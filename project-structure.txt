@@ -1,0 +1,168 @@
+ERP_LOJA_ROUPAS/
+├── README.md
+├── .gitignore
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+│
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   │
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── vendedor.py
+│   │   │   ├── venda.py
+│   │   │   ├── cambista.py
+│   │   │   ├── comprovante.py
+│   │   │   ├── pedido.py
+│   │   │   └── funcionario.py
+│   │   │
+│   │   ├── schemas/
+│   │   │   ├── __init__.py
+│   │   │   ├── vendedor.py
+│   │   │   ├── venda.py
+│   │   │   ├── cambista.py
+│   │   │   ├── comprovante.py
+│   │   │   ├── pedido.py
+│   │   │   └── funcionario.py
+│   │   │
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── deps.py
+│   │   │   ├── auth.py
+│   │   │   └── endpoints/
+│   │   │       ├── __init__.py
+│   │   │       ├── vendas.py
+│   │   │       ├── vendedores.py
+│   │   │       ├── cambistas.py
+│   │   │       ├── comprovantes.py
+│   │   │       ├── pedidos.py
+│   │   │       ├── funcionarios.py
+│   │   │       └── relatorios.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── venda_service.py
+│   │   │   ├── comissao_service.py
+│   │   │   ├── cambio_service.py
+│   │   │   ├── upload_service.py
+│   │   │   └── relatorio_service.py
+│   │   │
+│   │   └── utils/
+│   │       ├── __init__.py
+│   │       ├── moedas.py
+│   │       ├── validations.py
+│   │       └── helpers.py
+│   │
+│   ├── alembic/
+│   │   ├── versions/
+│   │   ├── env.py
+│   │   ├── script.py.mako
+│   │   └── alembic.ini
+│   │
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── test_vendas.py
+│   │   ├── test_vendedores.py
+│   │   └── test_cambistas.py
+│   │
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── public/
+│   │   ├── index.html
+│   │   ├── favicon.ico
+│   │   └── manifest.json
+│   │
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   ├── Loading.tsx
+│   │   │   │   └── ErrorBoundary.tsx
+│   │   │   │
+│   │   │   ├── vendas/
+│   │   │   │   ├── VendaForm.tsx
+│   │   │   │   ├── VendaList.tsx
+│   │   │   │   └── VendaCard.tsx
+│   │   │   │
+│   │   │   ├── vendedores/
+│   │   │   │   ├── VendedorForm.tsx
+│   │   │   │   └── VendedorList.tsx
+│   │   │   │
+│   │   │   ├── logistica/
+│   │   │   │   ├── PedidoForm.tsx
+│   │   │   │   ├── PedidoList.tsx
+│   │   │   │   └── RastreioCard.tsx
+│   │   │   │
+│   │   │   └── relatorios/
+│   │   │       ├── Dashboard.tsx
+│   │   │       ├── ComissaoReport.tsx
+│   │   │       └── FinanceiroReport.tsx
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── Login.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Vendas.tsx
+│   │   │   ├── Logistica.tsx
+│   │   │   ├── RH.tsx
+│   │   │   └── Relatorios.tsx
+│   │   │
+│   │   ├── services/
+│   │   │   ├── api.ts
+│   │   │   ├── vendaService.ts
+│   │   │   ├── vendedorService.ts
+│   │   │   ├── logisticaService.ts
+│   │   │   └── authService.ts
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useVendas.ts
+│   │   │   └── usePedidos.ts
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── constants.ts
+│   │   │   ├── moedas.ts
+│   │   │   ├── formatters.ts
+│   │   │   └── validations.ts
+│   │   │
+│   │   ├── types/
+│   │   │   ├── venda.ts
+│   │   │   ├── vendedor.ts
+│   │   │   ├── pedido.ts
+│   │   │   └── common.ts
+│   │   │
+│   │   ├── App.tsx
+│   │   ├── index.tsx
+│   │   └── index.css
+│   │
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tailwind.config.js
+│   └── Dockerfile
+│
+├── database/
+│   ├── init.sql
+│   ├── seed.sql
+│   └── migrations/
+│       ├── 001_initial_tables.sql
+│       ├── 002_add_vendedores.sql
+│       └── 003_add_cambistas.sql
+│
+├── docs/
+│   ├── API.md
+│   ├── DEPLOYMENT.md
+│   ├── DATABASE.md
+│   └── CONTRIBUTING.md
+│
+└── deploy/
+    ├── render.yaml
+    ├── docker-compose.prod.yml
+    ├── nginx.conf
+    └── startup.sh

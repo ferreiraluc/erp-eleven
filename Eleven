@@ -1,0 +1,194 @@
+# ERP Loja de Roupas - Sistema de Gestão Empresarial
+
+## Visão Geral do Projeto
+
+Sistema ERP web completo para gestão de loja de roupas familiar, centralizando todas as operações em uma única plataforma moderna e eficiente.
+
+## Objetivos Principais
+
+- Centralizar todas as operações da empresa em um sistema único
+- Eliminar dependência do WhatsApp para controles empresariais
+- Automatizar processos manuais (caderno → planilha → sistema)
+- Fornecer dashboards e relatórios em tempo real
+- Escalar para crescimento futuro da empresa
+
+## Arquitetura Técnica Proposta
+
+### Stack Tecnológica
+- **Frontend**: React.js/Next.js com TypeScript
+- **Backend**: Python (FastAPI ou Django REST Framework)
+- **Banco de Dados**: PostgreSQL
+- **Autenticação**: JWT + OAuth2
+- **Deploy**: Render Cloud Service
+- **Cache**: Redis (opcional para performance)
+
+### Estrutura de Módulos
+```
+ERP_LOJA_ROUPAS/
+├── frontend/           # React/Next.js
+├── backend/           # Python API
+├── database/          # Scripts SQL e migrações
+├── docs/              # Documentação
+└── deploy/            # Configurações de deploy
+```
+
+## Módulos do Sistema
+
+### 1. Módulo Financeiro
+**Substituir**: Grupos WhatsApp de pagamentos e planilha Excel
+
+**Funcionalidades**:
+- **Controle de Cambistas**:
+  - Registro de vendas por cambista (Junior, Denis, Sol, Wiss, Lucas)
+  - Cálculo automático de taxas (atualmente 5.65 para G$)
+  - Controle de repasses diários
+  - Upload de comprovantes PIX
+- **Multi-moedas**:
+  - Suporte a G$ (Guaranis), R$, U$, EUR
+  - Conversão automática com taxas atualizadas
+  - Totalizadores por moeda e vendedor
+- **Fluxo de Caixa**:
+  - Registro de saídas esporádicas
+  - Categorização de custos operacionais
+  - Integração bancária para conciliação
+  - Backup diário automático (10-20 comprovantes/dia)
+
+### 2. Módulo de Vendas
+**Substituir**: Caderno + planilha Excel semanal
+
+**Funcionalidades**:
+- **Registro de Vendas**:
+  - Interface rápida para lançamento (similar ao caderno)
+  - Seleção de vendedor, moeda, método de pagamento
+  - Cálculo automático de valor líquido
+- **Gestão Semanal**:
+  - Fechamento automático domingo a sábado
+  - Cálculo de comissões por vendedor
+  - Totalização por moeda e período
+- **Sem Controle de Estoque** (conforme solicitado):
+  - Foco em vendas e financeiro
+  - Descrição livre de produtos
+  - Sem necessidade de cadastro prévio
+
+### 3. Módulo de Logística
+**Substituir**: Grupo WhatsApp de pedidos
+
+**Funcionalidades**:
+- **Gestão de Pedidos (5-15 diários)**:
+  - Centralização de pedidos Instagram/WhatsApp
+  - Status: Pendente → Processando → Enviado → Entregue
+  - Integração com múltiplas transportadoras
+- **Controle de Envios**:
+  - **Correios**: Integração com API para etiquetas
+  - **Azul Cargo**: Controle manual com códigos
+  - **Envios Particulares**: Registro para controle interno
+  - **Superfrete**: Possível integração futura
+- **Endereços e Rastreamento**:
+  - Cadastro automático de endereços
+  - Validação de CEP
+  - Códigos de rastreio centralizados
+  - Etiquetas prontas para impressão
+
+### 4. Módulo de RH
+**Substituir**: Controle manual de funcionários
+
+**Funcionalidades**:
+- **Gestão de Pessoal (6 funcionários)**:
+  - Cadastro com horários fixos
+  - Controle de ponto manual → digital
+  - Escala de trabalho
+- **Sistema de Comissões**:
+  - Cálculo baseado na planilha Excel atual
+  - Fechamento semanal automático (domingo a sábado)
+  - Relatórios de performance por vendedor
+- **Administração**:
+  - Controle de vales
+  - Folgas e férias
+  - Histórico de pagamentos
+
+### 5. Módulo de Relatórios e BI
+**Funcionalidades**:
+- **Dashboards**:
+  - Visão geral da empresa
+  - KPIs em tempo real
+  - Gráficos interativos
+- **Relatórios**:
+  - Vendas por período
+  - Performance de funcionários
+  - Análise de produtos
+  - Relatórios fiscais
+
+## Controle de Acesso
+
+### Níveis de Usuário
+1. **Administrador** (Você): Acesso total
+2. **Gerente**: Relatórios e aprovações
+3. **Vendedor**: Vendas e consultas
+4. **Financeiro**: Módulo financeiro
+5. **Operacional**: Estoque e logística
+
+##  Funcionalidades Específicas
+
+### Interface Mobile-First
+- Dashboard responsivo
+- App PWA para funcionários
+- Notificações push
+
+### Automações
+- Backup automático diário
+- Relatórios por email
+- Alertas de estoque baixo
+- Lembretes de pagamentos
+
+### Integrações Futuras
+- WhatsApp Business API
+- Marketplace (Mercado Livre, Shopee)
+- Gateways de pagamento
+- Sistemas de nota fiscal
+
+## Fases de Desenvolvimento Ajustadas
+
+### Fase 1 - MVP Financeiro (4-6 semanas)
+**Prioridade MÁXIMA - Substituir planilha Excel**
+- [ ] **Lançamento de Vendas**: Interface rápida similar ao caderno
+- [ ] **Multi-moedas**: G$, R$, U$, EUR com conversões
+- [ ] **Vendedores**: Controle individual (Junior, Denis, Sol, Wiss, Lucas)
+- [ ] **Cambistas**: Cálculo automático de taxas e repasses
+- [ ] **Método de Pagamento**: Débito, Crédito, PIX, Dinheiro
+- [ ] **Fechamento Semanal**: Automático domingo a sábado
+- [ ] **Cálculo de Comissões**: Baseado na lógica atual da planilha
+- [ ] **Upload de Comprovantes**: Sistema para 10-20 arquivos/dia
+
+### Fase 2 - Logística (3-4 semanas) 
+**Substituir grupo WhatsApp de pedidos**
+- [ ] **Cadastro de Pedidos**: Centralização Instagram/WhatsApp
+- [ ] **Gestão de Endereços**: Banco de clientes com histórico
+- [ ] **Controle de Envios**: Correios, Azul, Particulares
+- [ ] **Códigos de Rastreio**: Centralização e consulta
+- [ ] **Etiquetas**: Geração automática para impressão
+
+### Fase 3 - RH e Relatórios (3-4 semanas)
+- [ ] **Controle de Funcionários**: 6 funcionários com horários fixos
+- [ ] **Controle de Ponto**: Digitalização do processo manual
+- [ ] **Dashboard Gerencial**: Visão geral do negócio
+- [ ] **Relatórios Financeiros**: Por período, vendedor, moeda
+- [ ] **Relatórios de Comissões**: Automáticos por semana
+
+### Fase 4 - Otimizações (2-3 semanas)
+- [ ] **Integração Bancária**: Conciliação automática
+- [ ] **Backup Automático**: Comprovantes e dados
+- [ ] **Notificações**: Alertas importantes
+- [ ] **Performance**: Otimização para uso diário
+
+
+## Próximas Decisões Técnicas
+
+1. **Framework Backend**: FastAPI ou Django REST?
+2. **Banco de Dados**: PostgreSQL configuração inicial
+3. **Upload de Arquivos**: AWS S3 ou storage local?
+4. **Autenticação**: Níveis de acesso por usuário
+5. **Deploy**: Configuração no Render
+
+---
+
+*Este documento será atualizado conforme o desenvolvimento do projeto. Versão: 1.0*

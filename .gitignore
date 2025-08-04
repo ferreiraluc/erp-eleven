@@ -1,0 +1,371 @@
+# ================================
+# ERP ELEVEN - GITIGNORE
+# ================================
+
+# ================================
+# ENVIRONMENT & SECRETS
+# ================================
+.env
+.env.local
+.env.example
+.env.development.local
+.env.test.local
+.env.production.local
+*.key
+*.pem
+*.p12
+secrets/
+config/secrets/
+
+# ================================
+# DEPENDENCIES
+# ================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Python
+__pycache__/
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+.ENV/
+env.bak/
+venv.bak/
+
+# ================================
+# BUILD OUTPUTS
+# ================================
+
+# React Build
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/out/
+
+# Python Build
+backend/build/
+backend/dist/
+backend/*.egg-info/
+
+# General Build
+*.tgz
+*.tar.gz
+
+# ================================
+# DATABASES
+# ================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# PostgreSQL
+*.sql.backup
+*.dump
+pg_data/
+
+# ================================
+# LOGS
+# ================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Python Logs
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.nox/
+.coverage
+.pytest_cache/
+cover/
+*.cover
+*.py,cover
+.hypothesis/
+
+# ================================
+# TEMPORARY FILES
+# ================================
+*.tmp
+*.temp
+.tmp/
+.temp/
+*.swp
+*.swo
+*~
+
+# OS Generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ================================
+# IDE & EDITORS
+# ================================
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ / PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ================================
+# FRONTEND SPECIFIC
+# ================================
+
+# React
+frontend/.eslintcache
+frontend/build/
+frontend/*.tsbuildinfo
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Nuxt.js
+frontend/.nuxt
+frontend/dist
+
+# Gatsby
+frontend/.cache/
+frontend/public
+
+# Storybook
+frontend/.out
+frontend/.storybook-out
+
+# TypeScript
+*.tsbuildinfo
+
+# ================================
+# BACKEND SPECIFIC
+# ================================
+
+# FastAPI
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+
+# Django (if used)
+backend/*.log
+backend/local_settings.py
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/media/
+
+# Flask (if used)
+backend/instance/
+backend/.webassets-cache
+
+# Celery (if used)
+backend/celerybeat-schedule
+backend/celerybeat.pid
+
+# ================================
+# TESTING
+# ================================
+.coverage
+.pytest_cache/
+.nyc_output
+coverage/
+*.lcov
+
+# Jest
+frontend/coverage/
+
+# ================================
+# PACKAGE MANAGERS
+# ================================
+
+# NPM
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Yarn
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# PNPM
+.pnpm-debug.log*
+
+# ================================
+# DEPLOYMENT
+# ================================
+
+# Docker
+.dockerignore
+
+# Render
+.render/
+
+# Vercel
+.vercel/
+
+# Netlify
+.netlify/
+
+# Heroku
+.heroku/
+
+# ================================
+# MONITORING & ANALYTICS
+# ================================
+
+# Sentry
+.sentryclirc
+
+# ================================
+# DOCUMENTATION
+# ================================
+docs/_build/
+docs/.doctrees/
+
+# ================================
+# CACHE DIRECTORIES
+# ================================
+.cache/
+.parcel-cache/
+.sass-cache/
+
+# ================================
+# BACKUP FILES
+# ================================
+*.backup
+*.bak
+*.old
+*.orig
+
+# ================================
+# UPLOADS & USER CONTENT
+# ================================
+uploads/
+user-uploads/
+media/
+static/uploads/
+
+# ================================
+# DEVELOPMENT TOOLS
+# ================================
+
+# Webpack
+.webpack/
+
+# ESLint
+.eslintcache
+
+# Prettier
+.prettierignore
+
+# Stylelint
+.stylelintcache
+
+# ================================
+# CUSTOM PROJECT FILES
+# ================================
+
+# Development notes (keep personal notes private)
+NOTES.md
+TODO.md
+dev-notes/
+
+# Local configuration overrides
+config.local.*
+settings.local.*
+
+# Test data files (if sensitive)
+test-data/
+sample-data/
+fixtures/private/
+
+# ================================
+# FINAL CATCH-ALL
+# ================================
+
+# Any file ending with .local
+*.local
+
+# Any file ending with .private
+*.private
+
+# Any directory named 'private'
+private/
