@@ -7,10 +7,9 @@ from ..database import Base
 
 class UsuarioRole(enum.Enum):
     ADMIN = "ADMIN"
-    GERENTE = "GERENTE"
-    VENDEDOR = "VENDEDOR"
-    FINANCEIRO = "FINANCEIRO"
-    OPERACIONAL = "OPERACIONAL"
+    GERENTE = "GERENTE"  # 2 managers
+    VENDEDOR = "VENDEDOR"  # 3 salespeople
+    LIMPEZA = "LIMPEZA"  # 1 cleaner
 
 class Usuario(Base):
     __tablename__ = "usuarios"

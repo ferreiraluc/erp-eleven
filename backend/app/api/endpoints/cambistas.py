@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ...database import get_db
 from ...models.cambista import Cambista
+from ...models.exchange_rate import ExchangeRate, CurrencyPair
 from ...schemas.cambista import CambistaCreate, CambistaResponse
 
 router = APIRouter()
@@ -26,3 +27,39 @@ def obter_cambista(cambista_id: str, db: Session = Depends(get_db)):
     if not cambista:
         raise HTTPException(status_code=404, detail="Cambista não encontrado")
     return cambista
+
+@router.get("/{cambista_id}/current-rates")
+def get_cambista_with_current_rates(cambista_id: str, db: Session = Depends(get_db)):
+    """Get cambista with current exchange rates from the system"""
+    cambista = db.query(Cambista).filter(Cambista.id == cambista_id).first()
+    if not cambista:
+        raise HTTPException(status_code=404, detail="Cambista não encontrado")
+    
+    # Get current system exchange rates
+    usd_to_pyg = db.query(ExchangeRate).filter(
+        ExchangeRate.currency_pair == CurrencyPair.USD_TO_PYG,
+        ExchangeRate.is_active == True
+    ).first()
+    
+    usd_to_brl = db.query(ExchangeRate).filter(
+        ExchangeRate.currency_pair == CurrencyPair.USD_TO_BRL,
+        ExchangeRate.is_active == True
+    ).first()
+    
+    eur_to_brl = db.query(ExchangeRate).filter(
+        ExchangeRate.currency_pair == CurrencyPair.EUR_TO_BRL,
+        ExchangeRate.is_active == True
+    ).first()
+    
+    return {
+        "cambista": cambista,
+        "current_system_rates": {
+            "usd_to_pyg": usd_to_pyg.rate if usd_to_pyg else None,
+            "usd_to_brl": usd_to_brl.rate if usd_to_brl else None,
+            "eur_to_brl": eur_to_brl.rate if eur_to_brl else None,
+        },
+        "rate_comparison": {
+            "usd_to_brl_diff": float(cambista.taxa_u_para_r - usd_to_brl.rate) if usd_to_brl else None,
+            "eur_to_brl_diff": float(cambista.taxa_eur_para_r - eur_to_brl.rate) if eur_to_brl else None,
+        }
+    }

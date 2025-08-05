@@ -5,3 +5,4 @@ from .comprovante import Comprovante
 from .pedido import Pedido
 from .funcionario import Funcionario
 from .usuario import Usuario
+from .exchange_rate import ExchangeRate

@@ -13,10 +13,25 @@ class VendaBase(BaseModel):
     taxa_cambio_usada: Optional[Decimal] = None
     valor_cambista: Optional[Decimal] = None
     valor_liquido: Decimal
+    taxa_desconto_pagamento: Optional[Decimal] = None
     descricao_produto: Optional[str] = None
     observacoes: Optional[str] = None
 
-class VendaCreate(VendaBase):
+class VendaCreate(BaseModel):
+    # Sales flow: Currency, Amount, Seller, Payment Method
+    moeda: MoedaTipo
+    valor_bruto: Decimal
+    vendedor_id: uuid.UUID
+    metodo_pagamento: PagamentoMetodo
+    # Optional fields
+    data_venda: Optional[date] = None
+    cambista_id: Optional[uuid.UUID] = None
+    descricao_produto: Optional[str] = None
+    observacoes: Optional[str] = None
+    created_by: Optional[uuid.UUID] = None
+
+class VendaCreateComplete(VendaBase):
+    # Complete schema for internal use
     vendedor_id: uuid.UUID
     cambista_id: Optional[uuid.UUID] = None
     created_by: Optional[uuid.UUID] = None

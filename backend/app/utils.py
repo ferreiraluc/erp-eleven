@@ -97,3 +97,57 @@ def calculate_commission(valor_venda: float, taxa_comissao: float) -> float:
     Calculate commission amount
     """
     return (valor_venda * taxa_comissao) / 100
+
+def calculate_payment_fee(metodo_pagamento: str) -> float:
+    """
+    Calculate payment method fee percentage based on Excel formula:
+    =IF(E13="Thais"; C13*0.98; IF(E13="Credit"; C13*0.948; IF(E13="Debit"; C13*0.975; C13)))
+    
+    Returns the multiplier to apply to the gross amount
+    """
+    from .models.venda import PagamentoMetodo
+    
+    fee_rates = {
+        PagamentoMetodo.PIX_THAIS.value: 0.98,      # 2% fee
+        PagamentoMetodo.CREDITO.value: 0.948,       # 5.2% fee  
+        PagamentoMetodo.DEBITO.value: 0.975,        # 2.5% fee
+        PagamentoMetodo.PIX_POWER.value: 1.0,       # No fee
+        PagamentoMetodo.PIX_MERCADO_PAGO.value: 1.0, # No fee
+        PagamentoMetodo.PY_TRANSFER_SUDAMERIS.value: 1.0, # No fee
+        PagamentoMetodo.PY_TRANSFER_INTERFISA.value: 1.0, # No fee
+    }
+    
+    return fee_rates.get(metodo_pagamento, 1.0)
+
+def calculate_net_amount(valor_bruto: float, metodo_pagamento: str) -> tuple[float, float]:
+    """
+    Calculate net amount after payment method fees
+    
+    Returns: (net_amount, fee_percentage)
+    """
+    fee_multiplier = calculate_payment_fee(metodo_pagamento)
+    net_amount = valor_bruto * fee_multiplier
+    fee_percentage = (1 - fee_multiplier) * 100
+    
+    return net_amount, fee_percentage
+
+def convert_currency(amount: float, from_currency: str, to_currency: str, exchange_rate: float) -> float:
+    """
+    Convert amount from one currency to another using exchange rate
+    
+    Args:
+        amount: Amount to convert
+        from_currency: Source currency (USD, EUR, etc.)
+        to_currency: Target currency (PYG, BRL, etc.)
+        exchange_rate: Rate for conversion
+    
+    Returns:
+        Converted amount
+    """
+    return amount * exchange_rate
+
+def get_currency_pair_key(from_currency: str, to_currency: str) -> str:
+    """
+    Generate currency pair key for lookups
+    """
+    return f"{from_currency}_TO_{to_currency}"

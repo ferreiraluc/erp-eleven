@@ -13,11 +13,13 @@ class MoedaTipo(enum.Enum):
     EUR = "EUR"
 
 class PagamentoMetodo(enum.Enum):
-    DEBITO = "DEBITO"
+    PIX_POWER = "PIX_POWER"
+    PIX_THAIS = "PIX_THAIS"
+    PIX_MERCADO_PAGO = "PIX_MERCADO_PAGO"
     CREDITO = "CREDITO"
-    PIX = "PIX"
-    DINHEIRO = "DINHEIRO"
-    TRANSFERENCIA = "TRANSFERENCIA"
+    DEBITO = "DEBITO"
+    PY_TRANSFER_SUDAMERIS = "PY_TRANSFER_SUDAMERIS"
+    PY_TRANSFER_INTERFISA = "PY_TRANSFER_INTERFISA"
 
 class Venda(Base):
     __tablename__ = "vendas"
@@ -34,6 +36,7 @@ class Venda(Base):
     taxa_cambio_usada = Column(DECIMAL(8,4))
     valor_cambista = Column(DECIMAL(15,4))
     valor_liquido = Column(DECIMAL(15,4), nullable=False)
+    taxa_desconto_pagamento = Column(DECIMAL(5,4), default=0)  # Fee percentage applied
     
     descricao_produto = Column(Text)
     observacoes = Column(Text)
