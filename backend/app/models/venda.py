@@ -28,9 +28,9 @@ class Venda(Base):
     data_venda = Column(Date, nullable=False, default=func.current_date())
     vendedor_id = Column(UUID(as_uuid=True), ForeignKey("vendedores.id"), nullable=False)
     
-    moeda = Column(Enum(MoedaTipo), nullable=False)
+    moeda = Column(Enum(MoedaTipo, name='moeda_tipo', native_enum=True, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     valor_bruto = Column(DECIMAL(15,4), nullable=False)
-    metodo_pagamento = Column(Enum(PagamentoMetodo), nullable=False)
+    metodo_pagamento = Column(Enum(PagamentoMetodo, name='pagamento_metodo', native_enum=True, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     
     cambista_id = Column(UUID(as_uuid=True), ForeignKey("cambistas.id"))
     taxa_cambio_usada = Column(DECIMAL(8,4))

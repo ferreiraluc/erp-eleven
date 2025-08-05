@@ -10,7 +10,14 @@ from app.models import *
 from app.api.endpoints.auth import get_password_hash
 from decimal import Decimal
 from app.models.usuario import Usuario, UsuarioRole
-from app.models.venda import Venda, MoedaTipo, PagamentoMetodo  
+from app.models.venda import Venda, MoedaTipo, PagamentoMetodo
+from app.models.vendedor import Vendedor
+from app.models.cambista import Cambista
+from app.models.exchange_rate import ExchangeRate
+from app.models.money_transfer import MoneyTransfer
+from app.models.comprovante import Comprovante
+from app.models.pedido import Pedido
+from app.models.funcionario import Funcionario  
 from app.database import Base
 
 def create_initial_admin():
@@ -59,8 +66,8 @@ def create_sample_users(admin_user):
         {
             "nome": "Carlos Oliveira",
             "email": "carlos@loja.com",
-            "role": UsuarioRole.FINANCEIRO,
-            "password": "financeiro123"
+            "role": UsuarioRole.LIMPEZA,
+            "password": "limpeza123"
         }
     ]
     
@@ -198,7 +205,7 @@ def create_sample_sales(vendors, cambistas, users):
             "vendedor_id": vendors[0].id,
             "moeda": MoedaTipo.R_DOLLAR,
             "valor_bruto": Decimal("150.00"),
-            "metodo_pagamento": PagamentoMetodo.PIX,
+            "metodo_pagamento": PagamentoMetodo.PIX_POWER,
             "valor_liquido": Decimal("150.00"),
             "descricao_produto": "Camiseta básica",
             "created_by": users[0].id
@@ -231,6 +238,108 @@ def create_sample_sales(vendors, cambistas, users):
     
     return created_sales
 
+def create_sample_exchange_rates():
+    """Create sample exchange rates"""
+    db = next(get_db())
+    
+    from app.models.exchange_rate import ExchangeRate, CurrencyPair
+    
+    rates_data = [
+        {
+            "currency_pair": CurrencyPair.USD_TO_PYG,
+            "rate": Decimal("7800.0000"),
+            "source": "Bonanza Cambios",
+            "updated_by": "Admin"
+        },
+        {
+            "currency_pair": CurrencyPair.USD_TO_BRL,
+            "rate": Decimal("5.5000"),
+            "source": "Manual Entry", 
+            "updated_by": "Admin"
+        },
+        {
+            "currency_pair": CurrencyPair.EUR_TO_PYG,
+            "rate": Decimal("8400.0000"),
+            "source": "Bonanza Cambios",
+            "updated_by": "Admin"
+        },
+        {
+            "currency_pair": CurrencyPair.EUR_TO_BRL,
+            "rate": Decimal("6.2000"),
+            "source": "Manual Entry",
+            "updated_by": "Admin"
+        }
+    ]
+    
+    created_rates = []
+    for rate_data in rates_data:
+        # Check if rate already exists
+        existing = db.query(ExchangeRate).filter(ExchangeRate.currency_pair == rate_data["currency_pair"]).first()
+        if existing:
+            print(f"⚠️ Exchange rate {rate_data['currency_pair'].value} already exists")
+            created_rates.append(existing)
+            continue
+        
+        rate = ExchangeRate(**rate_data)
+        
+        db.add(rate)
+        db.commit()
+        db.refresh(rate)
+        
+        print(f"✅ Created exchange rate: {rate.currency_pair.value} = {rate.rate}")
+        created_rates.append(rate)
+    
+    return created_rates
+
+def create_sample_funcionarios(users):
+    """Create sample employees"""
+    db = next(get_db())
+    
+    from datetime import date
+    
+    funcionarios_data = [
+        {
+            "nome": "Ana Silva",
+            "cpf": "123.456.789-01",
+            "usuario_id": users[1].id if len(users) > 1 else None,
+            "cargo": "Gerente de Loja",
+            "salario": Decimal("3500.00"),
+            "data_admissao": date(2024, 1, 15),
+            "telefone": "11987654321",
+            "endereco": "Rua das Flores, 123 - São Paulo, SP"
+        },
+        {
+            "nome": "Carlos Santos",
+            "cpf": "987.654.321-01", 
+            "usuario_id": users[2].id if len(users) > 2 else None,
+            "cargo": "Auxiliar de Limpeza",
+            "salario": Decimal("1500.00"),
+            "data_admissao": date(2024, 2, 1),
+            "telefone": "11976543210",
+            "endereco": "Av. Central, 456 - São Paulo, SP"
+        }
+    ]
+    
+    created_funcionarios = []
+    for funcionario_data in funcionarios_data:
+        # Check if funcionario already exists
+        existing = db.query(Funcionario).filter(Funcionario.cpf == funcionario_data["cpf"]).first()
+        if existing:
+            print(f"⚠️ Funcionario {funcionario_data['nome']} already exists")
+            created_funcionarios.append(existing)
+            continue
+        
+        funcionario = Funcionario(**funcionario_data)
+        
+        db.add(funcionario)
+        db.commit()
+        db.refresh(funcionario)
+        
+        print(f"✅ Created funcionario: {funcionario.nome}")
+        created_funcionarios.append(funcionario)
+    
+    return created_funcionarios
+
 def main():
     """Set up initial database data"""
     print("🚀 Setting up ERP Eleven Database")
@@ -246,6 +355,8 @@ def main():
         users = create_sample_users(admin_user)
         vendors = create_sample_vendors(users)
         cambistas = create_sample_cambistas()
+        exchange_rates = create_sample_exchange_rates()
+        funcionarios = create_sample_funcionarios(users)
         sales = create_sample_sales(vendors, cambistas, users)
         
         print("\n" + "=" * 40)
@@ -254,7 +365,7 @@ def main():
         print("Admin: admin@loja.com / 123456")
         print("Manager: joao@loja.com / gerente123")
         print("Vendor: maria@loja.com / vendedor123")
-        print("Finance: carlos@loja.com / financeiro123")
+        print("Cleaning: carlos@loja.com / limpeza123")
         
     except Exception as e:
         print(f"❌ Database setup failed: {e}")
