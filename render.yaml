@@ -15,12 +15,11 @@ services:
     env: python
     region: oregon
     plan: free
+    pythonVersion: "3.11"
     buildCommand: |
-      cd backend
-      pip install -r requirements.txt
+      pip install -r backend/requirements.txt
     startCommand: |
-      cd backend
-      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -32,21 +31,3 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
-
-  # Frontend Web Service
-  - type: web
-    name: erp-eleven-frontend
-    env: node
-    region: oregon
-    plan: free
-    buildCommand: |
-      cd frontend
-      npm install
-      npm run build
-    staticPublishPath: ./frontend/build
-    envVars:
-      - key: REACT_APP_API_URL
-        fromService:
-          type: web
-          name: erp-eleven-backend
-          property: host
