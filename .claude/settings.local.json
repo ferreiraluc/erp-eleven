@@ -3,7 +3,17 @@
     "allow": [
       "Bash(source:*)",
       "Bash(python:*)",
-      "Bash(npx tailwindcss init:*)"
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(PORT=3001 npm start)",
+      "Bash(export NODE_OPTIONS=\"--openssl-legacy-provider\")",
+      "Bash(touch:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(ls:*)",
+      "Bash(npm run preview:*)"
     ],
     "deny": []
   }
