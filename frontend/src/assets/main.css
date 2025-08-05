@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-family: Inter, system-ui, sans-serif;
+  }
+  
+  body {
+    margin: 0;
+    background-color: #f9fafb;
+    color: #111827;
+  }
+  
+  #app {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    background-color: #2563eb;
+    color: white;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-primary:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .btn-secondary {
+    background-color: white;
+    color: #374151;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #f9fafb;
+  }
+  
+  .card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+  }
+  
+  .input-field {
+    display: block;
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .input-field:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+}

@@ -1,0 +1,125 @@
+import axios from 'axios'
+
+const API_BASE_URL = 'http://localhost:8000'
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_data')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+export interface LoginRequest {
+  email: string
+  senha: string
+}
+
+export interface LoginResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
+}
+
+export interface DashboardStats {
+  total_sales_today: number
+  total_sales_week: number
+  total_sales_month: number
+  pending_orders: number
+  active_vendors: number
+  exchange_rate_g_to_r: number
+}
+
+export interface Sale {
+  id: string
+  data_venda: string
+  vendedor_nome: string
+  moeda: string
+  valor_bruto: number
+  valor_liquido: number
+  metodo_pagamento: string
+  descricao_produto: string
+}
+
+export interface Vendor {
+  id: string
+  nome: string
+  taxa_comissao: number
+  meta_semanal: number
+  telefone: string
+  ativo: boolean
+}
+
+export interface User {
+  id: string
+  nome: string
+  email: string
+  role: string
+  ativo: boolean
+  ultimo_login?: string
+  created_at: string
+  updated_at: string
+}
+
+// Auth API
+export const authAPI = {
+  login: (credentials: LoginRequest): Promise<LoginResponse> => 
+    api.post('/api/auth/login', credentials).then(res => res.data),
+  
+  getCurrentUser: (): Promise<User> => 
+    api.get('/api/auth/me').then(res => res.data),
+  
+  logout: (): Promise<void> => 
+    api.post('/api/auth/logout').then(res => res.data),
+}
+
+// Dashboard API
+export const dashboardAPI = {
+  getStats: (): Promise<DashboardStats> => 
+    api.get('/api/dashboard/stats').then(res => res.data),
+  
+  getRecentSales: (limit = 10): Promise<Sale[]> => 
+    api.get(`/api/vendas/?limit=${limit}`).then(res => res.data),
+}
+
+// Sales API
+export const salesAPI = {
+  getAll: (): Promise<Sale[]> => 
+    api.get('/api/vendas/').then(res => res.data),
+  
+  create: (sale: Partial<Sale>): Promise<Sale> => 
+    api.post('/api/vendas/', sale).then(res => res.data),
+}
+
+// Vendors API
+export const vendorsAPI = {
+  getAll: (): Promise<Vendor[]> => 
+    api.get('/api/vendedores/').then(res => res.data),
+  
+  create: (vendor: Partial<Vendor>): Promise<Vendor> => 
+    api.post('/api/vendedores/', vendor).then(res => res.data),
+}
+
+export default api
