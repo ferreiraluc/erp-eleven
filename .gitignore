@@ -368,4 +368,8 @@ fixtures/private/
 *.private
 
 # Any directory named 'private'
-private/
+private/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
