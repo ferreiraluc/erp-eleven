@@ -13,6 +13,7 @@ from ...schemas.money_transfer import (
     DeliveryConfirmation,
     TransferSummary
 )
+from ...services.thais_transfer_service import ThaisTransferService
 
 router = APIRouter()
 
@@ -192,3 +193,43 @@ def cancel_transfer(transfer_id: str, reason: str = None, db: Session = Depends(
     db.commit()
     db.refresh(transfer)
     return transfer
+
+@router.get("/thais/pending-balance")
+def get_thais_pending_balance(db: Session = Depends(get_db)):
+    """Get current pending balance that needs to be sent to Thais"""
+    return ThaisTransferService.get_pending_thais_balance(db)
+
+@router.post("/{transfer_id}/send-to-thais", response_model=MoneyTransferResponse)
+def send_transfer_to_thais(
+    transfer_id: str,
+    transfer_method: str = "PIX",
+    reference_number: str = None,
+    sent_by: str = "Store Manager",
+    db: Session = Depends(get_db)
+):
+    """Mark accumulated transfer as sent to Thais"""
+    try:
+        transfer = ThaisTransferService.process_transfer_to_thais(
+            db, transfer_id, transfer_method, reference_number, sent_by
+        )
+        db.commit()
+        db.refresh(transfer)
+        return transfer
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/thais/weekly-summary")
+def get_weekly_thais_summary(
+    start_date: str,
+    end_date: str,
+    db: Session = Depends(get_db)
+):
+    """Get Thais-related summary for weekly balance calculation"""
+    from datetime import datetime
+    
+    try:
+        start = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        return ThaisTransferService.get_weekly_thais_summary(db, start, end)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")

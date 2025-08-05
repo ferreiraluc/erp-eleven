@@ -7,6 +7,7 @@ from ...database import get_db
 from ...models.venda import Venda
 from ...schemas.venda import VendaCreate, VendaResponse
 from ...utils import calculate_net_amount
+from ...services.thais_transfer_service import ThaisTransferService
 
 router = APIRouter()
 
@@ -40,6 +41,15 @@ def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
     
     db_venda = Venda(**venda_data)
     db.add(db_venda)
+    db.flush()  # Get the ID without committing yet
+    
+    # Handle PIX_THAIS automatic transfer accumulation
+    if ThaisTransferService.is_thais_payment(venda.metodo_pagamento):
+        transfer = ThaisTransferService.add_sale_to_pending_transfer(db, db_venda)
+        if transfer:
+            db_venda.pending_transfer_id = transfer.id
+            db_venda.requires_thais_transfer = True
+    
     db.commit()
     db.refresh(db_venda)
     return db_venda

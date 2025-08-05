@@ -38,3 +38,6 @@ class MoneyTransfer(Base):
     created_at = Column(DateTime, default=func.current_timestamp())
     updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
     created_by = Column(String(100))
+    
+    # Related sales (for PIX_THAIS sales that need this transfer)
+    related_sales = relationship("Venda", foreign_keys="[Venda.pending_transfer_id]", back_populates="pending_transfer")

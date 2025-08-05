@@ -38,6 +38,10 @@ class Venda(Base):
     valor_liquido = Column(DECIMAL(15,4), nullable=False)
     taxa_desconto_pagamento = Column(DECIMAL(5,4), default=0)  # Fee percentage applied
     
+    # Thais transfer tracking
+    pending_transfer_id = Column(UUID(as_uuid=True), ForeignKey("money_transfers.id"), nullable=True)
+    requires_thais_transfer = Column(Boolean, default=False)  # True for PIX_THAIS sales
+    
     descricao_produto = Column(Text)
     observacoes = Column(Text)
     
@@ -51,3 +55,4 @@ class Venda(Base):
     vendedor = relationship("Vendedor", backref="vendas")
     cambista = relationship("Cambista", backref="vendas")
     usuario_criador = relationship("Usuario", foreign_keys=[created_by])
+    pending_transfer = relationship("MoneyTransfer", foreign_keys=[pending_transfer_id], back_populates="related_sales")
