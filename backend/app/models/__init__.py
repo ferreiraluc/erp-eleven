@@ -6,3 +6,4 @@ from .pedido import Pedido
 from .funcionario import Funcionario
 from .usuario import Usuario
 from .exchange_rate import ExchangeRate
+from .money_transfer import MoneyTransfer
