@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => ({
     reportCompressedSize: false,
     emptyOutDir: true,
   },
-  base: './',
+  base: '/',
   define: {
     __VUE_OPTIONS_API__: false,
     __VUE_PROD_DEVTOOLS__: false,

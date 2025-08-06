@@ -46,8 +46,10 @@ app.use((req, res, next) => {
 
 // Serve static files from the dist directory
 app.use(express.static(distPath, {
-  maxAge: isProduction ? '1y' : '0', // Cache static assets for 1 year in production
+  index: false, // Disable automatic serving of index.html
+  maxAge: isProduction ? '1y' : '0',
   setHeaders: (res, filePath) => {
+    console.log(`Serving static file: ${filePath}`);
     // No cache for HTML files
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -65,15 +67,22 @@ app.use(express.static(distPath, {
 app.get('/health', (_req, res) => {
   const fs = require('fs');
   let distContents = [];
+  let assetsContents = [];
   let indexSize = 0;
+  let indexContent = '';
   
   try {
     if (existsSync(distPath)) {
       distContents = fs.readdirSync(distPath);
+      const assetsPath = path.join(distPath, 'assets');
+      if (existsSync(assetsPath)) {
+        assetsContents = fs.readdirSync(assetsPath);
+      }
     }
     if (existsSync(indexPath)) {
       const stats = fs.statSync(indexPath);
       indexSize = stats.size;
+      indexContent = fs.readFileSync(indexPath, 'utf8').substring(0, 500); // First 500 chars
     }
   } catch (err) {
     console.error('Error reading dist directory:', err);
@@ -87,9 +96,26 @@ app.get('/health', (_req, res) => {
     distExists: existsSync(distPath),
     indexExists: existsSync(indexPath),
     indexSize: indexSize,
+    indexPreview: indexContent,
     distContents: distContents,
+    assetsContents: assetsContents,
     apiUrl: process.env.VITE_API_BASE_URL || 'not set'
   });
+});
+
+// Debug endpoint to see raw index.html
+app.get('/debug/index', (_req, res) => {
+  const fs = require('fs');
+  try {
+    if (existsSync(indexPath)) {
+      const content = fs.readFileSync(indexPath, 'utf8');
+      res.type('text/plain').send(content);
+    } else {
+      res.status(404).send('Index file not found');
+    }
+  } catch (err) {
+    res.status(500).send('Error reading index file: ' + err.message);
+  }
 });
 
 // Handle SPA routing - serve index.html for all non-API routes

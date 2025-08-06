@@ -1,13 +1,33 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    <title>ERP Eleven - Sistema de Gestão</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
+        <div style="text-align: center;">
+          <h1>ERP Eleven</h1>
+          <p>Carregando aplicação...</p>
+          <div id="loading-error" style="color: red; display: none;">
+            <p>Erro ao carregar a aplicação. Verifique a conexão e tente novamente.</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      // Fallback se o JavaScript não carregar em 10 segundos
+      setTimeout(() => {
+        const app = document.getElementById('app');
+        const error = document.getElementById('loading-error');
+        if (app && app.innerHTML.includes('Carregando aplicação...')) {
+          if (error) error.style.display = 'block';
+        }
+      }, 10000);
+    </script>
   </body>
 </html>
