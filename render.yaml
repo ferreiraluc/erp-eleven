@@ -25,7 +25,7 @@ services:
   - type: web
     name: erp-eleven-frontend
     runtime: static
-    buildCommand: cd frontend && npm install && NODE_ENV=production npm run build
+    buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/dist
     envVars:
       - key: NODE_ENV
