@@ -5,11 +5,11 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    vueDevTools(),
-  ],
+    mode === 'development' ? vueDevTools() : undefined,
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -30,4 +30,14 @@ export default defineConfig({
     },
   },
   base: './',
-})
+  server: {
+    port: 3000,
+    proxy: mode === 'development' ? {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+    } : undefined,
+  },
+}))
