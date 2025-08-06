@@ -224,7 +224,6 @@ frontend/dist
 
 # Gatsby
 frontend/.cache/
-frontend/public
 
 # Storybook
 frontend/.out
