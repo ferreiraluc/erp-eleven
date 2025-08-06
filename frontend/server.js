@@ -27,18 +27,22 @@ if (isProduction) {
   // Compress responses
   app.use(compression());
   
-  // Security headers
+  // Basic security headers (less restrictive)
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // Removed X-Frame-Options and XSS-Protection for compatibility
     next();
   });
   
   // Disable powered by header
   app.disable('x-powered-by');
 }
+
+// Add debug logging for all requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Serve static files from the dist directory
 app.use(express.static(distPath, {
@@ -59,12 +63,32 @@ app.use(express.static(distPath, {
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
+  const fs = require('fs');
+  let distContents = [];
+  let indexSize = 0;
+  
+  try {
+    if (existsSync(distPath)) {
+      distContents = fs.readdirSync(distPath);
+    }
+    if (existsSync(indexPath)) {
+      const stats = fs.statSync(indexPath);
+      indexSize = stats.size;
+    }
+  } catch (err) {
+    console.error('Error reading dist directory:', err);
+  }
+
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
+    distPath: distPath,
     distExists: existsSync(distPath),
-    indexExists: existsSync(indexPath)
+    indexExists: existsSync(indexPath),
+    indexSize: indexSize,
+    distContents: distContents,
+    apiUrl: process.env.VITE_API_BASE_URL || 'not set'
   });
 });
 
