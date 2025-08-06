@@ -15,4 +15,18 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia'],
+          ui: ['@headlessui/vue', '@heroicons/vue'],
+        },
+      },
+    },
+  },
 })
