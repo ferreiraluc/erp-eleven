@@ -1,27 +1,20 @@
-services:
-  # PostgreSQL Database
-  - type: pserv
-    name: erp-eleven-db
-    env: docker
-    plan: free
+databases:
+  - name: erp-eleven-db
+    databaseName: eleven
+    user: postgres
     region: oregon
-    databases:
-      - name: eleven
-        user: postgres
+    plan: free
 
+services:
   # Backend API Service
   - type: web
+    runtime: python
     name: erp-eleven-backend
-    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    preDeployCommand: cd backend && python init_db.py
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     region: oregon
     plan: free
-    pythonVersion: "3.11"
-    buildCommand: |
-      pip install -r backend/requirements.txt
-    startCommand: |
-      cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    preDeployCommand: |
-      python -c "import psycopg2; conn = psycopg2.connect('$DATABASE_URL'); cursor = conn.cursor(); cursor.execute(open('../postgres.sql').read()); conn.commit(); conn.close()" || echo "Database already initialized"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
