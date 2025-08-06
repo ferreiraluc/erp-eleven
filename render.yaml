@@ -1,8 +1,6 @@
 databases:
   - name: erp-eleven-db
     databaseName: eleven
-    region: singapore
-    plan: free
 
 services:
   # Backend API Service
@@ -11,8 +9,6 @@ services:
     name: erp-eleven-backend
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    region: singapore
-    plan: free
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -27,10 +23,8 @@ services:
 
   # Frontend Web Service (New)
   - type: web
-    name: erp-eleven-frontend-v2
+    name: erp-eleven-frontend
     runtime: node
-    region: singapore
-    plan: free
     buildCommand: cd frontend && npm install && npm run build
     startCommand: cd frontend && npm start
     envVars:
