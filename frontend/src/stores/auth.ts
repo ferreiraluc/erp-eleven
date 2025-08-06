@@ -78,8 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
-  // Initialize store with stored data
-  loadStoredAuth()
+  // Note: loadStoredAuth() will be called from App.vue onMounted
 
   return {
     // State

@@ -11,8 +11,15 @@ const messages = {
 
 // Get stored locale or default to Portuguese (BR)
 const getStoredLocale = (): string => {
-  const stored = localStorage.getItem('locale')
-  return stored && ['en', 'es', 'pt'].includes(stored) ? stored : 'pt'
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('locale')
+      return stored && ['en', 'es', 'pt'].includes(stored) ? stored : 'pt'
+    }
+  } catch (e) {
+    console.warn('localStorage not available:', e)
+  }
+  return 'pt'
 }
 
 export const i18n = createI18n({
@@ -32,8 +39,16 @@ export const availableLocales = [
 export const setLocale = (locale: string) => {
   if (availableLocales.some(l => l.code === locale)) {
     i18n.global.locale.value = locale as 'en' | 'es' | 'pt'
-    localStorage.setItem('locale', locale)
-    document.documentElement.lang = locale
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('locale', locale)
+      }
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = locale
+      }
+    } catch (e) {
+      console.warn('Error setting locale:', e)
+    }
   }
 }
 
