@@ -1,7 +1,7 @@
 databases:
   - name: erp-eleven-db
     databaseName: eleven
-    region: oregon
+    region: sao-paulo
     plan: free
 
 services:
@@ -11,7 +11,7 @@ services:
     name: erp-eleven-backend
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    region: oregon
+    region: sao-paulo
     plan: free
     envVars:
       - key: DATABASE_URL
@@ -29,9 +29,13 @@ services:
   - type: web
     name: erp-eleven-frontend
     runtime: static
+    region: sao-paulo
+    plan: free
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/dist
     envVars:
+      - key: NODE_VERSION
+        value: 20.19.0
       - key: VITE_API_BASE_URL
         fromService:
           type: web
