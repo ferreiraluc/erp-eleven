@@ -1,7 +1,6 @@
 databases:
   - name: erp-eleven-db
     databaseName: eleven
-    user: postgres
     region: oregon
     plan: free
 
@@ -11,7 +10,6 @@ services:
     runtime: python
     name: erp-eleven-backend
     buildCommand: pip install -r backend/requirements.txt
-    preDeployCommand: cd backend && python init_db.py
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     region: oregon
     plan: free
