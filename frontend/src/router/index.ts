@@ -6,7 +6,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/dashboard'
+      redirect: () => {
+        // Load auth data immediately to check authentication status
+        const authStore = useAuthStore()
+        authStore.loadStoredAuth()
+        return authStore.isAuthenticated ? '/dashboard' : '/login'
+      }
     },
     {
       path: '/login',
@@ -23,14 +28,23 @@ const router = createRouter({
     // Catch all route
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/dashboard'
+      redirect: () => {
+        const authStore = useAuthStore()
+        authStore.loadStoredAuth()
+        return authStore.isAuthenticated ? '/dashboard' : '/login'
+      }
     }
   ],
 })
 
 // Navigation guards
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
+  
+  // Load stored auth if not already loaded
+  if (!authStore.token) {
+    authStore.loadStoredAuth()
+  }
   
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
