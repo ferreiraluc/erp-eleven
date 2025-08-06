@@ -21,10 +21,9 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
 
-  # Frontend Web Service (New)
-  - type: web
+  # Frontend Web Service (when frontend is created)
+  - type: static
     name: erp-eleven-frontend
-    runtime: static
     buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
+    staticPublishPath: frontend/dist
     
