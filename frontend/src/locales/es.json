@@ -1,0 +1,82 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "export": "Exportar",
+    "import": "Importar",
+    "refresh": "Actualizar",
+    "logout": "Cerrar sesión",
+    "login": "Iniciar sesión",
+    "signup": "Registrarse",
+    "viewAll": "Ver todo",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "auth": {
+    "welcomeTitle": "Bienvenido a ERP Eleven",
+    "signInSubtitle": "Inicia sesión en tu cuenta para continuar",
+    "emailLabel": "Dirección de correo electrónico",
+    "passwordLabel": "Contraseña",
+    "emailPlaceholder": "Ingresa tu correo electrónico",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "rememberMe": "Recordarme",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "signInButton": "Iniciar sesión",
+    "signingIn": "Iniciando sesión...",
+    "testCredentials": "Credenciales de prueba: admin@loja.com / 123456"
+  },
+  "dashboard": {
+    "welcomeBack": "¡Bienvenido de vuelta, {name}!",
+    "loadingDashboard": "Cargando dashboard...",
+    "todaysSales": "Ventas de Hoy",
+    "weeklySales": "Ventas Semanales",
+    "pendingOrders": "Pedidos Pendientes",
+    "activeVendors": "Vendedores Activos",
+    "exchangeRate": "Tipo de Cambio",
+    "exchangeRateLabel": "Tasa de Cambio USD",
+    "quickActions": "Acciones Rápidas",
+    "newSale": "Nueva Venta",
+    "manageVendors": "Gestionar Vendedores",
+    "viewOrders": "Ver Pedidos",
+    "reports": "Reportes",
+    "recentSales": "Ventas Recientes",
+    "systemStatus": "Estado del Sistema",
+    "apiServer": "Servidor API",
+    "database": "Base de Datos",
+    "exchangeRates": "Tipos de Cambio",
+    "online": "En línea",
+    "connected": "Conectado",
+    "lastUpdated": "Última actualización hace {time}",
+    "noRecentSales": "No se encontraron ventas recientes",
+    "salesWillAppear": "Las ventas aparecerán aquí una vez creadas",
+    "unknownVendor": "Vendedor desconocido",
+    "productSale": "Venta de producto"
+  },
+  "footer": {
+    "currency": "Moneda",
+    "language": "Idioma",
+    "settings": "Configuración",
+    "help": "Ayuda",
+    "about": "Acerca de",
+    "version": "Versión"
+  },
+  "currencies": {
+    "USD": "USD (Dólar Americano)",
+    "G$": "₲ (Guaraní Paraguayo)",
+    "R$": "R$ (Real Brasileño)",
+    "EUR": "EUR (Euro)"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "pt": "Português (BR)"
+  }
+}

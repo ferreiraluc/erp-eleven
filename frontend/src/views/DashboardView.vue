@@ -11,7 +11,7 @@
           </div>
           <div class="app-info">
             <h1 class="app-title">ERP Eleven</h1>
-            <p class="welcome-text">Welcome back, {{ authStore.userName }}!</p>
+            <p class="welcome-text">{{ $t('dashboard.welcomeBack', { name: authStore.userName }) }}</p>
           </div>
         </div>
         
@@ -23,13 +23,66 @@
             {{ currentTime }}
           </div>
           
+          <!-- Currency Selector -->
+          <div class="header-control">
+            <div class="dropdown">
+              <button @click="toggleCurrencyDropdown" class="header-dropdown-button">
+                <span class="control-flag">{{ currencyStore.getCurrentCurrency?.flag }}</span>
+                <span class="control-text">{{ currencyStore.selectedCurrency }}</span>
+                <svg class="dropdown-icon" :class="{ 'rotate': showCurrencyDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div v-if="showCurrencyDropdown" class="header-dropdown-menu">
+                <button
+                  v-for="currency in currencyStore.availableCurrencies"
+                  :key="currency.code"
+                  @click="handleCurrencyChange(currency.code)"
+                  class="header-dropdown-item"
+                  :class="{ 'active': currency.code === currencyStore.selectedCurrency }"
+                >
+                  <span class="control-flag">{{ currency.flag }}</span>
+                  <div class="currency-info">
+                    <span class="currency-code">{{ currency.code }}</span>
+                    <span class="currency-name">{{ currency.name }}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Language Selector -->
+          <div class="header-control">
+            <div class="dropdown">
+              <button @click="toggleLanguageDropdown" class="header-dropdown-button">
+                <span class="control-flag">{{ getCurrentLanguage?.flag }}</span>
+                <span class="control-text">{{ getCurrentLanguage?.code?.toUpperCase() }}</span>
+                <svg class="dropdown-icon" :class="{ 'rotate': showLanguageDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div v-if="showLanguageDropdown" class="header-dropdown-menu">
+                <button
+                  v-for="lang in availableLocales"
+                  :key="lang.code"
+                  @click="handleLanguageChange(lang.code)"
+                  class="header-dropdown-item"
+                  :class="{ 'active': lang.code === currentLocale }"
+                >
+                  <span class="control-flag">{{ lang.flag }}</span>
+                  <span class="language-name">{{ lang.name }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div class="divider"></div>
           
           <button @click="handleLogout" class="logout-button">
             <svg class="logout-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>Logout</span>
+            <span>{{ $t('common.logout') }}</span>
           </button>
         </div>
       </div>
@@ -44,7 +97,7 @@
             <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p>Loading dashboard...</p>
+          <p>{{ $t('dashboard.loadingDashboard') }}</p>
         </div>
       </div>
 
@@ -60,8 +113,8 @@
                 </svg>
               </div>
               <div class="stat-info">
-                <p class="stat-label">Today's Sales</p>
-                <p class="stat-value">R$ {{ formatCurrency(dashboardStore.stats?.total_sales_today || 0) }}</p>
+                <p class="stat-label">{{ $t('dashboard.todaysSales') }}</p>
+                <p class="stat-value">{{ formatCurrency(dashboardStore.stats?.total_sales_today || 0, 'R$') }}</p>
               </div>
             </div>
           </div>
@@ -74,8 +127,8 @@
                 </svg>
               </div>
               <div class="stat-info">
-                <p class="stat-label">Weekly Sales</p>
-                <p class="stat-value">R$ {{ formatCurrency(dashboardStore.stats?.total_sales_week || 0) }}</p>
+                <p class="stat-label">{{ $t('dashboard.weeklySales') }}</p>
+                <p class="stat-value">{{ formatCurrency(dashboardStore.stats?.total_sales_week || 0, 'R$') }}</p>
               </div>
             </div>
           </div>
@@ -88,7 +141,7 @@
                 </svg>
               </div>
               <div class="stat-info">
-                <p class="stat-label">Pending Orders</p>
+                <p class="stat-label">{{ $t('dashboard.pendingOrders') }}</p>
                 <p class="stat-value">{{ dashboardStore.stats?.pending_orders || 0 }}</p>
               </div>
             </div>
@@ -102,7 +155,7 @@
                 </svg>
               </div>
               <div class="stat-info">
-                <p class="stat-label">Active Vendors</p>
+                <p class="stat-label">{{ $t('dashboard.activeVendors') }}</p>
                 <p class="stat-value">{{ dashboardStore.stats?.active_vendors || 0 }}</p>
               </div>
             </div>
@@ -114,7 +167,7 @@
           <!-- Exchange Rate Card -->
           <div class="action-card">
             <div class="card-header">
-              <h3 class="card-title">Exchange Rate</h3>
+              <h3 class="card-title">{{ $t('dashboard.exchangeRate') }}</h3>
               <div class="card-icon green">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V4M9 8h6" />
@@ -122,14 +175,14 @@
               </div>
             </div>
             <div class="exchange-rate">
-              <p class="rate-value">{{ dashboardStore.stats?.exchange_rate_g_to_r || 0 }}</p>
-              <p class="rate-label">G$ to R$ Rate</p>
+              <p class="rate-value">{{ currencyStore.exchangeRates[currencyStore.selectedCurrency].toFixed(2) }}</p>
+              <p class="rate-label">1 USD = {{ currencyStore.exchangeRates[currencyStore.selectedCurrency].toFixed(2) }} {{ currencyStore.getCurrentCurrency?.symbol }}</p>
             </div>
           </div>
 
           <!-- Quick Actions -->
           <div class="action-card wide">
-            <h3 class="card-title">Quick Actions</h3>
+            <h3 class="card-title">{{ $t('dashboard.quickActions') }}</h3>
             <div class="quick-actions">
               <button class="action-button primary">
                 <div class="action-icon">
@@ -137,7 +190,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                 </div>
-                <span>New Sale</span>
+                <span>{{ $t('dashboard.newSale') }}</span>
               </button>
 
               <button class="action-button green">
@@ -146,7 +199,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <span>Manage Vendors</span>
+                <span>{{ $t('dashboard.manageVendors') }}</span>
               </button>
 
               <button class="action-button purple">
@@ -155,7 +208,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                   </svg>
                 </div>
-                <span>View Orders</span>
+                <span>{{ $t('dashboard.viewOrders') }}</span>
               </button>
 
               <button class="action-button yellow">
@@ -164,7 +217,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <span>Reports</span>
+                <span>{{ $t('dashboard.reports') }}</span>
               </button>
             </div>
           </div>
@@ -175,16 +228,16 @@
           <!-- Recent Sales -->
           <div class="activity-card">
             <div class="card-header">
-              <h3 class="card-title">Recent Sales</h3>
-              <button class="view-all-button">View all</button>
+              <h3 class="card-title">{{ $t('dashboard.recentSales') }}</h3>
+              <button class="view-all-button">{{ $t('common.viewAll') }}</button>
             </div>
             
             <div v-if="dashboardStore.recentSales.length === 0" class="empty-state">
               <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <p class="empty-title">No recent sales found</p>
-              <p class="empty-subtitle">Sales will appear here once they are created</p>
+              <p class="empty-title">{{ $t('dashboard.noRecentSales') }}</p>
+              <p class="empty-subtitle">{{ $t('dashboard.salesWillAppear') }}</p>
             </div>
             
             <div v-else class="sales-list">
@@ -194,11 +247,11 @@
                 class="sale-item"
               >
                 <div class="sale-info">
-                  <p class="sale-product">{{ sale.descricao_produto || 'Product sale' }}</p>
-                  <p class="sale-details">{{ sale.vendedor_nome || 'Unknown vendor' }} • {{ formatDate(sale.data_venda) }}</p>
+                  <p class="sale-product">{{ sale.descricao_produto || $t('dashboard.productSale') }}</p>
+                  <p class="sale-details">{{ sale.vendedor_nome || $t('dashboard.unknownVendor') }} • {{ formatDate(sale.data_venda) }}</p>
                 </div>
                 <div class="sale-amount">
-                  <p class="sale-value">{{ sale.moeda }} {{ formatCurrency(sale.valor_liquido) }}</p>
+                  <p class="sale-value">{{ sale.moeda }} {{ formatOriginalCurrency(sale.valor_liquido) }}</p>
                   <p class="sale-method">{{ sale.metodo_pagamento }}</p>
                 </div>
               </div>
@@ -207,44 +260,85 @@
 
           <!-- System Status -->
           <div class="activity-card">
-            <h3 class="card-title">System Status</h3>
+            <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
             <div class="status-list">
               <div class="status-item">
                 <div class="status-indicator online"></div>
-                <span class="status-label">API Server</span>
-                <span class="status-value online">Online</span>
+                <span class="status-label">{{ $t('dashboard.apiServer') }}</span>
+                <span class="status-value online">{{ $t('dashboard.online') }}</span>
               </div>
               
               <div class="status-item">
                 <div class="status-indicator online"></div>
-                <span class="status-label">Database</span>
-                <span class="status-value online">Connected</span>
+                <span class="status-label">{{ $t('dashboard.database') }}</span>
+                <span class="status-value online">{{ $t('dashboard.connected') }}</span>
               </div>
               
               <div class="status-item">
                 <div class="status-indicator warning"></div>
-                <span class="status-label">Exchange Rates</span>
-                <span class="status-value warning">Last updated 2h ago</span>
+                <span class="status-label">{{ $t('dashboard.exchangeRates') }}</span>
+                <span class="status-value warning">{{ $t('dashboard.lastUpdated', { time: '2h ago' }) }}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
     </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <div class="footer-info">
+            <span class="footer-brand">ERP Eleven</span>
+            <span class="footer-version">v1.0.0</span>
+            <span class="footer-version">Developed by lucasadrianof</span>
+          </div>
+        </div>
+        
+        <div class="footer-center">
+          <div class="footer-status">
+            <span class="system-status-indicator"></span>
+            <span class="system-status-text">System Online</span>
+          </div>
+        </div>
+        
+        <div class="footer-right">
+          <div class="footer-links">
+            <button class="footer-link">{{ $t('footer.help') }}</button>
+            <button class="footer-link">{{ $t('footer.settings') }}</button>
+            <button class="footer-link">{{ $t('footer.about') }}</button>
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useDashboardStore } from '@/stores/dashboard'
+import { useCurrencyStore } from '@/stores/currency'
+import { availableLocales, setLocale } from '@/i18n'
+import type { CurrencyCode } from '@/stores/currency'
 
 const router = useRouter()
+const { locale, t } = useI18n()
 const authStore = useAuthStore()
 const dashboardStore = useDashboardStore()
+const currencyStore = useCurrencyStore()
 
 const currentTime = ref('')
+const showCurrencyDropdown = ref(false)
+const showLanguageDropdown = ref(false)
+
+const currentLocale = computed(() => locale.value)
+const getCurrentLanguage = computed(() => {
+  return availableLocales.find(lang => lang.code === currentLocale.value)
+})
 
 const updateTime = () => {
   currentTime.value = new Date().toLocaleString('en-US', {
@@ -257,7 +351,14 @@ const updateTime = () => {
   })
 }
 
-const formatCurrency = (value: number) => {
+const formatCurrency = (value: number, fromCurrency: CurrencyCode = 'R$') => {
+  // Convert from the original currency (usually R$) to the selected currency
+  const convertedValue = currencyStore.convertBetweenCurrencies(value, fromCurrency, currencyStore.selectedCurrency)
+  return currencyStore.formatCurrency(convertedValue)
+}
+
+const formatOriginalCurrency = (value: number) => {
+  // Format the original value without currency conversion for financial transparency
   return value.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -273,11 +374,43 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-let timeInterval: NodeJS.Timeout
+const toggleCurrencyDropdown = () => {
+  showCurrencyDropdown.value = !showCurrencyDropdown.value
+  showLanguageDropdown.value = false
+}
+
+const toggleLanguageDropdown = () => {
+  showLanguageDropdown.value = !showLanguageDropdown.value
+  showCurrencyDropdown.value = false
+}
+
+const handleCurrencyChange = (currencyCode: CurrencyCode) => {
+  currencyStore.setSelectedCurrency(currencyCode)
+  showCurrencyDropdown.value = false
+  // Refresh dashboard data to reflect currency changes
+  dashboardStore.refreshData()
+}
+
+const handleLanguageChange = (langCode: string) => {
+  setLocale(langCode)
+  showLanguageDropdown.value = false
+}
+
+// Close dropdowns when clicking outside
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.dropdown')) {
+    showCurrencyDropdown.value = false
+    showLanguageDropdown.value = false
+  }
+}
+
+let timeInterval: number
 
 onMounted(async () => {
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
+  document.addEventListener('click', handleClickOutside)
   
   await dashboardStore.refreshData()
 })
@@ -286,6 +419,7 @@ onUnmounted(() => {
   if (timeInterval) {
     clearInterval(timeInterval)
   }
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -347,6 +481,86 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.header-control {
+  position: relative;
+}
+
+.header-dropdown-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.header-dropdown-button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.header-dropdown-button:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.control-flag {
+  font-size: 0.875rem;
+  width: 1.25rem;
+  display: inline-block;
+}
+
+.control-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.header-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  margin-top: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+  min-width: 200px;
+}
+
+.header-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.header-dropdown-item:hover {
+  background-color: #f9fafb;
+}
+
+.header-dropdown-item.active {
+  background-color: #eff6ff;
+  color: #2563eb;
 }
 
 .current-time {
@@ -783,6 +997,222 @@ onUnmounted(() => {
   color: #f59e0b;
 }
 
+/* Footer Styles */
+.dashboard-footer {
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+  margin-top: auto;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-brand {
+  font-weight: 600;
+  color: #2563eb;
+  font-size: 0.875rem;
+}
+
+.footer-version {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.75rem;
+}
+
+.footer-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.system-status-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: #10b981;
+}
+
+.system-status-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.footer-controls {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  position: relative;
+}
+
+.control-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: center;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  min-width: 120px;
+  justify-content: space-between;
+}
+
+.dropdown-button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.dropdown-button:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.dropdown-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #6b7280;
+  transition: transform 0.2s;
+}
+
+.dropdown-icon.rotate {
+  transform: rotate(180deg);
+}
+
+.currency-flag,
+.language-flag {
+  font-size: 1rem;
+  width: 1.25rem;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  margin-top: 0.25rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f9fafb;
+}
+
+.dropdown-item.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.currency-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.currency-code {
+  font-weight: 500;
+  line-height: 1;
+}
+
+.currency-name {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.language-name {
+  font-weight: 500;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-link {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: #2563eb;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -814,6 +1244,48 @@ onUnmounted(() => {
   .header-right {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header-control {
+    flex-shrink: 0;
+  }
+
+  .header-dropdown-button {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
+
+  .header-dropdown-menu {
+    min-width: 150px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .footer-controls {
+    gap: 1rem;
+  }
+
+  .control-group {
+    align-items: center;
+  }
+
+  .dropdown-button {
+    min-width: 100px;
+    font-size: 0.75rem;
+  }
+
+  .footer-links {
+    gap: 0.5rem;
+  }
+
+  .footer-link {
+    font-size: 0.75rem;
   }
 }
 </style>

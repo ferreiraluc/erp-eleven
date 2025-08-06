@@ -8,8 +8,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         </div>
-        <h2 class="login-title">Welcome to ERP Eleven</h2>
-        <p class="login-subtitle">Sign in to your account to continue</p>
+        <h2 class="login-title">{{ $t('auth.welcomeTitle') }}</h2>
+        <p class="login-subtitle">{{ $t('auth.signInSubtitle') }}</p>
       </div>
       
       <div class="card">
@@ -25,7 +25,7 @@
             </div>
 
             <div class="form-group">
-              <label for="email" class="form-label">Email address</label>
+              <label for="email" class="form-label">{{ $t('auth.emailLabel') }}</label>
               <input
                 id="email"
                 v-model="credentials.email"
@@ -33,13 +33,13 @@
                 autocomplete="email"
                 required
                 class="input-field"
-                placeholder="Enter your email"
+                :placeholder="$t('auth.emailPlaceholder')"
                 :disabled="authStore.isLoading"
               />
             </div>
 
             <div class="form-group">
-              <label for="password" class="form-label">Password</label>
+              <label for="password" class="form-label">{{ $t('auth.passwordLabel') }}</label>
               <input
                 id="password"
                 v-model="credentials.senha"
@@ -47,7 +47,7 @@
                 autocomplete="current-password"
                 required
                 class="input-field"
-                placeholder="Enter your password"
+                :placeholder="$t('auth.passwordPlaceholder')"
                 :disabled="authStore.isLoading"
               />
             </div>
@@ -60,11 +60,11 @@
                   type="checkbox"
                   class="checkbox"
                 />
-                <label for="remember-me" class="checkbox-label">Remember me</label>
+                <label for="remember-me" class="checkbox-label">{{ $t('auth.rememberMe') }}</label>
               </div>
 
               <div class="forgot-password">
-                <a href="#" class="forgot-link">Forgot your password?</a>
+                <a href="#" class="forgot-link">{{ $t('auth.forgotPassword') }}</a>
               </div>
             </div>
 
@@ -83,14 +83,14 @@
                 <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {{ authStore.isLoading ? 'Signing in...' : 'Sign in' }}
+              {{ authStore.isLoading ? $t('auth.signingIn') : $t('auth.signInButton') }}
             </button>
           </form>
         </div>
       </div>
 
       <div class="test-credentials">
-        <p>Test credentials: admin@loja.com / 123456</p>
+        <p>{{ $t('auth.testCredentials') }}</p>
       </div>
     </div>
   </div>
@@ -99,9 +99,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const { t } = useI18n()
 const authStore = useAuthStore()
 
 const credentials = ref({

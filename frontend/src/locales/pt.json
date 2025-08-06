@@ -1,0 +1,82 @@
+{
+  "common": {
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "export": "Exportar",
+    "import": "Importar",
+    "refresh": "Atualizar",
+    "logout": "Sair",
+    "login": "Entrar",
+    "signup": "Cadastrar",
+    "viewAll": "Ver tudo",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "yes": "Sim",
+    "no": "Não"
+  },
+  "auth": {
+    "welcomeTitle": "Bem-vindo ao ERP Eleven",
+    "signInSubtitle": "Entre na sua conta para continuar",
+    "emailLabel": "Endereço de email",
+    "passwordLabel": "Senha",
+    "emailPlaceholder": "Digite seu email",
+    "passwordPlaceholder": "Digite sua senha",
+    "rememberMe": "Lembrar-me",
+    "forgotPassword": "Esqueceu sua senha?",
+    "signInButton": "Entrar",
+    "signingIn": "Entrando...",
+    "testCredentials": "Credenciais de teste: admin@loja.com / 123456"
+  },
+  "dashboard": {
+    "welcomeBack": "Bem-vindo de volta, {name}!",
+    "loadingDashboard": "Carregando dashboard...",
+    "todaysSales": "Vendas de Hoje",
+    "weeklySales": "Vendas da Semana",
+    "pendingOrders": "Pedidos Pendentes",
+    "activeVendors": "Vendedores Ativos",
+    "exchangeRate": "Taxa de Câmbio",
+    "exchangeRateLabel": "Taxa de Câmbio USD",
+    "quickActions": "Ações Rápidas",
+    "newSale": "Nova Venda",
+    "manageVendors": "Gerenciar Vendedores",
+    "viewOrders": "Ver Pedidos",
+    "reports": "Relatórios",
+    "recentSales": "Vendas Recentes",
+    "systemStatus": "Status do Sistema",
+    "apiServer": "Servidor API",
+    "database": "Banco de Dados",
+    "exchangeRates": "Taxas de Câmbio",
+    "online": "Online",
+    "connected": "Conectado",
+    "lastUpdated": "Última atualização há {time}",
+    "noRecentSales": "Nenhuma venda recente encontrada",
+    "salesWillAppear": "As vendas aparecerão aqui assim que forem criadas",
+    "unknownVendor": "Vendedor desconhecido",
+    "productSale": "Venda de produto"
+  },
+  "footer": {
+    "currency": "Moeda",
+    "language": "Idioma",
+    "settings": "Configurações",
+    "help": "Ajuda",
+    "about": "Sobre",
+    "version": "Versão"
+  },
+  "currencies": {
+    "USD": "USD (Dólar Americano)",
+    "G$": "₲ (Guarani Paraguaio)",
+    "R$": "R$ (Real Brasileiro)",
+    "EUR": "EUR (Euro)"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "pt": "Português (BR)"
+  }
+}

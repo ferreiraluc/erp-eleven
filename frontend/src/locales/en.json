@@ -1,0 +1,82 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign Up",
+    "viewAll": "View all",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "welcomeTitle": "Welcome to ERP Eleven",
+    "signInSubtitle": "Sign in to your account to continue",
+    "emailLabel": "Email address",
+    "passwordLabel": "Password",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot your password?",
+    "signInButton": "Sign in",
+    "signingIn": "Signing in...",
+    "testCredentials": "Test credentials: admin@loja.com / 123456"
+  },
+  "dashboard": {
+    "welcomeBack": "Welcome back, {name}!",
+    "loadingDashboard": "Loading dashboard...",
+    "todaysSales": "Today's Sales",
+    "weeklySales": "Weekly Sales",
+    "pendingOrders": "Pending Orders",
+    "activeVendors": "Active Vendors",
+    "exchangeRate": "Exchange Rate",
+    "exchangeRateLabel": "USD Exchange Rate",
+    "quickActions": "Quick Actions",
+    "newSale": "New Sale",
+    "manageVendors": "Manage Vendors",
+    "viewOrders": "View Orders",
+    "reports": "Reports",
+    "recentSales": "Recent Sales",
+    "systemStatus": "System Status",
+    "apiServer": "API Server",
+    "database": "Database",
+    "exchangeRates": "Exchange Rates",
+    "online": "Online",
+    "connected": "Connected",
+    "lastUpdated": "Last updated {time}",
+    "noRecentSales": "No recent sales found",
+    "salesWillAppear": "Sales will appear here once they are created",
+    "unknownVendor": "Unknown vendor",
+    "productSale": "Product sale"
+  },
+  "footer": {
+    "currency": "Currency",
+    "language": "Language",
+    "settings": "Settings",
+    "help": "Help",
+    "about": "About",
+    "version": "Version"
+  },
+  "currencies": {
+    "USD": "USD (US Dollar)",
+    "G$": "₲ (Paraguayan Guaraní)",
+    "R$": "R$ (Brazilian Real)",
+    "EUR": "EUR (Euro)"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "pt": "Português (BR)"
+  }
+}
