@@ -29,8 +29,6 @@ services:
   - type: web
     name: erp-eleven-frontend
     runtime: node
-    region: sao-paulo
-    plan: free
     buildCommand: cd frontend && npm ci && npm run build
     startCommand: cd frontend && npm start
     envVars:
