@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = parseInt(process.env.PORT, 10) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 const distPath = path.join(__dirname, 'dist');
@@ -89,9 +89,26 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(port, '0.0.0.0', () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Frontend server running on port ${port}`);
   if (!isProduction) {
     console.log(`Health check: http://localhost:${port}/health`);
   }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
 });
