@@ -91,7 +91,6 @@ venv.bak/
 
 # React Build
 frontend/build/
-frontend/dist/
 frontend/.next/
 frontend/out/
 
@@ -219,8 +218,6 @@ frontend/out/
 
 # Nuxt.js
 frontend/.nuxt
-frontend/dist
-
 # Gatsby
 frontend/.cache/
 
