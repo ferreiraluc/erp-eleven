@@ -24,14 +24,7 @@ services:
   # Frontend Web Service (New)
   - type: web
     name: erp-eleven-frontend
-    runtime: node
+    runtime: static
     buildCommand: cd frontend && npm install && npm run build
     startCommand: cd frontend && npm start
-    envVars:
-      - key: NODE_VERSION
-        value: 20.19.0  
-      - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: erp-eleven-backend
-          property: host
+    
