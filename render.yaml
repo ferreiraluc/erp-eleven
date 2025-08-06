@@ -22,8 +22,9 @@ services:
         value: 30
 
   # Frontend Web Service (when frontend is created)
-  - type: static
+  - type: web
     name: erp-eleven-frontend
+    runtime: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     
