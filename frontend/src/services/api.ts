@@ -2,31 +2,12 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-// Debug: Log API configuration
-console.log('🔧 API_BASE_URL configured as:', API_BASE_URL)
-console.log('🔧 Environment variables:', {
-  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-  MODE: import.meta.env.MODE,
-  PROD: import.meta.env.PROD
-})
-
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-})
-
-// Debug: Log all requests
-api.interceptors.request.use((config) => {
-  console.log('🌐 Making API request:', {
-    method: config.method?.toUpperCase(),
-    url: config.url,
-    baseURL: config.baseURL,
-    fullURL: `${config.baseURL}${config.url}`
-  })
-  return config
 })
 
 // Request interceptor to add auth token

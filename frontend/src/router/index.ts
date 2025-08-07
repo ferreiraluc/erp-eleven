@@ -33,40 +33,40 @@ const router = createRouter({
   ],
 })
 
-// Navigation guards - temporarily disabled for debugging
-// router.beforeEach(async (to, _from, next) => {
-//   try {
-//     const authStore = useAuthStore()
+// Navigation guards
+router.beforeEach(async (to, _from, next) => {
+  try {
+    const authStore = useAuthStore()
     
-//     // Load stored auth if not already loaded
-//     if (!authStore.token) {
-//       authStore.loadStoredAuth()
-//     }
+    // Load stored auth if not already loaded
+    if (!authStore.token) {
+      authStore.loadStoredAuth()
+    }
     
-//     // Check if route requires authentication
-//     if (to.meta.requiresAuth) {
-//       if (authStore.isAuthenticated) {
-//         next()
-//       } else {
-//         next('/login')
-//       }
-//     }
-//     // Check if route requires guest (user not logged in)
-//     else if (to.meta.requiresGuest) {
-//       if (authStore.isAuthenticated) {
-//         next('/dashboard')
-//       } else {
-//         next()
-//       }
-//     }
-//     // Public routes
-//     else {
-//       next()
-//     }
-//   } catch (error) {
-//     console.error('Router navigation error:', error)
-//     next('/login')
-//   }
-// })
+    // Check if route requires authentication
+    if (to.meta.requiresAuth) {
+      if (authStore.isAuthenticated) {
+        next()
+      } else {
+        next('/login')
+      }
+    }
+    // Check if route requires guest (user not logged in)
+    else if (to.meta.requiresGuest) {
+      if (authStore.isAuthenticated) {
+        next('/dashboard')
+      } else {
+        next()
+      }
+    }
+    // Public routes
+    else {
+      next()
+    }
+  } catch (error) {
+    console.error('Router navigation error:', error)
+    next('/login')
+  }
+})
 
 export default router
