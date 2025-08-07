@@ -11,7 +11,7 @@ from ...models.usuario import Usuario, UsuarioRole
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-@router.post("/create-admin")
+@router.get("/create-admin")
 async def create_admin_user(db: Session = Depends(get_db)):
     """Create initial admin user - USE ONLY FOR SETUP"""
     
