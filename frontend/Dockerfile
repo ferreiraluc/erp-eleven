@@ -50,8 +50,14 @@ RUN addgroup -g 1001 -S nodejs && \
 # Change ownership and permissions of the app directory
 RUN chown -R nextjs:nodejs /app && \
     chmod -R 755 /app && \
-    chmod -R 644 /app/dist/* && \
-    chmod 755 /app/dist /app/dist/assets
+    find /app/dist -type f -exec chmod 644 {} \; && \
+    find /app/dist -type d -exec chmod 755 {} \;
+
+# Debug: Verify permissions after changes
+RUN echo "Checking final permissions:" && \
+    ls -la /app && \
+    ls -la /app/dist && \
+    ls -la /app/dist/assets | head -5
 
 USER nextjs
 
