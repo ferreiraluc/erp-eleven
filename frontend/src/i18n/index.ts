@@ -27,8 +27,15 @@ export const i18n = createI18n({
   locale: getStoredLocale(),
   fallbackLocale: 'en',
   messages,
-  globalInjection: true
+  globalInjection: true,
+  silentTranslationWarn: false,
+  missingWarn: false,
+  silentFallbackWarn: false
 })
+
+// Debug: Log i18n configuration
+console.log('🌍 i18n initialized with locale:', i18n.global.locale.value)
+console.log('🌍 Available messages:', Object.keys(messages))
 
 export const availableLocales = [
   { code: 'en', name: 'English', flag: '🇺🇸' },

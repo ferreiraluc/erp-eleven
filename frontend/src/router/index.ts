@@ -1,13 +1,7 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { h } from 'vue'
-
-// Simple fallback component for debugging
-const TestComponent = {
-  render() {
-    return h('div', { style: 'padding: 20px; background: red; color: white;' }, 'TEST COMPONENT WORKING!')
-  }
-}
+import LoginView from '@/views/LoginView.vue'
+import DashboardView from '@/views/DashboardView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -19,13 +13,13 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: TestComponent,
+      component: LoginView,
       meta: { requiresGuest: true }
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('../views/DashboardView.vue'),
+      component: DashboardView,
       meta: { requiresAuth: true }
     },
     // Catch all route
