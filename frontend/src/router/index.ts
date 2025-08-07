@@ -14,7 +14,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: TestView,
+      component: LoginView,
       meta: { requiresGuest: true }
     },
     {
