@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,8 +78,7 @@ app.get('/debug/index', (_req, res) => {
 app.get('/debug/assets', (_req, res) => {
   const assetsPath = path.join(distPath, 'assets');
   try {
-    const fs = require('fs');
-    const files = existsSync(assetsPath) ? fs.readdirSync(assetsPath) : [];
+    const files = existsSync(assetsPath) ? readdirSync(assetsPath) : [];
     
     res.json({
       assetsPath: assetsPath,
@@ -97,14 +96,13 @@ app.get('/debug/assets', (_req, res) => {
 // Test serving a specific asset manually
 app.get('/debug/test-js', (_req, res) => {
   try {
-    const fs = require('fs');
     const assetsPath = path.join(distPath, 'assets');
-    const files = fs.readdirSync(assetsPath);
+    const files = readdirSync(assetsPath);
     const jsFile = files.find(f => f.startsWith('index-') && f.endsWith('.js'));
     
     if (jsFile) {
       const jsPath = path.join(assetsPath, jsFile);
-      const content = fs.readFileSync(jsPath, 'utf8');
+      const content = readFileSync(jsPath, 'utf8');
       res.type('application/javascript').send(content.substring(0, 500) + '...[truncated]');
     } else {
       res.status(404).json({ error: 'No index JS file found', files });
