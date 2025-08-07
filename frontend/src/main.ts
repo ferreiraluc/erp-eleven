@@ -13,4 +13,11 @@ app.use(createPinia())
 app.use(router)
 app.use(i18n)
 
-app.mount('#app')
+// Wait for router to be ready before mounting
+router.isReady().then(() => {
+  app.mount('#app')
+}).catch((error) => {
+  console.error('Router initialization failed:', error)
+  // Mount anyway to show error state
+  app.mount('#app')
+})
