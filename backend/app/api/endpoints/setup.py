@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from ...database import get_db
-from ...models.usuario import Usuario, UserRole
+from ...models.usuario import Usuario, UsuarioRole
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -16,7 +16,7 @@ async def create_admin_user(db: Session = Depends(get_db)):
     """Create initial admin user - USE ONLY FOR SETUP"""
     
     # Check if any admin user already exists
-    existing_admin = db.query(Usuario).filter(Usuario.role == UserRole.ADMIN).first()
+    existing_admin = db.query(Usuario).filter(Usuario.role == UsuarioRole.ADMIN).first()
     if existing_admin:
         return {
             "message": "Admin user already exists",
@@ -32,7 +32,7 @@ async def create_admin_user(db: Session = Depends(get_db)):
         nome="Administrador",
         email="admin@loja.com",
         senha_hash=hashed_password,
-        role=UserRole.ADMIN,
+        role=UsuarioRole.ADMIN,
         ativo=True
     )
     
