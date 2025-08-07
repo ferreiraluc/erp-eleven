@@ -6,12 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: () => {
-        // Load auth data immediately to check authentication status
-        const authStore = useAuthStore()
-        authStore.loadStoredAuth()
-        return authStore.isAuthenticated ? '/dashboard' : '/login'
-      }
+      redirect: '/login'
     },
     {
       path: '/login',
@@ -28,43 +23,44 @@ const router = createRouter({
     // Catch all route
     {
       path: '/:pathMatch(.*)*',
-      redirect: () => {
-        const authStore = useAuthStore()
-        authStore.loadStoredAuth()
-        return authStore.isAuthenticated ? '/dashboard' : '/login'
-      }
+      redirect: '/login'
     }
   ],
 })
 
 // Navigation guards
-router.beforeEach((to, _from, next) => {
-  const authStore = useAuthStore()
-  
-  // Load stored auth if not already loaded
-  if (!authStore.token) {
-    authStore.loadStoredAuth()
-  }
-  
-  // Check if route requires authentication
-  if (to.meta.requiresAuth) {
-    if (authStore.isAuthenticated) {
-      next()
-    } else {
-      next('/login')
+router.beforeEach(async (to, _from, next) => {
+  try {
+    const authStore = useAuthStore()
+    
+    // Load stored auth if not already loaded
+    if (!authStore.token) {
+      authStore.loadStoredAuth()
     }
-  }
-  // Check if route requires guest (user not logged in)
-  else if (to.meta.requiresGuest) {
-    if (authStore.isAuthenticated) {
-      next('/dashboard')
-    } else {
+    
+    // Check if route requires authentication
+    if (to.meta.requiresAuth) {
+      if (authStore.isAuthenticated) {
+        next()
+      } else {
+        next('/login')
+      }
+    }
+    // Check if route requires guest (user not logged in)
+    else if (to.meta.requiresGuest) {
+      if (authStore.isAuthenticated) {
+        next('/dashboard')
+      } else {
+        next()
+      }
+    }
+    // Public routes
+    else {
       next()
     }
-  }
-  // Public routes
-  else {
-    next()
+  } catch (error) {
+    console.error('Router navigation error:', error)
+    next('/login')
   }
 })
 
