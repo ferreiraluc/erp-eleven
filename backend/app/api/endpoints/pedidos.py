@@ -26,7 +26,9 @@ def listar_pedidos(
     if status:
         query = query.filter(Pedido.status == status)
     if cidade:
-        query = query.filter(Pedido.endereco_cidade.ilike(f"%{cidade}%"))
+        # Sanitize input to prevent SQL injection
+        safe_cidade = cidade.replace('%', '\\%').replace('_', '\\_').replace('\\', '\\\\')
+        query = query.filter(Pedido.endereco_cidade.ilike(f"%{safe_cidade}%"))
     if transportadora:
         query = query.filter(Pedido.transportadora == transportadora)
     

@@ -8,16 +8,26 @@ from ...models.venda import Venda
 from ...schemas.venda import VendaCreate, VendaResponse
 from ...utils import calculate_net_amount
 from ...services.thais_transfer_service import ThaisTransferService
+from ...dependencies import get_current_active_user
 
 router = APIRouter()
 
 @router.get("/", response_model=List[VendaResponse])
-def listar_vendas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def listar_vendas(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     vendas = db.query(Venda).offset(skip).limit(limit).all()
     return vendas
 
 @router.post("/", response_model=VendaResponse)
-def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
+def criar_venda(
+    venda: VendaCreate, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     # Calculate net amount and fee based on payment method
     valor_liquido, taxa_desconto = calculate_net_amount(
         float(venda.valor_bruto), 
@@ -55,7 +65,11 @@ def criar_venda(venda: VendaCreate, db: Session = Depends(get_db)):
     return db_venda
 
 @router.get("/{venda_id}", response_model=VendaResponse)
-def obter_venda(venda_id: str, db: Session = Depends(get_db)):
+def obter_venda(
+    venda_id: str, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     venda = db.query(Venda).filter(Venda.id == venda_id).first()
     if not venda:
         raise HTTPException(status_code=404, detail="Venda não encontrada")

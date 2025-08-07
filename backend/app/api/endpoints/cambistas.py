@@ -5,16 +5,24 @@ from ...database import get_db
 from ...models.cambista import Cambista
 from ...models.exchange_rate import ExchangeRate, CurrencyPair
 from ...schemas.cambista import CambistaCreate, CambistaResponse
+from ...dependencies import get_current_active_user, require_role
 
 router = APIRouter()
 
 @router.get("/", response_model=List[CambistaResponse])
-def listar_cambistas(db: Session = Depends(get_db)):
+def listar_cambistas(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     cambistas = db.query(Cambista).filter(Cambista.ativo == True).all()
     return cambistas
 
 @router.post("/", response_model=CambistaResponse)
-def criar_cambista(cambista: CambistaCreate, db: Session = Depends(get_db)):
+def criar_cambista(
+    cambista: CambistaCreate, 
+    db: Session = Depends(get_db),
+    current_user = Depends(require_role(["ADMIN", "GERENTE"]))
+):
     db_cambista = Cambista(**cambista.dict())
     db.add(db_cambista)
     db.commit()
@@ -22,14 +30,22 @@ def criar_cambista(cambista: CambistaCreate, db: Session = Depends(get_db)):
     return db_cambista
 
 @router.get("/{cambista_id}", response_model=CambistaResponse)
-def obter_cambista(cambista_id: str, db: Session = Depends(get_db)):
+def obter_cambista(
+    cambista_id: str, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     cambista = db.query(Cambista).filter(Cambista.id == cambista_id).first()
     if not cambista:
         raise HTTPException(status_code=404, detail="Cambista não encontrado")
     return cambista
 
 @router.get("/{cambista_id}/current-rates")
-def get_cambista_with_current_rates(cambista_id: str, db: Session = Depends(get_db)):
+def get_cambista_with_current_rates(
+    cambista_id: str, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     """Get cambista with current exchange rates from the system"""
     cambista = db.query(Cambista).filter(Cambista.id == cambista_id).first()
     if not cambista:

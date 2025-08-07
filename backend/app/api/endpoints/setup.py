@@ -1,6 +1,8 @@
 """
 Setup endpoints for initial database configuration
 These endpoints should only be used during initial setup
+WARNING: These endpoints are NOT included in main.py for security reasons
+They contain hardcoded credentials and should only be used in development
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session

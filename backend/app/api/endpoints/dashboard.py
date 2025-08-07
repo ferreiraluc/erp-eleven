@@ -7,11 +7,15 @@ from ...database import get_db
 from ...models.venda import Venda
 from ...models.vendedor import Vendedor
 from ...models.pedido import Pedido
+from ...dependencies import get_current_active_user
 
 router = APIRouter()
 
 @router.get("/stats")
-def get_dashboard_stats(db: Session = Depends(get_db)) -> Dict[str, Any]:
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+) -> Dict[str, Any]:
     # Get current date
     today = date.today()
     
@@ -59,7 +63,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)) -> Dict[str, Any]:
 def get_vendas_por_periodo(
     start_date: str = None,
     end_date: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
 ) -> List[Dict[str, Any]]:
     query = db.query(
         func.date(Venda.data_venda).label('data'),
@@ -84,7 +89,10 @@ def get_vendas_por_periodo(
     ]
 
 @router.get("/vendedores-performance")
-def get_vendedores_performance(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
+def get_vendedores_performance(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+) -> List[Dict[str, Any]]:
     resultados = db.query(
         Vendedor.nome,
         func.count(Venda.id).label('total_vendas'),

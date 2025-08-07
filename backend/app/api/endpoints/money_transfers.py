@@ -14,6 +14,8 @@ from ...schemas.money_transfer import (
     TransferSummary
 )
 from ...services.thais_transfer_service import ThaisTransferService
+from ...models.usuario import Usuario
+from ...dependencies import get_current_active_user, require_role
 
 router = APIRouter()
 
@@ -22,7 +24,8 @@ def list_transfers(
     status: TransferStatus = None,
     skip: int = 0, 
     limit: int = 100, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     """List money transfers, optionally filtered by status"""
     query = db.query(MoneyTransfer)
@@ -34,14 +37,20 @@ def list_transfers(
     return transfers
 
 @router.get("/pending", response_model=List[MoneyTransferResponse])
-def list_pending_transfers(db: Session = Depends(get_db)):
+def list_pending_transfers(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     """List all pending transfers (money sent but not yet delivered)"""
     return db.query(MoneyTransfer).filter(
         MoneyTransfer.status == TransferStatus.PENDING
     ).order_by(desc(MoneyTransfer.transfer_date)).all()
 
 @router.get("/summary", response_model=TransferSummary)
-def get_transfer_summary(db: Session = Depends(get_db)):
+def get_transfer_summary(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     """Get summary of transfers for dashboard"""
     
     # Count pending and delivered transfers
@@ -82,7 +91,11 @@ def get_transfer_summary(db: Session = Depends(get_db)):
     )
 
 @router.post("/", response_model=MoneyTransferResponse)
-def create_transfer(transfer: MoneyTransferCreate, db: Session = Depends(get_db)):
+def create_transfer(
+    transfer: MoneyTransferCreate, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
+):
     """Create new money transfer to Thais"""
     
     # Calculate Thais' fee and net amount
@@ -104,7 +117,11 @@ def create_transfer(transfer: MoneyTransferCreate, db: Session = Depends(get_db)
     return db_transfer
 
 @router.get("/{transfer_id}", response_model=MoneyTransferResponse)
-def get_transfer(transfer_id: str, db: Session = Depends(get_db)):
+def get_transfer(
+    transfer_id: str, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     """Get specific transfer by ID"""
     transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
     if not transfer:
@@ -115,7 +132,8 @@ def get_transfer(transfer_id: str, db: Session = Depends(get_db)):
 def update_transfer(
     transfer_id: str, 
     transfer_update: MoneyTransferUpdate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Update transfer details"""
     transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
@@ -146,7 +164,8 @@ def update_transfer(
 def confirm_delivery(
     transfer_id: str, 
     confirmation: DeliveryConfirmation, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Confirm that money has been delivered to the store"""
     transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
@@ -173,7 +192,12 @@ def confirm_delivery(
     return transfer
 
 @router.post("/{transfer_id}/cancel", response_model=MoneyTransferResponse)
-def cancel_transfer(transfer_id: str, reason: str = None, db: Session = Depends(get_db)):
+def cancel_transfer(
+    transfer_id: str, 
+    reason: str = None, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
+):
     """Cancel a transfer"""
     transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
     if not transfer:
@@ -195,7 +219,10 @@ def cancel_transfer(transfer_id: str, reason: str = None, db: Session = Depends(
     return transfer
 
 @router.get("/thais/pending-balance")
-def get_thais_pending_balance(db: Session = Depends(get_db)):
+def get_thais_pending_balance(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
     """Get current pending balance that needs to be sent to Thais"""
     return ThaisTransferService.get_pending_thais_balance(db)
 
@@ -205,7 +232,8 @@ def send_transfer_to_thais(
     transfer_method: str = "PIX",
     reference_number: str = None,
     sent_by: str = "Store Manager",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Mark accumulated transfer as sent to Thais"""
     try:
@@ -222,7 +250,8 @@ def send_transfer_to_thais(
 def get_weekly_thais_summary(
     start_date: str,
     end_date: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
 ):
     """Get Thais-related summary for weekly balance calculation"""
     from datetime import datetime

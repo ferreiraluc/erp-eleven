@@ -10,11 +10,15 @@ from ...schemas.exchange_rate import (
     QuickRateUpdate,
     CurrentRatesResponse
 )
+from ...dependencies import get_current_active_user, require_role
 
 router = APIRouter()
 
 @router.get("/current", response_model=CurrentRatesResponse)
-def get_current_rates(db: Session = Depends(get_db)):
+def get_current_rates(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     """Get current exchange rates for easy frontend consumption"""
     rates = db.query(ExchangeRate).filter(ExchangeRate.is_active == True).all()
     
@@ -42,7 +46,11 @@ def get_current_rates(db: Session = Depends(get_db)):
     return result
 
 @router.post("/quick-update")
-def quick_update_rates(rates: QuickRateUpdate, db: Session = Depends(get_db)):
+def quick_update_rates(
+    rates: QuickRateUpdate, 
+    db: Session = Depends(get_db),
+    current_user = Depends(require_role(["ADMIN", "GERENTE"]))
+):
     """Quick update multiple exchange rates - perfect for footer editing"""
     updated_rates = []
     
@@ -130,12 +138,19 @@ def quick_update_rates(rates: QuickRateUpdate, db: Session = Depends(get_db)):
     }
 
 @router.get("/", response_model=List[ExchangeRateResponse])
-def list_exchange_rates(db: Session = Depends(get_db)):
+def list_exchange_rates(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     """List all exchange rates"""
     return db.query(ExchangeRate).filter(ExchangeRate.is_active == True).all()
 
 @router.post("/", response_model=ExchangeRateResponse)
-def create_exchange_rate(rate: ExchangeRateCreate, db: Session = Depends(get_db)):
+def create_exchange_rate(
+    rate: ExchangeRateCreate, 
+    db: Session = Depends(get_db),
+    current_user = Depends(require_role(["ADMIN", "GERENTE"]))
+):
     """Create new exchange rate"""
     # Check if rate already exists for this currency pair
     existing = db.query(ExchangeRate).filter(
@@ -156,7 +171,12 @@ def create_exchange_rate(rate: ExchangeRateCreate, db: Session = Depends(get_db)
     return db_rate
 
 @router.put("/{rate_id}", response_model=ExchangeRateResponse)
-def update_exchange_rate(rate_id: str, rate_update: ExchangeRateUpdate, db: Session = Depends(get_db)):
+def update_exchange_rate(
+    rate_id: str, 
+    rate_update: ExchangeRateUpdate, 
+    db: Session = Depends(get_db),
+    current_user = Depends(require_role(["ADMIN", "GERENTE"]))
+):
     """Update specific exchange rate"""
     rate = db.query(ExchangeRate).filter(ExchangeRate.id == rate_id).first()
     if not rate:
@@ -171,7 +191,11 @@ def update_exchange_rate(rate_id: str, rate_update: ExchangeRateUpdate, db: Sess
     return rate
 
 @router.get("/{currency_pair}")
-def get_rate_by_pair(currency_pair: CurrencyPair, db: Session = Depends(get_db)):
+def get_rate_by_pair(
+    currency_pair: CurrencyPair, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
     """Get current rate for specific currency pair"""
     rate = db.query(ExchangeRate).filter(
         ExchangeRate.currency_pair == currency_pair,
