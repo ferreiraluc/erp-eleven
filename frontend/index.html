@@ -20,12 +20,29 @@
     </div>
     <script type="module" src="/src/main.ts"></script>
     <script>
+      // Debug logging
+      console.log('Index.html loaded successfully');
+      
+      // Check if main script loads
+      window.addEventListener('error', (e) => {
+        console.error('Script loading error:', e);
+        const error = document.getElementById('loading-error');
+        if (error) {
+          error.style.display = 'block';
+          error.innerHTML = `<p>Erro ao carregar script: ${e.filename}</p>`;
+        }
+      });
+      
       // Fallback se o JavaScript não carregar em 10 segundos
       setTimeout(() => {
         const app = document.getElementById('app');
         const error = document.getElementById('loading-error');
         if (app && app.innerHTML.includes('Carregando aplicação...')) {
-          if (error) error.style.display = 'block';
+          console.log('Timeout: Vue app não carregou');
+          if (error) {
+            error.style.display = 'block';
+            error.innerHTML = '<p>Timeout: A aplicação não carregou. Verifique o console para mais detalhes.</p>';
+          }
         }
       }, 10000);
     </script>
