@@ -61,6 +61,8 @@
       setTimeout(() => {
         const app = document.getElementById('app');
         const error = document.getElementById('loading-error');
+        const appContent = app ? app.innerHTML : '';
+        
         if (app && app.innerHTML.includes('Carregando aplicação...')) {
           console.log('TIMEOUT: Vue app não iniciou');
           console.log('App content:', app.innerHTML);
@@ -69,8 +71,28 @@
             error.style.display = 'block';
             error.innerHTML = '<p>TIMEOUT: A aplicação Vue não iniciou. Verifique o console para detalhes.</p>';
           }
+        } else if (appContent.includes('<!---->')) {
+          console.log('Vue carregou mas router-view está vazio');
+          console.log('App content:', appContent);
+          console.log('Current URL:', window.location.href);
+          console.log('Current path:', window.location.pathname);
+          
+          // Try to debug router state
+          setTimeout(() => {
+            console.log('Checking if router and store are available...');
+            // Check if main Vue app instance exists
+            const vueApp = window.__VUE_APP__ || window.app;
+            console.log('Vue app instance:', !!vueApp);
+            
+            // Force navigation to login
+            if (window.location.pathname !== '/login') {
+              console.log('Navegando para /login...');
+              window.history.pushState({}, '', '/login');
+            }
+          }, 1000);
         } else {
           console.log('Vue parece ter carregado - conteúdo mudou');
+          console.log('Final app content:', appContent.substring(0, 200));
         }
       }, 8000);
     </script>

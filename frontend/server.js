@@ -129,6 +129,54 @@ app.get('/debug/main-entry', (_req, res) => {
   }
 });
 
+// Test routing by serving a basic HTML page
+app.get('/debug/test-route', (_req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Route Test</title>
+    </head>
+    <body>
+      <h1>Route Test - Frontend is working!</h1>
+      <p>This confirms the server can serve HTML content.</p>
+      <p>Time: ${new Date().toISOString()}</p>
+      <a href="/">Back to main app</a>
+    </body>
+    </html>
+  `);
+});
+
+// Serve a minimal Vue test page
+app.get('/debug/vue-test', (_req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Vue Test</title>
+      <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    </head>
+    <body>
+      <div id="app">
+        <h1>{{ message }}</h1>
+        <p>Vue version: {{ vueVersion }}</p>
+      </div>
+      <script>
+        const { createApp } = Vue;
+        createApp({
+          data() {
+            return {
+              message: 'Vue is working externally!',
+              vueVersion: Vue.version
+            };
+          }
+        }).mount('#app');
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 // Handle SPA routing - serve index.html for all non-API routes
 app.get('*', (req, res) => {
   if (!isProduction) {
