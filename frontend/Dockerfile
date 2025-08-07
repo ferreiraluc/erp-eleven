@@ -40,15 +40,19 @@ RUN npm install --only=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./server.js
 
-# Debug: Verify files are copied
-RUN ls -la && ls -la dist/
+# Debug: Verify files are copied and check permissions
+RUN ls -la && ls -la dist/ && ls -la dist/assets/
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
-# Change ownership of the app directory
-RUN chown -R nextjs:nodejs /app
+# Change ownership and permissions of the app directory
+RUN chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app && \
+    chmod -R 644 /app/dist/* && \
+    chmod 755 /app/dist /app/dist/assets
+
 USER nextjs
 
 # Expose port

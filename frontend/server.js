@@ -71,29 +71,6 @@ app.use(express.static(distPath, {
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
-  const fs = require('fs');
-  let distContents = [];
-  let assetsContents = [];
-  let indexSize = 0;
-  let indexContent = '';
-  
-  try {
-    if (existsSync(distPath)) {
-      distContents = fs.readdirSync(distPath);
-      const assetsPath = path.join(distPath, 'assets');
-      if (existsSync(assetsPath)) {
-        assetsContents = fs.readdirSync(assetsPath);
-      }
-    }
-    if (existsSync(indexPath)) {
-      const stats = fs.statSync(indexPath);
-      indexSize = stats.size;
-      indexContent = fs.readFileSync(indexPath, 'utf8').substring(0, 500); // First 500 chars
-    }
-  } catch (err) {
-    console.error('Error reading dist directory:', err);
-  }
-
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -101,61 +78,35 @@ app.get('/health', (_req, res) => {
     distPath: distPath,
     distExists: existsSync(distPath),
     indexExists: existsSync(indexPath),
-    indexSize: indexSize,
-    indexPreview: indexContent,
-    distContents: distContents,
-    assetsContents: assetsContents,
-    apiUrl: process.env.VITE_API_BASE_URL || 'not set'
+    apiUrl: process.env.VITE_API_BASE_URL || 'not set',
+    user: process.env.USER || 'unknown',
+    permissions: 'checking...'
   });
 });
 
-// Debug endpoint to see raw index.html
+// Simplified debug endpoints
 app.get('/debug/index', (_req, res) => {
-  const fs = require('fs');
   try {
-    if (existsSync(indexPath)) {
-      const content = fs.readFileSync(indexPath, 'utf8');
-      res.type('text/plain').send(content);
-    } else {
-      res.status(404).send('Index file not found');
-    }
+    res.json({
+      indexExists: existsSync(indexPath),
+      indexPath: indexPath,
+      message: 'Index file check'
+    });
   } catch (err) {
-    console.error('Debug index error:', err);
-    res.status(500).send('Error reading index file: ' + err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Test specific asset
-app.get('/debug/test-asset', (_req, res) => {
-  const fs = require('fs');
+app.get('/debug/assets', (_req, res) => {
   const assetsPath = path.join(distPath, 'assets');
-  
   try {
-    if (existsSync(assetsPath)) {
-      const files = fs.readdirSync(assetsPath);
-      const jsFiles = files.filter(f => f.endsWith('.js'));
-      if (jsFiles.length > 0) {
-        const firstJs = jsFiles[0];
-        const jsPath = path.join(assetsPath, firstJs);
-        const exists = existsSync(jsPath);
-        const stats = exists ? fs.statSync(jsPath) : null;
-        
-        res.json({
-          assetsPath,
-          files,
-          firstJs,
-          jsPath,
-          exists,
-          size: stats ? stats.size : 0
-        });
-      } else {
-        res.json({ error: 'No JS files found', files });
-      }
-    } else {
-      res.json({ error: 'Assets directory not found' });
-    }
+    res.json({
+      assetsPath: assetsPath,
+      assetsExists: existsSync(assetsPath),
+      distExists: existsSync(distPath),
+      message: 'Assets directory check'
+    });
   } catch (err) {
-    console.error('Test asset error:', err);
     res.status(500).json({ error: err.message });
   }
 });
