@@ -38,36 +38,14 @@ if (isProduction) {
   app.disable('x-powered-by');
 }
 
-// Add debug logging for all requests
+// Serve static files FIRST, before any other middleware
+app.use(express.static(distPath));
+
+// Add debug logging for non-static requests
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
-
-// Serve static files from the dist directory
-app.use(express.static(distPath, {
-  maxAge: isProduction ? '1y' : '0',
-  setHeaders: (res, filePath) => {
-    console.log(`Serving static file: ${filePath}`);
-    // Set proper MIME types
-    if (filePath.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    } else if (filePath.endsWith('.css')) {
-      res.setHeader('Content-Type', 'text/css');
-    }
-    
-    // No cache for HTML files
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    }
-    // Long cache for JS/CSS with hash in filename
-    else if (/\.(js|css)$/.test(filePath) && /-[a-f0-9]{8}\./.test(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
-  }
-}));
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -100,12 +78,37 @@ app.get('/debug/index', (_req, res) => {
 app.get('/debug/assets', (_req, res) => {
   const assetsPath = path.join(distPath, 'assets');
   try {
+    const fs = require('fs');
+    const files = existsSync(assetsPath) ? fs.readdirSync(assetsPath) : [];
+    
     res.json({
       assetsPath: assetsPath,
       assetsExists: existsSync(assetsPath),
       distExists: existsSync(distPath),
-      message: 'Assets directory check'
+      filesCount: files.length,
+      firstFewFiles: files.slice(0, 5),
+      message: 'Assets directory check with file list'
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Test serving a specific asset manually
+app.get('/debug/test-js', (_req, res) => {
+  try {
+    const fs = require('fs');
+    const assetsPath = path.join(distPath, 'assets');
+    const files = fs.readdirSync(assetsPath);
+    const jsFile = files.find(f => f.startsWith('index-') && f.endsWith('.js'));
+    
+    if (jsFile) {
+      const jsPath = path.join(assetsPath, jsFile);
+      const content = fs.readFileSync(jsPath, 'utf8');
+      res.type('application/javascript').send(content.substring(0, 500) + '...[truncated]');
+    } else {
+      res.status(404).json({ error: 'No index JS file found', files });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
