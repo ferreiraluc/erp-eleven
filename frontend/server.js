@@ -46,10 +46,16 @@ app.use((req, res, next) => {
 
 // Serve static files from the dist directory
 app.use(express.static(distPath, {
-  index: false, // Disable automatic serving of index.html
   maxAge: isProduction ? '1y' : '0',
   setHeaders: (res, filePath) => {
     console.log(`Serving static file: ${filePath}`);
+    // Set proper MIME types
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+    
     // No cache for HTML files
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -114,7 +120,43 @@ app.get('/debug/index', (_req, res) => {
       res.status(404).send('Index file not found');
     }
   } catch (err) {
+    console.error('Debug index error:', err);
     res.status(500).send('Error reading index file: ' + err.message);
+  }
+});
+
+// Test specific asset
+app.get('/debug/test-asset', (_req, res) => {
+  const fs = require('fs');
+  const assetsPath = path.join(distPath, 'assets');
+  
+  try {
+    if (existsSync(assetsPath)) {
+      const files = fs.readdirSync(assetsPath);
+      const jsFiles = files.filter(f => f.endsWith('.js'));
+      if (jsFiles.length > 0) {
+        const firstJs = jsFiles[0];
+        const jsPath = path.join(assetsPath, firstJs);
+        const exists = existsSync(jsPath);
+        const stats = exists ? fs.statSync(jsPath) : null;
+        
+        res.json({
+          assetsPath,
+          files,
+          firstJs,
+          jsPath,
+          exists,
+          size: stats ? stats.size : 0
+        });
+      } else {
+        res.json({ error: 'No JS files found', files });
+      }
+    } else {
+      res.json({ error: 'Assets directory not found' });
+    }
+  } catch (err) {
+    console.error('Test asset error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
