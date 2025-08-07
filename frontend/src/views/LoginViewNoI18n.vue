@@ -96,12 +96,25 @@ const credentials = ref({
 
 const handleLogin = async () => {
   try {
-    console.log('Attempting login with:', credentials.value.email)
+    console.log('🔐 Attempting login with:', credentials.value.email)
+    console.log('🔐 Full credentials object:', credentials.value)
+    
     await authStore.login(credentials.value)
-    console.log('Login successful, redirecting to dashboard')
-    router.push('/dashboard')
-  } catch (error) {
-    console.error('Login failed:', error)
+    console.log('✅ Login successful, redirecting to dashboard')
+    
+    // Small delay to see the success log
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1000)
+    
+  } catch (error: any) {
+    console.error('❌ Login failed with error:', error)
+    console.error('❌ Error response:', error.response?.data)
+    console.error('❌ Error status:', error.response?.status)
+    console.error('❌ Error config:', error.config)
+    
+    // Don't reload the page, keep the error visible
+    alert(`Login failed: ${error.response?.data?.detail || error.message}`)
   }
 }
 
