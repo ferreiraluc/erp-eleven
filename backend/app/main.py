@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import time
 import logging
-from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers
+from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, setup
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
 
@@ -59,6 +59,7 @@ app.include_router(pedidos.router, prefix="/api/pedidos", tags=["pedidos"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(exchange_rates.router, prefix="/api/exchange-rates", tags=["exchange-rates"])
 app.include_router(money_transfers.router, prefix="/api/money-transfers", tags=["money-transfers"])
+app.include_router(setup.router, prefix="/api/setup", tags=["setup"])
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
