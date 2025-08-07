@@ -23,28 +23,56 @@
       // Debug logging
       console.log('Index.html loaded successfully');
       
+      // Check if Vue is loading
+      window.addEventListener('load', () => {
+        console.log('Page fully loaded');
+        setTimeout(() => {
+          console.log('App div content after 2s:', document.getElementById('app').innerHTML.substring(0, 100));
+        }, 2000);
+      });
+      
       // Check if main script loads
       window.addEventListener('error', (e) => {
         console.error('Script loading error:', e);
+        console.error('Error details:', {
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno
+        });
         const error = document.getElementById('loading-error');
         if (error) {
           error.style.display = 'block';
-          error.innerHTML = `<p>Erro ao carregar script: ${e.filename}</p>`;
+          error.innerHTML = `<p>Erro ao carregar script: ${e.filename}</p><p>${e.message}</p>`;
         }
       });
       
-      // Fallback se o JavaScript não carregar em 10 segundos
+      // Check for unhandled promise rejections
+      window.addEventListener('unhandledrejection', (e) => {
+        console.error('Unhandled promise rejection:', e.reason);
+        const error = document.getElementById('loading-error');
+        if (error) {
+          error.style.display = 'block';
+          error.innerHTML = `<p>Erro na aplicação: ${e.reason}</p>`;
+        }
+      });
+      
+      // Show timeout with more info
       setTimeout(() => {
         const app = document.getElementById('app');
         const error = document.getElementById('loading-error');
         if (app && app.innerHTML.includes('Carregando aplicação...')) {
-          console.log('Timeout: Vue app não carregou');
+          console.log('TIMEOUT: Vue app não iniciou');
+          console.log('App content:', app.innerHTML);
+          console.log('Scripts loaded:', document.querySelectorAll('script').length);
           if (error) {
             error.style.display = 'block';
-            error.innerHTML = '<p>Timeout: A aplicação não carregou. Verifique o console para mais detalhes.</p>';
+            error.innerHTML = '<p>TIMEOUT: A aplicação Vue não iniciou. Verifique o console para detalhes.</p>';
           }
+        } else {
+          console.log('Vue parece ter carregado - conteúdo mudou');
         }
-      }, 10000);
+      }, 8000);
     </script>
   </body>
 </html>

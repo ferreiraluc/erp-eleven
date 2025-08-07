@@ -112,6 +112,23 @@ app.get('/debug/test-js', (_req, res) => {
   }
 });
 
+// Test main entry point detection
+app.get('/debug/main-entry', (_req, res) => {
+  try {
+    const indexContent = readFileSync(indexPath, 'utf8');
+    const scriptMatch = indexContent.match(/src="([^"]+)"/);
+    const mainScript = scriptMatch ? scriptMatch[1] : 'not found';
+    
+    res.json({
+      indexExists: existsSync(indexPath),
+      mainScript: mainScript,
+      indexPreview: indexContent.substring(0, 800)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Handle SPA routing - serve index.html for all non-API routes
 app.get('*', (req, res) => {
   if (!isProduction) {
