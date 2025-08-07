@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router
 import { useAuthStore } from '@/stores/auth'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import TestView from '@/views/TestView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -13,7 +14,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: LoginView,
+      component: TestView,
       meta: { requiresGuest: true }
     },
     {
@@ -30,40 +31,40 @@ const router = createRouter({
   ],
 })
 
-// Navigation guards
-router.beforeEach(async (to, _from, next) => {
-  try {
-    const authStore = useAuthStore()
+// Navigation guards - temporarily disabled for debugging
+// router.beforeEach(async (to, _from, next) => {
+//   try {
+//     const authStore = useAuthStore()
     
-    // Load stored auth if not already loaded
-    if (!authStore.token) {
-      authStore.loadStoredAuth()
-    }
+//     // Load stored auth if not already loaded
+//     if (!authStore.token) {
+//       authStore.loadStoredAuth()
+//     }
     
-    // Check if route requires authentication
-    if (to.meta.requiresAuth) {
-      if (authStore.isAuthenticated) {
-        next()
-      } else {
-        next('/login')
-      }
-    }
-    // Check if route requires guest (user not logged in)
-    else if (to.meta.requiresGuest) {
-      if (authStore.isAuthenticated) {
-        next('/dashboard')
-      } else {
-        next()
-      }
-    }
-    // Public routes
-    else {
-      next()
-    }
-  } catch (error) {
-    console.error('Router navigation error:', error)
-    next('/login')
-  }
-})
+//     // Check if route requires authentication
+//     if (to.meta.requiresAuth) {
+//       if (authStore.isAuthenticated) {
+//         next()
+//       } else {
+//         next('/login')
+//       }
+//     }
+//     // Check if route requires guest (user not logged in)
+//     else if (to.meta.requiresGuest) {
+//       if (authStore.isAuthenticated) {
+//         next('/dashboard')
+//       } else {
+//         next()
+//       }
+//     }
+//     // Public routes
+//     else {
+//       next()
+//     }
+//   } catch (error) {
+//     console.error('Router navigation error:', error)
+//     next('/login')
+//   }
+// })
 
 export default router
