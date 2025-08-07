@@ -123,6 +123,10 @@ const handleLogin = async () => {
 onMounted(() => {
   // Clear any previous errors
   authStore.clearError()
+
+  // DEBUG: Verifica se API base foi carregada corretamente
+  console.log('🌐 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
+
   
   // If already authenticated, redirect to dashboard
   if (authStore.isAuthenticated) {
