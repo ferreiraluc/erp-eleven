@@ -22,16 +22,16 @@ services:
         value: 30
 
   # Frontend Web Service (Dockerized)
-  - type: web
-    name: erp-eleven-frontend
-    runtime: docker
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: VITE_API_BASE_URL
-        value: https://erp-eleven-backend.onrender.com
-      - key: PORT
-        value: 3000
+  # - type: web
+  #   name: erp-eleven-frontend
+  #   runtime: docker
+  #   dockerfilePath: ./frontend/Dockerfile
+  #   dockerContext: ./frontend
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: VITE_API_BASE_URL
+  #       value: https://erp-eleven-backend.onrender.com
+  #     - key: PORT
+  #       value: 3000
     
