@@ -6,7 +6,6 @@ from typing import Optional
 from .database import get_db
 from .models.usuario import Usuario
 from .config import settings
-import uuid
 
 security = HTTPBearer()
 
@@ -67,14 +66,3 @@ def require_role(required_roles: list):
         return current_user
     return role_checker
 
-def validate_uuid(uuid_string: str) -> uuid.UUID:
-    """
-    Validates UUID format and returns UUID object
-    """
-    try:
-        return uuid.UUID(uuid_string)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid UUID format"
-        )

@@ -122,4 +122,53 @@ export const vendorsAPI = {
     api.post('/api/vendedores/', vendor).then(res => res.data),
 }
 
+// Exchange Rate Types
+export interface ExchangeRateResponse {
+  usd_to_pyg: number | null
+  usd_to_brl: number | null
+  eur_to_pyg: number | null
+  eur_to_brl: number | null
+  last_updated: string | null
+  source: string | null
+}
+
+export interface QuickRateUpdate {
+  usd_to_pyg?: number
+  usd_to_brl?: number
+  eur_to_pyg?: number
+  eur_to_brl?: number
+  source: string
+  notes?: string
+  updated_by: string
+}
+
+export interface ExchangeRateHistory {
+  current_rates: ExchangeRateResponse
+  historical_rates: Array<{
+    id: string
+    currency_pair: string
+    rate: number
+    source: string
+    is_active: boolean
+    created_at: string
+    updated_by: string
+  }>
+  total_records: number
+}
+
+// Exchange Rate API
+export const exchangeRateAPI = {
+  getCurrentRates: (): Promise<ExchangeRateResponse> =>
+    api.get('/api/exchange-rates/current').then(res => res.data),
+  
+  quickUpdate: (rates: QuickRateUpdate): Promise<any> =>
+    api.post('/api/exchange-rates/quick-update', rates).then(res => res.data),
+  
+  getHistory: (days = 30): Promise<ExchangeRateHistory> =>
+    api.get(`/api/exchange-rates/history?days=${days}`).then(res => res.data),
+  
+  getWeeklyAverage: (currencyPair: string, weeksBack = 0): Promise<any> =>
+    api.get(`/api/exchange-rates/weekly-average/${currencyPair}?weeks_back=${weeksBack}`).then(res => res.data)
+}
+
 export default api

@@ -1,17 +1,23 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
 from datetime import datetime
 import uuid
 from ..models.usuario import UsuarioRole
 
 class UsuarioBase(BaseModel):
-    nome: str
-    email: EmailStr
+    nome: str = Field(..., min_length=2, max_length=100, description="Nome completo do usuário")
+    email: EmailStr = Field(..., description="Email válido do usuário")
     role: UsuarioRole = UsuarioRole.VENDEDOR
     ativo: Optional[bool] = True
 
 class UsuarioCreate(UsuarioBase):
-    senha: str
+    senha: str = Field(..., min_length=6, max_length=100, description="Senha do usuário (mínimo 6 caracteres)")
+    
+    @validator('senha')
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('Senha deve ter pelo menos 6 caracteres')
+        return v
 
 class UsuarioUpdate(BaseModel):
     nome: Optional[str] = None
@@ -30,8 +36,8 @@ class UsuarioResponse(UsuarioBase):
         from_attributes = True
 
 class UsuarioLogin(BaseModel):
-    email: EmailStr
-    senha: str
+    email: EmailStr = Field(..., description="Email do usuário")
+    senha: str = Field(..., min_length=1, description="Senha do usuário")
 
 class Token(BaseModel):
     access_token: str

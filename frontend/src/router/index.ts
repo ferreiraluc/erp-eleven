@@ -1,10 +1,7 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import LoginView from '@/views/LoginView.vue'
 import LoginViewNoI18n from '@/views/LoginViewNoI18n.vue'
-import SimpleLoginView from '@/views/SimpleLoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
-import TestView from '@/views/TestView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),

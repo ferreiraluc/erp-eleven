@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { exchangeRateAPI, type QuickRateUpdate } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 export type CurrencyCode = 'G$' | 'R$' | 'USD' | 'EUR'
 
@@ -75,6 +77,75 @@ export const useCurrencyStore = defineStore('currency', () => {
     exchangeRates.value = { ...exchangeRates.value, ...newRates }
   }
 
+  // API Integration
+  const isLoading = ref(false)
+  const error = ref<string | null>(null)
+  const lastUpdate = ref<string | null>(null)
+
+  const loadCurrentRates = async () => {
+    try {
+      isLoading.value = true
+      error.value = null
+      
+      const response = await exchangeRateAPI.getCurrentRates()
+      
+      // Update exchange rates with API data
+      if (response.usd_to_pyg) exchangeRates.value['G$'] = response.usd_to_pyg
+      if (response.usd_to_brl) exchangeRates.value['R$'] = response.usd_to_brl
+      if (response.eur_to_pyg && response.usd_to_pyg) {
+        // Convert EUR->PYG to USD->EUR rate (approximate)
+        exchangeRates.value['EUR'] = response.usd_to_pyg / response.eur_to_pyg
+      }
+      
+      lastUpdate.value = response.last_updated
+      
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load exchange rates'
+      console.error('Error loading exchange rates:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const updateRatesAPI = async (rates: {
+    usd_to_pyg?: number
+    usd_to_brl?: number  
+    eur_to_pyg?: number
+    eur_to_brl?: number
+  }) => {
+    try {
+      const authStore = useAuthStore()
+      if (!authStore.user) throw new Error('User not authenticated')
+
+      isLoading.value = true
+      error.value = null
+
+      const updateData: QuickRateUpdate = {
+        ...rates,
+        source: 'Dashboard',
+        updated_by: authStore.user.nome,
+        notes: 'Updated from dashboard'
+      }
+
+      await exchangeRateAPI.quickUpdate(updateData)
+      
+      // Reload current rates to get updated data
+      await loadCurrentRates()
+      
+    } catch (err: any) {
+      error.value = err.message || 'Failed to update exchange rates'
+      console.error('Error updating exchange rates:', err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const canEdit = computed(() => {
+    const authStore = useAuthStore()
+    return authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
+  })
+
   return {
     selectedCurrency,
     exchangeRates,
@@ -85,6 +156,13 @@ export const useCurrencyStore = defineStore('currency', () => {
     convertToUSD,
     convertBetweenCurrencies,
     formatCurrency,
-    updateExchangeRates
+    updateExchangeRates,
+    // API methods
+    isLoading,
+    error,
+    lastUpdate,
+    loadCurrentRates,
+    updateRatesAPI,
+    canEdit
   }
 })

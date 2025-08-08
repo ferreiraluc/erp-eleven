@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime, date
 from typing import Dict, Any, List
+from datetime import date
 from ...database import get_db
 from ...models.venda import Venda
 from ...models.vendedor import Vendedor
 from ...models.pedido import Pedido
 from ...dependencies import get_current_active_user
+from ..validators import validate_date
 
 router = APIRouter()
 
@@ -73,9 +74,11 @@ def get_vendas_por_periodo(
     ).group_by(func.date(Venda.data_venda))
     
     if start_date:
-        query = query.filter(Venda.data_venda >= start_date)
+        validated_start = validate_date(start_date, "start_date")
+        query = query.filter(Venda.data_venda >= validated_start)
     if end_date:
-        query = query.filter(Venda.data_venda <= end_date)
+        validated_end = validate_date(end_date, "end_date")
+        query = query.filter(Venda.data_venda <= validated_end)
     
     resultados = query.order_by(func.date(Venda.data_venda)).all()
     

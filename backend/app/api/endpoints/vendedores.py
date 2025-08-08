@@ -5,7 +5,8 @@ from ...database import get_db
 from ...models.vendedor import Vendedor
 from ...models.usuario import Usuario
 from ...schemas.vendedor import VendedorCreate, VendedorResponse
-from ...dependencies import get_current_active_user, validate_uuid, require_role
+from ...dependencies import get_current_active_user, require_role
+from ..validators import validate_uuid
 
 router = APIRouter()
 

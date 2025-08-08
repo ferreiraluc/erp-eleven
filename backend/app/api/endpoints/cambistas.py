@@ -6,6 +6,7 @@ from ...models.cambista import Cambista
 from ...models.exchange_rate import ExchangeRate, CurrencyPair
 from ...schemas.cambista import CambistaCreate, CambistaResponse
 from ...dependencies import get_current_active_user, require_role
+from ..validators import validate_uuid
 
 router = APIRouter()
 
@@ -35,7 +36,8 @@ def obter_cambista(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    cambista = db.query(Cambista).filter(Cambista.id == cambista_id).first()
+    validated_id = validate_uuid(cambista_id, "cambista_id")
+    cambista = db.query(Cambista).filter(Cambista.id == validated_id).first()
     if not cambista:
         raise HTTPException(status_code=404, detail="Cambista não encontrado")
     return cambista
@@ -47,7 +49,8 @@ def get_cambista_with_current_rates(
     current_user = Depends(get_current_active_user)
 ):
     """Get cambista with current exchange rates from the system"""
-    cambista = db.query(Cambista).filter(Cambista.id == cambista_id).first()
+    validated_id = validate_uuid(cambista_id, "cambista_id")
+    cambista = db.query(Cambista).filter(Cambista.id == validated_id).first()
     if not cambista:
         raise HTTPException(status_code=404, detail="Cambista não encontrado")
     

@@ -27,20 +27,10 @@ def upgrade() -> None:
                existing_type=sa.CHAR(length=2),
                type_=sa.String(length=2),
                existing_nullable=False)
-    op.alter_column('pedidos', 'transportadora',
-               existing_type=postgresql.ENUM('CORREIOS', 'AZUL_CARGO', 'PARTICULAR', 'SUPERFRETE', name='transportadora_tipo'),
-               type_=sa.Enum('CORREIOS', 'AZUL_CARGO', 'PARTICULAR', 'SUPERFRETE', name='transportadoratipo'),
-               existing_nullable=False)
-    op.alter_column('pedidos', 'status',
-               existing_type=postgresql.ENUM('PENDENTE', 'PROCESSANDO', 'ENVIADO', 'ENTREGUE', 'CANCELADO', name='pedido_status'),
-               type_=sa.Enum('PENDENTE', 'PROCESSANDO', 'ENVIADO', 'ENTREGUE', 'CANCELADO', name='pedidostatus'),
-               existing_nullable=True,
-               existing_server_default=sa.text("'PENDENTE'::pedido_status"))
-    op.alter_column('usuarios', 'role',
-               existing_type=postgresql.ENUM('ADMIN', 'GERENTE', 'VENDEDOR', 'FINANCEIRO', 'OPERACIONAL', name='usuario_role'),
-               type_=sa.Enum('ADMIN', 'GERENTE', 'VENDEDOR', 'LIMPEZA', name='usuariorole'),
-               existing_nullable=False,
-               existing_server_default=sa.text("'VENDEDOR'::usuario_role"))
+    # Fix enum casting issues
+    op.execute("ALTER TABLE pedidos ALTER COLUMN transportadora TYPE transportadoratipo USING transportadora::text::transportadoratipo")
+    op.execute("ALTER TABLE pedidos ALTER COLUMN status TYPE pedidostatus USING status::text::pedidostatus")
+    op.execute("ALTER TABLE usuarios ALTER COLUMN role TYPE usuariorole USING CASE WHEN role::text IN ('ADMIN', 'GERENTE', 'VENDEDOR', 'LIMPEZA') THEN role::text::usuariorole ELSE 'VENDEDOR'::usuariorole END")
     op.add_column('vendas', sa.Column('taxa_desconto_pagamento', sa.DECIMAL(precision=5, scale=4), nullable=True))
     op.add_column('vendas', sa.Column('pending_transfer_id', sa.UUID(), nullable=True))
     op.add_column('vendas', sa.Column('requires_thais_transfer', sa.Boolean(), nullable=True))

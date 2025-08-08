@@ -5,7 +5,8 @@ from ...database import get_db
 from ...models.pedido import Pedido, PedidoStatus
 from ...models.usuario import Usuario
 from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate
-from ...dependencies import get_current_active_user, validate_uuid, require_role
+from ...dependencies import get_current_active_user, require_role
+from ..validators import validate_uuid
 from ...utils import generate_order_number, validate_brazilian_cep, validate_brazilian_phone
 
 router = APIRouter()

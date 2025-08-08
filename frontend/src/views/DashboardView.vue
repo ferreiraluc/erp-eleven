@@ -23,6 +23,25 @@
             {{ currentTime }}
           </div>
           
+          <!-- Exchange Rates Display -->
+          <div class="header-control">
+            <div class="exchange-rates-header" @click="handleHeaderClick" :class="{ 'editable': canEditRates }" style="cursor: pointer;">
+              <div class="rates-display">
+                <div class="rate-item-header">
+                  <span class="rate-flag">🇺🇸→🇵🇾</span>
+                  <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+                </div>
+                <div class="rate-item-header">
+                  <span class="rate-flag">🇺🇸→🇧🇷</span>
+                  <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                </div>
+              </div>
+              <svg v-if="canEditRates" class="edit-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+          </div>
+
           <!-- Currency Selector -->
           <div class="header-control">
             <div class="dropdown">
@@ -168,15 +187,48 @@
           <div class="action-card">
             <div class="card-header">
               <h3 class="card-title">{{ $t('dashboard.exchangeRate') }}</h3>
-              <div class="card-icon green">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V4M9 8h6" />
-                </svg>
+              <div class="card-actions">
+                <button 
+                  v-if="canEditRates"
+                  @click="openCardModal"
+                  class="edit-rate-btn"
+                  style="cursor: pointer;"
+                >
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <div class="card-icon green">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
               </div>
             </div>
-            <div class="exchange-rate">
-              <p class="rate-value">{{ currencyStore.exchangeRates[currencyStore.selectedCurrency].toFixed(2) }}</p>
-              <p class="rate-label">1 USD = {{ currencyStore.exchangeRates[currencyStore.selectedCurrency].toFixed(2) }} {{ currencyStore.getCurrentCurrency?.symbol }}</p>
+            <div v-if="isLoadingRates" class="exchange-rate loading">
+              <div class="rate-loading">
+                <svg class="loading-spinner" fill="none" viewBox="0 0 24 24">
+                  <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p>Carregando taxas...</p>
+              </div>
+            </div>
+            <div v-else class="exchange-rate">
+              <div class="rate-grid">
+                <div class="rate-item">
+                  <span class="rate-label">USD → G$</span>
+                  <span class="rate-value">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+                </div>
+                <div class="rate-item">
+                  <span class="rate-label">USD → R$</span>
+                  <span class="rate-value">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                </div>
+              </div>
+              <p class="rate-updated" v-if="lastUpdated">
+                Atualizado: {{ formatDate(lastUpdated) }}
+              </p>
+              <p v-if="ratesError" class="rate-error">{{ ratesError }}</p>
             </div>
           </div>
 
@@ -312,6 +364,87 @@
         </div>
       </div>
     </footer>
+
+
+    <!-- Exchange Rate Modal -->
+    <div v-if="showExchangeRateModal || showExchangeRateHeaderModal" class="modal-overlay" @click="closeExchangeRateModals">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Editar Taxas de Câmbio</h2>
+          <button @click="closeExchangeRateModals" class="modal-close">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div v-if="exchangeRateError" class="alert alert-error">
+            {{ exchangeRateError }}
+          </div>
+
+          <div class="rate-form">
+            <div class="form-group">
+              <label for="usd_to_pyg">USD → Guarani (G$)</label>
+              <input 
+                id="usd_to_pyg"
+                type="number" 
+                step="0.01"
+                v-model.number="editingRates.usd_to_pyg"
+                placeholder="7500.0000"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="usd_to_brl">USD → Real (R$)</label>
+              <input 
+                id="usd_to_brl"
+                type="number" 
+                step="0.01"
+                v-model.number="editingRates.usd_to_brl"
+                placeholder="5.85"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="eur_to_pyg">EUR → Guarani (G$)</label>
+              <input 
+                id="eur_to_pyg"
+                type="number" 
+                step="0.01"
+                v-model.number="editingRates.eur_to_pyg"
+                placeholder="8200.0000"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="eur_to_brl">EUR → Real (R$)</label>
+              <input 
+                id="eur_to_brl"
+                type="number" 
+                step="0.01"
+                v-model.number="editingRates.eur_to_brl"
+                placeholder="6.20"
+                class="form-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button @click="closeExchangeRateModals" class="btn btn-secondary">
+            Cancelar
+          </button>
+          <button @click="saveExchangeRates" :disabled="isLoadingRates" class="btn btn-primary">
+            <span v-if="isLoadingRates">Salvando...</span>
+            <span v-else>Salvar Taxas</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -334,6 +467,33 @@ const currencyStore = useCurrencyStore()
 const currentTime = ref('')
 const showCurrencyDropdown = ref(false)
 const showLanguageDropdown = ref(false)
+const showExchangeRateModal = ref(false)
+const showExchangeRateHeaderModal = ref(false)
+const exchangeRateError = ref<string | null>(null)
+
+// Exchange rate state (local to avoid dependency issues)
+const isLoadingRates = ref(false)
+const ratesError = ref<string | null>(null)
+const lastUpdated = ref<string | null>(null)
+const exchangeRates = ref<Record<string, number>>({
+  'G$': 7500.0,
+  'R$': 5.85,
+  'USD': 1.0,
+  'EUR': 0.92
+})
+
+// Exchange rate editing
+const editingRates = ref({
+  usd_to_pyg: 0,
+  usd_to_brl: 0,
+  eur_to_pyg: 0,
+  eur_to_brl: 0
+})
+
+// Check if user can edit rates
+const canEditRates = computed(() => {
+  return authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
+})
 
 const currentLocale = computed(() => locale.value)
 const getCurrentLanguage = computed(() => {
@@ -396,6 +556,90 @@ const handleLanguageChange = (langCode: string) => {
   showLanguageDropdown.value = false
 }
 
+// Exchange Rate Modal Functions
+const openCardModal = () => {
+  if (!canEditRates.value) return
+  showExchangeRateModal.value = true
+  loadCurrentRatesToEdit()
+}
+
+const handleHeaderClick = () => {
+  if (!canEditRates.value) return
+  showExchangeRateHeaderModal.value = true
+  loadCurrentRatesToEdit()
+}
+
+
+const closeExchangeRateModals = () => {
+  showExchangeRateModal.value = false
+  showExchangeRateHeaderModal.value = false
+  exchangeRateError.value = null
+}
+
+// Load exchange rates from API
+const loadExchangeRates = async () => {
+  try {
+    isLoadingRates.value = true
+    ratesError.value = null
+    
+    // Import exchangeRateAPI dynamically to avoid circular dependency
+    const { exchangeRateAPI } = await import('@/services/api')
+    const response = await exchangeRateAPI.getCurrentRates()
+    
+    // Update local state with API data
+    if (response.usd_to_pyg) exchangeRates.value['G$'] = Number(response.usd_to_pyg)
+    if (response.usd_to_brl) exchangeRates.value['R$'] = Number(response.usd_to_brl)
+    if (response.last_updated) lastUpdated.value = response.last_updated
+    
+  } catch (error: any) {
+    ratesError.value = error.message || 'Erro ao carregar taxas de câmbio'
+  } finally {
+    isLoadingRates.value = false
+  }
+}
+
+const loadCurrentRatesToEdit = () => {
+  editingRates.value = {
+    usd_to_pyg: exchangeRates.value['G$'],
+    usd_to_brl: exchangeRates.value['R$'],
+    eur_to_pyg: 8200, // Default values
+    eur_to_brl: 6.20
+  }
+}
+
+const saveExchangeRates = async () => {
+  try {
+    exchangeRateError.value = null
+    isLoadingRates.value = true
+    
+    // Import exchangeRateAPI directly
+    const { exchangeRateAPI } = await import('@/services/api')
+    
+    if (!authStore.user) {
+      throw new Error('User not authenticated')
+    }
+
+    await exchangeRateAPI.quickUpdate({
+      usd_to_pyg: editingRates.value.usd_to_pyg || undefined,
+      usd_to_brl: editingRates.value.usd_to_brl || undefined,
+      eur_to_pyg: editingRates.value.eur_to_pyg || undefined,
+      eur_to_brl: editingRates.value.eur_to_brl || undefined,
+      source: 'Dashboard',
+      updated_by: authStore.user.nome,
+      notes: 'Updated from dashboard'
+    })
+    
+    // Reload rates after successful update
+    await loadExchangeRates()
+    closeExchangeRateModals()
+    
+  } catch (error: any) {
+    exchangeRateError.value = error.message || 'Erro ao salvar as taxas de câmbio'
+  } finally {
+    isLoadingRates.value = false
+  }
+}
+
 // Close dropdowns when clicking outside
 const handleClickOutside = (event: Event) => {
   const target = event.target as HTMLElement
@@ -412,7 +656,11 @@ onMounted(async () => {
   timeInterval = setInterval(updateTime, 1000)
   document.addEventListener('click', handleClickOutside)
   
-  await dashboardStore.refreshData()
+  // Load exchange rates and dashboard data
+  await Promise.all([
+    loadExchangeRates(),
+    dashboardStore.refreshData()
+  ])
 })
 
 onUnmounted(() => {
@@ -433,6 +681,9 @@ onUnmounted(() => {
   background-color: white;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .header-content {
@@ -1222,6 +1473,305 @@ onUnmounted(() => {
   }
 }
 
+/* Exchange Rate Styles */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-rate-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.375rem;
+  background-color: #f3f4f6;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.edit-rate-btn:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.edit-rate-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.rate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.rate-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.rate-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.rate-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.rate-updated {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+  margin: 0;
+}
+
+.rate-error {
+  font-size: 0.75rem;
+  color: #dc2626;
+  text-align: center;
+  margin: 0;
+}
+
+.rate-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+
+.rate-loading .loading-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #2563eb;
+  animation: spin 1s linear infinite;
+}
+
+.rate-loading p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Header Exchange Rate Display */
+.exchange-rates-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.exchange-rates-header.editable {
+  cursor: pointer;
+}
+
+.exchange-rates-header.editable:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.rates-display {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.rate-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.rate-flag {
+  font-size: 0.75rem;
+}
+
+.rate-value-header {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.edit-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #6b7280;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  margin: 1rem;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal-close {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.modal-close svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+/* Form Styles */
+.rate-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-input {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.btn-primary:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.alert {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.alert-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
@@ -1286,6 +1836,30 @@ onUnmounted(() => {
 
   .footer-link {
     font-size: 0.75rem;
+  }
+
+  .rate-form {
+    grid-template-columns: 1fr;
+  }
+
+  .rates-display {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .exchange-rates-header {
+    padding: 0.5rem;
+  }
+
+  .modal-content {
+    margin: 0.5rem;
+    max-height: 95vh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem;
   }
 }
 </style>

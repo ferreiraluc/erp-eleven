@@ -9,6 +9,7 @@ from ...schemas.venda import VendaCreate, VendaResponse
 from ...utils import calculate_net_amount
 from ...services.thais_transfer_service import ThaisTransferService
 from ...dependencies import get_current_active_user
+from ..validators import validate_uuid
 
 router = APIRouter()
 
@@ -70,7 +71,8 @@ def obter_venda(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    venda = db.query(Venda).filter(Venda.id == venda_id).first()
+    validated_id = validate_uuid(venda_id, "venda_id")
+    venda = db.query(Venda).filter(Venda.id == validated_id).first()
     if not venda:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
     return venda

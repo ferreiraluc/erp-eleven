@@ -8,9 +8,13 @@ from ...schemas.exchange_rate import (
     ExchangeRateResponse, 
     ExchangeRateUpdate,
     QuickRateUpdate,
-    CurrentRatesResponse
+    CurrentRatesResponse,
+    WeeklyAverageResponse,
+    RateHistoryResponse
 )
 from ...dependencies import get_current_active_user, require_role
+from datetime import date, timedelta
+from sqlalchemy import and_, desc
 
 router = APIRouter()
 
@@ -51,80 +55,42 @@ def quick_update_rates(
     db: Session = Depends(get_db),
     current_user = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
-    """Quick update multiple exchange rates - perfect for footer editing"""
+    """Quick update multiple exchange rates - perfect for dashboard/header editing"""
     updated_rates = []
     
-    # Update USD to PYG
-    if rates.usd_to_pyg is not None:
-        rate_record = db.query(ExchangeRate).filter(
-            ExchangeRate.currency_pair == CurrencyPair.USD_TO_PYG
-        ).first()
+    # Helper function to update or create rate
+    def update_rate(currency_pair: CurrencyPair, new_rate):
+        if new_rate is None:
+            return
+            
+        # Deactivate previous active rate
+        db.query(ExchangeRate).filter(
+            ExchangeRate.currency_pair == currency_pair,
+            ExchangeRate.is_active == True
+        ).update({"is_active": False})
         
-        if rate_record:
-            rate_record.rate = rates.usd_to_pyg
-            rate_record.updated_by = rates.updated_by
-        else:
-            rate_record = ExchangeRate(
-                currency_pair=CurrencyPair.USD_TO_PYG,
-                rate=rates.usd_to_pyg,
-                updated_by=rates.updated_by
-            )
-            db.add(rate_record)
-        updated_rates.append("USD_TO_PYG")
+        # Create new active rate
+        new_record = ExchangeRate(
+            currency_pair=currency_pair,
+            rate=new_rate,
+            source=rates.source,
+            notes=rates.notes,
+            updated_by=rates.updated_by,
+            is_active=True
+            # rate_date=date.today()  # Will add after migration
+        )
+        db.add(new_record)
+        updated_rates.append({
+            "pair": currency_pair.value,
+            "rate": float(new_rate),
+            "source": rates.source
+        })
     
-    # Update USD to BRL
-    if rates.usd_to_brl is not None:
-        rate_record = db.query(ExchangeRate).filter(
-            ExchangeRate.currency_pair == CurrencyPair.USD_TO_BRL
-        ).first()
-        
-        if rate_record:
-            rate_record.rate = rates.usd_to_brl
-            rate_record.updated_by = rates.updated_by
-        else:
-            rate_record = ExchangeRate(
-                currency_pair=CurrencyPair.USD_TO_BRL,
-                rate=rates.usd_to_brl,
-                updated_by=rates.updated_by
-            )
-            db.add(rate_record)
-        updated_rates.append("USD_TO_BRL")
-    
-    # Update EUR to PYG  
-    if rates.eur_to_pyg is not None:
-        rate_record = db.query(ExchangeRate).filter(
-            ExchangeRate.currency_pair == CurrencyPair.EUR_TO_PYG
-        ).first()
-        
-        if rate_record:
-            rate_record.rate = rates.eur_to_pyg
-            rate_record.updated_by = rates.updated_by
-        else:
-            rate_record = ExchangeRate(
-                currency_pair=CurrencyPair.EUR_TO_PYG,
-                rate=rates.eur_to_pyg,
-                updated_by=rates.updated_by
-            )
-            db.add(rate_record)
-        updated_rates.append("EUR_TO_PYG")
-    
-    # Update EUR to BRL
-    if rates.eur_to_brl is not None:
-        rate_record = db.query(ExchangeRate).filter(
-            ExchangeRate.currency_pair == CurrencyPair.EUR_TO_BRL
-        ).first()
-        
-        if rate_record:
-            rate_record.rate = rates.eur_to_brl
-            rate_record.updated_by = rates.updated_by
-        else:
-            rate_record = ExchangeRate(
-                currency_pair=CurrencyPair.EUR_TO_BRL,
-                rate=rates.eur_to_brl,
-                updated_by=rates.updated_by
-            )
-            db.add(rate_record)
-        updated_rates.append("EUR_TO_BRL")
+    # Update all provided rates
+    update_rate(CurrencyPair.USD_TO_PYG, rates.usd_to_pyg)
+    update_rate(CurrencyPair.USD_TO_BRL, rates.usd_to_brl)
+    update_rate(CurrencyPair.EUR_TO_PYG, rates.eur_to_pyg)
+    update_rate(CurrencyPair.EUR_TO_BRL, rates.eur_to_brl)
     
     if not updated_rates:
         raise HTTPException(status_code=400, detail="No rates provided for update")
@@ -133,8 +99,9 @@ def quick_update_rates(
     
     return {
         "message": f"Successfully updated {len(updated_rates)} exchange rates",
-        "updated_pairs": updated_rates,
-        "timestamp": db.query(ExchangeRate).first().updated_at if updated_rates else None
+        "updated_rates": updated_rates,
+        "timestamp": date.today().isoformat(),
+        "updated_by": rates.updated_by
     }
 
 @router.get("/", response_model=List[ExchangeRateResponse])
@@ -189,6 +156,119 @@ def update_exchange_rate(
     db.commit()
     db.refresh(rate)
     return rate
+
+@router.get("/history")
+def get_exchange_rates_history(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """Get exchange rate history (simplified version)"""
+    
+    # Get current rates
+    current_rates = get_current_rates(db, current_user)
+    
+    # Get all historical rates (simplified)
+    all_rates = db.query(ExchangeRate).order_by(desc(ExchangeRate.created_at)).all()
+    
+    return {
+        "current_rates": current_rates,
+        "historical_rates": [
+            {
+                "id": str(rate.id),
+                "currency_pair": rate.currency_pair.value,
+                "rate": float(rate.rate),
+                "source": rate.source,
+                "is_active": rate.is_active,
+                "created_at": rate.created_at.isoformat() if rate.created_at else None,
+                "updated_by": rate.updated_by
+            }
+            for rate in all_rates
+        ],
+        "total_records": len(all_rates)
+    }
+
+@router.get("/weekly-average/{currency_pair}")
+def get_weekly_average(
+    currency_pair: CurrencyPair,
+    weeks_back: int = 0,  # 0 = current week, 1 = last week, etc.
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """Get weekly average for specific currency pair (simplified)"""
+    
+    # For now, just return the current rate as "average" since we don't have rate_date yet
+    current_rate = db.query(ExchangeRate).filter(
+        and_(
+            ExchangeRate.currency_pair == currency_pair,
+            ExchangeRate.is_active == True
+        )
+    ).first()
+    
+    if not current_rate:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No current rate found for {currency_pair.value}"
+        )
+    
+    today = date.today()
+    monday = today - timedelta(days=today.weekday() + (7 * weeks_back))
+    sunday = monday + timedelta(days=6)
+    
+    return {
+        "currency_pair": currency_pair.value,
+        "week_start": monday.isoformat(),
+        "week_end": sunday.isoformat(),
+        "average_rate": float(current_rate.rate),
+        "sample_count": 1,
+        "min_rate": float(current_rate.rate),
+        "max_rate": float(current_rate.rate),
+        "note": "Simplified version - showing current rate as average until rate_date field is added"
+    }
+
+@router.get("/sales-week-average/{currency_pair}")
+def get_sales_week_average(
+    currency_pair: CurrencyPair,
+    saturday_date: date,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """Get weekly average for sales period (Sunday to Saturday) - simplified version"""
+    
+    # Calculate the Sunday that starts this sales week
+    if saturday_date.weekday() != 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Please provide a Saturday date for sales week calculation"
+        )
+    
+    sunday_start = saturday_date - timedelta(days=6)
+    
+    # For now, just return the current rate as "average" since we don't have rate_date yet
+    current_rate = db.query(ExchangeRate).filter(
+        and_(
+            ExchangeRate.currency_pair == currency_pair,
+            ExchangeRate.is_active == True
+        )
+    ).first()
+    
+    if not current_rate:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No current rate found for {currency_pair.value}"
+        )
+    
+    return {
+        "currency_pair": currency_pair.value,
+        "sales_week_start": sunday_start.isoformat(),
+        "sales_week_end": saturday_date.isoformat(),
+        "average_rate": float(current_rate.rate),
+        "sample_count": 1,
+        "min_rate": float(current_rate.rate),
+        "max_rate": float(current_rate.rate),
+        "recommendation": f"Use {float(current_rate.rate)} as rate for sales closing on {saturday_date}",
+        "note": "Simplified version - showing current rate until rate_date field is added"
+    }
 
 @router.get("/{currency_pair}")
 def get_rate_by_pair(

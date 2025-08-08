@@ -16,6 +16,7 @@ from ...schemas.money_transfer import (
 from ...services.thais_transfer_service import ThaisTransferService
 from ...models.usuario import Usuario
 from ...dependencies import get_current_active_user, require_role
+from ..validators import validate_uuid
 
 router = APIRouter()
 
@@ -123,7 +124,8 @@ def get_transfer(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Get specific transfer by ID"""
-    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
+    validated_id = validate_uuid(transfer_id, "transfer_id")
+    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == validated_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
     return transfer
@@ -136,7 +138,8 @@ def update_transfer(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Update transfer details"""
-    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
+    validated_id = validate_uuid(transfer_id, "transfer_id")
+    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == validated_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
     
@@ -168,7 +171,8 @@ def confirm_delivery(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Confirm that money has been delivered to the store"""
-    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
+    validated_id = validate_uuid(transfer_id, "transfer_id")
+    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == validated_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
     
@@ -199,7 +203,8 @@ def cancel_transfer(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Cancel a transfer"""
-    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == transfer_id).first()
+    validated_id = validate_uuid(transfer_id, "transfer_id")
+    transfer = db.query(MoneyTransfer).filter(MoneyTransfer.id == validated_id).first()
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
     
@@ -254,7 +259,6 @@ def get_weekly_thais_summary(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Get Thais-related summary for weekly balance calculation"""
-    from datetime import datetime
     
     try:
         start = datetime.strptime(start_date, "%Y-%m-%d").date()
