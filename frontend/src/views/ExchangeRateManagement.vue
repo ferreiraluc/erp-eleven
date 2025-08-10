@@ -1331,8 +1331,59 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
+  /* Cards 2x2 no mobile - menores como Nova Venda */
   .current-rates-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem;
+  }
+  
+  .rate-card {
+    padding: 0.75rem !important;
+    min-height: auto;
+  }
+  
+  .rate-header {
+    margin-bottom: 0.5rem !important;
+    gap: 0.375rem;
+  }
+  
+  .rate-flag {
+    font-size: 0.875rem !important;
+  }
+  
+  .rate-pair {
+    font-size: 0.8125rem !important;
+  }
+  
+  .rate-value {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.375rem !important;
+  }
+  
+  .rate-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.6875rem !important;
+  }
+  
+  /* Reduzir texto de alterações no mobile */
+  .detail-item {
+    padding: 0.1875rem 0.375rem !important;
+    font-size: 0.6875rem !important;
+    white-space: nowrap;
+  }
+  
+  .average-details {
+    gap: 0.5rem !important;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .calculation-method {
+    font-size: 0.625rem !important;
+    line-height: 1.2;
+    text-align: center;
+    margin-top: 0.5rem;
   }
 
   .average-controls {

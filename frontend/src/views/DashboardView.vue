@@ -1880,6 +1880,42 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  /* Ocultar data/hora no mobile */
+  .current-time {
+    display: none !important;
+  }
+
+  /* Reduzir botão de edição de câmbio no mobile */
+  .edit-rate-btn {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    border-radius: 0.25rem !important;
+  }
+  
+  .edit-rate-btn svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+
+  /* Reduzir card Taxa de Câmbio para ficar igual aos outros */
+  .action-card.exchange-rate-card {
+    padding: 0.875rem !important;
+  }
+  
+  .action-card.exchange-rate-card .exchange-rate {
+    padding: 0.5rem 0 !important;
+    text-align: center;
+  }
+  
+  .action-card.exchange-rate-card .rate-item {
+    margin-bottom: 0.375rem !important;
+  }
+  
+  .action-card.exchange-rate-card .rate-value {
+    font-size: 1.125rem !important;
+    margin: 0 0 0.125rem 0 !important;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
