@@ -142,6 +142,13 @@ export interface QuickRateUpdate {
   updated_by: string
 }
 
+export interface HistoricalRateUpdate {
+  rate?: number
+  source?: string
+  notes?: string
+  updated_by?: string
+}
+
 export interface ExchangeRateHistory {
   current_rates: ExchangeRateResponse
   historical_rates: Array<{
@@ -173,7 +180,7 @@ export const exchangeRateAPI = {
   getSalesAverage: (currencyPair: string, daysBack = 7): Promise<any> =>
     api.get(`/api/exchange-rates/sales-average/${currencyPair}?days_back=${daysBack}`).then(res => res.data),
     
-  editHistoricalRate: (rateId: string, update: Partial<QuickRateUpdate>): Promise<any> =>
+  editHistoricalRate: (rateId: string, update: HistoricalRateUpdate): Promise<any> =>
     api.put(`/api/exchange-rates/history/${rateId}`, update).then(res => res.data),
     
   deleteHistoricalRate: (rateId: string): Promise<any> =>

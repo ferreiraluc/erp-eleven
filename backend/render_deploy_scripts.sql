@@ -3,11 +3,23 @@
 -- Execute estes comandos no Render CLI psql
 -- =========================================
 
--- 1. Criar enum para tipos de moeda (se não existir)
+-- 1. Criar enum para tipos de moeda (se não existir) 
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'currencypair') THEN
-        CREATE TYPE currencypair AS ENUM ('USD_TO_PYG', 'USD_TO_BRL', 'EUR_TO_PYG', 'EUR_TO_BRL');
+        CREATE TYPE currencypair AS ENUM ('USD_TO_PYG', 'USD_TO_BRL', 'EUR_TO_PYG', 'EUR_TO_USD', 'EUR_TO_BRL');
+    END IF;
+END $$;
+
+-- 1.1. Adicionar EUR_TO_USD se o enum já existir mas não tiver esse valor
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum e 
+        JOIN pg_type t ON e.enumtypid = t.oid 
+        WHERE t.typname = 'currencypair' AND e.enumlabel = 'EUR_TO_USD'
+    ) THEN
+        ALTER TYPE currencypair ADD VALUE 'EUR_TO_USD';
     END IF;
 END $$;
 
@@ -58,6 +70,10 @@ WHERE NOT EXISTS (SELECT 1 FROM exchange_rates WHERE currency_pair = 'USD_TO_PYG
 INSERT INTO exchange_rates (currency_pair, rate, source, is_active, notes, updated_by)
 SELECT 'EUR_TO_BRL', 6.2000, 'Configuração Inicial', true, 'Taxa inicial EUR para BRL', 'Sistema'
 WHERE NOT EXISTS (SELECT 1 FROM exchange_rates WHERE currency_pair = 'EUR_TO_BRL' AND is_active = true);
+
+INSERT INTO exchange_rates (currency_pair, rate, source, is_active, notes, updated_by)
+SELECT 'EUR_TO_USD', 1.0850, 'Configuração Inicial', true, 'Taxa inicial EUR para USD', 'Sistema'
+WHERE NOT EXISTS (SELECT 1 FROM exchange_rates WHERE currency_pair = 'EUR_TO_USD' AND is_active = true);
 
 INSERT INTO exchange_rates (currency_pair, rate, source, is_active, notes, updated_by)
 SELECT 'EUR_TO_PYG', 8200.0000, 'Configuração Inicial', true, 'Taxa inicial EUR para Guarani', 'Sistema'

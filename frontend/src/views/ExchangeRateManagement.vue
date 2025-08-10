@@ -55,7 +55,7 @@
     <div class="current-rates-section">
       <h2>{{ $t('exchangeManagement.currentRates') }}</h2>
       <div class="current-rates-grid">
-        <div class="rate-card" v-for="(rate, key) in currentRatesDisplay" :key="key">
+        <div class="rate-card" v-for="(rate, key) in currentRatesDisplay" :key="`${key}-${rate.value}-${rate.updated}`">
           <div class="rate-header">
             <span class="rate-flag">{{ rate.flag }}</span>
             <span class="rate-pair">{{ rate.pair }}</span>
@@ -256,21 +256,21 @@
             <div class="form-row">
               <div class="form-group">
                 <label>🇺🇸 USD → G$</label>
-                <input v-model="quickUpdateRates.usd_to_pyg" type="number" step="0.01" placeholder="7500.00">
+                <input v-model="quickUpdateRates.usd_to_pyg" type="number" step="0.01" :placeholder="placeholders.usd_to_pyg">
               </div>
               <div class="form-group">
                 <label>🇺🇸 USD → 🇧🇷 R$</label>
-                <input v-model="quickUpdateRates.usd_to_brl" type="number" step="0.01" placeholder="5.85">
+                <input v-model="quickUpdateRates.usd_to_brl" type="number" step="0.01" :placeholder="placeholders.usd_to_brl">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>🇪🇺 EUR → 🇺🇸 USD</label>
-                <input v-model="quickUpdateRates.eur_to_usd" type="number" step="0.0001" placeholder="1.0850">
+                <input v-model="quickUpdateRates.eur_to_usd" type="number" step="0.0001" :placeholder="placeholders.eur_to_usd">
               </div>
               <div class="form-group">
                 <label>🇪🇺 EUR → 🇧🇷 R$</label>
-                <input v-model="quickUpdateRates.eur_to_brl" type="number" step="0.01" placeholder="6.20">
+                <input v-model="quickUpdateRates.eur_to_brl" type="number" step="0.01" :placeholder="placeholders.eur_to_brl">
               </div>
             </div>
             <div class="form-group">
@@ -327,7 +327,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
-import { exchangeRateAPI } from '@/services/api'
+import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -364,49 +364,105 @@ const rateToDelete = ref<any>(null)
 
 // Quick update form - initial values will be set in onMounted
 const quickUpdateRates = ref({
-  usd_to_pyg: null,
-  usd_to_brl: null,
-  eur_to_usd: null,
-  eur_to_brl: null,
+  usd_to_pyg: undefined as number | undefined,
+  usd_to_brl: undefined as number | undefined,
+  eur_to_usd: undefined as number | undefined,
+  eur_to_brl: undefined as number | undefined,
   source: '',
   notes: '',
   updated_by: authStore.user?.nome || 'Admin'
 })
 
-// Computed
-const currentRatesDisplay = computed(() => {
-  if (!currentRates.value) return {}
+// Computed for placeholders - show current values instead of defaults
+const placeholders = computed(() => {
+  if (!currentRates.value) {
+    return {
+      usd_to_pyg: '7500.00',
+      usd_to_brl: '5.85', 
+      eur_to_usd: '1.0850',
+      eur_to_brl: '6.20'
+    }
+  }
   
   return {
+    usd_to_pyg: currentRates.value.usd_to_pyg ? Number(currentRates.value.usd_to_pyg).toFixed(2) : '7500.00',
+    usd_to_brl: currentRates.value.usd_to_brl ? Number(currentRates.value.usd_to_brl).toFixed(2) : '5.85',
+    eur_to_usd: currentRates.value.eur_to_usd ? Number(currentRates.value.eur_to_usd).toFixed(4) : '1.0850',
+    eur_to_brl: currentRates.value.eur_to_brl ? Number(currentRates.value.eur_to_brl).toFixed(2) : '6.20'
+  }
+})
+
+// Computed
+const currentRatesDisplay = computed(() => {
+  
+  // Return default values if no data
+  const defaultRates = {
     usd_pyg: {
       flag: '🇺🇸→🇵🇾',
       pair: 'USD → G$',
-      value: (typeof currentRates.value.usd_to_pyg === 'number' ? currentRates.value.usd_to_pyg.toFixed(0) : '7500'),
+      value: '7500',
+      source: 'Manual',
+      updated: null
+    },
+    usd_brl: {
+      flag: '🇺🇸→🇧🇷',
+      pair: 'USD → R$',
+      value: '5.85',
+      source: 'Manual',
+      updated: null
+    },
+    eur_usd: {
+      flag: '🇪🇺→🇺🇸',
+      pair: 'EUR → USD',
+      value: '1.0850',
+      source: 'Manual',
+      updated: null
+    },
+    eur_brl: {
+      flag: '🇪🇺→🇧🇷',
+      pair: 'EUR → R$',
+      value: '6.20',
+      source: 'Manual',
+      updated: null
+    }
+  }
+  
+  if (!currentRates.value) {
+    return defaultRates
+  }
+  
+  const result = {
+    usd_pyg: {
+      flag: '🇺🇸→🇵🇾',
+      pair: 'USD → G$',
+      value: (currentRates.value.usd_to_pyg ? Number(currentRates.value.usd_to_pyg).toFixed(0) : '7500'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     },
     usd_brl: {
       flag: '🇺🇸→🇧🇷',
       pair: 'USD → R$',
-      value: (typeof currentRates.value.usd_to_brl === 'number' ? currentRates.value.usd_to_brl.toFixed(2) : '5.85'),
+      value: (currentRates.value.usd_to_brl ? Number(currentRates.value.usd_to_brl).toFixed(2) : '5.85'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     },
     eur_usd: {
       flag: '🇪🇺→🇺🇸',
       pair: 'EUR → USD',
-      value: (typeof currentRates.value.eur_to_usd === 'number' ? currentRates.value.eur_to_usd.toFixed(4) : '1.0850'),
+      value: (currentRates.value.eur_to_usd ? Number(currentRates.value.eur_to_usd).toFixed(4) : '1.0850'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     },
     eur_brl: {
       flag: '🇪🇺→🇧🇷',
       pair: 'EUR → R$',
-      value: (typeof currentRates.value.eur_to_brl === 'number' ? currentRates.value.eur_to_brl.toFixed(2) : '6.20'),
+      value: (currentRates.value.eur_to_brl ? Number(currentRates.value.eur_to_brl).toFixed(2) : '6.20'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     }
   }
+  
+  return result
 })
 
 // Methods
@@ -449,14 +505,19 @@ const performQuickUpdate = async () => {
     updateError.value = null
     
     await exchangeRateAPI.quickUpdate(quickUpdateRates.value)
-    
     showQuickUpdateModal.value = false
+    
+    // Small delay to ensure backend update is complete
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
     await loadCurrentRates()
     await loadHistory()
+    await loadSalesAverage()
     
     // Reset form
     resetQuickUpdateForm()
   } catch (error: any) {
+    console.error('Quick update error:', error)
     updateError.value = error.message || 'Failed to update rates'
   } finally {
     isUpdating.value = false
@@ -480,12 +541,14 @@ const saveEditedRate = async () => {
   if (!editingRate.value) return
   
   try {
-    await exchangeRateAPI.editHistoricalRate(editingRate.value.id, {
+    const updateData: HistoricalRateUpdate = {
       rate: editingRate.value.rate,
       source: editingRate.value.source,
       notes: editingRate.value.notes,
       updated_by: authStore.user?.nome || 'Admin'
-    })
+    }
+    
+    await exchangeRateAPI.editHistoricalRate(editingRate.value.id, updateData)
     
     editingRate.value = null
     await loadHistory()
@@ -528,10 +591,10 @@ const handleLanguageChange = (langCode: string) => {
 
 const resetQuickUpdateForm = () => {
   quickUpdateRates.value = {
-    usd_to_pyg: null,
-    usd_to_brl: null,
-    eur_to_usd: null,
-    eur_to_brl: null,
+    usd_to_pyg: undefined,
+    usd_to_brl: undefined,
+    eur_to_usd: undefined,
+    eur_to_brl: undefined,
     source: t('exchangeManagement.managementPanel'),
     notes: '',
     updated_by: authStore.user?.nome || 'Admin'
@@ -579,14 +642,17 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
+
 // Initialize data
-onMounted(() => {
+onMounted(async () => {
   // Initialize form with translated values
   resetQuickUpdateForm()
   
-  loadCurrentRates()
-  loadHistory()
-  loadSalesAverage()
+  await Promise.all([
+    loadCurrentRates(),
+    loadHistory(),
+    loadSalesAverage()
+  ])
   
   // Add click outside listener
   document.addEventListener('click', handleClickOutside)
