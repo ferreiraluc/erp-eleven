@@ -161,27 +161,8 @@ export const exchangeRateAPI = {
   getCurrentRates: (): Promise<ExchangeRateResponse> =>
     api.get('/api/exchange-rates/current').then(res => res.data),
   
-  quickUpdate: async (rates: QuickRateUpdate): Promise<any> => {
-    console.log('🔧 QuickUpdate Debug:', {
-      url: `${API_BASE_URL}/api/exchange-rates/quick-update`,
-      rates,
-      token: localStorage.getItem('auth_token') ? 'exists' : 'missing'
-    })
-    
-    try {
-      const response = await api.post('/api/exchange-rates/quick-update', rates)
-      console.log('✅ QuickUpdate Success:', response.data)
-      return response.data
-    } catch (error: any) {
-      console.error('❌ QuickUpdate Error:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-        headers: error.response?.headers
-      })
-      throw error
-    }
-  },
+  quickUpdate: (rates: QuickRateUpdate): Promise<any> =>
+    api.post('/api/exchange-rates/quick-update', rates).then(res => res.data),
   
   getHistory: (days = 30): Promise<ExchangeRateHistory> =>
     api.get(`/api/exchange-rates/history?days=${days}`).then(res => res.data),

@@ -84,12 +84,8 @@ async def log_requests(request: Request, call_next):
     """Log all HTTP requests"""
     start_time = time.time()
     
-    # Log request with headers for CORS debug
-    origin = request.headers.get("origin", "no-origin")
-    method = request.method
-    path = request.url.path
-    
-    logger.info(f"📨 {method} {path} - Origin: {origin}")
+    # Log request
+    logger.info(f"📨 {request.method} {request.url.path}")
     
     response = await call_next(request)
     
@@ -140,14 +136,4 @@ async def health_check():
         "version": "1.0.0"
     }
 
-@app.get("/debug/cors", tags=["debug"])
-async def cors_debug(request: Request):
-    """Debug CORS headers"""
-    logger.info("🐛 CORS debug accessed")
-    return {
-        "origin": request.headers.get("origin"),
-        "host": request.headers.get("host"),
-        "user_agent": request.headers.get("user-agent"),
-        "all_headers": dict(request.headers)
-    }
 
