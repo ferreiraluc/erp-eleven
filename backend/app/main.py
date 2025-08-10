@@ -143,3 +143,18 @@ async def cors_debug(request: Request):
         "user_agent": request.headers.get("user-agent"),
         "all_headers": dict(request.headers)
     }
+
+@app.options("/api/exchange-rates/quick-update")
+async def preflight_quick_update(request: Request):
+    """Handle preflight for quick-update endpoint"""
+    origin = request.headers.get("origin")
+    logger.info(f"🔄 Preflight request from origin: {origin}")
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": origin if origin else "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+            "Access-Control-Max-Age": "86400"
+        }
+    )
