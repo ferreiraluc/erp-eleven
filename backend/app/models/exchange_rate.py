@@ -9,7 +9,8 @@ from ..database import Base
 class CurrencyPair(enum.Enum):
     USD_TO_PYG = "USD_TO_PYG"  # US Dollar to Paraguayan Guarani
     USD_TO_BRL = "USD_TO_BRL"  # US Dollar to Brazilian Real
-    EUR_TO_PYG = "EUR_TO_PYG"  # Euro to Paraguayan Guarani
+    EUR_TO_PYG = "EUR_TO_PYG"  # Euro to Paraguayan Guarani (DEPRECATED)
+    EUR_TO_USD = "EUR_TO_USD"  # Euro to US Dollar
     EUR_TO_BRL = "EUR_TO_BRL"  # Euro to Brazilian Real
 
 class ExchangeRate(Base):

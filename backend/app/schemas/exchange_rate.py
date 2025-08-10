@@ -43,7 +43,7 @@ class QuickRateUpdate(BaseModel):
     """Simplified schema for quick rate updates from frontend"""
     usd_to_pyg: Optional[Decimal] = Field(None, gt=0, le=99999999)
     usd_to_brl: Optional[Decimal] = Field(None, gt=0, le=99999999)
-    eur_to_pyg: Optional[Decimal] = Field(None, gt=0, le=99999999)
+    eur_to_usd: Optional[Decimal] = Field(None, gt=0, le=99999999)
     eur_to_brl: Optional[Decimal] = Field(None, gt=0, le=99999999)
     source: Optional[str] = Field("Dashboard", max_length=100)
     notes: Optional[str] = Field(None, max_length=500)
@@ -53,7 +53,7 @@ class CurrentRatesResponse(BaseModel):
     """Response with current exchange rates for easy frontend consumption"""
     usd_to_pyg: Optional[Decimal] = None
     usd_to_brl: Optional[Decimal] = None
-    eur_to_pyg: Optional[Decimal] = None
+    eur_to_usd: Optional[Decimal] = None
     eur_to_brl: Optional[Decimal] = None
     last_updated: Optional[datetime] = None
     source: Optional[str] = None

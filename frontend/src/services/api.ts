@@ -126,7 +126,7 @@ export const vendorsAPI = {
 export interface ExchangeRateResponse {
   usd_to_pyg: number | null
   usd_to_brl: number | null
-  eur_to_pyg: number | null
+  eur_to_usd: number | null
   eur_to_brl: number | null
   last_updated: string | null
   source: string | null
@@ -135,7 +135,7 @@ export interface ExchangeRateResponse {
 export interface QuickRateUpdate {
   usd_to_pyg?: number
   usd_to_brl?: number
-  eur_to_pyg?: number
+  eur_to_usd?: number
   eur_to_brl?: number
   source: string
   notes?: string

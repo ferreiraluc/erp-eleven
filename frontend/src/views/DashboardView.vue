@@ -432,13 +432,13 @@
             </div>
 
             <div class="form-group">
-              <label for="eur_to_pyg">EUR → Guarani (G$)</label>
+              <label for="eur_to_usd">EUR → USD ($)</label>
               <input 
-                id="eur_to_pyg"
+                id="eur_to_usd"
                 type="number" 
-                step="0.01"
-                v-model.number="editingRates.eur_to_pyg"
-                placeholder="8200.0000"
+                step="0.0001"
+                v-model.number="editingRates.eur_to_usd"
+                placeholder="1.0850"
                 class="form-input"
               />
             </div>
@@ -509,7 +509,7 @@ const exchangeRates = ref<Record<string, number>>({
 const editingRates = ref({
   usd_to_pyg: 0,
   usd_to_brl: 0,
-  eur_to_pyg: 0,
+  eur_to_usd: 0,
   eur_to_brl: 0
 })
 
@@ -651,7 +651,7 @@ const loadCurrentRatesToEdit = () => {
   editingRates.value = {
     usd_to_pyg: exchangeRates.value['G$'],
     usd_to_brl: exchangeRates.value['R$'],
-    eur_to_pyg: 8200, // Default values
+    eur_to_usd: 1.0850, // Default values
     eur_to_brl: 6.20
   }
 }
@@ -671,7 +671,7 @@ const saveExchangeRates = async () => {
     await exchangeRateAPI.quickUpdate({
       usd_to_pyg: editingRates.value.usd_to_pyg || undefined,
       usd_to_brl: editingRates.value.usd_to_brl || undefined,
-      eur_to_pyg: editingRates.value.eur_to_pyg || undefined,
+      eur_to_usd: editingRates.value.eur_to_usd || undefined,
       eur_to_brl: editingRates.value.eur_to_brl || undefined,
       source: 'Dashboard',
       updated_by: authStore.user.nome,

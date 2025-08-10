@@ -7,26 +7,53 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
-          Back to Dashboard
+          {{ $t('exchangeManagement.backToDashboard') }}
         </button>
         <div class="page-title">
-          <h1>Exchange Rate Management</h1>
-          <p>Complete control over currency exchange rates</p>
+          <h1>{{ $t('exchangeManagement.title') }}</h1>
+          <p>{{ $t('exchangeManagement.subtitle') }}</p>
         </div>
       </div>
       <div class="header-actions">
+        <!-- Language Selector -->
+        <div class="language-selector">
+          <button 
+            @click="showLanguageDropdown = !showLanguageDropdown" 
+            class="language-button"
+          >
+            <span class="language-flag">{{ currentLocale.flag }}</span>
+            <span class="language-text">{{ currentLocale.code.toUpperCase() }}</span>
+            <svg class="dropdown-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          
+          <div v-if="showLanguageDropdown" class="language-dropdown">
+            <button 
+              v-for="lang in availableLocales" 
+              :key="lang.code"
+              @click="handleLanguageChange(lang.code)"
+              class="language-option"
+              :class="{ 'active': lang.code === locale }"
+            >
+              <span class="option-flag">{{ lang.flag }}</span>
+              <span class="option-name">{{ lang.name }}</span>
+            </button>
+          </div>
+        </div>
+        
         <button @click="showQuickUpdateModal = true" class="btn btn-primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
-          Quick Update Rates
+          {{ $t('exchangeManagement.quickUpdateRates') }}
         </button>
       </div>
     </div>
 
     <!-- Current Rates Overview -->
     <div class="current-rates-section">
-      <h2>Current Exchange Rates</h2>
+      <h2>{{ $t('exchangeManagement.currentRates') }}</h2>
       <div class="current-rates-grid">
         <div class="rate-card" v-for="(rate, key) in currentRatesDisplay" :key="key">
           <div class="rate-header">
@@ -44,31 +71,31 @@
 
     <!-- Sales Average Section -->
     <div class="sales-average-section">
-      <h2>Sales Weekly Average</h2>
+      <h2>{{ $t('exchangeManagement.salesWeeklyAverage') }}</h2>
       <div class="average-controls">
         <select v-model="selectedCurrency" @change="loadSalesAverage" class="currency-select">
           <option value="USD_TO_BRL">USD → BRL</option>
           <option value="USD_TO_PYG">USD → G$</option>
           <option value="EUR_TO_BRL">EUR → BRL</option>
-          <option value="EUR_TO_PYG">EUR → G$</option>
+          <option value="EUR_TO_USD">EUR → USD</option>
         </select>
         <select v-model="averageDays" @change="loadSalesAverage" class="days-select">
-          <option value="7">Last 7 days</option>
-          <option value="14">Last 14 days</option>
-          <option value="30">Last 30 days</option>
+          <option value="7">{{ $t('exchangeManagement.last7Days') }}</option>
+          <option value="14">{{ $t('exchangeManagement.last14Days') }}</option>
+          <option value="30">{{ $t('exchangeManagement.last30Days') }}</option>
         </select>
       </div>
       
       <div v-if="salesAverage" class="average-card">
         <div class="average-info">
           <div class="average-rate">
-            <span class="average-label">Recommended Rate for Sales</span>
+            <span class="average-label">{{ $t('exchangeManagement.recommendedRate') }}</span>
             <span class="average-value">{{ salesAverage.average_rate?.toFixed(4) }}</span>
           </div>
           <div class="average-details">
-            <span class="detail-item">Min: {{ salesAverage.min_rate?.toFixed(4) }}</span>
-            <span class="detail-item">Max: {{ salesAverage.max_rate?.toFixed(4) }}</span>
-            <span class="detail-item">{{ salesAverage.sample_count }} changes</span>
+            <span class="detail-item">{{ $t('exchangeManagement.min') }}: {{ salesAverage.min_rate?.toFixed(4) }}</span>
+            <span class="detail-item">{{ $t('exchangeManagement.max') }}: {{ salesAverage.max_rate?.toFixed(4) }}</span>
+            <span class="detail-item">{{ salesAverage.sample_count }} {{ $t('exchangeManagement.changes') }}</span>
           </div>
         </div>
         <div class="calculation-method">
@@ -80,49 +107,49 @@
     <!-- Historical Rates -->
     <div class="historical-section">
       <div class="section-header">
-        <h2>Exchange Rate History</h2>
+        <h2>{{ $t('exchangeManagement.exchangeHistory') }}</h2>
         <div class="history-controls">
           <select v-model="historyDays" @change="loadHistory" class="days-select">
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 3 months</option>
+            <option value="7">{{ $t('exchangeManagement.last7Days') }}</option>
+            <option value="30">{{ $t('exchangeManagement.last30Days') }}</option>
+            <option value="90">{{ $t('exchangeManagement.last3Months') }}</option>
           </select>
           <button @click="loadHistory" class="btn btn-secondary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            Refresh
+            {{ $t('common.refresh') }}
           </button>
         </div>
       </div>
 
       <div v-if="isLoadingHistory" class="loading-state">
         <div class="loading-spinner"></div>
-        <p>Loading exchange rate history...</p>
+        <p>{{ $t('exchangeManagement.loading') }}</p>
       </div>
 
       <div v-else-if="historyError" class="error-state">
         <div class="error-icon">⚠️</div>
         <p>{{ historyError }}</p>
-        <button @click="loadHistory" class="btn btn-primary">Try Again</button>
+        <button @click="loadHistory" class="btn btn-primary">{{ $t('exchangeManagement.tryAgain') }}</button>
       </div>
 
       <div v-else-if="historicalRates.length === 0" class="empty-state">
         <div class="empty-icon">📊</div>
-        <p>No exchange rate history found for the selected period</p>
+        <p>{{ $t('exchangeManagement.noHistory') }}</p>
       </div>
 
       <div v-else class="history-table-container">
         <table class="history-table">
           <thead>
             <tr>
-              <th>Currency Pair</th>
-              <th>Rate</th>
-              <th>Source</th>
-              <th>Updated By</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>{{ $t('exchangeManagement.currencyPair') }}</th>
+              <th>{{ $t('exchangeManagement.rate') }}</th>
+              <th>{{ $t('exchangeManagement.source') }}</th>
+              <th>{{ $t('exchangeManagement.updatedBy') }}</th>
+              <th>{{ $t('exchangeManagement.date') }}</th>
+              <th>{{ $t('exchangeManagement.status') }}</th>
+              <th>{{ $t('exchangeManagement.actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -148,16 +175,16 @@
                 >
               </td>
               <td>
-                <span v-if="editingRate?.id !== rate.id" class="source-display">{{ rate.source || 'N/A' }}</span>
+                <span v-if="editingRate?.id !== rate.id" class="source-display">{{ rate.source || $t('exchangeManagement.na') }}</span>
                 <input 
                   v-else 
                   v-model="editingRate.source" 
                   type="text" 
                   class="source-input"
-                  placeholder="Source"
+                  :placeholder="$t('exchangeManagement.source')"
                 >
               </td>
-              <td class="updated-by">{{ rate.updated_by || 'System' }}</td>
+              <td class="updated-by">{{ rate.updated_by || $t('exchangeManagement.systemUser') }}</td>
               <td class="date-cell">
                 <div class="date-info">
                   <span class="date">{{ formatDate(rate.created_at) }}</span>
@@ -166,7 +193,7 @@
               </td>
               <td>
                 <span :class="['status-badge', rate.is_active ? 'active' : 'inactive']">
-                  {{ rate.is_active ? 'Active' : 'Historical' }}
+                  {{ rate.is_active ? $t('exchangeManagement.active') : $t('exchangeManagement.historical') }}
                 </span>
               </td>
               <td class="actions-cell">
@@ -175,7 +202,7 @@
                     v-if="editingRate?.id !== rate.id && !rate.is_active" 
                     @click="startEdit(rate)" 
                     class="btn-icon edit"
-                    title="Edit Rate"
+                    :title="$t('exchangeManagement.editRate')"
                   >
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -183,12 +210,12 @@
                   </button>
                   
                   <template v-if="editingRate?.id === rate.id">
-                    <button @click="saveEditedRate" class="btn-icon save" title="Save Changes">
+                    <button @click="saveEditedRate" class="btn-icon save" :title="$t('exchangeManagement.saveChanges')">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                     </button>
-                    <button @click="cancelEdit" class="btn-icon cancel" title="Cancel">
+                    <button @click="cancelEdit" class="btn-icon cancel" :title="$t('common.cancel')">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
@@ -199,7 +226,7 @@
                     v-if="editingRate?.id !== rate.id && !rate.is_active" 
                     @click="confirmDelete(rate)" 
                     class="btn-icon delete"
-                    title="Delete Rate"
+                    :title="$t('exchangeManagement.deleteRate')"
                   >
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -217,7 +244,7 @@
     <div v-if="showQuickUpdateModal" class="modal-overlay" @click="showQuickUpdateModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Quick Update Exchange Rates</h3>
+          <h3>{{ $t('exchangeManagement.quickUpdateTitle') }}</h3>
           <button @click="showQuickUpdateModal = false" class="modal-close">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -238,8 +265,8 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label>🇪🇺 EUR → G$</label>
-                <input v-model="quickUpdateRates.eur_to_pyg" type="number" step="0.01" placeholder="8200.00">
+                <label>🇪🇺 EUR → 🇺🇸 USD</label>
+                <input v-model="quickUpdateRates.eur_to_usd" type="number" step="0.0001" placeholder="1.0850">
               </div>
               <div class="form-group">
                 <label>🇪🇺 EUR → 🇧🇷 R$</label>
@@ -247,21 +274,21 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Source</label>
-              <input v-model="quickUpdateRates.source" type="text" placeholder="Manual Update">
+              <label>{{ $t('exchangeManagement.source') }}</label>
+              <input v-model="quickUpdateRates.source" type="text" :placeholder="$t('exchangeManagement.sourcePlaceholder')">
             </div>
             <div class="form-group">
-              <label>Notes</label>
-              <textarea v-model="quickUpdateRates.notes" placeholder="Optional notes about this update"></textarea>
+              <label>{{ $t('exchangeManagement.notes') }}</label>
+              <textarea v-model="quickUpdateRates.notes" :placeholder="$t('exchangeManagement.notesPlaceholder')"></textarea>
             </div>
           </div>
           <div v-if="updateError" class="error-message">{{ updateError }}</div>
         </div>
         <div class="modal-footer">
-          <button @click="showQuickUpdateModal = false" class="btn btn-secondary">Cancel</button>
+          <button @click="showQuickUpdateModal = false" class="btn btn-secondary">{{ $t('common.cancel') }}</button>
           <button @click="performQuickUpdate" :disabled="isUpdating" class="btn btn-primary">
-            <span v-if="isUpdating">Updating...</span>
-            <span v-else>Update Rates</span>
+            <span v-if="isUpdating">{{ $t('exchangeManagement.updating') }}</span>
+            <span v-else>{{ $t('exchangeManagement.updateRates') }}</span>
           </button>
         </div>
       </div>
@@ -271,22 +298,22 @@
     <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
       <div class="modal-content delete-modal" @click.stop>
         <div class="modal-header">
-          <h3>Confirm Deletion</h3>
+          <h3>{{ $t('exchangeManagement.confirmDeletion') }}</h3>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to delete this exchange rate entry?</p>
+          <p>{{ $t('exchangeManagement.deleteConfirmation') }}</p>
           <div class="delete-details">
-            <p><strong>Currency:</strong> {{ formatCurrencyPair(rateToDelete?.currency_pair) }}</p>
-            <p><strong>Rate:</strong> {{ Number(rateToDelete?.rate).toFixed(4) }}</p>
-            <p><strong>Date:</strong> {{ formatDate(rateToDelete?.created_at) }}</p>
+            <p><strong>{{ $t('exchangeManagement.currency') }}:</strong> {{ formatCurrencyPair(rateToDelete?.currency_pair) }}</p>
+            <p><strong>{{ $t('exchangeManagement.rate') }}:</strong> {{ Number(rateToDelete?.rate).toFixed(4) }}</p>
+            <p><strong>{{ $t('exchangeManagement.date') }}:</strong> {{ formatDate(rateToDelete?.created_at) }}</p>
           </div>
-          <p class="warning-text">This action cannot be undone.</p>
+          <p class="warning-text">{{ $t('exchangeManagement.warning') }}</p>
         </div>
         <div class="modal-footer">
-          <button @click="showDeleteModal = false" class="btn btn-secondary">Cancel</button>
+          <button @click="showDeleteModal = false" class="btn btn-secondary">{{ $t('common.cancel') }}</button>
           <button @click="deleteRate" :disabled="isDeleting" class="btn btn-danger">
-            <span v-if="isDeleting">Deleting...</span>
-            <span v-else>Delete</span>
+            <span v-if="isDeleting">{{ $t('exchangeManagement.deleting') }}</span>
+            <span v-else>{{ $t('common.delete') }}</span>
           </button>
         </div>
       </div>
@@ -295,13 +322,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { exchangeRateAPI } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { locale, t } = useI18n()
+
+// Language settings
+const showLanguageDropdown = ref(false)
+const availableLocales = [
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' }
+]
 
 // Reactive data
 const currentRates = ref<any>(null)
@@ -324,13 +362,13 @@ const updateError = ref<string | null>(null)
 const editingRate = ref<any>(null)
 const rateToDelete = ref<any>(null)
 
-// Quick update form
+// Quick update form - initial values will be set in onMounted
 const quickUpdateRates = ref({
   usd_to_pyg: null,
   usd_to_brl: null,
-  eur_to_pyg: null,
+  eur_to_usd: null,
   eur_to_brl: null,
-  source: 'Management Panel',
+  source: '',
   notes: '',
   updated_by: authStore.user?.nome || 'Admin'
 })
@@ -343,28 +381,28 @@ const currentRatesDisplay = computed(() => {
     usd_pyg: {
       flag: '🇺🇸→🇵🇾',
       pair: 'USD → G$',
-      value: currentRates.value.usd_to_pyg?.toFixed(0) || '7500',
+      value: (typeof currentRates.value.usd_to_pyg === 'number' ? currentRates.value.usd_to_pyg.toFixed(0) : '7500'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     },
     usd_brl: {
       flag: '🇺🇸→🇧🇷',
       pair: 'USD → R$',
-      value: currentRates.value.usd_to_brl?.toFixed(2) || '5.85',
+      value: (typeof currentRates.value.usd_to_brl === 'number' ? currentRates.value.usd_to_brl.toFixed(2) : '5.85'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     },
-    eur_pyg: {
-      flag: '🇪🇺→🇵🇾',
-      pair: 'EUR → G$',
-      value: currentRates.value.eur_to_pyg?.toFixed(0) || '8200',
+    eur_usd: {
+      flag: '🇪🇺→🇺🇸',
+      pair: 'EUR → USD',
+      value: (typeof currentRates.value.eur_to_usd === 'number' ? currentRates.value.eur_to_usd.toFixed(4) : '1.0850'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     },
     eur_brl: {
       flag: '🇪🇺→🇧🇷',
       pair: 'EUR → R$',
-      value: currentRates.value.eur_to_brl?.toFixed(2) || '6.20',
+      value: (typeof currentRates.value.eur_to_brl === 'number' ? currentRates.value.eur_to_brl.toFixed(2) : '6.20'),
       source: currentRates.value.source || 'Manual',
       updated: currentRates.value.last_updated
     }
@@ -417,15 +455,7 @@ const performQuickUpdate = async () => {
     await loadHistory()
     
     // Reset form
-    quickUpdateRates.value = {
-      usd_to_pyg: null,
-      usd_to_brl: null,
-      eur_to_pyg: null,
-      eur_to_brl: null,
-      source: 'Management Panel',
-      notes: '',
-      updated_by: authStore.user?.nome || 'Admin'
-    }
+    resetQuickUpdateForm()
   } catch (error: any) {
     updateError.value = error.message || 'Failed to update rates'
   } finally {
@@ -486,9 +516,31 @@ const deleteRate = async () => {
   }
 }
 
+// Language functions
+const currentLocale = computed(() => {
+  return availableLocales.find(loc => loc.code === locale.value) || availableLocales[0]
+})
+
+const handleLanguageChange = (langCode: string) => {
+  setLocale(langCode)
+  showLanguageDropdown.value = false
+}
+
+const resetQuickUpdateForm = () => {
+  quickUpdateRates.value = {
+    usd_to_pyg: null,
+    usd_to_brl: null,
+    eur_to_usd: null,
+    eur_to_brl: null,
+    source: t('exchangeManagement.managementPanel'),
+    notes: '',
+    updated_by: authStore.user?.nome || 'Admin'
+  }
+}
+
 // Helper functions
 const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A'
+  if (!dateString) return t('exchangeManagement.na')
   return new Date(dateString).toLocaleDateString()
 }
 
@@ -501,7 +553,7 @@ const formatCurrencyPair = (pair: string) => {
   const pairs: { [key: string]: string } = {
     'USD_TO_PYG': 'USD → G$',
     'USD_TO_BRL': 'USD → R$',
-    'EUR_TO_PYG': 'EUR → G$',
+    'EUR_TO_USD': 'EUR → USD',
     'EUR_TO_BRL': 'EUR → R$'
   }
   return pairs[pair] || pair
@@ -511,17 +563,38 @@ const getCurrencyFlag = (pair: string) => {
   const flags: { [key: string]: string } = {
     'USD_TO_PYG': '🇺🇸→🇵🇾',
     'USD_TO_BRL': '🇺🇸→🇧🇷',
-    'EUR_TO_PYG': '🇪🇺→🇵🇾',
+    'EUR_TO_USD': '🇪🇺→🇺🇸',
     'EUR_TO_BRL': '🇪🇺→🇧🇷'
   }
   return flags[pair] || '💱'
 }
 
+// Close dropdown when clicking outside
+const handleClickOutside = (event: Event) => {
+  const target = event.target as Element
+  const languageSelector = document.querySelector('.language-selector')
+  
+  if (languageSelector && !languageSelector.contains(target)) {
+    showLanguageDropdown.value = false
+  }
+}
+
 // Initialize data
 onMounted(() => {
+  // Initialize form with translated values
+  resetQuickUpdateForm()
+  
   loadCurrentRates()
   loadHistory()
   loadSalesAverage()
+  
+  // Add click outside listener
+  document.addEventListener('click', handleClickOutside)
+})
+
+// Cleanup
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -592,6 +665,107 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 1rem;
+  align-items: center;
+}
+
+/* Language Selector */
+.language-selector {
+  position: relative;
+}
+
+.language-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.language-button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.language-flag {
+  font-size: 0.875rem;
+  width: 1.25rem;
+  display: inline-block;
+}
+
+.language-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dropdown-icon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s;
+}
+
+.language-selector:hover .dropdown-icon {
+  transform: rotate(180deg);
+}
+
+.language-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  margin-top: 0.25rem;
+  min-width: 160px;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.875rem;
+}
+
+.language-option:hover {
+  background-color: #f3f4f6;
+}
+
+.language-option.active {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.language-option:first-child {
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.language-option:last-child {
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.option-flag {
+  font-size: 1rem;
+  width: 1.5rem;
+  display: inline-block;
+}
+
+.option-name {
+  font-weight: 500;
 }
 
 /* Current Rates Section */

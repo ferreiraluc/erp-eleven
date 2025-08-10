@@ -92,9 +92,9 @@ export const useCurrencyStore = defineStore('currency', () => {
       // Update exchange rates with API data
       if (response.usd_to_pyg) exchangeRates.value['G$'] = response.usd_to_pyg
       if (response.usd_to_brl) exchangeRates.value['R$'] = response.usd_to_brl
-      if (response.eur_to_pyg && response.usd_to_pyg) {
-        // Convert EUR->PYG to USD->EUR rate (approximate)
-        exchangeRates.value['EUR'] = response.usd_to_pyg / response.eur_to_pyg
+      if (response.eur_to_usd) {
+        // Use direct EUR->USD rate
+        exchangeRates.value['EUR'] = 1 / response.eur_to_usd
       }
       
       lastUpdate.value = response.last_updated
@@ -110,7 +110,7 @@ export const useCurrencyStore = defineStore('currency', () => {
   const updateRatesAPI = async (rates: {
     usd_to_pyg?: number
     usd_to_brl?: number  
-    eur_to_pyg?: number
+    eur_to_usd?: number
     eur_to_brl?: number
   }) => {
     try {

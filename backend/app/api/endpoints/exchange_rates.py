@@ -35,10 +35,13 @@ def get_current_rates(
             result.usd_to_pyg = rate.rate
         elif rate.currency_pair == CurrencyPair.USD_TO_BRL:
             result.usd_to_brl = rate.rate
-        elif rate.currency_pair == CurrencyPair.EUR_TO_PYG:
-            result.eur_to_pyg = rate.rate
+        elif rate.currency_pair == CurrencyPair.EUR_TO_USD:
+            result.eur_to_usd = rate.rate
         elif rate.currency_pair == CurrencyPair.EUR_TO_BRL:
             result.eur_to_brl = rate.rate
+        # Ignore deprecated EUR_TO_PYG entries
+        elif rate.currency_pair == CurrencyPair.EUR_TO_PYG:
+            continue  # Skip deprecated pairs
         
         # Track most recent update
         if not latest_update or rate.updated_at > latest_update:
@@ -96,7 +99,7 @@ def quick_update_rates(
     # Update all provided rates
     update_rate(CurrencyPair.USD_TO_PYG, rates.usd_to_pyg)
     update_rate(CurrencyPair.USD_TO_BRL, rates.usd_to_brl)
-    update_rate(CurrencyPair.EUR_TO_PYG, rates.eur_to_pyg)
+    update_rate(CurrencyPair.EUR_TO_USD, rates.eur_to_usd)
     update_rate(CurrencyPair.EUR_TO_BRL, rates.eur_to_brl)
     
     if not updated_rates:
