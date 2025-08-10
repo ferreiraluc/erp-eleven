@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router
 import { useAuthStore } from '@/stores/auth'
 import LoginViewNoI18n from '@/views/LoginViewNoI18n.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import ExchangeRateManagement from '@/views/ExchangeRateManagement.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -20,6 +21,12 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/exchange-rates',
+      name: 'exchange-rates',
+      component: ExchangeRateManagement,
       meta: { requiresAuth: true }
     },
     // Catch all route

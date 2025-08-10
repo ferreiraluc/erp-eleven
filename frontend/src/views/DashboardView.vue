@@ -184,13 +184,13 @@
         <!-- Quick Actions -->
         <div class="actions-grid">
           <!-- Exchange Rate Card -->
-          <div class="action-card">
+          <div class="action-card exchange-rate-card" @click="navigateToExchangeRates" style="cursor: pointer;">
             <div class="card-header">
               <h3 class="card-title">{{ $t('dashboard.exchangeRate') }}</h3>
               <div class="card-actions">
                 <button 
                   v-if="canEditRates"
-                  @click="openCardModal"
+                  @click.stop="openCardModal"
                   class="edit-rate-btn"
                   style="cursor: pointer;"
                 >
@@ -201,6 +201,11 @@
                 <div class="card-icon green">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div class="navigation-arrow">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
@@ -313,23 +318,41 @@
           <!-- System Status -->
           <div class="activity-card">
             <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
-            <div class="status-list">
-              <div class="status-item">
-                <div class="status-indicator online"></div>
-                <span class="status-label">{{ $t('dashboard.apiServer') }}</span>
-                <span class="status-value online">{{ $t('dashboard.online') }}</span>
+            <div class="status-grid">
+              <div class="status-box">
+                <div class="status-icon online">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
+                  </svg>
+                </div>
+                <div class="status-info">
+                  <span class="status-label">API</span>
+                  <span class="status-value online">Online</span>
+                </div>
               </div>
               
-              <div class="status-item">
-                <div class="status-indicator online"></div>
-                <span class="status-label">{{ $t('dashboard.database') }}</span>
-                <span class="status-value online">{{ $t('dashboard.connected') }}</span>
+              <div class="status-box">
+                <div class="status-icon online">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.79 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.79 4 8 4s8-1.79 8-4M4 7c0-2.21 3.79-4 8-4s8 1.79 8 4"></path>
+                  </svg>
+                </div>
+                <div class="status-info">
+                  <span class="status-label">Database</span>
+                  <span class="status-value online">Connected</span>
+                </div>
               </div>
               
-              <div class="status-item">
-                <div class="status-indicator warning"></div>
-                <span class="status-label">{{ $t('dashboard.exchangeRates') }}</span>
-                <span class="status-value warning">{{ $t('dashboard.lastUpdated', { time: '2h ago' }) }}</span>
+              <div class="status-box">
+                <div class="status-icon warning">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                  </svg>
+                </div>
+                <div class="status-info">
+                  <span class="status-label">Exchange</span>
+                  <span class="status-value warning">{{ getLastUpdateTime() }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -574,6 +597,32 @@ const closeExchangeRateModals = () => {
   showExchangeRateModal.value = false
   showExchangeRateHeaderModal.value = false
   exchangeRateError.value = null
+}
+
+const getLastUpdateTime = () => {
+  if (!exchangeRates.value || !exchangeRates.value.last_updated) {
+    return 'Never'
+  }
+  
+  const lastUpdate = new Date(exchangeRates.value.last_updated)
+  const now = new Date()
+  const diffInMinutes = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60))
+  
+  if (diffInMinutes < 1) {
+    return 'Just now'
+  } else if (diffInMinutes < 60) {
+    return `${diffInMinutes}m ago`
+  } else if (diffInMinutes < 1440) {
+    const hours = Math.floor(diffInMinutes / 60)
+    return `${hours}h ago`
+  } else {
+    const days = Math.floor(diffInMinutes / 1440)
+    return `${days}d ago`
+  }
+}
+
+const navigateToExchangeRates = () => {
+  router.push('/exchange-rates')
 }
 
 // Load exchange rates from API
@@ -978,7 +1027,14 @@ onUnmounted(() => {
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
-  padding: 1.5rem;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.action-card.exchange-rate-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .card-header {
@@ -1114,7 +1170,7 @@ onUnmounted(() => {
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .view-all-button {
@@ -1202,51 +1258,80 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
-.status-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
 }
 
-.status-item {
+.status-box {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
 }
 
-.status-indicator {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  margin-right: 0.75rem;
+.status-box:hover {
+  border-color: #d1d5db;
+  background-color: #f9fafb;
 }
 
-.status-indicator.online {
-  background-color: #10b981;
+.status-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.status-indicator.warning {
-  background-color: #f59e0b;
+.status-icon svg {
+  width: 1rem;
+  height: 1rem;
 }
 
-.status-label {
-  font-size: 0.875rem;
-  color: #6b7280;
+.status-icon.online {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.status-icon.warning {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   flex: 1;
 }
 
-.status-value {
-  font-size: 0.875rem;
+.status-info .status-label {
+  font-size: 0.75rem;
+  color: #6b7280;
   font-weight: 500;
+  line-height: 1.2;
 }
 
-.status-value.online {
-  color: #10b981;
+.status-info .status-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.status-value.warning {
-  color: #f59e0b;
+.status-info .status-value.online {
+  color: #16a34a;
 }
+
+.status-info .status-value.warning {
+  color: #d97706;
+}
+
 
 /* Footer Styles */
 .dashboard-footer {
@@ -1478,6 +1563,28 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.navigation-arrow {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.exchange-rate-card:hover .navigation-arrow {
+  color: #2563eb;
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.navigation-arrow svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .edit-rate-btn {

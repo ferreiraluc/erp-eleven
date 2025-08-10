@@ -13,7 +13,8 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(ls:*)",
-      "Bash(npm run preview:*)"
+      "Bash(npm run preview:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

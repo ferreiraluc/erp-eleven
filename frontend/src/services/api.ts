@@ -168,7 +168,16 @@ export const exchangeRateAPI = {
     api.get(`/api/exchange-rates/history?days=${days}`).then(res => res.data),
   
   getWeeklyAverage: (currencyPair: string, weeksBack = 0): Promise<any> =>
-    api.get(`/api/exchange-rates/weekly-average/${currencyPair}?weeks_back=${weeksBack}`).then(res => res.data)
+    api.get(`/api/exchange-rates/weekly-average/${currencyPair}?weeks_back=${weeksBack}`).then(res => res.data),
+    
+  getSalesAverage: (currencyPair: string, daysBack = 7): Promise<any> =>
+    api.get(`/api/exchange-rates/sales-average/${currencyPair}?days_back=${daysBack}`).then(res => res.data),
+    
+  editHistoricalRate: (rateId: string, update: Partial<QuickRateUpdate>): Promise<any> =>
+    api.put(`/api/exchange-rates/history/${rateId}`, update).then(res => res.data),
+    
+  deleteHistoricalRate: (rateId: string): Promise<any> =>
+    api.delete(`/api/exchange-rates/history/${rateId}`).then(res => res.data)
 }
 
 export default api
