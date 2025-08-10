@@ -37,12 +37,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# CORS - Must be first middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporário para debug - depois restringir
-    allow_credentials=False,  # Deve ser False quando origins é *
+    allow_origins=[
+        "https://erp-eleven-frontend.onrender.com",
+        "https://erp-eleven-backend.onrender.com", 
+        "https://erp-eleven.onrender.com",
+        "http://localhost:3000",
+        "http://localhost:5173"
+    ],
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "Access-Control-Allow-Origin"],
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -144,17 +151,3 @@ async def cors_debug(request: Request):
         "all_headers": dict(request.headers)
     }
 
-@app.options("/api/exchange-rates/quick-update")
-async def preflight_quick_update(request: Request):
-    """Handle preflight for quick-update endpoint"""
-    origin = request.headers.get("origin")
-    logger.info(f"🔄 Preflight request from origin: {origin}")
-    return JSONResponse(
-        content={},
-        headers={
-            "Access-Control-Allow-Origin": origin if origin else "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
-            "Access-Control-Max-Age": "86400"
-        }
-    )

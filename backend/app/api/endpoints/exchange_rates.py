@@ -63,23 +63,30 @@ def quick_update_rates(
         if new_rate is None:
             return
             
-        # Deactivate previous active rate
-        db.query(ExchangeRate).filter(
+        # Try to find existing active rate
+        existing_rate = db.query(ExchangeRate).filter(
             ExchangeRate.currency_pair == currency_pair,
             ExchangeRate.is_active == True
-        ).update({"is_active": False})
+        ).first()
         
-        # Create new active rate
-        new_record = ExchangeRate(
-            currency_pair=currency_pair,
-            rate=new_rate,
-            source=rates.source,
-            notes=rates.notes,
-            updated_by=rates.updated_by,
-            is_active=True
-            # rate_date=date.today()  # Will add after migration
-        )
-        db.add(new_record)
+        if existing_rate:
+            # Update existing rate
+            existing_rate.rate = new_rate
+            existing_rate.source = rates.source
+            existing_rate.notes = rates.notes
+            existing_rate.updated_by = rates.updated_by
+        else:
+            # Create new rate if none exists
+            new_record = ExchangeRate(
+                currency_pair=currency_pair,
+                rate=new_rate,
+                source=rates.source,
+                notes=rates.notes,
+                updated_by=rates.updated_by,
+                is_active=True
+            )
+            db.add(new_record)
+        
         updated_rates.append({
             "pair": currency_pair.value,
             "rate": float(new_rate),
