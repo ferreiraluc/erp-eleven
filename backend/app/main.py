@@ -39,17 +39,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173", 
-        "http://127.0.0.1:3000",
-        "https://erp-eleven.onrender.com",
-        "https://erp-eleven-frontend.onrender.com",
-        "https://erp-eleven-backend.onrender.com"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],  # Temporário para debug - depois restringir
+    allow_credentials=False,  # Deve ser False quando origins é *
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -84,9 +77,12 @@ async def log_requests(request: Request, call_next):
     """Log all HTTP requests"""
     start_time = time.time()
     
-    # Log request
-    client_host = request.client.host if request.client else "unknown"
-    logger.info(f"📨 {request.method} {request.url.path} - {client_host}")
+    # Log request with headers for CORS debug
+    origin = request.headers.get("origin", "no-origin")
+    method = request.method
+    path = request.url.path
+    
+    logger.info(f"📨 {method} {path} - Origin: {origin}")
     
     response = await call_next(request)
     
@@ -135,4 +131,15 @@ async def health_check():
         "status": "healthy", 
         "timestamp": time.time(),
         "version": "1.0.0"
+    }
+
+@app.get("/debug/cors", tags=["debug"])
+async def cors_debug(request: Request):
+    """Debug CORS headers"""
+    logger.info("🐛 CORS debug accessed")
+    return {
+        "origin": request.headers.get("origin"),
+        "host": request.headers.get("host"),
+        "user_agent": request.headers.get("user-agent"),
+        "all_headers": dict(request.headers)
     }
