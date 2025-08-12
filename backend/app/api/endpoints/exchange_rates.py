@@ -16,7 +16,7 @@ from ...dependencies import get_current_active_user, require_role
 from datetime import date, timedelta
 from sqlalchemy import and_, desc
 from ...config import settings
-from ...utils.datetime import ensure_timezone_aware, now_in_timezone
+from ...utils import ensure_timezone_aware, now_in_timezone
 
 router = APIRouter()
 
