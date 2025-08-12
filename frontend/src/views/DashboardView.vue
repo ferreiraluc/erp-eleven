@@ -17,83 +17,164 @@
         
         <div class="header-right">
           <div class="header-left-controls">
-            <!-- Currency and Language Selectors -->
-            <div class="currency-language-group">
-              <!-- Currency Selector -->
-              <div class="header-control">
-                <div class="dropdown">
-                  <button @click="toggleCurrencyDropdown" class="header-dropdown-button">
-                    <span class="control-flag">{{ currencyStore.getCurrentCurrency?.flag }}</span>
-                    <span class="control-text">{{ currencyStore.selectedCurrency }}</span>
-                    <svg class="dropdown-icon" :class="{ 'rotate': showCurrencyDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  <div v-if="showCurrencyDropdown" class="header-dropdown-menu">
-                    <button
-                      v-for="currency in currencyStore.availableCurrencies"
-                      :key="currency.code"
-                      @click="handleCurrencyChange(currency.code)"
-                      class="header-dropdown-item"
-                      :class="{ 'active': currency.code === currencyStore.selectedCurrency }"
-                    >
-                      <span class="control-flag">{{ currency.flag }}</span>
-                      <div class="currency-info">
-                        <span class="currency-code">{{ currency.code }}</span>
-                        <span class="currency-name">{{ currency.name }}</span>
-                      </div>
+            <!-- Currency, Language, and Exchange Rates (Mobile only) -->
+            <div class="mobile-controls">
+              <!-- Currency and Language Selectors -->
+              <div class="currency-language-group">
+                <!-- Currency Selector -->
+                <div class="header-control">
+                  <div class="dropdown">
+                    <button @click="toggleCurrencyDropdown" class="header-dropdown-button">
+                      <span class="control-flag">{{ currencyStore.getCurrentCurrency?.flag }}</span>
+                      <span class="control-text">{{ currencyStore.selectedCurrency }}</span>
+                      <svg class="dropdown-icon" :class="{ 'rotate': showCurrencyDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </button>
+                    <div v-if="showCurrencyDropdown" class="header-dropdown-menu">
+                      <button
+                        v-for="currency in currencyStore.availableCurrencies"
+                        :key="currency.code"
+                        @click="handleCurrencyChange(currency.code)"
+                        class="header-dropdown-item"
+                        :class="{ 'active': currency.code === currencyStore.selectedCurrency }"
+                      >
+                        <span class="control-flag">{{ currency.flag }}</span>
+                        <div class="currency-info">
+                          <span class="currency-code">{{ currency.code }}</span>
+                          <span class="currency-name">{{ currency.name }}</span>
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Language Selector -->
-              <div class="header-control">
-                <div class="dropdown">
-                  <button @click="toggleLanguageDropdown" class="header-dropdown-button">
-                    <span class="control-flag">{{ getCurrentLanguage?.flag }}</span>
-                    <span class="control-text">{{ getCurrentLanguage?.code?.toUpperCase() }}</span>
-                    <svg class="dropdown-icon" :class="{ 'rotate': showLanguageDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  <div v-if="showLanguageDropdown" class="header-dropdown-menu">
-                    <button
-                      v-for="lang in availableLocales"
-                      :key="lang.code"
-                      @click="handleLanguageChange(lang.code)"
-                      class="header-dropdown-item"
-                      :class="{ 'active': lang.code === currentLocale }"
-                    >
-                      <span class="control-flag">{{ lang.flag }}</span>
-                      <span class="language-name">{{ lang.name }}</span>
+                <!-- Language Selector -->
+                <div class="header-control">
+                  <div class="dropdown">
+                    <button @click="toggleLanguageDropdown" class="header-dropdown-button">
+                      <span class="control-flag">{{ getCurrentLanguage?.flag }}</span>
+                      <span class="control-text">{{ getCurrentLanguage?.code?.toUpperCase() }}</span>
+                      <svg class="dropdown-icon" :class="{ 'rotate': showLanguageDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </button>
+                    <div v-if="showLanguageDropdown" class="header-dropdown-menu">
+                      <button
+                        v-for="lang in availableLocales"
+                        :key="lang.code"
+                        @click="handleLanguageChange(lang.code)"
+                        class="header-dropdown-item"
+                        :class="{ 'active': lang.code === currentLocale }"
+                      >
+                        <span class="control-flag">{{ lang.flag }}</span>
+                        <span class="language-name">{{ lang.name }}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <!-- Exchange Rates Display -->
-            <div class="header-control">
-              <div class="exchange-rates-header" @click="handleHeaderClick" :class="{ 'editable': canEditRates }" style="cursor: pointer;">
-                <div class="rates-display">
-                  <div class="rate-item-header">
-                    <span class="rate-flag">🇺🇸→🇵🇾</span>
-                    <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+              
+              <!-- Exchange Rates Display -->
+              <div class="header-control">
+                <div class="exchange-rates-header" @click="handleHeaderClick" :class="{ 'editable': canEditRates }" style="cursor: pointer;">
+                  <div class="rates-display">
+                    <div class="rate-item-header">
+                      <span class="rate-flag">🇺🇸→🇵🇾</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+                    </div>
+                    <div class="rate-item-header">
+                      <span class="rate-flag">🇺🇸→🇧🇷</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                    </div>
                   </div>
-                  <div class="rate-item-header">
-                    <span class="rate-flag">🇺🇸→🇧🇷</span>
-                    <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
-                  </div>
+                  <svg v-if="canEditRates" class="edit-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
                 </div>
-                <svg v-if="canEditRates" class="edit-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
               </div>
             </div>
           </div>
 
           <div class="header-right-controls">
+            <!-- Currency, Language, and Exchange Rates (Desktop only) -->
+            <div class="desktop-controls">
+              <!-- Currency and Language Selectors -->
+              <div class="currency-language-group">
+                <!-- Currency Selector -->
+                <div class="header-control">
+                  <div class="dropdown">
+                    <button @click="toggleCurrencyDropdown" class="header-dropdown-button">
+                      <span class="control-flag">{{ currencyStore.getCurrentCurrency?.flag }}</span>
+                      <span class="control-text">{{ currencyStore.selectedCurrency }}</span>
+                      <svg class="dropdown-icon" :class="{ 'rotate': showCurrencyDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div v-if="showCurrencyDropdown" class="header-dropdown-menu">
+                      <button
+                        v-for="currency in currencyStore.availableCurrencies"
+                        :key="currency.code"
+                        @click="handleCurrencyChange(currency.code)"
+                        class="header-dropdown-item"
+                        :class="{ 'active': currency.code === currencyStore.selectedCurrency }"
+                      >
+                        <span class="control-flag">{{ currency.flag }}</span>
+                        <div class="currency-info">
+                          <span class="currency-code">{{ currency.code }}</span>
+                          <span class="currency-name">{{ currency.name }}</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Language Selector -->
+                <div class="header-control">
+                  <div class="dropdown">
+                    <button @click="toggleLanguageDropdown" class="header-dropdown-button">
+                      <span class="control-flag">{{ getCurrentLanguage?.flag }}</span>
+                      <span class="control-text">{{ getCurrentLanguage?.code?.toUpperCase() }}</span>
+                      <svg class="dropdown-icon" :class="{ 'rotate': showLanguageDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div v-if="showLanguageDropdown" class="header-dropdown-menu">
+                      <button
+                        v-for="lang in availableLocales"
+                        :key="lang.code"
+                        @click="handleLanguageChange(lang.code)"
+                        class="header-dropdown-item"
+                        :class="{ 'active': lang.code === currentLocale }"
+                      >
+                        <span class="control-flag">{{ lang.flag }}</span>
+                        <span class="language-name">{{ lang.name }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Exchange Rates Display -->
+              <div class="header-control">
+                <div class="exchange-rates-header" @click="handleHeaderClick" :class="{ 'editable': canEditRates }" style="cursor: pointer;">
+                  <div class="rates-display">
+                    <div class="rate-item-header">
+                      <span class="rate-flag">🇺🇸→🇵🇾</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+                    </div>
+                    <div class="rate-item-header">
+                      <span class="rate-flag">🇺🇸→🇧🇷</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                    </div>
+                  </div>
+                  <svg v-if="canEditRates" class="edit-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
             <div class="current-time">
               <svg class="time-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1916,7 +1997,31 @@ onUnmounted(() => {
   color: #b91c1c;
 }
 
+/* Responsive visibility classes */
+.desktop-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-controls {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  /* Toggle visibility classes for mobile */
+  .desktop-controls {
+    display: none !important;
+  }
+  
+  .mobile-controls {
+    display: block !important;
+  }
+
+  .mobile-controls .currency-language-group {
+    margin-bottom: 1rem;
+  }
+
   /* Ocultar data/hora no mobile */
   .current-time {
     display: none !important;
