@@ -73,11 +73,30 @@ def quick_update_rates(
         ).first()
         
         if existing_rate:
-            # Update existing rate
-            existing_rate.rate = new_rate
-            existing_rate.source = rates.source
-            existing_rate.notes = rates.notes
-            existing_rate.updated_by = rates.updated_by
+            # Check if rate actually changed (using decimal comparison)
+            from decimal import Decimal
+            old_rate = Decimal(str(existing_rate.rate))
+            new_rate_decimal = Decimal(str(new_rate))
+            
+            if old_rate != new_rate_decimal:
+                # Deactivate old rate (for history)
+                existing_rate.is_active = False
+                
+                # Create new rate entry
+                new_record = ExchangeRate(
+                    currency_pair=currency_pair,
+                    rate=new_rate,
+                    source=rates.source,
+                    notes=rates.notes,
+                    updated_by=rates.updated_by,
+                    is_active=True
+                )
+                db.add(new_record)
+            else:
+                # Rate didn't change, just update metadata
+                existing_rate.source = rates.source
+                existing_rate.notes = rates.notes
+                existing_rate.updated_by = rates.updated_by
         else:
             # Create new rate if none exists
             new_record = ExchangeRate(
