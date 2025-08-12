@@ -15,6 +15,7 @@ from ...schemas.exchange_rate import (
 from ...dependencies import get_current_active_user, require_role
 from datetime import date, timedelta
 from sqlalchemy import and_, desc
+from ...config import settings
 
 router = APIRouter()
 
@@ -124,12 +125,25 @@ def quick_update_rates(
     if not updated_rates:
         raise HTTPException(status_code=400, detail="No rates provided for update")
     
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Check if it's a unique constraint error
+        if "unique constraint" in str(e).lower() and "currency_pair" in str(e).lower():
+            raise HTTPException(
+                status_code=500, 
+                detail="Database constraint error: The exchange_rates table still has a unique constraint on currency_pair. "
+                       "Please run this SQL command in your Render database: "
+                       "ALTER TABLE exchange_rates DROP CONSTRAINT IF EXISTS exchange_rates_currency_pair_key;"
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     
     return {
         "message": f"Successfully updated {len(updated_rates)} exchange rates",
         "updated_rates": updated_rates,
-        "timestamp": date.today().isoformat(),
+        "timestamp": settings.now().isoformat(),
         "updated_by": rates.updated_by
     }
 
@@ -363,8 +377,8 @@ def get_sales_average_rate(
     from decimal import Decimal
     from sqlalchemy import func
     
-    # Calculate date range
-    end_date = datetime.now()
+    # Calculate date range using correct timezone
+    end_date = settings.now()
     start_date = end_date - timedelta(days=days_back)
     
     # Get all rates for this currency pair in the time period

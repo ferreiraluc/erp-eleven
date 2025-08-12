@@ -3,8 +3,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
 import enum
-from datetime import date
+from datetime import date, datetime
 from ..database import Base
+from ..config import settings
 
 class CurrencyPair(enum.Enum):
     USD_TO_PYG = "USD_TO_PYG"  # US Dollar to Paraguayan Guarani
@@ -23,8 +24,8 @@ class ExchangeRate(Base):
     is_active = Column(Boolean, default=True, index=True)  # Only one active rate per pair
     # rate_date = Column(Date, default=date.today, index=True)  # Will add after database migration
     notes = Column(Text)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     updated_by = Column(String(100))  # Who updated the rate
     
     def __repr__(self):

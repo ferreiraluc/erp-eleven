@@ -63,7 +63,7 @@
           <div class="rate-value">{{ rate.value }}</div>
           <div class="rate-meta">
             <span class="rate-source">{{ rate.source }}</span>
-            <span class="rate-updated">{{ formatDate(rate.updated) }}</span>
+            <span class="rate-updated">{{ formatDateLocal(rate.updated) }}</span>
           </div>
         </div>
       </div>
@@ -187,7 +187,7 @@
               <td class="updated-by">{{ rate.updated_by || $t('exchangeManagement.systemUser') }}</td>
               <td class="date-cell">
                 <div class="date-info">
-                  <span class="date">{{ formatDate(rate.created_at) }}</span>
+                  <span class="date">{{ formatDateLocal(rate.created_at) }}</span>
                   <span class="time">{{ formatTime(rate.created_at) }}</span>
                 </div>
               </td>
@@ -305,7 +305,7 @@
           <div class="delete-details">
             <p><strong>{{ $t('exchangeManagement.currency') }}:</strong> {{ formatCurrencyPair(rateToDelete?.currency_pair) }}</p>
             <p><strong>{{ $t('exchangeManagement.rate') }}:</strong> {{ Number(rateToDelete?.rate).toFixed(4) }}</p>
-            <p><strong>{{ $t('exchangeManagement.date') }}:</strong> {{ formatDate(rateToDelete?.created_at) }}</p>
+            <p><strong>{{ $t('exchangeManagement.date') }}:</strong> {{ formatDateLocal(rateToDelete?.created_at) }}</p>
           </div>
           <p class="warning-text">{{ $t('exchangeManagement.warning') }}</p>
         </div>
@@ -328,6 +328,7 @@ import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
+import { formatDate, formatDateTime, formatRelativeTime } from '@/utils/datetime'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -602,14 +603,18 @@ const resetQuickUpdateForm = () => {
 }
 
 // Helper functions
-const formatDate = (dateString: string) => {
+const formatDateLocal = (dateString: string) => {
   if (!dateString) return t('exchangeManagement.na')
-  return new Date(dateString).toLocaleDateString()
+  return formatDate(dateString)
 }
 
 const formatTime = (dateString: string) => {
   if (!dateString) return ''
-  return new Date(dateString).toLocaleTimeString()
+  return new Date(dateString).toLocaleTimeString('pt-BR', { 
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit' 
+  })
 }
 
 const formatCurrencyPair = (pair: string) => {
@@ -617,7 +622,8 @@ const formatCurrencyPair = (pair: string) => {
     'USD_TO_PYG': 'USD → G$',
     'USD_TO_BRL': 'USD → R$',
     'EUR_TO_USD': 'EUR → USD',
-    'EUR_TO_BRL': 'EUR → R$'
+    'EUR_TO_BRL': 'EUR → R$',
+    'EUR_TO_PYG': 'EUR → G$' // Deprecated but still in historical data
   }
   return pairs[pair] || pair
 }
@@ -627,7 +633,8 @@ const getCurrencyFlag = (pair: string) => {
     'USD_TO_PYG': '🇺🇸→🇵🇾',
     'USD_TO_BRL': '🇺🇸→🇧🇷',
     'EUR_TO_USD': '🇪🇺→🇺🇸',
-    'EUR_TO_BRL': '🇪🇺→🇧🇷'
+    'EUR_TO_BRL': '🇪🇺→🇧🇷',
+    'EUR_TO_PYG': '🇪🇺→🇵🇾' // Deprecated but still in historical data
   }
   return flags[pair] || '💱'
 }
