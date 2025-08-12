@@ -23,7 +23,7 @@ services:
       - key: TIMEZONE
         value: America/Sao_Paulo
       - key: LOG_LEVEL
-        value: WARNING
+        value: INFO
 
   # Frontend Static Site
   - type: static

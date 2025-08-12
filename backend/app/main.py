@@ -10,7 +10,7 @@ from .database import engine, Base
 
 # Setup logging
 import os
-log_level = os.getenv("LOG_LEVEL", "WARNING")  # Default to WARNING in production
+log_level = os.getenv("LOG_LEVEL", "INFO")  # Default to INFO for better tracking
 setup_logging(level=log_level)
 logger = get_logger(__name__)
 
