@@ -76,6 +76,17 @@
         <p>Credenciais de teste: admin@loja.com / 123456</p>
       </div>
     </div>
+    
+    <!-- Footer -->
+    <footer class="login-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="https://www.siterastreio.com.br/" target="_blank" class="footer-link">Rastreamento</a>
+          <span class="footer-separator">•</span>
+          <span class="footer-text">ERP Eleven © 2024</span>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -310,5 +321,47 @@ onMounted(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Footer Styles */
+.login-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 2rem;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.footer-link {
+  color: #2563eb;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.footer-separator {
+  color: #9ca3af;
+}
+
+.footer-text {
+  color: #6b7280;
 }
 </style>
