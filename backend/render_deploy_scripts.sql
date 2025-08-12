@@ -3,6 +3,9 @@
 -- Execute estes comandos no Render CLI psql
 -- =========================================
 
+-- 0. Configurar timezone do banco para GMT-3
+SET TIME ZONE 'America/Sao_Paulo';
+
 -- 1. Criar enum para tipos de moeda (se não existir) 
 DO $$ 
 BEGIN

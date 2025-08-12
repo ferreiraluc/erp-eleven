@@ -16,6 +16,7 @@ from ...dependencies import get_current_active_user, require_role
 from datetime import date, timedelta
 from sqlalchemy import and_, desc
 from ...config import settings
+from ...utils.datetime import ensure_timezone_aware, now_in_timezone
 
 router = APIRouter()
 
@@ -143,7 +144,7 @@ def quick_update_rates(
     return {
         "message": f"Successfully updated {len(updated_rates)} exchange rates",
         "updated_rates": updated_rates,
-        "timestamp": settings.now().isoformat(),
+        "timestamp": now_in_timezone().isoformat(),
         "updated_by": rates.updated_by
     }
 
@@ -378,7 +379,7 @@ def get_sales_average_rate(
     from sqlalchemy import func
     
     # Calculate date range using correct timezone
-    end_date = settings.now()
+    end_date = now_in_timezone()
     start_date = end_date - timedelta(days=days_back)
     
     # Get all rates for this currency pair in the time period
@@ -420,14 +421,17 @@ def get_sales_average_rate(
     total_time_weight = Decimal('0')
     
     for i, rate in enumerate(rates):
+        # Ensure rate.created_at has timezone info
+        rate_created_at = ensure_timezone_aware(rate.created_at)
+        
         # Calculate how long this rate was active
         if i < len(rates) - 1:
             # Not the last rate - active until next rate
-            next_rate_time = rates[i + 1].created_at
-            active_duration = (next_rate_time - rate.created_at).total_seconds()
+            next_rate_time = ensure_timezone_aware(rates[i + 1].created_at)
+            active_duration = (next_rate_time - rate_created_at).total_seconds()
         else:
             # Last rate - active until now
-            active_duration = (end_date - rate.created_at).total_seconds()
+            active_duration = (end_date - rate_created_at).total_seconds()
         
         # Weight the rate by how long it was active
         weight = Decimal(str(active_duration))
