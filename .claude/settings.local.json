@@ -14,7 +14,9 @@
       "Bash(lsof:*)",
       "Bash(ls:*)",
       "Bash(npm run preview:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(rm:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

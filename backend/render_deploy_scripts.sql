@@ -5,6 +5,7 @@
 
 -- 0. Configurar timezone do banco para GMT-3
 SET TIME ZONE 'America/Sao_Paulo';
+ALTER DATABASE current_database() SET timezone = 'America/Sao_Paulo';
 
 -- 1. Criar enum para tipos de moeda (se não existir) 
 DO $$ 
@@ -44,11 +45,11 @@ CREATE INDEX IF NOT EXISTS idx_exchange_rates_currency_pair ON exchange_rates(cu
 CREATE INDEX IF NOT EXISTS idx_exchange_rates_is_active ON exchange_rates(is_active);
 CREATE INDEX IF NOT EXISTS idx_exchange_rates_created_at ON exchange_rates(created_at);
 
--- 4. Criar trigger para updated_at
+-- 4. Criar trigger para updated_at com timezone
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW.updated_at = CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo';
     RETURN NEW;
 END;
 $$ language 'plpgsql';

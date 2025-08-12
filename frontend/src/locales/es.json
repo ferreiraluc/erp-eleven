@@ -87,7 +87,7 @@
     "currentRates": "Tipos de Cambio Actuales",
     "salesWeeklyAverage": "Promedio Semanal de Ventas",
     "exchangeHistory": "Historial de Tipos de Cambio",
-    "recommendedRate": "Tasa Recomendada para Ventas",
+    "recommendedRate": "Tasa Promedio del Período",
     "calculationMethod": "Promedio ponderado por tiempo basado en cuánto tiempo estuvo activa cada tasa",
     "lastDays": "Últimos {days} días",
     "last7Days": "Últimos 7 días",

@@ -9,7 +9,9 @@ from .logging_config import setup_logging, get_logger
 from .database import engine, Base
 
 # Setup logging
-setup_logging(level="INFO")
+import os
+log_level = os.getenv("LOG_LEVEL", "WARNING")  # Default to WARNING in production
+setup_logging(level=log_level)
 logger = get_logger(__name__)
 
 @asynccontextmanager

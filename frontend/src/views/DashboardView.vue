@@ -351,7 +351,7 @@
                 </div>
                 <div class="status-info">
                   <span class="status-label">Exchange</span>
-                  <span class="status-value warning">{{ getLastUpdateTime() }}</span>
+                  <span class="status-value warning">{{ getLastUpdateTime }}</span>
                 </div>
               </div>
             </div>
@@ -488,6 +488,7 @@ const dashboardStore = useDashboardStore()
 const currencyStore = useCurrencyStore()
 
 const currentTime = ref('')
+const timeUpdateTrigger = ref(0) // Para forçar atualizações do getLastUpdateTime
 const showCurrencyDropdown = ref(false)
 const showLanguageDropdown = ref(false)
 const showExchangeRateModal = ref(false)
@@ -532,6 +533,12 @@ const updateTime = () => {
     hour: '2-digit',
     minute: '2-digit'
   })
+  
+  // Update trigger to force reactivity of getLastUpdateTime every minute
+  const seconds = new Date().getSeconds()
+  if (seconds === 0) {
+    timeUpdateTrigger.value++
+  }
 }
 
 const formatCurrency = (value: number, fromCurrency: CurrencyCode = 'R$') => {
@@ -599,27 +606,30 @@ const closeExchangeRateModals = () => {
   exchangeRateError.value = null
 }
 
-const getLastUpdateTime = () => {
-  if (!exchangeRates.value || !exchangeRates.value.last_updated) {
-    return 'Never'
+const getLastUpdateTime = computed(() => {
+  // Force reactivity with trigger
+  timeUpdateTrigger.value
+  
+  if (!lastUpdated.value) {
+    return 'Nunca'
   }
   
-  const lastUpdate = new Date(exchangeRates.value.last_updated)
+  const lastUpdate = new Date(lastUpdated.value)
   const now = new Date()
   const diffInMinutes = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60))
   
   if (diffInMinutes < 1) {
-    return 'Just now'
+    return 'agora mesmo'
   } else if (diffInMinutes < 60) {
-    return `${diffInMinutes}m ago`
+    return `há ${diffInMinutes}min`
   } else if (diffInMinutes < 1440) {
     const hours = Math.floor(diffInMinutes / 60)
-    return `${hours}h ago`
+    return `há ${hours}h`
   } else {
     const days = Math.floor(diffInMinutes / 1440)
-    return `${days}d ago`
+    return `há ${days}d`
   }
-}
+})
 
 const navigateToExchangeRates = () => {
   router.push('/exchange-rates')

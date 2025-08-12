@@ -87,7 +87,7 @@
     "currentRates": "Current Exchange Rates",
     "salesWeeklyAverage": "Sales Weekly Average",
     "exchangeHistory": "Exchange Rate History",
-    "recommendedRate": "Recommended Rate for Sales",
+    "recommendedRate": "Average Rate for Period",
     "calculationMethod": "Time-weighted average based on how long each rate was active",
     "lastDays": "Last {days} days",
     "last7Days": "Last 7 days",

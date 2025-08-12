@@ -8,9 +8,7 @@ from ...schemas.exchange_rate import (
     ExchangeRateResponse, 
     ExchangeRateUpdate,
     QuickRateUpdate,
-    CurrentRatesResponse,
-    WeeklyAverageResponse,
-    RateHistoryResponse
+    CurrentRatesResponse
 )
 from ...dependencies import get_current_active_user, require_role
 from datetime import date, timedelta
@@ -45,9 +43,10 @@ def get_current_rates(
         elif rate.currency_pair == CurrencyPair.EUR_TO_PYG:
             continue  # Skip deprecated pairs
         
-        # Track most recent update
-        if not latest_update or rate.updated_at > latest_update:
-            latest_update = rate.updated_at
+        # Track most recent update (ensure timezone aware)
+        rate_updated_at = ensure_timezone_aware(rate.updated_at)
+        if not latest_update or rate_updated_at > latest_update:
+            latest_update = rate_updated_at
             source = rate.source
     
     result.last_updated = latest_update
@@ -224,7 +223,7 @@ def get_exchange_rates_history(
                 "rate": float(rate.rate),
                 "source": rate.source,
                 "is_active": rate.is_active,
-                "created_at": rate.created_at.isoformat() if rate.created_at else None,
+                "created_at": ensure_timezone_aware(rate.created_at).isoformat() if rate.created_at else None,
                 "updated_by": rate.updated_by
             }
             for rate in all_rates
@@ -362,7 +361,7 @@ def get_sales_week_average(
         "sample_count": 1,
         "min_rate": float(current_rate.rate),
         "max_rate": float(current_rate.rate),
-        "recommendation": f"Use {float(current_rate.rate)} as rate for sales closing on {saturday_date}",
+        "average_description": f"Use {float(current_rate.rate)} as average rate for sales closing on {saturday_date}",
         "note": "Simplified version - showing current rate until rate_date field is added"
     }
 
@@ -412,7 +411,7 @@ def get_sales_average_rate(
             "min_rate": float(latest_rate.rate),
             "max_rate": float(latest_rate.rate),
             "rates_in_period": 1,
-            "recommendation": f"Use {float(latest_rate.rate)} (latest rate) for USD conversion in sales",
+            "average_description": f"Use {float(latest_rate.rate)} (latest rate) for USD conversion in sales",
             "note": f"No rate changes in last {days_back} days, using most recent rate"
         }
     
@@ -458,12 +457,12 @@ def get_sales_average_rate(
         "min_rate": float(min_rate),
         "max_rate": float(max_rate),
         "rates_in_period": len(rates),
-        "recommendation": f"Use {float(weighted_average):.4f} for USD conversion in sales (weighted by time active)",
+        "average_description": f"Use {float(weighted_average):.4f} for USD conversion in sales (weighted by time active)",
         "calculation_method": "Time-weighted average based on how long each rate was active",
         "rate_changes": [
             {
                 "rate": float(rate.rate),
-                "changed_at": rate.created_at.isoformat(),
+                "changed_at": ensure_timezone_aware(rate.created_at).isoformat(),
                 "changed_by": rate.updated_by,
                 "source": rate.source
             }
@@ -492,6 +491,6 @@ def get_rate_by_pair(
     return {
         "currency_pair": currency_pair.value,
         "rate": rate.rate,
-        "last_updated": rate.updated_at,
+        "last_updated": ensure_timezone_aware(rate.updated_at),
         "source": rate.source
     }

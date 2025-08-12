@@ -87,7 +87,7 @@
     "currentRates": "Taxas de Câmbio Atuais",
     "salesWeeklyAverage": "Média Semanal de Vendas",
     "exchangeHistory": "Histórico de Taxa de Câmbio",
-    "recommendedRate": "Taxa Recomendada para Vendas",
+    "recommendedRate": "Taxa Média do Período",
     "calculationMethod": "Média ponderada por tempo baseada em quanto tempo cada taxa ficou ativa",
     "lastDays": "Últimos {days} dias",
     "last7Days": "Últimos 7 dias",
