@@ -55,3 +55,4 @@ class Pedido(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
 
     usuario_criador = relationship("Usuario", foreign_keys=[created_by])
+    rastreamentos = relationship("Rastreamento", back_populates="pedido")

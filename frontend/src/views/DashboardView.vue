@@ -269,8 +269,11 @@
           </div>
         </div>
 
-        <!-- Quick Actions -->
+        <!-- Quick Actions Grid -->
         <div class="actions-grid">
+          <!-- Rastreamento Card -->
+          <RastreamentoCard />
+          
           <!-- Exchange Rate Card -->
           <div class="action-card exchange-rate-card" @click="navigateToExchangeRates" style="cursor: pointer;">
             <div class="card-header">
@@ -326,7 +329,7 @@
           </div>
 
           <!-- Quick Actions -->
-          <div class="action-card wide">
+          <div class="action-card quick-actions-card">
             <h3 class="card-title">{{ $t('dashboard.quickActions') }}</h3>
             <div class="quick-actions">
               <button class="action-button primary">
@@ -568,6 +571,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useCurrencyStore } from '@/stores/currency'
 import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
+import RastreamentoCard from '@/components/RastreamentoCard.vue'
 
 const router = useRouter()
 const { locale, t } = useI18n()
@@ -1134,9 +1138,10 @@ onUnmounted(() => {
   color: #111827;
 }
 
+
 .actions-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1.5rem;
 }
 
@@ -1254,6 +1259,15 @@ onUnmounted(() => {
 
 .action-button.yellow:hover {
   background-color: #fef3c7;
+}
+
+.action-button.blue {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.action-button.blue:hover {
+  background-color: #dbeafe;
 }
 
 .action-icon {

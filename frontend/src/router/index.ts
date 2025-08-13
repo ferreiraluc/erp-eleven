@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import LoginViewNoI18n from '@/views/LoginViewNoI18n.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ExchangeRateManagement from '@/views/ExchangeRateManagement.vue'
+import RastreamentoView from '@/views/RastreamentoView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +28,12 @@ const router = createRouter({
       path: '/exchange-rates',
       name: 'exchange-rates',
       component: ExchangeRateManagement,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/rastreamento',
+      name: 'rastreamento',
+      component: RastreamentoView,
       meta: { requiresAuth: true }
     },
     // Catch all route

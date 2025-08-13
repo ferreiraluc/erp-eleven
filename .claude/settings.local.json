@@ -16,7 +16,8 @@
       "Bash(npm run preview:*)",
       "Bash(grep:*)",
       "Bash(rm:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }
