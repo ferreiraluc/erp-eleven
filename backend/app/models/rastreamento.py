@@ -21,7 +21,7 @@ class Rastreamento(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     codigo_rastreio = Column(String(100), nullable=False, unique=True, index=True)
     
-    # Dados do rastreamento
+    # Dados do envio
     status = Column(ENUM(RastreamentoStatus, name="rastreamento_status"), default=RastreamentoStatus.PENDENTE)
     servico_provedor = Column(String(100))
     ultima_atualizacao = Column(DateTime)

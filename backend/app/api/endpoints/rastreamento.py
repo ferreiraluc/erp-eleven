@@ -13,11 +13,8 @@ from ...schemas.rastreamento import (
     RastreamentoUpdate, 
     RastreamentoResponse,
     RastreamentoComPedido,
-    RastreamentoConsulta,
-    RastreamentoConsultaResponse,
     RastreamentoResumo
 )
-from ...services.rastreamento_service import rastreamento_service
 from ...dependencies import get_current_user
 
 router = APIRouter()
@@ -62,7 +59,7 @@ def listar_rastreamentos(
             "created_by": r.created_by,
             # Dados do pedido
             "numero_pedido": r.pedido.numero_pedido if r.pedido else None,
-            "cliente_nome": r.pedido.cliente_nome if r.pedido else None,
+            "cliente_nome_pedido": r.pedido.cliente_nome if r.pedido else None,
             "cliente_telefone": r.pedido.cliente_telefone if r.pedido else None,
             "endereco_cidade": r.pedido.endereco_cidade if r.pedido else None,
             "endereco_uf": r.pedido.endereco_uf if r.pedido else None,
@@ -143,7 +140,7 @@ def obter_rastreamento(
         "created_by": rastreamento.created_by,
         # Dados do pedido
         "numero_pedido": rastreamento.pedido.numero_pedido if rastreamento.pedido else None,
-        "cliente_nome": rastreamento.pedido.cliente_nome if rastreamento.pedido else None,
+        "cliente_nome_pedido": rastreamento.pedido.cliente_nome if rastreamento.pedido else None,
         "cliente_telefone": rastreamento.pedido.cliente_telefone if rastreamento.pedido else None,
         "endereco_cidade": rastreamento.pedido.endereco_cidade if rastreamento.pedido else None,
         "endereco_uf": rastreamento.pedido.endereco_uf if rastreamento.pedido else None,
@@ -187,7 +184,7 @@ def obter_rastreamento_por_codigo(
         "created_by": rastreamento.created_by,
         # Dados do pedido
         "numero_pedido": rastreamento.pedido.numero_pedido if rastreamento.pedido else None,
-        "cliente_nome": rastreamento.pedido.cliente_nome if rastreamento.pedido else None,
+        "cliente_nome_pedido": rastreamento.pedido.cliente_nome if rastreamento.pedido else None,
         "cliente_telefone": rastreamento.pedido.cliente_telefone if rastreamento.pedido else None,
         "endereco_cidade": rastreamento.pedido.endereco_cidade if rastreamento.pedido else None,
         "endereco_uf": rastreamento.pedido.endereco_uf if rastreamento.pedido else None,
@@ -246,92 +243,6 @@ def deletar_rastreamento(
     return {"message": "Rastreamento removido com sucesso"}
 
 
-@router.post("/consultar", response_model=RastreamentoConsultaResponse)
-async def consultar_rastreamento_online(
-    consulta: RastreamentoConsulta,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    """Consulta rastreamento online e atualiza o banco se existir"""
-    
-    # Consultar online
-    resultado = await rastreamento_service.consultar_rastreamento(
-        consulta.codigo, 
-        consulta.servico_id
-    )
-    
-    # Verificar se existe no banco e atualizar
-    rastreamento_db = db.query(Rastreamento).filter(
-        Rastreamento.codigo_rastreio == consulta.codigo,
-        Rastreamento.ativo == True
-    ).first()
-    
-    if rastreamento_db and resultado.sucesso:
-        # Atualizar dados no banco
-        rastreamento_db.status = RastreamentoStatus(resultado.status)
-        rastreamento_db.servico_provedor = resultado.service_provider
-        rastreamento_db.ultima_atualizacao = datetime.now()
-        rastreamento_db.historico_eventos = rastreamento_service.extrair_dados_para_historico(resultado)
-        
-        db.commit()
-    
-    return resultado
-
-
-@router.post("/consultar-e-salvar", response_model=RastreamentoResponse)
-async def consultar_e_salvar_rastreamento(
-    consulta: RastreamentoConsulta,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    """Consulta rastreamento online e salva no banco"""
-    
-    # Verificar se já existe
-    existing = db.query(Rastreamento).filter(
-        Rastreamento.codigo_rastreio == consulta.codigo,
-        Rastreamento.ativo == True
-    ).first()
-    
-    # Consultar online
-    resultado = await rastreamento_service.consultar_rastreamento(
-        consulta.codigo, 
-        consulta.servico_id
-    )
-    
-    if not resultado.sucesso:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Erro ao consultar rastreamento: {resultado.erro}"
-        )
-    
-    if existing:
-        # Atualizar existente
-        existing.status = RastreamentoStatus(resultado.status)
-        existing.servico_provedor = resultado.service_provider
-        existing.ultima_atualizacao = datetime.now()
-        existing.historico_eventos = rastreamento_service.extrair_dados_para_historico(resultado)
-        
-        db.commit()
-        db.refresh(existing)
-        return existing
-    else:
-        # Criar novo
-        novo_rastreamento = Rastreamento(
-            codigo_rastreio=consulta.codigo,
-            status=RastreamentoStatus(resultado.status),
-            servico_provedor=resultado.service_provider,
-            ultima_atualizacao=datetime.now(),
-            historico_eventos=rastreamento_service.extrair_dados_para_historico(resultado),
-            created_by=current_user.id
-        )
-        
-        db.add(novo_rastreamento)
-        db.commit()
-        db.refresh(novo_rastreamento)
-        
-        return novo_rastreamento
-
-
 @router.get("/resumo/dashboard", response_model=RastreamentoResumo)
 def obter_resumo_dashboard(
     db: Session = Depends(get_db),
@@ -371,47 +282,3 @@ def obter_resumo_dashboard(
         com_erro=com_erro,
         rastreamentos_recentes=recentes
     )
-
-
-@router.post("/atualizar-todos")
-async def atualizar_todos_rastreamentos(
-    servico_id: str = "0001",
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    """Atualiza todos os rastreamentos ativos que não estão entregues"""
-    
-    # Buscar rastreamentos que precisam ser atualizados
-    rastreamentos = db.query(Rastreamento).filter(
-        Rastreamento.ativo == True,
-        Rastreamento.status.in_([
-            RastreamentoStatus.PENDENTE,
-            RastreamentoStatus.EM_TRANSITO
-        ])
-    ).all()
-    
-    if not rastreamentos:
-        return {"message": "Nenhum rastreamento para atualizar"}
-    
-    codigos = [r.codigo_rastreio for r in rastreamentos]
-    
-    # Consultar todos em paralelo
-    resultados = await rastreamento_service.consultar_multiplos_codigos(codigos, servico_id)
-    
-    atualizados = 0
-    
-    # Atualizar no banco
-    for i, resultado in enumerate(resultados):
-        if resultado.sucesso:
-            rastreamento = rastreamentos[i]
-            rastreamento.status = RastreamentoStatus(resultado.status)
-            rastreamento.servico_provedor = resultado.service_provider
-            rastreamento.ultima_atualizacao = datetime.now()
-            rastreamento.historico_eventos = rastreamento_service.extrair_dados_para_historico(resultado)
-            atualizados += 1
-    
-    db.commit()
-    
-    return {
-        "message": f"{atualizados} rastreamentos atualizados de {len(rastreamentos)} total"
-    }

@@ -65,6 +65,15 @@
               <p class="rastreamento-cliente">{{ rastreamento.destinatario || 'Sem destinatário' }}</p>
             </div>
             <div class="rastreamento-status">
+              <button
+                @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
+                class="copy-btn"
+                title="Copiar código"
+              >
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
               <span 
                 class="status-badge"
                 :class="getStatusClass(rastreamento.status)"
@@ -346,6 +355,15 @@ const formatarCodigo = (event: Event) => {
   novoRastreamento.value.codigo_rastreio = valor
 }
 
+const copiarCodigo = async (codigo: string) => {
+  try {
+    await navigator.clipboard.writeText(codigo)
+    console.log('Código copiado:', codigo)
+  } catch (error) {
+    console.error('Erro ao copiar código:', error)
+  }
+}
+
 onMounted(() => {
   loadResumo()
 })
@@ -429,8 +447,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: 180px;
-  max-height: 220px;
+  min-height: 200px;
+  max-height: 260px;
 }
 
 .rastreamento-stats {
@@ -518,7 +536,7 @@ onMounted(() => {
   gap: 0.25rem;
   flex: 1;
   overflow-y: auto;
-  max-height: 120px;
+  max-height: 160px;
   padding-right: 0.25rem;
 }
 
@@ -577,6 +595,38 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.rastreamento-status {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.copy-btn {
+  width: 1rem;
+  height: 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  padding: 0.125rem;
+}
+
+.copy-btn:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.copy-btn svg {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .status-badge {

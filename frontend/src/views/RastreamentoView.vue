@@ -16,13 +16,6 @@
         </div>
         
         <div class="header-actions">
-          <button @click="atualizarTodos" :disabled="loading" class="btn btn-secondary">
-            <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span v-if="loading">Atualizando...</span>
-            <span v-else>Atualizar Todos</span>
-          </button>
           
           <button @click="abrirModalCriacao" class="btn btn-primary">
             <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,107 +132,107 @@
         </button>
       </div>
 
-      <div v-else class="rastreamentos-grid">
+      <div v-else class="rastreamentos-list">
+        <!-- Cabeçalho da lista -->
+        <div class="list-header">
+          <div class="header-codigo">Código</div>
+          <div class="header-destinatario">Destinatário</div>
+          <div class="header-descricao">Descrição</div>
+          <div class="header-rastreio">Rastreio</div>
+          <div class="header-status">Status</div>
+          <div class="header-data">Data</div>
+          <div class="header-actions">Ações</div>
+        </div>
+
         <div 
           v-for="rastreamento in rastreamentosFiltrados" 
           :key="rastreamento.id"
-          class="rastreamento-card"
+          class="rastreamento-row"
         >
-          <div class="card-header">
-            <div class="codigo-info">
-              <h3 class="codigo">{{ rastreamento.codigo_rastreio }}</h3>
-              <span 
-                class="status-badge"
-                :class="getStatusClass(rastreamento.status)"
-              >
-                {{ getStatusText(rastreamento.status) }}
-              </span>
-            </div>
-            
-            <div class="card-actions">
-              <button 
-                @click="consultarOnline(rastreamento.codigo_rastreio)"
-                class="action-btn"
-                title="Consultar Online"
-              >
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-              
-              <button 
-                @click="editarRastreamento(rastreamento)"
-                class="action-btn"
-                title="Editar"
-              >
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              
-              <button 
-                @click="removerRastreamento(rastreamento)"
-                class="action-btn delete"
-                title="Excluir"
-              >
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
+          <!-- Código e botão copiar -->
+          <div class="row-codigo">
+            <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
+            <button 
+              @click="copiarCodigo(rastreamento.codigo_rastreio)"
+              class="copy-btn"
+              title="Copiar Código"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
           </div>
 
-          <div class="card-content">
-            <div class="info-grid">
-              <div class="info-item" v-if="rastreamento.destinatario">
-                <span class="info-label">Destinatário:</span>
-                <span class="info-value">{{ rastreamento.destinatario }}</span>
-              </div>
-              
-              <div class="info-item" v-if="rastreamento.descricao">
-                <span class="info-label">Descrição:</span>
-                <span class="info-value">{{ rastreamento.descricao }}</span>
-              </div>
-              
-              <div class="info-item" v-if="rastreamento.origem">
-                <span class="info-label">Origem:</span>
-                <span class="info-value">{{ rastreamento.origem }}</span>
-              </div>
-              
-              <div class="info-item" v-if="rastreamento.destino">
-                <span class="info-label">Destino:</span>
-                <span class="info-value">{{ rastreamento.destino }}</span>
-              </div>
+          <!-- Destinatário -->
+          <div class="row-destinatario">
+            {{ rastreamento.destinatario || '-' }}
+          </div>
 
-              <div class="info-item" v-if="rastreamento.ultima_atualizacao">
-                <span class="info-label">Atualizado:</span>
-                <span class="info-value">{{ formatarData(rastreamento.ultima_atualizacao) }}</span>
-              </div>
+          <!-- Descrição -->
+          <div class="row-descricao">
+            {{ rastreamento.descricao || '-' }}
+          </div>
 
-              <div class="info-item" v-if="rastreamento.servico_provedor">
-                <span class="info-label">Provedor:</span>
-                <span class="info-value">{{ rastreamento.servico_provedor }}</span>
-              </div>
-            </div>
+          <!-- Botão Rastreio Correios -->
+          <div class="row-rastreio">
+            <button 
+              @click="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
+              class="rastreio-btn"
+              title="Rastrear nos Correios"
+            >
+              <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
+                <!-- Logo dos Correios -->
+                <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
+                <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
+                <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
+                <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
+                <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
+              </svg>
+              <span>Correios</span>
+            </button>
+          </div>
 
-            <!-- Histórico de eventos -->
-            <div v-if="rastreamento.historico_eventos && rastreamento.historico_eventos.length > 0" class="eventos-section">
-              <h4 class="eventos-title">Últimos Eventos</h4>
-              <div class="eventos-list">
-                <div 
-                  v-for="evento in rastreamento.historico_eventos.slice(-3)" 
-                  :key="evento.timestamp_consulta"
-                  class="evento-item"
-                >
-                  <div class="evento-dot"></div>
-                  <div class="evento-content">
-                    <p class="evento-situacao">{{ evento.situacao }}</p>
-                    <p class="evento-detalhes">{{ evento.detalhes }}</p>
-                    <p class="evento-data">{{ evento.data }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <!-- Status com edição inline -->
+          <div class="row-status">
+            <select 
+              v-model="rastreamento.status"
+              @change="atualizarStatus(rastreamento)"
+              class="status-select-inline"
+              :class="getStatusClass(rastreamento.status)"
+            >
+              <option value="PENDENTE">Pendente</option>
+              <option value="EM_TRANSITO">Em Trânsito</option>
+              <option value="ENTREGUE">Entregue</option>
+              <option value="ERRO">Erro</option>
+            </select>
+          </div>
+
+          <!-- Data criação -->
+          <div class="row-data">
+            {{ formatarData(rastreamento.created_at) }}
+          </div>
+
+          <!-- Ações -->
+          <div class="row-actions">
+            <button 
+              @click="editarRastreamento(rastreamento)"
+              class="action-btn"
+              title="Editar"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            
+            <button 
+              @click="removerRastreamento(rastreamento)"
+              class="action-btn delete"
+              title="Excluir"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -575,6 +568,39 @@ function getStatusText(status: string): string {
 
 function formatarData(data: string): string {
   return rastreamentoStore.formatarData(data)
+}
+
+// Novas funções para a lista
+async function copiarCodigo(codigo: string) {
+  try {
+    await navigator.clipboard.writeText(codigo)
+    // Você pode adicionar uma notificação aqui se quiser
+    console.log('Código copiado:', codigo)
+  } catch (error) {
+    console.error('Erro ao copiar código:', error)
+  }
+}
+
+function abrirRastreioCorreios(codigo: string) {
+  const url = `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`
+  window.open(url, '_blank')
+}
+
+async function atualizarStatus(rastreamento: any) {
+  try {
+    await rastreamentoStore.atualizarRastreamento(rastreamento.id, {
+      status: rastreamento.status
+    })
+    console.log('Status atualizado:', rastreamento.status)
+    
+    // Atualizar estatísticas automaticamente
+    await rastreamentoStore.obterResumoDashboard()
+    resumo.value = rastreamentoStore.resumoDashboard
+  } catch (error: any) {
+    console.error('Erro ao atualizar status:', error)
+    // Reverter o status em caso de erro
+    await carregarDados()
+  }
 }
 
 // Lifecycle
@@ -1280,5 +1306,252 @@ onMounted(() => {
     margin: 0.5rem;
     max-height: 95vh;
   }
+
+  .rastreamentos-list {
+    display: block;
+  }
+
+  .list-header {
+    display: none;
+  }
+
+  .rastreamento-row {
+    display: block;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .row-codigo,
+  .row-destinatario,
+  .row-descricao,
+  .row-rastreio,
+  .row-status,
+  .row-data,
+  .row-actions {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Estilos da Lista */
+.rastreamentos-list {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr 120px 120px 100px 120px;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+  border: 1px solid #e2e8f0;
+  align-items: center;
+}
+
+.list-header > div {
+  display: flex;
+  align-items: center;
+}
+
+.header-rastreio {
+  justify-content: center;
+}
+
+.header-status {
+  justify-content: center;
+}
+
+.header-data {
+  justify-content: center;
+}
+
+.header-actions {
+  justify-content: center;
+}
+
+.rastreamento-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr 120px 120px 100px 120px;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  margin-bottom: 0.25rem;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.rastreamento-row:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.row-codigo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.codigo-text {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.copy-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.row-destinatario,
+.row-descricao {
+  font-size: 0.875rem;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-select-inline {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.status-select-inline:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Status colors for select */
+.status-select-inline.text-yellow-600 {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fbbf24;
+}
+
+.status-select-inline.text-blue-600 {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #60a5fa;
+}
+
+.status-select-inline.text-green-600 {
+  background-color: #dcfce7;
+  color: #166534;
+  border-color: #4ade80;
+}
+
+.status-select-inline.text-red-600 {
+  background-color: #fecaca;
+  color: #991b1b;
+  border-color: #f87171;
+}
+
+.row-data {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+.action-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.action-btn.delete:hover {
+  background: #fecaca;
+  color: #dc2626;
+}
+
+.row-rastreio {
+  display: flex;
+  justify-content: center;
+}
+
+.rastreio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #fbbf24 0%, #fbff00 100%);
+  color: #1f2937;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  border: 1px solid #f59e0b;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.rastreio-btn:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px 0 rgba(245, 158, 11, 0.3);
+  border-color: #d97706;
+}
+
+.rastreio-btn svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
 }
 </style>
