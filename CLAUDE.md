@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 This is an ERP system project named "Eleven" for managing clothing store operations. The system handles sales, vendors, currency exchange, orders, and employee data with multi-currency support.
 
+**📖 IMPORTANTE**: Para documentação completa do projeto, consulte o arquivo `README.md` na raiz do projeto que contém todas as informações técnicas, endpoints, configuração e regras de negócio.
+
 ## Development Commands
 
 ### Backend (FastAPI + PostgreSQL)

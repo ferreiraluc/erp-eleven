@@ -518,21 +518,6 @@ async function salvarRastreamento() {
   }
 }
 
-async function consultarOnline(codigo: string) {
-  try {
-    loading.value = true
-    await rastreamentoStore.consultarRastreamentoOnline({
-      codigo,
-      servico_id: '0001'
-    })
-    await carregarDados()
-  } catch (error: any) {
-    console.error('Erro ao consultar online:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
 async function removerRastreamento(rastreamento: Rastreamento) {
   if (!confirm(`Tem certeza que deseja remover o rastreamento ${rastreamento.codigo_rastreio}?`)) {
     return
@@ -546,24 +531,8 @@ async function removerRastreamento(rastreamento: Rastreamento) {
   }
 }
 
-async function atualizarTodos() {
-  try {
-    loading.value = true
-    await rastreamentoStore.atualizarTodosRastreamentos()
-    await carregarDados()
-  } catch (error: any) {
-    console.error('Erro ao atualizar rastreamentos:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
 function getStatusClass(status: string): string {
   return rastreamentoStore.getStatusColor(status)
-}
-
-function getStatusText(status: string): string {
-  return rastreamentoStore.getStatusText(status)
 }
 
 function formatarData(data: string): string {
@@ -1309,6 +1278,7 @@ onMounted(() => {
 
   .rastreamentos-list {
     display: block;
+    padding: 0 1rem;
   }
 
   .list-header {
@@ -1319,18 +1289,81 @@ onMounted(() => {
     display: block;
     padding: 1rem;
     border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .row-codigo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .row-destinatario,
+  .row-descricao {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .row-destinatario::before {
+    content: "Destinatário: ";
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .row-descricao::before {
+    content: "Descrição: ";
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .row-rastreio {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+
+  .row-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 0.5rem;
   }
 
-  .row-codigo,
-  .row-destinatario,
-  .row-descricao,
-  .row-rastreio,
-  .row-status,
-  .row-data,
+  .row-status::before {
+    content: "Status: ";
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .row-data {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .row-data::before {
+    content: "Data: ";
+    font-weight: 600;
+    color: #6b7280;
+  }
+
   .row-actions {
-    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f3f4f6;
   }
 }
 

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import LoginViewNoI18n from '@/views/LoginViewNoI18n.vue'
+import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ExchangeRateManagement from '@/views/ExchangeRateManagement.vue'
 import RastreamentoView from '@/views/RastreamentoView.vue'
@@ -15,7 +15,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: LoginViewNoI18n,
+      component: LoginView,
       meta: { requiresGuest: true }
     },
     {

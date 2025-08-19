@@ -89,9 +89,6 @@
         </div>
       </div>
 
-      <div class="test-credentials">
-        <p>{{ $t('auth.testCredentials') }}</p>
-      </div>
     </div>
   </div>
 </template>
@@ -103,7 +100,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t } = useI18n()  // Internationalization hook
 const authStore = useAuthStore()
 
 const credentials = ref({

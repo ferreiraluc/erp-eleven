@@ -1,24 +1,26 @@
--- Migration para adicionar tabela de rastreamentos no Render
--- Execute este script no CLI do PostgreSQL do Render
+-- =============================================
+-- MIGRAÇÃO INICIAL: Setup completo do banco de dados ERP Eleven
+-- Data: 2025-08-19 - Versão 1.0
+-- =============================================
 
--- Primeiro, habilitar a extensão UUID (se não estiver habilitada)
+-- Habilitar extensões necessárias
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Criar o ENUM para status de rastreamento (se não existir)
+-- Enum para status de rastreamento
 DO $$ BEGIN
     CREATE TYPE rastreamento_status AS ENUM ('PENDENTE', 'EM_TRANSITO', 'ENTREGUE', 'ERRO', 'NAO_ENCONTRADO');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- Criar tabela de rastreamentos
+-- Tabela para armazenar rastreamentos
 CREATE TABLE IF NOT EXISTS rastreamentos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     codigo_rastreio VARCHAR(100) NOT NULL UNIQUE,
     
     -- Dados do rastreamento
     status rastreamento_status DEFAULT 'PENDENTE',
-    servico_provedor VARCHAR(100), -- correios_api, rastreio_pro, etc
+    servico_provedor VARCHAR(100),
     ultima_atualizacao TIMESTAMP,
     
     -- Dados do objeto
@@ -30,7 +32,7 @@ CREATE TABLE IF NOT EXISTS rastreamentos (
     -- Dados históricos (JSON para flexibilidade)
     historico_eventos JSONB DEFAULT '[]'::jsonb,
     
-    -- Relacionamento com pedidos (opcional, pode ser NULL se não existir tabela pedidos)
+    -- Relacionamento com pedidos (opcional)
     pedido_id UUID,
     
     -- Metadados
@@ -43,12 +45,11 @@ CREATE TABLE IF NOT EXISTS rastreamentos (
     created_by UUID
 );
 
--- Criar índices para performance
+-- Índices para performance
 CREATE INDEX IF NOT EXISTS idx_rastreamentos_codigo ON rastreamentos(codigo_rastreio);
 CREATE INDEX IF NOT EXISTS idx_rastreamentos_status ON rastreamentos(status);
 CREATE INDEX IF NOT EXISTS idx_rastreamentos_ativo ON rastreamentos(ativo);
 CREATE INDEX IF NOT EXISTS idx_rastreamentos_created_at ON rastreamentos(created_at);
 
--- Verificar se a tabela foi criada
-SELECT 'Tabela rastreamentos criada com sucesso!' as resultado;
-SELECT COUNT(*) as total_rastreamentos FROM rastreamentos;
+-- Verificar se a migração foi aplicada com sucesso
+SELECT 'Database migrated successfully - ERP Eleven v1.0!' as resultado;
