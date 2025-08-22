@@ -133,8 +133,8 @@
       </div>
 
       <div v-else class="rastreamentos-list">
-        <!-- Cabeçalho da lista -->
-        <div class="list-header">
+        <!-- Cabeçalho da lista desktop -->
+        <div class="list-header desktop-header">
           <div class="header-codigo">Código</div>
           <div class="header-destinatario">Destinatário</div>
           <div class="header-descricao">Descrição</div>
@@ -144,13 +144,76 @@
           <div class="header-actions">Ações</div>
         </div>
 
+        <!-- Cabeçalho da lista mobile -->
+        <div class="mobile-header">
+          <div class="mobile-header-codigo">Código</div>
+          <div class="mobile-header-rastreio">Rastreio</div>
+        </div>
+
         <div 
           v-for="rastreamento in rastreamentosFiltrados" 
           :key="rastreamento.id"
           class="rastreamento-row"
         >
-          <!-- Código e botão copiar -->
-          <div class="row-codigo">
+          <!-- Linha principal: Código e Rastreio -->
+          <div class="mobile-main-row">
+            <div class="mobile-codigo-section">
+              <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
+              <button 
+                @click="copiarCodigo(rastreamento.codigo_rastreio)"
+                class="copy-btn"
+                title="Copiar Código"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-rastreio-section">
+              <button 
+                @click="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
+                class="mobile-rastreio-btn-header"
+                title="Rastrear nos Correios"
+              >
+                <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
+                  <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
+                  <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
+                  <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
+                  <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
+                  <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
+                </svg>
+                <span>Correios</span>
+              </button>
+            </div>
+
+            <!-- Ações mobile -->
+            <div class="mobile-actions">
+              <button 
+                @click="editarRastreamento(rastreamento)"
+                class="mobile-action-btn"
+                title="Editar"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+              </button>
+              
+              <button 
+                @click="removerRastreamento(rastreamento)"
+                class="mobile-action-btn delete"
+                title="Excluir"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Excluir
+              </button>
+            </div>
+          </div>
+
+          <!-- Código e botão copiar (desktop) -->
+          <div class="row-codigo desktop-only">
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
               @click="copiarCodigo(rastreamento.codigo_rastreio)"
@@ -161,6 +224,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </button>
+
           </div>
 
           <!-- Destinatário -->
@@ -190,7 +254,44 @@
               </svg>
               <span>Correios</span>
             </button>
+
           </div>
+
+          <!-- Informações mobile -->
+          <div class="mobile-info-section">
+            <div class="mobile-info-row">
+              <span class="mobile-label">Destinatário:</span>
+              <span class="mobile-value">{{ rastreamento.destinatario || '-' }}</span>
+            </div>
+            
+            <div class="mobile-info-row">
+              <span class="mobile-label">Descrição:</span>
+              <span class="mobile-value">{{ rastreamento.descricao || '-' }}</span>
+            </div>
+            <div class="mobile-info-row mobile-date-row">
+              <span class="mobile-label">Data:</span>
+              <span class="mobile-date">{{ formatarData(rastreamento.created_at) }}</span>
+            </div>
+            <div class="mobile-info-row">
+              <span class="mobile-label">Status:</span>
+              <select 
+                v-model="rastreamento.status"
+                @change="atualizarStatus(rastreamento)"
+                class="mobile-status-select"
+                :class="getStatusClass(rastreamento.status)"
+              >
+                <option value="PENDENTE">Pendente</option>
+                <option value="EM_TRANSITO">Em Trânsito</option>
+                <option value="ENTREGUE">Entregue</option>
+                <option value="ERRO">Erro</option>
+              </select>
+            </div>
+            
+
+          </div>
+
+
+          
 
           <!-- Status com edição inline -->
           <div class="row-status">
@@ -207,7 +308,7 @@
             </select>
           </div>
 
-          <!-- Data criação -->
+          <!-- Data criação (desktop) -->
           <div class="row-data">
             {{ formatarData(rastreamento.created_at) }}
           </div>
@@ -658,25 +759,26 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  max-width: 600px;
 }
 
 .stat-card {
   background-color: white;
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .stat-icon {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -684,8 +786,8 @@ onMounted(() => {
 }
 
 .stat-icon svg {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .stat-icon.blue {
@@ -717,7 +819,7 @@ onMounted(() => {
 
 .stat-value {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #111827;
 }
@@ -1238,8 +1340,128 @@ onMounted(() => {
   }
 }
 
+/* Desktop styles */
+.mobile-info-section,
+.mobile-actions,
+.mobile-header,
+.mobile-main-row {
+  display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .mobile-info-section,
+  .mobile-actions,
+  .mobile-header,
+  .mobile-main-row {
+    display: block !important;
+  }
+  
+  .desktop-header,
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Header mobile simplificado */
+  .mobile-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+    border: 1px solid #e2e8f0;
+    align-items: center;
+  }
+
+  .mobile-header-codigo {
+    display: flex;
+    align-items: center;
+  }
+
+  .mobile-header-rastreio {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Linha principal mobile */
+  .mobile-main-row {
+    display: table-row !important;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    align-items: flex-start;
+  }
+
+  .mobile-codigo-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .mobile-codigo-section .codigo-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: monospace;
+    flex: 1;
+    color: #1e293b;
+    background: white;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .mobile-codigo-section .copy-btn {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.375rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .mobile-codigo-section .copy-btn:hover {
+    background: #f1f5f9;
+    border-color: #9ca3af;
+  }
+
+  .mobile-rastreio-section {
+    padding-top: 1rem;
+    padding-left: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .mobile-rastreio-btn-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #1f2937;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid #d97706;
+    box-shadow: 0 2px 4px 0 rgba(245, 158, 11, 0.2);
+    transition: all 0.2s;
+  }
+
+  .mobile-rastreio-btn-header:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px 0 rgba(245, 158, 11, 0.3);
+  }
   .header-content {
     flex-direction: column;
     gap: 1rem;
@@ -1251,7 +1473,31 @@ onMounted(() => {
   }
 
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+  
+  .stat-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .stat-icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
+  
+  .stat-value {
+    font-size: 1.25rem;
   }
 
   .filters-content {
@@ -1287,14 +1533,24 @@ onMounted(() => {
 
   .rastreamento-row {
     display: block;
-    padding: 1rem;
+    padding: 1.25rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
     background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.2s;
   }
 
+  .rastreamento-row:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border-color: #cbd5e1;
+  }
+
+  /* Layout mobile: Código e botão na primeira linha */
   .row-codigo {
     display: flex;
     justify-content: space-between;
@@ -1304,67 +1560,150 @@ onMounted(() => {
     border-bottom: 1px solid #f3f4f6;
   }
 
-  .row-destinatario,
-  .row-descricao {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
+  .row-codigo .codigo-text {
     font-size: 0.875rem;
-  }
-
-  .row-destinatario::before {
-    content: "Destinatário: ";
     font-weight: 600;
-    color: #6b7280;
+    font-family: monospace;
   }
 
-  .row-descricao::before {
-    content: "Descrição: ";
-    font-weight: 600;
-    color: #6b7280;
+  .row-codigo .copy-btn {
+    margin-left: 0.5rem;
   }
 
-  .row-rastreio {
-    display: flex;
-    justify-content: center;
-    margin: 1rem 0;
+
+  /* Seção de informações mobile */
+  .mobile-info-section {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 0.5rem;
+    border-left: 3px solid #e2e8f0;
   }
 
-  .row-status {
+  .mobile-info-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .row-status::before {
-    content: "Status: ";
-    font-weight: 600;
-    color: #6b7280;
-  }
-
-  .row-data {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 0.75rem;
-    font-size: 0.875rem;
+    padding: 0.375rem 0;
+    gap: 1rem;
   }
 
-  .row-data::before {
-    content: "Data: ";
+  .mobile-info-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .mobile-date-row {
+    margin-bottom: 0;
+  }
+
+  .mobile-label {
+    font-size: 0.75rem;
     font-weight: 600;
     color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 80px;
+    flex-shrink: 0;
   }
 
-  .row-actions {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #f3f4f6;
+  .mobile-value {
+    font-size: 0.875rem;
+    color: #111827;
+    text-align: right;
+    font-weight: 500;
+    white-space: pre-line;
+    word-wrap: break-word;
+    line-height: 1.4;
+    flex: 1;
+    max-width: 60%;
   }
+
+  .mobile-status-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 110px;
+    background: white;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+  }
+
+  .mobile-status-select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  .mobile-date {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  /* Ações mobile */
+  .mobile-actions {
+    display: flex !important;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1rem;
+    margin: 1rem 0 0 0;
+    width: 100%;
+    border-top: 1px solid #e5e7eb;
+    box-sizing: border-box;
+  }
+
+  .mobile-action-btn {
+    display: flex !important;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 28px;
+    white-space: nowrap;
+  }
+
+  .mobile-action-btn:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+  }
+
+  .mobile-action-btn.delete {
+    color: #dc2626;
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+
+  .mobile-action-btn.delete:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  /* Garantir que todos os elementos ficam dentro do card */
+  .rastreamento-row * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Esconder campos desktop no mobile */
+  .row-destinatario,
+  .row-descricao,
+  .row-rastreio,
+  .row-status,
+  .row-data,
+  .row-actions {
+    display: none !important;
+  }
+
 }
 
 /* Estilos da Lista */
