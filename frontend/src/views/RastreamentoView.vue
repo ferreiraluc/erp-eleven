@@ -158,16 +158,18 @@
           <!-- Linha principal: Código e Rastreio -->
           <div class="mobile-main-row">
             <div class="mobile-codigo-section">
-              <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
-              <button 
-                @click="copiarCodigo(rastreamento.codigo_rastreio)"
-                class="copy-btn"
-                title="Copiar Código"
-              >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
+              <div class="mobile-codigo-row">
+                <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
+                <button 
+                  @click="copiarCodigo(rastreamento.codigo_rastreio)"
+                  class="copy-btn"
+                  title="Copiar Código"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="mobile-rastreio-section">
               <button 
@@ -175,7 +177,7 @@
                 class="mobile-rastreio-btn-header"
                 title="Rastrear nos Correios"
               >
-                <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
+                <svg width="18" height="18" viewBox="0 0 100 100" fill="none">
                   <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
                   <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
                   <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
@@ -185,30 +187,36 @@
                 <span>Correios</span>
               </button>
             </div>
+          </div>
 
-            <!-- Ações mobile -->
-            <div class="mobile-actions">
-              <button 
-                @click="editarRastreamento(rastreamento)"
-                class="mobile-action-btn"
-                title="Editar"
+          <!-- Informações mobile -->
+          <div class="mobile-info-section">
+            <div class="mobile-info-row">
+              <span class="mobile-label">Destinatário:</span>
+              <span class="mobile-value">{{ rastreamento.destinatario || '-' }}</span>
+            </div>
+            
+            <div class="mobile-info-row">
+              <span class="mobile-label">Descrição:</span>
+              <span class="mobile-value">{{ rastreamento.descricao || '-' }}</span>
+            </div>
+            <div class="mobile-info-row mobile-date-row">
+              <span class="mobile-label">Data:</span>
+              <span class="mobile-date">{{ formatarData(rastreamento.created_at) }}</span>
+            </div>
+            <div class="mobile-info-row">
+              <span class="mobile-label">Status:</span>
+              <select 
+                v-model="rastreamento.status"
+                @change="atualizarStatus(rastreamento)"
+                class="mobile-status-select"
+                :class="getStatusClass(rastreamento.status)"
               >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Editar
-              </button>
-              
-              <button 
-                @click="removerRastreamento(rastreamento)"
-                class="mobile-action-btn delete"
-                title="Excluir"
-              >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Excluir
-              </button>
+                <option value="PENDENTE">Pendente</option>
+                <option value="EM_TRANSITO">Em Trânsito</option>
+                <option value="ENTREGUE">Entregue</option>
+                <option value="ERRO">Erro</option>
+              </select>
             </div>
           </div>
 
@@ -257,37 +265,29 @@
 
           </div>
 
-          <!-- Informações mobile -->
-          <div class="mobile-info-section">
-            <div class="mobile-info-row">
-              <span class="mobile-label">Destinatário:</span>
-              <span class="mobile-value">{{ rastreamento.destinatario || '-' }}</span>
-            </div>
+          <!-- Ações mobile -->
+          <div class="mobile-actions">
+            <button 
+              @click="editarRastreamento(rastreamento)"
+              class="mobile-action-btn"
+              title="Editar"
+            >
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Editar
+            </button>
             
-            <div class="mobile-info-row">
-              <span class="mobile-label">Descrição:</span>
-              <span class="mobile-value">{{ rastreamento.descricao || '-' }}</span>
-            </div>
-            <div class="mobile-info-row mobile-date-row">
-              <span class="mobile-label">Data:</span>
-              <span class="mobile-date">{{ formatarData(rastreamento.created_at) }}</span>
-            </div>
-            <div class="mobile-info-row">
-              <span class="mobile-label">Status:</span>
-              <select 
-                v-model="rastreamento.status"
-                @change="atualizarStatus(rastreamento)"
-                class="mobile-status-select"
-                :class="getStatusClass(rastreamento.status)"
-              >
-                <option value="PENDENTE">Pendente</option>
-                <option value="EM_TRANSITO">Em Trânsito</option>
-                <option value="ENTREGUE">Entregue</option>
-                <option value="ERRO">Erro</option>
-              </select>
-            </div>
-            
-
+            <button 
+              @click="removerRastreamento(rastreamento)"
+              class="mobile-action-btn delete"
+              title="Excluir"
+            >
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Excluir
+            </button>
           </div>
 
 
@@ -1391,76 +1391,89 @@ onMounted(() => {
 
   /* Linha principal mobile */
   .mobile-main-row {
-    display: table-row !important;
-    grid-template-columns: 1fr auto;
+    display: grid !important;
+    grid-template-columns: 2fr 1fr;
     gap: 1rem;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #f3f4f6;
-    align-items: flex-start;
+    margin-bottom: 0;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 0.75rem 0.75rem 0 0;
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+    align-items: center;
   }
 
   .mobile-codigo-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobile-codigo-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
   }
 
   .mobile-codigo-section .codigo-text {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 700;
     font-family: monospace;
     flex: 1;
     color: #1e293b;
     background: white;
-    padding: 0.375rem 0.5rem;
-    border-radius: 0.375rem;
-    border: 1px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   }
 
   .mobile-codigo-section .copy-btn {
     flex-shrink: 0;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.375rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
     background: white;
-    border: 1px solid #d1d5db;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 2px solid #d1d5db;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s;
   }
 
   .mobile-codigo-section .copy-btn:hover {
     background: #f1f5f9;
     border-color: #9ca3af;
+    transform: translateY(-1px);
   }
 
   .mobile-rastreio-section {
-    padding-top: 1rem;
-    padding-left: 1rem;
     display: flex;
+    justify-content: center;
     align-items: center;
   }
 
   .mobile-rastreio-btn-header {
     display: inline-flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
     color: #1f2937;
     border: none;
-    border-radius: 0.5rem;
-    font-size: 0.8rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    border: 1px solid #d97706;
-    box-shadow: 0 2px 4px 0 rgba(245, 158, 11, 0.2);
+    border: 2px solid #d97706;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.25);
     transition: all 0.2s;
+    min-width: 120px;
+    justify-content: center;
   }
 
   .mobile-rastreio-btn-header:hover {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px 0 rgba(245, 158, 11, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4);
   }
   .header-content {
     flex-direction: column;
@@ -1532,27 +1545,31 @@ onMounted(() => {
   }
 
   .rastreamento-row {
-    display: block;
-    padding: 1.25rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem;
-    margin-bottom: 1.25rem;
+    display: flex ;
+    flex-direction: column;
+    padding: 0;
+    border: 2px solid #e5e7eb;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
     background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     position: relative;
     width: 100%;
     box-sizing: border-box;
-    transition: all 0.2s;
+    transition: all 0.3s;
+    overflow: hidden;
   }
 
   .rastreamento-row:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    border-color: #cbd5e1;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: #9ca3af;
+    transform: translateY(-2px);
   }
 
   /* Layout mobile: Código e botão na primeira linha */
   .row-codigo {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.75rem;
@@ -1573,20 +1590,29 @@ onMounted(() => {
 
   /* Seção de informações mobile */
   .mobile-info-section {
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    background: #f8fafc;
-    border-radius: 0.5rem;
-    border-left: 3px solid #e2e8f0;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 0;
+    padding: 1.25rem;
+    background: white;
+    border-radius: 0;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-bottom: none;
+    box-shadow: none;
   }
 
   .mobile-info-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: flex-start;
-    margin-bottom: 0.75rem;
-    padding: 0.375rem 0;
-    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    gap: 1.5rem;
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
 
   .mobile-info-row:last-child {
@@ -1598,36 +1624,38 @@ onMounted(() => {
   }
 
   .mobile-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #4b5563;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    min-width: 80px;
+    min-width: 90px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
   }
 
   .mobile-value {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     color: #111827;
     text-align: right;
-    font-weight: 500;
+    font-weight: 600;
     white-space: pre-line;
     word-wrap: break-word;
-    line-height: 1.4;
+    line-height: 1.5;
     flex: 1;
-    max-width: 60%;
+    max-width: 65%;
   }
 
   .mobile-status-select {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #cbd5e1;
+    padding: 1rem 1rem;
+    border: 2px solid #cbd5e1;
     border-radius: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    min-width: 110px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    min-width: 130px;
     background: white;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     transition: all 0.2s;
   }
 
@@ -1646,30 +1674,37 @@ onMounted(() => {
   /* Ações mobile */
   .mobile-actions {
     display: flex !important;
-    gap: 1rem;
+    gap: 1.5rem;
     justify-content: center;
-    padding: 1rem;
-    margin: 1rem 0 0 0;
+    padding: 1.5rem;
+    margin: 1.5rem 0 0 0;
     width: 100%;
-    border-top: 1px solid #e5e7eb;
+    border-top: 2px solid #e5e7eb;
+    background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%);
+    border-radius: 0 0 0.75rem 0.75rem;
     box-sizing: border-box;
   }
 
   .mobile-action-btn {
     display: flex !important;
     align-items: center;
-    gap: 0.25rem;
-    padding: 1rem 0.75rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    background: #f8fafc;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border: 2px solid #d1d5db;
+    border-radius: 0.75rem;
+    background: white;
     color: #374151;
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    height: 28px;
+    min-height: 48px;
     white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    min-width: 100px;
+    justify-content: center;
+    flex: 1;
+    max-width: 140px;
   }
 
   .mobile-action-btn:hover {
@@ -1926,4 +1961,91 @@ onMounted(() => {
   height: 1rem;
   flex-shrink: 0;
 }
+
+/* Quebra a linha da listagem para 1 coluna e empilha os campos */
+@media (max-width: 1100px) {
+  .rastreamentos-list .list-header {
+    display: none !important; /* some o cabeçalho em telas menores */
+  }
+
+  .rastreamento-row {
+    display: grid;
+    grid-template-columns: 1fr !important; /* vira 1 coluna */
+    gap: 0.75rem;
+  }
+
+  /* Cada célula passa a ocupar a linha inteira, abaixo do bloco de código */
+  .row-destinatario,
+  .row-descricao,
+  .row-rastreio,
+  .row-status,
+  .row-data,
+  .row-actions {
+    grid-column: 1 / -1 !important;
+    justify-content: flex-start; /* evita centralização estranha herdada */
+  }
+}
+
+/* Evita corte lateral do card */
+.rastreamento-row {
+  overflow: visible;            /* antes estava hidden */
+}
+
+/* Permite que cada célula encolha dentro da linha */
+.rastreamento-row > * {
+  min-width: 0;
+}
+
+/* Mobile: empilha e garante que o conteúdo quebre corretamente */
+@media (max-width: 768px) {
+  .mobile-main-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: stretch;
+  }
+
+  .rastreamento-row {
+    display: flex;
+    flex-direction: column;     /* tudo embaixo do bloco código+correios */
+  }
+
+  /* As linhas de info podem quebrar para a próxima linha */
+  .mobile-info-row {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+
+  /* O valor deve poder ocupar a linha inteira sem cortar */
+  .mobile-value {
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* O select de status não deve estourar a largura */
+  .mobile-status-select {
+    width: 100%;
+    max-width: 260px;           /* ajuste fino opcional */
+  }
+
+  .mobile-rastreio-section,
+  .row-rastreio {
+    width: 100%;
+    display: flex;
+    justify-content: center; /* ou flex-start se quiser alinhado à esquerda */
+    margin-top: 0.5rem;
+  }
+
+  .mobile-rastreio-btn-header,
+  .rastreio-btn {
+    width: 100%;        /* ocupa a linha toda */
+    max-width: 100%;    /* evita estourar */
+    justify-content: center;
+    box-sizing: border-box;
+  }
+  
+}
+
+
+
 </style>
