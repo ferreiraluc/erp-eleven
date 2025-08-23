@@ -2046,6 +2046,144 @@ onMounted(() => {
   
 }
 
+/* ===== Ajustes de TAMANHO: somente MOBILE ===== */
+@media (max-width: 768px) {
+  /* Header mais compacto */
+  .page-header { border-bottom-width: 0; }
+  .header-content {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+  .back-button {
+    width: 2rem; height: 2rem; border-radius: 0.4rem;
+  }
+  .back-button svg { width: 1rem; height: 1rem; }
+
+  .page-title {
+    font-size: 1.125rem; /* antes 1.5rem */
+    line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 0.75rem;   /* menor */
+    color: #6b7280;
+  }
+
+  /* Botão “Novo Rastreamento” menor */
+  .header-actions .btn.btn-primary {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.85rem;
+    border-radius: 0.5rem;
+    gap: 0.4rem;
+  }
+  .header-actions .btn.btn-primary .btn-icon {
+    width: 0.9rem; height: 0.9rem;
+  }
+
+  /* Cards de estatísticas menores */
+  .stats-section { padding: 0.75rem 1rem; }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr; /* 2 colunas enxutas */
+    gap: 0.5rem;
+    max-width: none;
+  }
+  .stat-card {
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.625rem;
+    gap: 0.5rem;
+  }
+  .stat-icon {
+    width: 1.75rem; height: 1.75rem; border-radius: 0.375rem;
+  }
+  .stat-icon svg { width: 0.95rem; height: 0.95rem; }
+  .stat-label { font-size: 0.7rem; margin-bottom: 0.15rem; }
+  .stat-value { font-size: 1.05rem; }
+
+  /* Filtros/Busca mais compactos */
+  .filters-section { padding: 0 1rem 0.75rem; }
+  .search-input {
+    padding: 0.6rem 0.6rem 0.6rem 2.1rem;
+    font-size: 0.85rem;
+    border-radius: 0.5rem;
+  }
+  .search-icon { left: 0.6rem; }
+
+  .status-select {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+    min-width: 0;
+  }
+
+  /* Lista: “cards” de rastreamento menores */
+  .rastreamentos-list { padding: 0 1rem 1rem; }
+  .rastreamento-row {
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  /* Cabeçalho do card (código + botão Correios) menor */
+  .mobile-main-row {
+    padding: 0.85rem 0.9rem;
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+  .mobile-codigo-section .codigo-text {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+  }
+  .mobile-codigo-section .copy-btn {
+    width: 2.1rem; height: 2.1rem; border-radius: 0.45rem;
+  }
+  .mobile-rastreio-btn-header {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 100px;
+    border-radius: 0.6rem;
+  }
+
+  /* Blocos de info mais justos */
+  .mobile-info-section { padding: 0.75rem 0.9rem; }
+  .mobile-info-row {
+    padding: 0.6rem 0.7rem;
+    margin-bottom: 0.6rem;
+    border-radius: 0.5rem;
+  }
+  .mobile-label {
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
+  .mobile-value {
+    font-size: 0.9rem;
+  }
+  .mobile-status-select {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    max-width: 220px;
+    border-radius: 0.5rem;
+  }
+  .mobile-date { font-size: 0.75rem; }
+
+  /* Ações do card mais compactas */
+  .mobile-actions {
+    padding: 1rem;
+    margin-top: 0.75rem;
+    gap: 0.75rem;
+    border-top-width: 1px;
+  }
+  .mobile-action-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    min-height: 42px;
+    border-radius: 0.6rem;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 380px) {
+  .page-title { font-size: 1rem; }
+  .header-actions .btn.btn-primary { font-size: 0.8rem; padding: 0.45rem 0.7rem; }
+  .stat-value { font-size: 0.95rem; }
+}
+
 
 
 </style>
