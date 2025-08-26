@@ -21,7 +21,6 @@
             <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Novo Rastreamento
           </button>
         </div>
       </div>
@@ -144,79 +143,127 @@
           <div class="header-actions">Ações</div>
         </div>
 
-        <!-- Cabeçalho da lista mobile -->
-        <div class="mobile-header">
-          <div class="mobile-header-codigo">Código</div>
-          <div class="mobile-header-rastreio">Rastreio</div>
-        </div>
-
         <div 
           v-for="rastreamento in rastreamentosFiltrados" 
           :key="rastreamento.id"
           class="rastreamento-row"
         >
-          <!-- Linha principal: Código e Rastreio -->
-          <div class="mobile-main-row">
-            <div class="mobile-codigo-section">
-              <div class="mobile-codigo-row">
-                <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
-                <button 
-                  @click="copiarCodigo(rastreamento.codigo_rastreio)"
-                  class="copy-btn"
-                  title="Copiar Código"
-                >
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          <!-- Layout Mobile: Card Dropdown -->
+          <div class="mobile-dropdown-card">
+            <!-- Cabeçalho sempre visível -->
+            <div 
+              class="mobile-card-header"
+              @click="toggleCard(rastreamento.id)"
+            >
+              <div class="mobile-header-top">
+                <div class="mobile-name-section">
+                  <span class="mobile-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
+                </div>
+                <div class="mobile-expand-icon">
+                  <svg 
+                    width="20" 
+                    height="20" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                    :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
+                </div>
+              </div>
+              
+              <div class="mobile-header-main">
+                <div class="mobile-code-section">
+                  <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
+                  <button 
+                    @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
+                    class="mobile-copy-btn"
+                    title="Copiar"
+                  >
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <button 
+                  @click.stop="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
+                  class="mobile-correios-btn-compact"
+                  title="Rastrear nos Correios"
+                >
+                  <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
+                    <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
+                    <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
+                    <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
+                    <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
+                    <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
+                  </svg>
+                  Correios
                 </button>
               </div>
             </div>
-            <div class="mobile-rastreio-section">
-              <button 
-                @click="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
-                class="mobile-rastreio-btn-header"
-                title="Rastrear nos Correios"
-              >
-                <svg width="18" height="18" viewBox="0 0 100 100" fill="none">
-                  <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
-                  <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
-                  <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
-                  <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
-                  <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
-                </svg>
-                <span>Correios</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Informações mobile -->
-          <div class="mobile-info-section">
-            <div class="mobile-info-row">
-              <span class="mobile-label">Destinatário:</span>
-              <span class="mobile-value">{{ rastreamento.destinatario || '-' }}</span>
-            </div>
             
-            <div class="mobile-info-row">
-              <span class="mobile-label">Descrição:</span>
-              <span class="mobile-value">{{ rastreamento.descricao || '-' }}</span>
-            </div>
-            <div class="mobile-info-row mobile-date-row">
-              <span class="mobile-label">Data:</span>
-              <span class="mobile-date">{{ formatarData(rastreamento.created_at) }}</span>
-            </div>
-            <div class="mobile-info-row">
-              <span class="mobile-label">Status:</span>
-              <select 
-                v-model="rastreamento.status"
-                @change="atualizarStatus(rastreamento)"
-                class="mobile-status-select"
-                :class="getStatusClass(rastreamento.status)"
-              >
-                <option value="PENDENTE">Pendente</option>
-                <option value="EM_TRANSITO">Em Trânsito</option>
-                <option value="ENTREGUE">Entregue</option>
-                <option value="ERRO">Erro</option>
-              </select>
+            <!-- Conteúdo expansível -->
+            <div 
+              class="mobile-card-content"
+              :class="{ 'expanded': isCardExpanded(rastreamento.id) }"
+            >
+              <div class="mobile-card-inner">
+                <!-- Status -->
+                <div class="mobile-content-row">
+                  <span class="mobile-content-label">Status:</span>
+                  <select 
+                    v-model="rastreamento.status"
+                    @change="atualizarStatus(rastreamento)"
+                    class="mobile-status-select-expanded"
+                    :class="getStatusClass(rastreamento.status)"
+                  >
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="EM_TRANSITO">Em Trânsito</option>
+                    <option value="ENTREGUE">Entregue</option>
+                    <option value="ERRO">Erro</option>
+                  </select>
+                </div>
+                
+                <!-- Detalhes -->
+                <div class="mobile-content-row" v-if="rastreamento.destinatario">
+                  <span class="mobile-content-label">Destinatário:</span>
+                  <span class="mobile-content-value">{{ rastreamento.destinatario }}</span>
+                </div>
+                <div class="mobile-content-row" v-if="rastreamento.descricao">
+                  <span class="mobile-content-label">Descrição:</span>
+                  <span class="mobile-content-value">{{ rastreamento.descricao }}</span>
+                </div>
+                <div class="mobile-content-row">
+                  <span class="mobile-content-label">Criado em:</span>
+                  <span class="mobile-content-value mobile-date-value">{{ formatarData(rastreamento.created_at) }}</span>
+                </div>
+                
+                <!-- Ações -->
+                <div class="mobile-content-actions">
+                  <button 
+                    @click="editarRastreamento(rastreamento)"
+                    class="mobile-action-btn-expanded edit"
+                    title="Editar"
+                  >
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Editar
+                  </button>
+                  <button 
+                    @click="removerRastreamento(rastreamento)"
+                    class="mobile-action-btn-expanded delete"
+                    title="Excluir"
+                  >
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Excluir
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -265,30 +312,6 @@
 
           </div>
 
-          <!-- Ações mobile -->
-          <div class="mobile-actions">
-            <button 
-              @click="editarRastreamento(rastreamento)"
-              class="mobile-action-btn"
-              title="Editar"
-            >
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Editar
-            </button>
-            
-            <button 
-              @click="removerRastreamento(rastreamento)"
-              class="mobile-action-btn delete"
-              title="Excluir"
-            >
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Excluir
-            </button>
-          </div>
 
 
           
@@ -462,6 +485,7 @@ const salvando = ref(false)
 const modalError = ref<string | null>(null)
 const editandoRastreamento = ref<Rastreamento | null>(null)
 const codigoInput = ref<HTMLInputElement>()
+const expandedCards = ref<Set<string>>(new Set())
 
 // Dados do resumo
 const resumo = ref(rastreamentoStore.resumoDashboard)
@@ -499,7 +523,17 @@ const rastreamentosFiltrados = computed(() => {
     lista = lista.filter(r => r.status === filtros.value.status)
   }
   
-  return lista
+  // Ordenação: entregues vão para o final, demais por data de criação (mais recentes primeiro)
+  return lista.sort((a, b) => {
+    // Se um é entregue e outro não, o entregue vai para baixo
+    if (a.status === 'ENTREGUE' && b.status !== 'ENTREGUE') return 1
+    if (a.status !== 'ENTREGUE' && b.status === 'ENTREGUE') return -1
+    
+    // Se ambos são entregues ou ambos não são, ordena por data de criação (mais recente primeiro)
+    const dataA = new Date(a.created_at).getTime()
+    const dataB = new Date(b.created_at).getTime()
+    return dataB - dataA
+  })
 })
 
 // Methods
@@ -671,6 +705,19 @@ async function atualizarStatus(rastreamento: any) {
     // Reverter o status em caso de erro
     await carregarDados()
   }
+}
+
+// Funções para controlar expansão dos cards
+function toggleCard(cardId: string) {
+  if (expandedCards.value.has(cardId)) {
+    expandedCards.value.delete(cardId)
+  } else {
+    expandedCards.value.add(cardId)
+  }
+}
+
+function isCardExpanded(cardId: string): boolean {
+  return expandedCards.value.has(cardId)
 }
 
 // Lifecycle
@@ -1341,19 +1388,13 @@ onMounted(() => {
 }
 
 /* Desktop styles */
-.mobile-info-section,
-.mobile-actions,
-.mobile-header,
-.mobile-main-row {
+.mobile-dropdown-card {
   display: none;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .mobile-info-section,
-  .mobile-actions,
-  .mobile-header,
-  .mobile-main-row {
+  .mobile-dropdown-card {
     display: block !important;
   }
   
@@ -1362,127 +1403,292 @@ onMounted(() => {
     display: none !important;
   }
 
-  /* Header mobile simplificado */
-  .mobile-header {
-    display: grid !important;
-    grid-template-columns: 1fr auto;
-    gap: 1rem;
-    padding: 1rem;
-    background-color: #f8fafc;
-    border-radius: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #374151;
-    border: 1px solid #e2e8f0;
-    align-items: center;
-  }
 
-  .mobile-header-codigo {
-    display: flex;
-    align-items: center;
+  /* Novo layout mobile - cards dropdown com largura quase total */
+  .mobile-dropdown-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin: 0 0.25rem 16px 0.25rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: all 0.2s ease;
+    width: calc(100% - 0.5rem);
   }
-
-  .mobile-header-rastreio {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  
+  .mobile-dropdown-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   }
-
-  /* Linha principal mobile */
-  .mobile-main-row {
-    display: grid !important;
-    grid-template-columns: 2fr 1fr;
-    gap: 1rem;
-    margin-bottom: 0;
-    padding: 1.25rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-radius: 0.75rem 0.75rem 0 0;
-    border: 1px solid #e2e8f0;
-    border-bottom: none;
-    align-items: center;
-  }
-
-  .mobile-codigo-section {
+  
+  /* Cabeçalho sempre visível com nome */
+  .mobile-card-header {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    padding: 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    cursor: pointer;
+    transition: all 0.2s;
+    gap: 12px;
   }
-
-  .mobile-codigo-row {
+  
+  .mobile-card-header:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  }
+  
+  .mobile-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .mobile-name-section {
+    flex: 1;
+  }
+  
+  .mobile-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.2;
+  }
+  
+  .mobile-header-main {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 12px;
+    width: 100%;
   }
-
-  .mobile-codigo-section .codigo-text {
-    font-size: 1rem;
-    font-weight: 700;
-    font-family: monospace;
-    flex: 1;
+  
+  .mobile-code-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .mobile-code {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 14px;
+    font-weight: 600;
     color: #1e293b;
     background: white;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    border: 2px solid #e2e8f0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    letter-spacing: 0.5px;
   }
-
-  .mobile-codigo-section .copy-btn {
-    flex-shrink: 0;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.5rem;
+  
+  .mobile-copy-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     background: white;
-    border: 2px solid #d1d5db;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
   }
-
-  .mobile-codigo-section .copy-btn:hover {
+  
+  .mobile-copy-btn:hover {
     background: #f1f5f9;
-    border-color: #9ca3af;
-    transform: translateY(-1px);
+    border-color: #94a3b8;
+    color: #475569;
   }
-
-  .mobile-rastreio-section {
+  
+  .mobile-correios-btn-compact {
     display: flex;
-    justify-content: center;
     align-items: center;
-  }
-
-  .mobile-rastreio-btn-header {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
+    gap: 6px;
+    padding: 8px 12px;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
     color: #1f2937;
-    border: none;
-    border-radius: 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 700;
+    border: 1px solid #d97706;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
-    border: 2px solid #d97706;
-    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.25);
     transition: all 0.2s;
-    min-width: 120px;
+  }
+  
+  .mobile-correios-btn-compact:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+  }
+  
+  .mobile-expand-icon {
+    color: #64748b;
+    transition: all 0.3s ease;
+  }
+  
+  .mobile-expand-icon svg {
+    transition: transform 0.3s ease;
+  }
+  
+  .mobile-expand-icon svg.rotate-180 {
+    transform: rotate(180deg);
+  }
+  
+  /* Conteúdo expansível */
+  .mobile-card-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    opacity: 0;
+  }
+  
+  .mobile-card-content.expanded {
+    max-height: 400px;
+    opacity: 1;
+  }
+  
+  .mobile-card-inner {
+    padding: 16px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .mobile-content-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .mobile-content-row:last-child {
+    border-bottom: none;
+  }
+  
+  .mobile-content-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  
+  .mobile-content-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    text-align: right;
+    max-width: 60%;
+    word-break: break-word;
+  }
+  
+  .mobile-date-value {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 400;
+  }
+  
+  .mobile-status-select-expanded {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: white;
+    min-width: 100px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .mobile-status-select-expanded:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  /* Status colors for expanded select */
+  .mobile-status-select-expanded.text-yellow-600 {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-color: #fbbf24;
+  }
+  
+  .mobile-status-select-expanded.text-blue-600 {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-color: #60a5fa;
+  }
+  
+  .mobile-status-select-expanded.text-green-600 {
+    background-color: #dcfce7;
+    color: #166534;
+    border-color: #4ade80;
+  }
+  
+  .mobile-status-select-expanded.text-red-600 {
+    background-color: #fecaca;
+    color: #991b1b;
+    border-color: #f87171;
+  }
+  
+  .mobile-content-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+  }
+  
+  .mobile-action-btn-expanded {
+    flex: 1;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+  }
+  
+  .mobile-action-btn-expanded.edit {
+    color: #475569;
+  }
+  
+  .mobile-action-btn-expanded.edit:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #334155;
+  }
+  
+  .mobile-action-btn-expanded.delete {
+    color: #dc2626;
+    border-color: #fca5a5;
+  }
+  
+  .mobile-action-btn-expanded.delete:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+  }
+  
+  .header-content {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
   }
 
-  .mobile-rastreio-btn-header:hover {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4);
-  }
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+  .header-left {
+    flex: 1;
   }
 
   .header-actions {
-    justify-content: space-between;
+    justify-content: flex-end;
+    flex-shrink: 0;
   }
 
   .stats-grid {
@@ -1588,140 +1794,7 @@ onMounted(() => {
   }
 
 
-  /* Seção de informações mobile */
-  .mobile-info-section {
-    display: flex;
-    flex-direction: row;
-    margin-bottom: 0;
-    padding: 1.25rem;
-    background: white;
-    border-radius: 0;
-    border: 1px solid #e2e8f0;
-    border-top: none;
-    border-bottom: none;
-    box-shadow: none;
-  }
 
-  .mobile-info-row {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    gap: 1.5rem;
-    background: white;
-    border-radius: 0.5rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  }
-
-  .mobile-info-row:last-child {
-    margin-bottom: 0;
-  }
-
-  .mobile-date-row {
-    margin-bottom: 0;
-  }
-
-  .mobile-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #4b5563;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    min-width: 90px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-  }
-
-  .mobile-value {
-    font-size: 0.95rem;
-    color: #111827;
-    text-align: right;
-    font-weight: 600;
-    white-space: pre-line;
-    word-wrap: break-word;
-    line-height: 1.5;
-    flex: 1;
-    max-width: 65%;
-  }
-
-  .mobile-status-select {
-    padding: 1rem 1rem;
-    border: 2px solid #cbd5e1;
-    border-radius: 0.5rem;
-    font-size: 0.85rem;
-    font-weight: 700;
-    min-width: 130px;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s;
-  }
-
-  .mobile-status-select:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-  }
-
-  .mobile-date {
-    font-size: 0.8rem;
-    color: #6b7280;
-    font-weight: 500;
-  }
-
-  /* Ações mobile */
-  .mobile-actions {
-    display: flex !important;
-    gap: 1.5rem;
-    justify-content: center;
-    padding: 1.5rem;
-    margin: 1.5rem 0 0 0;
-    width: 100%;
-    border-top: 2px solid #e5e7eb;
-    background: linear-gradient(135deg, #fafbfc 0%, #f8fafc 100%);
-    border-radius: 0 0 0.75rem 0.75rem;
-    box-sizing: border-box;
-  }
-
-  .mobile-action-btn {
-    display: flex !important;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem 1.5rem;
-    border: 2px solid #d1d5db;
-    border-radius: 0.75rem;
-    background: white;
-    color: #374151;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    min-height: 48px;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    min-width: 100px;
-    justify-content: center;
-    flex: 1;
-    max-width: 140px;
-  }
-
-  .mobile-action-btn:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
-  }
-
-  .mobile-action-btn.delete {
-    color: #dc2626;
-    border-color: #fca5a5;
-    background: #fef2f2;
-  }
-
-  .mobile-action-btn.delete:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-  }
 
   /* Garantir que todos os elementos ficam dentro do card */
   .rastreamento-row * {
@@ -2068,15 +2141,20 @@ onMounted(() => {
     color: #6b7280;
   }
 
-  /* Botão “Novo Rastreamento” menor */
+  /* Botão "Novo Rastreamento" menor e no canto direito */
+  .header-actions {
+    justify-content: flex-end;
+  }
+  
   .header-actions .btn.btn-primary {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
     border-radius: 0.5rem;
-    gap: 0.4rem;
+    gap: 0.3rem;
+    min-width: auto;
   }
   .header-actions .btn.btn-primary .btn-icon {
-    width: 0.9rem; height: 0.9rem;
+    width: 0.8rem; height: 0.8rem;
   }
 
   /* Cards de estatísticas menores */
@@ -2113,8 +2191,8 @@ onMounted(() => {
     min-width: 0;
   }
 
-  /* Lista: “cards” de rastreamento menores */
-  .rastreamentos-list { padding: 0 1rem 1rem; }
+  /* Lista: "cards" de rastreamento com largura total */
+  .rastreamentos-list { padding: 0 0.5rem 1rem; }
   .rastreamento-row {
     border-radius: 0.75rem;
     margin-bottom: 1rem;
