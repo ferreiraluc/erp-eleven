@@ -1409,11 +1409,11 @@ onMounted(() => {
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    margin: 0 0.25rem 16px 0.25rem;
+    margin: 0 0.125rem 16px 0.125rem;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     transition: all 0.2s ease;
-    width: calc(100% - 0.5rem);
+    width: calc(100% - 0.25rem);
   }
   
   .mobile-dropdown-card:hover {
@@ -1743,7 +1743,7 @@ onMounted(() => {
 
   .rastreamentos-list {
     display: block;
-    padding: 0 1rem;
+    padding: 0rem;
   }
 
   .list-header {
@@ -1818,7 +1818,7 @@ onMounted(() => {
 .rastreamentos-list {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1.5rem 2rem;
+  padding: 0rem 2rem;
 }
 
 .list-header {
@@ -2157,31 +2157,38 @@ onMounted(() => {
     width: 0.8rem; height: 0.8rem;
   }
 
-  /* Cards de estatísticas menores */
-  .stats-section { padding: 0.75rem 1rem; }
+  /* Cards de estatísticas com exata largura dos cards de rastreamento */
+  .stats-section { padding: 0.75rem 0.125rem; }
   .stats-grid {
-    grid-template-columns: 1fr 1fr; /* 2 colunas enxutas */
-    gap: 0.5rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem;
     max-width: none;
+    width: 100%;
   }
   .stat-card {
-    padding: 0.5rem 0.625rem;
-    border-radius: 0.625rem;
-    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    gap: 0.75rem;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 80px;
   }
   .stat-icon {
-    width: 1.75rem; height: 1.75rem; border-radius: 0.375rem;
+    width: 2.25rem; height: 2.25rem; border-radius: 0.5rem;
   }
-  .stat-icon svg { width: 0.95rem; height: 0.95rem; }
-  .stat-label { font-size: 0.7rem; margin-bottom: 0.15rem; }
-  .stat-value { font-size: 1.05rem; }
+  .stat-icon svg { width: 1.25rem; height: 1.25rem; }
+  .stat-label { font-size: 0.8rem; margin-bottom: 0.25rem; font-weight: 500; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
 
-  /* Filtros/Busca mais compactos */
-  .filters-section { padding: 0 1rem 0.75rem; }
+  /* Filtros/Busca com exata largura dos cards */
+  .filters-section { padding: 0 0.125rem 0.75rem; }
   .search-input {
     padding: 0.6rem 0.6rem 0.6rem 2.1rem;
     font-size: 0.85rem;
     border-radius: 0.5rem;
+    width: 100%;
+    margin: 0;
   }
   .search-icon { left: 0.6rem; }
 
@@ -2189,13 +2196,28 @@ onMounted(() => {
     padding: 0.6rem;
     font-size: 0.85rem;
     min-width: 0;
+    width: 100%;
+    margin: 0;
+  }
+  
+  .search-box {
+    width: 100%;
+    margin: 0;
+  }
+  
+  .filter-select {
+    width: 100%;
+    margin: 0;
   }
 
   /* Lista: "cards" de rastreamento com largura total */
-  .rastreamentos-list { padding: 0 0.5rem 1rem; }
+  .rastreamentos-list { 
+    padding: 0.01rem 0.01rem; 
+    
+  }
   .rastreamento-row {
     border-radius: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
 
