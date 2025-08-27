@@ -146,128 +146,130 @@
         <div 
           v-for="rastreamento in rastreamentosFiltrados" 
           :key="rastreamento.id"
-          class="rastreamento-row"
+          class="mobile-rastreamento-row"
+          :class="'mobile-rastreamento-row-status-' + rastreamento.status.toLowerCase().replace('_', '-')"
         >
           <!-- Layout Mobile: Card Dropdown -->
           <div class="mobile-dropdown-card">
-            <!-- Cabeçalho sempre visível -->
-            <div 
-              class="mobile-card-header"
-              @click="toggleCard(rastreamento.id)"
-            >
-              <div class="mobile-header-top">
-                <div class="mobile-name-section">
-                  <span class="mobile-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
+              <!-- Cabeçalho sempre visível -->
+              <div 
+                class="mobile-card-header"
+                @click="toggleCard(rastreamento.id)"
+              >
+                <div class="mobile-header-top">
+                  <div class="mobile-name-section">
+                    <span class="mobile-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
+                  </div>
+                  <div class="mobile-expand-icon">
+                    <svg 
+                      width="20" 
+                      height="20" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                      :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
-                <div class="mobile-expand-icon">
-                  <svg 
-                    width="20" 
-                    height="20" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                    :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }"
+                
+                <div class="mobile-header-main">
+                  <div class="mobile-code-section">
+                    <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
+                    <button 
+                      @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
+                      class="mobile-copy-btn"
+                      title="Copiar"
+                    >
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <button 
+                    @click.stop="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
+                    class="mobile-correios-btn-compact"
+                    title="Rastrear nos Correios"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
+                    <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
+                      <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
+                      <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
+                      <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
+                      <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
+                      <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
+                    </svg>
+                    Correios
+                  </button>
                 </div>
               </div>
               
-              <div class="mobile-header-main">
-                <div class="mobile-code-section">
-                  <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
-                  <button 
-                    @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
-                    class="mobile-copy-btn"
-                    title="Copiar"
-                  >
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <button 
-                  @click.stop="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
-                  class="mobile-correios-btn-compact"
-                  title="Rastrear nos Correios"
-                >
-                  <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
-                    <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
-                    <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
-                    <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
-                    <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
-                    <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
-                  </svg>
-                  Correios
-                </button>
-              </div>
-            </div>
-            
-            <!-- Conteúdo expansível -->
-            <div 
-              class="mobile-card-content"
-              :class="{ 'expanded': isCardExpanded(rastreamento.id) }"
-            >
-              <div class="mobile-card-inner">
-                <!-- Status -->
-                <div class="mobile-content-row">
-                  <span class="mobile-content-label">Status:</span>
-                  <select 
-                    v-model="rastreamento.status"
-                    @change="atualizarStatus(rastreamento)"
-                    class="mobile-status-select-expanded"
-                    :class="getStatusClass(rastreamento.status)"
-                  >
-                    <option value="PENDENTE">Pendente</option>
-                    <option value="EM_TRANSITO">Em Trânsito</option>
-                    <option value="ENTREGUE">Entregue</option>
-                    <option value="ERRO">Erro</option>
-                  </select>
-                </div>
-                
-                <!-- Detalhes -->
-                <div class="mobile-content-row" v-if="rastreamento.destinatario">
-                  <span class="mobile-content-label">Destinatário:</span>
-                  <span class="mobile-content-value">{{ rastreamento.destinatario }}</span>
-                </div>
-                <div class="mobile-content-row" v-if="rastreamento.descricao">
-                  <span class="mobile-content-label">Descrição:</span>
-                  <span class="mobile-content-value">{{ rastreamento.descricao }}</span>
-                </div>
-                <div class="mobile-content-row">
-                  <span class="mobile-content-label">Criado em:</span>
-                  <span class="mobile-content-value mobile-date-value">{{ formatarData(rastreamento.created_at) }}</span>
-                </div>
-                
-                <!-- Ações -->
-                <div class="mobile-content-actions">
-                  <button 
-                    @click="editarRastreamento(rastreamento)"
-                    class="mobile-action-btn-expanded edit"
-                    title="Editar"
-                  >
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Editar
-                  </button>
-                  <button 
-                    @click="removerRastreamento(rastreamento)"
-                    class="mobile-action-btn-expanded delete"
-                    title="Excluir"
-                  >
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Excluir
-                  </button>
+              <!-- Conteúdo expansível -->
+              <div 
+                class="mobile-card-content"
+                :class="{ 'expanded': isCardExpanded(rastreamento.id) }"
+              >
+                <div class="mobile-card-inner">
+                  <!-- Status -->
+                  <div class="mobile-content-row">
+                    <span class="mobile-content-label">Status:</span>
+                    <select 
+                      v-model="rastreamento.status"
+                      @change="atualizarStatus(rastreamento)"
+                      class="mobile-status-select-expanded"
+                      :class="getStatusClass(rastreamento.status)"
+                    >
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="EM_TRANSITO">Em Trânsito</option>
+                      <option value="ENTREGUE">Entregue</option>
+                      <option value="ERRO">Erro</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Detalhes -->
+                  <div class="mobile-content-row" v-if="rastreamento.destinatario">
+                    <span class="mobile-content-label">Destinatário:</span>
+                    <span class="mobile-content-value">{{ rastreamento.destinatario }}</span>
+                  </div>
+                  <div class="mobile-content-row" v-if="rastreamento.descricao">
+                    <span class="mobile-content-label">Descrição:</span>
+                    <span class="mobile-content-value">{{ rastreamento.descricao }}</span>
+                  </div>
+                  <div class="mobile-content-row">
+                    <span class="mobile-content-label">Criado em:</span>
+                    <span class="mobile-content-value mobile-date-value">{{ formatarData(rastreamento.created_at) }}</span>
+                  </div>
+                  
+                  <!-- Ações -->
+                  <div class="mobile-content-actions">
+                    <button 
+                      @click="editarRastreamento(rastreamento)"
+                      class="mobile-action-btn-expanded edit"
+                      title="Editar"
+                    >
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Editar
+                    </button>
+                    <button 
+                      @click="removerRastreamento(rastreamento)"
+                      class="mobile-action-btn-expanded delete"
+                      title="Excluir"
+                    >
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Excluir
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
           </div>
-
-          <!-- Código e botão copiar (desktop) -->
+            
+          <!-- Desktop layout -->
+          <div class="rastreamento-row">
           <div class="row-codigo desktop-only">
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
@@ -357,6 +359,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
+          </div>
           </div>
         </div>
       </div>
@@ -672,6 +675,22 @@ function getStatusClass(status: string): string {
 
 function formatarData(data: string): string {
   return rastreamentoStore.formatarData(data)
+}
+
+function getStatusCardClass(status: string): string {
+  switch (status) {
+    case 'ENTREGUE':
+      return 'card-status-entregue'
+    case 'EM_TRANSITO':
+      return 'card-status-transito'
+    case 'PENDENTE':
+      return 'card-status-pendente'
+    case 'ERRO':
+    case 'NAO_ENCONTRADO':
+      return 'card-status-erro'
+    default:
+      return 'card-status-default'
+  }
 }
 
 // Novas funções para a lista
@@ -1750,27 +1769,6 @@ onMounted(() => {
     display: none;
   }
 
-  .rastreamento-row {
-    display: flex ;
-    flex-direction: column;
-    padding: 0;
-    border: 2px solid #e5e7eb;
-    border-radius: 1rem;
-    margin-bottom: 2rem;
-    background: white;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-    position: relative;
-    width: 100%;
-    box-sizing: border-box;
-    transition: all 0.3s;
-    overflow: hidden;
-  }
-
-  .rastreamento-row:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    border-color: #9ca3af;
-    transform: translateY(-2px);
-  }
 
   /* Layout mobile: Código e botão na primeira linha */
   .row-codigo {
@@ -1796,11 +1794,6 @@ onMounted(() => {
 
 
 
-  /* Garantir que todos os elementos ficam dentro do card */
-  .rastreamento-row * {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
 
   /* Esconder campos desktop no mobile */
   .row-destinatario,
@@ -1857,6 +1850,7 @@ onMounted(() => {
   justify-content: center;
 }
 
+/* Desktop: mostrar apenas rastreamento-row, ocultar dropdown */
 .rastreamento-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1.5fr 120px 120px 100px 120px;
@@ -1873,6 +1867,43 @@ onMounted(() => {
 .rastreamento-row:hover {
   border-color: #cbd5e1;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Ocultar dropdown cards no desktop */
+.mobile-dropdown-card {
+  display: none;
+  background-color: transparent;
+  border: none;
+}
+
+/* Cores para o container completo do mobile (cabeçalho + dropdown) */
+.mobile-rastreamento-row-status-entregue {
+  background-color: #dcfce7; /* Verde claro */
+  border: 1px solid #16a34a;
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-rastreamento-row-status-em-transito {
+  background-color: #dbeafe; /* Azul claro */
+  border: 1px solid #2563eb;
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-rastreamento-row-status-pendente {
+  background-color: #fef3c7; /* Amarelo/laranja */
+  border: 1px solid #d97706;
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-rastreamento-row-status-erro,
+.mobile-rastreamento-row-status-nao-encontrado {
+  background-color: #fecaca; /* Vermelho claro */
+  border: 1px solid #dc2626;
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .row-codigo {
@@ -2041,11 +2072,6 @@ onMounted(() => {
     display: none !important; /* some o cabeçalho em telas menores */
   }
 
-  .rastreamento-row {
-    display: grid;
-    grid-template-columns: 1fr !important; /* vira 1 coluna */
-    gap: 0.75rem;
-  }
 
   /* Cada célula passa a ocupar a linha inteira, abaixo do bloco de código */
   .row-destinatario,
@@ -2059,15 +2085,6 @@ onMounted(() => {
   }
 }
 
-/* Evita corte lateral do card */
-.rastreamento-row {
-  overflow: visible;            /* antes estava hidden */
-}
-
-/* Permite que cada célula encolha dentro da linha */
-.rastreamento-row > * {
-  min-width: 0;
-}
 
 /* Mobile: empilha e garante que o conteúdo quebre corretamente */
 @media (max-width: 768px) {
@@ -2077,10 +2094,6 @@ onMounted(() => {
     align-items: stretch;
   }
 
-  .rastreamento-row {
-    display: flex;
-    flex-direction: column;     /* tudo embaixo do bloco código+correios */
-  }
 
   /* As linhas de info podem quebrar para a próxima linha */
   .mobile-info-row {
@@ -2210,15 +2223,19 @@ onMounted(() => {
     margin: 0;
   }
 
+  /* Mobile: ocultar rastreamento-row, mostrar dropdown */
+  .rastreamento-row {
+    display: none !important;
+  }
+  
+  .mobile-dropdown-card {
+    display: block !important;
+  }
+
   /* Lista: "cards" de rastreamento com largura total */
   .rastreamentos-list { 
     padding: 0.01rem 0.01rem; 
     
-  }
-  .rastreamento-row {
-    border-radius: 0.75rem;
-    margin-bottom: 0.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
 
   /* Cabeçalho do card (código + botão Correios) menor */
