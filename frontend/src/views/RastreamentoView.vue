@@ -1850,14 +1850,14 @@ onMounted(() => {
   justify-content: center;
 }
 
-/* Desktop: mostrar apenas rastreamento-row, ocultar dropdown */
+/* Desktop: mostrar apenas rastreamento-row, ocultar dropdown - SEM CORES */
 .rastreamento-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1.5fr 120px 120px 100px 120px;
   gap: 1rem;
   padding: 1rem;
-  background-color: white;
-  border: 1px solid #e5e7eb;
+  background-color: white !important; /* Sempre branco no desktop */
+  border: 1px solid #e5e7eb !important; /* Sempre borda cinza no desktop */
   border-radius: 0.5rem;
   margin-bottom: 0.25rem;
   align-items: center;
@@ -1865,8 +1865,27 @@ onMounted(() => {
 }
 
 .rastreamento-row:hover {
-  border-color: #cbd5e1;
+  border-color: #cbd5e1 !important; /* Hover cinza no desktop */
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Desktop: Forçar selects sem cores de status */
+.rastreamento-row .status-select-inline {
+  background-color: white !important;
+  color: #374151 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Desktop: Garantir que classes mobile de status não afetem o desktop */
+@media (min-width: 769px) {
+  .mobile-rastreamento-row-status-entregue,
+  .mobile-rastreamento-row-status-em-transito,
+  .mobile-rastreamento-row-status-pendente,
+  .mobile-rastreamento-row-status-erro,
+  .mobile-rastreamento-row-status-nao-encontrado {
+    background-color: transparent !important;
+    border: none !important;
+  }
 }
 
 /* Ocultar dropdown cards no desktop */
@@ -1876,34 +1895,36 @@ onMounted(() => {
   border: none;
 }
 
-/* Cores para o container completo do mobile (cabeçalho + dropdown) */
-.mobile-rastreamento-row-status-entregue {
-  background-color: #dcfce7; /* Verde claro */
-  border: 1px solid #16a34a;
-  border-radius: 0.75rem;
-  margin-bottom: 0.5rem;
-}
+/* Cores para o container completo do mobile (cabeçalho + dropdown) - APENAS NO MOBILE */
+@media (max-width: 768px) {
+  .mobile-rastreamento-row-status-entregue {
+    background-color: #dcfce7 !important; /* Verde claro */
+    border: 1px solid #16a34a !important;
+    border-radius: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
 
-.mobile-rastreamento-row-status-em-transito {
-  background-color: #dbeafe; /* Azul claro */
-  border: 1px solid #2563eb;
-  border-radius: 0.75rem;
-  margin-bottom: 0.5rem;
-}
+  .mobile-rastreamento-row-status-em-transito {
+    background-color: #dbeafe !important; /* Azul claro */
+    border: 1px solid #2563eb !important;
+    border-radius: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
 
-.mobile-rastreamento-row-status-pendente {
-  background-color: #fef3c7; /* Amarelo/laranja */
-  border: 1px solid #d97706;
-  border-radius: 0.75rem;
-  margin-bottom: 0.5rem;
-}
+  .mobile-rastreamento-row-status-pendente {
+    background-color: #fef3c7 !important; /* Amarelo/laranja */
+    border: 1px solid #d97706 !important;
+    border-radius: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
 
-.mobile-rastreamento-row-status-erro,
-.mobile-rastreamento-row-status-nao-encontrado {
-  background-color: #fecaca; /* Vermelho claro */
-  border: 1px solid #dc2626;
-  border-radius: 0.75rem;
-  margin-bottom: 0.5rem;
+  .mobile-rastreamento-row-status-erro,
+  .mobile-rastreamento-row-status-nao-encontrado {
+    background-color: #fecaca !important; /* Vermelho claro */
+    border: 1px solid #dc2626 !important;
+    border-radius: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
 }
 
 .row-codigo {
