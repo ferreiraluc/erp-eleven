@@ -273,6 +273,48 @@
         <div class="actions-grid">
           <!-- Rastreamento Card -->
           <RastreamentoCard />
+
+          <!-- System Status -->
+          <div class="activity-card-status">
+            <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
+            <div class="status-grid">
+              <div class="status-box">
+                <div class="status-icon online">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
+                  </svg>
+                </div>
+                <div class="status-info">
+                  <span class="status-label">API</span>
+                  <span class="status-value online">Online</span>
+                </div>
+              </div>
+              
+              <div class="status-box">
+                <div class="status-icon online">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.79 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.79 4 8 4s8-1.79 8-4M4 7c0-2.21 3.79-4 8-4s8 1.79 8 4"></path>
+                  </svg>
+                </div>
+                <div class="status-info">
+                  <span class="status-label">Database</span>
+                  <span class="status-value online">Connected</span>
+                </div>
+              </div>
+              
+              <div class="status-box">
+                <div class="status-icon warning">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                  </svg>
+                </div>
+                <div class="status-info">
+                  <span class="status-label">Exchange</span>
+                  <span class="status-value warning">{{ getLastUpdateTime }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
           
           <!-- Exchange Rate Card -->
           <div class="action-card exchange-rate-card" @click="navigateToExchangeRates" style="cursor: pointer;">
@@ -406,47 +448,6 @@
             </div>
           </div>
 
-          <!-- System Status -->
-          <div class="activity-card">
-            <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
-            <div class="status-grid">
-              <div class="status-box">
-                <div class="status-icon online">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
-                  </svg>
-                </div>
-                <div class="status-info">
-                  <span class="status-label">API</span>
-                  <span class="status-value online">Online</span>
-                </div>
-              </div>
-              
-              <div class="status-box">
-                <div class="status-icon online">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.79 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.79 4 8 4s8-1.79 8-4M4 7c0-2.21 3.79-4 8-4s8 1.79 8 4"></path>
-                  </svg>
-                </div>
-                <div class="status-info">
-                  <span class="status-label">Database</span>
-                  <span class="status-value online">Connected</span>
-                </div>
-              </div>
-              
-              <div class="status-box">
-                <div class="status-icon warning">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                  </svg>
-                </div>
-                <div class="status-info">
-                  <span class="status-label">Exchange</span>
-                  <span class="status-value warning">{{ getLastUpdateTime }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </main>
@@ -1141,8 +1142,10 @@ onUnmounted(() => {
 
 .actions-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 2fr 1fr 1fr 2fr;
+  grid-template-rows: auto;
+  gap: 1rem;
+  align-items: start;
 }
 
 .action-card {
@@ -1152,6 +1155,127 @@ onUnmounted(() => {
   border: 1px solid #e5e7eb;
   padding: 1rem;
   transition: all 0.2s;
+}
+
+/* Compact square cards */
+.action-card.exchange-rate-card,
+.activity-card-status {
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1;
+  padding: 0.75rem;
+  justify-self: center;
+}
+
+.activity-card-status {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.activity-card-status .card-title {
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.activity-card-status .status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-card-status .status-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activity-card-status .status-icon {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.activity-card-status .status-icon svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.activity-card-status .status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-card-status .status-label {
+  font-size: 0.625rem;
+  color: #6b7280;
+  font-weight: 500;
+  margin: 0;
+}
+
+.activity-card-status .status-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.activity-card-status .status-value.online {
+  color: #16a34a;
+}
+
+.activity-card-status .status-value.warning {
+  color: #f59e0b;
+}
+
+/* Exchange Rate compact styles */
+.action-card.exchange-rate-card .card-title {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.action-card.exchange-rate-card .card-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.action-card.exchange-rate-card .card-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.action-card.exchange-rate-card .exchange-rate {
+  padding: 0.5rem 0;
+}
+
+.action-card.exchange-rate-card .rate-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.125rem;
+}
+
+.action-card.exchange-rate-card .rate-label {
+  font-size: 0.625rem;
+  color: #6b7280;
+}
+
+.action-card.exchange-rate-card .rate-updated {
+  font-size: 0.625rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+/* Regular cards - maintain normal size */
+.action-card.quick-actions-card {
+  width: 100%;
+  max-width: none;
+  aspect-ratio: unset;
+  padding: 1rem;
 }
 
 .action-card.exchange-rate-card:hover {
@@ -1211,6 +1335,7 @@ onUnmounted(() => {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
+
 
 .action-button {
   display: flex;
@@ -1293,7 +1418,7 @@ onUnmounted(() => {
 
 .activity-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
 }
 
@@ -1304,6 +1429,15 @@ onUnmounted(() => {
   border: 1px solid #e5e7eb;
   padding: 1rem;
 }
+
+.activity-card-status {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 1rem;
+}
+
 
 .view-all-button {
   background: none;
