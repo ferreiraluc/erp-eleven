@@ -307,16 +307,16 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
   function getStatusColor(status: string): string {
     switch (status) {
       case 'PENDENTE':
-        return 'text-yellow-600 bg-yellow-100'
+        return 'text-yellow-600'
       case 'EM_TRANSITO':
-        return 'text-blue-600 bg-blue-100'
+        return 'text-blue-600'
       case 'ENTREGUE':
-        return 'text-green-600 bg-green-100'
+        return 'text-green-600'
       case 'ERRO':
       case 'NAO_ENCONTRADO':
-        return 'text-red-600 bg-red-100'
+        return 'text-red-600'
       default:
-        return 'text-gray-600 bg-gray-100'
+        return 'text-gray-600'
     }
   }
 

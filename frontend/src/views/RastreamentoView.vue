@@ -1627,27 +1627,27 @@ onMounted(() => {
   
   /* Status colors for expanded select */
   .mobile-status-select-expanded.text-yellow-600 {
-    background-color: #fef3c7;
-    color: #92400e;
-    border-color: #fbbf24;
+    background-color: #f59e0b !important;
+    color: white !important;
+    border-color: #d97706 !important;
   }
   
   .mobile-status-select-expanded.text-blue-600 {
-    background-color: #dbeafe;
-    color: #1e40af;
-    border-color: #60a5fa;
+    background-color: #3b82f6 !important;
+    color: white !important;
+    border-color: #2563eb !important;
   }
   
   .mobile-status-select-expanded.text-green-600 {
-    background-color: #dcfce7;
-    color: #166534;
-    border-color: #4ade80;
+    background-color: #10b981 !important;
+    color: white !important;
+    border-color: #059669 !important;
   }
   
   .mobile-status-select-expanded.text-red-600 {
-    background-color: #fecaca;
-    color: #991b1b;
-    border-color: #f87171;
+    background-color: #ef4444 !important;
+    color: white !important;
+    border-color: #dc2626 !important;
   }
   
   .mobile-content-actions {
@@ -1992,27 +1992,27 @@ onMounted(() => {
 
 /* Status colors for select */
 .status-select-inline.text-yellow-600 {
-  background-color: #fef3c7;
-  color: #92400e;
-  border-color: #fbbf24;
+  background-color: #f59e0b !important;
+  color: white !important;
+  border-color: #d97706 !important;
 }
 
 .status-select-inline.text-blue-600 {
-  background-color: #dbeafe;
-  color: #1e40af;
-  border-color: #60a5fa;
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-color: #2563eb !important;
 }
 
 .status-select-inline.text-green-600 {
-  background-color: #dcfce7;
-  color: #166534;
-  border-color: #4ade80;
+  background-color: #10b981 !important;
+  color: white !important;
+  border-color: #059669 !important;
 }
 
 .status-select-inline.text-red-600 {
-  background-color: #fecaca;
-  color: #991b1b;
-  border-color: #f87171;
+  background-color: #ef4444 !important;
+  color: white !important;
+  border-color: #dc2626 !important;
 }
 
 .row-data {

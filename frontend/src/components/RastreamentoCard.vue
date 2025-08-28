@@ -640,23 +640,23 @@ onMounted(() => {
 }
 
 .status-pendente {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: #f59e0b;
+  color: white;
 }
 
 .status-em-transito {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: #3b82f6;
+  color: white;
 }
 
 .status-entregue {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: #10b981;
+  color: white;
 }
 
 .status-erro {
-  background-color: #fecaca;
-  color: #991b1b;
+  background-color: #ef4444;
+  color: white;
 }
 
 .empty-rastreamentos {
@@ -871,6 +871,7 @@ onMounted(() => {
     transform: rotate(360deg);
   }
 }
+
 
 @media (max-width: 768px) {
   .rastreamento-stats {
