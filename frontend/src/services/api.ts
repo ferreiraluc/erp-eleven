@@ -113,13 +113,50 @@ export const salesAPI = {
     api.post('/api/vendas/', sale).then(res => res.data),
 }
 
+// Vendor Types
+export interface VendorCreate {
+  nome: string
+  taxa_comissao?: number
+  meta_semanal?: number
+  conta_bancaria?: string
+  telefone?: string
+  ativo?: boolean
+  usuario_id?: string
+}
+
+export interface VendorResponse {
+  id: string
+  nome: string
+  taxa_comissao: number
+  meta_semanal: number
+  conta_bancaria?: string
+  telefone?: string
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
 // Vendors API
 export const vendorsAPI = {
-  getAll: (): Promise<Vendor[]> => 
-    api.get('/api/vendedores/').then(res => res.data),
+  getAll: (skip = 0, limit = 100, ativo?: boolean): Promise<VendorResponse[]> => {
+    let url = `/api/vendedores/?skip=${skip}&limit=${limit}`
+    if (ativo !== undefined) {
+      url += `&ativo=${ativo}`
+    }
+    return api.get(url).then(res => res.data)
+  },
   
-  create: (vendor: Partial<Vendor>): Promise<Vendor> => 
+  getById: (id: string): Promise<VendorResponse> => 
+    api.get(`/api/vendedores/${id}`).then(res => res.data),
+  
+  create: (vendor: VendorCreate): Promise<VendorResponse> => 
     api.post('/api/vendedores/', vendor).then(res => res.data),
+  
+  update: (id: string, vendor: Partial<VendorCreate>): Promise<VendorResponse> => 
+    api.put(`/api/vendedores/${id}`, vendor).then(res => res.data),
+  
+  delete: (id: string): Promise<{message: string}> => 
+    api.delete(`/api/vendedores/${id}`).then(res => res.data),
 }
 
 // Exchange Rate Types
