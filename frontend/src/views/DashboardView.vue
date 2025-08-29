@@ -1148,6 +1148,13 @@ onUnmounted(() => {
   align-items: start;
 }
 
+@media (max-width: 1024px) {
+  .actions-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+}
+
 .action-card {
   background-color: white;
   border-radius: 0.75rem;
@@ -1161,10 +1168,12 @@ onUnmounted(() => {
 .action-card.exchange-rate-card,
 .activity-card-status {
   width: 100%;
-  max-width: 180px;
-  aspect-ratio: 1;
+  max-width: 200px;
+  height: 200px;
   padding: 0.75rem;
   justify-self: center;
+  display: flex;
+  flex-direction: column;
 }
 
 .activity-card-status {
@@ -1178,24 +1187,30 @@ onUnmounted(() => {
 .activity-card-status .card-title {
   font-size: 0.875rem;
   margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 
 .activity-card-status .status-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.1rem;
+  flex: 1;
+  justify-content: space-evenly;
+  -moz-background-inline-policy: inherit;
+  
 }
 
 .activity-card-status .status-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
+
 }
 
 .activity-card-status .status-icon {
-  width: 1rem;
-  height: 1rem;
-  border-radius: 0.25rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.125rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1203,8 +1218,8 @@ onUnmounted(() => {
 }
 
 .activity-card-status .status-icon svg {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.5rem;
+  height: 0.5rem;
 }
 
 .activity-card-status .status-info {
@@ -1213,16 +1228,18 @@ onUnmounted(() => {
 }
 
 .activity-card-status .status-label {
-  font-size: 0.625rem;
+  font-size: 0.5rem;
   color: #6b7280;
   font-weight: 500;
   margin: 0;
+  line-height: 1.2;
 }
 
 .activity-card-status .status-value {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   font-weight: 600;
   margin: 0;
+  line-height: 1.2;
 }
 
 .activity-card-status .status-value.online {
@@ -1533,11 +1550,13 @@ onUnmounted(() => {
 .status-box {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: 1rem;
+  padding: 0.25rem;
+  padding-bottom: 0.3rem;
   border-radius: 0.5rem;
   border: 1px solid #e5e7eb;
   transition: all 0.2s;
+  
 }
 
 .status-box:hover {
