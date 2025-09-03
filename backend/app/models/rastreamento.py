@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 import uuid
 import enum
 from ..database import Base
+from ..config import settings
 
 
 class RastreamentoStatus(str, enum.Enum):
@@ -43,8 +44,8 @@ class Rastreamento(Base):
     ativo = Column(Boolean, default=True)
     
     # Auditoria
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey('usuarios.id'))
     
     # Relacionamentos

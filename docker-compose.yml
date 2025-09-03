@@ -26,7 +26,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/eleven
       - SECRET_KEY=your-secret-key-for-development
       - ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - ACCESS_TOKEN_EXPIRE_MINUTES=720
     depends_on:
       - db
     networks:

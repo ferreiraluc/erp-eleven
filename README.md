@@ -118,7 +118,7 @@ cp .env.example .env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/eleven
 SECRET_KEY=your-super-secret-key-here-change-this
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_TOKEN_EXPIRE_MINUTES=720
 TIMEZONE=America/Sao_Paulo
 ```
 
@@ -371,7 +371,7 @@ psql -U postgres -h localhost -d eleven < backup_eleven_20240101.sql
 DATABASE_URL=postgresql://user:password@host:5432/eleven
 SECRET_KEY=super-secret-production-key-256-bits
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=480
+ACCESS_TOKEN_EXPIRE_MINUTES=720
 TIMEZONE=America/Sao_Paulo
 ENVIRONMENT=production
 ```

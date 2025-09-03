@@ -5,6 +5,7 @@ from sqlalchemy.sql import func
 import uuid
 import enum
 from ..database import Base
+from ..config import settings
 
 class PedidoStatus(enum.Enum):
     PENDENTE = "PENDENTE"
@@ -50,8 +51,8 @@ class Pedido(Base):
     observacoes = Column(Text)
     instrucoes_entrega = Column(Text)
     
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
 
     usuario_criador = relationship("Usuario", foreign_keys=[created_by])

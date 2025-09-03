@@ -40,7 +40,7 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 - **DATABASE_URL**: postgresql://postgres:postgres@localhost:5432/eleven
 - **SECRET_KEY**: Generate a secure key for JWT tokens
 - **ALGORITHM**: HS256 (for JWT)
-- **ACCESS_TOKEN_EXPIRE_MINUTES**: 30
+- **ACCESS_TOKEN_EXPIRE_MINUTES**: 720
 
 ## Architecture
 
