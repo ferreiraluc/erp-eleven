@@ -157,6 +157,13 @@ export const vendorsAPI = {
   
   delete: (id: string): Promise<{message: string}> => 
     api.delete(`/api/vendedores/${id}`).then(res => res.data),
+
+  // Folgas endpoints
+  getFolgasCalendario: (ano: number, mes: number): Promise<any[]> =>
+    api.get(`/api/vendedores/folgas/calendario?ano=${ano}&mes=${mes}`).then(res => res.data),
+
+  getEstatisticasResumo: (ano: number, mes: number): Promise<{vendedores: any[]}> =>
+    api.get(`/api/vendedores/estatisticas/resumo?ano=${ano}&mes=${mes}`).then(res => res.data),
 }
 
 // Exchange Rate Types

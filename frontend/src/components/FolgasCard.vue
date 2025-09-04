@@ -134,6 +134,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { vendorsAPI } from '@/services/api'
 import FolgasCalendarAdvanced from './FolgasCalendarAdvanced.vue'
 
 const authStore = useAuthStore()
@@ -244,27 +245,12 @@ const closeFullCalendar = () => {
 const loadData = async () => {
   try {
     // Carregar folgas do calendário
-    const folgasResponse = await fetch(`/api/vendedores/folgas/calendario?ano=${currentYear.value}&mes=${currentMonth.value + 1}`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-    
-    if (folgasResponse.ok) {
-      folgas.value = await folgasResponse.json()
-    }
+    const folgasData = await vendorsAPI.getFolgasCalendario(currentYear.value, currentMonth.value + 1)
+    folgas.value = folgasData || []
 
     // Carregar estatísticas
-    const statsResponse = await fetch(`/api/vendedores/estatisticas/resumo?ano=${currentYear.value}&mes=${currentMonth.value + 1}`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (statsResponse.ok) {
-      const statsData = await statsResponse.json()
-      estatisticas.value = statsData.vendedores || []
-    }
+    const statsData = await vendorsAPI.getEstatisticasResumo(currentYear.value, currentMonth.value + 1)
+    estatisticas.value = statsData.vendedores || []
   } catch (error) {
     console.error('Erro ao carregar dados das folgas:', error)
   }
