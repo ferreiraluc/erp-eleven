@@ -17,6 +17,7 @@ class Funcionario(Base):
     salario = Column(DECIMAL(10,2))
     data_admissao = Column(Date)
     data_demissao = Column(Date)
+    cor_calendario = Column(String(7), default="#3B82F6")  # Cor hexadecimal para o calendário
     
     horarios = Column(JSONB)
     

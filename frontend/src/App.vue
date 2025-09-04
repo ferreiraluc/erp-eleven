@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <RouterView />
+    <NotificationToast />
   </div>
 </template>
 
@@ -8,6 +9,7 @@
 import { RouterView, useRouter } from 'vue-router'
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import NotificationToast from '@/components/NotificationToast.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()

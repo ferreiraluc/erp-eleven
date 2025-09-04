@@ -10,6 +10,7 @@ class VendedorBase(BaseModel):
     meta_semanal: Optional[Decimal] = Decimal("0")
     conta_bancaria: Optional[str] = None
     telefone: Optional[str] = None
+    cor_calendario: Optional[str] = "#3B82F6"
     ativo: Optional[bool] = True
 
 class VendedorCreate(VendedorBase):

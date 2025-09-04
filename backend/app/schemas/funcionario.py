@@ -11,6 +11,7 @@ class FuncionarioBase(BaseModel):
     salario: Optional[Decimal] = None
     data_admissao: Optional[date] = None
     data_demissao: Optional[date] = None
+    cor_calendario: Optional[str] = "#3B82F6"
     horarios: Optional[Dict[str, Any]] = None
     telefone: Optional[str] = None
     endereco: Optional[str] = None
@@ -26,6 +27,7 @@ class FuncionarioUpdate(BaseModel):
     salario: Optional[Decimal] = None
     data_admissao: Optional[date] = None
     data_demissao: Optional[date] = None
+    cor_calendario: Optional[str] = None
     horarios: Optional[Dict[str, Any]] = None
     telefone: Optional[str] = None
     endereco: Optional[str] = None

@@ -411,10 +411,14 @@
               </button>
             </div>
           </div>
+
         </div>
 
-        <!-- Recent Activity -->
-        <div class="activity-grid">
+        <!-- Calendar and Sales Grid -->
+        <div class="calendar-sales-grid">
+          <!-- Folgas Card -->
+          <FolgasCard />
+          
           <!-- Recent Sales -->
           <div class="activity-card">
             <div class="card-header">
@@ -447,7 +451,6 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </main>
@@ -573,6 +576,7 @@ import { useCurrencyStore } from '@/stores/currency'
 import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
+import FolgasCard from '@/components/FolgasCard.vue'
 
 const router = useRouter()
 const { locale, t } = useI18n()
@@ -1437,6 +1441,13 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
+.calendar-sales-grid {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  gap: 1.5rem;
+  align-items: start;
+}
+
 .activity-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -2234,7 +2245,8 @@ onUnmounted(() => {
   }
   
   .actions-grid,
-  .activity-grid {
+  .activity-grid,
+  .calendar-sales-grid {
     grid-template-columns: 1fr;
   }
   

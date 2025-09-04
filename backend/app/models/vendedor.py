@@ -15,6 +15,7 @@ class Vendedor(Base):
     meta_semanal = Column(DECIMAL(12,2), default=0)
     conta_bancaria = Column(String(50))
     telefone = Column(String(20))
+    cor_calendario = Column(String(7), default="#3B82F6")
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.current_timestamp())
     updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())

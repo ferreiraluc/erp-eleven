@@ -264,6 +264,13 @@
           </div>
 
           <div class="form-group">
+            <ColorPicker 
+              v-model="form.cor_calendario"
+              label="Cor do Calendário"
+            />
+          </div>
+
+          <div class="form-group">
             <label class="checkbox-label">
               <input 
                 v-model="form.ativo"
@@ -292,6 +299,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import ColorPicker from '@/components/ColorPicker.vue'
 import { vendorsAPI, type VendorResponse, type VendorCreate } from '@/services/api'
 
 const router = useRouter()
@@ -313,6 +321,7 @@ const form = ref<VendorCreate & { id?: string }>({
   meta_semanal: 0,
   conta_bancaria: '',
   telefone: '',
+  cor_calendario: '#3B82F6',
   ativo: true
 })
 
@@ -367,6 +376,7 @@ const openCreateModal = () => {
     meta_semanal: 0,
     conta_bancaria: '',
     telefone: '',
+    cor_calendario: '#3B82F6',
     ativo: true
   }
   formError.value = ''
@@ -382,6 +392,7 @@ const editVendor = (vendor: VendorResponse) => {
     meta_semanal: vendor.meta_semanal,
     conta_bancaria: vendor.conta_bancaria || '',
     telefone: vendor.telefone || '',
+    cor_calendario: vendor.cor_calendario || '#3B82F6',
     ativo: vendor.ativo
   }
   formError.value = ''
@@ -404,6 +415,7 @@ const submitForm = async () => {
       meta_semanal: form.value.meta_semanal || 0,
       conta_bancaria: form.value.conta_bancaria?.trim() || undefined,
       telefone: form.value.telefone?.trim() || undefined,
+      cor_calendario: form.value.cor_calendario || '#3B82F6',
       ativo: form.value.ativo
     }
 
