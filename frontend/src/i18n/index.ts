@@ -34,13 +34,13 @@ export const i18n = createI18n({
 })
 
 // Debug: Log i18n configuration
-console.log('🌍 i18n initialized with locale:', i18n.global.locale.value)
-console.log('🌍 Available messages:', Object.keys(messages))
+console.log('[I18N] i18n initialized with locale:', i18n.global.locale.value)
+console.log('[I18N] Available messages:', Object.keys(messages))
 
 export const availableLocales = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'pt', name: 'Português (BR)', flag: '🇧🇷' }
+  { code: 'en', name: 'English', flag: 'US' },
+  { code: 'es', name: 'Español', flag: 'ES' },
+  { code: 'pt', name: 'Português (BR)', flag: 'BR' }
 ]
 
 export const setLocale = (locale: string) => {

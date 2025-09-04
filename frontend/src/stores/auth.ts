@@ -16,42 +16,42 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   const login = async (credentials: LoginRequest) => {
     try {
-      console.log('🏪 AuthStore: Starting login process')
+      console.log('[AUTH_STORE] Starting login process')
       isLoading.value = true
       error.value = null
 
-      console.log('🏪 AuthStore: Calling authAPI.login with:', credentials)
+      console.log('[AUTH_STORE] Calling authAPI.login with:', credentials)
       // First get the token
       const loginResponse = await authAPI.login(credentials)
-      console.log('🏪 AuthStore: Login response received:', loginResponse)
+      console.log('[AUTH_STORE] Login response received:', loginResponse)
       
       token.value = loginResponse.access_token
       
       // Store token in localStorage
       localStorage.setItem('auth_token', loginResponse.access_token)
-      console.log('🏪 AuthStore: Token stored in localStorage')
+      console.log('[AUTH_STORE] Token stored in localStorage')
       
       // Then get user information
-      console.log('🏪 AuthStore: Getting current user info')
+      console.log('[AUTH_STORE] Getting current user info')
       const userResponse = await authAPI.getCurrentUser()
-      console.log('🏪 AuthStore: User response received:', userResponse)
+      console.log('[AUTH_STORE] User response received:', userResponse)
       
       user.value = userResponse
       
       // Store user data in localStorage
       localStorage.setItem('user_data', JSON.stringify(userResponse))
-      console.log('🏪 AuthStore: User data stored in localStorage')
+      console.log('[AUTH_STORE] User data stored in localStorage')
       
       return loginResponse
     } catch (err: any) {
-      console.error('🏪 AuthStore: Login error caught:', err)
-      console.error('🏪 AuthStore: Error response:', err.response?.data)
+      console.error('[AUTH_STORE] Login error caught:', err)
+      console.error('[AUTH_STORE] Error response:', err.response?.data)
       
       error.value = err.response?.data?.detail || 'Login failed'
       throw err
     } finally {
       isLoading.value = false
-      console.log('🏪 AuthStore: Login process finished')
+      console.log('[AUTH_STORE] Login process finished')
     }
   }
 

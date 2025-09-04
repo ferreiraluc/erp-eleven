@@ -129,13 +129,13 @@
       </div>
 
       <div v-else-if="historyError" class="error-state">
-        <div class="error-icon">⚠️</div>
+        <div class="error-icon">[ERROR]</div>
         <p>{{ historyError }}</p>
         <button @click="loadHistory" class="btn btn-primary">{{ $t('exchangeManagement.tryAgain') }}</button>
       </div>
 
       <div v-else-if="historicalRates.length === 0" class="empty-state">
-        <div class="empty-icon">📊</div>
+        <div class="empty-icon">[CHART]</div>
         <p>{{ $t('exchangeManagement.noHistory') }}</p>
       </div>
 
@@ -636,7 +636,7 @@ const getCurrencyFlag = (pair: string) => {
     'EUR_TO_BRL': '🇪🇺→🇧🇷',
     'EUR_TO_PYG': '🇪🇺→🇵🇾' // Deprecated but still in historical data
   }
-  return flags[pair] || '💱'
+  return flags[pair] || '[EXCHANGE]'
 }
 
 // Close dropdown when clicking outside

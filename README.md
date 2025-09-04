@@ -243,7 +243,7 @@ GET    /                        # Informações da API
 GET    /health                  # Health check
 ```
 
-## 🗄️ Banco de Dados
+## Banco de Dados
 
 ### Principais Tabelas
 
