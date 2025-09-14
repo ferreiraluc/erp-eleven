@@ -164,6 +164,16 @@ export const vendorsAPI = {
 
   getEstatisticasResumo: (ano: number, mes: number): Promise<{vendedores: any[]}> =>
     api.get(`/api/vendedores/estatisticas/resumo?ano=${ano}&mes=${mes}`).then(res => res.data),
+
+  // Folgas CRUD
+  createFolga: (vendedorId: string, folga: any): Promise<any> =>
+    api.post(`/api/vendedores/${vendedorId}/folgas`, folga).then(res => res.data),
+
+  updateFolga: (folgaId: string, folga: any): Promise<any> =>
+    api.put(`/api/vendedores/folgas/${folgaId}`, folga).then(res => res.data),
+
+  deleteFolga: (folgaId: string): Promise<{message: string}> =>
+    api.delete(`/api/vendedores/folgas/${folgaId}`).then(res => res.data),
 }
 
 // Exchange Rate Types

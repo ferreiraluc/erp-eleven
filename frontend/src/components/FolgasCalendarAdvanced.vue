@@ -362,6 +362,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { vendorsAPI } from '@/services/api'
 
 const authStore = useAuthStore()
 
@@ -525,12 +526,6 @@ const submitFolga = async () => {
   try {
     loading.value = true
     
-    const url = editingFolga.value 
-      ? `/api/vendedores/folgas/${editingFolga.value.id}`
-      : `/api/vendedores/${folgaForm.vendedor_id}/folgas`
-    
-    const method = editingFolga.value ? 'PUT' : 'POST'
-    
     const payload = editingFolga.value ? {
       data: folgaForm.data,
       tipo: folgaForm.tipo,
@@ -545,18 +540,10 @@ const submitFolga = async () => {
       motivo: folgaForm.motivo || null
     }
     
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
-      body: JSON.stringify(payload)
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || 'Erro ao salvar folga')
+    if (editingFolga.value) {
+      await vendorsAPI.updateFolga(editingFolga.value.id, payload)
+    } else {
+      await vendorsAPI.createFolga(folgaForm.vendedor_id, payload)
     }
 
     await loadFolgas()
@@ -596,25 +583,12 @@ const confirmDelete = async () => {
     
     if (folgaToDelete.value) {
       // Excluir uma folga específica
-      const response = await fetch(`/api/vendedores/folgas/${folgaToDelete.value.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`
-        }
-      })
-      
-      if (!response.ok) throw new Error('Erro ao excluir folga')
-      
+      await vendorsAPI.deleteFolga(folgaToDelete.value.id)
       showNotification('Folga excluída com sucesso!', 'success')
     } else if (selectedFolgas.value.length > 0) {
       // Excluir folgas selecionadas
       const deletePromises = selectedFolgas.value.map(folgaId =>
-        fetch(`/api/vendedores/folgas/${folgaId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${authStore.token}`
-          }
-        })
+        vendorsAPI.deleteFolga(folgaId)
       )
       
       await Promise.all(deletePromises)
@@ -646,14 +620,7 @@ const bulkUpdateApproval = async (approved: boolean) => {
     loading.value = true
     
     const updatePromises = selectedFolgas.value.map(folgaId =>
-      fetch(`/api/vendedores/folgas/${folgaId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`
-        },
-        body: JSON.stringify({ aprovado: approved })
-      })
+      vendorsAPI.updateFolga(folgaId, { aprovado: approved })
     )
     
     await Promise.all(updatePromises)
@@ -705,35 +672,27 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
 // Métodos de carregamento
 const loadFolgas = async () => {
   try {
-    const response = await fetch(`/api/vendedores/folgas/calendario?ano=${currentYear.value}&mes=${currentMonth.value + 1}`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (response.ok) {
-      folgas.value = await response.json()
-    }
+    console.log('Loading folgas for:', currentYear.value, currentMonth.value + 1)
+    const data = await vendorsAPI.getFolgasCalendario(currentYear.value, currentMonth.value + 1)
+    folgas.value = data || []
+    console.log('Folgas loaded:', data?.length || 0)
   } catch (error) {
     console.error('Erro ao carregar folgas:', error)
     showNotification('Erro ao carregar folgas', 'error')
+    folgas.value = []
   }
 }
 
 const loadVendedores = async () => {
   try {
-    const response = await fetch('/api/vendedores/', {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (response.ok) {
-      vendedores.value = await response.json()
-    }
+    console.log('Loading vendedores...')
+    const data = await vendorsAPI.getAll()
+    vendedores.value = data || []
+    console.log('Vendedores loaded:', data?.length || 0)
   } catch (error) {
     console.error('Erro ao carregar vendedores:', error)
     showNotification('Erro ao carregar vendedores', 'error')
+    vendedores.value = []
   }
 }
 
