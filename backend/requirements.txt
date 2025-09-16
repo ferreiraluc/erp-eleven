@@ -11,5 +11,5 @@ python-dotenv==1.0.1
 email-validator==2.2.0
 pandas==2.2.3
 openpyxl==3.1.5
-requests==2.32.3
+requests==2.32.4
 msal==1.31.0
