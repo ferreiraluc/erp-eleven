@@ -269,12 +269,150 @@
           </div>
         </div>
 
+        <!-- Pedidos Stats -->
+        <div class="stats-grid pedidos-stats">
+          <div class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon teal">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Total Pedidos</p>
+                <p class="stat-value">{{ formatNumber(totalPedidos) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon red">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Pedidos Pendentes</p>
+                <p class="stat-value">{{ formatNumber(pedidosPendentes) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon indigo">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Pedidos Enviados</p>
+                <p class="stat-value">{{ formatNumber(pedidosEnviados) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon green">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Pedidos Entregues</p>
+                <p class="stat-value">{{ formatNumber(pedidosEntregues) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Quick Actions Grid -->
         <div class="actions-grid">
+          <!-- Quick Actions - Main Card -->
+          <div class="action-card quick-actions-card">
+            <h3 class="card-title">{{ $t('dashboard.quickActions') }}</h3>
+            <div class="quick-actions">
+              <button class="action-button primary" @click="navigateToNewSale">
+                <div class="action-icon">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <div class="action-content">
+                  <span class="action-title">Nova Venda</span>
+                  <span class="action-subtitle">Registrar venda</span>
+                </div>
+              </button>
+
+              <button class="action-button orange" @click="navigateToVendas">
+                <div class="action-icon">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                  </svg>
+                </div>
+                <div class="action-content">
+                  <span class="action-title">Vendas</span>
+                  <span class="action-subtitle">Histórico e relatórios</span>
+                </div>
+              </button>
+
+              <button class="action-button green" @click="navigateToVendors">
+                <div class="action-icon">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div class="action-content">
+                  <span class="action-title">Gestionar Vendedores</span>
+                  <span class="action-subtitle">Comissões e metas</span>
+                </div>
+              </button>
+
+              <button class="action-button purple" @click="navigateToPedidos">
+                <div class="action-icon">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <div class="action-content">
+                  <span class="action-title">Ver Pedidos</span>
+                  <span class="action-subtitle">Gerenciar pedidos</span>
+                </div>
+              </button>
+
+              <button class="action-button teal" @click="navigateToRastreamento">
+                <div class="action-icon">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div class="action-content">
+                  <span class="action-title">Rastreamento</span>
+                  <span class="action-subtitle">Acompanhar envios</span>
+                </div>
+              </button>
+
+              <button class="action-button yellow">
+                <div class="action-icon">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div class="action-content">
+                  <span class="action-title">Reportes</span>
+                  <span class="action-subtitle">Análises e dados</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <!-- Rastreamento Card -->
           <RastreamentoCard />
 
-          <!-- System Status -->
+          <!-- System Status Card -->
           <div class="activity-card-status">
             <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
             <div class="status-grid">
@@ -289,7 +427,7 @@
                   <span class="status-value online">Online</span>
                 </div>
               </div>
-              
+
               <div class="status-box">
                 <div class="status-icon online">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -301,7 +439,7 @@
                   <span class="status-value online">Connected</span>
                 </div>
               </div>
-              
+
               <div class="status-box">
                 <div class="status-icon warning">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,13 +453,13 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Exchange Rate Card -->
           <div class="action-card exchange-rate-card" @click="navigateToExchangeRates" style="cursor: pointer;">
             <div class="card-header">
               <h3 class="card-title">{{ $t('dashboard.exchangeRate') }}</h3>
               <div class="card-actions">
-                <button 
+                <button
                   v-if="canEditRates"
                   @click.stop="openCardModal"
                   class="edit-rate-btn"
@@ -367,57 +505,6 @@
                 Atualizado: {{ formatDate(lastUpdated) }}
               </p>
               <p v-if="ratesError" class="rate-error">{{ ratesError }}</p>
-            </div>
-          </div>
-
-          <!-- Quick Actions -->
-          <div class="action-card quick-actions-card">
-            <h3 class="card-title">{{ $t('dashboard.quickActions') }}</h3>
-            <div class="quick-actions">
-              <button class="action-button primary">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <span>{{ $t('dashboard.newSale') }}</span>
-              </button>
-
-              <button class="action-button orange" @click="navigateToVendas">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-                  </svg>
-                </div>
-                <span>💰 Vendas</span>
-              </button>
-
-              <button class="action-button green" @click="navigateToVendors">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <span>{{ $t('dashboard.manageVendors') }}</span>
-              </button>
-
-              <button class="action-button purple" @click="navigateToPedidos">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                </div>
-                <span>{{ $t('dashboard.viewOrders') }}</span>
-              </button>
-
-              <button class="action-button yellow">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <span>{{ $t('dashboard.reports') }}</span>
-              </button>
             </div>
           </div>
 
@@ -624,6 +711,12 @@ const editingRates = ref({
   eur_to_brl: 0
 })
 
+// Pedidos data
+const totalPedidos = ref(0)
+const pedidosPendentes = ref(0)
+const pedidosEnviados = ref(0)
+const pedidosEntregues = ref(0)
+
 // Check if user can edit rates
 const canEditRates = computed(() => {
   return authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
@@ -667,6 +760,10 @@ const formatOriginalCurrency = (value: number) => {
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR')
+}
+
+const formatNumber = (value: number) => {
+  return value.toLocaleString('pt-BR')
 }
 
 const handleLogout = async () => {
@@ -757,25 +854,53 @@ const navigateToPedidos = () => {
   router.push('/pedidos')
 }
 
+const navigateToNewSale = () => {
+  router.push('/vendas/novo')
+}
+
+const navigateToRastreamento = () => {
+  router.push('/rastreamento')
+}
+
 // Load exchange rates from API
 const loadExchangeRates = async () => {
   try {
     isLoadingRates.value = true
     ratesError.value = null
-    
+
     // Import exchangeRateAPI dynamically to avoid circular dependency
     const { exchangeRateAPI } = await import('@/services/api')
     const response = await exchangeRateAPI.getCurrentRates()
-    
+
     // Update local state with API data
     if (response.usd_to_pyg) exchangeRates.value['G$'] = Number(response.usd_to_pyg)
     if (response.usd_to_brl) exchangeRates.value['R$'] = Number(response.usd_to_brl)
     if (response.last_updated) lastUpdated.value = response.last_updated
-    
+
   } catch (error: any) {
     ratesError.value = error.message || 'Erro ao carregar taxas de câmbio'
   } finally {
     isLoadingRates.value = false
+  }
+}
+
+// Load pedidos data from API
+const loadPedidosData = async () => {
+  try {
+    const { pedidosAPI } = await import('@/services/api')
+    const pedidos = await pedidosAPI.list({ limit: 1000 })
+
+    totalPedidos.value = pedidos.length
+    pedidosPendentes.value = pedidos.filter(p => p.status === 'PENDENTE').length
+    pedidosEnviados.value = pedidos.filter(p => p.status === 'ENVIADO').length
+    pedidosEntregues.value = pedidos.filter(p => p.status === 'ENTREGUE').length
+  } catch (error) {
+    console.error('Erro ao carregar dados dos pedidos:', error)
+    // Set default values on error
+    totalPedidos.value = 0
+    pedidosPendentes.value = 0
+    pedidosEnviados.value = 0
+    pedidosEntregues.value = 0
   }
 }
 
@@ -836,11 +961,12 @@ onMounted(async () => {
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
   document.addEventListener('click', handleClickOutside)
-  
-  // Load exchange rates and dashboard data
+
+  // Load exchange rates, dashboard data and pedidos data
   await Promise.all([
     loadExchangeRates(),
-    dashboardStore.refreshData()
+    dashboardStore.refreshData(),
+    loadPedidosData()
   ])
 })
 
@@ -1111,6 +1237,13 @@ onUnmounted(() => {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
   padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
 }
 
 .stat-content {
@@ -1154,6 +1287,21 @@ onUnmounted(() => {
   color: #d97706;
 }
 
+.stat-icon.teal {
+  background-color: #f0fdfa;
+  color: #0d9488;
+}
+
+.stat-icon.red {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.stat-icon.indigo {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
 .stat-label {
   margin: 0 0 0.25rem 0;
   font-size: 0.875rem;
@@ -1171,7 +1319,7 @@ onUnmounted(() => {
 
 .actions-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 2fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   grid-template-rows: auto;
   gap: 1rem;
   align-items: start;
@@ -1392,8 +1540,9 @@ onUnmounted(() => {
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   gap: 0.5rem;
+  min-height: 120px;
 }
 
 .action-button.primary {
@@ -1403,6 +1552,8 @@ onUnmounted(() => {
 
 .action-button.primary:hover {
   background-color: #dbeafe;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .action-button.green {
@@ -1412,6 +1563,8 @@ onUnmounted(() => {
 
 .action-button.green:hover {
   background-color: #dcfce7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .action-button.purple {
@@ -1421,6 +1574,8 @@ onUnmounted(() => {
 
 .action-button.purple:hover {
   background-color: #f3e8ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .action-button.yellow {
@@ -1430,6 +1585,8 @@ onUnmounted(() => {
 
 .action-button.yellow:hover {
   background-color: #fef3c7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .action-button.blue {
@@ -1439,6 +1596,25 @@ onUnmounted(() => {
 
 .action-button.blue:hover {
   background-color: #dbeafe;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.action-button.teal {
+  background-color: #f0fdfa;
+  color: #0d9488;
+}
+
+.action-button.teal:hover {
+  background-color: #ccfbf1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.action-button.orange:hover {
+  background-color: #fed7aa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .action-icon {
@@ -1460,6 +1636,27 @@ onUnmounted(() => {
 .action-button span {
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.action-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.action-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.action-subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.8;
+  line-height: 1.2;
 }
 
 .calendar-sales-grid {
@@ -2262,17 +2459,47 @@ onUnmounted(() => {
   }
 
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
   }
-  
+
+  .pedidos-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .actions-grid,
   .activity-grid,
   .calendar-sales-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
-  
+
   .quick-actions {
     grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .action-button {
+    min-height: 100px;
+    padding: 0.75rem;
+  }
+
+  .action-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .action-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .action-title {
+    font-size: 0.75rem;
+  }
+
+  .action-subtitle {
+    font-size: 0.6875rem;
   }
   
   .header-content {
