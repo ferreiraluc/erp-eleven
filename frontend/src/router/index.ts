@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import ExchangeRateManagement from '@/views/ExchangeRateManagement.vue'
 import RastreamentoView from '@/views/RastreamentoView.vue'
 import VendorManagement from '@/views/VendorManagement.vue'
+import VendasView from '@/views/VendasView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -41,6 +42,12 @@ const router = createRouter({
       path: '/vendors',
       name: 'vendors',
       component: VendorManagement,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/vendas',
+      name: 'vendas',
+      component: VendasView,
       meta: { requiresAuth: true }
     },
     // Catch all route

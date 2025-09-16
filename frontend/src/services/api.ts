@@ -176,6 +176,63 @@ export const vendorsAPI = {
     api.delete(`/api/vendedores/folgas/${folgaId}`).then(res => res.data),
 }
 
+// Excel Import Types
+export interface ImportPreviewRequest {
+  file_path: string
+  access_token: string
+}
+
+export interface ImportPreviewResponse {
+  success: boolean
+  total_rows: number
+  valid_rows: number
+  errors: string[]
+  preview_data: ImportPreviewSale[]
+}
+
+export interface ImportPreviewSale {
+  vendedor_nome: string
+  data_venda: string
+  valor_bruto: number
+  moeda: string
+  metodo_pagamento: string
+  descricao_produto: string
+  row_number: number
+}
+
+export interface ImportResultResponse {
+  success: boolean
+  imported_count: number
+  skipped_count: number
+  total_errors: number
+  errors: string[]
+}
+
+// Excel Import API
+export const excelImportAPI = {
+  // Preview de formato personalizado (padrão para VENDASgeral.xlsx)
+  previewUpload: (file: File): Promise<ImportPreviewResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/excel-import/preview-custom-format', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(res => res.data)
+  },
+
+  // Importar formato personalizado (padrão para VENDASgeral.xlsx)
+  importUpload: (file: File): Promise<ImportResultResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/excel-import/import-custom-format', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(res => res.data)
+  },
+
+  // Obter template de planilha
+  getTemplate: (): Promise<any> =>
+    api.get('/api/excel-import/template').then(res => res.data),
+}
+
 // Exchange Rate Types
 export interface ExchangeRateResponse {
   usd_to_pyg: number | null
