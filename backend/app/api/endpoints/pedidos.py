@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ...database import get_db
 from ...models.pedido import Pedido, PedidoStatus
+from ...models.pedido_tag import TagStatus
 from ...models.usuario import Usuario
 from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate
 from ...dependencies import get_current_active_user, require_role
@@ -18,12 +19,13 @@ def listar_pedidos(
     status: Optional[PedidoStatus] = Query(None),
     cidade: Optional[str] = Query(None),
     transportadora: Optional[str] = Query(None),
+    tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """List orders with pagination and filters"""
-    query = db.query(Pedido)
-    
+    query = db.query(Pedido).options(joinedload(Pedido.tags))
+
     if status:
         query = query.filter(Pedido.status == status)
     if cidade:
@@ -32,53 +34,65 @@ def listar_pedidos(
         query = query.filter(Pedido.endereco_cidade.ilike(f"%{safe_cidade}%"))
     if transportadora:
         query = query.filter(Pedido.transportadora == transportadora)
-    
+    if tag_id:
+        # Filter by tag using join
+        tag_uuid = validate_uuid(tag_id)
+        query = query.join(Pedido.tags).filter(TagStatus.id == tag_uuid)
+
     pedidos = query.order_by(Pedido.created_at.desc()).offset(skip).limit(limit).all()
     return pedidos
 
 @router.post("/", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
 def criar_pedido(
-    pedido: PedidoCreate, 
+    pedido: PedidoCreate,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Create new order"""
-    # Validate input data
-    if not validate_brazilian_cep(pedido.endereco_cep):
+    # Basic validation only
+    if pedido.valor_total <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid CEP format"
+            detail="Order value must be greater than zero"
         )
-    
-    if not validate_brazilian_phone(pedido.cliente_telefone):
+
+    # Optional phone validation
+    if pedido.cliente_telefone and not validate_brazilian_phone(pedido.cliente_telefone):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid phone number format"
         )
-    
+
     # Generate unique order number
     numero_pedido = generate_order_number(db)
-    
+
     # Create order
-    pedido_data = pedido.dict()
+    pedido_data = pedido.dict(exclude={"tag_ids"})
     pedido_data["numero_pedido"] = numero_pedido
     pedido_data["created_by"] = current_user.id
-    
+
     db_pedido = Pedido(**pedido_data)
     db.add(db_pedido)
+    db.flush()  # Get the ID without committing
+
+    # Add tags if provided
+    if pedido.tag_ids:
+        tags = db.query(TagStatus).filter(TagStatus.id.in_(pedido.tag_ids), TagStatus.ativo == True).all()
+        db_pedido.tags = tags
+
     db.commit()
     db.refresh(db_pedido)
     return db_pedido
 
 @router.get("/{pedido_id}", response_model=PedidoResponse)
 def obter_pedido(
-    pedido_id: str, 
+    pedido_id: str,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Get order by ID"""
     pedido_uuid = validate_uuid(pedido_id)
-    pedido = db.query(Pedido).filter(Pedido.id == pedido_uuid).first()
+    pedido = db.query(Pedido).options(joinedload(Pedido.tags)).filter(Pedido.id == pedido_uuid).first()
     if not pedido:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -93,7 +107,7 @@ def obter_pedido_por_numero(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Get order by order number"""
-    pedido = db.query(Pedido).filter(Pedido.numero_pedido == numero_pedido).first()
+    pedido = db.query(Pedido).options(joinedload(Pedido.tags)).filter(Pedido.numero_pedido == numero_pedido).first()
     if not pedido:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -110,32 +124,40 @@ def atualizar_pedido(
 ):
     """Update order"""
     pedido_uuid = validate_uuid(pedido_id)
-    db_pedido = db.query(Pedido).filter(Pedido.id == pedido_uuid).first()
+    db_pedido = db.query(Pedido).options(joinedload(Pedido.tags)).filter(Pedido.id == pedido_uuid).first()
     if not db_pedido:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found"
         )
-    
-    # Validate data if provided
-    update_data = pedido_update.dict(exclude_unset=True)
-    
-    if "endereco_cep" in update_data and not validate_brazilian_cep(update_data["endereco_cep"]):
+
+    # Basic validation
+    update_data = pedido_update.dict(exclude_unset=True, exclude={"tag_ids"})
+
+    if "valor_total" in update_data and update_data["valor_total"] <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid CEP format"
+            detail="Order value must be greater than zero"
         )
-    
-    if "cliente_telefone" in update_data and not validate_brazilian_phone(update_data["cliente_telefone"]):
+
+    if "cliente_telefone" in update_data and update_data["cliente_telefone"] and not validate_brazilian_phone(update_data["cliente_telefone"]):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid phone number format"
         )
-    
+
     # Update fields
     for field, value in update_data.items():
         setattr(db_pedido, field, value)
-    
+
+    # Update tags if provided
+    if pedido_update.tag_ids is not None:
+        if pedido_update.tag_ids:
+            tags = db.query(TagStatus).filter(TagStatus.id.in_(pedido_update.tag_ids), TagStatus.ativo == True).all()
+            db_pedido.tags = tags
+        else:
+            db_pedido.tags = []
+
     db.commit()
     db.refresh(db_pedido)
     return db_pedido

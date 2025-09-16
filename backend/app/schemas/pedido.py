@@ -1,55 +1,35 @@
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, date
+from typing import Optional, List
+from datetime import datetime
 from decimal import Decimal
 import uuid
-from ..models.pedido import PedidoStatus, TransportadoraTipo
+from ..models.pedido import PedidoStatus
+from .tag_status import TagStatusSimple
 
 class PedidoBase(BaseModel):
-    cliente_nome: str
-    cliente_telefone: Optional[str] = None
-    cliente_email: Optional[str] = None
-    endereco_rua: str
-    endereco_numero: Optional[str] = None
-    endereco_complemento: Optional[str] = None
-    endereco_bairro: Optional[str] = None
-    endereco_cidade: str
-    endereco_uf: str
-    endereco_cep: str
-    transportadora: TransportadoraTipo
-    codigo_rastreio: Optional[str] = None
-    valor_frete: Optional[Decimal] = None
-    peso_kg: Optional[Decimal] = None
-    status: Optional[PedidoStatus] = PedidoStatus.PENDENTE
-    data_pedido: Optional[date] = None
-    data_envio: Optional[date] = None
-    data_entrega: Optional[date] = None
-    observacoes: Optional[str] = None
-    instrucoes_entrega: Optional[str] = None
-
-class PedidoCreate(PedidoBase):
-    created_by: Optional[uuid.UUID] = None
-
-class PedidoUpdate(BaseModel):
+    descricao: str  # Descrição das peças/produtos
+    valor_total: Decimal  # Valor total do pedido
     cliente_nome: Optional[str] = None
     cliente_telefone: Optional[str] = None
     cliente_email: Optional[str] = None
-    endereco_rua: Optional[str] = None
-    endereco_numero: Optional[str] = None
-    endereco_complemento: Optional[str] = None
-    endereco_bairro: Optional[str] = None
-    endereco_cidade: Optional[str] = None
-    endereco_uf: Optional[str] = None
-    endereco_cep: Optional[str] = None
-    transportadora: Optional[TransportadoraTipo] = None
+    endereco_entrega: Optional[str] = None  # Endereço livre
+    status: Optional[PedidoStatus] = PedidoStatus.PENDENTE
     codigo_rastreio: Optional[str] = None
-    valor_frete: Optional[Decimal] = None
-    peso_kg: Optional[Decimal] = None
+
+class PedidoCreate(PedidoBase):
+    created_by: Optional[uuid.UUID] = None
+    tag_ids: Optional[List[uuid.UUID]] = []
+
+class PedidoUpdate(BaseModel):
+    descricao: Optional[str] = None
+    valor_total: Optional[Decimal] = None
+    cliente_nome: Optional[str] = None
+    cliente_telefone: Optional[str] = None
+    cliente_email: Optional[str] = None
+    endereco_entrega: Optional[str] = None
     status: Optional[PedidoStatus] = None
-    data_envio: Optional[date] = None
-    data_entrega: Optional[date] = None
-    observacoes: Optional[str] = None
-    instrucoes_entrega: Optional[str] = None
+    codigo_rastreio: Optional[str] = None
+    tag_ids: Optional[List[uuid.UUID]] = None
 
 class PedidoResponse(PedidoBase):
     id: uuid.UUID
@@ -57,6 +37,7 @@ class PedidoResponse(PedidoBase):
     created_at: datetime
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
+    tags: List[TagStatusSimple] = []
 
     class Config:
         from_attributes = True

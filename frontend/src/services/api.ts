@@ -298,4 +298,116 @@ export const exchangeRateAPI = {
     api.delete(`/api/exchange-rates/history/${rateId}`).then(res => res.data)
 }
 
+// Tag Types
+export interface Tag {
+  id: string
+  nome: string
+  cor: string
+  descricao?: string
+  ordem: string
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface TagCreate {
+  nome: string
+  cor?: string
+  descricao?: string
+  ordem?: string
+  ativo?: boolean
+}
+
+// Tags API
+export const tagsAPI = {
+  getAll: (skip = 0, limit = 100, ativo = true): Promise<Tag[]> => {
+    const url = `/api/tags/?skip=${skip}&limit=${limit}&ativo=${ativo}`
+    return api.get(url).then(res => res.data)
+  },
+
+  getById: (id: string): Promise<Tag> =>
+    api.get(`/api/tags/${id}`).then(res => res.data),
+
+  create: (tag: TagCreate): Promise<Tag> =>
+    api.post('/api/tags/', tag).then(res => res.data),
+
+  update: (id: string, tag: Partial<TagCreate>): Promise<Tag> =>
+    api.put(`/api/tags/${id}`, tag).then(res => res.data),
+
+  delete: (id: string): Promise<{message: string}> =>
+    api.delete(`/api/tags/${id}`).then(res => res.data),
+
+  createDefaultTags: (): Promise<any> =>
+    api.post('/api/tags/seed').then(res => res.data)
+}
+
+// Pedido Types (Simplified)
+export interface Pedido {
+  id: string
+  numero_pedido: string
+  descricao: string  // Descrição das peças/produtos
+  valor_total: number  // Valor total do pedido
+  cliente_nome?: string
+  cliente_telefone?: string
+  cliente_email?: string
+  endereco_entrega?: string  // Endereço livre
+  status: 'PENDENTE' | 'PROCESSANDO' | 'ENVIADO' | 'ENTREGUE' | 'CANCELADO'
+  codigo_rastreio?: string
+  created_at: string
+  updated_at: string
+  created_by?: string
+  tags: Tag[]
+}
+
+export interface PedidoCreate {
+  descricao: string
+  valor_total: number
+  cliente_nome?: string
+  cliente_telefone?: string
+  cliente_email?: string
+  endereco_entrega?: string
+  status?: 'PENDENTE' | 'PROCESSANDO' | 'ENVIADO' | 'ENTREGUE' | 'CANCELADO'
+  codigo_rastreio?: string
+  tag_ids?: string[]
+}
+
+// Pedidos API
+export const pedidosAPI = {
+  getAll: (params?: {
+    skip?: number
+    limit?: number
+    status?: string
+    cidade?: string
+    transportadora?: string
+    tag_id?: string
+  }): Promise<Pedido[]> => {
+    let url = '/api/pedidos/?'
+    if (params) {
+      const searchParams = new URLSearchParams()
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, value.toString())
+        }
+      })
+      url += searchParams.toString()
+    }
+    return api.get(url).then(res => res.data)
+  },
+
+  getById: (id: string): Promise<Pedido> =>
+    api.get(`/api/pedidos/${id}`).then(res => res.data),
+
+  getByNumber: (numero: string): Promise<Pedido> =>
+    api.get(`/api/pedidos/numero/${numero}`).then(res => res.data),
+
+  create: (pedido: PedidoCreate): Promise<Pedido> =>
+    api.post('/api/pedidos/', pedido).then(res => res.data),
+
+  update: (id: string, pedido: Partial<PedidoCreate & { tag_ids?: string[] }>): Promise<Pedido> =>
+    api.put(`/api/pedidos/${id}`, pedido).then(res => res.data),
+
+  delete: (id: string): Promise<{message: string}> =>
+    api.delete(`/api/pedidos/${id}`).then(res => res.data)
+}
+
 export default api
