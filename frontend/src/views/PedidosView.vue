@@ -384,12 +384,44 @@ const handlePedidoSaved = async (pedido: Pedido) => {
   await loadPedidos()
 }
 
-const createRastreamento = (pedido: Pedido) => {
-  // Navigate to rastreamento with pedido context
-  router.push({
-    name: 'rastreamento',
-    query: { pedido_id: pedido.id }
-  })
+const createRastreamento = async (pedido: Pedido) => {
+  if (!pedido.codigo_rastreio) {
+    // Se não tem código de rastreio, vai para página de rastreamentos para criar novo
+    router.push({
+      name: 'rastreamento',
+      query: { pedido_id: pedido.id }
+    })
+    return
+  }
+
+  try {
+    // Verificar se já existe rastreamento para este código
+    const resultado = await pedidosAPI.verificarRastreamento(pedido.codigo_rastreio)
+
+    if (resultado.exists && resultado.rastreamento_id) {
+      // Se existe, navegar diretamente para o rastreamento existente
+      router.push({
+        name: 'rastreamento-detalhes',
+        params: { id: resultado.rastreamento_id }
+      })
+    } else {
+      // Se não existe, criar novo rastreamento
+      router.push({
+        name: 'rastreamento',
+        query: {
+          pedido_id: pedido.id,
+          codigo_rastreio: pedido.codigo_rastreio
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Erro ao verificar rastreamento:', error)
+    // Em caso de erro, ir para página de rastreamentos
+    router.push({
+      name: 'rastreamento',
+      query: { pedido_id: pedido.id }
+    })
+  }
 }
 
 const previousPage = () => {

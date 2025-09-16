@@ -61,8 +61,7 @@ def listar_rastreamentos(
             "numero_pedido": r.pedido.numero_pedido if r.pedido else None,
             "cliente_nome_pedido": r.pedido.cliente_nome if r.pedido else None,
             "cliente_telefone": r.pedido.cliente_telefone if r.pedido else None,
-            "endereco_cidade": r.pedido.endereco_cidade if r.pedido else None,
-            "endereco_uf": r.pedido.endereco_uf if r.pedido else None,
+            "endereco_entrega": r.pedido.endereco_entrega if r.pedido else None,
         }
         resultado.append(rastreamento_dict)
     
@@ -142,8 +141,7 @@ def obter_rastreamento(
         "numero_pedido": rastreamento.pedido.numero_pedido if rastreamento.pedido else None,
         "cliente_nome_pedido": rastreamento.pedido.cliente_nome if rastreamento.pedido else None,
         "cliente_telefone": rastreamento.pedido.cliente_telefone if rastreamento.pedido else None,
-        "endereco_cidade": rastreamento.pedido.endereco_cidade if rastreamento.pedido else None,
-        "endereco_uf": rastreamento.pedido.endereco_uf if rastreamento.pedido else None,
+        "endereco_entrega": rastreamento.pedido.endereco_entrega if rastreamento.pedido else None,
     }
 
 
@@ -186,8 +184,7 @@ def obter_rastreamento_por_codigo(
         "numero_pedido": rastreamento.pedido.numero_pedido if rastreamento.pedido else None,
         "cliente_nome_pedido": rastreamento.pedido.cliente_nome if rastreamento.pedido else None,
         "cliente_telefone": rastreamento.pedido.cliente_telefone if rastreamento.pedido else None,
-        "endereco_cidade": rastreamento.pedido.endereco_cidade if rastreamento.pedido else None,
-        "endereco_uf": rastreamento.pedido.endereco_uf if rastreamento.pedido else None,
+        "endereco_entrega": rastreamento.pedido.endereco_entrega if rastreamento.pedido else None,
     }
 
 

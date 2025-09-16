@@ -9,6 +9,7 @@ from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 from ...utils import generate_order_number, validate_brazilian_cep, validate_brazilian_phone
+from ...services.rastreamento_sync import RastreamentoSyncService
 
 router = APIRouter()
 
@@ -18,7 +19,6 @@ def listar_pedidos(
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[PedidoStatus] = Query(None),
     cidade: Optional[str] = Query(None),
-    transportadora: Optional[str] = Query(None),
     tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
@@ -31,9 +31,7 @@ def listar_pedidos(
     if cidade:
         # Sanitize input to prevent SQL injection
         safe_cidade = cidade.replace('%', '\\%').replace('_', '\\_').replace('\\', '\\\\')
-        query = query.filter(Pedido.endereco_cidade.ilike(f"%{safe_cidade}%"))
-    if transportadora:
-        query = query.filter(Pedido.transportadora == transportadora)
+        query = query.filter(Pedido.endereco_entrega.ilike(f"%{safe_cidade}%"))
     if tag_id:
         # Filter by tag using join
         tag_uuid = validate_uuid(tag_id)
@@ -79,6 +77,12 @@ def criar_pedido(
     if pedido.tag_ids:
         tags = db.query(TagStatus).filter(TagStatus.id.in_(pedido.tag_ids), TagStatus.ativo == True).all()
         db_pedido.tags = tags
+
+    # Sincronizar com rastreamentos se código foi fornecido
+    if db_pedido.codigo_rastreio:
+        RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
+            db, db_pedido, current_user.id
+        )
 
     db.commit()
     db.refresh(db_pedido)
@@ -158,6 +162,12 @@ def atualizar_pedido(
         else:
             db_pedido.tags = []
 
+    # Sincronizar com rastreamentos se código foi adicionado/alterado
+    if "codigo_rastreio" in update_data and db_pedido.codigo_rastreio:
+        RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
+            db, db_pedido, current_user.id
+        )
+
     db.commit()
     db.refresh(db_pedido)
     return db_pedido
@@ -187,3 +197,22 @@ def excluir_pedido(
     db.delete(db_pedido)
     db.commit()
     return {"message": "Order deleted successfully"}
+
+@router.get("/rastreamento/{codigo_rastreio}")
+def verificar_rastreamento_existente(
+    codigo_rastreio: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    """Verifica se existe rastreamento para o código fornecido"""
+    rastreamento = RastreamentoSyncService.buscar_rastreamento_por_codigo(db, codigo_rastreio)
+
+    if rastreamento:
+        return {
+            "exists": True,
+            "rastreamento_id": str(rastreamento.id),
+            "status": rastreamento.status.value,
+            "pedido_associado": str(rastreamento.pedido_id) if rastreamento.pedido_id else None
+        }
+
+    return {"exists": False}

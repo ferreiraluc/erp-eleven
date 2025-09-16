@@ -407,7 +407,16 @@ export const pedidosAPI = {
     api.put(`/api/pedidos/${id}`, pedido).then(res => res.data),
 
   delete: (id: string): Promise<{message: string}> =>
-    api.delete(`/api/pedidos/${id}`).then(res => res.data)
+    api.delete(`/api/pedidos/${id}`).then(res => res.data),
+
+  // Verificar rastreamento existente
+  verificarRastreamento: (codigoRastreio: string): Promise<{
+    exists: boolean
+    rastreamento_id?: string
+    status?: string
+    pedido_associado?: string
+  }> =>
+    api.get(`/api/pedidos/rastreamento/${codigoRastreio}`).then(res => res.data)
 }
 
 export default api
