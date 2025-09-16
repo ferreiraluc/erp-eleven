@@ -4,7 +4,14 @@
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
-          <h1 class="page-title">Pedidos</h1>
+          <div class="header-top">
+            <button @click="$router.back()" class="back-button">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 class="page-title">Pedidos</h1>
+          </div>
           <p class="page-subtitle">Gerencie todos os pedidos da loja</p>
         </div>
         <div class="header-right">
@@ -127,7 +134,8 @@
           <div class="col col-cliente">
             <div class="cliente-info">
               <span class="cliente-nome">{{ pedido.cliente_nome }}</span>
-              <span class="cliente-cidade">{{ pedido.endereco_cidade }}, {{ pedido.endereco_uf }}</span>
+              <span class="pedido-descricao-lista">{{ pedido.descricao }}</span>
+              <span class="cliente-cidade" v-if="pedido.endereco_cidade">{{ pedido.endereco_cidade }}, {{ pedido.endereco_uf }}</span>
             </div>
           </div>
           <div class="col col-status">
@@ -473,8 +481,38 @@ onMounted(async () => {
   align-items: center;
 }
 
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.back-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 .page-title {
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
   color: #111827;
@@ -747,6 +785,12 @@ onMounted(async () => {
 .cliente-nome {
   font-weight: 500;
   color: #111827;
+}
+
+.pedido-descricao-lista {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
 }
 
 .cliente-cidade {

@@ -74,40 +74,48 @@
         </div>
       </div>
 
-      <!-- Ranking de funcionários -->
-      <div class="vendedores-ranking">
-        <h4 class="ranking-title">Ranking do Mês</h4>
-        <div class="ranking-list">
+      <!-- Lista de folgas por funcionário -->
+      <div class="funcionarios-folgas">
+        <h4 class="folgas-title">Folgas por Funcionário</h4>
+        <div v-if="funcionariosComFolgas.length > 0" class="folgas-list">
           <div
-            v-for="(vendedor, index) in topVendedores"
-            :key="vendedor.vendedor_id"
-            class="ranking-item"
+            v-for="funcionario in funcionariosComFolgas"
+            :key="funcionario.vendedor_id"
+            class="funcionario-item"
           >
-            <div class="ranking-position">{{ index + 1 }}º</div>
-            <div class="ranking-info">
+            <div class="funcionario-info">
               <div
                 class="vendedor-color"
-                :style="{ backgroundColor: vendedor.vendedor_cor }"
+                :style="{ backgroundColor: funcionario.vendedor_cor }"
               ></div>
-              <div class="vendedor-details">
-                <span class="vendedor-name">{{ vendedor.vendedor_nome }}</span>
-                <span class="vendedor-stats">
-                  {{ vendedor.dias_trabalhados }}d trabalhados, {{ vendedor.folgas_aprovadas }}d folgas
-                </span>
+              <div class="funcionario-details">
+                <span class="funcionario-name">{{ funcionario.vendedor_nome }}</span>
+                <div class="funcionario-stats">
+                  <span class="stat-group">
+                    <span class="stat-number">{{ funcionario.folgas_aprovadas || 0 }}</span>
+                    <span class="stat-label">folgas</span>
+                  </span>
+                  <span class="stat-separator">•</span>
+                  <span class="stat-group">
+                    <span class="stat-number">{{ funcionario.faltas || 0 }}</span>
+                    <span class="stat-label">faltas</span>
+                  </span>
+                  <span class="stat-separator">•</span>
+                  <span class="stat-group">
+                    <span class="stat-number">{{ funcionario.licencas || 0 }}</span>
+                    <span class="stat-label">licenças</span>
+                  </span>
+                </div>
               </div>
             </div>
-            <div class="ranking-score">
-              <div class="score-bar">
-                <div 
-                  class="score-fill"
-                  :style="{ 
-                    width: `${(vendedor.dias_trabalhados / maxDiasTrabalhados) * 100}%`,
-                    backgroundColor: vendedor.vendedor_cor 
-                  }"
-                ></div>
-              </div>
+            <div class="total-ausencias">
+              <span class="total-number">{{ funcionario.total_ausencias }}</span>
+              <span class="total-label">total</span>
             </div>
           </div>
+        </div>
+        <div v-else class="no-data">
+          <span>Nenhum dado disponível</span>
         </div>
       </div>
     </div>
@@ -133,11 +141,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import { vendorsAPI } from '@/services/api'
 import FolgasCalendarAdvanced from './FolgasCalendarAdvanced.vue'
-
-const authStore = useAuthStore()
 
 // Estado reativo
 const currentYear = ref(new Date().getFullYear())
@@ -188,15 +193,17 @@ const totalFolgasMes = computed(() => {
   return folgas.value.filter(f => f.aprovado).length
 })
 
-const topVendedores = computed(() => {
-  return estatisticas.value
-    .slice()
-    .sort((a, b) => b.dias_trabalhados - a.dias_trabalhados)
-    .slice(0, 5)
-})
+const funcionariosComFolgas = computed(() => {
+  if (!estatisticas.value || estatisticas.value.length === 0) return []
 
-const maxDiasTrabalhados = computed(() => {
-  return Math.max(...estatisticas.value.map(f => f.dias_trabalhados), 1)
+  // Calcular total de ausências para cada funcionário (folgas + faltas + licenças)
+  const funcionariosComAusencias = estatisticas.value.map(vendedor => ({
+    ...vendedor,
+    total_ausencias: (vendedor.folgas_aprovadas || 0) + (vendedor.faltas || 0) + (vendedor.licencas || 0)
+  }))
+
+  // Ordenar por total de ausências (maior para menor)
+  return funcionariosComAusencias.sort((a, b) => b.total_ausencias - a.total_ausencias)
 })
 
 // Métodos
@@ -471,67 +478,45 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Ranking */
-.vendedores-ranking {
+/* Lista de folgas por funcionário */
+.funcionarios-folgas {
   margin-top: 1.5rem;
 }
 
-.ranking-title {
+.folgas-title {
   font-size: 0.875rem;
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 0.75rem;
 }
 
-.ranking-list {
+.folgas-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.ranking-item {
+.funcionario-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #f3f4f6;
+  transition: all 0.2s;
+}
+
+.funcionario-item:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.funcionario-info {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem;
-  background: #f9fafb;
-  border-radius: 6px;
-}
-
-.ranking-position {
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #e5e7eb;
-  color: #374151;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.ranking-item:first-child .ranking-position {
-  background: #fbbf24;
-  color: white;
-}
-
-.ranking-item:nth-child(2) .ranking-position {
-  background: #9ca3af;
-  color: white;
-}
-
-.ranking-item:nth-child(3) .ranking-position {
-  background: #d97706;
-  color: white;
-}
-
-.ranking-info {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   min-width: 0;
 }
 
@@ -542,13 +527,14 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.vendedor-details {
+.funcionario-details {
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
   min-width: 0;
 }
 
-.vendedor-name {
+.funcionario-name {
   font-size: 0.75rem;
   font-weight: 600;
   color: #1f2937;
@@ -557,31 +543,63 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
-.vendedor-stats {
-  font-size: 0.625rem;
-  color: #6b7280;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.funcionario-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.ranking-score {
-  width: 3rem;
+.stat-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-number {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.stat-label {
+  font-size: 0.625rem;
+  color: #6b7280;
+}
+
+.stat-separator {
+  font-size: 0.625rem;
+  color: #9ca3af;
+}
+
+.total-ausencias {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
   flex-shrink: 0;
 }
 
-.score-bar {
-  width: 100%;
-  height: 4px;
-  background: #e5e7eb;
-  border-radius: 2px;
-  overflow: hidden;
+.total-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
 }
 
-.score-fill {
-  height: 100%;
-  transition: width 0.3s ease;
-  border-radius: 2px;
+.total-label {
+  font-size: 0.625rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.no-data {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  background: #f9fafb;
+  border-radius: 8px;
 }
 
 /* Modal */
@@ -592,7 +610,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 1000;
   padding: 1rem;
 }
 

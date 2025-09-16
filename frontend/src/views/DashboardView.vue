@@ -210,124 +210,6 @@
 
       <!-- Dashboard Content -->
       <div v-else class="dashboard-content">
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon green">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">{{ $t('dashboard.todaysSales') }}</p>
-                <p class="stat-value">{{ formatCurrency(dashboardStore.stats?.total_sales_today || 0, 'R$') }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon blue">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">{{ $t('dashboard.weeklySales') }}</p>
-                <p class="stat-value">{{ formatCurrency(dashboardStore.stats?.total_sales_week || 0, 'R$') }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon purple">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">{{ $t('dashboard.pendingOrders') }}</p>
-                <p class="stat-value">{{ dashboardStore.stats?.pending_orders || 0 }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon yellow">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">{{ $t('dashboard.activeVendors') }}</p>
-                <p class="stat-value">{{ dashboardStore.stats?.active_vendors || 0 }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pedidos Stats -->
-        <div class="stats-grid pedidos-stats">
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon teal">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">Total Pedidos</p>
-                <p class="stat-value">{{ formatNumber(totalPedidos) }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon red">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">Pedidos Pendentes</p>
-                <p class="stat-value">{{ formatNumber(pedidosPendentes) }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon indigo">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">Pedidos Enviados</p>
-                <p class="stat-value">{{ formatNumber(pedidosEnviados) }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon green">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="stat-info">
-                <p class="stat-label">Pedidos Entregues</p>
-                <p class="stat-value">{{ formatNumber(pedidosEntregues) }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Quick Actions Grid -->
         <div class="actions-grid">
           <!-- Quick Actions - Main Card -->
@@ -349,7 +231,7 @@
               <button class="action-button orange" @click="navigateToVendas">
                 <div class="action-icon">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <div class="action-content">
@@ -398,7 +280,7 @@
               <button class="action-button yellow">
                 <div class="action-icon">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div class="action-content">
@@ -412,6 +294,59 @@
           <!-- Rastreamento Card -->
           <RastreamentoCard />
 
+
+
+        </div>
+
+        <!-- Calendar and Sales Grid -->
+        <div class="calendar-sales-grid">
+          <!-- Folgas Card -->
+          <FolgasCard />
+
+          <!-- Vendas Import Card -->
+          <VendasImportCard />
+          
+          <!-- Recent Sales -->
+          <div class="activity-card">
+            <div class="card-header">
+              <h3 class="card-title">{{ $t('dashboard.recentSales') }}</h3>
+              <button class="view-all-button">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+                {{ $t('common.viewAll') }}
+              </button>
+            </div>
+            
+            <div v-if="dashboardStore.recentSales.length === 0" class="empty-state">
+              <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <p class="empty-title">{{ $t('dashboard.noRecentSales') }}</p>
+              <p class="empty-subtitle">{{ $t('dashboard.salesWillAppear') }}</p>
+            </div>
+            
+            <div v-else class="sales-list">
+              <div
+                v-for="sale in dashboardStore.recentSales"
+                :key="sale.id"
+                class="sale-item"
+              >
+                <div class="sale-info">
+                  <p class="sale-product">{{ sale.descricao_produto || $t('dashboard.productSale') }}</p>
+                  <p class="sale-details">{{ sale.vendedor_nome || $t('dashboard.unknownVendor') }} • {{ formatDate(sale.data_venda) }}</p>
+                </div>
+                <div class="sale-amount">
+                  <p class="sale-value">{{ sale.moeda }} {{ formatOriginalCurrency(sale.valor_liquido) }}</p>
+                  <p class="sale-method">{{ sale.metodo_pagamento }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status and Exchange Rate Grid (1x1) -->
+        <div class="status-exchange-grid">
           <!-- System Status Card -->
           <div class="activity-card-status">
             <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
@@ -454,100 +389,35 @@
             </div>
           </div>
 
-          <!-- Exchange Rate Card -->
-          <div class="action-card exchange-rate-card" @click="navigateToExchangeRates" style="cursor: pointer;">
-            <div class="card-header">
-              <h3 class="card-title">{{ $t('dashboard.exchangeRate') }}</h3>
-              <div class="card-actions">
+          <!-- Exchange Rate Card (Compact) -->
+          <div class="activity-card-status exchange-rate-compact" @click="navigateToExchangeRates" style="cursor: pointer;">
+            <div class="card-header-compact">
+              <h3 class="card-title">Taxa de Câmbio</h3>
+              <div class="card-actions-compact">
                 <button
                   v-if="canEditRates"
                   @click.stop="openCardModal"
-                  class="edit-rate-btn"
+                  class="edit-rate-btn-compact"
                   style="cursor: pointer;"
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <div class="card-icon green">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-                <div class="navigation-arrow">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
               </div>
             </div>
-            <div v-if="isLoadingRates" class="exchange-rate loading">
-              <div class="rate-loading">
-                <svg class="loading-spinner" fill="none" viewBox="0 0 24 24">
-                  <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p>Carregando taxas...</p>
-              </div>
-            </div>
-            <div v-else class="exchange-rate">
-              <div class="rate-grid">
-                <div class="rate-item">
-                  <span class="rate-label">USD → G$</span>
-                  <span class="rate-value">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+            <div class="exchange-rate-compact">
+              <div class="rate-grid-compact">
+                <div class="rate-item-compact">
+                  <span class="rate-label-compact">USD → G$</span>
+                  <span class="rate-value-compact">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '6400' }}</span>
                 </div>
-                <div class="rate-item">
-                  <span class="rate-label">USD → R$</span>
-                  <span class="rate-value">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                <div class="rate-item-compact">
+                  <span class="rate-label-compact">USD → R$</span>
+                  <span class="rate-value-compact">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.45' }}</span>
                 </div>
               </div>
-              <p class="rate-updated" v-if="lastUpdated">
-                Atualizado: {{ formatDate(lastUpdated) }}
-              </p>
-              <p v-if="ratesError" class="rate-error">{{ ratesError }}</p>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Calendar and Sales Grid -->
-        <div class="calendar-sales-grid">
-          <!-- Folgas Card -->
-          <FolgasCard />
-
-          <!-- Vendas Import Card -->
-          <VendasImportCard />
-          
-          <!-- Recent Sales -->
-          <div class="activity-card">
-            <div class="card-header">
-              <h3 class="card-title">{{ $t('dashboard.recentSales') }}</h3>
-              <button class="view-all-button">{{ $t('common.viewAll') }}</button>
-            </div>
-            
-            <div v-if="dashboardStore.recentSales.length === 0" class="empty-state">
-              <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p class="empty-title">{{ $t('dashboard.noRecentSales') }}</p>
-              <p class="empty-subtitle">{{ $t('dashboard.salesWillAppear') }}</p>
-            </div>
-            
-            <div v-else class="sales-list">
-              <div
-                v-for="sale in dashboardStore.recentSales"
-                :key="sale.id"
-                class="sale-item"
-              >
-                <div class="sale-info">
-                  <p class="sale-product">{{ sale.descricao_produto || $t('dashboard.productSale') }}</p>
-                  <p class="sale-details">{{ sale.vendedor_nome || $t('dashboard.unknownVendor') }} • {{ formatDate(sale.data_venda) }}</p>
-                </div>
-                <div class="sale-amount">
-                  <p class="sale-value">{{ sale.moeda }} {{ formatOriginalCurrency(sale.valor_liquido) }}</p>
-                  <p class="sale-method">{{ sale.metodo_pagamento }}</p>
-                </div>
-              </div>
+              <p class="rate-updated-compact">Atualizado: {{ formatDate(new Date().toISOString()) }}</p>
             </div>
           </div>
         </div>
@@ -574,9 +444,25 @@
         
         <div class="footer-right">
           <div class="footer-links">
-            <button class="footer-link">{{ $t('footer.help') }}</button>
-            <button class="footer-link">{{ $t('footer.settings') }}</button>
-            <button class="footer-link">{{ $t('footer.about') }}</button>
+            <button class="footer-link">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ $t('footer.help') }}
+            </button>
+            <button class="footer-link">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {{ $t('footer.settings') }}
+            </button>
+            <button class="footer-link">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ $t('footer.about') }}
+            </button>
           </div>
         </div>
       </div>
@@ -711,11 +597,6 @@ const editingRates = ref({
   eur_to_brl: 0
 })
 
-// Pedidos data
-const totalPedidos = ref(0)
-const pedidosPendentes = ref(0)
-const pedidosEnviados = ref(0)
-const pedidosEntregues = ref(0)
 
 // Check if user can edit rates
 const canEditRates = computed(() => {
@@ -884,25 +765,6 @@ const loadExchangeRates = async () => {
   }
 }
 
-// Load pedidos data from API
-const loadPedidosData = async () => {
-  try {
-    const { pedidosAPI } = await import('@/services/api')
-    const pedidos = await pedidosAPI.list({ limit: 1000 })
-
-    totalPedidos.value = pedidos.length
-    pedidosPendentes.value = pedidos.filter(p => p.status === 'PENDENTE').length
-    pedidosEnviados.value = pedidos.filter(p => p.status === 'ENVIADO').length
-    pedidosEntregues.value = pedidos.filter(p => p.status === 'ENTREGUE').length
-  } catch (error) {
-    console.error('Erro ao carregar dados dos pedidos:', error)
-    // Set default values on error
-    totalPedidos.value = 0
-    pedidosPendentes.value = 0
-    pedidosEnviados.value = 0
-    pedidosEntregues.value = 0
-  }
-}
 
 const loadCurrentRatesToEdit = () => {
   editingRates.value = {
@@ -962,11 +824,10 @@ onMounted(async () => {
   timeInterval = setInterval(updateTime, 1000)
   document.addEventListener('click', handleClickOutside)
 
-  // Load exchange rates, dashboard data and pedidos data
+  // Load exchange rates and dashboard data
   await Promise.all([
     loadExchangeRates(),
-    dashboardStore.refreshData(),
-    loadPedidosData()
+    dashboardStore.refreshData()
   ])
 })
 
@@ -1231,6 +1092,79 @@ onUnmounted(() => {
   gap: 1.5rem;
 }
 
+.exchange-rate-section {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 2rem;
+}
+
+.exchange-rate-section .exchange-rate-card {
+  max-width: 400px;
+  width: 100%;
+}
+
+/* Exchange Card Styles */
+.exchange-card {
+  cursor: pointer;
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.exchange-rates-compact {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.rate-item-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background-color: #f3f4f6;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  flex: 1;
+}
+
+.rate-item-compact .currency-flag {
+  font-size: 0.875rem;
+}
+
+.rate-item-compact .rate-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.edit-rate-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-rate-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.edit-rate-btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
 .stat-card {
   background-color: white;
   border-radius: 0.75rem;
@@ -1319,7 +1253,7 @@ onUnmounted(() => {
 
 .actions-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr;
   grid-template-rows: auto;
   gap: 1rem;
   align-items: start;
@@ -1342,7 +1276,6 @@ onUnmounted(() => {
 }
 
 /* Compact square cards */
-.action-card.exchange-rate-card,
 .activity-card-status {
   width: 100%;
   max-width: 200px;
@@ -1427,42 +1360,7 @@ onUnmounted(() => {
   color: #f59e0b;
 }
 
-/* Exchange Rate compact styles */
-.action-card.exchange-rate-card .card-title {
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-}
-
-.action-card.exchange-rate-card .card-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.action-card.exchange-rate-card .card-icon svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.action-card.exchange-rate-card .exchange-rate {
-  padding: 0.5rem 0;
-}
-
-.action-card.exchange-rate-card .rate-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 0.125rem;
-}
-
-.action-card.exchange-rate-card .rate-label {
-  font-size: 0.625rem;
-  color: #6b7280;
-}
-
-.action-card.exchange-rate-card .rate-updated {
-  font-size: 0.625rem;
-  color: #9ca3af;
-  margin-top: 0.25rem;
-}
+/* Exchange Rate compact styles - REMOVED - Using new exchange-stats-card design */
 
 /* Regular cards - maintain normal size */
 .action-card.quick-actions-card {
@@ -1472,11 +1370,8 @@ onUnmounted(() => {
   padding: 1rem;
 }
 
-.action-card.exchange-rate-card:hover {
-  border-color: #2563eb;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
+/* Old exchange rate card hover - REMOVED */
+
 
 .card-header {
   display: flex;
@@ -1620,7 +1515,7 @@ onUnmounted(() => {
 .action-icon {
   width: 2.5rem;
   height: 2.5rem;
-  background-color: currentColor;
+  background-color: rgba(255, 255, 255, 0.4);
   border-radius: 0.5rem;
   display: flex;
   align-items: center;
@@ -1631,6 +1526,7 @@ onUnmounted(() => {
 .action-icon svg {
   width: 1.5rem;
   height: 1.5rem;
+  stroke: currentColor;
 }
 
 .action-button span {
@@ -1661,7 +1557,7 @@ onUnmounted(() => {
 
 .calendar-sales-grid {
   display: grid;
-  grid-template-columns: 30% 70%;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1.5rem;
   align-items: start;
 }
@@ -1690,12 +1586,20 @@ onUnmounted(() => {
 
 
 .view-all-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: none;
   border: none;
   color: #2563eb;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+.view-all-button svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .view-all-button:hover {
@@ -2055,12 +1959,20 @@ onUnmounted(() => {
 }
 
 .footer-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: none;
   border: none;
   color: #6b7280;
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s;
+}
+
+.footer-link svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .footer-link:hover {
@@ -2094,11 +2006,7 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 
-.exchange-rate-card:hover .navigation-arrow {
-  color: #2563eb;
-  opacity: 1;
-  transform: translateX(2px);
-}
+/* Old exchange rate card navigation arrow - REMOVED */
 
 .navigation-arrow svg {
   width: 1rem;
@@ -2147,6 +2055,35 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.rate-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.rate-updated {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+  margin: 0;
+}
+
+.exchange-rate-card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.exchange-rate-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
+  transform: translateY(-1px);
 }
 
 .rate-value {
@@ -2439,23 +2376,52 @@ onUnmounted(() => {
     height: 0.75rem !important;
   }
 
-  /* Reduzir card Taxa de Câmbio para ficar igual aos outros */
-  .action-card.exchange-rate-card {
-    padding: 0.875rem !important;
+  /* Old exchange rate card mobile styles - REMOVED - Using new design */
+
+  /* Exchange stats card responsive styles */
+  .exchange-stats-card {
+    padding: 1rem;
   }
-  
-  .action-card.exchange-rate-card .exchange-rate {
-    padding: 0.5rem 0 !important;
-    text-align: center;
+
+  .exchange-rates-grid {
+    gap: 0.5rem;
   }
-  
-  .action-card.exchange-rate-card .rate-item {
-    margin-bottom: 0.375rem !important;
+
+  .exchange-rate-pill {
+    padding: 0.375rem 0.5rem;
   }
-  
-  .action-card.exchange-rate-card .rate-value {
-    font-size: 1.125rem !important;
-    margin: 0 0 0.125rem 0 !important;
+
+  .currency-flag {
+    font-size: 1rem;
+  }
+
+  .rate-value {
+    font-size: 0.75rem;
+  }
+
+  .exchange-title {
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .exchange-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .exchange-icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .exchange-edit-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .exchange-edit-btn svg {
+    width: 0.75rem;
+    height: 0.75rem;
   }
 
   .stats-grid {
@@ -2463,8 +2429,8 @@ onUnmounted(() => {
     gap: 1rem;
   }
 
-  .pedidos-stats {
-    grid-template-columns: 1fr 1fr;
+  .exchange-rate-section .exchange-rate-card {
+    max-width: 100%;
   }
 
   .actions-grid,
@@ -2600,5 +2566,111 @@ onUnmounted(() => {
 }
 .action-button.orange:hover {
   background-color: #fed7aa;
+}
+
+/* Status and Exchange Rate Grid */
+.status-exchange-grid {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+  justify-content: center;
+}
+
+.status-exchange-grid .activity-card-status {
+  width: 280px;
+  height: 220px;
+  flex-shrink: 0;
+}
+
+/* Exchange Rate Compact Styles */
+.exchange-rate-compact {
+  transition: all 0.2s;
+}
+
+.exchange-rate-compact:hover {
+  background-color: #f9fafb;
+}
+
+.card-header-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.card-actions-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.edit-rate-btn-compact {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
+  background-color: #f3f4f6;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.edit-rate-btn-compact:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.edit-rate-btn-compact svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.rate-grid-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.rate-item-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.rate-label-compact {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.rate-value-compact {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.rate-updated-compact {
+  font-size: 0.625rem;
+  color: #9ca3af;
+  text-align: center;
+  margin: 0;
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  .status-exchange-grid {
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .status-exchange-grid .activity-card-status {
+    width: 180px;
+    height: 160px;
+  }
 }
 </style>
