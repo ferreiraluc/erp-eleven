@@ -92,7 +92,7 @@
                 <span class="funcionario-name">{{ funcionario.vendedor_nome }}</span>
                 <div class="funcionario-stats">
                   <span class="stat-group">
-                    <span class="stat-number">{{ funcionario.folgas_aprovadas || 0 }}</span>
+                    <span class="stat-number">{{ funcionario.folgas_tipo || 0 }}</span>
                     <span class="stat-label">folgas</span>
                   </span>
                   <span class="stat-separator">•</span>
@@ -186,20 +186,20 @@ const miniCalendarDays = computed(() => {
 
 const totalFolgasHoje = computed(() => {
   const hoje = new Date().toISOString().split('T')[0]
-  return folgas.value.filter(f => f.data === hoje && f.aprovado).length
+  return folgas.value.filter(f => f.data === hoje).length
 })
 
 const totalFolgasMes = computed(() => {
-  return folgas.value.filter(f => f.aprovado).length
+  return folgas.value.length
 })
 
 const funcionariosComFolgas = computed(() => {
   if (!estatisticas.value || estatisticas.value.length === 0) return []
 
-  // Calcular total de ausências para cada funcionário (folgas + faltas + licenças)
+  // Calcular total de ausências para cada funcionário
   const funcionariosComAusencias = estatisticas.value.map(vendedor => ({
     ...vendedor,
-    total_ausencias: (vendedor.folgas_aprovadas || 0) + (vendedor.faltas || 0) + (vendedor.licencas || 0)
+    total_ausencias: vendedor.total_folgas || 0
   }))
 
   // Ordenar por total de ausências (maior para menor)

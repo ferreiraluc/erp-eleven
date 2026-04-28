@@ -304,11 +304,12 @@ def obter_estatisticas_resumo(
         total_folgas = len(folgas_mes)
         folgas_aprovadas = len([f for f in folgas_mes if f.aprovado])
         folgas_pendentes = total_folgas - folgas_aprovadas
+        folgas_tipo = len([f for f in folgas_mes if f.tipo == TipoFolga.FOLGA])
         faltas = len([f for f in folgas_mes if f.tipo == TipoFolga.FALTA])
         licencas = len([f for f in folgas_mes if f.tipo == TipoFolga.LICENCA])
         ferias = len([f for f in folgas_mes if f.tipo == TipoFolga.FERIAS])
         meio_periodo = len([f for f in folgas_mes if f.tipo == TipoFolga.MEIO_PERIODO])
-        dias_trabalhados = total_dias_uteis - folgas_aprovadas
+        dias_trabalhados = total_dias_uteis - total_folgas
 
         estatisticas.append(EstatisticasFolgas(
             vendedor_id=vendedor.id,
@@ -317,6 +318,7 @@ def obter_estatisticas_resumo(
             total_folgas=total_folgas,
             folgas_aprovadas=folgas_aprovadas,
             folgas_pendentes=folgas_pendentes,
+            folgas_tipo=folgas_tipo,
             faltas=faltas,
             licencas=licencas,
             ferias=ferias,

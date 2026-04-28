@@ -43,6 +43,7 @@ class EstatisticasFolgas(BaseModel):
     total_folgas: int
     folgas_aprovadas: int
     folgas_pendentes: int
+    folgas_tipo: int      # contagem de tipo=FOLGA independente de aprovação
     faltas: int
     licencas: int
     ferias: int
