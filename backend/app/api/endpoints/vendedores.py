@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from datetime import datetime, date
 from ...database import get_db
@@ -176,7 +177,11 @@ def criar_folga(
     folga.vendedor_id = vendedor_uuid
     db_folga = Folga(**folga.model_dump())
     db.add(db_folga)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Já existe folga cadastrada para esta data")
     db.refresh(db_folga)
     return db_folga
 
