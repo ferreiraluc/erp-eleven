@@ -43,6 +43,10 @@ class EstatisticasFolgas(BaseModel):
     total_folgas: int
     folgas_aprovadas: int
     folgas_pendentes: int
+    faltas: int
+    licencas: int
+    ferias: int
+    meio_periodo: int
     dias_trabalhados: int
     ultimo_periodo: List[FolgaResponse] = []
 

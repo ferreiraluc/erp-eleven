@@ -247,6 +247,7 @@ const openFullCalendar = () => {
 
 const closeFullCalendar = () => {
   showFullCalendar.value = false
+  loadData()
 }
 
 const loadData = async () => {

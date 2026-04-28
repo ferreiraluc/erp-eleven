@@ -37,6 +37,8 @@ CREATE TABLE usuarios (
 -- VENDEDORES
 -- =============================================
 
+CREATE TYPE tipo_folga AS ENUM ('FOLGA', 'FERIAS', 'LICENCA', 'FALTA', 'MEIO_PERIODO');
+
 CREATE TABLE vendedores (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     nome VARCHAR(100) NOT NULL,
@@ -45,6 +47,7 @@ CREATE TABLE vendedores (
     meta_semanal DECIMAL(12,2) DEFAULT 0,
     conta_bancaria VARCHAR(50),
     telefone VARCHAR(20),
+    cor_calendario VARCHAR(7) DEFAULT '#3B82F6',
     ativo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -203,6 +206,27 @@ CREATE TRIGGER trigger_pedido_numero
     EXECUTE FUNCTION generate_pedido_numero();
 
 -- =============================================
+-- CONTROLE DE FOLGAS
+-- =============================================
+
+CREATE TABLE folgas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vendedor_id UUID NOT NULL REFERENCES vendedores(id),
+    data DATE NOT NULL,
+    tipo tipo_folga DEFAULT 'FOLGA',
+    periodo VARCHAR(20) DEFAULT 'COMPLETO',
+    motivo TEXT,
+    aprovado BOOLEAN DEFAULT FALSE,
+    aprovado_por UUID REFERENCES usuarios(id),
+    ativo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_folgas_vendedor ON folgas(vendedor_id);
+CREATE INDEX idx_folgas_data ON folgas(data);
+
+-- =============================================
 -- FUNCIONÁRIOS E RH
 -- =============================================
 
@@ -325,6 +349,7 @@ CREATE TRIGGER update_cambistas_updated_at BEFORE UPDATE ON cambistas FOR EACH R
 CREATE TRIGGER update_vendas_updated_at BEFORE UPDATE ON vendas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_pedidos_updated_at BEFORE UPDATE ON pedidos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_funcionarios_updated_at BEFORE UPDATE ON funcionarios FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_folgas_updated_at BEFORE UPDATE ON folgas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================
 -- VIEWS ÚTEIS
