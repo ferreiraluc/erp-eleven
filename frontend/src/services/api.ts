@@ -419,4 +419,142 @@ export const pedidosAPI = {
     api.get(`/api/pedidos/rastreamento/${codigoRastreio}`).then(res => res.data)
 }
 
+// ─── Inventory Types ──────────────────────────────────────────────────────────
+
+export interface InventoryItem {
+  id: string
+  name: string
+  description?: string
+  category?: string
+  size?: string
+  color?: string
+  unit: string
+  location?: string
+  barcode?: string
+  sku_internal: string
+  supplier_id?: string
+  cost_price: number
+  sale_price: number
+  currency: string
+  min_stock: number
+  max_stock: number
+  current_stock: number
+  is_active: boolean
+  alert_level?: string
+  created_at: string
+  updated_at: string
+  created_by?: string
+}
+
+export interface InventoryItemList {
+  items: InventoryItem[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+export interface AlertSummary {
+  low_stock_count: number
+  out_of_stock_count: number
+  overstocked_count: number
+  total_active_items: number
+}
+
+export interface StockMovement {
+  id: string
+  item_id: string
+  movement_type: string
+  quantity: number
+  quantity_before: number
+  quantity_after: number
+  reason?: string
+  reference_type?: string
+  reference_id?: string
+  unit_cost?: number
+  location_from?: string
+  location_to?: string
+  notes?: string
+  created_at: string
+  created_by?: string
+}
+
+export interface InventorySupplier {
+  id: string
+  name: string
+  contact?: string
+  is_active: boolean
+  created_at: string
+}
+
+// ─── Inventory API ────────────────────────────────────────────────────────────
+
+export const inventoryAPI = {
+  getItems: (params: Record<string, any> = {}): Promise<InventoryItemList> => {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.append(k, String(v)) })
+    return api.get(`/api/inventory/items?${qs}`).then(res => res.data)
+  },
+
+  createItem: (item: Partial<InventoryItem>): Promise<InventoryItem> =>
+    api.post('/api/inventory/items', item).then(res => res.data),
+
+  getItem: (id: string): Promise<InventoryItem> =>
+    api.get(`/api/inventory/items/${id}`).then(res => res.data),
+
+  updateItem: (id: string, item: Partial<InventoryItem>): Promise<InventoryItem> =>
+    api.put(`/api/inventory/items/${id}`, item).then(res => res.data),
+
+  deleteItem: (id: string): Promise<{ message: string }> =>
+    api.delete(`/api/inventory/items/${id}`).then(res => res.data),
+
+  getByBarcode: (code: string): Promise<InventoryItem[]> =>
+    api.get(`/api/inventory/items/barcode/${encodeURIComponent(code)}`).then(res => res.data),
+
+  quickExit: (id: string): Promise<{ message: string; new_stock: number }> =>
+    api.post(`/api/inventory/items/${id}/quick-exit`).then(res => res.data),
+
+  getAlertsSummary: (): Promise<AlertSummary> =>
+    api.get('/api/inventory/alerts/summary').then(res => res.data),
+
+  createMovement: (data: any): Promise<StockMovement> =>
+    api.post('/api/inventory/movements', data).then(res => res.data),
+
+  createBatchMovement: (data: any): Promise<any> =>
+    api.post('/api/inventory/movements/batch', data).then(res => res.data),
+
+  getMovements: (params: Record<string, any> = {}): Promise<StockMovement[]> => {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.append(k, String(v)) })
+    return api.get(`/api/inventory/movements?${qs}`).then(res => res.data)
+  },
+
+  getItemMovements: (itemId: string, skip = 0, limit = 50): Promise<StockMovement[]> =>
+    api.get(`/api/inventory/movements/item/${itemId}?skip=${skip}&limit=${limit}`).then(res => res.data),
+
+  getSuppliers: (): Promise<InventorySupplier[]> =>
+    api.get('/api/inventory/suppliers').then(res => res.data),
+
+  createSupplier: (data: Partial<InventorySupplier>): Promise<InventorySupplier> =>
+    api.post('/api/inventory/suppliers', data).then(res => res.data),
+
+  getSessions: (): Promise<any[]> =>
+    api.get('/api/inventory/sessions').then(res => res.data),
+
+  createSession: (data: any): Promise<any> =>
+    api.post('/api/inventory/sessions', data).then(res => res.data),
+
+  getSession: (id: string): Promise<any> =>
+    api.get(`/api/inventory/sessions/${id}`).then(res => res.data),
+
+  updateSessionStatus: (id: string, status: string): Promise<any> =>
+    api.put(`/api/inventory/sessions/${id}/status`, { status }).then(res => res.data),
+
+  scanItem: (sessionId: string, data: any): Promise<any> =>
+    api.post(`/api/inventory/sessions/${sessionId}/scan`, data).then(res => res.data),
+
+  applySession: (sessionId: string): Promise<any> =>
+    api.post(`/api/inventory/sessions/${sessionId}/apply`).then(res => res.data),
+}
+
 export default api

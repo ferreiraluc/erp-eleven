@@ -1,0 +1,165 @@
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from datetime import datetime
+from decimal import Decimal
+import uuid
+
+
+class SupplierBase(BaseModel):
+    name: str
+    contact: Optional[str] = None
+    is_active: Optional[bool] = True
+
+
+class SupplierCreate(SupplierBase):
+    pass
+
+
+class SupplierResponse(SupplierBase):
+    id: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ItemBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    size: Optional[str] = None
+    color: Optional[str] = None
+    unit: Optional[str] = "un"
+    location: Optional[str] = None
+    barcode: Optional[str] = None
+    supplier_id: Optional[uuid.UUID] = None
+    cost_price: Optional[Decimal] = Decimal("0")
+    sale_price: Optional[Decimal] = Decimal("0")
+    currency: Optional[str] = "PYG"
+    min_stock: Optional[int] = 0
+    max_stock: Optional[int] = 0
+    is_active: Optional[bool] = True
+
+
+class ItemCreate(ItemBase):
+    pass
+
+
+class ItemUpdate(ItemBase):
+    name: Optional[str] = None
+
+
+class ItemResponse(ItemBase):
+    id: uuid.UUID
+    sku_internal: str
+    current_stock: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[uuid.UUID] = None
+    alert_level: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ItemListResponse(BaseModel):
+    items: List[ItemResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class MovementBase(BaseModel):
+    item_id: uuid.UUID
+    movement_type: str
+    quantity: int
+    reason: Optional[str] = None
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+    unit_cost: Optional[Decimal] = None
+    location_from: Optional[str] = None
+    location_to: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class MovementCreate(MovementBase):
+    pass
+
+
+class BatchMovementItem(BaseModel):
+    item_id: uuid.UUID
+    quantity: int
+    unit_cost: Optional[Decimal] = None
+
+
+class BatchMovementCreate(BaseModel):
+    items: List[BatchMovementItem]
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class MovementResponse(MovementBase):
+    id: uuid.UUID
+    quantity_before: int
+    quantity_after: int
+    created_at: datetime
+    created_by: Optional[uuid.UUID] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SessionBase(BaseModel):
+    name: str
+    location_filter: Optional[str] = None
+    category_filter: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class SessionCreate(SessionBase):
+    pass
+
+
+class SessionStatusUpdate(BaseModel):
+    status: str
+
+
+class ScanItemCreate(BaseModel):
+    item_id: uuid.UUID
+    counted_quantity: int
+
+
+class SessionItemResponse(BaseModel):
+    id: uuid.UUID
+    session_id: uuid.UUID
+    item_id: uuid.UUID
+    system_quantity: int
+    counted_quantity: Optional[int] = None
+    difference: Optional[int] = None
+    scanned_at: Optional[datetime] = None
+    counted_by: Optional[uuid.UUID] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SessionResponse(SessionBase):
+    id: uuid.UUID
+    status: str
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    applied_at: Optional[datetime] = None
+    created_by: Optional[uuid.UUID] = None
+    approved_by: Optional[uuid.UUID] = None
+    session_items: List[SessionItemResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class AlertSummary(BaseModel):
+    low_stock_count: int
+    out_of_stock_count: int
+    overstocked_count: int
+    total_active_items: int

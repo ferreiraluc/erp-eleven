@@ -10,3 +10,4 @@ from .usuario import Usuario
 from .exchange_rate import ExchangeRate
 from .money_transfer import MoneyTransfer
 from .rastreamento import Rastreamento
+from .inventory import Supplier, Item, StockMovement, InventorySession, InventorySessionItem, MovementType, SessionStatus

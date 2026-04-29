@@ -294,7 +294,34 @@
           <!-- Rastreamento Card -->
           <RastreamentoCard />
 
-
+          <!-- Stock Alerts Card -->
+          <div v-if="stockAlerts" class="action-card stock-alerts-card">
+            <h3 class="card-title">Alertas de Estoque</h3>
+            <div class="stock-alert-items">
+              <router-link to="/inventory?status=out_of_stock" class="stock-alert-row red">
+                <div class="alert-dot red-dot"></div>
+                <div class="alert-text">
+                  <span class="alert-count">{{ stockAlerts.out_of_stock_count }}</span>
+                  <span class="alert-label">Sem estoque</span>
+                </div>
+              </router-link>
+              <router-link to="/inventory?status=low_stock" class="stock-alert-row yellow">
+                <div class="alert-dot yellow-dot"></div>
+                <div class="alert-text">
+                  <span class="alert-count">{{ stockAlerts.low_stock_count }}</span>
+                  <span class="alert-label">Estoque baixo</span>
+                </div>
+              </router-link>
+              <router-link to="/inventory" class="stock-alert-row gray">
+                <div class="alert-dot gray-dot"></div>
+                <div class="alert-text">
+                  <span class="alert-count">{{ stockAlerts.total_active_items }}</span>
+                  <span class="alert-label">Itens ativos</span>
+                </div>
+              </router-link>
+            </div>
+            <router-link to="/inventory" class="view-inventory-link">Ver inventário completo →</router-link>
+          </div>
 
         </div>
 
@@ -563,6 +590,7 @@ import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
 import VendasImportCard from '@/components/VendasImportCard.vue'
+import { inventoryAPI, type AlertSummary } from '@/services/api'
 
 const router = useRouter()
 const { locale, t } = useI18n()
@@ -577,6 +605,9 @@ const showLanguageDropdown = ref(false)
 const showExchangeRateModal = ref(false)
 const showExchangeRateHeaderModal = ref(false)
 const exchangeRateError = ref<string | null>(null)
+
+// Exchange rate state (local to avoid dependency issues)
+const stockAlerts = ref<AlertSummary | null>(null)
 
 // Exchange rate state (local to avoid dependency issues)
 const isLoadingRates = ref(false)
@@ -824,11 +855,12 @@ onMounted(async () => {
   timeInterval = setInterval(updateTime, 1000)
   document.addEventListener('click', handleClickOutside)
 
-  // Load exchange rates and dashboard data
+  // Load exchange rates, dashboard data, and stock alerts
   await Promise.all([
     loadExchangeRates(),
     dashboardStore.refreshData()
   ])
+  inventoryAPI.getAlertsSummary().then(data => { stockAlerts.value = data }).catch(() => {})
 })
 
 onUnmounted(() => {
@@ -840,6 +872,52 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Stock Alerts Card */
+.stock-alerts-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stock-alert-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stock-alert-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.stock-alert-row:hover { opacity: 0.8; }
+.stock-alert-row.red { background: #fee2e2; }
+.stock-alert-row.yellow { background: #fef3c7; }
+.stock-alert-row.gray { background: #f3f4f6; }
+
+.alert-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.red-dot { background: #ef4444; }
+.yellow-dot { background: #f59e0b; }
+.gray-dot { background: #9ca3af; }
+
+.alert-text { display: flex; align-items: center; gap: 0.5rem; }
+.alert-count { font-weight: 700; font-size: 1rem; color: #111827; }
+.alert-label { font-size: 0.8rem; color: #6b7280; }
+
+.view-inventory-link {
+  font-size: 0.8rem;
+  color: #3b82f6;
+  text-decoration: none;
+  text-align: right;
+}
+
+.view-inventory-link:hover { text-decoration: underline; }
+
 .dashboard {
   min-height: 100vh;
   background-color: #f9fafb;
