@@ -14,6 +14,12 @@
           <p class="page-subtitle">Gerencie os itens do inventário</p>
         </div>
         <div class="header-right">
+          <button @click="showImport = true" class="btn btn-secondary">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Importar
+          </button>
           <button @click="openCreate" class="btn btn-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -79,10 +85,13 @@
         :class="'alert-' + item.alert_level"
       >
         <div class="item-card-header">
-          <div class="alert-badge" :class="'badge-' + item.alert_level">
-            {{ alertLabel(item.alert_level) }}
+          <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
+          <div class="item-card-title">
+            <div class="alert-badge" :class="'badge-' + item.alert_level">
+              {{ alertLabel(item.alert_level) }}
+            </div>
+            <span class="item-name">{{ item.name }}</span>
           </div>
-          <span class="item-name">{{ item.name }}</span>
         </div>
 
         <div class="item-meta">
@@ -142,6 +151,12 @@
       @saved="onMovementSaved"
       @close="showMovementModal = false"
     />
+
+    <ImportModal
+      v-if="showImport"
+      @imported="() => { inventoryStore.loadItems(1); inventoryStore.loadAlerts() }"
+      @close="showImport = false"
+    />
   </div>
 </template>
 
@@ -153,6 +168,7 @@ import { inventoryAPI, type InventoryItem } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
+import ImportModal from '@/components/inventory/ImportModal.vue'
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
@@ -162,6 +178,7 @@ const activeStatus = ref((route.query.status as string) || '')
 const showScanner = ref(false)
 const showItemForm = ref(false)
 const showMovementModal = ref(false)
+const showImport = ref(false)
 const editingItem = ref<InventoryItem | null>(null)
 const movementItem = ref<InventoryItem | null>(null)
 const suppliers = ref<Array<{ id: string; name: string }>>([])
@@ -309,7 +326,9 @@ onMounted(async () => {
 .item-card.alert-high { border-left: 4px solid #8b5cf6; }
 .item-card.alert-ok { border-left: 4px solid #10b981; }
 .item-card.alert-inactive { border-left: 4px solid #9ca3af; opacity: 0.7; }
-.item-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.375rem; }
+.item-card-header { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.375rem; }
+.item-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; flex-shrink: 0; }
+.item-card-title { display: flex; flex-direction: column; gap: 0.25rem; }
 .alert-badge { font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap; }
 .badge-out { background: #fee2e2; color: #dc2626; }
 .badge-low { background: #fef3c7; color: #d97706; }

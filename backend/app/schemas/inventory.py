@@ -39,6 +39,7 @@ class ItemBase(BaseModel):
     min_stock: Optional[int] = 0
     max_stock: Optional[int] = 0
     is_active: Optional[bool] = True
+    image_data: Optional[str] = None
 
 
 class ItemCreate(ItemBase):
@@ -57,6 +58,7 @@ class ItemResponse(ItemBase):
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
     alert_level: Optional[str] = None
+    image_data: Optional[str] = None
 
     class Config:
         from_attributes = True

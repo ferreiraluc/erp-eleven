@@ -58,6 +58,7 @@ class Item(Base):
     created_at = Column(DateTime, default=func.current_timestamp())
     updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
+    image_data = Column(Text, nullable=True)
 
     supplier = relationship("Supplier", back_populates="items")
     movements = relationship("StockMovement", back_populates="item")

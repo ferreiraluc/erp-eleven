@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, date
 import uuid
+import io
+import csv
+import xml.etree.ElementTree as ET
 
 from ...database import get_db
 from ...models.inventory import (
@@ -515,3 +518,189 @@ def _session_to_response(session: InventorySession) -> SessionResponse:
         approved_by=session.approved_by,
         session_items=items,
     )
+
+
+# ─── Import: CSV ──────────────────────────────────────────────────────────────
+
+@router.post("/import/csv")
+async def import_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+):
+    """Import inventory items from CSV.
+    Columns (PT or EN accepted): name/nome, category/categoria, size/tamanho,
+    color/cor, unit/unidade, barcode/codigo_barras, cost_price/custo,
+    sale_price/preco_venda, currency/moeda, min_stock/estoque_minimo,
+    max_stock/estoque_maximo, location/localizacao, initial_stock/estoque_inicial
+    """
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")
+    except Exception:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    created, skipped, errors = 0, 0, []
+
+    for i, row in enumerate(reader, start=2):
+        name = (row.get("name") or row.get("nome") or "").strip()
+        if not name:
+            skipped += 1
+            continue
+        try:
+            sku = _generate_sku()
+            while db.query(Item).filter(Item.sku_internal == sku).first():
+                sku = _generate_sku()
+
+            initial_stock = int(float(row.get("initial_stock") or row.get("estoque_inicial") or 0))
+            unit_raw = (row.get("unit") or row.get("unidade") or "un").strip().lower()
+
+            db_item = Item(
+                name=name,
+                description=(row.get("description") or row.get("descricao") or "").strip() or None,
+                category=(row.get("category") or row.get("categoria") or "").strip() or None,
+                size=(row.get("size") or row.get("tamanho") or "").strip() or None,
+                color=(row.get("color") or row.get("cor") or "").strip() or None,
+                unit=unit_raw or "un",
+                location=(row.get("location") or row.get("localizacao") or "").strip() or None,
+                barcode=(row.get("barcode") or row.get("codigo_barras") or "").strip() or None,
+                sku_internal=sku,
+                cost_price=float(str(row.get("cost_price") or row.get("custo") or 0).replace(",", ".")),
+                sale_price=float(str(row.get("sale_price") or row.get("preco_venda") or 0).replace(",", ".")),
+                currency=(row.get("currency") or row.get("moeda") or "USD").strip(),
+                min_stock=int(float(row.get("min_stock") or row.get("estoque_minimo") or 0)),
+                max_stock=int(float(row.get("max_stock") or row.get("estoque_maximo") or 0)),
+                current_stock=initial_stock,
+                is_active=True,
+                created_by=current_user.id,
+            )
+            db.add(db_item)
+            db.flush()
+
+            if initial_stock > 0:
+                movement = StockMovement(
+                    item_id=db_item.id,
+                    movement_type=MovementType.entry,
+                    quantity=initial_stock,
+                    quantity_before=0,
+                    quantity_after=initial_stock,
+                    reason="Importação CSV",
+                    created_by=current_user.id,
+                )
+                db.add(movement)
+
+            created += 1
+        except Exception as e:
+            errors.append(f"Linha {i}: {str(e)}")
+            skipped += 1
+
+    db.commit()
+    return {"created": created, "skipped": skipped, "errors": errors}
+
+
+# ─── Import: NF-e XML ─────────────────────────────────────────────────────────
+
+@router.post("/import/nfe")
+async def import_nfe(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+):
+    """Import inventory items from Brazilian NF-e XML."""
+    content = await file.read()
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as e:
+        raise HTTPException(status_code=400, detail=f"XML inválido: {str(e)}")
+
+    # Detect namespace
+    ns = ""
+    tag = root.tag
+    if tag.startswith("{"):
+        ns = tag[1:tag.index("}")]
+
+    def _find(node, path):
+        if ns:
+            return node.find("/".join(f"{{{ns}}}{p}" for p in path.split("/")))
+        return node.find(path)
+
+    def _findall(node, path):
+        if ns:
+            return node.findall("/".join(f"{{{ns}}}{p}" for p in path.split("/")))
+        return node.findall(path)
+
+    def _txt(node, tag_name, default=""):
+        el = _find(node, tag_name)
+        return el.text.strip() if el is not None and el.text else default
+
+    infnfe = _find(root, "NFe/infNFe") or _find(root, "infNFe") or root
+    dets = _findall(infnfe, "det")
+    if not dets:
+        dets = root.findall(f".//{{{ns}}}det" if ns else ".//det")
+
+    if not dets:
+        raise HTTPException(status_code=400, detail="Nenhum item encontrado no XML da NF-e")
+
+    created, skipped, errors = 0, 0, []
+
+    for det in dets:
+        prod = _find(det, "prod")
+        if prod is None:
+            skipped += 1
+            continue
+        try:
+            name = _txt(prod, "xProd")
+            if not name:
+                skipped += 1
+                continue
+
+            barcode = _txt(prod, "cEAN")
+            if barcode in ("SEM GTIN", "SEMGTIN", ""):
+                barcode = None
+
+            unit_raw = _txt(prod, "uCom", "un").upper()
+            unit = "par" if unit_raw in ("PAR", "PR") else "un"
+
+            initial_stock = int(float(_txt(prod, "qCom", "0").replace(",", ".")))
+            cost_price = float(_txt(prod, "vUnCom", "0").replace(",", "."))
+
+            sku = _generate_sku()
+            while db.query(Item).filter(Item.sku_internal == sku).first():
+                sku = _generate_sku()
+
+            db_item = Item(
+                name=name,
+                barcode=barcode,
+                unit=unit,
+                sku_internal=sku,
+                cost_price=cost_price,
+                sale_price=cost_price,
+                currency="USD",
+                current_stock=initial_stock,
+                is_active=True,
+                created_by=current_user.id,
+            )
+            db.add(db_item)
+            db.flush()
+
+            if initial_stock > 0:
+                movement = StockMovement(
+                    item_id=db_item.id,
+                    movement_type=MovementType.entry,
+                    quantity=initial_stock,
+                    quantity_before=0,
+                    quantity_after=initial_stock,
+                    reason="Importação NF-e",
+                    unit_cost=cost_price if cost_price > 0 else None,
+                    created_by=current_user.id,
+                )
+                db.add(movement)
+
+            created += 1
+        except Exception as e:
+            errors.append(f"Item {det.get('nItem', '?')}: {str(e)}")
+            skipped += 1
+
+    db.commit()
+    return {"created": created, "skipped": skipped, "errors": errors}

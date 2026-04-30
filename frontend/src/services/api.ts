@@ -441,6 +441,7 @@ export interface InventoryItem {
   current_stock: number
   is_active: boolean
   alert_level?: string
+  image_data?: string
   created_at: string
   updated_at: string
   created_by?: string
@@ -555,6 +556,16 @@ export const inventoryAPI = {
 
   applySession: (sessionId: string): Promise<any> =>
     api.post(`/api/inventory/sessions/${sessionId}/apply`).then(res => res.data),
+
+  importCsv: (file: File): Promise<{ created: number; skipped: number; errors: string[] }> => {
+    const fd = new FormData(); fd.append('file', file)
+    return api.post('/api/inventory/import/csv', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+  },
+
+  importNfe: (file: File): Promise<{ created: number; skipped: number; errors: string[] }> => {
+    const fd = new FormData(); fd.append('file', file)
+    return api.post('/api/inventory/import/nfe', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+  },
 }
 
 export default api
