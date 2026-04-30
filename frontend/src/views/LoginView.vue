@@ -90,6 +90,10 @@
       </div>
 
     </div>
+
+    <footer class="login-footer">
+      <a href="https://www.siterastreio.com.br/" target="_blank" rel="noopener noreferrer" class="footer-link">Rastreamento</a>
+    </footer>
   </div>
 </template>
 
@@ -314,5 +318,24 @@ onMounted(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+.login-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.footer-link {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: #6b7280;
 }
 </style>
