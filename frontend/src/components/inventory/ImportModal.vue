@@ -21,7 +21,7 @@
       </div>
 
       <div class="modal-body">
-        <!-- CSV -->
+        <!-- CSV info -->
         <template v-if="importType === 'csv'">
           <div class="info-box">
             <p>O arquivo CSV deve ter cabeçalhos em português ou inglês. Colunas aceitas:</p>
@@ -32,11 +32,70 @@
           </div>
         </template>
 
-        <!-- NF-e -->
+        <!-- NF-e config panel -->
         <template v-if="importType === 'nfe'">
           <div class="info-box">
-            <p>Selecione o arquivo XML da Nota Fiscal Eletrônica. Os itens da nota serão criados com a quantidade e custo unitário da NF-e.</p>
-            <p class="note">Campos extraídos: nome do produto, código EAN, unidade, quantidade, valor unitário.</p>
+            <p>Campos extraídos: nome (xProd), código EAN, unidade, quantidade, valor unitário.</p>
+          </div>
+
+          <div class="config-panel">
+            <h4 class="config-title">Configurações da importação</h4>
+
+            <!-- Category -->
+            <div class="config-row">
+              <label class="config-label">Categoria dos produtos</label>
+              <input
+                v-model="nfeConfig.category"
+                type="text"
+                class="config-input"
+                placeholder="Ex: Calçados, Camisetas, Acessórios..."
+                list="category-suggestions"
+              />
+              <datalist id="category-suggestions">
+                <option value="Calçados" />
+                <option value="Camisetas" />
+                <option value="Calças" />
+                <option value="Vestidos" />
+                <option value="Acessórios" />
+                <option value="Bolsas" />
+                <option value="Bermudas" />
+                <option value="Jaquetas" />
+              </datalist>
+            </div>
+
+            <!-- Currency -->
+            <div class="config-row">
+              <label class="config-label">Moeda do XML</label>
+              <select v-model="nfeConfig.currency" class="config-select">
+                <option value="BRL">R$ — Real Brasileiro</option>
+                <option value="USD">U$ — Dólar Americano</option>
+                <option value="PYG">G$ — Guarani Paraguaio</option>
+                <option value="EUR">€ — Euro</option>
+              </select>
+            </div>
+
+            <!-- Split color toggle -->
+            <div class="config-row config-row-check">
+              <label class="config-label">
+                Separar cor do nome do produto
+                <span class="config-hint">As 2 primeiras palavras do xProd viram o nome; o restante vira a cor</span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" v-model="nfeConfig.splitColor" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- Preview of split logic -->
+            <div v-if="nfeConfig.splitColor" class="split-preview">
+              <span class="preview-label">Exemplo:</span>
+              <span class="preview-text">
+                <strong>xProd:</strong> "TENIS ADIDAS PRETO VERNIZ"
+                &rarr;
+                <strong>Nome:</strong> "Tenis Adidas" &nbsp;
+                <strong>Cor:</strong> "Preto Verniz"
+              </span>
+            </div>
           </div>
         </template>
 
@@ -106,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { inventoryAPI } from '@/services/api'
 
 const emit = defineEmits<{
@@ -120,6 +179,12 @@ const fileInputRef = ref<HTMLInputElement>()
 const isDragging = ref(false)
 const uploading = ref(false)
 const result = ref<{ created: number; skipped: number; errors: string[] } | null>(null)
+
+const nfeConfig = reactive({
+  category: '',
+  currency: 'BRL',
+  splitColor: true,
+})
 
 function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement
@@ -141,7 +206,11 @@ async function handleImport() {
     if (importType.value === 'csv') {
       result.value = await inventoryAPI.importCsv(selectedFile.value)
     } else {
-      result.value = await inventoryAPI.importNfe(selectedFile.value)
+      result.value = await inventoryAPI.importNfe(selectedFile.value, {
+        category: nfeConfig.category || undefined,
+        currency: nfeConfig.currency,
+        splitColor: nfeConfig.splitColor,
+      })
     }
   } catch (e: any) {
     result.value = { created: 0, skipped: 0, errors: [e.response?.data?.detail || 'Erro na importação'] }
@@ -152,7 +221,7 @@ async function handleImport() {
 
 function downloadTemplate() {
   const headers = 'nome,categoria,tamanho,cor,unidade,codigo_barras,custo,preco_venda,moeda,estoque_minimo,estoque_maximo,localizacao,estoque_inicial'
-  const example = 'Camiseta Polo Azul,Camisetas,M,Azul,un,7891234567890,25.00,45.00,USD,5,50,A-01,10'
+  const example = 'Camiseta Polo Azul,Camisetas,M,Azul,un,7891234567890,25.00,45.00,BRL,5,50,A-01,10'
   const blob = new Blob([headers + '\n' + example], { type: 'text/csv;charset=utf-8;' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
@@ -173,9 +242,42 @@ function downloadTemplate() {
 .modal-body { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
 .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.8rem; color: #1e40af; }
 .info-box p { margin: 0 0 0.5rem; }
+.info-box p:last-child { margin-bottom: 0; }
 .info-box code { display: block; background: white; border-radius: 4px; padding: 0.4rem 0.6rem; font-size: 0.7rem; word-break: break-all; margin-top: 0.25rem; }
-.info-box .note { color: #6b7280; margin-top: 0.5rem; }
 .download-link { margin-top: 0.5rem; background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline; padding: 0; }
+
+/* Config panel */
+.config-panel { border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.875rem; }
+.config-title { margin: 0 0 0.25rem; font-size: 0.8rem; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; }
+.config-row { display: flex; flex-direction: column; gap: 0.3rem; }
+.config-row-check { flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; }
+.config-label { font-size: 0.825rem; font-weight: 500; color: #374151; }
+.config-hint { display: block; font-size: 0.72rem; color: #9ca3af; font-weight: 400; margin-top: 0.1rem; }
+.config-input { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.45rem 0.65rem; font-size: 0.85rem; outline: none; }
+.config-input:focus { border-color: #3b82f6; }
+.config-select { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.45rem 0.65rem; font-size: 0.85rem; background: white; outline: none; cursor: pointer; }
+.config-select:focus { border-color: #3b82f6; }
+
+/* Toggle switch */
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: #d1d5db; border-radius: 22px;
+  transition: background 0.2s; cursor: pointer;
+}
+.toggle-track::before {
+  content: ''; position: absolute; width: 16px; height: 16px;
+  left: 3px; top: 3px; background: white; border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle input:checked + .toggle-track { background: #3b82f6; }
+.toggle input:checked + .toggle-track::before { transform: translateX(18px); }
+
+/* Split preview */
+.split-preview { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.75rem; color: #6b7280; }
+.preview-label { font-weight: 600; color: #374151; margin-right: 0.35rem; }
+.preview-text { line-height: 1.6; }
+
 .drop-zone {
   border: 2px dashed #d1d5db; border-radius: 10px; padding: 2rem 1.5rem;
   display: flex; flex-direction: column; align-items: center; gap: 0.5rem;

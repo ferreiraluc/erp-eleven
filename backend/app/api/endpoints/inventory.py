@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
@@ -604,10 +604,17 @@ async def import_csv(
 @router.post("/import/nfe")
 async def import_nfe(
     file: UploadFile = File(...),
+    category: Optional[str] = Form(None),
+    currency: str = Form("BRL"),
+    split_color: bool = Form(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
-    """Import inventory items from Brazilian NF-e XML."""
+    """Import inventory items from Brazilian NF-e XML.
+
+    xProd parsing: when split_color=True, the first 2 words become the item name
+    and the remaining words become the color field.
+    """
     content = await file.read()
     try:
         root = ET.fromstring(content)
@@ -634,6 +641,15 @@ async def import_nfe(
         el = _find(node, tag_name)
         return el.text.strip() if el is not None and el.text else default
 
+    def _parse_xprod(xprod: str):
+        """Split xProd into (name, color). First 2 words = name, rest = color."""
+        words = xprod.split()
+        if len(words) <= 2:
+            return xprod, None
+        name = " ".join(words[:2])
+        color = " ".join(words[2:]).title()
+        return name, color
+
     infnfe = _find(root, "NFe/infNFe") or _find(root, "infNFe") or root
     dets = _findall(infnfe, "det")
     if not dets:
@@ -641,6 +657,9 @@ async def import_nfe(
 
     if not dets:
         raise HTTPException(status_code=400, detail="Nenhum item encontrado no XML da NF-e")
+
+    # Auto-map unit based on category
+    category_unit = "par" if category and "cal" in category.lower() else "un"
 
     created, skipped, errors = 0, 0, []
 
@@ -650,17 +669,25 @@ async def import_nfe(
             skipped += 1
             continue
         try:
-            name = _txt(prod, "xProd")
-            if not name:
+            xprod_raw = _txt(prod, "xProd")
+            if not xprod_raw:
                 skipped += 1
                 continue
+
+            if split_color:
+                name, color = _parse_xprod(xprod_raw)
+            else:
+                name, color = xprod_raw, None
 
             barcode = _txt(prod, "cEAN")
             if barcode in ("SEM GTIN", "SEMGTIN", ""):
                 barcode = None
 
-            unit_raw = _txt(prod, "uCom", "un").upper()
-            unit = "par" if unit_raw in ("PAR", "PR") else "un"
+            unit_raw = _txt(prod, "uCom", "").upper()
+            if unit_raw in ("PAR", "PR"):
+                unit = "par"
+            else:
+                unit = category_unit
 
             initial_stock = int(float(_txt(prod, "qCom", "0").replace(",", ".")))
             cost_price = float(_txt(prod, "vUnCom", "0").replace(",", "."))
@@ -671,12 +698,14 @@ async def import_nfe(
 
             db_item = Item(
                 name=name,
+                color=color,
+                category=category or None,
                 barcode=barcode,
                 unit=unit,
                 sku_internal=sku,
                 cost_price=cost_price,
                 sale_price=cost_price,
-                currency="USD",
+                currency=currency,
                 current_stock=initial_stock,
                 is_active=True,
                 created_by=current_user.id,
