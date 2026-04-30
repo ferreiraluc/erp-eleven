@@ -92,7 +92,7 @@
     </div>
 
     <footer class="login-footer">
-      <a href="https://www.siterastreio.com.br/" target="_blank" rel="noopener noreferrer" class="footer-link">Rastreamento</a>
+      <a href="https://www.siterastreio.com.br/" target="_blank">Rastreamento</a>
     </footer>
   </div>
 </template>
