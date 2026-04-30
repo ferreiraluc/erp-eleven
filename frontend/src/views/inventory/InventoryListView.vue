@@ -87,7 +87,7 @@
         <div class="item-card-header">
           <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
           <div class="item-card-title">
-            <div class="alert-badge" :class="'badge-' + item.alert_level">
+            <div v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">
               {{ alertLabel(item.alert_level) }}
             </div>
             <span class="item-name">{{ item.name }}</span>
@@ -296,7 +296,8 @@ onMounted(async () => {
 <style scoped>
 .inventory-view { min-height: 100vh; background: #f9fafb; }
 .page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; position: sticky; top: 0; z-index: 10; }
-.header-content { display: flex; align-items: flex-start; justify-content: space-between; max-width: 800px; margin: 0 auto; }
+.header-content { display: flex; align-items: center; justify-content: space-between; max-width: 800px; margin: 0 auto; }
+.header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }
 .back-button { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
 .page-title { font-size: 1.25rem; font-weight: 700; color: #111827; margin: 0; }
@@ -329,7 +330,7 @@ onMounted(async () => {
 .item-card-header { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.375rem; }
 .item-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; flex-shrink: 0; }
 .item-card-title { display: flex; flex-direction: column; gap: 0.25rem; }
-.alert-badge { font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap; }
+.alert-badge { font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap; align-self: flex-start; }
 .badge-out { background: #fee2e2; color: #dc2626; }
 .badge-low { background: #fef3c7; color: #d97706; }
 .badge-high { background: #ede9fe; color: #7c3aed; }

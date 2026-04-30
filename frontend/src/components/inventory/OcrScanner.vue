@@ -30,7 +30,7 @@
 
         <!-- Processing -->
         <div v-if="phase === 'processing'" class="processing-wrap">
-          <canvas ref="canvasRef" class="preview-canvas"></canvas>
+          <img v-if="capturedImageUrl" :src="capturedImageUrl" class="preview-canvas" alt="captura" />
           <div class="processing-status">
             <div class="spinner"></div>
             <p>{{ statusMsg }}</p>
@@ -39,7 +39,7 @@
 
         <!-- Results -->
         <div v-if="phase === 'results'" class="results-wrap">
-          <canvas ref="canvasRef" class="preview-canvas-small"></canvas>
+          <img v-if="capturedImageUrl" :src="capturedImageUrl" class="preview-canvas-small" alt="captura" />
 
           <div class="raw-text-box">
             <label>Texto detectado:</label>
@@ -95,7 +95,7 @@ const emit = defineEmits<{
 }>()
 
 const videoRef = ref<HTMLVideoElement>()
-const canvasRef = ref<HTMLCanvasElement>()
+const capturedImageUrl = ref('')
 const phase = ref<'camera' | 'processing' | 'results' | 'error'>('camera')
 const statusMsg = ref('Preparando OCR...')
 const rawText = ref('')
@@ -142,28 +142,28 @@ onUnmounted(() => {
 
 function capture() {
   const video = videoRef.value
-  const canvas = canvasRef.value
-  if (!video || !canvas) return
+  if (!video || !video.videoWidth) return
 
-  phase.value = 'processing'
-
+  // Create offscreen canvas — never depends on DOM ref
+  const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth
   canvas.height = video.videoHeight
   const ctx = canvas.getContext('2d')!
   ctx.drawImage(video, 0, 0)
 
-  // Preprocess: grayscale + increase contrast for white labels
+  // Preprocess: grayscale threshold — good contrast for white labels on dark backgrounds
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const d = imageData.data
   for (let i = 0; i < d.length; i += 4) {
     const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
-    // Threshold: pixels above 128 → white, below → black (good for white labels)
     const val = gray > 128 ? 255 : 0
     d[i] = d[i + 1] = d[i + 2] = val
   }
   ctx.putImageData(imageData, 0, 0)
 
+  capturedImageUrl.value = canvas.toDataURL('image/jpeg', 0.9)
   if (stream) stream.getTracks().forEach(t => t.stop())
+  phase.value = 'processing'
 
   runOcr(canvas)
 }
@@ -234,6 +234,7 @@ function setField(key: keyof OcrResult, value: string) {
 function retake() {
   phase.value = 'camera'
   rawText.value = ''
+  capturedImageUrl.value = ''
   suggestedFields.forEach(f => { f.value = ''; f.accepted = true })
   // Re-open camera
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
