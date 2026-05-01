@@ -122,6 +122,7 @@
                 <span class="stock-number" :class="'stock-' + item.alert_level">
                   Est.&nbsp;{{ item.current_stock }}
                 </span>
+                <span v-if="item.size" class="item-size-inline">{{ item.size }}</span>
                 <span v-if="item.location" class="item-location-inline">· {{ item.location }}</span>
                 <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">
                   {{ alertLabel(item.alert_level) }}
@@ -317,7 +318,7 @@ onMounted(async () => {
 <style scoped>
 .inventory-view { min-height: 100vh; background: #f9fafb; }
 .page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; position: sticky; top: 0; z-index: 10; }
-.header-content { display: flex; align-items: center; justify-content: space-between; max-width: 800px; margin: 0 auto; }
+.header-content { display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
 .header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }
 .back-button { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
@@ -326,7 +327,7 @@ onMounted(async () => {
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
-.search-section { padding: 1rem; max-width: 800px; margin: 0 auto; }
+.search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
 .search-box { flex: 1; position: relative; }
 .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
@@ -342,7 +343,17 @@ onMounted(async () => {
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 3rem 1rem; color: #6b7280; gap: 0.5rem; }
 /* ── Items list ─────────────────────────────────────────────────────────────── */
-.items-list { padding: 0 1rem 1rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.3rem; }
+.items-list {
+  padding: 0 1rem 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.3rem;
+}
+@media (max-width: 500px) {
+  .items-list { grid-template-columns: 1fr; }
+}
 
 .item-card {
   background: white;
@@ -382,8 +393,8 @@ onMounted(async () => {
 
 /* Row 1: Name + Color */
 .item-name-row { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; }
-.item-name { font-weight: 600; font-size: 0.82rem; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
-.item-color-tag { font-size: 0.65rem; font-weight: 500; color: #6b7280; background: #f3f4f6; border-radius: 3px; padding: 0.1rem 0.35rem; white-space: nowrap; flex-shrink: 0; }
+.item-name { font-weight: 600; font-size: 0.82rem; color: #111827; flex: 1; min-width: 0; word-break: break-word; }
+.item-color-tag { font-size: 0.65rem; font-weight: 500; color: #6b7280; background: #f3f4f6; border-radius: 3px; padding: 0.1rem 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; flex-shrink: 0; }
 
 /* Row 2: barcode · category · price */
 .item-sub { font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; flex-wrap: wrap; gap: 0; line-height: 1.3; }
@@ -400,6 +411,7 @@ onMounted(async () => {
 .stock-high     { color: #7c3aed; }
 .stock-ok       { color: #059669; }
 .stock-inactive { color: #6b7280; }
+.item-size-inline { font-size: 0.65rem; font-weight: 600; color: #374151; background: #f3f4f6; border-radius: 3px; padding: 0.05rem 0.3rem; }
 .item-location-inline { font-size: 0.65rem; color: #9ca3af; }
 
 /* Alert badge */
