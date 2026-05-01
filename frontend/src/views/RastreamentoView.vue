@@ -137,7 +137,7 @@
           <div class="header-codigo">Código</div>
           <div class="header-destinatario">Destinatário</div>
           <div class="header-descricao">Descrição</div>
-          <div class="header-rastreio">Rastreio</div>
+          <div class="header-rastreio">Último evento</div>
           <div class="header-status">Status</div>
           <div class="header-data">Data</div>
           <div class="header-actions">Ações</div>
@@ -177,7 +177,7 @@
                 <div class="mobile-header-main">
                   <div class="mobile-code-section">
                     <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
-                    <button 
+                    <button
                       @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
                       class="mobile-copy-btn"
                       title="Copiar"
@@ -187,21 +187,9 @@
                       </svg>
                     </button>
                   </div>
-                  
-                  <button 
-                    @click.stop="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
-                    class="mobile-correios-btn-compact"
-                    title="Rastrear nos Correios"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
-                      <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
-                      <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
-                      <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
-                      <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
-                      <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
-                    </svg>
-                    Correios
-                  </button>
+                  <span class="status-badge-inline" :class="getStatusBadgeClass(rastreamento.status)">
+                    {{ getStatusText(rastreamento.status) }}
+                  </span>
                 </div>
               </div>
               
@@ -214,17 +202,9 @@
                   <!-- Status -->
                   <div class="mobile-content-row">
                     <span class="mobile-content-label">Status:</span>
-                    <select 
-                      v-model="rastreamento.status"
-                      @change="atualizarStatus(rastreamento)"
-                      class="mobile-status-select-expanded"
-                      :class="getStatusClass(rastreamento.status)"
-                    >
-                      <option value="PENDENTE">Pendente</option>
-                      <option value="EM_TRANSITO">Em Trânsito</option>
-                      <option value="ENTREGUE">Entregue</option>
-                      <option value="ERRO">Erro</option>
-                    </select>
+                    <span class="status-badge-inline" :class="getStatusBadgeClass(rastreamento.status)">
+                      {{ getStatusText(rastreamento.status) }}
+                    </span>
                   </div>
                   
                   <!-- Detalhes -->
@@ -337,43 +317,18 @@
             {{ rastreamento.descricao || '-' }}
           </div>
 
-          <!-- Botão Rastreio Correios -->
-          <div class="row-rastreio">
-            <button 
-              @click="abrirRastreioCorreios(rastreamento.codigo_rastreio)"
-              class="rastreio-btn"
-              title="Rastrear nos Correios"
-            >
-              <svg width="16" height="16" viewBox="0 0 100 100" fill="none">
-                <!-- Logo dos Correios -->
-                <path d="M15 25 L35 45 L15 65 Z" fill="#FFC107"/>
-                <path d="M35 15 L65 35 L45 55 L15 25 Z" fill="#FFC107"/>
-                <path d="M45 55 L75 75 L45 85 Z" fill="#FF9800"/>
-                <path d="M65 35 L85 15 L85 45 L65 65 Z" fill="#2196F3"/>
-                <path d="M65 65 L85 45 L85 75 L65 85 Z" fill="#1976D2"/>
-              </svg>
-              <span>Correios</span>
-            </button>
-
+          <!-- Último evento -->
+          <div class="row-rastreio row-ultimo-evento">
+            <span class="ultimo-evento-text">
+              {{ rastreamento.historico_eventos?.[0]?.situacao || '—' }}
+            </span>
           </div>
 
-
-
-          
-
-          <!-- Status com edição inline -->
+          <!-- Status (badge estático) -->
           <div class="row-status">
-            <select 
-              v-model="rastreamento.status"
-              @change="atualizarStatus(rastreamento)"
-              class="status-select-inline"
-              :class="getStatusClass(rastreamento.status)"
-            >
-              <option value="PENDENTE">Pendente</option>
-              <option value="EM_TRANSITO">Em Trânsito</option>
-              <option value="ENTREGUE">Entregue</option>
-              <option value="ERRO">Erro</option>
-            </select>
+            <span class="status-badge-inline" :class="getStatusBadgeClass(rastreamento.status)">
+              {{ getStatusText(rastreamento.status) }}
+            </span>
           </div>
 
           <!-- Data criação (desktop) -->
@@ -686,20 +641,24 @@ async function consultarESalvar() {
 
 async function salvarRastreamento() {
   if (!formData.value.codigo_rastreio) return
-  
+
   try {
     salvando.value = true
     modalError.value = null
-    
+
     if (editandoRastreamento.value) {
       await rastreamentoStore.atualizarRastreamento(
         editandoRastreamento.value.id,
         formData.value
       )
     } else {
-      await rastreamentoStore.criarRastreamento(formData.value)
+      // Create then immediately fetch real data from Wonca API
+      const novo = await rastreamentoStore.criarRastreamento(formData.value)
+      if (novo?.id) {
+        atualizarOnline(novo).catch(() => {})
+      }
     }
-    
+
     await carregarDados()
     fecharModal()
   } catch (error: any) {
@@ -724,6 +683,28 @@ async function removerRastreamento(rastreamento: Rastreamento) {
 
 function getStatusClass(status: string): string {
   return rastreamentoStore.getStatusColor(status)
+}
+
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'PENDENTE': return 'badge-pendente'
+    case 'EM_TRANSITO': return 'badge-em-transito'
+    case 'ENTREGUE': return 'badge-entregue'
+    case 'ERRO':
+    case 'NAO_ENCONTRADO': return 'badge-erro'
+    default: return 'badge-pendente'
+  }
+}
+
+function getStatusText(status: string): string {
+  switch (status) {
+    case 'PENDENTE': return 'Pendente'
+    case 'EM_TRANSITO': return 'Em Trânsito'
+    case 'ENTREGUE': return 'Entregue'
+    case 'ERRO': return 'Erro'
+    case 'NAO_ENCONTRADO': return 'Não encontrado'
+    default: return status
+  }
 }
 
 function formatarData(data: string): string {
@@ -757,27 +738,6 @@ async function copiarCodigo(codigo: string) {
   }
 }
 
-function abrirRastreioCorreios(codigo: string) {
-  const url = `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`
-  window.open(url, '_blank')
-}
-
-async function atualizarStatus(rastreamento: any) {
-  try {
-    await rastreamentoStore.atualizarRastreamento(rastreamento.id, {
-      status: rastreamento.status
-    })
-    console.log('Status atualizado:', rastreamento.status)
-    
-    // Atualizar estatísticas automaticamente
-    await rastreamentoStore.obterResumoDashboard()
-    resumo.value = rastreamentoStore.resumoDashboard
-  } catch (error: any) {
-    console.error('Erro ao atualizar status:', error)
-    // Reverter o status em caso de erro
-    await carregarDados()
-  }
-}
 
 // Funções para controlar expansão dos cards
 function toggleCard(cardId: string) {
@@ -2399,6 +2359,33 @@ onMounted(() => {
   .page-title { font-size: 1rem; }
   .header-actions .btn.btn-primary { font-size: 0.8rem; padding: 0.45rem 0.7rem; }
   .stat-value { font-size: 0.95rem; }
+}
+
+/* ── Status badges ───────────────────────────────────────────────────────────── */
+.status-badge-inline {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.badge-pendente { background: #fef3c7; color: #92400e; }
+.badge-em-transito { background: #dbeafe; color: #1e40af; }
+.badge-entregue { background: #d1fae5; color: #065f46; }
+.badge-erro { background: #fee2e2; color: #991b1b; }
+
+/* ── Last event column ───────────────────────────────────────────────────────── */
+.row-ultimo-evento { overflow: hidden; }
+.ultimo-evento-text {
+  font-size: 0.75rem;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 180px;
 }
 
 /* ── Refresh button ──────────────────────────────────────────────────────────── */
