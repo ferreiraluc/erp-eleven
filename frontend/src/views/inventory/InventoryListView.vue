@@ -47,17 +47,38 @@
         </button>
       </div>
 
-      <!-- Filter chips -->
-      <div class="filter-chips">
-        <button
-          v-for="chip in statusChips"
-          :key="chip.value"
-          @click="setStatusFilter(chip.value)"
-          :class="['chip', { active: activeStatus === chip.value }]"
-        >
-          {{ chip.label }}
-          <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
-        </button>
+      <!-- Filter chips + view switcher -->
+      <div class="chips-and-views">
+        <div class="filter-chips">
+          <button
+            v-for="chip in statusChips"
+            :key="chip.value"
+            @click="setStatusFilter(chip.value)"
+            :class="['chip', { active: activeStatus === chip.value }]"
+          >
+            {{ chip.label }}
+            <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
+          </button>
+        </div>
+
+        <!-- View mode switcher -->
+        <div class="view-switcher">
+          <button :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" title="Lista minimalista">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
+          <button :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" title="Compacto (2 colunas)">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h7M4 12h7M4 19h7M14 5h6M14 12h6M14 19h6" />
+            </svg>
+          </button>
+          <button :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" title="Grade de imagens">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -77,61 +98,52 @@
     </div>
 
     <!-- Items list -->
-    <div v-else class="items-list">
+    <div v-else class="items-container" :class="`view-${viewMode}`">
       <div
         v-for="item in inventoryStore.items"
         :key="item.id"
         class="item-card"
         :class="'alert-' + item.alert_level"
       >
+        <!-- Imagem topo (grid view) -->
+        <div class="item-grid-image" @click="item.image_data && (imageModalSrc = item.image_data)" :class="{ 'thumb-clickable': item.image_data }">
+          <img v-if="item.image_data" :src="item.image_data" alt="" class="item-grid-img" />
+          <div v-else class="item-grid-placeholder">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+          </div>
+        </div>
+
         <div class="item-row-main">
-          <!-- Imagem (clicável) -->
+          <!-- Thumb (compact view) -->
           <div class="item-thumb-wrap" @click="item.image_data && (imageModalSrc = item.image_data)" :class="{ 'thumb-clickable': item.image_data }">
             <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
-            <div v-else class="item-thumb-placeholder">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
+            <div v-else class="item-thumb-placeholder"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div>
           </div>
 
-          <!-- Info -->
           <div class="item-info">
-            <!-- Linha 1: Nome + Cor -->
+            <!-- Cor + Nome -->
             <div class="item-name-row">
-              <span class="item-name">{{ item.name }}</span>
               <span v-if="item.color" class="item-color-tag">{{ item.color }}</span>
+              <span class="item-name">{{ item.name }}</span>
             </div>
-
-            <!-- Linha 2: barcode · categoria · preço -->
+            <!-- barcode · categoria · preço -->
             <div class="item-sub">
               <span v-if="item.barcode" class="item-barcode">{{ item.barcode }}</span>
-              <template v-if="item.category">
-                <span class="item-sub-sep" v-if="item.barcode"> · </span>
-                <span>{{ item.category }}</span>
-              </template>
-              <template v-if="(item as any).sale_price">
-                <span class="item-sub-sep"> · </span>
-                <span class="item-price">R$ {{ Number((item as any).sale_price).toFixed(2).replace('.', ',') }}</span>
-              </template>
+              <template v-if="item.category"><span class="item-sub-sep" v-if="item.barcode"> · </span><span>{{ item.category }}</span></template>
+              <template v-if="item.sale_price"><span class="item-sub-sep"> · </span><span class="item-price">{{ currencySymbol((item as any).sale_currency || item.currency) }} {{ Number(item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span></template>
             </div>
-
-            <!-- Linha 3: estoque + local + badge + ações -->
+            <!-- estoque + tamanho + badge + ações -->
             <div class="item-bottom-row">
               <div class="item-left-info">
-                <span class="stock-number" :class="'stock-' + item.alert_level">
-                  Est.&nbsp;{{ item.current_stock }}
-                </span>
+                <span class="stock-number" :class="'stock-' + item.alert_level">Est.&nbsp;{{ item.current_stock }}</span>
                 <span v-if="item.size" class="item-size-inline">{{ item.size }}</span>
                 <span v-if="item.location" class="item-location-inline">· {{ item.location }}</span>
-                <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">
-                  {{ alertLabel(item.alert_level) }}
-                </span>
+                <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">{{ alertLabel(item.alert_level) }}</span>
               </div>
               <div class="item-actions">
                 <button @click="handleQuickExit(item)" class="action-btn exit-btn" :disabled="item.current_stock <= 0" title="Consumir 1">−1</button>
-                <button @click="openMovement(item)" class="action-btn move-btn" title="Movimentar">Mov.</button>
-                <button @click="openEdit(item)" class="action-btn edit-btn" title="Editar">Editar</button>
+                <button @click="openMovement(item)" class="action-btn move-btn">Mov.</button>
+                <button @click="openEdit(item)" class="action-btn edit-btn">Editar</button>
               </div>
             </div>
           </div>
@@ -139,17 +151,17 @@
       </div>
     </div>
 
+    <!-- Sentinel para infinite scroll -->
+    <div ref="scrollSentinel" class="scroll-sentinel">
+      <div v-if="inventoryStore.loading && inventoryStore.items.length > 0" class="loading-more">
+        <div class="spinner-sm"></div>
+      </div>
+    </div>
+
     <!-- Image modal -->
     <div v-if="imageModalSrc" class="image-modal-overlay" @click="imageModalSrc = null">
       <img :src="imageModalSrc" alt="" class="image-modal-img" @click.stop />
       <button class="image-modal-close" @click="imageModalSrc = null">✕</button>
-    </div>
-
-    <!-- Load more -->
-    <div v-if="inventoryStore.pagination.page < inventoryStore.pagination.total_pages" class="load-more">
-      <button @click="loadMore" :disabled="inventoryStore.loading" class="btn btn-secondary">
-        {{ inventoryStore.loading ? 'Carregando...' : 'Carregar mais' }}
-      </button>
     </div>
 
     <!-- Toast -->
@@ -182,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
@@ -205,6 +217,21 @@ const movementItem = ref<InventoryItem | null>(null)
 const suppliers = ref<Array<{ id: string; name: string }>>([])
 const toast = ref<{ message: string; type: string } | null>(null)
 const imageModalSrc = ref<string | null>(null)
+const viewMode = ref<'list' | 'compact' | 'grid'>(
+  (localStorage.getItem('inv_view') as any) || 'compact'
+)
+const scrollSentinel = ref<HTMLElement | null>(null)
+let scrollObserver: IntersectionObserver | null = null
+
+function setView(mode: 'list' | 'compact' | 'grid') {
+  viewMode.value = mode
+  localStorage.setItem('inv_view', mode)
+}
+
+function currencySymbol(c: string): string {
+  const map: Record<string, string> = { PYG: 'G$', BRL: 'R$', USD: 'U$', EUR: '€' }
+  return map[c] || c
+}
 
 const statusChips = computed(() => [
   { value: '', label: 'Todos' },
@@ -299,6 +326,10 @@ function showToast(message: string, type: string) {
   setTimeout(() => { toast.value = null }, 3000)
 }
 
+onUnmounted(() => {
+  scrollObserver?.disconnect()
+})
+
 onMounted(async () => {
   if (route.query.status) {
     inventoryStore.filters.status = route.query.status as string
@@ -312,6 +343,21 @@ onMounted(async () => {
     const supplierList = await inventoryAPI.getSuppliers()
     suppliers.value = supplierList
   } catch {}
+
+  nextTick(() => {
+    if (scrollSentinel.value) {
+      scrollObserver = new IntersectionObserver(([entry]) => {
+        if (
+          entry.isIntersecting &&
+          !inventoryStore.loading &&
+          inventoryStore.pagination.page < inventoryStore.pagination.total_pages
+        ) {
+          loadMore()
+        }
+      }, { rootMargin: '300px' })
+      scrollObserver.observe(scrollSentinel.value)
+    }
+  })
 })
 </script>
 
@@ -334,7 +380,6 @@ onMounted(async () => {
 .search-input { width: 100%; padding: 0.625rem 0.75rem 0.625rem 2.25rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none; box-sizing: border-box; }
 .search-input:focus { border-color: #3b82f6; }
 .camera-btn { padding: 0.625rem; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; color: #374151; }
-.filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .chip { padding: 0.375rem 0.75rem; border-radius: 20px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 0.8rem; cursor: pointer; color: #374151; display: flex; align-items: center; gap: 0.25rem; }
 .chip.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
 .chip-count { background: #ef4444; color: white; border-radius: 10px; padding: 0 5px; font-size: 0.7rem; min-width: 16px; text-align: center; }
@@ -342,18 +387,87 @@ onMounted(async () => {
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 3rem 1rem; color: #6b7280; gap: 0.5rem; }
-/* ── Items list ─────────────────────────────────────────────────────────────── */
-.items-list {
+/* ── View container ──────────────────────────────────────────────────────────── */
+.items-container {
   padding: 0 1rem 1rem;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* --- COMPACT view (default, 2 cols) --- */
+.view-compact {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.3rem;
 }
-@media (max-width: 500px) {
-  .items-list { grid-template-columns: 1fr; }
+.view-compact .item-grid-image { display: none; }
+
+/* --- LIST view (1 col, minimal rows) --- */
+.view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
+.view-list .item-card { padding: 0.3rem 0.6rem; }
+.view-list .item-grid-image { display: none; }
+.view-list .item-thumb-wrap { display: none; }
+.view-list .item-info { flex-direction: row; align-items: center; gap: 0.5rem; flex-wrap: nowrap; overflow: hidden; }
+.view-list .item-name-row { flex-shrink: 0; max-width: 180px; min-width: 120px; }
+.view-list .item-sub { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.view-list .item-bottom-row { flex-shrink: 0; margin-top: 0; }
+.view-list .item-left-info { display: none; }
+
+/* --- GRID view (image-prominent square cards) --- */
+.view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem;
+}
+.view-grid .item-card { padding: 0; overflow: hidden; }
+.view-grid .item-grid-image {
+  display: flex;
+  width: 100%;
+  height: 100px;
+  overflow: hidden;
+  background: #f3f4f6;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.view-grid .item-grid-img { width: 100%; height: 100%; object-fit: cover; }
+.view-grid .item-grid-placeholder { color: #d1d5db; }
+.view-grid .item-thumb-wrap { display: none; }
+.view-grid .item-row-main { padding: 0.35rem 0.4rem; }
+.view-grid .item-info { gap: 0.1rem; }
+.view-grid .item-sub { display: none; }
+.view-grid .item-name { font-size: 0.75rem; white-space: normal; }
+.view-grid .item-bottom-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+.view-grid .item-actions { gap: 0.2rem; }
+.view-grid .action-btn { padding: 0.2rem 0.35rem; font-size: 0.62rem; }
+
+@media (max-width: 500px) {
+  .view-compact { grid-template-columns: 1fr; }
+  .view-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
+
+/* ── Item grid image (hidden by default, shown in grid view) ─── */
+.item-grid-image { display: none; }
+.item-grid-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.item-grid-placeholder { color: #d1d5db; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.item-grid-image.thumb-clickable { cursor: zoom-in; }
+
+/* ── Infinite scroll sentinel ──────────────────────────────────── */
+.scroll-sentinel { height: 40px; display: flex; align-items: center; justify-content: center; }
+.loading-more { display: flex; align-items: center; justify-content: center; padding: 0.5rem; }
+.spinner-sm { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+/* ── View switcher ────────────────────────────────────────────── */
+.chips-and-views { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1; }
+.view-switcher { display: flex; gap: 0.25rem; flex-shrink: 0; }
+.view-btn { padding: 0.35rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; display: flex; align-items: center; transition: all 0.15s; }
+.view-btn:hover { border-color: #9ca3af; color: #374151; }
+.view-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
 
 .item-card {
   background: white;
@@ -470,7 +584,6 @@ onMounted(async () => {
 .image-modal-close:hover { background: rgba(255,255,255,0.3); }
 
 /* ── Misc ────────────────────────────────────────────────────────────────────── */
-.load-more { padding: 1rem; display: flex; justify-content: center; }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; z-index: 9999; white-space: nowrap; }
 .toast-success { background: #065f46; color: white; }
 .toast-error   { background: #7f1d1d; color: white; }

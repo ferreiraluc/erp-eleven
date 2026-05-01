@@ -105,25 +105,33 @@
           <div class="form-row">
             <div class="form-group">
               <label>Custo</label>
-              <input v-model.number="form.cost_price" type="number" step="0.01" min="0" class="form-input" :class="{ error: errors.cost_price }" placeholder="0.00" />
+              <div class="price-with-currency">
+                <select v-model="form.cost_currency" class="currency-select">
+                  <option value="PYG">G$</option>
+                  <option value="BRL">R$</option>
+                  <option value="USD">U$</option>
+                  <option value="EUR">€</option>
+                </select>
+                <input v-model.number="form.cost_price" type="number" step="0.01" min="0" class="form-input price-input" :class="{ error: errors.cost_price }" placeholder="0.00" />
+              </div>
               <span v-if="errors.cost_price" class="error-msg">{{ errors.cost_price }}</span>
             </div>
             <div class="form-group">
               <label>Preço de Venda</label>
-              <input v-model.number="form.sale_price" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" />
+              <div class="price-with-currency">
+                <select v-model="form.sale_currency" class="currency-select">
+                  <option value="PYG">G$</option>
+                  <option value="BRL">R$</option>
+                  <option value="USD">U$</option>
+                  <option value="EUR">€</option>
+                </select>
+                <input v-model.number="form.sale_price" type="number" step="0.01" min="0" class="form-input price-input" placeholder="0.00" />
+              </div>
             </div>
           </div>
 
           <div class="form-row">
-            <div class="form-group">
-              <label>Moeda</label>
-              <select v-model="form.currency" class="form-input">
-                <option value="USD">U$ (Dólar)</option>
-                <option value="PYG">G$ (Guarani)</option>
-                <option value="BRL">R$ (Real)</option>
-                <option value="EUR">EUR (Euro)</option>
-              </select>
-            </div>
+            <div class="form-group" style="display:none"><!-- currency kept for compat -->
             <div class="form-group">
               <label>Fornecedor</label>
               <select v-model="form.supplier_id" class="form-input">
@@ -260,7 +268,9 @@ const form = reactive({
   supplier_id: '',
   cost_price: 0,
   sale_price: 0,
-  currency: 'USD',
+  currency: 'PYG',
+  cost_currency: 'PYG',
+  sale_currency: 'PYG',
   min_stock: 0,
   max_stock: 0,
   is_active: true,
@@ -283,7 +293,9 @@ onMounted(() => {
       supplier_id: props.item.supplier_id || '',
       cost_price: Number(props.item.cost_price) || 0,
       sale_price: Number(props.item.sale_price) || 0,
-      currency: props.item.currency || 'USD',
+      currency: props.item.currency || 'PYG',
+      cost_currency: (props.item as any).cost_currency || props.item.currency || 'PYG',
+      sale_currency: (props.item as any).sale_currency || props.item.currency || 'PYG',
       min_stock: props.item.min_stock || 0,
       max_stock: props.item.max_stock || 0,
       image_data: props.item.image_data || '',
@@ -464,6 +476,10 @@ function capturePhoto() {
 .form-group label { font-size: 0.8rem; font-weight: 500; color: #374151; display: flex; align-items: center; gap: 0.35rem; }
 .auto-tag { font-size: 0.65rem; background: #dbeafe; color: #1d4ed8; border-radius: 4px; padding: 0.1rem 0.35rem; }
 .form-input { padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; outline: none; width: 100%; box-sizing: border-box; }
+.price-with-currency { display: flex; gap: 0; }
+.currency-select { padding: 0.5rem 0.4rem; border: 1px solid #d1d5db; border-right: none; border-radius: 6px 0 0 6px; font-size: 0.8rem; font-weight: 600; color: #374151; background: #f9fafb; outline: none; cursor: pointer; flex-shrink: 0; }
+.currency-select:focus { border-color: #3b82f6; }
+.price-input { border-radius: 0 6px 6px 0 !important; }
 .form-input:focus { border-color: #3b82f6; }
 .form-input.error { border-color: #ef4444; }
 .error-msg { font-size: 0.75rem; color: #ef4444; }

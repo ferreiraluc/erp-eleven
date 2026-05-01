@@ -436,6 +436,8 @@ export interface InventoryItem {
   cost_price: number
   sale_price: number
   currency: string
+  cost_currency: string
+  sale_currency: string
   min_stock: number
   max_stock: number
   current_stock: number
