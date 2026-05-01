@@ -289,12 +289,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       const response = await api.post(`/api/rastreamento/${id}/atualizar`)
       const idx = rastreamentos.value.findIndex(r => r.id === id)
       if (idx !== -1) {
-        rastreamentos.value[idx] = {
-          ...rastreamentos.value[idx],
-          historico_eventos: response.data.eventos,
-          status: response.data.status,
-          ultima_atualizacao: response.data.ultima_atualizacao,
-        }
+        rastreamentos.value.splice(idx, 1, response.data)
       }
       return response.data
     } catch (err: any) {

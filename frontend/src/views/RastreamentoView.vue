@@ -756,8 +756,7 @@ async function atualizarOnline(rastreamento: Rastreamento) {
   refreshingIds.value.add(rastreamento.id)
   try {
     await rastreamentoStore.atualizarOnline(rastreamento.id)
-    await rastreamentoStore.obterResumoDashboard()
-    resumo.value = rastreamentoStore.resumoDashboard
+    await carregarDados()
   } catch (err: any) {
     console.error('Erro ao atualizar rastreamento:', err)
   } finally {

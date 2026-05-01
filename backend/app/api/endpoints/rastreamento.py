@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 from typing import List, Optional, Any
 import uuid
+import logging
 from datetime import datetime, date, timedelta
+
+logger = logging.getLogger(__name__)
 
 from ...database import get_db
 from ...models.rastreamento import Rastreamento, RastreamentoStatus
@@ -412,17 +415,15 @@ def atualizar_rastreamento_online(
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
+    logger.info(f"[Wonca] {r.codigo_rastreio}: {len(events)} eventos, status={inferred.value}")
+
     r.historico_eventos = events
     r.status = inferred
     r.ultima_atualizacao = datetime.utcnow()
     db.commit()
     db.refresh(r)
 
-    return {
-        "status": inferred.value,
-        "eventos": events,
-        "ultima_atualizacao": r.ultima_atualizacao,
-    }
+    return _build_response(r)
 
 
 # ─── Atualizar todos via Wonca ──────────────────────────────────────────────────

@@ -1,6 +1,9 @@
 import requests as http_requests
+import logging
 from ..models.rastreamento import RastreamentoStatus
 from ..config import settings
+
+logger = logging.getLogger(__name__)
 
 WONCA_URL = "https://api-labs.wonca.com.br/wonca.labs.v1.LabsService/Track"
 
