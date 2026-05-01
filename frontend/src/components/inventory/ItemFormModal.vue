@@ -130,15 +130,12 @@
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group" style="display:none"><!-- currency kept for compat -->
-            <div class="form-group">
-              <label>Fornecedor</label>
-              <select v-model="form.supplier_id" class="form-input">
-                <option value="">Nenhum</option>
-                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label>Fornecedor</label>
+            <select v-model="form.supplier_id" class="form-input">
+              <option value="">Nenhum</option>
+              <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
           </div>
 
           <div class="form-row">
