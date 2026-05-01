@@ -1154,7 +1154,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .rastreamentos-section {
-    padding: 0 0 1rem;
+    padding: 0 0.5rem 1rem;
   }
 }
 
