@@ -84,44 +84,64 @@
         class="item-card"
         :class="'alert-' + item.alert_level"
       >
-        <div class="item-card-header">
-          <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
-          <div class="item-card-title">
-            <div v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">
-              {{ alertLabel(item.alert_level) }}
+        <div class="item-row-main">
+          <!-- Imagem (clicável) -->
+          <div class="item-thumb-wrap" @click="item.image_data && (imageModalSrc = item.image_data)" :class="{ 'thumb-clickable': item.image_data }">
+            <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
+            <div v-else class="item-thumb-placeholder">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
             </div>
-            <span class="item-name">{{ item.name }}</span>
+          </div>
+
+          <!-- Info -->
+          <div class="item-info">
+            <!-- Linha 1: Nome + Cor -->
+            <div class="item-name-row">
+              <span class="item-name">{{ item.name }}</span>
+              <span v-if="item.color" class="item-color-tag">{{ item.color }}</span>
+            </div>
+
+            <!-- Linha 2: barcode · categoria · preço -->
+            <div class="item-sub">
+              <span v-if="item.barcode" class="item-barcode">{{ item.barcode }}</span>
+              <template v-if="item.category">
+                <span class="item-sub-sep" v-if="item.barcode"> · </span>
+                <span>{{ item.category }}</span>
+              </template>
+              <template v-if="(item as any).sale_price">
+                <span class="item-sub-sep"> · </span>
+                <span class="item-price">R$ {{ Number((item as any).sale_price).toFixed(2).replace('.', ',') }}</span>
+              </template>
+            </div>
+
+            <!-- Linha 3: estoque + local + badge + ações -->
+            <div class="item-bottom-row">
+              <div class="item-left-info">
+                <span class="stock-number" :class="'stock-' + item.alert_level">
+                  Est.&nbsp;{{ item.current_stock }}
+                </span>
+                <span v-if="item.location" class="item-location-inline">· {{ item.location }}</span>
+                <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">
+                  {{ alertLabel(item.alert_level) }}
+                </span>
+              </div>
+              <div class="item-actions">
+                <button @click="handleQuickExit(item)" class="action-btn exit-btn" :disabled="item.current_stock <= 0" title="Consumir 1">−1</button>
+                <button @click="openMovement(item)" class="action-btn move-btn" title="Movimentar">Mov.</button>
+                <button @click="openEdit(item)" class="action-btn edit-btn" title="Editar">Editar</button>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="item-meta">
-          <span>{{ item.sku_internal }}</span>
-          <span v-if="item.category">· {{ item.category }}</span>
-          <span v-if="item.size">· {{ item.size }}</span>
-        </div>
-
-        <div v-if="item.location" class="item-location">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          </svg>
-          Local: {{ item.location }}
-        </div>
-
-        <div class="item-stock-row">
-          <span class="stock-number" :class="'stock-' + item.alert_level">
-            Estoque: {{ item.current_stock }}
-          </span>
-          <span class="stock-limits">mín:{{ item.min_stock }} máx:{{ item.max_stock }}</span>
-        </div>
-
-        <div class="item-actions">
-          <button @click="handleQuickExit(item)" class="action-btn exit-btn" :disabled="item.current_stock <= 0">
-            Consumir 1
-          </button>
-          <button @click="openMovement(item)" class="action-btn move-btn">Movimentar</button>
-          <button @click="openEdit(item)" class="action-btn edit-btn">Editar</button>
-        </div>
       </div>
+    </div>
+
+    <!-- Image modal -->
+    <div v-if="imageModalSrc" class="image-modal-overlay" @click="imageModalSrc = null">
+      <img :src="imageModalSrc" alt="" class="image-modal-img" @click.stop />
+      <button class="image-modal-close" @click="imageModalSrc = null">✕</button>
     </div>
 
     <!-- Load more -->
@@ -183,6 +203,7 @@ const editingItem = ref<InventoryItem | null>(null)
 const movementItem = ref<InventoryItem | null>(null)
 const suppliers = ref<Array<{ id: string; name: string }>>([])
 const toast = ref<{ message: string; type: string } | null>(null)
+const imageModalSrc = ref<string | null>(null)
 
 const statusChips = computed(() => [
   { value: '', label: 'Todos' },
@@ -320,42 +341,126 @@ onMounted(async () => {
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 3rem 1rem; color: #6b7280; gap: 0.5rem; }
-.items-list { padding: 0 1rem 1rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
-.item-card { background: white; border-radius: 10px; padding: 1rem; border: 1px solid #e5e7eb; }
-.item-card.alert-out { border-left: 4px solid #ef4444; }
-.item-card.alert-low { border-left: 4px solid #f59e0b; }
-.item-card.alert-high { border-left: 4px solid #8b5cf6; }
-.item-card.alert-ok { border-left: 4px solid #10b981; }
-.item-card.alert-inactive { border-left: 4px solid #9ca3af; opacity: 0.7; }
-.item-card-header { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.375rem; }
-.item-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; flex-shrink: 0; }
-.item-card-title { display: flex; flex-direction: column; gap: 0.25rem; }
-.alert-badge { font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; white-space: nowrap; align-self: flex-start; }
-.badge-out { background: #fee2e2; color: #dc2626; }
-.badge-low { background: #fef3c7; color: #d97706; }
-.badge-high { background: #ede9fe; color: #7c3aed; }
-.badge-ok { background: #d1fae5; color: #059669; }
-.badge-inactive { background: #f3f4f6; color: #6b7280; }
-.item-name { font-weight: 600; font-size: 0.95rem; color: #111827; }
-.item-meta { font-size: 0.78rem; color: #6b7280; margin-bottom: 0.25rem; }
-.item-location { font-size: 0.78rem; color: #6b7280; display: flex; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem; }
-.item-stock-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
-.stock-number { font-size: 0.875rem; font-weight: 600; }
-.stock-out { color: #dc2626; }
-.stock-low { color: #d97706; }
-.stock-high { color: #7c3aed; }
-.stock-ok { color: #059669; }
+/* ── Items list ─────────────────────────────────────────────────────────────── */
+.items-list { padding: 0 1rem 1rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.3rem; }
+
+.item-card {
+  background: white;
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #e5e7eb;
+}
+.item-card.alert-out    { border-left: 3px solid #ef4444; }
+.item-card.alert-low    { border-left: 3px solid #f59e0b; }
+.item-card.alert-high   { border-left: 3px solid #8b5cf6; }
+.item-card.alert-ok     { border-left: 3px solid #10b981; }
+.item-card.alert-inactive { border-left: 3px solid #9ca3af; opacity: 0.7; }
+
+/* Main row: thumb + info side by side */
+.item-row-main { display: flex; align-items: center; gap: 0.5rem; }
+
+/* Thumbnail */
+.item-thumb-wrap {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.item-thumb-wrap.thumb-clickable { cursor: zoom-in; }
+.item-thumb-wrap.thumb-clickable:hover { border-color: #3b82f6; }
+.item-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.item-thumb-placeholder { color: #d1d5db; }
+
+/* Info column */
+.item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+
+/* Row 1: Name + Color */
+.item-name-row { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; }
+.item-name { font-weight: 600; font-size: 0.82rem; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.item-color-tag { font-size: 0.65rem; font-weight: 500; color: #6b7280; background: #f3f4f6; border-radius: 3px; padding: 0.1rem 0.35rem; white-space: nowrap; flex-shrink: 0; }
+
+/* Row 2: barcode · category · price */
+.item-sub { font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; flex-wrap: wrap; gap: 0; line-height: 1.3; }
+.item-barcode { font-family: monospace; letter-spacing: 0.02em; }
+.item-sub-sep { margin: 0 0.15rem; color: #d1d5db; }
+.item-price { color: #059669; font-weight: 600; }
+
+/* Row 3: stock + location + badge + actions */
+.item-bottom-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin-top: 0.1rem; }
+.item-left-info { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.stock-number { font-size: 0.72rem; font-weight: 700; }
+.stock-out      { color: #dc2626; }
+.stock-low      { color: #d97706; }
+.stock-high     { color: #7c3aed; }
+.stock-ok       { color: #059669; }
 .stock-inactive { color: #6b7280; }
-.stock-limits { font-size: 0.75rem; color: #9ca3af; }
-.item-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.action-btn { padding: 0.375rem 0.75rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; border: none; font-weight: 500; }
-.exit-btn { background: #fee2e2; color: #dc2626; }
+.item-location-inline { font-size: 0.65rem; color: #9ca3af; }
+
+/* Alert badge */
+.alert-badge { font-size: 0.6rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 3px; white-space: nowrap; }
+.badge-out      { background: #fee2e2; color: #dc2626; }
+.badge-low      { background: #fef3c7; color: #d97706; }
+.badge-high     { background: #ede9fe; color: #7c3aed; }
+.badge-ok       { background: #d1fae5; color: #059669; }
+.badge-inactive { background: #f3f4f6; color: #6b7280; }
+
+/* Action buttons */
+.item-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.action-btn { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; border: none; font-weight: 600; white-space: nowrap; }
+.exit-btn  { background: #fee2e2; color: #dc2626; }
 .exit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.move-btn { background: #dbeafe; color: #1d4ed8; }
-.edit-btn { background: #f3f4f6; color: #374151; }
+.move-btn  { background: #dbeafe; color: #1d4ed8; }
+.edit-btn  { background: #f3f4f6; color: #374151; }
+
+/* ── Image modal ─────────────────────────────────────────────────────────────── */
+.image-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  cursor: zoom-out;
+  padding: 1rem;
+}
+.image-modal-img {
+  max-width: min(90vw, 600px);
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  cursor: default;
+}
+.image-modal-close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  font-size: 1.25rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.image-modal-close:hover { background: rgba(255,255,255,0.3); }
+
+/* ── Misc ────────────────────────────────────────────────────────────────────── */
 .load-more { padding: 1rem; display: flex; justify-content: center; }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; z-index: 9999; white-space: nowrap; }
 .toast-success { background: #065f46; color: white; }
-.toast-error { background: #7f1d1d; color: white; }
+.toast-error   { background: #7f1d1d; color: white; }
 .toast-warning { background: #78350f; color: white; }
 </style>
