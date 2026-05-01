@@ -606,14 +606,12 @@ async def import_nfe(
     file: UploadFile = File(...),
     category: Optional[str] = Form(None),
     currency: str = Form("BRL"),
-    split_color: bool = Form(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
     """Import inventory items from Brazilian NF-e XML.
 
-    xProd parsing: when split_color=True, the first 2 words become the item name
-    and the remaining words become the color field.
+    xProd parsing: first 2 words = item name, remaining words = color field.
     """
     content = await file.read()
     try:
@@ -674,10 +672,7 @@ async def import_nfe(
                 skipped += 1
                 continue
 
-            if split_color:
-                name, color = _parse_xprod(xprod_raw)
-            else:
-                name, color = xprod_raw, None
+            name, color = _parse_xprod(xprod_raw)
 
             barcode = _txt(prod, "cEAN")
             if barcode in ("SEM GTIN", "SEMGTIN", ""):

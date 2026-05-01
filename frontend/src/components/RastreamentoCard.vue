@@ -63,6 +63,9 @@
             <div class="rastreamento-info">
               <p class="rastreamento-codigo">{{ rastreamento.codigo_rastreio }}</p>
               <p class="rastreamento-cliente">{{ rastreamento.destinatario || 'Sem destinatário' }}</p>
+              <p v-if="rastreamento.historico_eventos?.length" class="rastreamento-ultimo-evento">
+                {{ rastreamento.historico_eventos[0]?.situacao }}
+              </p>
             </div>
             <div class="rastreamento-status">
               <button
@@ -595,6 +598,16 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.rastreamento-ultimo-evento {
+  font-size: 0.55rem;
+  color: #2563eb;
+  margin: 0.1rem 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
 }
 
 .rastreamento-status {

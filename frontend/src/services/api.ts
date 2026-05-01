@@ -564,13 +564,12 @@ export const inventoryAPI = {
 
   importNfe: (
     file: File,
-    opts: { category?: string; currency?: string; splitColor?: boolean }
+    opts: { category?: string; currency?: string }
   ): Promise<{ created: number; skipped: number; errors: string[] }> => {
     const fd = new FormData()
     fd.append('file', file)
     if (opts.category) fd.append('category', opts.category)
     fd.append('currency', opts.currency ?? 'BRL')
-    fd.append('split_color', String(opts.splitColor !== false))
     return api.post('/api/inventory/import/nfe', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
   },
 }

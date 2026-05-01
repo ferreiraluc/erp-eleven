@@ -74,25 +74,13 @@
               </select>
             </div>
 
-            <!-- Split color toggle -->
-            <div class="config-row config-row-check">
-              <label class="config-label">
-                Separar cor do nome do produto
-                <span class="config-hint">As 2 primeiras palavras do xProd viram o nome; o restante vira a cor</span>
-              </label>
-              <label class="toggle">
-                <input type="checkbox" v-model="nfeConfig.splitColor" />
-                <span class="toggle-track"></span>
-              </label>
-            </div>
-
-            <!-- Preview of split logic -->
-            <div v-if="nfeConfig.splitColor" class="split-preview">
-              <span class="preview-label">Exemplo:</span>
+            <!-- Split info (always active) -->
+            <div class="split-preview">
+              <span class="preview-label">Separação automática:</span>
               <span class="preview-text">
                 <strong>xProd:</strong> "TENIS ADIDAS PRETO VERNIZ"
                 &rarr;
-                <strong>Nome:</strong> "Tenis Adidas" &nbsp;
+                <strong>Nome:</strong> "Tenis Adidas" &nbsp;·&nbsp;
                 <strong>Cor:</strong> "Preto Verniz"
               </span>
             </div>
@@ -183,7 +171,6 @@ const result = ref<{ created: number; skipped: number; errors: string[] } | null
 const nfeConfig = reactive({
   category: '',
   currency: 'BRL',
-  splitColor: true,
 })
 
 function onFileChange(e: Event) {
@@ -209,7 +196,6 @@ async function handleImport() {
       result.value = await inventoryAPI.importNfe(selectedFile.value, {
         category: nfeConfig.category || undefined,
         currency: nfeConfig.currency,
-        splitColor: nfeConfig.splitColor,
       })
     }
   } catch (e: any) {

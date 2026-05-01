@@ -284,6 +284,24 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
     }
   }
 
+  async function atualizarOnline(id: string) {
+    try {
+      const response = await api.post(`/api/rastreamento/${id}/atualizar`)
+      const idx = rastreamentos.value.findIndex(r => r.id === id)
+      if (idx !== -1) {
+        rastreamentos.value[idx] = {
+          ...rastreamentos.value[idx],
+          historico_eventos: response.data.eventos,
+          status: response.data.status,
+          ultima_atualizacao: response.data.ultima_atualizacao,
+        }
+      }
+      return response.data
+    } catch (err: any) {
+      throw err
+    }
+  }
+
   async function atualizarTodosRastreamentos(servicoId: string = '0001') {
     try {
       loading.value = true
@@ -387,6 +405,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
     consultarRastreamentoOnline,
     consultarESalvarRastreamento,
     obterResumoDashboard,
+    atualizarOnline,
     atualizarTodosRastreamentos,
 
     // Helpers

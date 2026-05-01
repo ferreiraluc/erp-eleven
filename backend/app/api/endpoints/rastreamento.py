@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
-from typing import List, Optional
+from typing import List, Optional, Any
 import uuid
 from datetime import datetime, date, timedelta
 
@@ -279,3 +279,179 @@ def obter_resumo_dashboard(
         com_erro=com_erro,
         rastreamentos_recentes=recentes
     )
+
+
+# ─── Wonca API helpers ──────────────────────────────────────────────────────────
+
+def _build_response(r: Rastreamento) -> dict:
+    """Build the standard RastreamentoComPedido dict for a single object."""
+    return {
+        "id": r.id,
+        "codigo_rastreio": r.codigo_rastreio,
+        "status": r.status,
+        "servico_provedor": r.servico_provedor,
+        "ultima_atualizacao": r.ultima_atualizacao,
+        "descricao": r.descricao,
+        "destinatario": r.destinatario,
+        "origem": r.origem,
+        "destino": r.destino,
+        "historico_eventos": r.historico_eventos or [],
+        "pedido_id": r.pedido_id,
+        "data_criacao": r.data_criacao,
+        "ativo": r.ativo,
+        "created_at": r.created_at,
+        "updated_at": r.updated_at,
+        "created_by": r.created_by,
+        "numero_pedido": r.pedido.numero_pedido if r.pedido else None,
+        "cliente_nome_pedido": r.pedido.cliente_nome if r.pedido else None,
+        "cliente_telefone": r.pedido.cliente_telefone if r.pedido else None,
+        "endereco_entrega": r.pedido.endereco_entrega if r.pedido else None,
+    }
+
+
+# ─── Consultar (sem salvar) ─────────────────────────────────────────────────────
+
+@router.post("/consultar")
+def consultar_rastreamento(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Consulta rastreamento na Wonca API sem persistir no banco."""
+    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+
+    codigo = body.get("codigo", "")
+    if not codigo:
+        raise HTTPException(status_code=400, detail="Código de rastreio não informado")
+
+    try:
+        raw = fetch_tracking_raw(codigo)
+        events = normalize_events(raw)
+        inferred = infer_status(events)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return {
+        "codigo": codigo,
+        "status": inferred.value,
+        "eventos": events,
+        "sucesso": bool(events),
+    }
+
+
+# ─── Consultar e Salvar ─────────────────────────────────────────────────────────
+
+@router.post("/consultar-e-salvar")
+def consultar_e_salvar_rastreamento(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Consulta na Wonca API e cria ou atualiza o rastreamento no banco."""
+    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+
+    codigo = body.get("codigo", "")
+    if not codigo:
+        raise HTTPException(status_code=400, detail="Código de rastreio não informado")
+
+    try:
+        raw = fetch_tracking_raw(codigo)
+        events = normalize_events(raw)
+        inferred = infer_status(events)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    existing = db.query(Rastreamento).filter(
+        Rastreamento.codigo_rastreio == codigo,
+        Rastreamento.ativo == True,
+    ).first()
+
+    if existing:
+        existing.historico_eventos = events
+        existing.status = inferred
+        existing.ultima_atualizacao = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return _build_response(existing)
+
+    new_r = Rastreamento(
+        codigo_rastreio=codigo,
+        status=inferred,
+        historico_eventos=events,
+        ultima_atualizacao=datetime.utcnow(),
+        created_by=current_user.id,
+    )
+    db.add(new_r)
+    db.commit()
+    db.refresh(new_r)
+    return _build_response(new_r)
+
+
+# ─── Atualizar individual via Wonca ────────────────────────────────────────────
+
+@router.post("/{rastreamento_id}/atualizar")
+def atualizar_rastreamento_online(
+    rastreamento_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Busca dados atualizados na Wonca API para um rastreamento existente."""
+    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+
+    r = db.query(Rastreamento).filter(
+        Rastreamento.id == rastreamento_id,
+        Rastreamento.ativo == True,
+    ).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Rastreamento não encontrado")
+
+    try:
+        raw = fetch_tracking_raw(r.codigo_rastreio)
+        events = normalize_events(raw)
+        inferred = infer_status(events)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    r.historico_eventos = events
+    r.status = inferred
+    r.ultima_atualizacao = datetime.utcnow()
+    db.commit()
+    db.refresh(r)
+
+    return {
+        "status": inferred.value,
+        "eventos": events,
+        "ultima_atualizacao": r.ultima_atualizacao,
+    }
+
+
+# ─── Atualizar todos via Wonca ──────────────────────────────────────────────────
+
+@router.post("/atualizar-todos")
+def atualizar_todos_rastreamentos(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Atualiza todos os rastreamentos ativos (exceto entregues) via Wonca API."""
+    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+
+    ativos = db.query(Rastreamento).filter(
+        Rastreamento.ativo == True,
+        Rastreamento.status != RastreamentoStatus.ENTREGUE,
+    ).all()
+
+    updated, errors = 0, []
+    for r in ativos:
+        try:
+            raw = fetch_tracking_raw(r.codigo_rastreio)
+            events = normalize_events(raw)
+            inferred = infer_status(events)
+            r.historico_eventos = events
+            r.status = inferred
+            r.ultima_atualizacao = datetime.utcnow()
+            updated += 1
+        except Exception as e:
+            errors.append(f"{r.codigo_rastreio}: {str(e)}")
+
+    db.commit()
+    return {"updated": updated, "errors": errors}

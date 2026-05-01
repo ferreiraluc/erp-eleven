@@ -241,9 +241,22 @@
                     <span class="mobile-content-value mobile-date-value">{{ formatarData(rastreamento.created_at) }}</span>
                   </div>
                   
+                  <!-- Progress track -->
+                  <div class="progress-track" :class="{ 'track-erro': rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO' }">
+                    <div class="track-steps">
+                      <div v-for="(step, i) in ['Postado','Em trânsito','Saiu p/ entrega','Entregue']" :key="i" class="track-step">
+                        <div class="step-dot" :class="trackingProgressStep(rastreamento) > i ? 'dot-done' : (trackingProgressStep(rastreamento) === i+1 ? 'dot-active' : 'dot-future')"></div>
+                        <span class="step-label">{{ step }}</span>
+                      </div>
+                    </div>
+                    <div class="track-bar">
+                      <div class="track-fill" :style="{ width: rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO' ? '0%' : ((trackingProgressStep(rastreamento) - 1) / 3 * 100) + '%' }"></div>
+                    </div>
+                  </div>
+
                   <!-- Ações -->
                   <div class="mobile-content-actions">
-                    <button 
+                    <button
                       @click="editarRastreamento(rastreamento)"
                       class="mobile-action-btn-expanded edit"
                       title="Editar"
@@ -253,7 +266,7 @@
                       </svg>
                       Editar
                     </button>
-                    <button 
+                    <button
                       @click="removerRastreamento(rastreamento)"
                       class="mobile-action-btn-expanded delete"
                       title="Excluir"
@@ -263,6 +276,36 @@
                       </svg>
                       Excluir
                     </button>
+                    <button
+                      @click.stop="atualizarOnline(rastreamento)"
+                      :disabled="isRefreshing(rastreamento.id)"
+                      class="mobile-action-btn-expanded refresh"
+                      title="Atualizar via API"
+                    >
+                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'spin': isRefreshing(rastreamento.id) }">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {{ isRefreshing(rastreamento.id) ? 'Atualizando...' : 'Atualizar' }}
+                    </button>
+                  </div>
+
+                  <!-- Events timeline -->
+                  <div v-if="rastreamento.historico_eventos?.length" class="events-timeline">
+                    <p class="timeline-title">Histórico de eventos</p>
+                    <div class="timeline-list">
+                      <div v-for="(ev, idx) in rastreamento.historico_eventos" :key="idx" class="timeline-event">
+                        <div class="tl-dot" :class="idx === 0 ? 'tl-dot-active' : ''"></div>
+                        <div class="tl-content">
+                          <p class="tl-situacao">{{ ev.situacao }}</p>
+                          <p class="tl-meta">
+                            <span v-if="ev.local">{{ ev.local }}</span>
+                            <span v-if="ev.local && ev.data"> · </span>
+                            <span v-if="ev.data">{{ ev.data }}</span>
+                          </p>
+                          <p v-if="ev.detalhes" class="tl-detalhe">{{ ev.detalhes }}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -340,7 +383,17 @@
 
           <!-- Ações -->
           <div class="row-actions">
-            <button 
+            <button
+              @click="atualizarOnline(rastreamento)"
+              :disabled="isRefreshing(rastreamento.id)"
+              class="action-btn refresh"
+              title="Atualizar via API"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'spin': isRefreshing(rastreamento.id) }">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button
               @click="editarRastreamento(rastreamento)"
               class="action-btn"
               title="Editar"
@@ -349,8 +402,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
-            
-            <button 
+            <button
               @click="removerRastreamento(rastreamento)"
               class="action-btn delete"
               title="Excluir"
@@ -489,6 +541,7 @@ const modalError = ref<string | null>(null)
 const editandoRastreamento = ref<Rastreamento | null>(null)
 const codigoInput = ref<HTMLInputElement>()
 const expandedCards = ref<Set<string>>(new Set())
+const refreshingIds = ref<Set<string>>(new Set())
 
 // Dados do resumo
 const resumo = ref(rastreamentoStore.resumoDashboard)
@@ -737,6 +790,32 @@ function toggleCard(cardId: string) {
 
 function isCardExpanded(cardId: string): boolean {
   return expandedCards.value.has(cardId)
+}
+
+async function atualizarOnline(rastreamento: Rastreamento) {
+  refreshingIds.value.add(rastreamento.id)
+  try {
+    await rastreamentoStore.atualizarOnline(rastreamento.id)
+    await rastreamentoStore.obterResumoDashboard()
+    resumo.value = rastreamentoStore.resumoDashboard
+  } catch (err: any) {
+    console.error('Erro ao atualizar rastreamento:', err)
+  } finally {
+    refreshingIds.value.delete(rastreamento.id)
+  }
+}
+
+function isRefreshing(id: string): boolean {
+  return refreshingIds.value.has(id)
+}
+
+function trackingProgressStep(rastreamento: Rastreamento): number {
+  if (rastreamento.status === 'ENTREGUE') return 4
+  if (rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO') return 0
+  const latest = (rastreamento.historico_eventos?.[0]?.situacao || '').toLowerCase()
+  if (latest.includes('saiu para entrega') || latest.includes('veículo de entrega')) return 3
+  if (rastreamento.status === 'EM_TRANSITO') return 2
+  return 1
 }
 
 // Lifecycle
@@ -2322,6 +2401,115 @@ onMounted(() => {
   .stat-value { font-size: 0.95rem; }
 }
 
+/* ── Refresh button ──────────────────────────────────────────────────────────── */
+.action-btn.refresh { color: #2563eb; }
+.action-btn.refresh:hover { background-color: #eff6ff; color: #1d4ed8; }
+.action-btn.refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+.mobile-action-btn-expanded.refresh { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.mobile-action-btn-expanded.refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@keyframes spin-btn { to { transform: rotate(360deg); } }
+.spin { animation: spin-btn 0.8s linear infinite; }
+
+/* ── Progress track ──────────────────────────────────────────────────────────── */
+.progress-track {
+  margin: 0.75rem 0 0.5rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+.progress-track.track-erro { background: #fef2f2; border-color: #fecaca; }
+.track-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+.track-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+.step-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: white;
+  transition: all 0.2s;
+}
+.step-dot.dot-done { background: #3b82f6; border-color: #3b82f6; }
+.step-dot.dot-active { background: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.step-dot.dot-future { background: white; border-color: #d1d5db; }
+.progress-track.track-erro .step-dot { border-color: #ef4444; }
+.step-label { font-size: 0.6rem; color: #6b7280; text-align: center; line-height: 1.2; white-space: nowrap; }
+.track-bar {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 7px;
+}
+.track-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.progress-track.track-erro .track-fill { background: #ef4444; }
+
+/* ── Events timeline ─────────────────────────────────────────────────────────── */
+.events-timeline {
+  margin-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+}
+.timeline-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.5rem;
+}
+.timeline-list { display: flex; flex-direction: column; gap: 0; }
+.timeline-event {
+  display: flex;
+  gap: 0.6rem;
+  position: relative;
+  padding-bottom: 0.75rem;
+}
+.timeline-event:last-child { padding-bottom: 0; }
+.timeline-event:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 2px;
+  background: #e5e7eb;
+}
+.tl-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d1d5db;
+  border: 2px solid #9ca3af;
+  flex-shrink: 0;
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+.tl-dot.tl-dot-active { background: #3b82f6; border-color: #3b82f6; }
+.tl-content { flex: 1; min-width: 0; }
+.tl-situacao { font-size: 0.8rem; font-weight: 500; color: #111827; margin: 0 0 0.1rem; }
+.tl-meta { font-size: 0.7rem; color: #6b7280; margin: 0 0 0.1rem; }
+.tl-detalhe { font-size: 0.68rem; color: #9ca3af; margin: 0; }
 
 
 </style>
