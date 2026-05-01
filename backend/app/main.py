@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import time
 import logging
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
@@ -14,20 +16,70 @@ log_level = os.getenv("LOG_LEVEL", "INFO")  # Default to INFO for better trackin
 setup_logging(level=log_level)
 logger = get_logger(__name__)
 
+def _job_atualizar_rastreamentos():
+    """Scheduled job: update all active (non-delivered) trackings via Wonca API."""
+    from .database import SessionLocal
+    from .models.rastreamento import Rastreamento, RastreamentoStatus
+    from .services.wonca_service import parse_tracking
+    from datetime import datetime
+
+    db = SessionLocal()
+    try:
+        ativos = db.query(Rastreamento).filter(
+            Rastreamento.ativo == True,
+            Rastreamento.status != RastreamentoStatus.ENTREGUE,
+        ).all()
+
+        updated, errors = 0, []
+        for r in ativos:
+            try:
+                events, meta, inferred = parse_tracking(r.codigo_rastreio)
+                r.historico_eventos = events
+                r.rastreio_info = meta
+                r.status = inferred
+                r.ultima_atualizacao = datetime.utcnow()
+                updated += 1
+            except Exception as e:
+                errors.append(f"{r.codigo_rastreio}: {str(e)}")
+
+        db.commit()
+        logger.info(f"[SCHEDULER] Atualização diária: {updated} atualizados, {len(errors)} erros")
+        if errors:
+            logger.warning(f"[SCHEDULER] Erros: {errors}")
+    except Exception as e:
+        logger.error(f"[SCHEDULER] Falha na atualização diária: {e}")
+    finally:
+        db.close()
+
+
+scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     logger.info("[STARTUP] Starting ERP Eleven API")
-    
+
     # Create database tables
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("[DB] Database tables created/verified")
     except Exception as e:
         logger.error(f"[DB_ERROR] Database setup failed: {e}")
-    
+
+    # Start daily tracking update scheduler (19:00 BRT)
+    scheduler.add_job(
+        _job_atualizar_rastreamentos,
+        CronTrigger(hour=19, minute=0, timezone="America/Sao_Paulo"),
+        id="atualizar_rastreamentos_diario",
+        replace_existing=True,
+    )
+    scheduler.start()
+    logger.info("[SCHEDULER] Job de atualização diária de rastreamentos agendado (19:00 BRT)")
+
     yield
-    
+
+    scheduler.shutdown(wait=False)
     logger.info("[SHUTDOWN] Shutting down ERP Eleven API")
 
 app = FastAPI(

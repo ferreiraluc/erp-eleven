@@ -26,8 +26,7 @@ def fetch_tracking_raw(code: str) -> dict:
             timeout=15,
         )
         resp.raise_for_status()
-        data = resp.json()
-        return data
+        return resp.json()
     except http_requests.RequestException as e:
         raise ValueError(f"Erro ao consultar API de rastreio: {str(e)}")
 
@@ -39,8 +38,8 @@ def _s(val) -> str:
 
 def _unwrap(raw: dict) -> dict:
     """
-    Wonca wraps the actual tracking payload as a JSON-encoded string under the
-    key 'json'.  Unwrap it when present; otherwise return the dict as-is.
+    Wonca wraps the actual Correios payload as a JSON-encoded string under 'json'.
+    Parse and return it; fall back to the outer dict if not present.
     """
     json_field = raw.get("json")
     if isinstance(json_field, str):
@@ -51,14 +50,43 @@ def _unwrap(raw: dict) -> dict:
     return raw
 
 
+def extract_meta(inner: dict) -> dict:
+    """
+    Extract top-level metadata from the unwrapped Wonca inner dict.
+    Returns a dict with non-null, human-readable fields.
+    """
+    tipo_postal = inner.get("tipoPostal") or {}
+    meta: dict = {}
+
+    tipo_servico = _s(tipo_postal.get("descricao") or "")
+    if tipo_servico:
+        meta["tipo_servico"] = tipo_servico
+
+    categoria = _s(tipo_postal.get("categoria") or "")
+    if categoria:
+        meta["categoria"] = categoria
+
+    sigla = _s(tipo_postal.get("sigla") or "")
+    if sigla:
+        meta["sigla"] = sigla
+
+    data_prevista = _s(inner.get("dtPrevista") or "")
+    if data_prevista:
+        meta["data_prevista"] = data_prevista
+
+    if inner.get("atrasado"):
+        meta["atrasado"] = True
+
+    return meta
+
+
 def normalize_events(raw: dict) -> list:
     """
     Normalize any Wonca response shape into a list of EventoRastreio-compatible dicts.
-    Each item: { data, local, situacao, detalhes }
+    Each item: { data, local, local_tipo, situacao, situacao_frontend, detalhes,
+                 codigo_evento, destino_cidade, destino_uf }
     """
-    # Unwrap the double-encoded JSON if present
     inner = _unwrap(raw)
-
     raw_list: list = []
 
     # Direct keys on inner dict (Correios via Wonca uses "eventos")
@@ -67,7 +95,7 @@ def normalize_events(raw: dict) -> list:
             raw_list = inner[key]
             break
 
-    # Try wrapped shapes: { result: {...}, tracking: {...}, data: {...} }
+    # Wrapped shapes: { result: {...}, tracking: {...}, data: {...} }
     if not raw_list:
         for wrapper in ("result", "tracking", "data"):
             w = inner.get(wrapper)
@@ -89,14 +117,12 @@ def normalize_events(raw: dict) -> list:
                     raw_list = v
                     break
 
-    logger.info(f"[Wonca normalize] found {len(raw_list)} raw events")
-
     result = []
     for ev in raw_list:
         if not isinstance(ev, dict):
             continue
 
-        # Date: prefer dtHrCriado.date (Correios via Wonca), fall back to flat fields
+        # ── Date ─────────────────────────────────────────────────────────
         dthrcriado = ev.get("dtHrCriado")
         if isinstance(dthrcriado, dict):
             date_val = _s(dthrcriado.get("date", ""))
@@ -109,7 +135,7 @@ def normalize_events(raw: dict) -> list:
         if hora and hora not in date_val:
             date_val = f"{date_val} {hora}".strip()
 
-        # Location: unidade.endereco.cidade/uf (Correios via Wonca)
+        # ── Location (origin unit) ────────────────────────────────────────
         unidade = ev.get("unidade") if isinstance(ev.get("unidade"), dict) else {}
         endereco = unidade.get("endereco") if isinstance(unidade.get("endereco"), dict) else {}
         cidade = _s(
@@ -124,24 +150,50 @@ def normalize_events(raw: dict) -> list:
         if not local and cidade:
             local = f"{cidade}/{uf}" if uf else cidade
 
-        # Description: descricao primary, descricaoFrontEnd fallback
+        local_tipo = _s(unidade.get("tipo") or "")
+
+        # ── Destination unit ─────────────────────────────────────────────
+        destino_cidade = ""
+        destino_uf = ""
+        unidade_dest = ev.get("unidadeDestino")
+        if isinstance(unidade_dest, dict):
+            end_dest = unidade_dest.get("endereco") if isinstance(unidade_dest.get("endereco"), dict) else {}
+            destino_cidade = _s(end_dest.get("cidade") or "")
+            destino_uf = _s(end_dest.get("uf") or "")
+
+        # ── Description ──────────────────────────────────────────────────
         situacao = _s(
             ev.get("descricao") or ev.get("description") or
             ev.get("descricaoFrontEnd") or ev.get("situacao") or
             ev.get("status") or ev.get("tipo") or ""
         )
+        situacao_frontend = _s(ev.get("descricaoFrontEnd") or "")
         detalhes = _s(
             ev.get("detalhe") or ev.get("detail") or ev.get("detalhes") or
             ev.get("subStatus") or ev.get("comentario") or ev.get("complemento") or ""
         )
+        codigo_evento = _s(ev.get("codigo") or "")
 
-        if situacao:
-            result.append({
-                "data": date_val,
-                "local": local,
-                "situacao": situacao,
-                "detalhes": detalhes,
-            })
+        if not situacao:
+            continue
+
+        entry: dict = {
+            "data": date_val,
+            "local": local,
+            "situacao": situacao,
+            "detalhes": detalhes,
+        }
+        if local_tipo:
+            entry["local_tipo"] = local_tipo
+        if situacao_frontend and situacao_frontend != situacao:
+            entry["situacao_frontend"] = situacao_frontend
+        if destino_cidade:
+            entry["destino_cidade"] = destino_cidade
+            entry["destino_uf"] = destino_uf
+        if codigo_evento:
+            entry["codigo_evento"] = codigo_evento
+
+        result.append(entry)
 
     return result
 
@@ -180,5 +232,18 @@ def infer_status(events: list) -> RastreamentoStatus:
         if kw in latest:
             return RastreamentoStatus.EM_TRANSITO
 
-    # Has events but description unrecognised → assume in transit
     return RastreamentoStatus.EM_TRANSITO
+
+
+def parse_tracking(code: str) -> tuple:
+    """
+    Fetch and fully parse tracking data for a code.
+    Returns (events: list, meta: dict, inferred_status: RastreamentoStatus).
+    """
+    raw = fetch_tracking_raw(code)
+    inner = _unwrap(raw)
+    events = normalize_events(raw)
+    meta = extract_meta(inner)
+    inferred = infer_status(events)
+    logger.info(f"[Wonca] {code}: {len(events)} eventos, status={inferred.value}")
+    return events, meta, inferred

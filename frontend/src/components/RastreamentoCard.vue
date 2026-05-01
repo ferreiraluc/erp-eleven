@@ -61,10 +61,18 @@
             class="rastreamento-item"
           >
             <div class="rastreamento-info">
-              <p class="rastreamento-codigo">{{ rastreamento.codigo_rastreio }}</p>
+              <div class="rastreamento-codigo-row">
+                <p class="rastreamento-codigo">{{ rastreamento.codigo_rastreio }}</p>
+                <span v-if="rastreamento.rastreio_info?.sigla || rastreamento.rastreio_info?.categoria" class="card-service-badge">
+                  {{ rastreamento.rastreio_info.sigla || rastreamento.rastreio_info.categoria }}
+                </span>
+              </div>
               <p class="rastreamento-cliente">{{ rastreamento.destinatario || 'Sem destinatário' }}</p>
               <p v-if="rastreamento.historico_eventos?.length" class="rastreamento-ultimo-evento">
                 {{ rastreamento.historico_eventos[0]?.situacao }}
+              </p>
+              <p v-if="rastreamento.rastreio_info?.data_prevista" class="rastreamento-previsao">
+                Prev. {{ rastreamento.rastreio_info.data_prevista }}
               </p>
             </div>
             <div class="rastreamento-status">
@@ -450,8 +458,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: 200px;
-  max-height: 260px;
+  min-height: 220px;
+  max-height: 380px;
 }
 
 .rastreamento-stats {
@@ -539,7 +547,7 @@ onMounted(() => {
   gap: 0.25rem;
   flex: 1;
   overflow-y: auto;
-  max-height: 160px;
+  max-height: 260px;
   padding-right: 0.25rem;
 }
 
@@ -600,6 +608,25 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
+.rastreamento-codigo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.card-service-badge {
+  font-size: 0.5rem;
+  font-weight: 700;
+  background: #2563eb;
+  color: white;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
 .rastreamento-ultimo-evento {
   font-size: 0.55rem;
   color: #2563eb;
@@ -608,6 +635,12 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   font-style: italic;
+}
+
+.rastreamento-previsao {
+  font-size: 0.52rem;
+  color: #6b7280;
+  margin: 0.05rem 0 0;
 }
 
 .rastreamento-status {

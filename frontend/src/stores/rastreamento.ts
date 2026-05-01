@@ -11,6 +11,14 @@ export interface EventoRastreio {
   destino?: string
 }
 
+export interface RastreioInfo {
+  tipo_servico?: string
+  categoria?: string
+  sigla?: string
+  data_prevista?: string
+  atrasado?: boolean
+}
+
 export interface Rastreamento {
   id: string
   codigo_rastreio: string
@@ -22,6 +30,7 @@ export interface Rastreamento {
   origem?: string
   destino?: string
   historico_eventos: any[]
+  rastreio_info?: RastreioInfo
   pedido_id?: string
   data_criacao: string
   ativo: boolean

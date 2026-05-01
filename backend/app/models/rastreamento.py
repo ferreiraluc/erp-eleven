@@ -35,6 +35,9 @@ class Rastreamento(Base):
     
     # Dados históricos (JSON para flexibilidade)
     historico_eventos = Column(JSONB, default=[])
+
+    # Metadados extras retornados pela API (tipo de serviço, data prevista, etc.)
+    rastreio_info = Column(JSONB, nullable=True)
     
     # Relacionamento com pedidos
     pedido_id = Column(UUID(as_uuid=True), ForeignKey('pedidos.id'), nullable=True)

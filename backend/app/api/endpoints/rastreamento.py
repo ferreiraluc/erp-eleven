@@ -54,6 +54,7 @@ def listar_rastreamentos(
             "origem": r.origem,
             "destino": r.destino,
             "historico_eventos": r.historico_eventos or [],
+            "rastreio_info": r.rastreio_info or {},
             "pedido_id": r.pedido_id,
             "data_criacao": r.data_criacao,
             "ativo": r.ativo,
@@ -299,6 +300,7 @@ def _build_response(r: Rastreamento) -> dict:
         "origem": r.origem,
         "destino": r.destino,
         "historico_eventos": r.historico_eventos or [],
+        "rastreio_info": r.rastreio_info or {},
         "pedido_id": r.pedido_id,
         "data_criacao": r.data_criacao,
         "ativo": r.ativo,
@@ -321,16 +323,14 @@ def consultar_rastreamento(
     current_user: Usuario = Depends(get_current_user),
 ):
     """Consulta rastreamento na Wonca API sem persistir no banco."""
-    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+    from ...services.wonca_service import parse_tracking
 
     codigo = body.get("codigo", "")
     if not codigo:
         raise HTTPException(status_code=400, detail="Código de rastreio não informado")
 
     try:
-        raw = fetch_tracking_raw(codigo)
-        events = normalize_events(raw)
-        inferred = infer_status(events)
+        events, meta, inferred = parse_tracking(codigo)
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -338,6 +338,7 @@ def consultar_rastreamento(
         "codigo": codigo,
         "status": inferred.value,
         "eventos": events,
+        "rastreio_info": meta,
         "sucesso": bool(events),
     }
 
@@ -351,16 +352,14 @@ def consultar_e_salvar_rastreamento(
     current_user: Usuario = Depends(get_current_user),
 ):
     """Consulta na Wonca API e cria ou atualiza o rastreamento no banco."""
-    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+    from ...services.wonca_service import parse_tracking
 
     codigo = body.get("codigo", "")
     if not codigo:
         raise HTTPException(status_code=400, detail="Código de rastreio não informado")
 
     try:
-        raw = fetch_tracking_raw(codigo)
-        events = normalize_events(raw)
-        inferred = infer_status(events)
+        events, meta, inferred = parse_tracking(codigo)
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -371,6 +370,7 @@ def consultar_e_salvar_rastreamento(
 
     if existing:
         existing.historico_eventos = events
+        existing.rastreio_info = meta
         existing.status = inferred
         existing.ultima_atualizacao = datetime.utcnow()
         db.commit()
@@ -381,6 +381,7 @@ def consultar_e_salvar_rastreamento(
         codigo_rastreio=codigo,
         status=inferred,
         historico_eventos=events,
+        rastreio_info=meta,
         ultima_atualizacao=datetime.utcnow(),
         created_by=current_user.id,
     )
@@ -399,7 +400,7 @@ def atualizar_rastreamento_online(
     current_user: Usuario = Depends(get_current_user),
 ):
     """Busca dados atualizados na Wonca API para um rastreamento existente."""
-    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+    from ...services.wonca_service import parse_tracking
 
     r = db.query(Rastreamento).filter(
         Rastreamento.id == rastreamento_id,
@@ -409,15 +410,12 @@ def atualizar_rastreamento_online(
         raise HTTPException(status_code=404, detail="Rastreamento não encontrado")
 
     try:
-        raw = fetch_tracking_raw(r.codigo_rastreio)
-        events = normalize_events(raw)
-        inferred = infer_status(events)
+        events, meta, inferred = parse_tracking(r.codigo_rastreio)
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
-    logger.info(f"[Wonca] {r.codigo_rastreio}: {len(events)} eventos, status={inferred.value}")
-
     r.historico_eventos = events
+    r.rastreio_info = meta
     r.status = inferred
     r.ultima_atualizacao = datetime.utcnow()
     db.commit()
@@ -434,7 +432,7 @@ def atualizar_todos_rastreamentos(
     current_user: Usuario = Depends(get_current_user),
 ):
     """Atualiza todos os rastreamentos ativos (exceto entregues) via Wonca API."""
-    from ...services.wonca_service import fetch_tracking_raw, normalize_events, infer_status
+    from ...services.wonca_service import parse_tracking
 
     ativos = db.query(Rastreamento).filter(
         Rastreamento.ativo == True,
@@ -444,10 +442,9 @@ def atualizar_todos_rastreamentos(
     updated, errors = 0, []
     for r in ativos:
         try:
-            raw = fetch_tracking_raw(r.codigo_rastreio)
-            events = normalize_events(raw)
-            inferred = infer_status(events)
+            events, meta, inferred = parse_tracking(r.codigo_rastreio)
             r.historico_eventos = events
+            r.rastreio_info = meta
             r.status = inferred
             r.ultima_atualizacao = datetime.utcnow()
             updated += 1

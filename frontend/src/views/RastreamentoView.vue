@@ -221,6 +221,17 @@
                     <span class="mobile-content-value mobile-date-value">{{ formatarData(rastreamento.created_at) }}</span>
                   </div>
                   
+                  <!-- Rastreio info (service + expected delivery) -->
+                  <div v-if="rastreamento.rastreio_info && (rastreamento.rastreio_info.tipo_servico || rastreamento.rastreio_info.data_prevista)" class="rastreio-info-bar">
+                    <span v-if="rastreamento.rastreio_info.tipo_servico" class="ri-badge">
+                      {{ rastreamento.rastreio_info.tipo_servico }}
+                    </span>
+                    <span v-if="rastreamento.rastreio_info.data_prevista" class="ri-previsao">
+                      Prev. entrega: <strong>{{ rastreamento.rastreio_info.data_prevista }}</strong>
+                    </span>
+                    <span v-if="rastreamento.rastreio_info.atrasado" class="ri-atrasado">Atrasado</span>
+                  </div>
+
                   <!-- Progress track -->
                   <div class="progress-track" :class="{ 'track-erro': rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO' }">
                     <div class="track-steps">
@@ -277,10 +288,15 @@
                         <div class="tl-dot" :class="idx === 0 ? 'tl-dot-active' : ''"></div>
                         <div class="tl-content">
                           <p class="tl-situacao">{{ ev.situacao }}</p>
+                          <p v-if="ev.situacao_frontend && ev.situacao_frontend !== ev.situacao" class="tl-situacao-sub">{{ ev.situacao_frontend }}</p>
                           <p class="tl-meta">
                             <span v-if="ev.local">{{ ev.local }}</span>
-                            <span v-if="ev.local && ev.data"> · </span>
-                            <span v-if="ev.data">{{ ev.data }}</span>
+                            <span v-if="ev.local_tipo" class="tl-local-tipo"> ({{ ev.local_tipo }})</span>
+                            <span v-if="(ev.local || ev.local_tipo) && ev.data"> · </span>
+                            <span v-if="ev.data">{{ formatEventDate(ev.data) }}</span>
+                          </p>
+                          <p v-if="ev.destino_cidade" class="tl-destino">
+                            → {{ ev.destino_cidade }}<span v-if="ev.destino_uf">/{{ ev.destino_uf }}</span>
                           </p>
                           <p v-if="ev.detalhes" class="tl-detalhe">{{ ev.detalhes }}</p>
                         </div>
@@ -292,7 +308,7 @@
           </div>
             
           <!-- Desktop layout -->
-          <div class="rastreamento-row">
+          <div class="rastreamento-row" @click="toggleCard(rastreamento.id)" style="cursor:pointer;">
           <div class="row-codigo desktop-only">
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
@@ -317,11 +333,13 @@
             {{ rastreamento.descricao || '-' }}
           </div>
 
-          <!-- Último evento -->
+          <!-- Último evento + serviço -->
           <div class="row-rastreio row-ultimo-evento">
+            <span v-if="rastreamento.rastreio_info?.tipo_servico" class="desktop-service-badge">{{ rastreamento.rastreio_info.tipo_servico }}</span>
             <span class="ultimo-evento-text">
               {{ rastreamento.historico_eventos?.[0]?.situacao || '—' }}
             </span>
+            <span v-if="rastreamento.rastreio_info?.data_prevista" class="desktop-previsao">Prev. {{ rastreamento.rastreio_info.data_prevista }}</span>
           </div>
 
           <!-- Status (badge estático) -->
@@ -367,6 +385,55 @@
               </svg>
             </button>
           </div>
+          </div>
+
+          <!-- Desktop expanded detail panel -->
+          <div v-if="isCardExpanded(rastreamento.id)" class="desktop-detail-panel">
+            <!-- Service info bar -->
+            <div v-if="rastreamento.rastreio_info && (rastreamento.rastreio_info.tipo_servico || rastreamento.rastreio_info.data_prevista)" class="rastreio-info-bar">
+              <span v-if="rastreamento.rastreio_info.tipo_servico" class="ri-badge">{{ rastreamento.rastreio_info.tipo_servico }}</span>
+              <span v-if="rastreamento.rastreio_info.data_prevista" class="ri-previsao">Previsão de entrega: <strong>{{ rastreamento.rastreio_info.data_prevista }}</strong></span>
+              <span v-if="rastreamento.rastreio_info.atrasado" class="ri-atrasado">Atrasado</span>
+            </div>
+
+            <div class="desktop-detail-body">
+              <!-- Progress track -->
+              <div class="progress-track" :class="{ 'track-erro': rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO' }">
+                <div class="track-steps">
+                  <div v-for="(step, i) in ['Postado','Em trânsito','Saiu p/ entrega','Entregue']" :key="i" class="track-step">
+                    <div class="step-dot" :class="trackingProgressStep(rastreamento) > i ? 'dot-done' : (trackingProgressStep(rastreamento) === i+1 ? 'dot-active' : 'dot-future')"></div>
+                    <span class="step-label">{{ step }}</span>
+                  </div>
+                </div>
+                <div class="track-bar">
+                  <div class="track-fill" :style="{ width: rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO' ? '0%' : ((trackingProgressStep(rastreamento) - 1) / 3 * 100) + '%' }"></div>
+                </div>
+              </div>
+
+              <!-- Full timeline -->
+              <div v-if="rastreamento.historico_eventos?.length" class="events-timeline desktop-timeline">
+                <p class="timeline-title">Linha do tempo completa</p>
+                <div class="timeline-list">
+                  <div v-for="(ev, idx) in rastreamento.historico_eventos" :key="idx" class="timeline-event">
+                    <div class="tl-dot" :class="idx === 0 ? 'tl-dot-active' : ''"></div>
+                    <div class="tl-content">
+                      <p class="tl-situacao">{{ ev.situacao }}</p>
+                      <p v-if="ev.situacao_frontend && ev.situacao_frontend !== ev.situacao" class="tl-situacao-sub">{{ ev.situacao_frontend }}</p>
+                      <p class="tl-meta">
+                        <span v-if="ev.local">{{ ev.local }}</span>
+                        <span v-if="ev.local_tipo" class="tl-local-tipo"> ({{ ev.local_tipo }})</span>
+                        <span v-if="(ev.local || ev.local_tipo) && ev.data"> · </span>
+                        <span v-if="ev.data">{{ formatEventDate(ev.data) }}</span>
+                      </p>
+                      <p v-if="ev.destino_cidade" class="tl-destino">
+                        → {{ ev.destino_cidade }}<span v-if="ev.destino_uf">/{{ ev.destino_uf }}</span>
+                      </p>
+                      <p v-if="ev.detalhes" class="tl-detalhe">{{ ev.detalhes }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -750,6 +817,24 @@ function toggleCard(cardId: string) {
 
 function isCardExpanded(cardId: string): boolean {
   return expandedCards.value.has(cardId)
+}
+
+function formatEventDate(dateStr: string): string {
+  if (!dateStr) return ''
+  try {
+    // Handle "2026-04-30 16:51:46.000000" format from Correios via Wonca
+    const d = new Date(dateStr.replace(' ', 'T').split('.')[0])
+    if (isNaN(d.getTime())) return dateStr
+    return d.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return dateStr
+  }
 }
 
 async function atualizarOnline(rastreamento: Rastreamento) {
@@ -1599,7 +1684,7 @@ onMounted(() => {
   }
   
   .mobile-card-content.expanded {
-    max-height: 400px;
+    max-height: 900px;
     opacity: 1;
   }
   
@@ -2494,8 +2579,102 @@ onMounted(() => {
 .tl-dot.tl-dot-active { background: #3b82f6; border-color: #3b82f6; }
 .tl-content { flex: 1; min-width: 0; }
 .tl-situacao { font-size: 0.8rem; font-weight: 500; color: #111827; margin: 0 0 0.1rem; }
+.tl-situacao-sub { font-size: 0.72rem; color: #4b5563; margin: 0 0 0.1rem; font-style: italic; }
 .tl-meta { font-size: 0.7rem; color: #6b7280; margin: 0 0 0.1rem; }
+.tl-local-tipo { color: #9ca3af; }
+.tl-destino { font-size: 0.7rem; color: #2563eb; margin: 0 0 0.1rem; font-weight: 500; }
 .tl-detalhe { font-size: 0.68rem; color: #9ca3af; margin: 0; }
+
+/* ── Rastreio info bar ───────────────────────────────────────────────────────── */
+.rastreio-info-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  margin: 0.5rem 0 0.75rem;
+}
+.ri-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #2563eb;
+  color: white;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.ri-previsao {
+  font-size: 0.72rem;
+  color: #1e40af;
+}
+.ri-previsao strong { font-weight: 600; }
+.ri-atrasado {
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: #ef4444;
+  color: white;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+/* ── Desktop last-event column enhancements ─────────────────────────────────── */
+.desktop-service-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: #2563eb;
+  color: white;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.row-ultimo-evento { flex-direction: column; align-items: flex-start; gap: 0.15rem; }
+.desktop-previsao {
+  font-size: 0.65rem;
+  color: #6b7280;
+  margin-top: 0.1rem;
+}
+
+/* ── Desktop expanded detail panel ─────────────────────────────────────────── */
+.desktop-detail-panel {
+  display: none;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 1rem 1.5rem;
+  animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.desktop-detail-body {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.desktop-timeline .timeline-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+.desktop-timeline .timeline-list::-webkit-scrollbar { width: 3px; }
+.desktop-timeline .timeline-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+@media (min-width: 769px) {
+  .desktop-detail-panel { display: block; }
+}
+@media (max-width: 768px) {
+  .desktop-detail-panel { display: none !important; }
+  .desktop-service-badge { display: none; }
+  .desktop-previsao { display: none; }
+}
 
 
 </style>

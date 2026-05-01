@@ -51,12 +51,13 @@ class RastreamentoResponse(RastreamentoBase):
     servico_provedor: Optional[str] = None
     ultima_atualizacao: Optional[datetime] = None
     historico_eventos: List[Dict[str, Any]] = Field(default_factory=list)
+    rastreio_info: Optional[Dict[str, Any]] = None
     data_criacao: date
     ativo: bool
     created_at: datetime
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
-    
+
     class Config:
         from_attributes = True
 
