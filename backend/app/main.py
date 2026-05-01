@@ -10,6 +10,7 @@ from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboa
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
 
+# Main
 # Setup logging
 import os
 log_level = os.getenv("LOG_LEVEL", "INFO")  # Default to INFO for better tracking
