@@ -48,7 +48,7 @@
             </svg>
           </div>
           <div class="stat-content">
-            <p class="stat-label">Em Trânsito</p>
+            <p class="stat-label">Trânsito</p>
             <p class="stat-value">{{ resumo?.em_transito || 0 }}</p>
           </div>
         </div>
@@ -75,6 +75,110 @@
             <p class="stat-label">Pendentes</p>
             <p class="stat-value">{{ resumo?.pendentes || 0 }}</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculadora de Frete (fixa) -->
+    <div class="freight-section">
+      <div class="freight-inner">
+        <div class="freight-title-row">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 7h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
+          </svg>
+          <span class="freight-title">Calculadora de Frete (Correios)</span>
+        </div>
+
+        <div class="freight-fields">
+          <!-- CEP Origem: bloqueado por padrão -->
+          <div class="freight-field">
+            <label class="freight-label">CEP Origem</label>
+            <div class="freight-cep-origem-row">
+              <input
+                v-if="editingCepOrigem"
+                v-model="calcCepOrigem"
+                type="text"
+                maxlength="8"
+                placeholder="00000000"
+                class="freight-input"
+                @input="calcCepOrigem = calcCepOrigem.replace(/\D/g,'').slice(0,8)"
+                @keyup.enter="salvarCepOrigem"
+              />
+              <span v-else class="freight-cep-locked">{{ calcCepOrigem || '—' }}</span>
+              <button
+                v-if="editingCepOrigem"
+                type="button"
+                @click="salvarCepOrigem"
+                class="freight-cep-save-btn"
+                title="Salvar CEP"
+              >OK</button>
+              <button
+                v-else
+                type="button"
+                @click="editingCepOrigem = true"
+                class="freight-cep-edit-btn"
+                title="Editar CEP de origem"
+              >
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- CEP Destino -->
+          <div class="freight-field">
+            <label class="freight-label">CEP Destino</label>
+            <input
+              v-model="calcCepDestino"
+              type="text"
+              maxlength="8"
+              placeholder="00000000"
+              class="freight-input"
+              @input="calcCepDestino = calcCepDestino.replace(/\D/g,'').slice(0,8)"
+              @keyup.enter="calcularFrete"
+            />
+          </div>
+
+          <!-- Peso -->
+          <div class="freight-field freight-field-sm">
+            <label class="freight-label">Peso (kg)</label>
+            <input
+              v-model.number="calcPeso"
+              type="number"
+              step="0.1"
+              min="0.1"
+              max="30"
+              class="freight-input"
+            />
+          </div>
+
+          <button
+            type="button"
+            @click="calcularFrete"
+            :disabled="calcLoading || !calcCepOrigem || !calcCepDestino"
+            class="freight-calc-btn"
+          >{{ calcLoading ? '...' : 'Calcular' }}</button>
+        </div>
+
+        <div v-if="calcErro" class="freight-erro">{{ calcErro }}</div>
+
+        <div v-if="calcResultados.length" class="freight-resultados">
+          <div v-for="r in calcResultados" :key="r.codigo" class="freight-resultado-item" :class="{ 'freight-resultado-selected': calcCustoParaUsar === parseFloat(r.valor?.replace(',','.')) }">
+            <div class="freight-resultado-servico">{{ r.servico }}</div>
+            <div v-if="r.erro" class="freight-resultado-erro">{{ r.erro }}</div>
+            <template v-else>
+              <div class="freight-resultado-valor">R$ {{ r.valor }}</div>
+              <div class="freight-resultado-prazo">{{ r.prazo }} dia{{ r.prazo !== 1 ? 's' : '' }} útil{{ r.prazo !== 1 ? 'eis' : '' }}</div>
+              <button type="button" @click="selecionarFrete(r.valor)" class="freight-usar-btn">
+                {{ calcCustoParaUsar === parseFloat(r.valor?.replace(',','.')) ? '✓ Selecionado' : 'Usar' }}
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="calcCustoParaUsar" class="freight-selected-hint">
+          Frete selecionado: <strong>R$ {{ calcCustoParaUsar.toFixed(2).replace('.',',') }}</strong> — será aplicado ao próximo rastreamento criado/editado.
         </div>
       </div>
     </div>
@@ -528,55 +632,10 @@
                 placeholder="0,00"
                 class="form-input"
               />
-            </div>
-          </div>
-
-          <!-- Calculadora de frete -->
-          <div class="calc-section">
-            <button type="button" @click="showCalculadora = !showCalculadora" class="calc-toggle-btn">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 7h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
-              </svg>
-              {{ showCalculadora ? 'Fechar calculadora' : 'Calculadora de frete (Correios)' }}
-            </button>
-
-            <div v-if="showCalculadora" class="calc-panel">
-              <div class="calc-fields">
-                <div class="calc-field">
-                  <label>CEP Origem</label>
-                  <input v-model="calcCepOrigem" type="text" maxlength="9" placeholder="00000-000" class="form-input" @input="calcCepOrigem = calcCepOrigem.replace(/\D/g,'').slice(0,8)" />
-                  <span class="calc-hint">Salvo automaticamente</span>
-                </div>
-                <div class="calc-field">
-                  <label>CEP Destino</label>
-                  <input v-model="calcCepDestino" type="text" maxlength="9" placeholder="00000-000" class="form-input" @input="calcCepDestino = calcCepDestino.replace(/\D/g,'').slice(0,8)" />
-                </div>
-                <div class="calc-field calc-field-sm">
-                  <label>Peso (kg)</label>
-                  <input v-model.number="calcPeso" type="number" step="0.1" min="0.1" max="30" class="form-input" />
-                </div>
-                <button
-                  type="button"
-                  @click="calcularFrete"
-                  :disabled="calcLoading || !calcCepOrigem || !calcCepDestino"
-                  class="btn btn-success calc-btn"
-                >
-                  {{ calcLoading ? 'Calculando...' : 'Calcular' }}
+              <div v-if="calcCustoParaUsar && !formData.custo_emissao" class="modal-frete-hint">
+                <button type="button" @click="formData.custo_emissao = calcCustoParaUsar" class="modal-frete-apply-btn">
+                  Aplicar frete calculado: R$ {{ calcCustoParaUsar.toFixed(2).replace('.',',') }}
                 </button>
-              </div>
-
-              <div v-if="calcErro" class="alert alert-error" style="margin-top:0.5rem;">{{ calcErro }}</div>
-
-              <div v-if="calcResultados.length" class="calc-resultados">
-                <div v-for="r in calcResultados" :key="r.codigo" class="calc-resultado-item">
-                  <div class="calc-servico">{{ r.servico }}</div>
-                  <div v-if="r.erro" class="calc-erro">{{ r.erro }}</div>
-                  <template v-else>
-                    <div class="calc-valor">R$ {{ r.valor }}</div>
-                    <div class="calc-prazo">{{ r.prazo }} dia{{ r.prazo !== 1 ? 's' : '' }} útil{{ r.prazo !== 1 ? 'eis' : '' }}</div>
-                    <button type="button" @click="aplicarCusto(r.valor)" class="calc-aplicar-btn">Usar</button>
-                  </template>
-                </div>
               </div>
             </div>
           </div>
@@ -649,21 +708,29 @@ const formData = ref<RastreamentoCreate>({
   pedido_id: undefined
 })
 
-// Freight calculator
-const showCalculadora = ref(false)
+// Freight calculator (fixed section, outside modal)
+const editingCepOrigem = ref(!localStorage.getItem('erp_cep_origem'))
 const calcCepOrigem = ref(localStorage.getItem('erp_cep_origem') || '')
 const calcCepDestino = ref('')
 const calcPeso = ref(0.3)
 const calcLoading = ref(false)
 const calcResultados = ref<any[]>([])
 const calcErro = ref('')
+const calcCustoParaUsar = ref<number | null>(null)
+
+function salvarCepOrigem() {
+  const cep = calcCepOrigem.value.replace(/\D/g, '').slice(0, 8)
+  calcCepOrigem.value = cep
+  if (cep) localStorage.setItem('erp_cep_origem', cep)
+  editingCepOrigem.value = false
+}
 
 async function calcularFrete() {
   if (!calcCepOrigem.value || !calcCepDestino.value) return
-  localStorage.setItem('erp_cep_origem', calcCepOrigem.value)
   calcLoading.value = true
   calcErro.value = ''
   calcResultados.value = []
+  calcCustoParaUsar.value = null
   try {
     const data = await freteAPI.calcular(calcCepOrigem.value, calcCepDestino.value, calcPeso.value)
     calcResultados.value = data.resultados || []
@@ -674,9 +741,9 @@ async function calcularFrete() {
   }
 }
 
-function aplicarCusto(valor: string) {
+function selecionarFrete(valor: string) {
   const num = parseFloat(valor.replace(',', '.').replace(/[^0-9.]/g, ''))
-  if (!isNaN(num)) formData.value.custo_emissao = num
+  if (!isNaN(num)) calcCustoParaUsar.value = num
 }
 
 function getBadgeText(info: any): string {
@@ -748,12 +815,9 @@ function abrirModalCriacao() {
     custo_emissao: undefined,
     pedido_id: undefined
   }
-  calcResultados.value = []
-  calcErro.value = ''
-  showCalculadora.value = false
   modalError.value = null
   showModal.value = true
-  
+
   nextTick(() => {
     codigoInput.value?.focus()
   })
@@ -770,9 +834,6 @@ function editarRastreamento(rastreamento: Rastreamento) {
     custo_emissao: rastreamento.custo_emissao,
     pedido_id: rastreamento.pedido_id
   }
-  calcResultados.value = []
-  calcErro.value = ''
-  showCalculadora.value = false
   modalError.value = null
   showModal.value = true
 }
@@ -1054,31 +1115,31 @@ onMounted(() => {
 .stats-section {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 0.75rem 1.5rem 0.5rem;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  gap: 0.5rem;
   max-width: 100%;
 }
 
 .stat-card {
   background-color: white;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 
 .stat-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.35rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1086,8 +1147,8 @@ onMounted(() => {
 }
 
 .stat-icon svg {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 0.7rem;
+  height: 0.7rem;
 }
 
 .stat-icon.blue {
@@ -1111,17 +1172,19 @@ onMounted(() => {
 }
 
 .stat-label {
-  margin: 0 0 0.25rem 0;
-  font-size: 0.875rem;
+  margin: 0 0 0.1rem 0;
+  font-size: 0.65rem;
   font-weight: 500;
   color: #6b7280;
+  white-space: nowrap;
 }
 
 .stat-value {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: #111827;
+  line-height: 1;
 }
 
 /* Filters */
@@ -1946,33 +2009,33 @@ onMounted(() => {
 
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
   .stat-card {
-    padding: 0.6rem 0.5rem;
-    gap: 0.35rem;
+    padding: 0.35rem 0.3rem;
+    gap: 0.2rem;
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
 
   .stat-icon {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
   .stat-icon svg {
-    width: 0.9rem;
-    height: 0.9rem;
+    width: 0.55rem;
+    height: 0.55rem;
   }
 
   .stat-label {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
   }
 
   .stat-value {
-    font-size: 1.1rem;
+    font-size: 0.75rem;
   }
 
   .filters-content {
@@ -2428,29 +2491,31 @@ onMounted(() => {
     width: 0.8rem; height: 0.8rem;
   }
 
-  /* Cards de estatísticas com exata largura dos cards de rastreamento */
-  .stats-section { padding: 0.75rem 0.125rem; }
+  /* Cards de estatísticas compactos 1×4 */
+  .stats-section { padding: 0.5rem 0.125rem 0.25rem; }
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 0.25rem;
+    gap: 0.2rem;
     max-width: none;
     width: 100%;
   }
   .stat-card {
-    padding: 1rem;
-    border-radius: 0.75rem;
-    gap: 0.75rem;
+    padding: 0.4rem 0.25rem;
+    border-radius: 0.4rem;
+    gap: 0.15rem;
     margin: 0;
     width: 100%;
     box-sizing: border-box;
-    min-height: 80px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
   .stat-icon {
-    width: 2.25rem; height: 2.25rem; border-radius: 0.5rem;
+    width: 1rem; height: 1rem; border-radius: 0.25rem;
   }
-  .stat-icon svg { width: 1.25rem; height: 1.25rem; }
-  .stat-label { font-size: 0.8rem; margin-bottom: 0.25rem; font-weight: 500; }
-  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-icon svg { width: 0.5rem; height: 0.5rem; }
+  .stat-label { font-size: 0.5rem; margin-bottom: 0; font-weight: 500; white-space: nowrap; }
+  .stat-value { font-size: 0.8rem; font-weight: 700; line-height: 1; }
 
   /* Filtros/Busca com exata largura dos cards */
   .filters-section { padding: 0 0.125rem 0.75rem; }
@@ -2556,89 +2621,186 @@ onMounted(() => {
 @media (max-width: 380px) {
   .page-title { font-size: 1rem; }
   .header-actions .btn.btn-primary { font-size: 0.8rem; padding: 0.45rem 0.7rem; }
-  .stat-value { font-size: 0.85rem; }
-  .stat-label { font-size: 0.55rem; }
-  .stat-icon { width: 1.5rem; height: 1.5rem; }
+  .stat-value { font-size: 0.7rem; }
+  .stat-label { font-size: 0.45rem; }
+  .stat-icon { width: 0.875rem; height: 0.875rem; }
+  .stat-icon svg { width: 0.45rem; height: 0.45rem; }
 }
 
-/* ── Freight Calculator ──────────────────────────────────────────────────────── */
-.calc-section {
-  margin-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 0.75rem;
+/* ── Freight Calculator (fixed section) ─────────────────────────────────────── */
+.freight-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 0.75rem;
 }
-.calc-toggle-btn {
+.freight-inner {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.freight-title-row {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: none;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.8rem;
+  margin-bottom: 0.6rem;
   color: #374151;
-  cursor: pointer;
-  transition: all 0.15s;
 }
-.calc-toggle-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
-.calc-panel {
-  margin-top: 0.75rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.75rem;
+.freight-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
 }
-.calc-fields {
+.freight-fields {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: flex-end;
 }
-.calc-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1;
-  min-width: 120px;
-}
-.calc-field-sm { max-width: 90px; flex: none; }
-.calc-field label { font-size: 0.75rem; font-weight: 500; color: #374151; }
-.calc-hint { font-size: 0.6rem; color: #6b7280; }
-.calc-btn { white-space: nowrap; align-self: flex-end; padding: 0.5rem 1rem; }
-.calc-resultados {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  flex-wrap: wrap;
-}
-.calc-resultado-item {
-  flex: 1;
-  min-width: 130px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
+.freight-field {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  flex: 1;
+  min-width: 100px;
 }
-.calc-servico { font-size: 0.75rem; font-weight: 700; color: #1e40af; }
-.calc-valor { font-size: 1rem; font-weight: 700; color: #111827; }
-.calc-prazo { font-size: 0.7rem; color: #6b7280; }
-.calc-erro { font-size: 0.7rem; color: #dc2626; }
-.calc-aplicar-btn {
-  margin-top: 0.25rem;
+.freight-field-sm { max-width: 80px; flex: none; }
+.freight-label { font-size: 0.7rem; font-weight: 500; color: #374151; }
+.freight-input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: white;
+  width: 100%;
+  box-sizing: border-box;
+}
+.freight-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+.freight-cep-origem-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.freight-cep-locked {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: 0.05em;
+  font-family: monospace;
+  padding: 0.3rem 0;
+}
+.freight-cep-edit-btn {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.freight-cep-edit-btn:hover { background: #f3f4f6; color: #374151; }
+.freight-cep-save-btn {
   background: #2563eb;
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.freight-cep-save-btn:hover { background: #1d4ed8; }
+.freight-calc-btn {
+  padding: 0.4rem 0.9rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  align-self: flex-end;
+  transition: background 0.15s;
+}
+.freight-calc-btn:hover:not(:disabled) { background: #1d4ed8; }
+.freight-calc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.freight-erro { font-size: 0.75rem; color: #dc2626; margin-top: 0.4rem; }
+.freight-resultados {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+.freight-resultado-item {
+  flex: 1;
+  min-width: 110px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: border-color 0.15s;
+}
+.freight-resultado-item.freight-resultado-selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.freight-resultado-servico { font-size: 0.7rem; font-weight: 700; color: #1e40af; }
+.freight-resultado-valor { font-size: 0.95rem; font-weight: 700; color: #111827; }
+.freight-resultado-prazo { font-size: 0.65rem; color: #6b7280; }
+.freight-resultado-erro { font-size: 0.65rem; color: #dc2626; }
+.freight-usar-btn {
+  margin-top: 0.2rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.65rem;
   cursor: pointer;
   align-self: flex-start;
   transition: background 0.15s;
 }
-.calc-aplicar-btn:hover { background: #1d4ed8; }
+.freight-usar-btn:hover { background: #1d4ed8; }
+.freight-selected-hint {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: #1e40af;
+  background: #eff6ff;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+}
+
+/* Modal freight apply hint */
+.modal-frete-hint { margin-top: 0.35rem; }
+.modal-frete-apply-btn {
+  background: none;
+  border: 1px dashed #2563eb;
+  color: #2563eb;
+  border-radius: 5px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.modal-frete-apply-btn:hover { background: #eff6ff; }
+
+@media (max-width: 768px) {
+  .freight-section { padding: 0 0.125rem 0.5rem; }
+  .freight-inner { padding: 0.6rem 0.75rem; border-radius: 8px; }
+  .freight-fields { gap: 0.4rem; }
+  .freight-field { min-width: 80px; }
+  .freight-field-sm { max-width: 70px; }
+}
 
 /* ── Status badges ───────────────────────────────────────────────────────────── */
 .status-badge-inline {

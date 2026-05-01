@@ -65,8 +65,10 @@ async def lifespan(app: FastAPI):
         from alembic.config import Config as AlembicConfig
         from alembic import command as alembic_command
         import os
-        alembic_cfg = AlembicConfig(os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini"))
-        alembic_cfg.set_main_option("script_location", os.path.join(os.path.dirname(__file__), "..", "..", "alembic"))
+        # __file__ is backend/app/main.py → one level up is backend/
+        backend_dir = os.path.dirname(os.path.dirname(__file__))
+        alembic_cfg = AlembicConfig(os.path.join(backend_dir, "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
         alembic_command.upgrade(alembic_cfg, "head")
         logger.info("[DB] Alembic migrations applied successfully")
     except Exception as e:
