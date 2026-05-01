@@ -47,38 +47,40 @@
         </button>
       </div>
 
-      <!-- Filter chips + view switcher -->
-      <div class="chips-and-views">
-        <div class="filter-chips">
-          <button
-            v-for="chip in statusChips"
-            :key="chip.value"
-            @click="setStatusFilter(chip.value)"
-            :class="['chip', { active: activeStatus === chip.value }]"
-          >
-            {{ chip.label }}
-            <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
-          </button>
-        </div>
+      <!-- Filter chips -->
+      <div class="filter-chips">
+        <button
+          v-for="chip in statusChips"
+          :key="chip.value"
+          @click="setStatusFilter(chip.value)"
+          :class="['chip', { active: activeStatus === chip.value }]"
+        >
+          {{ chip.label }}
+          <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
+        </button>
+      </div>
 
-        <!-- View mode switcher -->
-        <div class="view-switcher">
-          <button :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" title="Lista minimalista">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-          </button>
-          <button :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" title="Compacto (2 colunas)">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h7M4 12h7M4 19h7M14 5h6M14 12h6M14 19h6" />
-            </svg>
-          </button>
-          <button :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" title="Grade de imagens">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-          </button>
-        </div>
+      <!-- View mode switcher -->
+      <div class="view-switcher">
+        <span class="view-label">Visualização:</span>
+        <button :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" title="Lista">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+          Lista
+        </button>
+        <button :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" title="Compacto">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h7M4 12h7M4 19h7M14 5h6M14 12h6M14 19h6" />
+          </svg>
+          Compacto
+        </button>
+        <button :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" title="Grade">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+          Grade
+        </button>
       </div>
     </div>
 
@@ -135,7 +137,7 @@
             <!-- estoque + tamanho + badge + ações -->
             <div class="item-bottom-row">
               <div class="item-left-info">
-                <span class="stock-number" :class="'stock-' + item.alert_level">Estoque&nbsp;{{ item.current_stock }}</span>
+                <span class="stock-number" :class="'stock-' + item.alert_level">Estoque:&nbsp;{{ item.current_stock }}</span>
                 <span v-if="item.size" class="item-size-inline">{{ item.size }}</span>
                 <span v-if="item.location" class="item-location-inline">· {{ item.location }}</span>
                 <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">{{ alertLabel(item.alert_level) }}</span>
@@ -402,32 +404,27 @@ onMounted(async () => {
 }
 .view-compact .item-grid-image { display: none; }
 
-/* --- LIST view (1 col, minimal rows) --- */
+/* --- LIST view (1 col, todas as infos em linhas separadas) --- */
 .view-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
-.view-list .item-card { padding: 0.3rem 0.6rem; }
+.view-list .item-card { padding: 0.35rem 0.75rem; }
 .view-list .item-grid-image { display: none; }
 .view-list .item-thumb-wrap { display: none; }
-.view-list .item-info { flex-direction: row; align-items: center; gap: 0.5rem; flex-wrap: nowrap; overflow: hidden; }
-.view-list .item-name-row { flex-shrink: 0; max-width: 180px; min-width: 120px; }
-.view-list .item-sub { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.view-list .item-bottom-row { flex-shrink: 0; margin-top: 0; }
-.view-list .item-left-info { display: none; }
 
-/* --- GRID view (image-prominent square cards) --- */
+/* --- GRID view (imagem em destaque, infos em linhas) --- */
 .view-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
 }
 .view-grid .item-card { padding: 0; overflow: hidden; }
 .view-grid .item-grid-image {
   display: flex;
   width: 100%;
-  height: 100px;
+  height: 110px;
   overflow: hidden;
   background: #f3f4f6;
   align-items: center;
@@ -437,17 +434,20 @@ onMounted(async () => {
 .view-grid .item-grid-img { width: 100%; height: 100%; object-fit: cover; }
 .view-grid .item-grid-placeholder { color: #d1d5db; }
 .view-grid .item-thumb-wrap { display: none; }
-.view-grid .item-row-main { padding: 0.35rem 0.4rem; }
-.view-grid .item-info { gap: 0.1rem; }
-.view-grid .item-sub { display: none; }
-.view-grid .item-name { font-size: 0.75rem; white-space: normal; }
-.view-grid .item-bottom-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
-.view-grid .item-actions { gap: 0.2rem; }
-.view-grid .action-btn { padding: 0.2rem 0.35rem; font-size: 0.62rem; }
+.view-grid .item-row-main { padding: 0.5rem 0.6rem; }
+.view-grid .item-info { gap: 0.25rem; }
+.view-grid .item-name { font-size: 0.78rem; white-space: normal; line-height: 1.3; }
+.view-grid .item-name-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+.view-grid .item-color-tag { max-width: none; }
+.view-grid .item-sub { flex-wrap: wrap; }
+.view-grid .item-bottom-row { flex-direction: column; align-items: flex-start; gap: 0.35rem; margin-top: 0.25rem; }
+.view-grid .item-actions { flex-wrap: wrap; gap: 0.25rem; }
+.view-grid .action-btn { font-size: 0.68rem; padding: 0.25rem 0.45rem; }
 
-@media (max-width: 500px) {
+@media (max-width: 600px) {
   .view-compact { grid-template-columns: 1fr; }
-  .view-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .view-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .item-color-tag { max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* ── Item grid image (hidden by default, shown in grid view) ─── */
@@ -461,11 +461,13 @@ onMounted(async () => {
 .loading-more { display: flex; align-items: center; justify-content: center; padding: 0.5rem; }
 .spinner-sm { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
+/* ── Filter chips ─────────────────────────────────────────────── */
+.filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+
 /* ── View switcher ────────────────────────────────────────────── */
-.chips-and-views { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
-.filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; flex: 1; }
-.view-switcher { display: flex; gap: 0.25rem; flex-shrink: 0; }
-.view-btn { padding: 0.35rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; display: flex; align-items: center; transition: all 0.15s; }
+.view-switcher { display: flex; align-items: center; gap: 0.35rem; }
+.view-label { font-size: 0.75rem; color: #9ca3af; margin-right: 0.1rem; }
+.view-btn { display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; white-space: nowrap; }
 .view-btn:hover { border-color: #9ca3af; color: #374151; }
 .view-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
 
