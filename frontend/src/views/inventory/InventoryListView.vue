@@ -121,10 +121,10 @@
           </div>
 
           <div class="item-info">
-            <!-- Cor + Nome -->
+            <!-- Nome + Cor -->
             <div class="item-name-row">
-              <span v-if="item.color" class="item-color-tag">{{ item.color }}</span>
               <span class="item-name">{{ item.name }}</span>
+              <span v-if="item.color" class="item-color-tag">{{ item.color }}</span>
             </div>
             <!-- barcode · categoria · preço -->
             <div class="item-sub">
@@ -135,14 +135,14 @@
             <!-- estoque + tamanho + badge + ações -->
             <div class="item-bottom-row">
               <div class="item-left-info">
-                <span class="stock-number" :class="'stock-' + item.alert_level">Est.&nbsp;{{ item.current_stock }}</span>
+                <span class="stock-number" :class="'stock-' + item.alert_level">Estoque&nbsp;{{ item.current_stock }}</span>
                 <span v-if="item.size" class="item-size-inline">{{ item.size }}</span>
                 <span v-if="item.location" class="item-location-inline">· {{ item.location }}</span>
                 <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">{{ alertLabel(item.alert_level) }}</span>
               </div>
               <div class="item-actions">
-                <button @click="handleQuickExit(item)" class="action-btn exit-btn" :disabled="item.current_stock <= 0" title="Consumir 1">−1</button>
-                <button @click="openMovement(item)" class="action-btn move-btn">Mov.</button>
+                <button @click="handleQuickExit(item)" class="action-btn exit-btn" :disabled="item.current_stock <= 0">Diminuir</button>
+                <button @click="openMovement(item)" class="action-btn move-btn">Movimentar</button>
                 <button @click="openEdit(item)" class="action-btn edit-btn">Editar</button>
               </div>
             </div>
@@ -506,9 +506,9 @@ onMounted(async () => {
 .item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
 
 /* Row 1: Name + Color */
-.item-name-row { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; }
-.item-name { font-weight: 600; font-size: 0.82rem; color: #111827; flex: 1; min-width: 0; word-break: break-word; }
-.item-color-tag { font-size: 0.65rem; font-weight: 500; color: #6b7280; background: #f3f4f6; border-radius: 3px; padding: 0.1rem 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; flex-shrink: 0; }
+.item-name-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; min-width: 0; }
+.item-name { font-weight: 600; font-size: 0.82rem; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-color-tag { font-size: 0.65rem; font-weight: 500; color: #6b7280; background: #f3f4f6; border-radius: 3px; padding: 0.1rem 0.35rem; white-space: nowrap; flex-shrink: 0; }
 
 /* Row 2: barcode · category · price */
 .item-sub { font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; flex-wrap: wrap; gap: 0; line-height: 1.3; }
