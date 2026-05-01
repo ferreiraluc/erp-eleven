@@ -1,3 +1,4 @@
+import json as _json
 import requests as http_requests
 import logging
 from ..models.rastreamento import RastreamentoStatus
@@ -26,7 +27,6 @@ def fetch_tracking_raw(code: str) -> dict:
         )
         resp.raise_for_status()
         data = resp.json()
-        logger.info(f"[Wonca raw] {code}: {data}")
         return data
     except http_requests.RequestException as e:
         raise ValueError(f"Erro ao consultar API de rastreio: {str(e)}")
@@ -37,25 +37,42 @@ def _s(val) -> str:
     return str(val).strip() if val is not None else ""
 
 
+def _unwrap(raw: dict) -> dict:
+    """
+    Wonca wraps the actual tracking payload as a JSON-encoded string under the
+    key 'json'.  Unwrap it when present; otherwise return the dict as-is.
+    """
+    json_field = raw.get("json")
+    if isinstance(json_field, str):
+        try:
+            return _json.loads(json_field)
+        except Exception:
+            pass
+    return raw
+
+
 def normalize_events(raw: dict) -> list:
     """
     Normalize any Wonca response shape into a list of EventoRastreio-compatible dicts.
     Each item: { data, local, situacao, detalhes }
     """
+    # Unwrap the double-encoded JSON if present
+    inner = _unwrap(raw)
+
     raw_list: list = []
 
-    # Try direct keys first
-    for key in ("events", "eventos", "evento"):
-        if key in raw and isinstance(raw[key], list):
-            raw_list = raw[key]
+    # Direct keys on inner dict (Correios via Wonca uses "eventos")
+    for key in ("eventos", "events", "evento"):
+        if key in inner and isinstance(inner[key], list):
+            raw_list = inner[key]
             break
 
     # Try wrapped shapes: { result: {...}, tracking: {...}, data: {...} }
     if not raw_list:
         for wrapper in ("result", "tracking", "data"):
-            w = raw.get(wrapper)
+            w = inner.get(wrapper)
             if isinstance(w, dict):
-                for key in ("events", "eventos", "evento"):
+                for key in ("eventos", "events", "evento"):
                     if key in w and isinstance(w[key], list):
                         raw_list = w[key]
                         break
@@ -63,8 +80,8 @@ def normalize_events(raw: dict) -> list:
                 break
 
     # Correios-style: { objeto: [{ evento: [...] }] }
-    if not raw_list and "objeto" in raw:
-        objs = raw["objeto"]
+    if not raw_list and "objeto" in inner:
+        objs = inner["objeto"]
         if isinstance(objs, list) and objs:
             for key in ("evento", "eventos", "events"):
                 v = objs[0].get(key) if isinstance(objs[0], dict) else None
@@ -72,36 +89,50 @@ def normalize_events(raw: dict) -> list:
                     raw_list = v
                     break
 
+    logger.info(f"[Wonca normalize] found {len(raw_list)} raw events")
+
     result = []
     for ev in raw_list:
         if not isinstance(ev, dict):
             continue
 
-        # Date + time
-        date_val = _s(
-            ev.get("data") or ev.get("date") or ev.get("eventDate") or
-            ev.get("dataHora") or ev.get("dateTime") or ""
-        )
+        # Date: prefer dtHrCriado.date (Correios via Wonca), fall back to flat fields
+        dthrcriado = ev.get("dtHrCriado")
+        if isinstance(dthrcriado, dict):
+            date_val = _s(dthrcriado.get("date", ""))
+        else:
+            date_val = _s(
+                ev.get("data") or ev.get("date") or ev.get("eventDate") or
+                ev.get("dataHora") or ev.get("dateTime") or ""
+            )
         hora = _s(ev.get("hora") or ev.get("time") or "")
         if hora and hora not in date_val:
             date_val = f"{date_val} {hora}".strip()
 
-        # Location
+        # Location: unidade.endereco.cidade/uf (Correios via Wonca)
         unidade = ev.get("unidade") if isinstance(ev.get("unidade"), dict) else {}
-        cidade = _s(ev.get("cidade") or ev.get("city") or unidade.get("cidade") or "")
-        uf = _s(ev.get("uf") or ev.get("state") or unidade.get("uf") or "")
+        endereco = unidade.get("endereco") if isinstance(unidade.get("endereco"), dict) else {}
+        cidade = _s(
+            ev.get("cidade") or ev.get("city") or
+            endereco.get("cidade") or unidade.get("cidade") or ""
+        )
+        uf = _s(
+            ev.get("uf") or ev.get("state") or
+            endereco.get("uf") or unidade.get("uf") or ""
+        )
         local = _s(ev.get("local") or ev.get("location") or "")
         if not local and cidade:
             local = f"{cidade}/{uf}" if uf else cidade
 
-        # Description
+        # Description: descricao primary, descricaoFrontEnd fallback
         situacao = _s(
-            ev.get("descricao") or ev.get("description") or ev.get("situacao") or
+            ev.get("descricao") or ev.get("description") or
+            ev.get("descricaoFrontEnd") or ev.get("situacao") or
             ev.get("status") or ev.get("tipo") or ""
         )
         detalhes = _s(
             ev.get("detalhe") or ev.get("detail") or ev.get("detalhes") or
-            ev.get("subStatus") or ev.get("complemento") or ""
+            ev.get("subStatus") or ev.get("comentario") or ev.get("complemento") or ""
         )
 
         if situacao:
@@ -136,6 +167,7 @@ def infer_status(events: list) -> RastreamentoStatus:
         "transferência", "transferencia", "distribuição", "distribuicao",
         "veículo de entrega", "postado", "coletado", "triagem",
         "aguardando retirada", "em processamento", "objeto recebido",
+        "objeto em transferência", "objeto postado",
     ]
 
     for kw in delivered:
