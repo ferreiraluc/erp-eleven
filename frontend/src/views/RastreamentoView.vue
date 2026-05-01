@@ -79,110 +79,9 @@
       </div>
     </div>
     
-    <!-- Calculadora de Frete (fixa) -->
-    
-    <!--<div class="freight-section">
-      <div class="freight-inner">
-        <div class="freight-title-row">
-          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 7h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
-          </svg>
-          <span class="freight-title">Calculadora de Frete (Correios)</span>
-        </div>
-
-        <div class="freight-fields">
-          <!-- CEP Origem: bloqueado por padrão -->
-          <div class="freight-field">
-            <label class="freight-label">CEP Origem</label>
-            <div class="freight-cep-origem-row">
-              <input
-                v-if="editingCepOrigem"
-                v-model="calcCepOrigem"
-                type="text"
-                maxlength="8"
-                placeholder="00000000"
-                class="freight-input"
-                @input="calcCepOrigem = calcCepOrigem.replace(/\D/g,'').slice(0,8)"
-                @keyup.enter="salvarCepOrigem"
-              />
-              <span v-else class="freight-cep-locked">{{ calcCepOrigem || '—' }}</span>
-              <button
-                v-if="editingCepOrigem"
-                type="button"
-                @click="salvarCepOrigem"
-                class="freight-cep-save-btn"
-                title="Salvar CEP"
-              >OK</button>
-              <button
-                v-else
-                type="button"
-                @click="editingCepOrigem = true"
-                class="freight-cep-edit-btn"
-                title="Editar CEP de origem"
-              >
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- CEP Destino -->
-          <div class="freight-field">
-            <label class="freight-label">CEP Destino</label>
-            <input
-              v-model="calcCepDestino"
-              type="text"
-              maxlength="8"
-              placeholder="00000000"
-              class="freight-input"
-              @input="calcCepDestino = calcCepDestino.replace(/\D/g,'').slice(0,8)"
-              @keyup.enter="calcularFrete"
-            />
-          </div>
-
-          <!-- Peso -->
-          <div class="freight-field freight-field-sm">
-            <label class="freight-label">Peso (kg)</label>
-            <input
-              v-model.number="calcPeso"
-              type="number"
-              step="0.1"
-              min="0.1"
-              max="30"
-              class="freight-input"
-            />
-          </div>
-
-          <button
-            type="button"
-            @click="calcularFrete"
-            :disabled="calcLoading || !calcCepOrigem || !calcCepDestino"
-            class="freight-calc-btn"
-          >{{ calcLoading ? '...' : 'Calcular' }}</button>
-        </div>
-
-        <div v-if="calcErro" class="freight-erro">{{ calcErro }}</div>
-
-        <div v-if="calcResultados.length" class="freight-resultados">
-          <div v-for="r in calcResultados" :key="r.codigo" class="freight-resultado-item" :class="{ 'freight-resultado-selected': calcCustoParaUsar === parseFloat(r.valor?.replace(',','.')) }">
-            <div class="freight-resultado-servico">{{ r.servico }}</div>
-            <div v-if="r.erro" class="freight-resultado-erro">{{ r.erro }}</div>
-            <template v-else>
-              <div class="freight-resultado-valor">R$ {{ r.valor }}</div>
-              <div class="freight-resultado-prazo">{{ r.prazo }} dia{{ r.prazo !== 1 ? 's' : '' }} útil{{ r.prazo !== 1 ? 'eis' : '' }}</div>
-              <button type="button" @click="selecionarFrete(r.valor)" class="freight-usar-btn">
-                {{ calcCustoParaUsar === parseFloat(r.valor?.replace(',','.')) ? '✓ Selecionado' : 'Usar' }}
-              </button>
-            </template>
-          </div>
-        </div>
-
-        <div v-if="calcCustoParaUsar" class="freight-selected-hint">
-          Frete selecionado: <strong>R$ {{ calcCustoParaUsar.toFixed(2).replace('.',',') }}</strong> — será aplicado ao próximo rastreamento criado/editado.
-        </div>
-      </div>
-    </div>-->
+    <!-- CALCULADORA DE FRETE DESATIVADA — reativar quando API estiver pronta
+    <div class="freight-section"> ... </div>
+    -->
 
     <!-- Filtros e Busca -->
     <div class="filters-section">
@@ -633,11 +532,7 @@
                 placeholder="0,00"
                 class="form-input"
               />
-              <div v-if="calcCustoParaUsar && !formData.custo_emissao" class="modal-frete-hint">
-                <button type="button" @click="formData.custo_emissao = calcCustoParaUsar" class="modal-frete-apply-btn">
-                  Aplicar frete calculado: R$ {{ calcCustoParaUsar.toFixed(2).replace('.',',') }}
-                </button>
-              </div>
+              <!-- modal-frete-hint desativado junto com a calculadora -->
             </div>
           </div>
         </div>
@@ -675,7 +570,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import type { Rastreamento, RastreamentoCreate } from '@/stores/rastreamento'
-import { freteAPI } from '@/services/api'
+// import { freteAPI } from '@/services/api' // desativado com a calculadora de frete
 
 const rastreamentoStore = useRastreamentoStore()
 
@@ -709,43 +604,19 @@ const formData = ref<RastreamentoCreate>({
   pedido_id: undefined
 })
 
-// Freight calculator (fixed section, outside modal)
-const editingCepOrigem = ref(!localStorage.getItem('erp_cep_origem'))
-const calcCepOrigem = ref(localStorage.getItem('erp_cep_origem') || '')
-const calcCepDestino = ref('')
-const calcPeso = ref(0.3)
-const calcLoading = ref(false)
-const calcResultados = ref<any[]>([])
-const calcErro = ref('')
-const calcCustoParaUsar = ref<number | null>(null)
-
-function salvarCepOrigem() {
-  const cep = calcCepOrigem.value.replace(/\D/g, '').slice(0, 8)
-  calcCepOrigem.value = cep
-  if (cep) localStorage.setItem('erp_cep_origem', cep)
-  editingCepOrigem.value = false
-}
-
-async function calcularFrete() {
-  if (!calcCepOrigem.value || !calcCepDestino.value) return
-  calcLoading.value = true
-  calcErro.value = ''
-  calcResultados.value = []
-  calcCustoParaUsar.value = null
-  try {
-    const data = await freteAPI.calcular(calcCepOrigem.value, calcCepDestino.value, calcPeso.value)
-    calcResultados.value = data.resultados || []
-  } catch (e: any) {
-    calcErro.value = e.response?.data?.detail || 'Erro ao consultar Correios'
-  } finally {
-    calcLoading.value = false
-  }
-}
-
-function selecionarFrete(valor: string) {
-  const num = parseFloat(valor.replace(',', '.').replace(/[^0-9.]/g, ''))
-  if (!isNaN(num)) calcCustoParaUsar.value = num
-}
+// CALCULADORA DE FRETE DESATIVADA — reativar quando API estiver pronta
+// const editingCepOrigem = ref(!localStorage.getItem('erp_cep_origem'))
+// const calcCepOrigem = ref(localStorage.getItem('erp_cep_origem') || '')
+// const calcCepDestino = ref('')
+// const calcPeso = ref(0.3)
+// const calcLoading = ref(false)
+// const calcResultados = ref<any[]>([])
+// const calcErro = ref('')
+// const calcCustoParaUsar = ref<number | null>(null)
+//
+// function salvarCepOrigem() { ... }
+// async function calcularFrete() { ... }
+// function selecionarFrete(valor: string) { ... }
 
 function getBadgeText(info: any): string {
   if (!info) return ''
