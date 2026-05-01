@@ -63,8 +63,8 @@
             <div class="rastreamento-info">
               <div class="rastreamento-codigo-row">
                 <p class="rastreamento-codigo">{{ rastreamento.codigo_rastreio }}</p>
-                <span v-if="rastreamento.rastreio_info?.sigla || rastreamento.rastreio_info?.categoria" class="card-service-badge">
-                  {{ rastreamento.rastreio_info.sigla || rastreamento.rastreio_info.categoria }}
+                <span v-if="getBadgeText(rastreamento.rastreio_info)" class="card-service-badge">
+                  {{ getBadgeText(rastreamento.rastreio_info) }}
                 </span>
               </div>
               <p class="rastreamento-cliente">{{ rastreamento.destinatario || 'Sem destinatário' }}</p>
@@ -364,6 +364,14 @@ const formatarCodigo = (event: Event) => {
     valor = valor.substring(0, 13)
   }
   novoRastreamento.value.codigo_rastreio = valor
+}
+
+const getBadgeText = (info: any): string => {
+  if (!info) return ''
+  const tipo = info.tipo_servico || ''
+  const match = tipo.match(/\(([^)]+)\)/)
+  if (match) return match[1]
+  return info.categoria || info.sigla || ''
 }
 
 const copiarCodigo = async (codigo: string) => {

@@ -60,12 +60,22 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     logger.info("[STARTUP] Starting ERP Eleven API")
 
-    # Create database tables
+    # Run Alembic migrations (applies any pending migrations automatically)
     try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("[DB] Database tables created/verified")
+        from alembic.config import Config as AlembicConfig
+        from alembic import command as alembic_command
+        import os
+        alembic_cfg = AlembicConfig(os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", os.path.join(os.path.dirname(__file__), "..", "..", "alembic"))
+        alembic_command.upgrade(alembic_cfg, "head")
+        logger.info("[DB] Alembic migrations applied successfully")
     except Exception as e:
-        logger.error(f"[DB_ERROR] Database setup failed: {e}")
+        logger.error(f"[DB_ERROR] Alembic migration failed: {e}")
+        # Fall back to create_all for tables that don't exist yet
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            pass
 
     # Start daily tracking update scheduler (19:00 BRT)
     scheduler.add_job(

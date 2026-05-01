@@ -574,4 +574,10 @@ export const inventoryAPI = {
   },
 }
 
+// Freight Calculator API
+export const freteAPI = {
+  calcular: (cep_origem: string, cep_destino: string, peso = 0.3) =>
+    api.post('/api/rastreamento/calcular-frete', { cep_origem, cep_destino, peso }).then(r => r.data),
+}
+
 export default api

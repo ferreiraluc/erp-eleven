@@ -27,7 +27,7 @@ class RastreamentoBase(BaseModel):
 
 class RastreamentoCreate(RastreamentoBase):
     """Schema para criação de envio"""
-    pass
+    custo_emissao: Optional[float] = None
 
 
 class RastreamentoUpdate(BaseModel):
@@ -40,6 +40,7 @@ class RastreamentoUpdate(BaseModel):
     origem: Optional[str] = Field(None, max_length=200)
     destino: Optional[str] = Field(None, max_length=200)
     historico_eventos: Optional[List[Dict[str, Any]]] = None
+    custo_emissao: Optional[float] = None
     pedido_id: Optional[uuid.UUID] = None
     ativo: Optional[bool] = None
 
@@ -52,6 +53,7 @@ class RastreamentoResponse(RastreamentoBase):
     ultima_atualizacao: Optional[datetime] = None
     historico_eventos: List[Dict[str, Any]] = Field(default_factory=list)
     rastreio_info: Optional[Dict[str, Any]] = None
+    custo_emissao: Optional[float] = None
     data_criacao: date
     ativo: bool
     created_at: datetime

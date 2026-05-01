@@ -31,6 +31,7 @@ export interface Rastreamento {
   destino?: string
   historico_eventos: any[]
   rastreio_info?: RastreioInfo
+  custo_emissao?: number
   pedido_id?: string
   data_criacao: string
   ativo: boolean
@@ -51,6 +52,7 @@ export interface RastreamentoCreate {
   destinatario?: string
   origem?: string
   destino?: string
+  custo_emissao?: number
   pedido_id?: string
 }
 

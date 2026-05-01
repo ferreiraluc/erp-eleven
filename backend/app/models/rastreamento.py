@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Date, Text, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Date, Text, ForeignKey, DECIMAL
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -38,6 +38,9 @@ class Rastreamento(Base):
 
     # Metadados extras retornados pela API (tipo de serviço, data prevista, etc.)
     rastreio_info = Column(JSONB, nullable=True)
+
+    # Custo de emissão da etiqueta
+    custo_emissao = Column(DECIMAL(10, 2), nullable=True)
     
     # Relacionamento com pedidos
     pedido_id = Column(UUID(as_uuid=True), ForeignKey('pedidos.id'), nullable=True)

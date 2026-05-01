@@ -222,9 +222,9 @@
                   </div>
                   
                   <!-- Rastreio info (service + expected delivery) -->
-                  <div v-if="rastreamento.rastreio_info && (rastreamento.rastreio_info.tipo_servico || rastreamento.rastreio_info.data_prevista)" class="rastreio-info-bar">
-                    <span v-if="rastreamento.rastreio_info.tipo_servico" class="ri-badge">
-                      {{ rastreamento.rastreio_info.tipo_servico }}
+                  <div v-if="rastreamento.rastreio_info && (getBadgeText(rastreamento.rastreio_info) || rastreamento.rastreio_info.data_prevista)" class="rastreio-info-bar">
+                    <span v-if="getBadgeText(rastreamento.rastreio_info)" class="ri-badge">
+                      {{ getBadgeText(rastreamento.rastreio_info) }}
                     </span>
                     <span v-if="rastreamento.rastreio_info.data_prevista" class="ri-previsao">
                       Prev. entrega: <strong>{{ rastreamento.rastreio_info.data_prevista }}</strong>
@@ -335,7 +335,7 @@
 
           <!-- Último evento + serviço -->
           <div class="row-rastreio row-ultimo-evento">
-            <span v-if="rastreamento.rastreio_info?.tipo_servico" class="desktop-service-badge">{{ rastreamento.rastreio_info.tipo_servico }}</span>
+            <span v-if="getBadgeText(rastreamento.rastreio_info)" class="desktop-service-badge">{{ getBadgeText(rastreamento.rastreio_info) }}</span>
             <span class="ultimo-evento-text">
               {{ rastreamento.historico_eventos?.[0]?.situacao || '—' }}
             </span>
@@ -390,8 +390,8 @@
           <!-- Desktop expanded detail panel -->
           <div v-if="isCardExpanded(rastreamento.id)" class="desktop-detail-panel">
             <!-- Service info bar -->
-            <div v-if="rastreamento.rastreio_info && (rastreamento.rastreio_info.tipo_servico || rastreamento.rastreio_info.data_prevista)" class="rastreio-info-bar">
-              <span v-if="rastreamento.rastreio_info.tipo_servico" class="ri-badge">{{ rastreamento.rastreio_info.tipo_servico }}</span>
+            <div v-if="rastreamento.rastreio_info && (getBadgeText(rastreamento.rastreio_info) || rastreamento.rastreio_info.data_prevista)" class="rastreio-info-bar">
+              <span v-if="getBadgeText(rastreamento.rastreio_info)" class="ri-badge">{{ getBadgeText(rastreamento.rastreio_info) }}</span>
               <span v-if="rastreamento.rastreio_info.data_prevista" class="ri-previsao">Previsão de entrega: <strong>{{ rastreamento.rastreio_info.data_prevista }}</strong></span>
               <span v-if="rastreamento.rastreio_info.atrasado" class="ri-atrasado">Atrasado</span>
             </div>
@@ -508,13 +508,76 @@
 
             <div class="form-group">
               <label for="destino">Destino</label>
-              <input 
+              <input
                 id="destino"
-                type="text" 
+                type="text"
                 v-model="formData.destino"
                 placeholder="Local de destino"
                 class="form-input"
               />
+            </div>
+
+            <div class="form-group">
+              <label for="custo_emissao">Custo de emissão (R$)</label>
+              <input
+                id="custo_emissao"
+                type="number"
+                step="0.01"
+                min="0"
+                v-model="formData.custo_emissao"
+                placeholder="0,00"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <!-- Calculadora de frete -->
+          <div class="calc-section">
+            <button type="button" @click="showCalculadora = !showCalculadora" class="calc-toggle-btn">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 7h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
+              </svg>
+              {{ showCalculadora ? 'Fechar calculadora' : 'Calculadora de frete (Correios)' }}
+            </button>
+
+            <div v-if="showCalculadora" class="calc-panel">
+              <div class="calc-fields">
+                <div class="calc-field">
+                  <label>CEP Origem</label>
+                  <input v-model="calcCepOrigem" type="text" maxlength="9" placeholder="00000-000" class="form-input" @input="calcCepOrigem = calcCepOrigem.replace(/\D/g,'').slice(0,8)" />
+                  <span class="calc-hint">Salvo automaticamente</span>
+                </div>
+                <div class="calc-field">
+                  <label>CEP Destino</label>
+                  <input v-model="calcCepDestino" type="text" maxlength="9" placeholder="00000-000" class="form-input" @input="calcCepDestino = calcCepDestino.replace(/\D/g,'').slice(0,8)" />
+                </div>
+                <div class="calc-field calc-field-sm">
+                  <label>Peso (kg)</label>
+                  <input v-model.number="calcPeso" type="number" step="0.1" min="0.1" max="30" class="form-input" />
+                </div>
+                <button
+                  type="button"
+                  @click="calcularFrete"
+                  :disabled="calcLoading || !calcCepOrigem || !calcCepDestino"
+                  class="btn btn-success calc-btn"
+                >
+                  {{ calcLoading ? 'Calculando...' : 'Calcular' }}
+                </button>
+              </div>
+
+              <div v-if="calcErro" class="alert alert-error" style="margin-top:0.5rem;">{{ calcErro }}</div>
+
+              <div v-if="calcResultados.length" class="calc-resultados">
+                <div v-for="r in calcResultados" :key="r.codigo" class="calc-resultado-item">
+                  <div class="calc-servico">{{ r.servico }}</div>
+                  <div v-if="r.erro" class="calc-erro">{{ r.erro }}</div>
+                  <template v-else>
+                    <div class="calc-valor">R$ {{ r.valor }}</div>
+                    <div class="calc-prazo">{{ r.prazo }} dia{{ r.prazo !== 1 ? 's' : '' }} útil{{ r.prazo !== 1 ? 'eis' : '' }}</div>
+                    <button type="button" @click="aplicarCusto(r.valor)" class="calc-aplicar-btn">Usar</button>
+                  </template>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -552,6 +615,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import type { Rastreamento, RastreamentoCreate } from '@/stores/rastreamento'
+import { freteAPI } from '@/services/api'
 
 const rastreamentoStore = useRastreamentoStore()
 
@@ -581,8 +645,47 @@ const formData = ref<RastreamentoCreate>({
   destinatario: '',
   origem: '',
   destino: '',
+  custo_emissao: undefined,
   pedido_id: undefined
 })
+
+// Freight calculator
+const showCalculadora = ref(false)
+const calcCepOrigem = ref(localStorage.getItem('erp_cep_origem') || '')
+const calcCepDestino = ref('')
+const calcPeso = ref(0.3)
+const calcLoading = ref(false)
+const calcResultados = ref<any[]>([])
+const calcErro = ref('')
+
+async function calcularFrete() {
+  if (!calcCepOrigem.value || !calcCepDestino.value) return
+  localStorage.setItem('erp_cep_origem', calcCepOrigem.value)
+  calcLoading.value = true
+  calcErro.value = ''
+  calcResultados.value = []
+  try {
+    const data = await freteAPI.calcular(calcCepOrigem.value, calcCepDestino.value, calcPeso.value)
+    calcResultados.value = data.resultados || []
+  } catch (e: any) {
+    calcErro.value = e.response?.data?.detail || 'Erro ao consultar Correios'
+  } finally {
+    calcLoading.value = false
+  }
+}
+
+function aplicarCusto(valor: string) {
+  const num = parseFloat(valor.replace(',', '.').replace(/[^0-9.]/g, ''))
+  if (!isNaN(num)) formData.value.custo_emissao = num
+}
+
+function getBadgeText(info: any): string {
+  if (!info) return ''
+  const tipo = info.tipo_servico || ''
+  const match = tipo.match(/\(([^)]+)\)/)
+  if (match) return match[1]
+  return info.categoria || info.sigla || ''
+}
 
 // Computed
 const rastreamentosFiltrados = computed(() => {
@@ -642,8 +745,12 @@ function abrirModalCriacao() {
     destinatario: '',
     origem: '',
     destino: '',
+    custo_emissao: undefined,
     pedido_id: undefined
   }
+  calcResultados.value = []
+  calcErro.value = ''
+  showCalculadora.value = false
   modalError.value = null
   showModal.value = true
   
@@ -660,8 +767,12 @@ function editarRastreamento(rastreamento: Rastreamento) {
     destinatario: rastreamento.destinatario || '',
     origem: rastreamento.origem || '',
     destino: rastreamento.destino || '',
+    custo_emissao: rastreamento.custo_emissao,
     pedido_id: rastreamento.pedido_id
   }
+  calcResultados.value = []
+  calcErro.value = ''
+  showCalculadora.value = false
   modalError.value = null
   showModal.value = true
 }
@@ -948,9 +1059,9 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  max-width: 600px;
+  max-width: 100%;
 }
 
 .stat-card {
@@ -1834,31 +1945,34 @@ onMounted(() => {
   }
 
   .stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-  }
-  
-  .stat-card {
-    padding: 0.75rem;
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
   }
-  
+
+  .stat-card {
+    padding: 0.6rem 0.5rem;
+    gap: 0.35rem;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
   .stat-icon {
-    width: 2rem;
-    height: 2rem;
+    width: 1.75rem;
+    height: 1.75rem;
   }
-  
+
   .stat-icon svg {
-    width: 1rem;
-    height: 1rem;
+    width: 0.9rem;
+    height: 0.9rem;
   }
-  
+
   .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
   }
-  
+
   .stat-value {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
   }
 
   .filters-content {
@@ -2317,7 +2431,7 @@ onMounted(() => {
   /* Cards de estatísticas com exata largura dos cards de rastreamento */
   .stats-section { padding: 0.75rem 0.125rem; }
   .stats-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.25rem;
     max-width: none;
     width: 100%;
@@ -2442,8 +2556,89 @@ onMounted(() => {
 @media (max-width: 380px) {
   .page-title { font-size: 1rem; }
   .header-actions .btn.btn-primary { font-size: 0.8rem; padding: 0.45rem 0.7rem; }
-  .stat-value { font-size: 0.95rem; }
+  .stat-value { font-size: 0.85rem; }
+  .stat-label { font-size: 0.55rem; }
+  .stat-icon { width: 1.5rem; height: 1.5rem; }
 }
+
+/* ── Freight Calculator ──────────────────────────────────────────────────────── */
+.calc-section {
+  margin-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+}
+.calc-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.calc-toggle-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+.calc-panel {
+  margin-top: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+.calc-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+.calc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 120px;
+}
+.calc-field-sm { max-width: 90px; flex: none; }
+.calc-field label { font-size: 0.75rem; font-weight: 500; color: #374151; }
+.calc-hint { font-size: 0.6rem; color: #6b7280; }
+.calc-btn { white-space: nowrap; align-self: flex-end; padding: 0.5rem 1rem; }
+.calc-resultados {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+.calc-resultado-item {
+  flex: 1;
+  min-width: 130px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.calc-servico { font-size: 0.75rem; font-weight: 700; color: #1e40af; }
+.calc-valor { font-size: 1rem; font-weight: 700; color: #111827; }
+.calc-prazo { font-size: 0.7rem; color: #6b7280; }
+.calc-erro { font-size: 0.7rem; color: #dc2626; }
+.calc-aplicar-btn {
+  margin-top: 0.25rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.15s;
+}
+.calc-aplicar-btn:hover { background: #1d4ed8; }
 
 /* ── Status badges ───────────────────────────────────────────────────────────── */
 .status-badge-inline {

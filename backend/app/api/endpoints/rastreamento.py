@@ -55,6 +55,7 @@ def listar_rastreamentos(
             "destino": r.destino,
             "historico_eventos": r.historico_eventos or [],
             "rastreio_info": r.rastreio_info or {},
+            "custo_emissao": r.custo_emissao,
             "pedido_id": r.pedido_id,
             "data_criacao": r.data_criacao,
             "ativo": r.ativo,
@@ -285,6 +286,31 @@ def obter_resumo_dashboard(
     )
 
 
+# ─── Calcular frete (Correios) ───────────────────────────────────────────────
+
+@router.post("/calcular-frete")
+def calcular_frete_endpoint(
+    body: dict,
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Calculates freight cost and delivery time via Correios public API."""
+    from ...services.correios_service import calcular_frete
+
+    cep_origem = (body.get("cep_origem") or "").strip()
+    cep_destino = (body.get("cep_destino") or "").strip()
+    peso = float(body.get("peso") or 0.3)
+
+    if not cep_origem or not cep_destino:
+        raise HTTPException(status_code=400, detail="CEP de origem e destino são obrigatórios")
+
+    try:
+        resultados = calcular_frete(cep_origem, cep_destino, peso)
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return {"resultados": resultados}
+
+
 # ─── Wonca API helpers ──────────────────────────────────────────────────────────
 
 def _build_response(r: Rastreamento) -> dict:
@@ -301,6 +327,7 @@ def _build_response(r: Rastreamento) -> dict:
         "destino": r.destino,
         "historico_eventos": r.historico_eventos or [],
         "rastreio_info": r.rastreio_info or {},
+        "custo_emissao": r.custo_emissao,
         "pedido_id": r.pedido_id,
         "data_criacao": r.data_criacao,
         "ativo": r.ativo,
