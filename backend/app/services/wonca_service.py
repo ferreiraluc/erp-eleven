@@ -25,7 +25,9 @@ def fetch_tracking_raw(code: str) -> dict:
             timeout=15,
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        logger.info(f"[Wonca raw] {code}: {data}")
+        return data
     except http_requests.RequestException as e:
         raise ValueError(f"Erro ao consultar API de rastreio: {str(e)}")
 
