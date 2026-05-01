@@ -78,9 +78,10 @@
         </div>
       </div>
     </div>
-
+    
     <!-- Calculadora de Frete (fixa) -->
-    <div class="freight-section">
+    
+    <!--<div class="freight-section">
       <div class="freight-inner">
         <div class="freight-title-row">
           <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -181,7 +182,7 @@
           Frete selecionado: <strong>R$ {{ calcCustoParaUsar.toFixed(2).replace('.',',') }}</strong> — será aplicado ao próximo rastreamento criado/editado.
         </div>
       </div>
-    </div>
+    </div>-->
 
     <!-- Filtros e Busca -->
     <div class="filters-section">
