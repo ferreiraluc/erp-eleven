@@ -36,8 +36,8 @@ class ItemBase(BaseModel):
     cost_price: Optional[Decimal] = Decimal("0")
     sale_price: Optional[Decimal] = Decimal("0")
     currency: Optional[str] = "PYG"
-    cost_currency: Optional[str] = "PYG"
-    sale_currency: Optional[str] = "PYG"
+    cost_currency: Optional[str] = "BRL"
+    sale_currency: Optional[str] = "USD"
     min_stock: Optional[int] = 0
     max_stock: Optional[int] = 0
     is_active: Optional[bool] = True
