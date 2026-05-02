@@ -732,7 +732,7 @@ onMounted(async () => {
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
-.search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; }
+.search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; overflow: hidden; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
 .search-box { flex: 1; position: relative; }
 .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
@@ -876,12 +876,18 @@ onMounted(async () => {
 .item-brand { font-weight: 600; color: #374151; }
 
 /* ── View switcher ────────────────────────────────────────────── */
-.view-switcher { display: flex; align-items: center; gap: 0.35rem; }
+.view-switcher { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
 .view-label { font-size: 0.75rem; color: #9ca3af; margin-right: 0.1rem; }
 .view-btn { display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; white-space: nowrap; }
 .view-btn:hover { border-color: #9ca3af; color: #374151; }
 .view-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
 .view-sep { color: #d1d5db; padding: 0 0.1rem; }
+@media (max-width: 600px) {
+  .view-label { display: none; }
+  .view-sep { display: none; }
+  .view-switcher { gap: 0.25rem; }
+  .view-btn { padding: 0.3rem 0.5rem; }
+}
 
 .item-card {
   background: white;
