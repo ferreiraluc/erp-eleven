@@ -20,12 +20,6 @@
             </svg>
             Importar
           </button>
-          <button @click="toggleSelectionMode" :class="['btn', selectionMode ? 'btn-warning' : 'btn-secondary']">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            {{ selectionMode ? 'Cancelar' : 'Selecionar' }}
-          </button>
           <button @click="openCreate" class="btn btn-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -53,8 +47,9 @@
         </button>
       </div>
 
-      <!-- Filter chips -->
-      <div class="filter-chips">
+      <!-- Filter chips (status + marca + categoria + ver grupos) -->
+      <div class="filter-chips" ref="filterChipsRef">
+        <!-- Status -->
         <button
           v-for="chip in statusChips"
           :key="chip.value"
@@ -64,19 +59,33 @@
           {{ chip.label }}
           <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
         </button>
-      </div>
 
-      <!-- Filtros avançados: Marca + Categoria -->
-      <div class="advanced-filters" v-if="distinctBrands.length > 0 || distinctCategories.length > 0">
-        <select v-if="distinctBrands.length > 0" v-model="filterBrand" @change="applyAdvancedFilter" class="filter-select">
-          <option value="">Todas as marcas</option>
-          <option v-for="b in distinctBrands" :key="b" :value="b">{{ b }}</option>
-        </select>
-        <select v-if="distinctCategories.length > 0" v-model="filterCategory" @change="applyAdvancedFilter" class="filter-select">
-          <option value="">Todas as categorias</option>
-          <option v-for="c in distinctCategories" :key="c" :value="c">{{ formatCategory(c) }}</option>
-        </select>
-        <button v-if="filterBrand || filterCategory" @click="clearAdvancedFilters" class="filter-clear-btn">✕ Limpar filtros</button>
+        <!-- Marca dropdown chip -->
+        <div class="chip-dd-wrap" v-if="distinctBrands.length > 0">
+          <button @click="toggleFilter('brand')" :class="['chip', { active: !!filterBrand }]">
+            {{ filterBrand || 'Marca' }} <span class="chip-caret">▾</span>
+          </button>
+          <div v-if="openFilter === 'brand'" class="chip-dropdown">
+            <button @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">Todas as marcas</button>
+            <button v-for="b in distinctBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
+          </div>
+        </div>
+
+        <!-- Categoria dropdown chip -->
+        <div class="chip-dd-wrap" v-if="distinctCategories.length > 0">
+          <button @click="toggleFilter('category')" :class="['chip', { active: !!filterCategory }]">
+            {{ filterCategory ? formatCategory(filterCategory) : 'Categoria' }} <span class="chip-caret">▾</span>
+          </button>
+          <div v-if="openFilter === 'category'" class="chip-dropdown">
+            <button @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">Todas as categorias</button>
+            <button v-for="c in distinctCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
+          </div>
+        </div>
+
+        <!-- Ver grupos (só aparece se existem grupos) -->
+        <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
+          {{ groupMode ? 'Ver grupos ✓' : 'Ver grupos' }}
+        </button>
       </div>
 
       <!-- Sugestões de agrupamento (visível no modo seleção) -->
@@ -115,10 +124,7 @@
           Grade
         </button>
         <span class="view-sep">|</span>
-        <button :class="['view-btn', { active: groupMode }]" @click="toggleGroupMode" title="Agrupar modelos">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
+        <button :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" title="Selecionar para agrupar">
           Agrupar
         </button>
       </div>
@@ -346,6 +352,10 @@ const distinctBrands = ref<string[]>([])
 const distinctCategories = ref<string[]>([])
 const filterBrand = ref('')
 const filterCategory = ref('')
+const openFilter = ref<string | null>(null)
+const filterChipsRef = ref<HTMLElement | null>(null)
+
+const hasGroups = computed(() => inventoryStore.items.some(i => i.group_key))
 const imageModalSrc = ref<string | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
@@ -538,6 +548,19 @@ function setStatusFilter(status: string) {
   inventoryStore.loadItems(1)
 }
 
+function toggleFilter(key: string) {
+  openFilter.value = openFilter.value === key ? null : key
+}
+
+function setFilter(key: 'brand' | 'category', value: string) {
+  if (key === 'brand') filterBrand.value = value
+  else filterCategory.value = value
+  openFilter.value = null
+  inventoryStore.filters.brand = filterBrand.value
+  inventoryStore.filters.category = filterCategory.value
+  inventoryStore.loadItems(1)
+}
+
 function applyAdvancedFilter() {
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
@@ -648,8 +671,15 @@ function showToast(message: string, type: string) {
   setTimeout(() => { toast.value = null }, 3000)
 }
 
+function onDocClick(e: MouseEvent) {
+  if (filterChipsRef.value && !filterChipsRef.value.contains(e.target as Node)) {
+    openFilter.value = null
+  }
+}
+
 onUnmounted(() => {
   scrollObserver?.disconnect()
+  document.removeEventListener('click', onDocClick)
 })
 
 onMounted(async () => {
@@ -670,6 +700,8 @@ onMounted(async () => {
     distinctBrands.value = dv.brands
     distinctCategories.value = dv.categories
   } catch {}
+
+  document.addEventListener('click', onDocClick)
 
   nextTick(() => {
     if (scrollSentinel.value) {
@@ -789,11 +821,21 @@ onMounted(async () => {
 /* ── Filter chips ─────────────────────────────────────────────── */
 .filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
 
-/* ── Advanced filters ─────────────────────────────────────────── */
-.advanced-filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
-.filter-select { padding: 0.3rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; color: #374151; background: white; outline: none; cursor: pointer; }
-.filter-select:focus { border-color: #3b82f6; }
-.filter-clear-btn { font-size: 0.75rem; color: #ef4444; background: none; border: none; cursor: pointer; padding: 0.2rem 0.4rem; }
+/* ── Chip dropdown filters ────────────────────────────────────── */
+.chip-dd-wrap { position: relative; }
+.chip-caret { font-size: 0.6rem; margin-left: 0.2rem; }
+.chip-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
+  background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 160px; overflow: hidden;
+}
+.chip-dd-opt {
+  display: block; width: 100%; text-align: left;
+  padding: 0.45rem 0.85rem; font-size: 0.82rem; color: #374151;
+  background: none; border: none; cursor: pointer;
+}
+.chip-dd-opt:hover { background: #f9fafb; }
+.chip-dd-opt.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
 
 /* ── Suggestions bar ──────────────────────────────────────────── */
 .suggestions-bar { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; }
