@@ -205,14 +205,21 @@ def infer_status(events: list) -> RastreamentoStatus:
 
     latest = events[0].get("situacao", "").lower()
 
-    delivered = [
-        "entregue ao destinatário", "entregue", "delivered",
-        "objeto entregue",
-    ]
+    # Frases de NÃO entrega devem ser checadas ANTES das de entrega,
+    # pois "entregue" é substring de "não entregue" e causaria falso-positivo.
     errors = [
-        "devolvido", "extraviado", "não entregue", "nao entregue",
+        "não entregue", "nao entregue",
+        "objeto não entregue", "objeto nao entregue",
+        "carteiro não atendido", "carteiro nao atendido",
+        "destinatário ausente", "destinatario ausente",
+        "devolvido", "extraviado",
         "recusado", "retornou ao remetente", "destruído", "indenizado",
         "mudou-se", "ausente", "cancelado", "roubado",
+        "não foi entregue", "nao foi entregue",
+    ]
+    delivered = [
+        "entregue ao destinatário", "entregue ao destinatario",
+        "objeto entregue", "delivered",
     ]
     transit = [
         "encaminhado", "trânsito", "transito", "saiu para entrega",
@@ -222,12 +229,13 @@ def infer_status(events: list) -> RastreamentoStatus:
         "objeto em transferência", "objeto postado",
     ]
 
-    for kw in delivered:
-        if kw in latest:
-            return RastreamentoStatus.ENTREGUE
+    # Erros/não-entrega primeiro para evitar falso positivo com "entregue"
     for kw in errors:
         if kw in latest:
             return RastreamentoStatus.ERRO
+    for kw in delivered:
+        if kw in latest:
+            return RastreamentoStatus.ENTREGUE
     for kw in transit:
         if kw in latest:
             return RastreamentoStatus.EM_TRANSITO
