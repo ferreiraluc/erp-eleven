@@ -152,9 +152,29 @@
         <!-- ── CARD DE GRUPO ── -->
         <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)">
           <div class="group-header">
+            <!-- Imagem do grupo (primeira imagem disponível) -->
+            <div
+              class="group-thumb-wrap"
+              @click.stop="entry.group.items.find(i => i.image_data)?.image_data && (imageModalSrc = entry.group.items.find(i => i.image_data)!.image_data!)"
+              :class="{ 'thumb-clickable': entry.group.items.some(i => i.image_data) }"
+            >
+              <img
+                v-if="entry.group.items.find(i => i.image_data)"
+                :src="entry.group.items.find(i => i.image_data)!.image_data"
+                alt=""
+                class="group-thumb"
+              />
+              <div v-else class="group-thumb-placeholder">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              </div>
+            </div>
             <div class="group-title-area">
               <span class="group-name">{{ entry.group.group_key }}</span>
               <span class="group-total-stock">Total: {{ entry.group.total_stock }}</span>
+              <span v-if="entry.group.items.find(i => i.barcode)" class="group-barcode">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="9" height="9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
+                {{ entry.group.items.find(i => i.barcode)!.barcode }}
+              </span>
             </div>
             <div class="group-btns">
               <button @click="toggleExpand(entry.group.group_key)" class="action-btn expand-btn">
@@ -220,6 +240,10 @@
                   <span class="item-sub-sep"> · </span>
                   <span class="item-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }} {{ Number(entry.item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
                 </template>
+              </div>
+              <div v-if="entry.item.barcode" class="item-barcode-row">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="10" height="10" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
+                <span class="item-barcode">{{ entry.item.barcode }}</span>
               </div>
               <div class="item-bottom-row">
                 <div class="item-left-info">
@@ -754,7 +778,7 @@ onMounted(async () => {
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
 }
-.search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; overflow: hidden; }
+.search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; position: relative; z-index: 20; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
 .search-box { flex: 1; position: relative; }
 .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
@@ -879,9 +903,14 @@ onMounted(async () => {
 .group-card.alert-ok   { border-left: 3px solid #10b981; }
 
 .group-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
-.group-title-area { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.group-thumb-wrap { flex-shrink: 0; width: 36px; height: 36px; border-radius: 5px; overflow: hidden; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; }
+.group-thumb { width: 100%; height: 100%; object-fit: cover; }
+.group-thumb-placeholder { color: #9ca3af; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.thumb-clickable { cursor: zoom-in; }
+.group-title-area { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; flex-wrap: wrap; }
 .group-name { font-weight: 700; font-size: 0.85rem; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-total-stock { font-size: 0.72rem; color: #6b7280; white-space: nowrap; }
+.group-barcode { font-family: monospace; font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
 .group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
 .size-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .size-chip { font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 20px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
@@ -954,7 +983,8 @@ onMounted(async () => {
 
 /* Row 2: barcode · category · price */
 .item-sub { font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; flex-wrap: wrap; gap: 0; line-height: 1.3; }
-.item-barcode { font-family: monospace; letter-spacing: 0.02em; }
+.item-barcode-row { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.1rem; }
+.item-barcode { font-family: monospace; letter-spacing: 0.03em; font-size: 0.67rem; color: #9ca3af; }
 .item-sub-sep { margin: 0 0.15rem; color: #d1d5db; }
 .item-price { color: #059669; font-weight: 600; }
 
