@@ -98,7 +98,7 @@
                     @mousedown.prevent="selectCliente(c)"
                   >
                     <span class="sug-name">{{ c.nome }}</span>
-                    <span class="sug-detail">{{ [c.telefone, c.cpf, c.endereco_cidade].filter(Boolean).join(' · ') }}</span>
+                    <span class="sug-detail">{{ [c.telefone, c.cpf].filter(Boolean).join(' · ') }}</span>
                   </button>
                 </div>
               </div>
@@ -290,8 +290,7 @@ function selectCliente(c: Cliente) {
   formData.value.cliente_nome = c.nome
   formData.value.cliente_telefone = c.telefone || ''
   formData.value.cliente_email = c.email || ''
-  const parts = [c.endereco_rua, c.endereco_bairro, c.endereco_cidade, c.endereco_uf, c.endereco_cep]
-  formData.value.endereco_entrega = parts.filter(Boolean).join(', ')
+  formData.value.endereco_entrega = c.endereco || ''
 }
 
 function clearCliente() {

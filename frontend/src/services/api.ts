@@ -350,11 +350,7 @@ export interface Cliente {
   telefone?: string
   email?: string
   cpf?: string
-  endereco_rua?: string
-  endereco_bairro?: string
-  endereco_cidade?: string
-  endereco_uf?: string
-  endereco_cep?: string
+  endereco?: string
   ativo: boolean
   created_at: string
   updated_at: string
@@ -365,11 +361,7 @@ export interface ClienteCreate {
   telefone?: string
   email?: string
   cpf?: string
-  endereco_rua?: string
-  endereco_bairro?: string
-  endereco_cidade?: string
-  endereco_uf?: string
-  endereco_cep?: string
+  endereco?: string
   ativo?: boolean
 }
 
@@ -389,7 +381,7 @@ export interface Pedido {
   updated_at: string
   created_by?: string
   tags: Tag[]
-  cliente?: { id: string; nome: string; telefone?: string; email?: string; cpf?: string; endereco_cidade?: string; endereco_uf?: string }
+  cliente?: { id: string; nome: string; telefone?: string; email?: string; cpf?: string; endereco?: string }
 }
 
 export interface PedidoCreate {

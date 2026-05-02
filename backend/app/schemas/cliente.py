@@ -9,11 +9,7 @@ class ClienteBase(BaseModel):
     telefone: Optional[str] = None
     email: Optional[str] = None
     cpf: Optional[str] = None
-    endereco_rua: Optional[str] = None
-    endereco_bairro: Optional[str] = None
-    endereco_cidade: Optional[str] = None
-    endereco_uf: Optional[str] = None
-    endereco_cep: Optional[str] = None
+    endereco: Optional[str] = None
     ativo: Optional[bool] = True
 
 
@@ -26,11 +22,7 @@ class ClienteUpdate(BaseModel):
     telefone: Optional[str] = None
     email: Optional[str] = None
     cpf: Optional[str] = None
-    endereco_rua: Optional[str] = None
-    endereco_bairro: Optional[str] = None
-    endereco_cidade: Optional[str] = None
-    endereco_uf: Optional[str] = None
-    endereco_cep: Optional[str] = None
+    endereco: Optional[str] = None
     ativo: Optional[bool] = None
 
 
@@ -43,15 +35,13 @@ class ClienteResponse(ClienteBase):
         from_attributes = True
 
 
-# Versão compacta para embed em PedidoResponse
 class ClienteSimple(BaseModel):
     id: uuid.UUID
     nome: str
     telefone: Optional[str] = None
     email: Optional[str] = None
     cpf: Optional[str] = None
-    endereco_cidade: Optional[str] = None
-    endereco_uf: Optional[str] = None
+    endereco: Optional[str] = None
 
     class Config:
         from_attributes = True

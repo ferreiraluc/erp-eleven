@@ -18,14 +18,8 @@ def _sync_cliente_fields(db_pedido: Pedido, cliente: Cliente) -> None:
     db_pedido.cliente_nome = cliente.nome
     db_pedido.cliente_telefone = cliente.telefone
     db_pedido.cliente_email = cliente.email
-    parts = [
-        cliente.endereco_rua,
-        cliente.endereco_bairro,
-        cliente.endereco_cidade,
-        cliente.endereco_uf,
-        cliente.endereco_cep,
-    ]
-    db_pedido.endereco_entrega = ", ".join(p for p in parts if p) or db_pedido.endereco_entrega
+    if cliente.endereco:
+        db_pedido.endereco_entrega = cliente.endereco
 
 router = APIRouter()
 
