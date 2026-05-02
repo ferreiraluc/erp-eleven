@@ -228,15 +228,15 @@
                 </div>
               </button>
 
-              <button class="action-button orange" @click="navigateToVendas">
+              <button class="action-button orange" @click="navigateToInventory">
                 <div class="action-icon">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
                 <div class="action-content">
-                  <span class="action-title">Vendas</span>
-                  <span class="action-subtitle">Histórico e relatórios</span>
+                  <span class="action-title">Estoque</span>
+                  <span class="action-subtitle">Gerenciar itens</span>
                 </div>
               </button>
 
@@ -330,46 +330,6 @@
           <!-- Folgas Card -->
           <FolgasCard />
 
-          <!-- Vendas Import Card -->
-          <VendasImportCard />
-          
-          <!-- Recent Sales -->
-          <div class="activity-card">
-            <div class="card-header">
-              <h3 class="card-title">{{ $t('dashboard.recentSales') }}</h3>
-              <button class="view-all-button">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-                {{ $t('common.viewAll') }}
-              </button>
-            </div>
-            
-            <div v-if="dashboardStore.recentSales.length === 0" class="empty-state">
-              <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p class="empty-title">{{ $t('dashboard.noRecentSales') }}</p>
-              <p class="empty-subtitle">{{ $t('dashboard.salesWillAppear') }}</p>
-            </div>
-            
-            <div v-else class="sales-list">
-              <div
-                v-for="sale in dashboardStore.recentSales"
-                :key="sale.id"
-                class="sale-item"
-              >
-                <div class="sale-info">
-                  <p class="sale-product">{{ sale.descricao_produto || $t('dashboard.productSale') }}</p>
-                  <p class="sale-details">{{ sale.vendedor_nome || $t('dashboard.unknownVendor') }} • {{ formatDate(sale.data_venda) }}</p>
-                </div>
-                <div class="sale-amount">
-                  <p class="sale-value">{{ sale.moeda }} {{ formatOriginalCurrency(sale.valor_liquido) }}</p>
-                  <p class="sale-method">{{ sale.metodo_pagamento }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Status and Exchange Rate Grid (1x1) -->
@@ -589,7 +549,6 @@ import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
-import VendasImportCard from '@/components/VendasImportCard.vue'
 import { inventoryAPI, type AlertSummary } from '@/services/api'
 
 const router = useRouter()
@@ -760,6 +719,10 @@ const navigateToVendors = () => {
 
 const navigateToVendas = () => {
   router.push('/vendas')
+}
+
+const navigateToInventory = () => {
+  router.push('/inventory')
 }
 
 const navigateToPedidos = () => {
@@ -1593,12 +1556,12 @@ onUnmounted(() => {
 .action-icon {
   width: 2.5rem;
   height: 2.5rem;
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(0, 0, 0, 0.07);
   border-radius: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #111827;
 }
 
 .action-icon svg {
