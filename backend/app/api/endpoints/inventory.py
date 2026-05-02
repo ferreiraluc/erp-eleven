@@ -20,7 +20,7 @@ from ...schemas.inventory import (
     SupplierCreate, SupplierResponse,
     MovementCreate, MovementResponse, BatchMovementCreate,
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
-    SessionItemResponse, AlertSummary,
+    SessionItemResponse, AlertSummary, GroupItemsRequest,
 )
 from ...dependencies import get_current_active_user, require_role
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level
@@ -229,6 +229,21 @@ def update_item(
     resp = ItemResponse.model_validate(db_item)
     resp.alert_level = _compute_alert_level(db_item)
     return resp
+
+
+@router.post("/items/group")
+def group_items_batch(
+    request: GroupItemsRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+):
+    items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
+    if not items:
+        raise HTTPException(status_code=404, detail="No items found")
+    for item in items:
+        item.group_key = request.group_key
+    db.commit()
+    return {"message": f"Grouped {len(items)} items", "count": len(items)}
 
 
 @router.post("/items/ungroup/{group_key_value}")

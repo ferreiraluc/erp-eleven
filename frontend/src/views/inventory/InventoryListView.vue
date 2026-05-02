@@ -20,6 +20,12 @@
             </svg>
             Importar
           </button>
+          <button @click="toggleSelectionMode" :class="['btn', selectionMode ? 'btn-warning' : 'btn-secondary']">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            {{ selectionMode ? 'Cancelar' : 'Selecionar' }}
+          </button>
           <button @click="openCreate" class="btn btn-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -139,9 +145,20 @@
         </div>
 
         <!-- ── CARD INDIVIDUAL ── -->
-        <div v-else class="item-card" :class="['alert-' + entry.item.alert_level, { 'sub-item': entry.type === 'item' && groupMode && entry.item.group_key }]">
+        <div
+          v-else
+          class="item-card"
+          :class="['alert-' + entry.item.alert_level, { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id) }]"
+          @click="selectionMode && toggleSelection(entry.item.id)"
+        >
+          <!-- Checkbox de seleção -->
+          <div v-if="selectionMode" class="card-check" @click.stop="toggleSelection(entry.item.id)">
+            <span :class="['check-box', { checked: selectedIds.includes(entry.item.id) }]">
+              <svg v-if="selectedIds.includes(entry.item.id)" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </span>
+          </div>
           <!-- Imagem topo (grid view) -->
-          <div class="item-grid-image" @click="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
+          <div class="item-grid-image" @click.stop="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
             <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-grid-img" />
             <div v-else class="item-grid-placeholder">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
@@ -232,6 +249,46 @@
       @imported="() => { inventoryStore.loadItems(1); inventoryStore.loadAlerts() }"
       @close="showImport = false"
     />
+
+    <!-- Barra flutuante de seleção -->
+    <transition name="sel-bar">
+      <div v-if="selectionMode && selectedIds.length > 0" class="selection-bar">
+        <span class="sel-count">{{ selectedIds.length }} item{{ selectedIds.length !== 1 ? 's' : '' }} selecionado{{ selectedIds.length !== 1 ? 's' : '' }}</span>
+        <div class="sel-actions">
+          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">
+            Agrupar
+          </button>
+          <button @click="selectedIds = []" class="sel-btn">Limpar</button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal de nome do grupo -->
+    <div v-if="showGroupModal" class="gmodal-overlay" @click.self="showGroupModal = false">
+      <div class="gmodal">
+        <h3 class="gmodal-title">Definir nome do grupo</h3>
+        <p class="gmodal-sub">{{ selectedIds.length }} itens serão agrupados. Defina um código ou nome de modelo:</p>
+        <input
+          v-model="groupNameInput"
+          type="text"
+          class="gmodal-input"
+          placeholder="Ex: DKR003, FLC009 LUTT/NAPA..."
+          list="gname-list"
+          ref="groupNameInputRef"
+          @keydown.enter="confirmGroup"
+        />
+        <datalist id="gname-list">
+          <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
+        </datalist>
+        <p class="gmodal-hint">Sugestão baseada nos nomes: <strong>{{ groupNameSuggestion }}</strong></p>
+        <div class="gmodal-footer">
+          <button @click="showGroupModal = false" class="sel-btn">Cancelar</button>
+          <button @click="confirmGroup" class="sel-btn sel-btn-primary" :disabled="!groupNameInput.trim() || grouping">
+            {{ grouping ? 'Agrupando...' : 'Agrupar' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -264,6 +321,12 @@ const viewMode = ref<'list' | 'compact' | 'grid'>(
 )
 const groupMode = ref(localStorage.getItem('inv_group_mode') === 'true')
 const expandedGroups = ref<string[]>([])
+const selectionMode = ref(false)
+const selectedIds = ref<string[]>([])
+const showGroupModal = ref(false)
+const groupNameInput = ref('')
+const groupNameInputRef = ref<HTMLInputElement | null>(null)
+const grouping = ref(false)
 const scrollSentinel = ref<HTMLElement | null>(null)
 let scrollObserver: IntersectionObserver | null = null
 
@@ -281,6 +344,62 @@ function toggleExpand(groupKey: string) {
   const idx = expandedGroups.value.indexOf(groupKey)
   if (idx === -1) expandedGroups.value.push(groupKey)
   else expandedGroups.value.splice(idx, 1)
+}
+
+function toggleSelectionMode() {
+  selectionMode.value = !selectionMode.value
+  if (!selectionMode.value) {
+    selectedIds.value = []
+    showGroupModal.value = false
+  }
+}
+
+function toggleSelection(id: string) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(idx, 1)
+}
+
+const groupNameSuggestion = computed(() => {
+  if (selectedIds.value.length < 2) return ''
+  const selected = inventoryStore.items.filter(i => selectedIds.value.includes(i.id))
+  if (!selected.length) return ''
+  const names = selected.map(i => i.name)
+  let prefix = names[0]
+  for (const name of names.slice(1)) {
+    let i = 0
+    while (i < prefix.length && i < name.length && prefix[i] === name[i]) i++
+    prefix = prefix.slice(0, i)
+  }
+  return prefix.trim().replace(/[-_\s]+$/, '')
+})
+
+watch(showGroupModal, (val) => {
+  if (val) {
+    groupNameInput.value = groupNameSuggestion.value
+    nextTick(() => groupNameInputRef.value?.focus())
+  }
+})
+
+async function confirmGroup() {
+  const name = groupNameInput.value.trim()
+  if (!name || grouping.value) return
+  grouping.value = true
+  try {
+    await inventoryAPI.groupItems(selectedIds.value, name)
+    showToast(`${selectedIds.value.length} itens agrupados como "${name}"`, 'success')
+    showGroupModal.value = false
+    selectionMode.value = false
+    selectedIds.value = []
+    groupNameInput.value = ''
+    groupMode.value = true
+    localStorage.setItem('inv_group_mode', 'true')
+    await inventoryStore.loadItems(1)
+  } catch (e: any) {
+    showToast(e.response?.data?.detail || 'Erro ao agrupar', 'error')
+  } finally {
+    grouping.value = false
+  }
 }
 
 function currencySymbol(c: string): string {
@@ -748,6 +867,48 @@ onMounted(async () => {
   transition: background 0.15s;
 }
 .image-modal-close:hover { background: rgba(255,255,255,0.3); }
+
+/* ── Selection mode ──────────────────────────────────────────────────────────── */
+.btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.card-selected { outline: 2px solid #3b82f6; outline-offset: -2px; }
+.card-check { position: absolute; top: 0.35rem; left: 0.35rem; z-index: 2; }
+.item-card { position: relative; }
+.check-box {
+  width: 20px; height: 20px; border-radius: 4px; border: 2px solid #d1d5db;
+  background: white; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+}
+.check-box.checked { background: #3b82f6; border-color: #3b82f6; color: white; }
+
+/* ── Selection floating bar ─────────────────────────────────────────────────── */
+.selection-bar {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: white; border-radius: 12px;
+  padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 1rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000; white-space: nowrap;
+}
+.sel-count { font-size: 0.875rem; font-weight: 500; }
+.sel-actions { display: flex; gap: 0.5rem; }
+.sel-btn { padding: 0.4rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; background: rgba(255,255,255,0.15); color: white; }
+.sel-btn:hover { background: rgba(255,255,255,0.25); }
+.sel-btn-primary { background: #3b82f6; }
+.sel-btn-primary:hover { background: #2563eb; }
+.sel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sel-bar-enter-active, .sel-bar-leave-active { transition: all 0.25s ease; }
+.sel-bar-enter-from, .sel-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(1rem); }
+
+/* ── Group modal ─────────────────────────────────────────────────────────────── */
+.gmodal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.gmodal { background: white; border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 400px; }
+.gmodal-title { font-size: 1.05rem; font-weight: 700; color: #111827; margin: 0 0 0.4rem; }
+.gmodal-sub { font-size: 0.82rem; color: #6b7280; margin: 0 0 1rem; }
+.gmodal-input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; outline: none; box-sizing: border-box; margin-bottom: 0.5rem; }
+.gmodal-input:focus { border-color: #3b82f6; }
+.gmodal-hint { font-size: 0.75rem; color: #9ca3af; margin: 0 0 1.25rem; }
+.gmodal-hint strong { color: #374151; }
+.gmodal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; }
+.gmodal-footer .sel-btn { background: #f3f4f6; color: #374151; }
+.gmodal-footer .sel-btn-primary { background: #3b82f6; color: white; }
 
 /* ── Misc ────────────────────────────────────────────────────────────────────── */
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; z-index: 9999; white-space: nowrap; }

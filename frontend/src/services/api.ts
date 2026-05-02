@@ -519,6 +519,9 @@ export const inventoryAPI = {
   quickExit: (id: string): Promise<{ message: string; new_stock: number }> =>
     api.post(`/api/inventory/items/${id}/quick-exit`).then(res => res.data),
 
+  groupItems: (itemIds: string[], groupKey: string): Promise<{ message: string; count: number }> =>
+    api.post('/api/inventory/items/group', { item_ids: itemIds, group_key: groupKey }).then(res => res.data),
+
   ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
     api.post(`/api/inventory/items/ungroup/${encodeURIComponent(groupKey)}`).then(res => res.data),
 

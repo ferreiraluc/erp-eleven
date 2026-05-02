@@ -76,6 +76,11 @@ class ItemListResponse(BaseModel):
     total_pages: int
 
 
+class GroupItemsRequest(BaseModel):
+    item_ids: List[uuid.UUID]
+    group_key: str
+
+
 class MovementBase(BaseModel):
     item_id: uuid.UUID
     movement_type: str
