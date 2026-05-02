@@ -8,7 +8,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const alerts = ref<AlertSummary | null>(null)
   const movements = ref<StockMovement[]>([])
   const pagination = ref({ total: 0, page: 1, page_size: 20, total_pages: 1 })
-  const filters = ref({ search: '', status: '', category: '', location: '', size: '', color: '' })
+  const filters = ref({ search: '', status: '', category: '', brand: '', location: '', size: '', color: '' })
   const loading = ref(false)
   const error = ref<string | null>(null)
 

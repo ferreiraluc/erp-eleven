@@ -525,6 +525,9 @@ export const inventoryAPI = {
   ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
     api.post(`/api/inventory/items/ungroup/${encodeURIComponent(groupKey)}`).then(res => res.data),
 
+  getDistinctValues: (): Promise<{ brands: string[]; categories: string[] }> =>
+    api.get('/api/inventory/items/distinct-values').then(res => res.data),
+
   getAlertsSummary: (): Promise<AlertSummary> =>
     api.get('/api/inventory/alerts/summary').then(res => res.data),
 

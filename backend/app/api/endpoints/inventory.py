@@ -67,10 +67,24 @@ def create_supplier(
 
 # --- Items -------------------------------------------------------------------
 
+@router.get("/items/distinct-values")
+def get_distinct_values(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    brands = db.query(Item.brand).filter(Item.brand.isnot(None), Item.brand != '').distinct().all()
+    categories = db.query(Item.category).filter(Item.category.isnot(None), Item.category != '').distinct().all()
+    return {
+        "brands": sorted([b[0] for b in brands]),
+        "categories": sorted([c[0] for c in categories]),
+    }
+
+
 @router.get("/items", response_model=ItemListResponse)
 def list_items(
     search: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     size: Optional[str] = Query(None),
     color: Optional[str] = Query(None),
@@ -95,6 +109,8 @@ def list_items(
         )
     if category:
         query = query.filter(Item.category.ilike(f"%{category}%"))
+    if brand:
+        query = query.filter(Item.brand.ilike(f"%{brand}%"))
     if location:
         query = query.filter(Item.location.ilike(f"%{location}%"))
     if size:

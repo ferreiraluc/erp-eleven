@@ -66,6 +66,33 @@
         </button>
       </div>
 
+      <!-- Filtros avançados: Marca + Categoria -->
+      <div class="advanced-filters" v-if="distinctBrands.length > 0 || distinctCategories.length > 0">
+        <select v-if="distinctBrands.length > 0" v-model="filterBrand" @change="applyAdvancedFilter" class="filter-select">
+          <option value="">Todas as marcas</option>
+          <option v-for="b in distinctBrands" :key="b" :value="b">{{ b }}</option>
+        </select>
+        <select v-if="distinctCategories.length > 0" v-model="filterCategory" @change="applyAdvancedFilter" class="filter-select">
+          <option value="">Todas as categorias</option>
+          <option v-for="c in distinctCategories" :key="c" :value="c">{{ formatCategory(c) }}</option>
+        </select>
+        <button v-if="filterBrand || filterCategory" @click="clearAdvancedFilters" class="filter-clear-btn">✕ Limpar filtros</button>
+      </div>
+
+      <!-- Sugestões de agrupamento (visível no modo seleção) -->
+      <div v-if="selectionMode && suggestedGroups.length > 0" class="suggestions-bar">
+        <span class="sug-label">Similares detectados:</span>
+        <button
+          v-for="sg in suggestedGroups.slice(0, 4)"
+          :key="sg.name"
+          @click="selectSuggestedGroup(sg)"
+          class="sug-chip"
+          :title="`${sg.items.length} itens com nome similar`"
+        >
+          {{ sg.name }} ({{ sg.items.length }})
+        </button>
+      </div>
+
       <!-- View mode switcher -->
       <div class="view-switcher">
         <span class="view-label">Visualização:</span>
@@ -315,6 +342,10 @@ const editingItem = ref<InventoryItem | null>(null)
 const movementItem = ref<InventoryItem | null>(null)
 const suppliers = ref<Array<{ id: string; name: string }>>([])
 const toast = ref<{ message: string; type: string } | null>(null)
+const distinctBrands = ref<string[]>([])
+const distinctCategories = ref<string[]>([])
+const filterBrand = ref('')
+const filterCategory = ref('')
 const imageModalSrc = ref<string | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
@@ -507,6 +538,45 @@ function setStatusFilter(status: string) {
   inventoryStore.loadItems(1)
 }
 
+function applyAdvancedFilter() {
+  inventoryStore.filters.brand = filterBrand.value
+  inventoryStore.filters.category = filterCategory.value
+  inventoryStore.loadItems(1)
+}
+
+function clearAdvancedFilters() {
+  filterBrand.value = ''
+  filterCategory.value = ''
+  inventoryStore.filters.brand = ''
+  inventoryStore.filters.category = ''
+  inventoryStore.loadItems(1)
+}
+
+// Sugestões de grupos por nome similar (prefixo comum ≥ 4 chars)
+interface SuggestedGroup { name: string; items: InventoryItem[] }
+const suggestedGroups = computed<SuggestedGroup[]>(() => {
+  const ungrouped = inventoryStore.items.filter(i => !i.group_key)
+  const map = new Map<string, InventoryItem[]>()
+  for (const item of ungrouped) {
+    // Normaliza: remove tamanhos comuns do final do nome
+    const base = item.name.replace(/\s+(PP|P|M|G|GG|XG|XGG|XXG|\d+)\s*$/i, '').trim()
+    if (base.length < 4) continue
+    const arr = map.get(base) ?? []
+    arr.push(item)
+    map.set(base, arr)
+  }
+  return Array.from(map.entries())
+    .filter(([, items]) => items.length >= 2)
+    .map(([name, items]) => ({ name, items }))
+    .sort((a, b) => b.items.length - a.items.length)
+})
+
+function selectSuggestedGroup(sg: SuggestedGroup) {
+  selectedIds.value = sg.items.map(i => i.id)
+  groupNameInput.value = sg.name
+  showGroupModal.value = true
+}
+
 function loadMore() {
   const nextPage = inventoryStore.pagination.page + 1
   inventoryStore.loadItems(nextPage, true)
@@ -594,6 +664,11 @@ onMounted(async () => {
   try {
     const supplierList = await inventoryAPI.getSuppliers()
     suppliers.value = supplierList
+  } catch {}
+  try {
+    const dv = await inventoryAPI.getDistinctValues()
+    distinctBrands.value = dv.brands
+    distinctCategories.value = dv.categories
   } catch {}
 
   nextTick(() => {
@@ -713,6 +788,18 @@ onMounted(async () => {
 
 /* ── Filter chips ─────────────────────────────────────────────── */
 .filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+
+/* ── Advanced filters ─────────────────────────────────────────── */
+.advanced-filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.filter-select { padding: 0.3rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; color: #374151; background: white; outline: none; cursor: pointer; }
+.filter-select:focus { border-color: #3b82f6; }
+.filter-clear-btn { font-size: 0.75rem; color: #ef4444; background: none; border: none; cursor: pointer; padding: 0.2rem 0.4rem; }
+
+/* ── Suggestions bar ──────────────────────────────────────────── */
+.suggestions-bar { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; }
+.sug-label { font-size: 0.72rem; color: #92400e; font-weight: 600; white-space: nowrap; }
+.sug-chip { font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 20px; border: 1px solid #fbbf24; background: #fef3c7; color: #92400e; cursor: pointer; white-space: nowrap; }
+.sug-chip:hover { background: #fde68a; }
 
 /* ── Group card ───────────────────────────────────────────────── */
 .group-card {

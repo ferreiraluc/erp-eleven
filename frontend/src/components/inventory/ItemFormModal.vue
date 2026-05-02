@@ -143,22 +143,12 @@
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Fornecedor</label>
-              <select v-model="form.supplier_id" class="form-input">
-                <option value="">Nenhum</option>
-                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Grupo (variantes)</label>
-              <input v-model="form.group_key" type="text" class="form-input" placeholder="Ex: Camiseta Azul P20" list="group-key-list" />
-              <datalist id="group-key-list">
-                <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
-              </datalist>
-              <span class="field-hint">Itens com o mesmo grupo serão agrupáveis na lista</span>
-            </div>
+          <div class="form-group">
+            <label>Fornecedor</label>
+            <select v-model="form.supplier_id" class="form-input">
+              <option value="">Nenhum</option>
+              <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
           </div>
 
           <div class="form-row">
