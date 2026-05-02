@@ -118,7 +118,11 @@ async function handleSubmit() {
     emit('saved', result)
     emit('close')
   } catch (e: any) {
-    errorMsg.value = e.response?.data?.detail || 'Erro ao salvar cliente.'
+    console.error('[ClienteFormModal] save error:', e)
+    const detail = e.response?.data?.detail
+    errorMsg.value = Array.isArray(detail)
+      ? detail.map((d: any) => d.msg || String(d)).join('; ')
+      : (typeof detail === 'string' ? detail : e.message || 'Erro ao salvar cliente.')
   } finally {
     submitting.value = false
   }
