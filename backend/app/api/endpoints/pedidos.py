@@ -4,12 +4,28 @@ from typing import List, Optional
 from ...database import get_db
 from ...models.pedido import Pedido, PedidoStatus
 from ...models.pedido_tag import TagStatus
+from ...models.cliente import Cliente
 from ...models.usuario import Usuario
 from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 from ...utils import generate_order_number, validate_brazilian_cep, validate_brazilian_phone
 from ...services.rastreamento_sync import RastreamentoSyncService
+
+
+def _sync_cliente_fields(db_pedido: Pedido, cliente: Cliente) -> None:
+    """Copia dados do Cliente para os campos inline do Pedido."""
+    db_pedido.cliente_nome = cliente.nome
+    db_pedido.cliente_telefone = cliente.telefone
+    db_pedido.cliente_email = cliente.email
+    parts = [
+        cliente.endereco_rua,
+        cliente.endereco_bairro,
+        cliente.endereco_cidade,
+        cliente.endereco_uf,
+        cliente.endereco_cep,
+    ]
+    db_pedido.endereco_entrega = ", ".join(p for p in parts if p) or db_pedido.endereco_entrega
 
 router = APIRouter()
 
@@ -64,12 +80,23 @@ def criar_pedido(
     # Generate unique order number
     numero_pedido = generate_order_number(db)
 
+    # Se cliente_id fornecido, valida e sincroniza campos
+    cliente_obj = None
+    if pedido.cliente_id:
+        cliente_obj = db.query(Cliente).filter(Cliente.id == pedido.cliente_id, Cliente.ativo == True).first()
+        if not cliente_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+
     # Create order
     pedido_data = pedido.dict(exclude={"tag_ids"})
     pedido_data["numero_pedido"] = numero_pedido
     pedido_data["created_by"] = current_user.id
 
     db_pedido = Pedido(**pedido_data)
+
+    if cliente_obj:
+        _sync_cliente_fields(db_pedido, cliente_obj)
+
     db.add(db_pedido)
     db.flush()  # Get the ID without committing
 
@@ -134,6 +161,13 @@ def atualizar_pedido(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found"
         )
+
+    # Se cliente_id fornecido, valida e sincroniza campos
+    if pedido_update.cliente_id is not None:
+        cliente_obj = db.query(Cliente).filter(Cliente.id == pedido_update.cliente_id, Cliente.ativo == True).first()
+        if not cliente_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+        _sync_cliente_fields(db_pedido, cliente_obj)
 
     # Basic validation
     update_data = pedido_update.dict(exclude_unset=True, exclude={"tag_ids"})

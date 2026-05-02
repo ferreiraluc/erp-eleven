@@ -342,26 +342,60 @@ export const tagsAPI = {
 }
 
 // Pedido Types (Simplified)
+// ─── Cliente Types ─────────────────────────────────────────────────────────────
+
+export interface Cliente {
+  id: string
+  nome: string
+  telefone?: string
+  email?: string
+  cpf?: string
+  endereco_rua?: string
+  endereco_bairro?: string
+  endereco_cidade?: string
+  endereco_uf?: string
+  endereco_cep?: string
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ClienteCreate {
+  nome: string
+  telefone?: string
+  email?: string
+  cpf?: string
+  endereco_rua?: string
+  endereco_bairro?: string
+  endereco_cidade?: string
+  endereco_uf?: string
+  endereco_cep?: string
+  ativo?: boolean
+}
+
 export interface Pedido {
   id: string
   numero_pedido: string
-  descricao: string  // Descrição das peças/produtos
-  valor_total: number  // Valor total do pedido
+  descricao: string
+  valor_total: number
+  cliente_id?: string
   cliente_nome?: string
   cliente_telefone?: string
   cliente_email?: string
-  endereco_entrega?: string  // Endereço livre
+  endereco_entrega?: string
   status: 'PENDENTE' | 'PROCESSANDO' | 'ENVIADO' | 'ENTREGUE' | 'CANCELADO'
   codigo_rastreio?: string
   created_at: string
   updated_at: string
   created_by?: string
   tags: Tag[]
+  cliente?: { id: string; nome: string; telefone?: string; email?: string; cpf?: string; endereco_cidade?: string; endereco_uf?: string }
 }
 
 export interface PedidoCreate {
   descricao: string
   valor_total: number
+  cliente_id?: string
   cliente_nome?: string
   cliente_telefone?: string
   cliente_email?: string
@@ -417,6 +451,29 @@ export const pedidosAPI = {
     pedido_associado?: string
   }> =>
     api.get(`/api/pedidos/rastreamento/${codigoRastreio}`).then(res => res.data)
+}
+
+// ─── Clientes API ──────────────────────────────────────────────────────────────
+
+export const clientesAPI = {
+  getAll: (params?: { search?: string; ativo?: boolean; skip?: number; limit?: number }): Promise<Cliente[]> => {
+    const p = new URLSearchParams()
+    if (params?.search) p.append('search', params.search)
+    if (params?.ativo !== undefined) p.append('ativo', String(params.ativo))
+    if (params?.skip !== undefined) p.append('skip', String(params.skip))
+    if (params?.limit !== undefined) p.append('limit', String(params.limit))
+    return api.get(`/api/clientes/?${p.toString()}`).then(r => r.data)
+  },
+  search: (q: string, limit = 10): Promise<Cliente[]> =>
+    api.get(`/api/clientes/search?q=${encodeURIComponent(q)}&limit=${limit}`).then(r => r.data),
+  getById: (id: string): Promise<Cliente> =>
+    api.get(`/api/clientes/${id}`).then(r => r.data),
+  create: (data: ClienteCreate): Promise<Cliente> =>
+    api.post('/api/clientes/', data).then(r => r.data),
+  update: (id: string, data: Partial<ClienteCreate>): Promise<Cliente> =>
+    api.put(`/api/clientes/${id}`, data).then(r => r.data),
+  delete: (id: string): Promise<{ message: string }> =>
+    api.delete(`/api/clientes/${id}`).then(r => r.data),
 }
 
 // ─── Inventory Types ──────────────────────────────────────────────────────────

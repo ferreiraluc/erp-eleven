@@ -45,7 +45,11 @@ class Pedido(Base):
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
 
+    # FK para Cliente (opcional, retrocompatível)
+    cliente_id = Column(UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=True)
+
     # Relacionamentos
     usuario_criador = relationship("Usuario", foreign_keys=[created_by])
     rastreamentos = relationship("Rastreamento", back_populates="pedido")
     tags = relationship("TagStatus", secondary=pedido_tags_association, back_populates="pedidos")
+    cliente = relationship("Cliente", back_populates="pedidos", foreign_keys=[cliente_id])

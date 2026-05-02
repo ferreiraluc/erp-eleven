@@ -8,6 +8,7 @@ import VendorManagement from '@/views/VendorManagement.vue'
 import VendasView from '@/views/VendasView.vue'
 import PedidosView from '@/views/PedidosView.vue'
 import InventoryListView from '@/views/inventory/InventoryListView.vue'
+import ClientesView from '@/views/ClientesView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -62,6 +63,12 @@ const router = createRouter({
       path: '/inventory',
       name: 'inventory',
       component: InventoryListView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/clientes',
+      name: 'clientes',
+      component: ClientesView,
       meta: { requiresAuth: true }
     },
     // Catch all route

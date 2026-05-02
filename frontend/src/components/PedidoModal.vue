@@ -74,6 +74,39 @@
           <!-- Cliente Section (Opcional) -->
           <div class="form-section">
             <h3 class="section-title">Dados do Cliente (Opcional)</h3>
+
+            <!-- Autocomplete para vincular cliente existente -->
+            <div class="cliente-autocomplete" style="margin-bottom:.75rem;">
+              <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Vincular cliente cadastrado</label>
+              <div style="position:relative;">
+                <input
+                  v-model="clienteSearch"
+                  type="text"
+                  placeholder="Buscar por nome, telefone ou CPF..."
+                  class="form-input"
+                  @input="onClienteSearchInput"
+                  @blur="setTimeout(() => showSuggestions = false, 200)"
+                  style="width:100%;box-sizing:border-box;"
+                />
+                <button v-if="selectedCliente" type="button" @click="clearCliente" style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;">✕ Desvincular</button>
+                <div v-if="showSuggestions" class="suggestion-list">
+                  <button
+                    v-for="c in clienteSuggestions"
+                    :key="c.id"
+                    type="button"
+                    class="suggestion-item"
+                    @mousedown.prevent="selectCliente(c)"
+                  >
+                    <span class="sug-name">{{ c.nome }}</span>
+                    <span class="sug-detail">{{ [c.telefone, c.cpf, c.endereco_cidade].filter(Boolean).join(' · ') }}</span>
+                  </button>
+                </div>
+              </div>
+              <p v-if="selectedCliente" style="font-size:.72rem;color:#10b981;margin:.3rem 0 0;">
+                ✓ Vinculado: {{ selectedCliente.nome }} — campos preenchidos automaticamente
+              </p>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label for="cliente_nome">Nome do Cliente</label>
@@ -210,7 +243,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { pedidosAPI, tagsAPI, type Pedido, type PedidoCreate, type Tag } from '@/services/api'
+import { pedidosAPI, tagsAPI, clientesAPI, type Pedido, type PedidoCreate, type Tag, type Cliente } from '@/services/api'
 import TagManagerModal from './TagManagerModal.vue'
 
 interface Props {
@@ -232,6 +265,40 @@ const isSubmitting = ref(false)
 const tags = ref<Tag[]>([])
 const selectedTags = ref<string[]>([])
 const showTagManager = ref(false)
+
+// Cliente autocomplete
+const clienteSearch = ref('')
+const clienteSuggestions = ref<Cliente[]>([])
+const selectedCliente = ref<Cliente | null>(null)
+const showSuggestions = ref(false)
+let clienteSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+async function onClienteSearchInput() {
+  if (clienteSearch.value.length < 2) { clienteSuggestions.value = []; showSuggestions.value = false; return }
+  if (clienteSearchTimer) clearTimeout(clienteSearchTimer)
+  clienteSearchTimer = setTimeout(async () => {
+    clienteSuggestions.value = await clientesAPI.search(clienteSearch.value, 8)
+    showSuggestions.value = clienteSuggestions.value.length > 0
+  }, 250)
+}
+
+function selectCliente(c: Cliente) {
+  selectedCliente.value = c
+  clienteSearch.value = c.nome
+  showSuggestions.value = false
+  formData.value.cliente_id = c.id
+  formData.value.cliente_nome = c.nome
+  formData.value.cliente_telefone = c.telefone || ''
+  formData.value.cliente_email = c.email || ''
+  const parts = [c.endereco_rua, c.endereco_bairro, c.endereco_cidade, c.endereco_uf, c.endereco_cep]
+  formData.value.endereco_entrega = parts.filter(Boolean).join(', ')
+}
+
+function clearCliente() {
+  selectedCliente.value = null
+  clienteSearch.value = ''
+  formData.value.cliente_id = undefined
+}
 
 // Form data
 const formData = ref<PedidoCreate>({
@@ -261,6 +328,7 @@ const resetForm = () => {
   formData.value = {
     descricao: '',
     valor_total: 0,
+    cliente_id: undefined,
     cliente_nome: '',
     cliente_telefone: '',
     cliente_email: '',
@@ -269,6 +337,8 @@ const resetForm = () => {
     codigo_rastreio: ''
   }
   selectedTags.value = []
+  selectedCliente.value = null
+  clienteSearch.value = ''
 }
 
 const loadFormData = () => {
@@ -276,6 +346,7 @@ const loadFormData = () => {
     formData.value = {
       descricao: props.pedido.descricao,
       valor_total: props.pedido.valor_total,
+      cliente_id: props.pedido.cliente_id || undefined,
       cliente_nome: props.pedido.cliente_nome || '',
       cliente_telefone: props.pedido.cliente_telefone || '',
       cliente_email: props.pedido.cliente_email || '',
@@ -284,6 +355,13 @@ const loadFormData = () => {
       codigo_rastreio: props.pedido.codigo_rastreio || ''
     }
     selectedTags.value = props.pedido.tags.map(tag => tag.id)
+    if (props.pedido.cliente) {
+      selectedCliente.value = props.pedido.cliente as Cliente
+      clienteSearch.value = props.pedido.cliente.nome
+    } else {
+      selectedCliente.value = null
+      clienteSearch.value = ''
+    }
   } else {
     resetForm()
   }
@@ -702,4 +780,35 @@ onMounted(() => {
     flex-direction: column;
   }
 }
+
+/* Cliente autocomplete */
+.suggestion-list {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.1);
+  z-index: 200;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.suggestion-item {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  width: 100%;
+  text-align: left;
+  padding: .5rem .85rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: #f9fafb; }
+.sug-name { font-size: .85rem; font-weight: 600; color: #111827; }
+.sug-detail { font-size: .73rem; color: #6b7280; }
 </style>

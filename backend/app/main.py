@@ -6,7 +6,7 @@ import time
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory
+from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory, clientes
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
 
@@ -131,6 +131,7 @@ app.include_router(money_transfers.router, prefix="/api/money-transfers", tags=[
 app.include_router(rastreamento.router, prefix="/api/rastreamento", tags=["rastreamento"])
 app.include_router(excel_import.router, prefix="/api/excel-import", tags=["excel-import"])
 app.include_router(inventory.router, prefix="/api/inventory", tags=["inventory"])
+app.include_router(clientes.router, prefix="/api/clientes", tags=["clientes"])
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
