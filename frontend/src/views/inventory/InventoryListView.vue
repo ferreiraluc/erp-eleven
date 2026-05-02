@@ -229,7 +229,14 @@
                   <span v-if="entry.item.alert_level && entry.item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + entry.item.alert_level">{{ alertLabel(entry.item.alert_level) }}</span>
                 </div>
                 <div class="item-actions">
-                  <button @click="handleQuickExit(entry.item)" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">Diminuir</button>
+                  <div class="exit-wrap">
+                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">Diminuir</button>
+                    <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
+                      <span class="confirm-question">Confirmar saída?</span>
+                      <button @click.stop="handleQuickExit(entry.item)" class="confirm-yes">Sim</button>
+                      <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
+                    </div>
+                  </div>
                   <button @click="openMovement(entry.item)" class="action-btn move-btn">Movimentar</button>
                   <button @click="openEdit(entry.item)" class="action-btn edit-btn">Editar</button>
                 </div>
@@ -369,6 +376,7 @@ const groupNameInput = ref('')
 const groupNameInputRef = ref<HTMLInputElement | null>(null)
 const grouping = ref(false)
 const scrollSentinel = ref<HTMLElement | null>(null)
+const confirmExitId = ref<string | null>(null)
 let scrollObserver: IntersectionObserver | null = null
 
 function setView(mode: 'list' | 'compact' | 'grid') {
@@ -621,6 +629,7 @@ function openMovement(item: InventoryItem) {
 }
 
 async function handleQuickExit(item: InventoryItem) {
+  confirmExitId.value = null
   try {
     const result = await inventoryStore.quickExit(item.id)
     showToast(`Saída registrada. Estoque: ${result.new_stock}`, 'success')
@@ -674,6 +683,10 @@ function showToast(message: string, type: string) {
 function onDocClick(e: MouseEvent) {
   if (filterChipsRef.value && !filterChipsRef.value.contains(e.target as Node)) {
     openFilter.value = null
+  }
+  const target = e.target as HTMLElement
+  if (!target.closest('.exit-wrap')) {
+    confirmExitId.value = null
   }
 }
 
@@ -732,6 +745,15 @@ onMounted(async () => {
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
+@media (max-width: 600px) {
+  .page-header { padding: 0.4rem 0.75rem; }
+  .header-content { padding: 0; }
+  .page-subtitle { display: none; }
+  .page-title { font-size: 1rem; }
+  .header-top { gap: 0.5rem; }
+  .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
+  .btn svg { width: 13px !important; height: 13px !important; }
+}
 .search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; overflow: hidden; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
 .search-box { flex: 1; position: relative; }
@@ -963,6 +985,48 @@ onMounted(async () => {
 .exit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .move-btn  { background: #dbeafe; color: #1d4ed8; }
 .edit-btn  { background: #f3f4f6; color: #374151; }
+
+/* ── Quick exit confirm popover ──────────────────────────────────────────── */
+.exit-wrap { position: relative; display: inline-block; }
+.exit-confirm-popover {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 0.45rem 0.55rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.exit-confirm-popover::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #e5e7eb;
+}
+.exit-confirm-popover::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: white;
+}
+.confirm-question { font-size: 0.72rem; color: #374151; font-weight: 500; }
+.confirm-yes { background: #ef4444; color: white; border: none; border-radius: 5px; padding: 0.2rem 0.55rem; font-size: 0.7rem; cursor: pointer; font-weight: 700; }
+.confirm-yes:hover { background: #dc2626; }
+.confirm-no { background: #f3f4f6; color: #6b7280; border: none; border-radius: 5px; padding: 0.2rem 0.5rem; font-size: 0.7rem; cursor: pointer; }
+.confirm-no:hover { background: #e5e7eb; }
 
 /* ── Image modal ─────────────────────────────────────────────────────────────── */
 .image-modal-overlay {
