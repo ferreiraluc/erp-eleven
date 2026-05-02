@@ -42,6 +42,8 @@ class ItemBase(BaseModel):
     max_stock: Optional[int] = 0
     is_active: Optional[bool] = True
     image_data: Optional[str] = None
+    brand: Optional[str] = None
+    group_key: Optional[str] = None
 
 
 class ItemCreate(ItemBase):

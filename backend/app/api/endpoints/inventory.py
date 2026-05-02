@@ -231,6 +231,21 @@ def update_item(
     return resp
 
 
+@router.post("/items/ungroup/{group_key_value}")
+def ungroup_items(
+    group_key_value: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+):
+    items = db.query(Item).filter(Item.group_key == group_key_value).all()
+    if not items:
+        raise HTTPException(status_code=404, detail="No items found with this group_key")
+    for item in items:
+        item.group_key = None
+    db.commit()
+    return {"message": f"Ungrouped {len(items)} items", "count": len(items)}
+
+
 @router.delete("/items/{item_id}")
 def delete_item(
     item_id: str,

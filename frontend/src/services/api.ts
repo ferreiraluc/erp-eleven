@@ -444,6 +444,8 @@ export interface InventoryItem {
   is_active: boolean
   alert_level?: string
   image_data?: string
+  brand?: string
+  group_key?: string
   created_at: string
   updated_at: string
   created_by?: string
@@ -516,6 +518,9 @@ export const inventoryAPI = {
 
   quickExit: (id: string): Promise<{ message: string; new_stock: number }> =>
     api.post(`/api/inventory/items/${id}/quick-exit`).then(res => res.data),
+
+  ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
+    api.post(`/api/inventory/items/ungroup/${encodeURIComponent(groupKey)}`).then(res => res.data),
 
   getAlertsSummary: (): Promise<AlertSummary> =>
     api.get('/api/inventory/alerts/summary').then(res => res.data),

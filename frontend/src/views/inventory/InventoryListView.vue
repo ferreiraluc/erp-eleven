@@ -81,6 +81,13 @@
           </svg>
           Grade
         </button>
+        <span class="view-sep">|</span>
+        <button :class="['view-btn', { active: groupMode }]" @click="toggleGroupMode" title="Agrupar modelos">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          Agrupar
+        </button>
       </div>
     </div>
 
@@ -101,56 +108,87 @@
 
     <!-- Items list -->
     <div v-else class="items-container" :class="`view-${viewMode}`">
-      <div
-        v-for="item in inventoryStore.items"
-        :key="item.id"
-        class="item-card"
-        :class="'alert-' + item.alert_level"
-      >
-        <!-- Imagem topo (grid view) -->
-        <div class="item-grid-image" @click="item.image_data && (imageModalSrc = item.image_data)" :class="{ 'thumb-clickable': item.image_data }">
-          <img v-if="item.image_data" :src="item.image_data" alt="" class="item-grid-img" />
-          <div v-else class="item-grid-placeholder">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+      <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
+
+        <!-- ── CARD DE GRUPO ── -->
+        <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)">
+          <div class="group-header">
+            <div class="group-title-area">
+              <span class="group-name">{{ entry.group.group_key }}</span>
+              <span class="group-total-stock">Total: {{ entry.group.total_stock }}</span>
+            </div>
+            <div class="group-btns">
+              <button @click="toggleExpand(entry.group.group_key)" class="action-btn expand-btn">
+                {{ expandedGroups.includes(entry.group.group_key) ? '▲ Recolher' : '▼ Expandir' }}
+              </button>
+              <button @click="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn">Desagrupar</button>
+            </div>
+          </div>
+          <div class="size-chips">
+            <span
+              v-for="v in entry.group.items"
+              :key="v.id"
+              class="size-chip"
+              :class="'chip-alert-' + v.alert_level"
+              @click="openEdit(v)"
+              :title="v.name + ' · ' + v.sku_internal"
+            >
+              {{ v.size || v.name }} &nbsp;{{ v.current_stock }}
+            </span>
           </div>
         </div>
 
-        <div class="item-row-main">
-          <!-- Thumb (compact view) -->
-          <div class="item-thumb-wrap" @click="item.image_data && (imageModalSrc = item.image_data)" :class="{ 'thumb-clickable': item.image_data }">
-            <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
-            <div v-else class="item-thumb-placeholder"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div>
+        <!-- ── CARD INDIVIDUAL ── -->
+        <div v-else class="item-card" :class="['alert-' + entry.item.alert_level, { 'sub-item': entry.type === 'item' && groupMode && entry.item.group_key }]">
+          <!-- Imagem topo (grid view) -->
+          <div class="item-grid-image" @click="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
+            <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-grid-img" />
+            <div v-else class="item-grid-placeholder">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            </div>
           </div>
 
-          <div class="item-info">
-            <!-- Nome + Cor -->
-            <div class="item-name-row">
-              <span class="item-name">{{ item.name }}</span>
-              <span v-if="item.color" class="item-color-tag">{{ item.color }}</span>
+          <div class="item-row-main">
+            <!-- Thumb -->
+            <div class="item-thumb-wrap" @click="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
+              <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-thumb" />
+              <div v-else class="item-thumb-placeholder"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div>
             </div>
-            <!-- barcode · categoria · preço -->
-            <div class="item-sub">
-              <span v-if="item.barcode" class="item-barcode">{{ item.barcode }}</span>
-              <template v-if="item.category"><span class="item-sub-sep" v-if="item.barcode"> · </span><span>{{ item.category }}</span></template>
-              <template v-if="item.sale_price"><span class="item-sub-sep"> · </span><span class="item-price">{{ currencySymbol((item as any).sale_currency || item.currency) }} {{ Number(item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span></template>
-            </div>
-            <!-- estoque + tamanho + badge + ações -->
-            <div class="item-bottom-row">
-              <div class="item-left-info">
-                <span class="stock-number" :class="'stock-' + item.alert_level">Estoque:&nbsp;{{ item.current_stock }}</span>
-                <span v-if="item.size" class="item-size-inline">{{ item.size }}</span>
-                <span v-if="item.location" class="item-location-inline">· {{ item.location }}</span>
-                <span v-if="item.alert_level && item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + item.alert_level">{{ alertLabel(item.alert_level) }}</span>
+
+            <div class="item-info">
+              <div class="item-name-row">
+                <span class="item-name">{{ entry.item.name }}</span>
+                <span v-if="entry.item.color" class="item-color-tag">{{ entry.item.color }}</span>
               </div>
-              <div class="item-actions">
-                <button @click="handleQuickExit(item)" class="action-btn exit-btn" :disabled="item.current_stock <= 0">Diminuir</button>
-                <button @click="openMovement(item)" class="action-btn move-btn">Movimentar</button>
-                <button @click="openEdit(item)" class="action-btn edit-btn">Editar</button>
+              <div class="item-sub">
+                <span v-if="entry.item.brand" class="item-brand">{{ entry.item.brand }}</span>
+                <template v-if="entry.item.category">
+                  <span class="item-sub-sep" v-if="entry.item.brand"> · </span>
+                  <span>{{ formatCategory(entry.item.category) }}</span>
+                </template>
+                <template v-if="entry.item.sale_price">
+                  <span class="item-sub-sep"> · </span>
+                  <span class="item-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }} {{ Number(entry.item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+                </template>
+              </div>
+              <div class="item-bottom-row">
+                <div class="item-left-info">
+                  <span class="stock-number" :class="'stock-' + entry.item.alert_level">Estoque:&nbsp;{{ entry.item.current_stock }}</span>
+                  <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
+                  <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
+                  <span v-if="entry.item.alert_level && entry.item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + entry.item.alert_level">{{ alertLabel(entry.item.alert_level) }}</span>
+                </div>
+                <div class="item-actions">
+                  <button @click="handleQuickExit(entry.item)" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">Diminuir</button>
+                  <button @click="openMovement(entry.item)" class="action-btn move-btn">Movimentar</button>
+                  <button @click="openEdit(entry.item)" class="action-btn edit-btn">Editar</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+      </template>
     </div>
 
     <!-- Sentinel para infinite scroll -->
@@ -176,6 +214,8 @@
       v-if="showItemForm"
       :item="editingItem"
       :suppliers="suppliers"
+      :existing-group-keys="existingGroupKeys"
+      :existing-brands="existingBrands"
       @saved="onItemSaved"
       @close="showItemForm = false"
     />
@@ -222,6 +262,8 @@ const imageModalSrc = ref<string | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
 )
+const groupMode = ref(localStorage.getItem('inv_group_mode') === 'true')
+const expandedGroups = ref<string[]>([])
 const scrollSentinel = ref<HTMLElement | null>(null)
 let scrollObserver: IntersectionObserver | null = null
 
@@ -230,9 +272,98 @@ function setView(mode: 'list' | 'compact' | 'grid') {
   localStorage.setItem('inv_view', mode)
 }
 
+function toggleGroupMode() {
+  groupMode.value = !groupMode.value
+  localStorage.setItem('inv_group_mode', String(groupMode.value))
+}
+
+function toggleExpand(groupKey: string) {
+  const idx = expandedGroups.value.indexOf(groupKey)
+  if (idx === -1) expandedGroups.value.push(groupKey)
+  else expandedGroups.value.splice(idx, 1)
+}
+
 function currencySymbol(c: string): string {
   const map: Record<string, string> = { PYG: 'G$', BRL: 'R$', USD: 'U$', EUR: '€' }
   return map[c] || c
+}
+
+function formatCategory(cat: string): string {
+  return cat ? cat.replace('>', ' › ') : ''
+}
+
+interface GroupEntry {
+  _isGroup: true
+  group_key: string
+  items: InventoryItem[]
+  total_stock: number
+}
+
+type FlatEntry = { type: 'group'; group: GroupEntry } | { type: 'item'; item: InventoryItem }
+
+const flatList = computed<FlatEntry[]>(() => {
+  if (!groupMode.value) {
+    return inventoryStore.items.map(item => ({ type: 'item' as const, item }))
+  }
+  const groups = new Map<string, InventoryItem[]>()
+  const ungrouped: InventoryItem[] = []
+  for (const item of inventoryStore.items) {
+    if (item.group_key) {
+      const arr = groups.get(item.group_key) ?? []
+      arr.push(item)
+      groups.set(item.group_key, arr)
+    } else {
+      ungrouped.push(item)
+    }
+  }
+  const result: FlatEntry[] = []
+  for (const [key, items] of groups) {
+    const g: GroupEntry = {
+      _isGroup: true,
+      group_key: key,
+      items,
+      total_stock: items.reduce((s, i) => s + i.current_stock, 0),
+    }
+    result.push({ type: 'group', group: g })
+    if (expandedGroups.value.includes(key)) {
+      for (const item of items) result.push({ type: 'item', item })
+    }
+  }
+  for (const item of ungrouped) result.push({ type: 'item', item })
+  return result
+})
+
+function groupAlertLevel(items: InventoryItem[]): string {
+  if (items.some(i => i.alert_level === 'out')) return 'out'
+  if (items.some(i => i.alert_level === 'low')) return 'low'
+  if (items.some(i => i.alert_level === 'high')) return 'high'
+  return 'ok'
+}
+
+const existingGroupKeys = computed<string[]>(() => {
+  const s = new Set<string>()
+  for (const item of inventoryStore.items) {
+    if (item.group_key) s.add(item.group_key)
+  }
+  return Array.from(s).sort()
+})
+
+const existingBrands = computed<string[]>(() => {
+  const s = new Set<string>()
+  for (const item of inventoryStore.items) {
+    if (item.brand) s.add(item.brand)
+  }
+  return Array.from(s).sort()
+})
+
+async function handleUngroup(groupKey: string) {
+  try {
+    await inventoryAPI.ungroup(groupKey)
+    showToast(`Grupo "${groupKey}" desagrupado`, 'success')
+    await inventoryStore.loadItems(1)
+  } catch (e: any) {
+    showToast(e.response?.data?.detail || 'Erro ao desagrupar', 'error')
+  }
 }
 
 const statusChips = computed(() => [
@@ -464,12 +595,45 @@ onMounted(async () => {
 /* ── Filter chips ─────────────────────────────────────────────── */
 .filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
 
+/* ── Group card ───────────────────────────────────────────────── */
+.group-card {
+  background: white;
+  border-radius: 7px;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  grid-column: 1 / -1;
+}
+.group-card.alert-out  { border-left: 3px solid #ef4444; }
+.group-card.alert-low  { border-left: 3px solid #f59e0b; }
+.group-card.alert-high { border-left: 3px solid #8b5cf6; }
+.group-card.alert-ok   { border-left: 3px solid #10b981; }
+
+.group-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
+.group-title-area { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.group-name { font-weight: 700; font-size: 0.85rem; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-total-stock { font-size: 0.72rem; color: #6b7280; white-space: nowrap; }
+.group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.size-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.size-chip { font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 20px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
+.chip-alert-out      { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+.chip-alert-low      { background: #fef3c7; color: #d97706; border-color: #fcd34d; }
+.chip-alert-high     { background: #ede9fe; color: #7c3aed; border-color: #c4b5fd; }
+.chip-alert-ok       { background: #d1fae5; color: #059669; border-color: #6ee7b7; }
+.chip-alert-inactive { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+.expand-btn  { background: #f0f9ff; color: #0369a1; }
+.ungroup-btn { background: #fff7ed; color: #c2410c; }
+.sub-item { margin-left: 0.5rem; border-left: 2px solid #e5e7eb; }
+
+/* ── Brand ─────────────────────────────────────────────────────── */
+.item-brand { font-weight: 600; color: #374151; }
+
 /* ── View switcher ────────────────────────────────────────────── */
 .view-switcher { display: flex; align-items: center; gap: 0.35rem; }
 .view-label { font-size: 0.75rem; color: #9ca3af; margin-right: 0.1rem; }
 .view-btn { display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; white-space: nowrap; }
 .view-btn:hover { border-color: #9ca3af; color: #374151; }
 .view-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.view-sep { color: #d1d5db; padding: 0 0.1rem; }
 
 .item-card {
   background: white;

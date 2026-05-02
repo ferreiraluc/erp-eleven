@@ -44,21 +44,34 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Categoria</label>
-              <div class="input-combo">
-                <select v-if="!newCategory" v-model="form.category" class="form-input">
-                  <option value="">Selecione...</option>
-                  <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-                </select>
-                <input v-if="newCategory" v-model="form.category" type="text" class="form-input" placeholder="Nova categoria" />
-                <button @click="newCategory = !newCategory" class="combo-toggle" type="button">
-                  {{ newCategory ? '↩' : '+' }}
-                </button>
-              </div>
+              <label>Marca</label>
+              <input v-model="form.brand" type="text" class="form-input" placeholder="Ex: Nike, Adidas..." list="brand-list" />
+              <datalist id="brand-list">
+                <option v-for="b in existingBrands" :key="b" :value="b" />
+              </datalist>
             </div>
             <div class="form-group">
               <label>Tamanho</label>
               <input v-model="form.size" type="text" class="form-input" placeholder="P, M, G, GG..." />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Categoria</label>
+              <select v-model="categoryParent" class="form-input">
+                <option value="">Selecione...</option>
+                <option v-for="cat in parentCategories" :key="cat" :value="cat">{{ cat }}</option>
+                <option value="_custom">Outra...</option>
+              </select>
+              <input v-if="categoryParent === '_custom'" v-model="categoryCustom" type="text" class="form-input" style="margin-top:0.3rem" placeholder="Nome da categoria" />
+            </div>
+            <div class="form-group">
+              <label>Subcategoria</label>
+              <input v-model="categorySub" type="text" class="form-input" placeholder="Ex: Sociais, Tênis..." :disabled="!categoryParent || categoryParent === '_custom'" list="sub-list" />
+              <datalist id="sub-list">
+                <option v-for="s in subcategorySuggestions" :key="s" :value="s" />
+              </datalist>
             </div>
           </div>
 
@@ -130,12 +143,22 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Fornecedor</label>
-            <select v-model="form.supplier_id" class="form-input">
-              <option value="">Nenhum</option>
-              <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
-            </select>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fornecedor</label>
+              <select v-model="form.supplier_id" class="form-input">
+                <option value="">Nenhum</option>
+                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Grupo (variantes)</label>
+              <input v-model="form.group_key" type="text" class="form-input" placeholder="Ex: Camiseta Azul P20" list="group-key-list" />
+              <datalist id="group-key-list">
+                <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
+              </datalist>
+              <span class="field-hint">Itens com o mesmo grupo serão agrupáveis na lista</span>
+            </div>
           </div>
 
           <div class="form-row">
@@ -225,6 +248,8 @@ import OcrScanner from './OcrScanner.vue'
 const props = defineProps<{
   item?: InventoryItem | null
   suppliers?: Array<{ id: string; name: string }>
+  existingGroupKeys?: string[]
+  existingBrands?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -238,12 +263,38 @@ const showScanner = ref(false)
 const showOcr = ref(false)
 const showCameraPhoto = ref(false)
 const saving = ref(false)
-const newCategory = ref(false)
 const barcodeDuplicateWarning = ref(false)
 const unitAutoSet = ref(false)
 const photoInputRef = ref<HTMLInputElement>()
 const photoVideoRef = ref<HTMLVideoElement>()
 let photoStream: MediaStream | null = null
+
+// Hierarchical category
+const parentCategories = ['Camisetas', 'Calças', 'Vestidos', 'Acessórios', 'Calçados', 'Outros']
+const categoryParent = ref('')
+const categorySub = ref('')
+const categoryCustom = ref('')
+
+const subcategorySuggestions = computed(() => {
+  const map: Record<string, string[]> = {
+    'Calçados': ['Sociais', 'Tênis', 'Mocassim', 'Sandálias', 'Botas', 'Chinelos', 'Sapatilhas'],
+    'Camisetas': ['Gola Redonda', 'Polo', 'Regata', 'Manga Longa', 'Cropped'],
+    'Calças': ['Jeans', 'Social', 'Moletom', 'Bermuda', 'Short', 'Legging'],
+    'Vestidos': ['Casual', 'Festa', 'Midi', 'Longo', 'Curto'],
+    'Acessórios': ['Cintos', 'Bolsas', 'Carteiras', 'Chapéus', 'Meias', 'Gravatas'],
+  }
+  return map[categoryParent.value] || []
+})
+
+watch([categoryParent, categorySub, categoryCustom], () => {
+  if (categoryParent.value === '_custom') {
+    form.category = categoryCustom.value
+  } else if (categoryParent.value && categorySub.value) {
+    form.category = `${categoryParent.value}>${categorySub.value}`
+  } else {
+    form.category = categoryParent.value === '_custom' ? '' : categoryParent.value
+  }
+})
 
 // Category → Unit mapping
 const categoryUnitMap: Record<string, string> = {
@@ -251,14 +302,13 @@ const categoryUnitMap: Record<string, string> = {
   'Calcados': 'par',
 }
 
-const categories = ['Camisetas', 'Calças', 'Vestidos', 'Acessórios', 'Calçados', 'Outros']
-
 const form = reactive({
   name: '',
   description: '',
   category: '',
   size: '',
   color: '',
+  brand: '',
   unit: 'un',
   location: '',
   barcode: '',
@@ -272,6 +322,7 @@ const form = reactive({
   max_stock: 0,
   is_active: true,
   image_data: '',
+  group_key: '',
 })
 
 const errors = reactive<Record<string, string>>({})
@@ -284,6 +335,7 @@ onMounted(() => {
       category: props.item.category || '',
       size: props.item.size || '',
       color: props.item.color || '',
+      brand: props.item.brand || '',
       unit: props.item.unit || 'un',
       location: props.item.location || '',
       barcode: props.item.barcode || '',
@@ -291,12 +343,23 @@ onMounted(() => {
       cost_price: Number(props.item.cost_price) || 0,
       sale_price: Number(props.item.sale_price) || 0,
       currency: props.item.currency || 'PYG',
-      cost_currency: (props.item as any).cost_currency || 'BRL',
-      sale_currency: (props.item as any).sale_currency || 'USD',
+      cost_currency: props.item.cost_currency || 'BRL',
+      sale_currency: props.item.sale_currency || 'USD',
       min_stock: props.item.min_stock || 0,
       max_stock: props.item.max_stock || 0,
       image_data: props.item.image_data || '',
+      group_key: props.item.group_key || '',
     })
+    // Init hierarchical category
+    const cat = props.item.category || ''
+    const parts = cat.split('>')
+    if (parentCategories.includes(parts[0])) {
+      categoryParent.value = parts[0]
+      categorySub.value = parts[1] || ''
+    } else if (cat) {
+      categoryParent.value = '_custom'
+      categoryCustom.value = cat
+    }
   }
 })
 
@@ -348,6 +411,8 @@ async function handleSubmit() {
       ...form,
       supplier_id: form.supplier_id || null,
       image_data: form.image_data || null,
+      brand: form.brand || null,
+      group_key: form.group_key || null,
     }
     let result: InventoryItem
     if (isEdit.value && props.item) {
@@ -504,4 +569,5 @@ function capturePhoto() {
 .btn-primary { background: #3b82f6; color: white; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.field-hint { font-size: 0.7rem; color: #9ca3af; margin-top: 0.15rem; }
 </style>
