@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import time
+import traceback
 import logging
+import sys
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory, clientes
@@ -48,7 +50,7 @@ def _job_atualizar_rastreamentos():
         if errors:
             logger.warning(f"[SCHEDULER] Erros: {errors}")
     except Exception as e:
-        logger.error(f"[SCHEDULER] Falha na atualização diária: {e}")
+        logger.error(f"[SCHEDULER] Falha na atualização diária: {e}\n{traceback.format_exc()}")
     finally:
         db.close()
 
@@ -59,7 +61,22 @@ scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
+    logger.info("=" * 60)
     logger.info("[STARTUP] Starting ERP Eleven API")
+    logger.info(f"[STARTUP] Python {sys.version}")
+    logger.info(f"[STARTUP] LOG_LEVEL={os.getenv('LOG_LEVEL', 'INFO')}")
+    db_url = os.getenv("DATABASE_URL", "")
+    if db_url:
+        # Log DB host only, never credentials
+        try:
+            from urllib.parse import urlparse
+            p = urlparse(db_url)
+            logger.info(f"[STARTUP] DB host={p.hostname}:{p.port} db={p.path.lstrip('/')}")
+        except Exception:
+            logger.info("[STARTUP] DATABASE_URL is set")
+    else:
+        logger.warning("[STARTUP] DATABASE_URL not set — using default")
+    logger.info("=" * 60)
 
     # Run Alembic migrations (applies any pending migrations automatically)
     try:
@@ -153,26 +170,53 @@ async def security_headers_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all HTTP requests"""
+    """Log all HTTP requests with timing, status and query params."""
     start_time = time.time()
-    
-    # Log request
-    logger.info(f"[REQUEST] {request.method} {request.url.path}")
-    
-    response = await call_next(request)
-    
-    # Calculate processing time
-    process_time = time.time() - start_time
-    
-    # Log response
-    logger.info(f"[RESPONSE] {response.status_code} - {process_time:.3f}s")
-    
+    qs = f"?{request.url.query}" if request.url.query else ""
+    route = f"{request.method} {request.url.path}{qs}"
+
+    # Skip noisy health-check logging at INFO
+    is_health = request.url.path == "/health"
+
+    if not is_health:
+        logger.info(f"[REQ] {route}")
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        elapsed = time.time() - start_time
+        logger.critical(
+            f"[CRASH] {route} — unhandled exception after {elapsed:.3f}s: {exc}\n"
+            f"{traceback.format_exc()}"
+        )
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+    elapsed = time.time() - start_time
+    status = response.status_code
+
+    if status >= 500:
+        logger.error(f"[RES] {status} {route} ({elapsed:.3f}s)")
+    elif status >= 400:
+        logger.warning(f"[RES] {status} {route} ({elapsed:.3f}s)")
+    elif not is_health:
+        logger.info(f"[RES] {status} {route} ({elapsed:.3f}s)")
+
     return response
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Global HTTP exception handler"""
-    logger.error(f"[HTTP_ERROR] {exc.status_code}: {exc.detail} - {request.method} {request.url.path}")
+    qs = f"?{request.url.query}" if request.url.query else ""
+    if exc.status_code >= 500:
+        logger.error(
+            f"[HTTP_ERROR] {exc.status_code}: {exc.detail} — "
+            f"{request.method} {request.url.path}{qs}\n{traceback.format_exc()}"
+        )
+    else:
+        logger.warning(
+            f"[HTTP_WARN] {exc.status_code}: {exc.detail} — "
+            f"{request.method} {request.url.path}{qs}"
+        )
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail, "status_code": exc.status_code}
@@ -180,8 +224,12 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Global exception handler"""
-    logger.error(f"[EXCEPTION] Unhandled exception: {str(exc)} - {request.method} {request.url.path}")
+    """Global exception handler — logs full traceback so crashes are diagnosable."""
+    qs = f"?{request.url.query}" if request.url.query else ""
+    logger.critical(
+        f"[UNHANDLED] {type(exc).__name__}: {exc} — "
+        f"{request.method} {request.url.path}{qs}\n{traceback.format_exc()}"
+    )
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error", "status_code": 500}

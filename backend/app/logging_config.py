@@ -5,13 +5,13 @@ from typing import Optional
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter with colors for different log levels"""
-    
+
     COLORS = {
-        'DEBUG': '\033[36m',    # Cyan
-        'INFO': '\033[32m',     # Green
-        'WARNING': '\033[33m',  # Yellow
-        'ERROR': '\033[31m',    # Red
-        'CRITICAL': '\033[35m', # Magenta
+        'DEBUG':    '\033[36m',          # Cyan
+        'INFO':     '\033[32m',          # Green
+        'WARNING':  '\033[33m',          # Yellow
+        'ERROR':    '\033[31m',          # Red
+        'CRITICAL': '\033[1m\033[31m',   # Bold Red
     }
     RESET = '\033[0m'
     
@@ -59,10 +59,11 @@ def setup_logging(level: str = "INFO", log_file: Optional[str] = None):
     
     # Configure specific loggers
     loggers_config = {
-        'uvicorn.access': logging.WARNING,
+        'uvicorn.access': logging.INFO,     # show HTTP access log from uvicorn itself
         'uvicorn.error': logging.INFO,
-        'sqlalchemy.engine': logging.WARNING,
+        'sqlalchemy.engine': logging.WARNING,  # set to INFO to see all SQL queries
         'alembic': logging.INFO,
+        'apscheduler': logging.WARNING,     # suppress noisy scheduler heartbeat ticks
     }
     
     for logger_name, logger_level in loggers_config.items():
