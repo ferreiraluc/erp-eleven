@@ -32,6 +32,17 @@ api.interceptors.response.use(
   }
 )
 
+export interface HealthStatus {
+  api: 'online' | 'offline'
+  database: 'online' | 'offline'
+  timestamp: number
+}
+
+export const healthAPI = {
+  check: (): Promise<HealthStatus> =>
+    api.get('/health', { timeout: 5000 }).then(r => r.data),
+}
+
 export interface LoginRequest {
   email: string
   senha: string

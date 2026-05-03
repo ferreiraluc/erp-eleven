@@ -339,26 +339,45 @@
             <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
             <div class="status-grid">
               <div class="status-box">
-                <div class="status-icon online">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div :class="['status-icon', apiStatus]">
+                  <!-- online: check mark -->
+                  <svg v-if="apiStatus === 'online'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
+                  </svg>
+                  <!-- offline: X -->
+                  <svg v-else-if="apiStatus === 'offline'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  <!-- checking: dots -->
+                  <svg v-else fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01"></path>
                   </svg>
                 </div>
                 <div class="status-info">
                   <span class="status-label">API</span>
-                  <span class="status-value online">Online</span>
+                  <span :class="['status-value', apiStatus]">
+                    {{ apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : '...' }}
+                  </span>
                 </div>
               </div>
 
               <div class="status-box">
-                <div class="status-icon online">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div :class="['status-icon', dbStatus]">
+                  <svg v-if="dbStatus === 'online'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.79 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.79 4 8 4s8-1.79 8-4M4 7c0-2.21 3.79-4 8-4s8 1.79 8 4"></path>
+                  </svg>
+                  <svg v-else-if="dbStatus === 'offline'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  <svg v-else fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01"></path>
                   </svg>
                 </div>
                 <div class="status-info">
                   <span class="status-label">Database</span>
-                  <span class="status-value online">Connected</span>
+                  <span :class="['status-value', dbStatus]">
+                    {{ dbStatus === 'online' ? 'Connected' : dbStatus === 'offline' ? 'Offline' : '...' }}
+                  </span>
                 </div>
               </div>
 
@@ -424,8 +443,10 @@
         
         <div class="footer-center">
           <div class="footer-status">
-            <span class="system-status-indicator"></span>
-            <span class="system-status-text">System Online</span>
+            <span :class="['system-status-indicator', { 'status-ind-offline': apiStatus === 'offline' || dbStatus === 'offline', 'status-ind-checking': apiStatus === 'checking' || dbStatus === 'checking' }]"></span>
+            <span class="system-status-text">
+              {{ (apiStatus === 'offline' || dbStatus === 'offline') ? 'System Offline' : apiStatus === 'checking' ? 'Checking...' : 'System Online' }}
+            </span>
           </div>
         </div>
         
@@ -549,7 +570,7 @@ import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
-import { inventoryAPI, type AlertSummary } from '@/services/api'
+import { inventoryAPI, healthAPI, type AlertSummary } from '@/services/api'
 
 const router = useRouter()
 const { locale, t } = useI18n()
@@ -567,6 +588,23 @@ const exchangeRateError = ref<string | null>(null)
 
 // Exchange rate state (local to avoid dependency issues)
 const stockAlerts = ref<AlertSummary | null>(null)
+
+// System status
+type StatusState = 'online' | 'offline' | 'checking'
+const apiStatus = ref<StatusState>('checking')
+const dbStatus = ref<StatusState>('checking')
+let healthInterval: NodeJS.Timeout | null = null
+
+async function checkHealth() {
+  try {
+    const h = await healthAPI.check()
+    apiStatus.value = h.api === 'online' ? 'online' : 'offline'
+    dbStatus.value = h.database === 'online' ? 'online' : 'offline'
+  } catch {
+    apiStatus.value = 'offline'
+    dbStatus.value = 'offline'
+  }
+}
 
 // Exchange rate state (local to avoid dependency issues)
 const isLoadingRates = ref(false)
@@ -828,12 +866,15 @@ onMounted(async () => {
     dashboardStore.refreshData()
   ])
   inventoryAPI.getAlertsSummary().then(data => { stockAlerts.value = data }).catch(() => {})
+
+  // Health check — run once immediately, then every 30s
+  checkHealth()
+  healthInterval = setInterval(checkHealth, 30_000)
 })
 
 onUnmounted(() => {
-  if (timeInterval) {
-    clearInterval(timeInterval)
-  }
+  if (timeInterval) clearInterval(timeInterval)
+  if (healthInterval) clearInterval(healthInterval)
   document.removeEventListener('click', handleClickOutside)
 })
 </script>
@@ -1777,6 +1818,16 @@ onUnmounted(() => {
   color: #16a34a;
 }
 
+.status-icon.offline {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.status-icon.checking {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+}
+
 .status-icon.warning {
   background-color: #fef3c7;
   color: #d97706;
@@ -1804,6 +1855,14 @@ onUnmounted(() => {
 
 .status-info .status-value.online {
   color: #16a34a;
+}
+
+.status-info .status-value.offline {
+  color: #dc2626;
+}
+
+.status-info .status-value.checking {
+  color: #9ca3af;
 }
 
 .status-info .status-value.warning {
@@ -1869,6 +1928,14 @@ onUnmounted(() => {
   height: 0.5rem;
   border-radius: 50%;
   background-color: #10b981;
+}
+
+.system-status-indicator.status-ind-offline {
+  background-color: #ef4444;
+}
+
+.system-status-indicator.status-ind-checking {
+  background-color: #9ca3af;
 }
 
 .system-status-text {

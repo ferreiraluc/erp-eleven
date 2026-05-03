@@ -200,12 +200,23 @@ async def root():
 
 @app.get("/health", tags=["health"])
 async def health_check():
-    """Health check endpoint"""
-    logger.info("[HEALTH] Health check accessed")
+    """Health check endpoint — reports API and database status."""
+    from .database import SessionLocal
+    from sqlalchemy import text as sql_text
+
+    db_status = "offline"
+    try:
+        db = SessionLocal()
+        db.execute(sql_text("SELECT 1"))
+        db.close()
+        db_status = "online"
+    except Exception as e:
+        logger.warning(f"[HEALTH] Database check failed: {e}")
+
     return {
-        "status": "healthy", 
+        "api": "online",
+        "database": db_status,
         "timestamp": time.time(),
-        "version": "1.0.0"
     }
 
 
