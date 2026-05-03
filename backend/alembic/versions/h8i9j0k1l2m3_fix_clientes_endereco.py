@@ -9,6 +9,11 @@ Handles three possible DB states:
   2. clientes table has old 5-column schema    → adds endereco, migrates data, drops old cols
   3. clientes table already has endereco col   → no-op
 """
+revision = 'h8i9j0k1l2m3'
+down_revision = 'g7h8i9j0k1l2'
+branch_labels = None
+depends_on = None
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.engine import reflection
