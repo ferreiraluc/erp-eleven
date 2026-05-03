@@ -212,6 +212,10 @@
                   </div>
                   
                   <!-- Detalhes -->
+                  <div v-if="rastreamento.pedido_id" class="mobile-content-row">
+                    <span class="mobile-content-label">Pedido:</span>
+                    <span class="mobile-content-value pedido-link-badge">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0,8) }}</span>
+                  </div>
                   <div class="mobile-content-row" v-if="rastreamento.destinatario">
                     <span class="mobile-content-label">Destinatário:</span>
                     <span class="mobile-content-value">{{ rastreamento.destinatario }}</span>
@@ -331,8 +335,9 @@
 
           </div>
 
-          <!-- Destinatário -->
+          <!-- Destinatário + Pedido -->
           <div class="row-destinatario">
+            <span v-if="rastreamento.pedido_id" class="pedido-link-badge">#{{ rastreamento.numero_pedido || '?' }}</span>
             {{ rastreamento.destinatario || '-' }}
           </div>
 
@@ -466,6 +471,44 @@
           </div>
 
           <div class="form-grid">
+
+            <!-- Vincular Pedido -->
+            <div class="form-group full-width">
+              <label>Vincular Pedido (opcional)</label>
+              <div style="position:relative;">
+                <input
+                  v-model="pedidoSearch"
+                  type="text"
+                  placeholder="Buscar nº pedido, descrição ou cliente..."
+                  class="form-input"
+                  @input="onPedidoSearchInput"
+                  @blur="setTimeout(() => showPedidoSuggestions = false, 180)"
+                  style="width:100%;box-sizing:border-box;"
+                />
+                <button
+                  v-if="selectedPedido"
+                  type="button"
+                  @click="clearPedido"
+                  style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;"
+                >✕ Desvincular</button>
+                <div v-if="showPedidoSuggestions" class="pedido-suggestion-list">
+                  <button
+                    v-for="p in pedidoSuggestions"
+                    :key="p.id"
+                    type="button"
+                    class="pedido-suggestion-item"
+                    @mousedown.prevent="selectPedido(p)"
+                  >
+                    <span class="sug-num">#{{ p.numero_pedido }}</span>
+                    <span class="sug-info">{{ [p.cliente_nome, p.descricao].filter(Boolean).join(' · ') }}</span>
+                  </button>
+                </div>
+              </div>
+              <p v-if="selectedPedido" style="font-size:.72rem;color:#10b981;margin:.3rem 0 0;">
+                ✓ Pedido #{{ selectedPedido.numero_pedido }} vinculado
+              </p>
+            </div>
+
             <div class="form-group full-width">
               <label for="codigo">Código de Rastreamento *</label>
               <input 
@@ -575,7 +618,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import type { Rastreamento, RastreamentoCreate } from '@/stores/rastreamento'
-// import { freteAPI } from '@/services/api' // desativado com a calculadora de frete
+import { pedidosAPI, type Pedido } from '@/services/api'
 
 const rastreamentoStore = useRastreamentoStore()
 
@@ -589,6 +632,48 @@ const codigoInput = ref<HTMLInputElement>()
 const expandedCards = ref<Set<string>>(new Set())
 const refreshingIds = ref<Set<string>>(new Set())
 const flashedIds = ref<Set<string>>(new Set())
+
+// Pedido autocomplete
+const pedidoSearch = ref('')
+const pedidoSuggestions = ref<Pedido[]>([])
+const selectedPedido = ref<Pedido | null>(null)
+const showPedidoSuggestions = ref(false)
+let pedidoSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+async function onPedidoSearchInput() {
+  if (pedidoSearch.value.length < 2) { pedidoSuggestions.value = []; showPedidoSuggestions.value = false; return }
+  if (pedidoSearchTimer) clearTimeout(pedidoSearchTimer)
+  pedidoSearchTimer = setTimeout(async () => {
+    try {
+      pedidoSuggestions.value = await pedidosAPI.getAll({ limit: 10 })
+      // filter client-side by search term
+      const term = pedidoSearch.value.toLowerCase()
+      pedidoSuggestions.value = pedidoSuggestions.value.filter(p =>
+        p.numero_pedido.toLowerCase().includes(term) ||
+        (p.descricao || '').toLowerCase().includes(term) ||
+        (p.cliente_nome || '').toLowerCase().includes(term)
+      )
+      showPedidoSuggestions.value = pedidoSuggestions.value.length > 0
+    } catch { pedidoSuggestions.value = [] }
+  }, 250)
+}
+
+function selectPedido(p: Pedido) {
+  selectedPedido.value = p
+  formData.value.pedido_id = p.id
+  pedidoSearch.value = `#${p.numero_pedido}${p.cliente_nome ? ' — ' + p.cliente_nome : ''}`
+  showPedidoSuggestions.value = false
+  // Auto-fill destinatário from pedido if empty
+  if (!formData.value.destinatario && p.cliente_nome) {
+    formData.value.destinatario = p.cliente_nome
+  }
+}
+
+function clearPedido() {
+  selectedPedido.value = null
+  formData.value.pedido_id = undefined
+  pedidoSearch.value = ''
+}
 
 function triggerFlash(id: string) {
   flashedIds.value = new Set([...flashedIds.value, id])
@@ -714,6 +799,8 @@ function abrirModalCriacao() {
     custo_emissao: undefined,
     pedido_id: undefined
   }
+  selectedPedido.value = null
+  pedidoSearch.value = ''
   modalError.value = null
   showModal.value = true
 
@@ -734,6 +821,14 @@ function editarRastreamento(rastreamento: Rastreamento) {
     custo_emissao: rastreamento.custo_emissao,
     pedido_id: rastreamento.pedido_id
   }
+  // Restore pedido search field if linked
+  if (rastreamento.pedido_id && rastreamento.numero_pedido) {
+    pedidoSearch.value = `#${rastreamento.numero_pedido}${rastreamento.cliente_nome ? ' — ' + rastreamento.cliente_nome : ''}`
+    selectedPedido.value = { id: rastreamento.pedido_id, numero_pedido: rastreamento.numero_pedido, cliente_nome: rastreamento.cliente_nome } as Pedido
+  } else {
+    selectedPedido.value = null
+    pedidoSearch.value = ''
+  }
   modalError.value = null
   showModal.value = true
 }
@@ -742,6 +837,8 @@ function fecharModal() {
   showModal.value = false
   editandoRastreamento.value = null
   modalError.value = null
+  selectedPedido.value = null
+  pedidoSearch.value = ''
 }
 
 function formatarCodigo(event: Event) {
@@ -2932,5 +3029,50 @@ onMounted(() => {
   .desktop-previsao { display: none; }
 }
 
+/* ── Pedido link badge ────────────────────────────────────────────────────────── */
+.pedido-link-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 0.375rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-right: 0.35rem;
+  border: 1px solid #bfdbfe;
+  white-space: nowrap;
+}
+
+/* ── Pedido autocomplete in rastreamento modal ──────────────────────────────── */
+.pedido-suggestion-list {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.1);
+  z-index: 200;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.pedido-suggestion-item {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  width: 100%;
+  text-align: left;
+  padding: .5rem .85rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+.pedido-suggestion-item:last-child { border-bottom: none; }
+.pedido-suggestion-item:hover { background: #f9fafb; }
+.sug-num { font-size: .82rem; font-weight: 700; color: #2563eb; }
+.sug-info { font-size: .73rem; color: #6b7280; }
 
 </style>

@@ -44,6 +44,7 @@ class PedidoResponse(PedidoBase):
     created_by: Optional[uuid.UUID] = None
     tags: List[TagStatusSimple] = []
     cliente: Optional[ClienteSimple] = None
+    anexos_count: int = 0
 
     class Config:
         from_attributes = True

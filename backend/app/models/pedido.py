@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, DECIMAL, Date, Text, Enum
+from sqlalchemy import Column, String, DateTime, ForeignKey, DECIMAL, Date, Text, Enum, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -28,6 +28,7 @@ class Pedido(Base):
     # Valor total do pedido
     valor_total = Column(DECIMAL(10,2), nullable=False)
     moeda = Column(String(3), nullable=False, default='R$')  # G$, R$, U$
+    anexos_count = Column(Integer, nullable=False, default=0)
 
     # Dados do cliente (opcionais)
     cliente_nome = Column(String(200))
@@ -54,3 +55,4 @@ class Pedido(Base):
     rastreamentos = relationship("Rastreamento", back_populates="pedido")
     tags = relationship("TagStatus", secondary=pedido_tags_association, back_populates="pedidos")
     cliente = relationship("Cliente", back_populates="pedidos", foreign_keys=[cliente_id])
+    anexos = relationship("PedidoAnexo", back_populates="pedido", cascade="all, delete-orphan", order_by="PedidoAnexo.created_at")

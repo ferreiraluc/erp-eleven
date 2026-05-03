@@ -67,6 +67,12 @@
           </div>
         </div>
 
+        <!-- Anexos -->
+        <div v-if="anexos.length" class="info-section">
+          <h3 class="section-title">Fotos e Anexos</h3>
+          <AnexosCarousel :anexos="anexos" :editable="false" />
+        </div>
+
         <!-- Cliente Info (Opcional) -->
         <div v-if="pedido.cliente_nome || pedido.cliente_telefone || pedido.cliente_email" class="info-section">
           <h3 class="section-title">Dados do Cliente</h3>
@@ -127,7 +133,9 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { pedidosAPI, type Pedido } from '@/services/api'
+import { ref, watch, onMounted } from 'vue'
+import { pedidosAPI, pedidoAnexosAPI, type Pedido, type PedidoAnexo } from '@/services/api'
+import AnexosCarousel from './AnexosCarousel.vue'
 
 interface Props {
   pedido: Pedido
@@ -135,12 +143,25 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   edit: [pedido: Pedido]
 }>()
 
 const router = useRouter()
+
+const anexos = ref<PedidoAnexo[]>([])
+
+async function loadAnexos() {
+  try {
+    anexos.value = await pedidoAnexosAPI.getAnexos(props.pedido.id)
+  } catch {
+    anexos.value = []
+  }
+}
+
+onMounted(loadAnexos)
+watch(() => props.pedido.id, loadAnexos)
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR', {

@@ -394,6 +394,7 @@ export interface Pedido {
   created_by?: string
   tags: Tag[]
   cliente?: { id: string; nome: string; telefone?: string; email?: string; cpf?: string; endereco?: string }
+  anexos_count?: number
 }
 
 export interface PedidoCreate {
@@ -456,6 +457,35 @@ export const pedidosAPI = {
     pedido_associado?: string
   }> =>
     api.get(`/api/pedidos/rastreamento/${codigoRastreio}`).then(res => res.data)
+}
+
+// ─── Pedido Anexos ─────────────────────────────────────────────────────────────
+
+export interface PedidoAnexo {
+  id: string
+  pedido_id: string
+  nome_arquivo: string
+  tipo_arquivo: string
+  tamanho: number
+  dados: string  // base64, no prefix
+  created_at: string
+  created_by?: string
+}
+
+export const pedidoAnexosAPI = {
+  getAnexos: (pedidoId: string): Promise<PedidoAnexo[]> =>
+    api.get(`/api/pedidos/${pedidoId}/anexos`).then(r => r.data),
+
+  upload: (pedidoId: string, data: {
+    nome_arquivo: string
+    tipo_arquivo: string
+    tamanho: number
+    dados: string
+  }): Promise<PedidoAnexo> =>
+    api.post(`/api/pedidos/${pedidoId}/anexos`, data).then(r => r.data),
+
+  delete: (pedidoId: string, anexoId: string): Promise<void> =>
+    api.delete(`/api/pedidos/${pedidoId}/anexos/${anexoId}`).then(r => r.data),
 }
 
 // ─── Clientes API ──────────────────────────────────────────────────────────────

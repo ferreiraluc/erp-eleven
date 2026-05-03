@@ -169,6 +169,19 @@
             </div>
           </div>
 
+          <!-- Anexos Section -->
+          <div class="form-section">
+            <h3 class="section-title">Fotos e Anexos</h3>
+            <AnexosCarousel
+              :anexos="anexos"
+              :editable="true"
+              :uploading="uploadingAnexo"
+              :error-msg="uploadError"
+              @delete="handleDeleteAnexo"
+              @upload="handleUploadFiles"
+            />
+          </div>
+
           <!-- Tags Section -->
           <div class="form-section">
             <div class="section-header">
@@ -254,8 +267,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { pedidosAPI, tagsAPI, clientesAPI, type Pedido, type PedidoCreate, type Tag, type Cliente } from '@/services/api'
+import { pedidosAPI, pedidoAnexosAPI, tagsAPI, clientesAPI, type Pedido, type PedidoCreate, type PedidoAnexo, type Tag, type Cliente } from '@/services/api'
 import TagManagerModal from './TagManagerModal.vue'
+import AnexosCarousel from './AnexosCarousel.vue'
 
 interface Props {
   isVisible: boolean
@@ -276,6 +290,12 @@ const isSubmitting = ref(false)
 const tags = ref<Tag[]>([])
 const selectedTags = ref<string[]>([])
 const showTagManager = ref(false)
+
+// Anexos
+const anexos = ref<PedidoAnexo[]>([])
+const pendingUploads = ref<{ file: File; base64: string }[]>([])
+const uploadingAnexo = ref(false)
+const uploadError = ref('')
 
 // Cliente autocomplete
 const clienteSearch = ref('')
@@ -351,6 +371,9 @@ const resetForm = () => {
   selectedTags.value = []
   selectedCliente.value = null
   clienteSearch.value = ''
+  anexos.value = []
+  pendingUploads.value = []
+  uploadError.value = ''
 }
 
 const loadFormData = () => {
@@ -415,6 +438,17 @@ const handleSubmit = async () => {
       result = await pedidosAPI.update(props.pedido.id, submitData)
     } else {
       result = await pedidosAPI.create(submitData)
+      // Upload any files that were added before the pedido was saved
+      for (const p of pendingUploads.value) {
+        try {
+          await pedidoAnexosAPI.upload(result.id, {
+            nome_arquivo: p.file.name,
+            tipo_arquivo: p.file.type,
+            tamanho: p.file.size,
+            dados: p.base64,
+          })
+        } catch { /* best-effort */ }
+      }
     }
 
     emit('saved', result)
@@ -424,6 +458,83 @@ const handleSubmit = async () => {
   } finally {
     isSubmitting.value = false
   }
+}
+
+async function loadAnexos() {
+  if (!props.pedido) { anexos.value = []; return }
+  try {
+    anexos.value = await pedidoAnexosAPI.getAnexos(props.pedido.id)
+  } catch {
+    anexos.value = []
+  }
+}
+
+async function handleUploadFiles(files: File[]) {
+  uploadError.value = ''
+  for (const file of files) {
+    if (anexos.value.length >= 10) { uploadError.value = 'Limite de 10 anexos atingido.'; break }
+    if (file.size > 5 * 1024 * 1024) { uploadError.value = `"${file.name}" excede 5 MB.`; continue }
+
+    uploadingAnexo.value = true
+    try {
+      const base64 = await fileToBase64(file)
+      // If pedido already saved, upload immediately; otherwise queue for post-save
+      if (props.pedido) {
+        const novo = await pedidoAnexosAPI.upload(props.pedido.id, {
+          nome_arquivo: file.name,
+          tipo_arquivo: file.type,
+          tamanho: file.size,
+          dados: base64,
+        })
+        anexos.value = [...anexos.value, novo]
+      } else {
+        // Pending uploads stored locally until pedido is created
+        pendingUploads.value.push({ file, base64 })
+        // Add a preview object
+        anexos.value = [...anexos.value, {
+          id: `pending-${Date.now()}-${file.name}`,
+          pedido_id: '',
+          nome_arquivo: file.name,
+          tipo_arquivo: file.type,
+          tamanho: file.size,
+          dados: base64,
+          created_at: new Date().toISOString(),
+        }]
+      }
+    } catch (e: any) {
+      uploadError.value = e?.response?.data?.detail || `Erro ao enviar "${file.name}".`
+    } finally {
+      uploadingAnexo.value = false
+    }
+  }
+}
+
+async function handleDeleteAnexo(anexo: PedidoAnexo) {
+  if (anexo.id.startsWith('pending-')) {
+    // Remove from pending list
+    pendingUploads.value = pendingUploads.value.filter(p => p.file.name !== anexo.nome_arquivo)
+    anexos.value = anexos.value.filter(a => a.id !== anexo.id)
+    return
+  }
+  try {
+    await pedidoAnexosAPI.delete(props.pedido!.id, anexo.id)
+    anexos.value = anexos.value.filter(a => a.id !== anexo.id)
+  } catch {
+    uploadError.value = 'Erro ao remover anexo.'
+  }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      // strip "data:image/jpeg;base64," prefix
+      resolve(result.split(',')[1])
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 const closeModal = () => {
@@ -452,6 +563,7 @@ watch(() => props.isVisible, (visible) => {
   if (visible) {
     loadFormData()
     loadTags()
+    loadAnexos()
   }
 })
 

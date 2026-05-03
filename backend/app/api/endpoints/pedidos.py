@@ -6,11 +6,17 @@ from ...models.pedido import Pedido, PedidoStatus
 from ...models.pedido_tag import TagStatus
 from ...models.cliente import Cliente
 from ...models.usuario import Usuario
+from ...models.pedido_anexo import PedidoAnexo
 from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate
+from ...schemas.pedido_anexo import PedidoAnexoCreate, PedidoAnexoResponse
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 from ...utils import generate_order_number, validate_brazilian_cep, validate_brazilian_phone
 from ...services.rastreamento_sync import RastreamentoSyncService
+
+MAX_ANEXOS_POR_PEDIDO = 10
+MAX_TAMANHO_BYTES = 5 * 1024 * 1024  # 5 MB
+TIPOS_PERMITIDOS = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
 
 def _sync_cliente_fields(db_pedido: Pedido, cliente: Cliente) -> None:
@@ -225,6 +231,81 @@ def excluir_pedido(
     db.delete(db_pedido)
     db.commit()
     return {"message": "Order deleted successfully"}
+
+@router.get("/{pedido_id}/anexos", response_model=List[PedidoAnexoResponse])
+def listar_anexos(
+    pedido_id: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """List all attachments for a pedido"""
+    pedido_uuid = validate_uuid(pedido_id)
+    pedido = db.query(Pedido).filter(Pedido.id == pedido_uuid).first()
+    if not pedido:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return db.query(PedidoAnexo).filter(PedidoAnexo.pedido_id == pedido_uuid).order_by(PedidoAnexo.created_at).all()
+
+
+@router.post("/{pedido_id}/anexos", response_model=PedidoAnexoResponse, status_code=status.HTTP_201_CREATED)
+def adicionar_anexo(
+    pedido_id: str,
+    anexo: PedidoAnexoCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Upload an image attachment to a pedido (base64-encoded)"""
+    pedido_uuid = validate_uuid(pedido_id)
+    pedido = db.query(Pedido).filter(Pedido.id == pedido_uuid).first()
+    if not pedido:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if anexo.tipo_arquivo not in TIPOS_PERMITIDOS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tipo de arquivo não permitido. Use JPEG, PNG, GIF ou WebP.")
+
+    if anexo.tamanho > MAX_TAMANHO_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Arquivo muito grande. Máximo permitido: 5 MB.")
+
+    contagem = db.query(PedidoAnexo).filter(PedidoAnexo.pedido_id == pedido_uuid).count()
+    if contagem >= MAX_ANEXOS_POR_PEDIDO:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Limite de {MAX_ANEXOS_POR_PEDIDO} anexos por pedido atingido.")
+
+    db_anexo = PedidoAnexo(
+        pedido_id=pedido_uuid,
+        nome_arquivo=anexo.nome_arquivo,
+        tipo_arquivo=anexo.tipo_arquivo,
+        tamanho=anexo.tamanho,
+        dados=anexo.dados,
+        created_by=current_user.id,
+    )
+    db.add(db_anexo)
+    pedido.anexos_count = (pedido.anexos_count or 0) + 1
+    db.commit()
+    db.refresh(db_anexo)
+    return db_anexo
+
+
+@router.delete("/{pedido_id}/anexos/{anexo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remover_anexo(
+    pedido_id: str,
+    anexo_id: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Delete an attachment from a pedido"""
+    pedido_uuid = validate_uuid(pedido_id)
+    anexo_uuid = validate_uuid(anexo_id)
+    db_anexo = db.query(PedidoAnexo).filter(
+        PedidoAnexo.id == anexo_uuid,
+        PedidoAnexo.pedido_id == pedido_uuid,
+    ).first()
+    if not db_anexo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anexo não encontrado.")
+    pedido = db.query(Pedido).filter(Pedido.id == pedido_uuid).first()
+    if pedido and pedido.anexos_count > 0:
+        pedido.anexos_count -= 1
+    db.delete(db_anexo)
+    db.commit()
+
 
 @router.get("/rastreamento/{codigo_rastreio}")
 def verificar_rastreamento_existente(
