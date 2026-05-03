@@ -27,6 +27,7 @@ class Pedido(Base):
 
     # Valor total do pedido
     valor_total = Column(DECIMAL(10,2), nullable=False)
+    moeda = Column(String(3), nullable=False, default='R$')  # G$, R$, U$
 
     # Dados do cliente (opcionais)
     cliente_nome = Column(String(200))

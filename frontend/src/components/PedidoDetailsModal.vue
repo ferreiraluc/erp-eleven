@@ -62,7 +62,7 @@
             <p class="description-text">{{ pedido.descricao }}</p>
             <div class="valor-info">
               <span class="valor-label">Valor Total:</span>
-              <span class="valor-value">R$ {{ formatCurrency(pedido.valor_total) }}</span>
+              <span class="valor-value">{{ pedido.moeda || 'G$' }} {{ formatCurrency(pedido.valor_total) }}</span>
             </div>
           </div>
         </div>

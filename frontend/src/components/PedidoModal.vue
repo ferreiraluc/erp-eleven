@@ -32,17 +32,28 @@
             </div>
             <div class="form-row">
               <div class="form-group required">
-                <label for="valor_total">Valor Total (R$)</label>
-                <input
-                  id="valor_total"
-                  v-model="formData.valor_total"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="0,00"
-                  class="form-input"
-                />
+                <label for="valor_total">Valor Total</label>
+                <div class="valor-with-moeda">
+                  <select
+                    v-model="formData.moeda"
+                    class="moeda-select"
+                    title="Moeda"
+                  >
+                    <option value="G$">G$</option>
+                    <option value="R$">R$</option>
+                    <option value="U$">U$</option>
+                  </select>
+                  <input
+                    id="valor_total"
+                    v-model="formData.valor_total"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    placeholder="0,00"
+                    class="form-input valor-input"
+                  />
+                </div>
               </div>
               <div class="form-group">
                 <label for="status">Status</label>
@@ -303,6 +314,7 @@ function clearCliente() {
 const formData = ref<PedidoCreate>({
   descricao: '',
   valor_total: 0,
+  moeda: 'G$',
   cliente_nome: '',
   cliente_telefone: '',
   cliente_email: '',
@@ -327,6 +339,7 @@ const resetForm = () => {
   formData.value = {
     descricao: '',
     valor_total: 0,
+    moeda: 'G$',
     cliente_id: undefined,
     cliente_nome: '',
     cliente_telefone: '',
@@ -345,6 +358,7 @@ const loadFormData = () => {
     formData.value = {
       descricao: props.pedido.descricao,
       valor_total: props.pedido.valor_total,
+      moeda: props.pedido.moeda || 'G$',
       cliente_id: props.pedido.cliente_id || undefined,
       cliente_nome: props.pedido.cliente_nome || '',
       cliente_telefone: props.pedido.cliente_telefone || '',
@@ -778,6 +792,40 @@ onMounted(() => {
   .modal-footer {
     flex-direction: column;
   }
+}
+
+/* Valor + moeda combo */
+.valor-with-moeda {
+  display: flex;
+  gap: 0;
+}
+
+.moeda-select {
+  padding: 0.75rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-right: none;
+  border-radius: 0.5rem 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background-color: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  width: 4.5rem;
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+
+.moeda-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  z-index: 1;
+  position: relative;
+}
+
+.valor-input {
+  border-radius: 0 0.5rem 0.5rem 0 !important;
+  flex: 1;
 }
 
 /* Cliente autocomplete */

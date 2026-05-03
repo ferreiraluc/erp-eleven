@@ -130,7 +130,7 @@
               <div class="hist-pedido-top">
                 <span class="hist-num">{{ p.numero_pedido }}</span>
                 <span :class="['hist-status', statusClass(p.status)]">{{ statusLabel(p.status) }}</span>
-                <span class="hist-valor">R$ {{ Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+                <span class="hist-valor">{{ p.moeda || 'G$' }} {{ Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
                 <span class="hist-date">{{ fmtDate(p.created_at) }}</span>
               </div>
               <div class="hist-descricao">{{ p.descricao }}</div>

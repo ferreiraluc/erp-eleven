@@ -10,6 +10,7 @@ from .cliente import ClienteSimple
 class PedidoBase(BaseModel):
     descricao: str
     valor_total: Decimal
+    moeda: Optional[str] = 'R$'
     cliente_nome: Optional[str] = None
     cliente_telefone: Optional[str] = None
     cliente_email: Optional[str] = None
@@ -25,6 +26,7 @@ class PedidoCreate(PedidoBase):
 class PedidoUpdate(BaseModel):
     descricao: Optional[str] = None
     valor_total: Optional[Decimal] = None
+    moeda: Optional[str] = None
     cliente_nome: Optional[str] = None
     cliente_telefone: Optional[str] = None
     cliente_email: Optional[str] = None

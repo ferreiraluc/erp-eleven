@@ -381,6 +381,7 @@ export interface Pedido {
   numero_pedido: string
   descricao: string
   valor_total: number
+  moeda?: string
   cliente_id?: string
   cliente_nome?: string
   cliente_telefone?: string
@@ -398,6 +399,7 @@ export interface Pedido {
 export interface PedidoCreate {
   descricao: string
   valor_total: number
+  moeda?: string
   cliente_id?: string
   cliente_nome?: string
   cliente_telefone?: string
