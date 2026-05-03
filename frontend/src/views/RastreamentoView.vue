@@ -147,11 +147,11 @@
           <div class="header-actions">Ações</div>
         </div>
 
-        <div 
-          v-for="rastreamento in rastreamentosFiltrados" 
+        <div
+          v-for="rastreamento in rastreamentosFiltrados"
           :key="rastreamento.id"
           class="mobile-rastreamento-row"
-          :class="'mobile-rastreamento-row-status-' + rastreamento.status.toLowerCase().replace('_', '-')"
+          :class="['mobile-rastreamento-row-status-' + rastreamento.status.toLowerCase().replace('_', '-'), { 'card-flash': flashedIds.has(rastreamento.id) }]"
         >
           <!-- Layout Mobile: Card Dropdown -->
           <div class="mobile-dropdown-card">
@@ -182,7 +182,7 @@
                   <div class="mobile-code-section">
                     <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
                     <button
-                      @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
+                      @click.stop="copiarCodigo(rastreamento)"
                       class="mobile-copy-btn"
                       title="Copiar"
                     >
@@ -223,6 +223,10 @@
                   <div class="mobile-content-row">
                     <span class="mobile-content-label">Criado em:</span>
                     <span class="mobile-content-value mobile-date-value">{{ formatarData(rastreamento.created_at) }}</span>
+                  </div>
+                  <div v-if="formatUltimaAtt(rastreamento)" class="mobile-content-row">
+                    <span class="mobile-content-label">Última att.:</span>
+                    <span class="mobile-content-value ultima-att-value">{{ formatUltimaAtt(rastreamento) }}</span>
                   </div>
                   
                   <!-- Rastreio info (service + expected delivery) -->
@@ -316,7 +320,7 @@
           <div class="row-codigo desktop-only">
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
-              @click="copiarCodigo(rastreamento.codigo_rastreio)"
+              @click="copiarCodigo(rastreamento)"
               class="copy-btn"
               title="Copiar Código"
             >
@@ -355,7 +359,8 @@
 
           <!-- Data criação (desktop) -->
           <div class="row-data">
-            {{ formatarData(rastreamento.created_at) }}
+            <span>{{ formatarData(rastreamento.created_at) }}</span>
+            <span v-if="formatUltimaAtt(rastreamento)" class="row-ultima-att">att. {{ formatUltimaAtt(rastreamento) }}</span>
           </div>
 
           <!-- Ações -->
@@ -583,6 +588,28 @@ const editandoRastreamento = ref<Rastreamento | null>(null)
 const codigoInput = ref<HTMLInputElement>()
 const expandedCards = ref<Set<string>>(new Set())
 const refreshingIds = ref<Set<string>>(new Set())
+const flashedIds = ref<Set<string>>(new Set())
+
+function triggerFlash(id: string) {
+  flashedIds.value = new Set([...flashedIds.value, id])
+  setTimeout(() => {
+    const s = new Set(flashedIds.value)
+    s.delete(id)
+    flashedIds.value = s
+  }, 1200)
+}
+
+function formatUltimaAtt(r: any): string {
+  if (!r.ultima_atualizacao) return ''
+  try {
+    const d = new Date(r.ultima_atualizacao)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+  } catch { return '' }
+}
 
 // Dados do resumo
 const resumo = ref(rastreamentoStore.resumoDashboard)
@@ -696,6 +723,7 @@ function abrirModalCriacao() {
 }
 
 function editarRastreamento(rastreamento: Rastreamento) {
+  triggerFlash(rastreamento.id)
   editandoRastreamento.value = rastreamento
   formData.value = {
     codigo_rastreio: rastreamento.codigo_rastreio,
@@ -839,11 +867,10 @@ function getStatusCardClass(status: string): string {
 }
 
 // Novas funções para a lista
-async function copiarCodigo(codigo: string) {
+async function copiarCodigo(rastreamento: Rastreamento) {
   try {
-    await navigator.clipboard.writeText(codigo)
-    // Você pode adicionar uma notificação aqui se quiser
-    console.log('Código copiado:', codigo)
+    await navigator.clipboard.writeText(rastreamento.codigo_rastreio)
+    triggerFlash(rastreamento.id)
   } catch (error) {
     console.error('Erro ao copiar código:', error)
   }
@@ -882,14 +909,21 @@ function formatEventDate(dateStr: string): string {
 }
 
 async function atualizarOnline(rastreamento: Rastreamento) {
-  refreshingIds.value.add(rastreamento.id)
+  const s = new Set(refreshingIds.value)
+  s.add(rastreamento.id)
+  refreshingIds.value = s
   try {
     await rastreamentoStore.atualizarOnline(rastreamento.id)
-    await carregarDados()
+    // The store already updates the item in-place via splice — no full reload needed
+    // Refresh resumo stats silently in background
+    rastreamentoStore.obterResumoDashboard().then(v => { resumo.value = rastreamentoStore.resumoDashboard }).catch(() => {})
+    triggerFlash(rastreamento.id)
   } catch (err: any) {
     console.error('Erro ao atualizar rastreamento:', err)
   } finally {
-    refreshingIds.value.delete(rastreamento.id)
+    const s2 = new Set(refreshingIds.value)
+    s2.delete(rastreamento.id)
+    refreshingIds.value = s2
   }
 }
 
@@ -2672,6 +2706,37 @@ onMounted(() => {
 
 @keyframes spin-btn { to { transform: rotate(360deg); } }
 .spin { animation: spin-btn 0.8s linear infinite; }
+
+/* ── Card flash highlight ─────────────────────────────────────────────────────── */
+@keyframes card-flash-anim {
+  0%   { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); background-color: transparent; }
+  25%  { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4); background-color: rgba(219, 234, 254, 0.45); }
+  70%  { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); background-color: rgba(219, 234, 254, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); background-color: transparent; }
+}
+
+.card-flash {
+  animation: card-flash-anim 1.2s ease-out;
+  border-radius: 0.5rem;
+}
+
+/* ── Última atualização ───────────────────────────────────────────────────────── */
+.row-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.row-ultima-att {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.ultima-att-value {
+  color: #6b7280;
+  font-style: italic;
+}
 
 /* ── Progress track ──────────────────────────────────────────────────────────── */
 .progress-track {
