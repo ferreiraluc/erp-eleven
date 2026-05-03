@@ -365,7 +365,7 @@
           <!-- Data criação (desktop) -->
           <div class="row-data">
             <span>{{ formatarData(rastreamento.created_at) }}</span>
-            <span v-if="formatUltimaAtt(rastreamento)" class="row-ultima-att">sync{{ formatUltimaAtt(rastreamento) }}</span>
+            <span v-if="formatUltimaAtt(rastreamento)" class="row-ultima-att">sync {{ formatUltimaAtt(rastreamento) }}</span>
           </div>
 
           <!-- Ações -->

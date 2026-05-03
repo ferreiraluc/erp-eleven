@@ -368,6 +368,8 @@ const openCreateModal = () => {
 }
 
 const openEditModal = (pedido: Pedido) => {
+  showDetailsModal.value = false
+  selectedPedido.value = null
   editingPedido.value = pedido
   showCreateModal.value = true
 }

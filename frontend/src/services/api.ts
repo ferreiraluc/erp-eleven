@@ -459,6 +459,26 @@ export const pedidosAPI = {
     api.get(`/api/pedidos/rastreamento/${codigoRastreio}`).then(res => res.data)
 }
 
+// ─── Rastreamentos (quick list for autocomplete) ───────────────────────────────
+
+export interface RastreamentoSimple {
+  id: string
+  codigo_rastreio: string
+  status: string
+  destinatario?: string
+  descricao?: string
+  pedido_id?: string
+  numero_pedido?: string
+}
+
+export const rastreamentosAPI = {
+  list: (params?: { limit?: number }): Promise<RastreamentoSimple[]> => {
+    const p = new URLSearchParams()
+    if (params?.limit) p.append('limit', String(params.limit))
+    return api.get(`/api/rastreamento/?${p.toString()}`).then(r => r.data)
+  },
+}
+
 // ─── Pedido Anexos ─────────────────────────────────────────────────────────────
 
 export interface PedidoAnexo {

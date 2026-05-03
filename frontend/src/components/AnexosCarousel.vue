@@ -74,18 +74,63 @@
         class="hidden-input"
         @change="onFilesSelected"
       />
-      <button
-        type="button"
-        class="upload-btn"
-        @click="fileInput?.click()"
-        :disabled="uploading || anexos.length >= 10"
-      >
-        <svg v-if="!uploading" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        <svg v-else class="spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="spin-track"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="spin-path"/></svg>
-        <span>{{ uploading ? 'Enviando...' : anexos.length >= 10 ? 'Limite atingido' : 'Adicionar foto' }}</span>
-      </button>
+      <div class="upload-btns-row">
+        <button
+          type="button"
+          class="upload-btn"
+          @click="fileInput?.click()"
+          :disabled="uploading || anexos.length >= 10"
+        >
+          <svg v-if="!uploading" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <svg v-else class="spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="spin-track"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="spin-path"/></svg>
+          <span>{{ uploading ? 'Enviando...' : anexos.length >= 10 ? 'Limite atingido' : 'Galeria' }}</span>
+        </button>
+        <button
+          type="button"
+          class="upload-btn camera-btn"
+          @click="openCamera"
+          :disabled="uploading || anexos.length >= 10"
+        >
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Câmera</span>
+        </button>
+      </div>
       <p v-if="errorMsg" class="upload-error">{{ errorMsg }}</p>
     </div>
+
+    <!-- Camera capture modal -->
+    <teleport to="body">
+      <div v-if="showCamera" class="camera-overlay" @click.self="closeCamera">
+        <div class="camera-modal">
+          <div class="camera-header">
+            <span>Tirar foto</span>
+            <button type="button" @click="closeCamera" class="camera-close">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="camera-body">
+            <video v-if="!capturedDataUrl" ref="videoEl" autoplay playsinline class="camera-video"></video>
+            <img v-else :src="capturedDataUrl" class="camera-preview" alt="Foto capturada" />
+            <canvas ref="canvasEl" class="hidden-input"></canvas>
+            <p v-if="cameraError" class="camera-error">{{ cameraError }}</p>
+          </div>
+
+          <div class="camera-footer">
+            <template v-if="!capturedDataUrl">
+              <button type="button" class="btn-capture" @click="capturePhoto" :disabled="!cameraReady">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Capturar
+              </button>
+            </template>
+            <template v-else>
+              <button type="button" class="btn-retake" @click="retakePhoto">Tirar novamente</button>
+              <button type="button" class="btn-use-photo" @click="usePhoto">Usar esta foto</button>
+            </template>
+          </div>
+        </div>
+      </div>
+    </teleport>
 
     <!-- Lightbox -->
     <teleport to="body">
@@ -112,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import type { PedidoAnexo } from '@/services/api'
 
 const props = withDefaults(defineProps<{
@@ -134,6 +179,70 @@ const emit = defineEmits<{
 const current = ref(0)
 const lightboxIndex = ref<number | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// Camera capture
+const showCamera = ref(false)
+const videoEl = ref<HTMLVideoElement | null>(null)
+const canvasEl = ref<HTMLCanvasElement | null>(null)
+const capturedDataUrl = ref<string | null>(null)
+const cameraStream = ref<MediaStream | null>(null)
+const cameraReady = ref(false)
+const cameraError = ref('')
+
+async function openCamera() {
+  cameraError.value = ''
+  capturedDataUrl.value = null
+  cameraReady.value = false
+  showCamera.value = true
+  await nextTick()
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    })
+    cameraStream.value = stream
+    if (videoEl.value) {
+      videoEl.value.srcObject = stream
+      videoEl.value.onloadedmetadata = () => { cameraReady.value = true }
+    }
+  } catch (e: any) {
+    cameraError.value = e?.name === 'NotAllowedError'
+      ? 'Permissão de câmera negada. Verifique as configurações do navegador.'
+      : 'Câmera não disponível neste dispositivo.'
+  }
+}
+
+function closeCamera() {
+  cameraStream.value?.getTracks().forEach(t => t.stop())
+  cameraStream.value = null
+  showCamera.value = false
+  capturedDataUrl.value = null
+  cameraReady.value = false
+}
+
+function capturePhoto() {
+  if (!videoEl.value || !canvasEl.value) return
+  const v = videoEl.value
+  const c = canvasEl.value
+  c.width = v.videoWidth
+  c.height = v.videoHeight
+  c.getContext('2d')!.drawImage(v, 0, 0)
+  capturedDataUrl.value = c.toDataURL('image/jpeg', 0.9)
+  if (navigator.vibrate) navigator.vibrate(100)
+}
+
+function retakePhoto() {
+  capturedDataUrl.value = null
+}
+
+function usePhoto() {
+  if (!capturedDataUrl.value || !canvasEl.value) return
+  canvasEl.value.toBlob(blob => {
+    if (!blob) return
+    const file = new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' })
+    emit('upload', [file])
+    closeCamera()
+  }, 'image/jpeg', 0.9)
+}
 
 watch(() => props.anexos.length, (n, o) => {
   if (current.value >= n) current.value = Math.max(0, n - 1)
@@ -358,12 +467,17 @@ function onFilesSelected(e: Event) {
 /* ── Upload zone ──────────────────────────── */
 .hidden-input { display: none; }
 
+.upload-btns-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
 .upload-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  width: 100%;
   padding: 0.75rem;
   border: 2px dashed #d1d5db;
   border-radius: 0.75rem;
@@ -381,6 +495,11 @@ function onFilesSelected(e: Event) {
   color: #2563eb;
 }
 .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.camera-btn:hover:not(:disabled) {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  color: #7c3aed;
+}
 
 .upload-error {
   margin: 0;
@@ -471,4 +590,90 @@ function onFilesSelected(e: Event) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Camera modal ─────────────────────────── */
+.camera-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.camera-modal {
+  background: #0f172a;
+  border-radius: 1rem;
+  width: 100%; max-width: 540px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+}
+.camera-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: white; font-weight: 600; font-size: 0.95rem;
+}
+.camera-close {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.6); display: flex;
+  transition: color 0.2s;
+}
+.camera-close:hover { color: white; }
+.camera-close svg { width: 1.25rem; height: 1.25rem; }
+.camera-body {
+  position: relative; background: #000;
+  min-height: 280px; display: flex; align-items: center; justify-content: center;
+}
+.camera-video {
+  width: 100%; max-height: 380px; object-fit: cover;
+  display: block;
+}
+.camera-preview {
+  width: 100%; max-height: 380px; object-fit: contain;
+}
+/* aim crosshair overlay */
+.camera-body::after {
+  content: '';
+  position: absolute; inset: 0;
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 0;
+  pointer-events: none;
+}
+.camera-error {
+  color: #fca5a5; font-size: 0.85rem; text-align: center;
+  padding: 1.5rem; margin: 0;
+}
+.camera-footer {
+  display: flex; gap: 0.75rem; justify-content: center;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.btn-capture {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.7rem 1.75rem;
+  background: white; color: #0f172a;
+  border: none; border-radius: 9999px;
+  font-weight: 700; font-size: 0.95rem; cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 4px 14px rgba(255,255,255,0.2);
+}
+.btn-capture svg { width: 1.1rem; height: 1.1rem; }
+.btn-capture:hover:not(:disabled) { background: #e2e8f0; transform: scale(1.04); }
+.btn-capture:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-retake {
+  padding: 0.65rem 1.25rem;
+  background: rgba(255,255,255,0.1); color: white;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 9999px; cursor: pointer; font-size: 0.875rem;
+  transition: background 0.2s;
+}
+.btn-retake:hover { background: rgba(255,255,255,0.2); }
+.btn-use-photo {
+  padding: 0.65rem 1.5rem;
+  background: #2563eb; color: white;
+  border: none; border-radius: 9999px;
+  font-weight: 600; font-size: 0.875rem; cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+}
+.btn-use-photo:hover { background: #1d4ed8; }
 </style>

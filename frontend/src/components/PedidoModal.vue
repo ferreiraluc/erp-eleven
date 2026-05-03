@@ -69,15 +69,54 @@
                   <option value="CANCELADO">Cancelado</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label for="codigo_rastreio">Código de Rastreio</label>
+              <div class="form-group rastreio-group">
+                <label>Rastreamento</label>
+                <!-- Modo autocomplete (padrão) -->
+                <div v-if="!rastreioManual" style="position:relative;">
+                  <input
+                    v-model="rastreioSearch"
+                    type="text"
+                    placeholder="Buscar rastreio cadastrado..."
+                    class="form-input"
+                    @input="onRastreioSearchInput"
+                    @blur="setTimeout(() => showRastreioSuggestions = false, 180)"
+                  />
+                  <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn">✕</button>
+                  <!-- Dropdown de sugestões -->
+                  <div v-if="showRastreioSuggestions" class="rastreio-list">
+                    <button
+                      v-for="r in rastreioFiltered"
+                      :key="r.id"
+                      type="button"
+                      class="rastreio-item"
+                      @mousedown.prevent="selectRastreio(r)"
+                    >
+                      <span class="rastreio-code">{{ r.codigo_rastreio }}</span>
+                      <span class="rastreio-status-dot" :style="{ background: rastreioStatusColor(r.status) }"></span>
+                      <span class="rastreio-status-text">{{ rastreioStatusLabel(r.status) }}</span>
+                      <span v-if="r.destinatario" class="rastreio-dest">· {{ r.destinatario }}</span>
+                    </button>
+                    <div v-if="!rastreioFiltered.length" class="rastreio-empty">Nenhum resultado</div>
+                  </div>
+                </div>
+                <!-- Modo manual: campo texto livre -->
                 <input
-                  id="codigo_rastreio"
+                  v-else
                   v-model="formData.codigo_rastreio"
                   type="text"
                   placeholder="BR123456789BR"
                   class="form-input"
                 />
+                <!-- Confirmação de seleção -->
+                <p v-if="selectedRastreio && !rastreioManual" class="rastreio-ok">
+                  ✓ {{ selectedRastreio.codigo_rastreio }}
+                  <span class="rastreio-status-dot" :style="{ background: rastreioStatusColor(selectedRastreio.status) }"></span>
+                  {{ rastreioStatusLabel(selectedRastreio.status) }}
+                </p>
+                <!-- Toggle entre modos -->
+                <button type="button" @click="rastreioManual = !rastreioManual; clearRastreio()" class="rastreio-toggle">
+                  {{ rastreioManual ? '← Buscar rastreamentos cadastrados' : 'Digitar código manualmente' }}
+                </button>
               </div>
             </div>
           </div>
@@ -267,7 +306,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { pedidosAPI, pedidoAnexosAPI, tagsAPI, clientesAPI, type Pedido, type PedidoCreate, type PedidoAnexo, type Tag, type Cliente } from '@/services/api'
+import { pedidosAPI, pedidoAnexosAPI, tagsAPI, clientesAPI, rastreamentosAPI, type Pedido, type PedidoCreate, type PedidoAnexo, type Tag, type Cliente, type RastreamentoSimple } from '@/services/api'
 import TagManagerModal from './TagManagerModal.vue'
 import AnexosCarousel from './AnexosCarousel.vue'
 
@@ -330,6 +369,52 @@ function clearCliente() {
   formData.value.cliente_id = undefined
 }
 
+// Rastreamento autocomplete
+const rastreioSearch = ref('')
+const rastreioList = ref<RastreamentoSimple[]>([])
+const rastreioFiltered = ref<RastreamentoSimple[]>([])
+const selectedRastreio = ref<RastreamentoSimple | null>(null)
+const showRastreioSuggestions = ref(false)
+const rastreioManual = ref(false)  // fallback: let user type a code manually
+
+async function loadRastreios() {
+  try { rastreioList.value = await rastreamentosAPI.list({ limit: 200 }) } catch { rastreioList.value = [] }
+}
+
+function onRastreioSearchInput() {
+  const term = rastreioSearch.value.toLowerCase()
+  if (!term) { rastreioFiltered.value = []; showRastreioSuggestions.value = false; return }
+  rastreioFiltered.value = rastreioList.value.filter(r =>
+    r.codigo_rastreio.toLowerCase().includes(term) ||
+    (r.destinatario || '').toLowerCase().includes(term) ||
+    (r.descricao || '').toLowerCase().includes(term)
+  ).slice(0, 8)
+  showRastreioSuggestions.value = rastreioFiltered.value.length > 0
+}
+
+function selectRastreio(r: RastreamentoSimple) {
+  selectedRastreio.value = r
+  formData.value.codigo_rastreio = r.codigo_rastreio
+  rastreioSearch.value = r.codigo_rastreio
+  showRastreioSuggestions.value = false
+}
+
+function clearRastreio() {
+  selectedRastreio.value = null
+  formData.value.codigo_rastreio = ''
+  rastreioSearch.value = ''
+}
+
+function rastreioStatusLabel(s: string) {
+  const m: Record<string, string> = { PENDENTE: 'Pendente', EM_TRANSITO: 'Em trânsito', ENTREGUE: 'Entregue', ERRO: 'Erro', NAO_ENCONTRADO: 'Não encontrado' }
+  return m[s] || s
+}
+
+function rastreioStatusColor(s: string) {
+  const m: Record<string, string> = { PENDENTE: '#f59e0b', EM_TRANSITO: '#3b82f6', ENTREGUE: '#10b981', ERRO: '#ef4444', NAO_ENCONTRADO: '#6b7280' }
+  return m[s] || '#9ca3af'
+}
+
 // Form data
 const formData = ref<PedidoCreate>({
   descricao: '',
@@ -371,6 +456,9 @@ const resetForm = () => {
   selectedTags.value = []
   selectedCliente.value = null
   clienteSearch.value = ''
+  selectedRastreio.value = null
+  rastreioSearch.value = ''
+  rastreioManual.value = false
   anexos.value = []
   pendingUploads.value = []
   uploadError.value = ''
@@ -397,6 +485,17 @@ const loadFormData = () => {
     } else {
       selectedCliente.value = null
       clienteSearch.value = ''
+    }
+    // Restore rastreio selection
+    if (props.pedido.codigo_rastreio) {
+      rastreioSearch.value = props.pedido.codigo_rastreio
+      const found = rastreioList.value.find(r => r.codigo_rastreio === props.pedido!.codigo_rastreio)
+      selectedRastreio.value = found || null
+      if (!found) rastreioManual.value = true
+    } else {
+      selectedRastreio.value = null
+      rastreioSearch.value = ''
+      rastreioManual.value = false
     }
   } else {
     resetForm()
@@ -559,8 +658,9 @@ const handleTagCreated = () => {
 }
 
 // Watchers
-watch(() => props.isVisible, (visible) => {
+watch(() => props.isVisible, async (visible) => {
   if (visible) {
+    await loadRastreios()
     loadFormData()
     loadTags()
     loadAnexos()
@@ -905,6 +1005,41 @@ onMounted(() => {
     flex-direction: column;
   }
 }
+
+/* Rastreamento autocomplete */
+.rastreio-group { position: relative; }
+.rastreio-clear-btn {
+  position: absolute; right: .5rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: #9ca3af; font-size: .8rem;
+}
+.rastreio-list {
+  position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+  background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.1); z-index: 200;
+  max-height: 240px; overflow-y: auto;
+}
+.rastreio-item {
+  display: flex; align-items: center; gap: .4rem;
+  width: 100%; text-align: left; padding: .55rem .85rem;
+  background: none; border: none; cursor: pointer; border-bottom: 1px solid #f3f4f6;
+  font-size: .8rem;
+}
+.rastreio-item:last-child { border-bottom: none; }
+.rastreio-item:hover { background: #f9fafb; }
+.rastreio-code { font-weight: 700; color: #111827; font-family: monospace; }
+.rastreio-status-dot { width: .5rem; height: .5rem; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.rastreio-status-text { font-size: .72rem; color: #6b7280; }
+.rastreio-dest { font-size: .72rem; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rastreio-empty { padding: .75rem; font-size: .8rem; color: #9ca3af; text-align: center; }
+.rastreio-ok {
+  margin: .3rem 0 0; font-size: .72rem; color: #10b981;
+  display: flex; align-items: center; gap: .3rem;
+}
+.rastreio-toggle {
+  background: none; border: none; cursor: pointer; font-size: .72rem;
+  color: #6b7280; text-decoration: underline; padding: 0; margin-top: .25rem;
+}
+.rastreio-toggle:hover { color: #374151; }
 
 /* Valor + moeda combo */
 .valor-with-moeda {

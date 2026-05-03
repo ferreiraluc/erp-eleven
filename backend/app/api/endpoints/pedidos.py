@@ -110,6 +110,9 @@ def criar_pedido(
         RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
             db, db_pedido, current_user.id
         )
+        # Avançar status automaticamente para ENVIADO ao vincular rastreio
+        if db_pedido.status in (PedidoStatus.PENDENTE, PedidoStatus.PROCESSANDO):
+            db_pedido.status = PedidoStatus.ENVIADO
 
     db.commit()
     db.refresh(db_pedido)
@@ -201,6 +204,9 @@ def atualizar_pedido(
         RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
             db, db_pedido, current_user.id
         )
+        # Avançar status automaticamente para ENVIADO ao vincular rastreio
+        if db_pedido.status in (PedidoStatus.PENDENTE, PedidoStatus.PROCESSANDO):
+            db_pedido.status = PedidoStatus.ENVIADO
 
     db.commit()
     db.refresh(db_pedido)
