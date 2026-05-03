@@ -1399,35 +1399,33 @@ onUnmounted(() => {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
   }
-  /* Compact header for iPad */
-  .header-content {
-    padding: 0.5rem 1rem;
-  }
-  .app-logo {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 0.375rem;
-  }
-  .logo-icon {
-    width: 1rem;
-    height: 1rem;
-  }
-  .app-title {
-    font-size: 1rem;
-  }
-  .welcome-text {
-    font-size: 0.75rem;
-  }
-  .header-left {
-    gap: 0.5rem;
-  }
-  .header-dropdown-button {
-    padding: 0.35rem 0.5rem;
-    font-size: 0.75rem;
-  }
-  .exchange-rates-header {
-    padding: 0.35rem 0.5rem;
-  }
+  /* Header: single compact row for iPad/tablet */
+  .header-content { padding: 0.45rem 0.75rem; flex-direction: row; align-items: center; }
+  .app-logo { width: 1.6rem; height: 1.6rem; border-radius: 0.375rem; }
+  .logo-icon { width: 0.95rem; height: 0.95rem; }
+  .app-title { font-size: 0.9rem; }
+  .welcome-text { display: none !important; }
+  .header-left { gap: 0.4rem; }
+  .header-right { flex: 1; flex-direction: row !important; align-items: center; justify-content: flex-end; gap: 0.3rem; width: auto !important; flex-wrap: nowrap !important; }
+  .header-left-controls { flex-direction: row !important; align-items: center; gap: 0.2rem; }
+  .mobile-controls { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.2rem; }
+  .mobile-controls .currency-language-group { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.15rem; margin-bottom: 0 !important; }
+  .desktop-controls { display: none !important; }
+  .header-dropdown-button { padding: 0.18rem 0.28rem; font-size: 0.6rem; gap: 0.1rem; min-width: auto !important; border-radius: 4px; }
+  .control-flag { font-size: 0.7rem; width: auto; }
+  .control-text { font-size: 0.6rem; }
+  .dropdown-icon { width: 0.45rem !important; height: 0.45rem !important; }
+  .exchange-rates-header { padding: 0.18rem 0.3rem !important; }
+  .rates-display { flex-direction: row; gap: 0.25rem; }
+  .rate-item-header { gap: 0.1rem; }
+  .rate-flag { font-size: 0.55rem; }
+  .rate-value-header { font-size: 0.6rem; }
+  .edit-icon { display: none !important; }
+  .header-right-controls { gap: 0.2rem; align-items: center; }
+  .current-time { display: none !important; }
+  .divider { display: none !important; }
+  .logout-button { padding: 0.2rem 0.35rem; font-size: 0.65rem; gap: 0.2rem; }
+  .logout-icon { width: 0.85rem; height: 0.85rem; }
 }
 
 .action-card {
@@ -2552,32 +2550,16 @@ onUnmounted(() => {
     display: none !important;
   }
   
-  .mobile-controls {
-    display: block !important;
-  }
-
-  .mobile-controls .currency-language-group {
-    margin-bottom: 1rem;
-  }
-
-  /* Further compact header on mobile */
-  .app-logo {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-  .logo-icon {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-  .app-title {
-    font-size: 0.875rem;
-  }
-  .welcome-text {
-    display: none !important;
-  }
-  .mobile-controls .currency-language-group {
-    margin-bottom: 0.5rem;
-  }
+  /* Mobile: single-row header, even more compact */
+  .header-content { flex-direction: row !important; padding: 0.3rem 0.5rem !important; gap: 0.2rem; }
+  .app-logo { width: 1.35rem; height: 1.35rem; }
+  .logo-icon { width: 0.8rem; height: 0.8rem; }
+  .app-title { font-size: 0.75rem; }
+  .header-right { flex: 1 !important; justify-content: flex-end !important; width: auto !important; }
+  .header-left-controls { gap: 0.15rem !important; }
+  .header-dropdown-button { padding: 0.12rem 0.18rem !important; font-size: 0.55rem !important; min-width: auto !important; }
+  .logout-button { padding: 0.15rem 0.2rem; }
+  .logout-button span { display: none !important; }
 
   /* Ocultar data/hora no mobile */
   .current-time {
@@ -2688,42 +2670,6 @@ onUnmounted(() => {
     font-size: 0.6875rem;
   }
   
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .header-right {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .header-left-controls {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
-  }
-
-  .currency-language-group {
-    gap: 0.25rem;
-  }
-
-  .header-right-controls {
-    gap: 0.5rem;
-  }
-
-  .header-control {
-    flex-shrink: 0;
-  }
-
-  .header-dropdown-button {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.75rem;
-    min-width: 80px;
-  }
-
   .header-dropdown-menu {
     min-width: 150px;
   }
