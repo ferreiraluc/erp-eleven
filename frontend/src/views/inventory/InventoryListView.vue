@@ -759,7 +759,7 @@ onMounted(async () => {
 
 <style scoped>
 .inventory-view { min-height: 100vh; background: #f9fafb; }
-.page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; position: sticky; top: 0; z-index: 10; }
+.page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; position: sticky; top: 0; z-index: 30; }
 .header-content { display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
 .header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }

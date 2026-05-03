@@ -1731,11 +1731,11 @@ onMounted(() => {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .mobile-dropdown-card {
     display: block !important;
   }
-  
+
   .desktop-header,
   .desktop-only {
     display: none !important;
@@ -2156,7 +2156,7 @@ onMounted(() => {
 }
 
 /* Desktop: Garantir que classes mobile de status não afetem o desktop */
-@media (min-width: 769px) {
+@media (min-width: 1101px) {
   .mobile-rastreamento-row-status-entregue,
   .mobile-rastreamento-row-status-em-transito,
   .mobile-rastreamento-row-status-pendente,
@@ -2175,7 +2175,7 @@ onMounted(() => {
 }
 
 /* Cores para o container completo do mobile (cabeçalho + dropdown) - APENAS NO MOBILE */
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .mobile-rastreamento-row-status-entregue {
     background-color: #dcfce7 !important; /* Verde claro */
     border: 1px solid #16a34a !important;
@@ -2204,6 +2204,17 @@ onMounted(() => {
     border-radius: 0.75rem;
     margin-bottom: 0.5rem;
   }
+}
+
+/* Mobile: 5% compact over iPad base */
+@media (max-width: 768px) {
+  .mobile-card-header { padding: 6px 9px; }
+  .mobile-name { font-size: 10.5px; }
+  .mobile-code { font-size: 9px; max-width: 130px; padding: 2px 5px; }
+  .mobile-card-inner { padding: 7px 9px; }
+  .mobile-content-label { font-size: 9.5px; }
+  .mobile-content-value { font-size: 9.5px; }
+  .mobile-copy-btn { width: 18px; height: 18px; }
 }
 
 .row-codigo {

@@ -90,6 +90,7 @@ def list_items(
     color: Optional[str] = Query(None),
     item_status: Optional[str] = Query(None, alias="status"),
     supplier_id: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -135,7 +136,12 @@ def list_items(
 
     total = query.count()
     offset = (page - 1) * page_size
-    items = query.order_by(Item.name).offset(offset).limit(page_size).all()
+    if sort_by == "updated_at":
+        items = query.order_by(Item.updated_at.desc()).offset(offset).limit(page_size).all()
+    elif sort_by == "created_at":
+        items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
+    else:
+        items = query.order_by(Item.name).offset(offset).limit(page_size).all()
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 

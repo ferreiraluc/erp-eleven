@@ -294,33 +294,41 @@
           <!-- Rastreamento Card -->
           <RastreamentoCard />
 
-          <!-- Stock Alerts Card -->
+          <!-- Stock Card -->
           <div v-if="stockAlerts" class="action-card stock-alerts-card">
-            <h3 class="card-title">Alertas de Estoque</h3>
-            <div class="stock-alert-items">
-              <router-link to="/inventory?status=out_of_stock" class="stock-alert-row red">
-                <div class="alert-dot red-dot"></div>
-                <div class="alert-text">
-                  <span class="alert-count">{{ stockAlerts.out_of_stock_count }}</span>
-                  <span class="alert-label">Sem estoque</span>
-                </div>
+            <div class="stock-card-header">
+              <h3 class="card-title">Estoque</h3>
+              <router-link to="/inventory" class="view-inventory-link">Ver tudo →</router-link>
+            </div>
+            <!-- 3 mini squares -->
+            <div class="stock-mini-stats">
+              <router-link to="/inventory?status=out_of_stock" class="mini-stat mini-red">
+                <span class="mini-count">{{ stockAlerts.out_of_stock_count }}</span>
+                <span class="mini-label">Sem estoque</span>
               </router-link>
-              <router-link to="/inventory?status=low_stock" class="stock-alert-row yellow">
-                <div class="alert-dot yellow-dot"></div>
-                <div class="alert-text">
-                  <span class="alert-count">{{ stockAlerts.low_stock_count }}</span>
-                  <span class="alert-label">Estoque baixo</span>
-                </div>
+              <router-link to="/inventory?status=low_stock" class="mini-stat mini-yellow">
+                <span class="mini-count">{{ stockAlerts.low_stock_count }}</span>
+                <span class="mini-label">Estoque baixo</span>
               </router-link>
-              <router-link to="/inventory" class="stock-alert-row gray">
-                <div class="alert-dot gray-dot"></div>
-                <div class="alert-text">
-                  <span class="alert-count">{{ stockAlerts.total_active_items }}</span>
-                  <span class="alert-label">Itens ativos</span>
-                </div>
+              <router-link to="/inventory" class="mini-stat mini-gray">
+                <span class="mini-count">{{ stockAlerts.total_active_items }}</span>
+                <span class="mini-label">Ativos</span>
               </router-link>
             </div>
-            <router-link to="/inventory" class="view-inventory-link">Ver inventário completo →</router-link>
+            <!-- Recent items list -->
+            <div v-if="recentInventoryItems.length" class="recent-inv-list">
+              <p class="recent-inv-title">Últimos atualizados</p>
+              <router-link
+                v-for="item in recentInventoryItems"
+                :key="item.id"
+                to="/inventory"
+                class="recent-inv-row"
+              >
+                <span class="recent-inv-dot" :class="`dot-${item.alert_level || 'ok'}`"></span>
+                <span class="recent-inv-name">{{ item.name }}</span>
+                <span class="recent-inv-stock">{{ item.current_stock }} {{ item.unit }}</span>
+              </router-link>
+            </div>
           </div>
 
         </div>
@@ -588,6 +596,7 @@ const exchangeRateError = ref<string | null>(null)
 
 // Exchange rate state (local to avoid dependency issues)
 const stockAlerts = ref<AlertSummary | null>(null)
+const recentInventoryItems = ref<any[]>([])
 
 // System status
 type StatusState = 'online' | 'offline' | 'checking'
@@ -866,6 +875,7 @@ onMounted(async () => {
     dashboardStore.refreshData()
   ])
   inventoryAPI.getAlertsSummary().then(data => { stockAlerts.value = data }).catch(() => {})
+  inventoryAPI.getItems({ page_size: 10, sort_by: 'updated_at' }).then(data => { recentInventoryItems.value = data.items }).catch(() => {})
 
   // Health check — run once immediately, then every 30s
   checkHealth()
@@ -880,51 +890,90 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Stock Alerts Card */
+/* Stock Card */
 .stock-alerts-card {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
-
-.stock-alert-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stock-alert-row {
+.stock-card-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: opacity 0.15s;
+  justify-content: space-between;
 }
-
-.stock-alert-row:hover { opacity: 0.8; }
-.stock-alert-row.red { background: #fee2e2; }
-.stock-alert-row.yellow { background: #fef3c7; }
-.stock-alert-row.gray { background: #f3f4f6; }
-
-.alert-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.red-dot { background: #ef4444; }
-.yellow-dot { background: #f59e0b; }
-.gray-dot { background: #9ca3af; }
-
-.alert-text { display: flex; align-items: center; gap: 0.5rem; }
-.alert-count { font-weight: 700; font-size: 1rem; color: #111827; }
-.alert-label { font-size: 0.8rem; color: #6b7280; }
-
 .view-inventory-link {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #3b82f6;
   text-decoration: none;
-  text-align: right;
 }
-
 .view-inventory-link:hover { text-decoration: underline; }
+
+/* 3 mini squares */
+.stock-mini-stats {
+  display: flex;
+  gap: 0.5rem;
+}
+.mini-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+  border-radius: 8px;
+  text-decoration: none;
+  gap: 0.2rem;
+  transition: opacity 0.15s;
+}
+.mini-stat:hover { opacity: 0.85; }
+.mini-red   { background: #fee2e2; }
+.mini-yellow { background: #fef3c7; }
+.mini-gray  { background: #f3f4f6; }
+.mini-count { font-size: 1.1rem; font-weight: 700; color: #111827; line-height: 1; }
+.mini-label { font-size: 0.62rem; color: #6b7280; text-align: center; line-height: 1.2; }
+
+/* Recent items */
+.recent-inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 0.5rem;
+}
+.recent-inv-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.35rem;
+}
+.recent-inv-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #f9fafb;
+  text-decoration: none;
+  transition: background 0.1s;
+}
+.recent-inv-row:last-child { border-bottom: none; }
+.recent-inv-row:hover { background: #f9fafb; border-radius: 4px; }
+.recent-inv-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.dot-out    { background: #ef4444; }
+.dot-low    { background: #f59e0b; }
+.dot-high   { background: #8b5cf6; }
+.dot-ok     { background: #10b981; }
+.dot-inactive { background: #9ca3af; }
+.recent-inv-name {
+  flex: 1; font-size: 0.78rem; color: #374151;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.recent-inv-stock {
+  font-size: 0.72rem; font-weight: 600; color: #6b7280; flex-shrink: 0;
+}
 
 .dashboard {
   min-height: 100vh;
@@ -1349,6 +1398,35 @@ onUnmounted(() => {
   .actions-grid {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
+  }
+  /* Compact header for iPad */
+  .header-content {
+    padding: 0.5rem 1rem;
+  }
+  .app-logo {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.375rem;
+  }
+  .logo-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+  .app-title {
+    font-size: 1rem;
+  }
+  .welcome-text {
+    font-size: 0.75rem;
+  }
+  .header-left {
+    gap: 0.5rem;
+  }
+  .header-dropdown-button {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  .exchange-rates-header {
+    padding: 0.35rem 0.5rem;
   }
 }
 
@@ -2480,6 +2558,25 @@ onUnmounted(() => {
 
   .mobile-controls .currency-language-group {
     margin-bottom: 1rem;
+  }
+
+  /* Further compact header on mobile */
+  .app-logo {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  .logo-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .app-title {
+    font-size: 0.875rem;
+  }
+  .welcome-text {
+    display: none !important;
+  }
+  .mobile-controls .currency-language-group {
+    margin-bottom: 0.5rem;
   }
 
   /* Ocultar data/hora no mobile */

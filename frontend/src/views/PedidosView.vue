@@ -973,5 +973,14 @@ onMounted(async () => {
     grid-template-columns: 1fr;
     padding: 1rem;
   }
+
+  .header-right .btn {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.75rem;
+  }
+  .header-right .btn-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
 }
 </style>
