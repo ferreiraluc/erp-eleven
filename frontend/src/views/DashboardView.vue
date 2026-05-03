@@ -2370,9 +2370,9 @@ onUnmounted(() => {
 }
 
 .rate-value-header {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  color: #111827;
+  color: #6b7280;
 }
 
 .edit-icon {
