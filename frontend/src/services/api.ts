@@ -466,6 +466,12 @@ export const clientesAPI = {
     api.put(`/api/clientes/${id}`, data).then(r => r.data),
   delete: (id: string): Promise<{ message: string }> =>
     api.delete(`/api/clientes/${id}`).then(r => r.data),
+  getPedidos: (id: string, params?: { skip?: number; limit?: number }): Promise<Pedido[]> => {
+    const p = new URLSearchParams()
+    if (params?.skip !== undefined) p.append('skip', String(params.skip))
+    if (params?.limit !== undefined) p.append('limit', String(params.limit))
+    return api.get(`/api/clientes/${id}/pedidos?${p.toString()}`).then(r => r.data)
+  },
 }
 
 // ─── Inventory Types ──────────────────────────────────────────────────────────

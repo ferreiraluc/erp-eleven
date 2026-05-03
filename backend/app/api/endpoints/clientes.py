@@ -1,28 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, desc
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from ...database import get_db
 from ...models.cliente import Cliente
+from ...models.pedido import Pedido
 from ...models.usuario import Usuario
 from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate
+from ...schemas.pedido import PedidoResponse
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 
 router = APIRouter()
-
-
-def _build_endereco_str(cliente: Cliente) -> str:
-    """Monta string de endereço a partir dos campos estruturados."""
-    parts = [
-        cliente.endereco_rua,
-        cliente.endereco_bairro,
-        cliente.endereco_cidade,
-        cliente.endereco_uf,
-        cliente.endereco_cep,
-    ]
-    return ", ".join(p for p in parts if p)
 
 
 @router.get("/", response_model=List[ClienteResponse])
@@ -46,7 +36,7 @@ def listar_clientes(
                 Cliente.email.ilike(term),
                 Cliente.telefone.ilike(term),
                 Cliente.cpf.ilike(term),
-                Cliente.endereco_cidade.ilike(term),
+                Cliente.endereco.ilike(term),
             )
         )
     return query.order_by(Cliente.nome).offset(skip).limit(limit).all()
@@ -155,3 +145,25 @@ def excluir_cliente(
     db_cliente.ativo = False
     db.commit()
     return {"message": "Cliente inativado com sucesso."}
+
+
+@router.get("/{cliente_id}/pedidos", response_model=List[PedidoResponse])
+def listar_pedidos_do_cliente(
+    cliente_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Lista todos os pedidos vinculados a um cliente."""
+    uuid_ = validate_uuid(cliente_id)
+    if not db.query(Cliente).filter(Cliente.id == uuid_).first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+    return (
+        db.query(Pedido)
+        .filter(Pedido.cliente_id == uuid_)
+        .order_by(desc(Pedido.created_at))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
