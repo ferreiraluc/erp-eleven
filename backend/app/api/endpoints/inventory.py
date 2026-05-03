@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, date
 import uuid
+import re
 import io
 import csv
 import xml.etree.ElementTree as ET
@@ -21,6 +22,7 @@ from ...schemas.inventory import (
     MovementCreate, MovementResponse, BatchMovementCreate,
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
     SessionItemResponse, AlertSummary, GroupItemsRequest,
+    GroupResponse, SuggestionResponse,
 )
 from ...dependencies import get_current_active_user, require_role
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level
@@ -214,6 +216,64 @@ def get_alerts_summary(
         overstocked_count=overstocked,
         total_active_items=len(active_items),
     )
+
+
+@router.get("/groups", response_model=List[GroupResponse])
+def get_groups(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Returns all groups with their items from DB"""
+    items = (
+        db.query(Item)
+        .filter(Item.group_key.isnot(None), Item.is_active == True)
+        .order_by(Item.group_key, Item.name)
+        .all()
+    )
+    groups_dict: dict = {}
+    for item in items:
+        key = item.group_key
+        if key not in groups_dict:
+            groups_dict[key] = []
+        resp = ItemResponse.model_validate(item)
+        resp.alert_level = _compute_alert_level(item)
+        groups_dict[key].append(resp)
+
+    result = []
+    for key, item_list in groups_dict.items():
+        total_stock = sum(i.current_stock for i in item_list)
+        result.append(GroupResponse(group_key=key, items=item_list, total_stock=total_stock))
+    return result
+
+
+@router.get("/suggestions", response_model=List[SuggestionResponse])
+def get_suggestions(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Returns grouping suggestions based on ALL ungrouped active items in DB"""
+    items = (
+        db.query(Item)
+        .filter(Item.group_key == None, Item.is_active == True)
+        .order_by(Item.name)
+        .all()
+    )
+    map_: dict = {}
+    for item in items:
+        base = re.sub(r'\s+(PP|P|M|G|GG|XG|XGG|XXG|\d+)\s*$', '', item.name, flags=re.IGNORECASE).strip()
+        if len(base) < 4:
+            continue
+        if base not in map_:
+            map_[base] = []
+        resp = ItemResponse.model_validate(item)
+        resp.alert_level = _compute_alert_level(item)
+        map_[base].append(resp)
+
+    return [
+        SuggestionResponse(name=name, items=item_list)
+        for name, item_list in sorted(map_.items(), key=lambda x: len(x[1]), reverse=True)
+        if len(item_list) >= 2
+    ]
 
 
 @router.get("/items/{item_id}", response_model=ItemResponse)

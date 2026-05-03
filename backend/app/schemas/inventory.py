@@ -81,6 +81,17 @@ class GroupItemsRequest(BaseModel):
     group_key: str
 
 
+class GroupResponse(BaseModel):
+    group_key: str
+    items: List[ItemResponse]
+    total_stock: int
+
+
+class SuggestionResponse(BaseModel):
+    name: str
+    items: List[ItemResponse]
+
+
 class MovementBase(BaseModel):
     item_id: uuid.UUID
     movement_type: str

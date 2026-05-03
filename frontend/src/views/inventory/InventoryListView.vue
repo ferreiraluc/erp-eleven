@@ -360,7 +360,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
-import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
@@ -386,7 +386,9 @@ const filterCategory = ref('')
 const openFilter = ref<string | null>(null)
 const filterChipsRef = ref<HTMLElement | null>(null)
 
-const hasGroups = computed(() => inventoryStore.items.some(i => i.group_key))
+const backendGroups = ref<GroupResponse[]>([])
+const backendSuggestions = ref<SuggestionResponse[]>([])
+const hasGroups = computed(() => backendGroups.value.length > 0 || inventoryStore.items.some(i => i.group_key))
 const imageModalSrc = ref<string | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
@@ -419,11 +421,25 @@ function toggleExpand(groupKey: string) {
   else expandedGroups.value.splice(idx, 1)
 }
 
+async function loadGroups() {
+  try {
+    backendGroups.value = await inventoryAPI.getGroups()
+  } catch {}
+}
+
+async function loadSuggestions() {
+  try {
+    backendSuggestions.value = await inventoryAPI.getSuggestions()
+  } catch {}
+}
+
 function toggleSelectionMode() {
   selectionMode.value = !selectionMode.value
   if (!selectionMode.value) {
     selectedIds.value = []
     showGroupModal.value = false
+  } else {
+    loadSuggestions()
   }
 }
 
@@ -467,7 +483,7 @@ async function confirmGroup() {
     groupNameInput.value = ''
     groupMode.value = true
     localStorage.setItem('inv_group_mode', 'true')
-    await inventoryStore.loadItems(1)
+    await Promise.all([inventoryStore.loadItems(1), loadGroups()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao agrupar', 'error')
   } finally {
@@ -497,31 +513,31 @@ const flatList = computed<FlatEntry[]>(() => {
   if (!groupMode.value) {
     return inventoryStore.items.map(item => ({ type: 'item' as const, item }))
   }
-  const groups = new Map<string, InventoryItem[]>()
-  const ungrouped: InventoryItem[] = []
-  for (const item of inventoryStore.items) {
-    if (item.group_key) {
-      const arr = groups.get(item.group_key) ?? []
-      arr.push(item)
-      groups.set(item.group_key, arr)
-    } else {
-      ungrouped.push(item)
-    }
-  }
+  // In group mode: use backend groups + ungrouped items from current page
+  const groupedItemIds = new Set<string>()
   const result: FlatEntry[] = []
-  for (const [key, items] of groups) {
-    const g: GroupEntry = {
+
+  for (const g of backendGroups.value) {
+    for (const item of g.items) groupedItemIds.add(item.id)
+    const entry: GroupEntry = {
       _isGroup: true,
-      group_key: key,
-      items,
-      total_stock: items.reduce((s, i) => s + i.current_stock, 0),
+      group_key: g.group_key,
+      items: g.items as InventoryItem[],
+      total_stock: g.total_stock,
     }
-    result.push({ type: 'group', group: g })
-    if (expandedGroups.value.includes(key)) {
-      for (const item of items) result.push({ type: 'item', item })
+    result.push({ type: 'group', group: entry })
+    if (expandedGroups.value.includes(g.group_key)) {
+      for (const item of g.items) result.push({ type: 'item', item: item as InventoryItem })
     }
   }
-  for (const item of ungrouped) result.push({ type: 'item', item })
+
+  // Ungrouped items from current page
+  for (const item of inventoryStore.items) {
+    if (!item.group_key && !groupedItemIds.has(item.id)) {
+      result.push({ type: 'item', item })
+    }
+  }
+
   return result
 })
 
@@ -532,13 +548,9 @@ function groupAlertLevel(items: InventoryItem[]): string {
   return 'ok'
 }
 
-const existingGroupKeys = computed<string[]>(() => {
-  const s = new Set<string>()
-  for (const item of inventoryStore.items) {
-    if (item.group_key) s.add(item.group_key)
-  }
-  return Array.from(s).sort()
-})
+const existingGroupKeys = computed<string[]>(() =>
+  backendGroups.value.map(g => g.group_key).sort()
+)
 
 const existingBrands = computed<string[]>(() => {
   const s = new Set<string>()
@@ -552,7 +564,7 @@ async function handleUngroup(groupKey: string) {
   try {
     await inventoryAPI.ungroup(groupKey)
     showToast(`Grupo "${groupKey}" desagrupado`, 'success')
-    await inventoryStore.loadItems(1)
+    await Promise.all([inventoryStore.loadItems(1), loadGroups()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao desagrupar', 'error')
   }
@@ -607,26 +619,10 @@ function clearAdvancedFilters() {
   inventoryStore.loadItems(1)
 }
 
-// Sugestões de grupos por nome similar (prefixo comum ≥ 4 chars)
-interface SuggestedGroup { name: string; items: InventoryItem[] }
-const suggestedGroups = computed<SuggestedGroup[]>(() => {
-  const ungrouped = inventoryStore.items.filter(i => !i.group_key)
-  const map = new Map<string, InventoryItem[]>()
-  for (const item of ungrouped) {
-    // Normaliza: remove tamanhos comuns do final do nome
-    const base = item.name.replace(/\s+(PP|P|M|G|GG|XG|XGG|XXG|\d+)\s*$/i, '').trim()
-    if (base.length < 4) continue
-    const arr = map.get(base) ?? []
-    arr.push(item)
-    map.set(base, arr)
-  }
-  return Array.from(map.entries())
-    .filter(([, items]) => items.length >= 2)
-    .map(([name, items]) => ({ name, items }))
-    .sort((a, b) => b.items.length - a.items.length)
-})
+// Backend-driven suggestions (works across ALL items, not just loaded page)
+const suggestedGroups = computed(() => backendSuggestions.value)
 
-function selectSuggestedGroup(sg: SuggestedGroup) {
+function selectSuggestedGroup(sg: SuggestionResponse) {
   selectedIds.value = sg.items.map(i => i.id)
   groupNameInput.value = sg.name
   showGroupModal.value = true
@@ -727,6 +723,7 @@ onMounted(async () => {
   await Promise.all([
     inventoryStore.loadItems(1),
     inventoryStore.loadAlerts(),
+    loadGroups(),
   ])
   try {
     const supplierList = await inventoryAPI.getSuppliers()

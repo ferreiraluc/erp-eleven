@@ -619,7 +619,10 @@ async function checkHealth() {
 const isLoadingRates = ref(false)
 const ratesError = ref<string | null>(null)
 const lastUpdated = ref<string | null>(null)
-const exchangeRates = ref<Record<string, number>>({
+const _cachedRates = (() => {
+  try { return JSON.parse(localStorage.getItem('erp_exchange_rates') || 'null') } catch { return null }
+})()
+const exchangeRates = ref<Record<string, number>>(_cachedRates ?? {
   'G$': 7500.0,
   'R$': 5.85,
   'USD': 1.0,
@@ -802,6 +805,9 @@ const loadExchangeRates = async () => {
     if (response.usd_to_pyg) exchangeRates.value['G$'] = Number(response.usd_to_pyg)
     if (response.usd_to_brl) exchangeRates.value['R$'] = Number(response.usd_to_brl)
     if (response.last_updated) lastUpdated.value = response.last_updated
+
+    // Persist so next page load shows real values immediately
+    try { localStorage.setItem('erp_exchange_rates', JSON.stringify(exchangeRates.value)) } catch { /* ignore */ }
 
   } catch (error: any) {
     ratesError.value = error.message || 'Erro ao carregar taxas de câmbio'
@@ -1415,11 +1421,12 @@ onUnmounted(() => {
   .control-flag { font-size: 0.7rem; width: auto; }
   .control-text { font-size: 0.6rem; }
   .dropdown-icon { width: 0.45rem !important; height: 0.45rem !important; }
-  .exchange-rates-header { padding: 0.18rem 0.3rem !important; }
-  .rates-display { flex-direction: row; gap: 0.25rem; }
-  .rate-item-header { gap: 0.1rem; }
-  .rate-flag { font-size: 0.55rem; }
-  .rate-value-header { font-size: 0.6rem; }
+  .exchange-rates-header { padding: 0.18rem 0.35rem !important; gap: 0.2rem !important; }
+  .rates-display { flex-direction: row !important; gap: 0.3rem; align-items: center; }
+  .rate-item-header { gap: 0.15rem; align-items: center; }
+  .rate-item-header + .rate-item-header { border-left: 1px solid #d1d5db; padding-left: 0.3rem; }
+  .rate-flag { display: none !important; }
+  .rate-value-header { font-size: 0.6rem; font-weight: 600; color: #374151; }
   .edit-icon { display: none !important; }
   .header-right-controls { gap: 0.2rem; align-items: center; }
   .current-time { display: none !important; }

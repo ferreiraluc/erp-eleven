@@ -610,6 +610,17 @@ export interface InventorySupplier {
   created_at: string
 }
 
+export interface GroupResponse {
+  group_key: string
+  items: InventoryItem[]
+  total_stock: number
+}
+
+export interface SuggestionResponse {
+  name: string
+  items: InventoryItem[]
+}
+
 // ─── Inventory API ────────────────────────────────────────────────────────────
 
 export const inventoryAPI = {
@@ -642,6 +653,12 @@ export const inventoryAPI = {
 
   ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
     api.post(`/api/inventory/items/ungroup/${encodeURIComponent(groupKey)}`).then(res => res.data),
+
+  getGroups: (): Promise<GroupResponse[]> =>
+    api.get('/api/inventory/groups').then(res => res.data),
+
+  getSuggestions: (): Promise<SuggestionResponse[]> =>
+    api.get('/api/inventory/suggestions').then(res => res.data),
 
   getDistinctValues: (): Promise<{ brands: string[]; categories: string[] }> =>
     api.get('/api/inventory/items/distinct-values').then(res => res.data),
