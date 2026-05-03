@@ -1425,8 +1425,8 @@ onUnmounted(() => {
   .rates-display { flex-direction: row !important; gap: 0.3rem; align-items: center; }
   .rate-item-header { gap: 0.15rem; align-items: center; }
   .rate-item-header + .rate-item-header { border-left: 1px solid #d1d5db; padding-left: 0.3rem; }
-  .rate-flag { display: none !important; }
-  .rate-value-header { font-size: 0.6rem; font-weight: 600; color: #374151; }
+  .rate-flag { font-size: 0.7rem; }
+  .rate-value-header { font-size: 0.6rem; font-weight: 500; color: #6b7280; }
   .edit-icon { display: none !important; }
   .header-right-controls { gap: 0.2rem; align-items: center; }
   .current-time { display: none !important; }
