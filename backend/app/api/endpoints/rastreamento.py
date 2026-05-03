@@ -102,7 +102,12 @@ def criar_rastreamento(
     db.add(db_rastreamento)
     db.commit()
     db.refresh(db_rastreamento)
-    
+    # Sync pedido status if linked
+    if db_rastreamento.pedido_id:
+        from ...services.rastreamento_sync import RastreamentoSyncService
+        RastreamentoSyncService.sincronizar_rastreamento_com_pedido(db, db_rastreamento)
+        db.commit()
+        db.refresh(db_rastreamento)
     return db_rastreamento
 
 
@@ -215,10 +220,15 @@ def atualizar_rastreamento(
     update_data = rastreamento_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_rastreamento, field, value)
-    
+
     db.commit()
     db.refresh(db_rastreamento)
-    
+    # Sync pedido status whenever rastreamento is saved
+    if db_rastreamento.pedido_id:
+        from ...services.rastreamento_sync import RastreamentoSyncService
+        RastreamentoSyncService.sincronizar_rastreamento_com_pedido(db, db_rastreamento)
+        db.commit()
+        db.refresh(db_rastreamento)
     return db_rastreamento
 
 

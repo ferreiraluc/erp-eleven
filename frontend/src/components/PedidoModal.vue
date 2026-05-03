@@ -79,6 +79,7 @@
                     placeholder="Buscar rastreio cadastrado..."
                     class="form-input"
                     @input="onRastreioSearchInput"
+                    @focus="onRastreioFocus"
                     @blur="setTimeout(() => showRastreioSuggestions = false, 180)"
                   />
                   <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn">✕</button>
@@ -381,9 +382,22 @@ async function loadRastreios() {
   try { rastreioList.value = await rastreamentosAPI.list({ limit: 200 }) } catch { rastreioList.value = [] }
 }
 
+function onRastreioFocus() {
+  if (!rastreioSearch.value) {
+    rastreioFiltered.value = rastreioList.value.slice(0, 8)
+    showRastreioSuggestions.value = rastreioFiltered.value.length > 0
+  } else {
+    onRastreioSearchInput()
+  }
+}
+
 function onRastreioSearchInput() {
   const term = rastreioSearch.value.toLowerCase()
-  if (!term) { rastreioFiltered.value = []; showRastreioSuggestions.value = false; return }
+  if (!term) {
+    rastreioFiltered.value = rastreioList.value.slice(0, 8)
+    showRastreioSuggestions.value = rastreioFiltered.value.length > 0
+    return
+  }
   rastreioFiltered.value = rastreioList.value.filter(r =>
     r.codigo_rastreio.toLowerCase().includes(term) ||
     (r.destinatario || '').toLowerCase().includes(term) ||

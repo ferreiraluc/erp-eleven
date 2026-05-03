@@ -46,6 +46,15 @@ def _job_atualizar_rastreamentos():
                 errors.append(f"{r.codigo_rastreio}: {str(e)}")
 
         db.commit()
+        # Sync pedido statuses for all updated rastreamentos
+        try:
+            from .services.rastreamento_sync import RastreamentoSyncService
+            for r in ativos:
+                if r.pedido_id:
+                    RastreamentoSyncService.sincronizar_rastreamento_com_pedido(db, r)
+            db.commit()
+        except Exception as e:
+            logger.warning(f"[SCHEDULER] Erro ao sincronizar pedidos: {e}")
         logger.info(f"[SCHEDULER] Atualização diária: {updated} atualizados, {len(errors)} erros")
         if errors:
             logger.warning(f"[SCHEDULER] Erros: {errors}")

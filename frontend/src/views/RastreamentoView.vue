@@ -482,6 +482,7 @@
                   placeholder="Buscar nº pedido, descrição ou cliente..."
                   class="form-input"
                   @input="onPedidoSearchInput"
+                  @focus="onPedidoFocus"
                   @blur="setTimeout(() => showPedidoSuggestions = false, 180)"
                   style="width:100%;box-sizing:border-box;"
                 />
@@ -636,26 +637,36 @@ const flashedIds = ref<Set<string>>(new Set())
 // Pedido autocomplete
 const pedidoSearch = ref('')
 const pedidoSuggestions = ref<Pedido[]>([])
+const pedidoCacheAll = ref<Pedido[]>([])
 const selectedPedido = ref<Pedido | null>(null)
 const showPedidoSuggestions = ref(false)
-let pedidoSearchTimer: ReturnType<typeof setTimeout> | null = null
 
-async function onPedidoSearchInput() {
-  if (pedidoSearch.value.length < 2) { pedidoSuggestions.value = []; showPedidoSuggestions.value = false; return }
-  if (pedidoSearchTimer) clearTimeout(pedidoSearchTimer)
-  pedidoSearchTimer = setTimeout(async () => {
-    try {
-      pedidoSuggestions.value = await pedidosAPI.getAll({ limit: 10 })
-      // filter client-side by search term
-      const term = pedidoSearch.value.toLowerCase()
-      pedidoSuggestions.value = pedidoSuggestions.value.filter(p =>
-        p.numero_pedido.toLowerCase().includes(term) ||
-        (p.descricao || '').toLowerCase().includes(term) ||
-        (p.cliente_nome || '').toLowerCase().includes(term)
-      )
-      showPedidoSuggestions.value = pedidoSuggestions.value.length > 0
-    } catch { pedidoSuggestions.value = [] }
-  }, 250)
+async function loadPedidoCache() {
+  try { pedidoCacheAll.value = await pedidosAPI.getAll({ limit: 200 }) } catch { pedidoCacheAll.value = [] }
+}
+
+function onPedidoFocus() {
+  if (!pedidoSearch.value) {
+    pedidoSuggestions.value = pedidoCacheAll.value.slice(0, 8)
+    showPedidoSuggestions.value = pedidoSuggestions.value.length > 0
+  } else {
+    onPedidoSearchInput()
+  }
+}
+
+function onPedidoSearchInput() {
+  const term = pedidoSearch.value.toLowerCase()
+  if (!term) {
+    pedidoSuggestions.value = pedidoCacheAll.value.slice(0, 8)
+    showPedidoSuggestions.value = pedidoSuggestions.value.length > 0
+    return
+  }
+  pedidoSuggestions.value = pedidoCacheAll.value.filter(p =>
+    p.numero_pedido.toLowerCase().includes(term) ||
+    (p.descricao || '').toLowerCase().includes(term) ||
+    (p.cliente_nome || '').toLowerCase().includes(term)
+  ).slice(0, 8)
+  showPedidoSuggestions.value = pedidoSuggestions.value.length > 0
 }
 
 function selectPedido(p: Pedido) {
@@ -803,6 +814,7 @@ function abrirModalCriacao() {
   pedidoSearch.value = ''
   modalError.value = null
   showModal.value = true
+  loadPedidoCache()
 
   nextTick(() => {
     codigoInput.value?.focus()
@@ -831,6 +843,7 @@ function editarRastreamento(rastreamento: Rastreamento) {
   }
   modalError.value = null
   showModal.value = true
+  loadPedidoCache()
 }
 
 function fecharModal() {

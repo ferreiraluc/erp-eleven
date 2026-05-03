@@ -107,11 +107,13 @@ def criar_pedido(
 
     # Sincronizar com rastreamentos se código foi fornecido
     if db_pedido.codigo_rastreio:
-        RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
+        rastreamento_linked = RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
             db, db_pedido, current_user.id
         )
-        # Avançar status automaticamente para ENVIADO ao vincular rastreio
-        if db_pedido.status in (PedidoStatus.PENDENTE, PedidoStatus.PROCESSANDO):
+        # Sync pedido status from rastreamento's actual status
+        if rastreamento_linked:
+            RastreamentoSyncService.sincronizar_rastreamento_com_pedido(db, rastreamento_linked)
+        elif db_pedido.status in (PedidoStatus.PENDENTE, PedidoStatus.PROCESSANDO):
             db_pedido.status = PedidoStatus.ENVIADO
 
     db.commit()
@@ -201,11 +203,13 @@ def atualizar_pedido(
 
     # Sincronizar com rastreamentos se código foi adicionado/alterado
     if "codigo_rastreio" in update_data and db_pedido.codigo_rastreio:
-        RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
+        rastreamento_linked = RastreamentoSyncService.sincronizar_pedido_com_rastreamento(
             db, db_pedido, current_user.id
         )
-        # Avançar status automaticamente para ENVIADO ao vincular rastreio
-        if db_pedido.status in (PedidoStatus.PENDENTE, PedidoStatus.PROCESSANDO):
+        # Sync pedido status from rastreamento's actual status
+        if rastreamento_linked:
+            RastreamentoSyncService.sincronizar_rastreamento_com_pedido(db, rastreamento_linked)
+        elif db_pedido.status in (PedidoStatus.PENDENTE, PedidoStatus.PROCESSANDO):
             db_pedido.status = PedidoStatus.ENVIADO
 
     db.commit()
