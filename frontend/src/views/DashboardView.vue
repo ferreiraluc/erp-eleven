@@ -2337,8 +2337,8 @@ onUnmounted(() => {
 .exchange-rates-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
   background-color: #f9fafb;
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
@@ -2356,23 +2356,31 @@ onUnmounted(() => {
 
 .rates-display {
   display: flex;
-  gap: 0.75rem;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
 }
 
 .rate-item-header {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
+  flex-wrap: nowrap;
+  gap: 0.15rem;
 }
 
 .rate-flag {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .rate-value-header {
   font-size: 0.75rem;
   font-weight: 500;
   color: #6b7280;
+  white-space: nowrap;
 }
 
 .edit-icon {
@@ -2565,6 +2573,11 @@ onUnmounted(() => {
   .header-right { flex: 1 !important; justify-content: flex-end !important; width: auto !important; }
   .header-left-controls { gap: 0.15rem !important; }
   .header-dropdown-button { padding: 0.12rem 0.18rem !important; font-size: 0.55rem !important; min-width: auto !important; }
+  .exchange-rates-header { padding: 0.1rem 0.22rem !important; gap: 0.1rem !important; }
+  .rates-display { flex-direction: row !important; flex-wrap: nowrap !important; gap: 0.2rem !important; align-items: center !important; }
+  .rate-item-header { flex-direction: row !important; flex-wrap: nowrap !important; gap: 0.08rem !important; }
+  .rate-flag { font-size: 0.5rem !important; white-space: nowrap !important; }
+  .rate-value-header { font-size: 0.55rem !important; white-space: nowrap !important; }
   .logout-button { padding: 0.15rem 0.2rem; }
   .logout-button span { display: none !important; }
 
