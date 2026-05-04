@@ -39,7 +39,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input v-model="searchQuery" type="text" placeholder="Buscar por nome, SKU, código..." class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
-          <button v-if="searchQuery" @click="searchQuery = ''" class="search-clear-btn" title="Limpar busca" type="button">
+          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn" title="Limpar busca" type="button">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -683,13 +683,23 @@ watch(searchQuery, (val) => {
     const trimmed = val.trim()
     inventoryStore.filters.search = trimmed
     if (groupMode.value) {
-      // Em modo grupo: busca nos grupos (backend) + itens soltos
       Promise.all([loadGroups(trimmed), inventoryStore.loadItems(1)])
     } else {
       inventoryStore.loadItems(1)
     }
   }, 300)
 })
+
+function clearSearch() {
+  if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
+  searchQuery.value = ''
+  inventoryStore.filters.search = ''
+  if (groupMode.value) {
+    Promise.all([loadGroups(''), inventoryStore.loadItems(1)])
+  } else {
+    inventoryStore.loadItems(1)
+  }
+}
 
 function setStatusFilter(status: string) {
   activeStatus.value = status
@@ -815,6 +825,14 @@ onUnmounted(() => {
   document.removeEventListener('click', onDocClick)
 })
 
+async function autoLoadRemainingPages() {
+  const { total_pages } = inventoryStore.pagination
+  for (let p = 2; p <= total_pages; p++) {
+    if (inventoryStore.filters.search || inventoryStore.filters.status) return
+    await inventoryStore.loadItems(p, true)
+  }
+}
+
 onMounted(async () => {
   if (route.query.status) {
     inventoryStore.filters.status = route.query.status as string
@@ -825,6 +843,8 @@ onMounted(async () => {
     inventoryStore.loadAlerts(),
     loadGroups(),
   ])
+  // Load remaining pages in background so full catalog is available immediately
+  autoLoadRemainingPages()
   try {
     const supplierList = await inventoryAPI.getSuppliers()
     suppliers.value = supplierList
