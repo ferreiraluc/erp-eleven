@@ -118,16 +118,19 @@ def list_items(
     query = db.query(Item)
 
     if search:
-        like = f"%{search.strip()}%"
-        query = query.filter(
-            or_(
-                Item.name.ilike(like),
-                Item.sku_internal.ilike(like),
-                Item.barcode.ilike(like),
-                Item.category.ilike(like),
-                Item.brand.ilike(like),
+        for token in search.strip().split():
+            like = f"%{token}%"
+            query = query.filter(
+                or_(
+                    Item.name.ilike(like),
+                    Item.sku_internal.ilike(like),
+                    Item.barcode.ilike(like),
+                    Item.category.ilike(like),
+                    Item.brand.ilike(like),
+                    Item.color.ilike(like),
+                    Item.group_key.ilike(like),
+                )
             )
-        )
     if category:
         query = query.filter(Item.category.ilike(f"%{category}%"))
     if brand:
@@ -244,25 +247,35 @@ def get_groups(
 ):
     """Returns all groups with their items from DB, optionally filtered by search term"""
     if search:
-        like = f"%{search.strip()}%"
-        # Find group_keys that match the search term directly OR contain matching items
-        matching_keys_query = (
-            db.query(Item.group_key)
-            .filter(
-                Item.group_key.isnot(None),
-                Item.is_active == True,
-                or_(
-                    Item.group_key.ilike(like),
-                    Item.name.ilike(like),
-                    Item.barcode.ilike(like),
-                    Item.brand.ilike(like),
-                    Item.category.ilike(like),
-                    Item.sku_internal.ilike(like),
-                ),
+        # For each token, find group_keys where ANY item (or the key itself) matches.
+        # Intersect results so ALL tokens must be present somewhere in the group.
+        tokens = [t for t in search.strip().split() if t]
+        key_sets = []
+        for token in tokens:
+            like = f"%{token}%"
+            rows = (
+                db.query(Item.group_key)
+                .filter(
+                    Item.group_key.isnot(None),
+                    Item.is_active == True,
+                    or_(
+                        Item.group_key.ilike(like),
+                        Item.name.ilike(like),
+                        Item.barcode.ilike(like),
+                        Item.brand.ilike(like),
+                        Item.category.ilike(like),
+                        Item.sku_internal.ilike(like),
+                        Item.color.ilike(like),
+                    ),
+                )
+                .distinct()
+                .all()
             )
-            .distinct()
-        )
-        matching_keys = [r[0] for r in matching_keys_query.all()]
+            key_sets.append({r[0] for r in rows})
+
+        if not key_sets:
+            return []
+        matching_keys = list(key_sets[0].intersection(*key_sets[1:]))
         if not matching_keys:
             return []
         items = (
