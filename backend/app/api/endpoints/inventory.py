@@ -32,6 +32,22 @@ from datetime import datetime as dt
 
 router = APIRouter()
 
+# ── Size ordering ─────────────────────────────────────────────────────────────
+_LETTER_SIZES = ["PP", "P", "M", "G", "GG", "XG", "XGG", "XXG", "XXXG", "U"]
+_LETTER_SIZE_ORDER = {s: i for i, s in enumerate(_LETTER_SIZES)}
+
+def _size_sort_key(size):
+    """Returns a tuple for correct size ordering: numeric < letter < unknown < null."""
+    if size is None:
+        return (3, 0.0, "")
+    s = size.strip().upper()
+    if s in _LETTER_SIZE_ORDER:
+        return (1, float(_LETTER_SIZE_ORDER[s]), s)
+    try:
+        return (0, float(s), s)
+    except ValueError:
+        return (2, 0.0, s)
+
 
 def _generate_sku() -> str:
     date_part = dt.now().strftime("%Y%m%d")
@@ -145,7 +161,7 @@ def list_items(
     elif sort_by == "created_at":
         items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
     else:
-        items = query.order_by(Item.name).offset(offset).limit(page_size).all()
+        items = query.order_by(Item.name, Item.size).offset(offset).limit(page_size).all()
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
@@ -273,8 +289,9 @@ def get_groups(
 
     result = []
     for key, item_list in groups_dict.items():
-        total_stock = sum(i.current_stock for i in item_list)
-        result.append(GroupResponse(group_key=key, items=item_list, total_stock=total_stock))
+        sorted_items = sorted(item_list, key=lambda i: _size_sort_key(i.size))
+        total_stock = sum(i.current_stock for i in sorted_items)
+        result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock))
     return result
 
 

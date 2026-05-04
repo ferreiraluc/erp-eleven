@@ -185,7 +185,7 @@
           </div>
           <div class="size-chips">
             <span
-              v-for="v in entry.group.items"
+              v-for="v in sortedBySize(entry.group.items)"
               :key="v.id"
               class="size-chip"
               :class="'chip-alert-' + v.alert_level"
@@ -583,6 +583,28 @@ const existingBrands = computed<string[]>(() => {
   }
   return Array.from(s).sort()
 })
+
+// ── Size ordering ────────────────────────────────────────────────────────────
+const LETTER_SIZE_ORDER: Record<string, number> = {
+  PP: 0, P: 1, M: 2, G: 3, GG: 4, XG: 5, XGG: 6, XXG: 7, XXXG: 8, U: 9
+}
+function sizeSortKey(size?: string | null): [number, number, string] {
+  if (!size) return [3, 0, '']
+  const s = size.trim().toUpperCase()
+  if (s in LETTER_SIZE_ORDER) return [1, LETTER_SIZE_ORDER[s], s]
+  const n = parseFloat(s)
+  if (!isNaN(n)) return [0, n, s]
+  return [2, 0, s]
+}
+function sortedBySize<T extends { size?: string | null }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const [at, an, as_] = sizeSortKey(a.size)
+    const [bt, bn, bs] = sizeSortKey(b.size)
+    if (at !== bt) return at - bt
+    if (an !== bn) return an - bn
+    return as_.localeCompare(bs)
+  })
+}
 
 async function handleUngroup(groupKey: string) {
   try {
