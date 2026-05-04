@@ -662,6 +662,15 @@ export const inventoryAPI = {
   getSuggestions: (): Promise<SuggestionResponse[]> =>
     api.get('/api/inventory/suggestions').then(res => res.data),
 
+  batchEdit: (data: {
+    item_ids: string[]
+    brand?: string
+    category?: string
+    image_data?: string
+    sizes?: Array<{ id: string; size: string }>
+  }): Promise<{ message: string; count: number }> =>
+    api.patch('/api/inventory/items/batch', data).then(res => res.data),
+
   getDistinctValues: (): Promise<{ brands: string[]; categories: string[] }> =>
     api.get('/api/inventory/items/distinct-values').then(res => res.data),
 

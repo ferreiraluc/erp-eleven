@@ -81,6 +81,21 @@ class GroupItemsRequest(BaseModel):
     group_key: str
 
 
+class BatchSizeEntry(BaseModel):
+    id: uuid.UUID
+    size: Optional[str] = None
+
+
+class BatchEditRequest(BaseModel):
+    item_ids: List[uuid.UUID]
+    # Shared fields — only applied when not None
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    image_data: Optional[str] = None
+    # Per-item sizes (optional)
+    sizes: Optional[List[BatchSizeEntry]] = None
+
+
 class GroupResponse(BaseModel):
     group_key: str
     items: List[ItemResponse]

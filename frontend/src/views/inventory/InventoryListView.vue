@@ -314,14 +314,23 @@
       @close="showImport = false"
     />
 
+    <BulkEditModal
+      v-if="showBulkEdit"
+      :items="inventoryStore.items.filter(i => selectedIds.includes(i.id))"
+      :distinct-brands="distinctBrands"
+      :distinct-categories="distinctCategories"
+      @close="showBulkEdit = false"
+      @saved="onBulkEditSaved"
+    />
+
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
       <div v-if="selectionMode && selectedIds.length > 0" class="selection-bar">
         <span class="sel-count">{{ selectedIds.length }} item{{ selectedIds.length !== 1 ? 's' : '' }} selecionado{{ selectedIds.length !== 1 ? 's' : '' }}</span>
         <div class="sel-actions">
-          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">
-            Agrupar
-          </button>
+          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">Agrupar</button>
+          <button @click="showBulkEdit = true" class="sel-btn sel-btn-primary">Editar massivo</button>
+          <button @click="selectAll" class="sel-btn">Sel. todos</button>
           <button @click="selectedIds = []" class="sel-btn">Limpar</button>
         </div>
       </div>
@@ -365,6 +374,7 @@ import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
 import ImportModal from '@/components/inventory/ImportModal.vue'
+import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
@@ -401,6 +411,7 @@ const showGroupModal = ref(false)
 const groupNameInput = ref('')
 const groupNameInputRef = ref<HTMLInputElement | null>(null)
 const grouping = ref(false)
+const showBulkEdit = ref(false)
 const scrollSentinel = ref<HTMLElement | null>(null)
 const confirmExitId = ref<string | null>(null)
 let scrollObserver: IntersectionObserver | null = null
@@ -441,6 +452,10 @@ function toggleSelectionMode() {
   } else {
     loadSuggestions()
   }
+}
+
+function selectAll() {
+  selectedIds.value = inventoryStore.items.map(i => i.id)
 }
 
 function toggleSelection(id: string) {
@@ -696,6 +711,14 @@ function onItemSaved(item: InventoryItem) {
 function onMovementSaved() {
   showMovementModal.value = false
   showToast('Movimentação registrada', 'success')
+  inventoryStore.loadItems(1)
+}
+
+function onBulkEditSaved() {
+  showBulkEdit.value = false
+  selectionMode.value = false
+  selectedIds.value = []
+  showToast('Itens atualizados com sucesso', 'success')
   inventoryStore.loadItems(1)
 }
 

@@ -23,6 +23,7 @@ from ...schemas.inventory import (
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
     SessionItemResponse, AlertSummary, GroupItemsRequest,
     GroupResponse, SuggestionResponse,
+    BatchEditRequest, BatchSizeEntry,
 )
 from ...dependencies import get_current_active_user, require_role
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level
@@ -372,6 +373,34 @@ def ungroup_items(
         item.group_key = None
     db.commit()
     return {"message": f"Ungrouped {len(items)} items", "count": len(items)}
+
+
+@router.patch("/items/batch", status_code=200)
+def batch_edit_items(
+    request: BatchEditRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+):
+    """Bulk edit shared fields (brand, category, image) and per-item sizes"""
+    items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
+    if not items:
+        raise HTTPException(status_code=404, detail="No items found")
+
+    sizes_map = {str(s.id): s.size for s in (request.sizes or [])}
+
+    for item in items:
+        if request.brand is not None:
+            item.brand = request.brand
+        if request.category is not None:
+            item.category = request.category
+        if request.image_data is not None:
+            item.image_data = request.image_data
+        item_id_str = str(item.id)
+        if item_id_str in sizes_map:
+            item.size = sizes_map[item_id_str]
+
+    db.commit()
+    return {"message": f"Updated {len(items)} items", "count": len(items)}
 
 
 @router.delete("/items/{item_id}")
