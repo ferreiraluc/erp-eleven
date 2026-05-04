@@ -760,22 +760,9 @@ async function handleQuickExit(item: InventoryItem) {
   }
 }
 
-async function onBarcodeDetected(code: string) {
+function onBarcodeDetected(code: string) {
   showScanner.value = false
-  try {
-    const items = await inventoryAPI.getByBarcode(code)
-    if (items.length === 1) {
-      openEdit(items[0])
-    } else if (items.length > 1) {
-      inventoryStore.filters.search = code
-      searchQuery.value = code
-      inventoryStore.loadItems(1)
-    } else {
-      showToast('Nenhum item encontrado para este código', 'warning')
-    }
-  } catch {
-    showToast('Erro ao buscar código', 'error')
-  }
+  searchQuery.value = code
 }
 
 function onItemSaved(item: InventoryItem) {
