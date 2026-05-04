@@ -164,7 +164,7 @@ def list_items(
     elif sort_by == "created_at":
         items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
     else:
-        items = query.order_by(Item.name, Item.size).offset(offset).limit(page_size).all()
+        items = query.order_by(Item.name, Item.color, Item.size).offset(offset).limit(page_size).all()
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
