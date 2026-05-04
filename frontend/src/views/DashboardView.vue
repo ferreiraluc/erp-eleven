@@ -649,13 +649,14 @@ const getCurrentLanguage = computed(() => {
 })
 
 const updateTime = () => {
-  currentTime.value = new Date().toLocaleString('en-US', {
+  currentTime.value = new Date().toLocaleString('pt-BR', {
     weekday: 'short',
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
   })
   
   // Update trigger to force reactivity of getLastUpdateTime every minute

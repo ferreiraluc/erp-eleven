@@ -5,6 +5,7 @@ from sqlalchemy.sql import func
 import uuid
 import enum
 from ..database import Base
+from ..config import settings
 
 
 class MovementType(enum.Enum):
@@ -29,7 +30,7 @@ class Supplier(Base):
     name = Column(String(200), nullable=False)
     contact = Column(String(200))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
 
     items = relationship("Item", back_populates="supplier")
 
@@ -59,8 +60,8 @@ class Item(Base):
     brand = Column(String(100), nullable=True)
     group_key = Column(String(100), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
     image_data = Column(Text, nullable=True)
 
@@ -84,7 +85,7 @@ class StockMovement(Base):
     location_from = Column(String(100))
     location_to = Column(String(100))
     notes = Column(Text)
-    created_at = Column(DateTime, default=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
 
     item = relationship("Item", back_populates="movements")
@@ -98,7 +99,7 @@ class InventorySession(Base):
     status = Column(SAEnum(SessionStatus), default=SessionStatus.open)
     location_filter = Column(String(100))
     category_filter = Column(String(100))
-    started_at = Column(DateTime, default=func.current_timestamp())
+    started_at = Column(DateTime, default=lambda: settings.now())
     finished_at = Column(DateTime)
     applied_at = Column(DateTime)
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)

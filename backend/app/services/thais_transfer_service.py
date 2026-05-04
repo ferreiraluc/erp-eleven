@@ -6,6 +6,7 @@ from typing import Optional, List
 from ..models.venda import Venda, PagamentoMetodo
 from ..models.money_transfer import MoneyTransfer, TransferStatus
 from ..schemas.money_transfer import MoneyTransferCreate
+from ..config import settings
 
 class ThaisTransferService:
     """Service to handle automatic transfer accumulation for PIX_THAIS sales"""
@@ -114,7 +115,7 @@ class ThaisTransferService:
         # Update transfer details
         transfer.transfer_method = transfer_method
         transfer.reference_number = reference_number
-        transfer.notes += f"\n\nSent to Thais on {datetime.now().strftime('%Y-%m-%d %H:%M')} by {sent_by or 'System'}"
+        transfer.notes += f"\n\nSent to Thais on {settings.now().strftime('%Y-%m-%d %H:%M')} by {sent_by or 'System'}"
         
         # Status remains PENDING until Thais delivers money to store
         return transfer

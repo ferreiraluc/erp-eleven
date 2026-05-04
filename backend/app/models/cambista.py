@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
 from ..database import Base
+from ..config import settings
 
 class Cambista(Base):
     __tablename__ = "cambistas"
@@ -16,5 +17,5 @@ class Cambista(Base):
     telefone = Column(String(20))
     ativo = Column(Boolean, default=True)
     observacoes = Column(Text)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())

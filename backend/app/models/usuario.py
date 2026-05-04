@@ -5,6 +5,7 @@ from sqlalchemy.sql import func
 import uuid
 import enum
 from ..database import Base
+from ..config import settings
 
 class UsuarioRole(enum.Enum):
     ADMIN = "ADMIN"
@@ -22,8 +23,8 @@ class Usuario(Base):
     role = Column(Enum(UsuarioRole), nullable=False, default=UsuarioRole.VENDEDOR)
     ativo = Column(Boolean, default=True)
     ultimo_login = Column(DateTime)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     
     # Relacionamentos
     rastreamentos_criados = relationship("Rastreamento", back_populates="criado_por")

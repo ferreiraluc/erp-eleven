@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from ..database import Base
+from ..config import settings
 
 class Vendedor(Base):
     __tablename__ = "vendedores"
@@ -17,7 +18,7 @@ class Vendedor(Base):
     telefone = Column(String(20))
     cor_calendario = Column(String(7), default="#3B82F6")
     ativo = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
 
     usuario = relationship("Usuario", backref="vendedor")

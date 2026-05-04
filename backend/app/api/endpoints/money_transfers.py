@@ -5,6 +5,7 @@ from typing import List
 from decimal import Decimal
 from datetime import datetime
 from ...database import get_db
+from ...config import settings
 from ...models.money_transfer import MoneyTransfer, TransferStatus
 from ...schemas.money_transfer import (
     MoneyTransferCreate, 
@@ -181,7 +182,7 @@ def confirm_delivery(
     
     # Update transfer status
     transfer.status = TransferStatus.DELIVERED
-    transfer.delivery_confirmed_at = datetime.utcnow()
+    transfer.delivery_confirmed_at = settings.now()
     transfer.delivery_confirmed_by = confirmation.confirmed_by
     
     if confirmation.notes:

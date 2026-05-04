@@ -19,7 +19,7 @@ from ...schemas.rastreamento import (
     RastreamentoResumo
 )
 from ...dependencies import get_current_user
-
+from ...config import settings
 router = APIRouter()
 
 
@@ -409,7 +409,7 @@ def consultar_e_salvar_rastreamento(
         existing.historico_eventos = events
         existing.rastreio_info = meta
         existing.status = inferred
-        existing.ultima_atualizacao = datetime.utcnow()
+        existing.ultima_atualizacao = settings.now()
         db.commit()
         db.refresh(existing)
         return _build_response(existing)
@@ -419,7 +419,7 @@ def consultar_e_salvar_rastreamento(
         status=inferred,
         historico_eventos=events,
         rastreio_info=meta,
-        ultima_atualizacao=datetime.utcnow(),
+        ultima_atualizacao=settings.now(),
         created_by=current_user.id,
     )
     db.add(new_r)
@@ -454,7 +454,7 @@ def atualizar_rastreamento_online(
     r.historico_eventos = events
     r.rastreio_info = meta
     r.status = inferred
-    r.ultima_atualizacao = datetime.utcnow()
+    r.ultima_atualizacao = settings.now()
     db.commit()
     db.refresh(r)
 
@@ -483,7 +483,7 @@ def atualizar_todos_rastreamentos(
             r.historico_eventos = events
             r.rastreio_info = meta
             r.status = inferred
-            r.ultima_atualizacao = datetime.utcnow()
+            r.ultima_atualizacao = settings.now()
             updated += 1
         except Exception as e:
             errors.append(f"{r.codigo_rastreio}: {str(e)}")

@@ -11,6 +11,7 @@ import csv
 import xml.etree.ElementTree as ET
 
 from ...database import get_db
+from ...config import settings
 from ...models.inventory import (
     Item, Supplier, StockMovement, MovementType,
     InventorySession, InventorySessionItem, SessionStatus
@@ -704,7 +705,7 @@ def scan_item(
 
     if existing:
         existing.counted_quantity = scan.counted_quantity
-        existing.scanned_at = datetime.utcnow()
+        existing.scanned_at = settings.now()
         existing.counted_by = current_user.id
     else:
         session_item = InventorySessionItem(
@@ -712,7 +713,7 @@ def scan_item(
             item_id=scan.item_id,
             system_quantity=item.current_stock,
             counted_quantity=scan.counted_quantity,
-            scanned_at=datetime.utcnow(),
+            scanned_at=settings.now(),
             counted_by=current_user.id,
         )
         db.add(session_item)

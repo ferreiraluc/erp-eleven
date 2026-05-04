@@ -1,6 +1,7 @@
 import random
 import string
 from datetime import datetime
+from .config import settings
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -8,7 +9,7 @@ def generate_order_number(db: Session, prefix: str = "PED") -> str:
     """
     Generate unique order number with format: PED-YYYY-XXXXXX
     """
-    year = datetime.now().year
+    year = settings.now().year
     
     # Generate random 6-digit number
     random_number = ''.join(random.choices(string.digits, k=6))

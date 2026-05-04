@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from ..database import Base
+from ..config import settings
 
 class Funcionario(Base):
     __tablename__ = "funcionarios"
@@ -25,7 +26,7 @@ class Funcionario(Base):
     endereco = Column(Text)
     
     ativo = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
 
     usuario = relationship("Usuario", backref="funcionario")

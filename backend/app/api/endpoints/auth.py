@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 import bcrypt
 from ...database import get_db
@@ -19,13 +19,24 @@ def get_password_hash(password: str) -> str:
     """Hash a password"""
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
+def _token_expiry() -> datetime:
+    """
+    Returns the JWT expiration as naive UTC datetime.
+    Always expires at midnight (local timezone) 7 days from today,
+    so sessions never cut off mid-shift and reset predictably every week.
+    """
+    now_local = datetime.now(settings.tz)
+    midnight_today = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    expire_local = midnight_today + timedelta(days=7)
+    return expire_local.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def create_access_token(data: dict) -> str:
-    """Create JWT access token"""
+    """Create JWT access token — expires at midnight 7 days from now (local timezone)"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = _token_expiry()
     to_encode.update({"exp": expire, "iat": datetime.utcnow()})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def authenticate_user(db: Session, email: str, password: str) -> Usuario:
     """Authenticate user credentials"""
@@ -54,14 +65,15 @@ async def login(user_credentials: UsuarioLogin, db: Session = Depends(get_db)):
         )
     
     # Update last login
-    user.ultimo_login = datetime.utcnow()
+    user.ultimo_login = settings.now()
     db.commit()
     
     access_token = create_access_token(data={"sub": user.email})
+    expires_in = int((_token_expiry() - datetime.utcnow()).total_seconds())
     return Token(
         access_token=access_token,
         token_type="bearer",
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        expires_in=expires_in
     )
 
 @router.get("/me", response_model=UsuarioResponse)

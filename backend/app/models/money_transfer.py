@@ -5,6 +5,7 @@ from sqlalchemy.sql import func
 import uuid
 import enum
 from ..database import Base
+from ..config import settings
 
 class TransferStatus(enum.Enum):
     PENDING = "PENDING"           # Money sent to Thais, waiting for delivery
@@ -35,8 +36,8 @@ class MoneyTransfer(Base):
     notes = Column(Text)
     
     # Audit trail
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(String(100))
     
     # Related sales (for PIX_THAIS sales that need this transfer)

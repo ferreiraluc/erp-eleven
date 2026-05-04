@@ -5,6 +5,7 @@ from sqlalchemy.sql import func
 import uuid
 import enum
 from ..database import Base
+from ..config import settings
 
 class TipoFolga(str, enum.Enum):
     FOLGA = "FOLGA"
@@ -28,8 +29,8 @@ class Folga(Base):
     aprovado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
     
     ativo = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.current_timestamp())
-    updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     
     vendedor = relationship("Vendedor", backref="folgas")
     aprovador = relationship("Usuario", foreign_keys=[aprovado_por])

@@ -134,7 +134,7 @@ def apply_session(
             movements.append(movement)
 
     session.status = SessionStatus.applied
-    from sqlalchemy.sql import func
-    session.applied_at = func.current_timestamp()
+    from ..config import settings
+    session.applied_at = settings.now()
     db.commit()
     return movements

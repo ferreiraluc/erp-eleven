@@ -11,6 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory, clientes
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
+from .config import settings
 
 # Main
 # Setup logging
@@ -40,7 +41,7 @@ def _job_atualizar_rastreamentos():
                 r.historico_eventos = events
                 r.rastreio_info = meta
                 r.status = inferred
-                r.ultima_atualizacao = datetime.utcnow()
+                r.ultima_atualizacao = settings.now()
                 updated += 1
             except Exception as e:
                 errors.append(f"{r.codigo_rastreio}: {str(e)}")
