@@ -657,6 +657,9 @@ export const inventoryAPI = {
   removeFromGroup: (itemId: string): Promise<{ message: string }> =>
     api.delete(`/api/inventory/items/${itemId}/group`).then(res => res.data),
 
+  renameGroup: (oldKey: string, newKey: string): Promise<{ message: string; count: number }> =>
+    api.patch(`/api/inventory/groups/${encodeURIComponent(oldKey)}`, { new_key: newKey }).then(res => res.data),
+
   getGroups: (search = ''): Promise<GroupResponse[]> => {
     const qs = search ? `?search=${encodeURIComponent(search)}` : ''
     return api.get(`/api/inventory/groups${qs}`).then(res => res.data)

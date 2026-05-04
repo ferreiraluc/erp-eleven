@@ -81,6 +81,10 @@ class GroupItemsRequest(BaseModel):
     group_key: str
 
 
+class RenameGroupRequest(BaseModel):
+    new_key: str
+
+
 class BatchSizeEntry(BaseModel):
     id: uuid.UUID
     size: Optional[str] = None

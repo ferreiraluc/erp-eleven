@@ -22,7 +22,7 @@ from ...schemas.inventory import (
     MovementCreate, MovementResponse, BatchMovementCreate,
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
     SessionItemResponse, AlertSummary, GroupItemsRequest,
-    GroupResponse, SuggestionResponse,
+    GroupResponse, SuggestionResponse, RenameGroupRequest,
     BatchEditRequest, BatchSizeEntry,
 )
 from ...dependencies import get_current_active_user, require_role
@@ -306,6 +306,28 @@ def get_groups(
         total_stock = sum(i.current_stock for i in sorted_items)
         result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock))
     return result
+
+
+@router.patch("/groups/{old_key}", status_code=200)
+def rename_group(
+    old_key: str,
+    body: RenameGroupRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Rename a group — updates group_key on all items in the group without touching item names"""
+    new_key = body.new_key.strip()
+    if not new_key:
+        raise HTTPException(status_code=400, detail="O nome do grupo não pode ser vazio")
+    if new_key == old_key:
+        return {"message": "Nenhuma alteração", "count": 0}
+    items = db.query(Item).filter(Item.group_key == old_key).all()
+    if not items:
+        raise HTTPException(status_code=404, detail="Grupo não encontrado")
+    for item in items:
+        item.group_key = new_key
+    db.commit()
+    return {"message": f"Grupo renomeado de '{old_key}' para '{new_key}'", "count": len(items)}
 
 
 @router.get("/suggestions", response_model=List[SuggestionResponse])

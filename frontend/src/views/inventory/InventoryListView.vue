@@ -1,5 +1,6 @@
 <template>
   <div class="inventory-view">
+    <div class="sticky-toolbar">
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
@@ -129,6 +130,7 @@
         </button>
       </div>
     </div>
+    </div><!-- /sticky-toolbar -->
 
     <!-- Loading -->
     <div v-if="inventoryStore.loading && inventoryStore.items.length === 0" class="loading-state">
@@ -169,7 +171,21 @@
               </div>
             </div>
             <div class="group-title-area">
-              <span class="group-name">{{ entry.group.group_key }}</span>
+              <input
+                v-if="editingGroupKey === entry.group.group_key"
+                v-model="editingGroupName"
+                class="group-name-input"
+                @keydown.enter.prevent="saveGroupName(entry.group.group_key)"
+                @keydown.escape="editingGroupKey = null"
+                @blur="saveGroupName(entry.group.group_key)"
+                @click.stop
+              />
+              <span
+                v-else
+                class="group-name group-name-editable"
+                @click.stop="startEditGroupName(entry.group.group_key)"
+                title="Clique para renomear o grupo"
+              >{{ entry.group.group_key }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
               <span class="group-total-stock">Total: {{ entry.group.total_stock }}</span>
               <span v-if="entry.group.items.find(i => i.barcode)" class="group-barcode">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="9" height="9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
@@ -414,6 +430,8 @@ const selectedIds = ref<string[]>([])
 const showGroupModal = ref(false)
 const groupNameInput = ref('')
 const groupNameInputRef = ref<HTMLInputElement | null>(null)
+const editingGroupKey = ref<string | null>(null)
+const editingGroupName = ref('')
 const grouping = ref(false)
 const showBulkEdit = ref(false)
 const scrollSentinel = ref<HTMLElement | null>(null)
@@ -604,6 +622,29 @@ function sortedBySize<T extends { size?: string | null }>(items: T[]): T[] {
     if (an !== bn) return an - bn
     return as_.localeCompare(bs)
   })
+}
+
+function startEditGroupName(groupKey: string) {
+  editingGroupKey.value = groupKey
+  editingGroupName.value = groupKey
+  nextTick(() => {
+    const input = document.querySelector<HTMLInputElement>('.group-name-input')
+    input?.focus()
+    input?.select()
+  })
+}
+
+async function saveGroupName(oldKey: string) {
+  const newKey = editingGroupName.value.trim()
+  editingGroupKey.value = null
+  if (!newKey || newKey === oldKey) return
+  try {
+    await inventoryAPI.renameGroup(oldKey, newKey)
+    showToast(`Grupo renomeado para "${newKey}"`, 'success')
+    await Promise.all([inventoryStore.loadItems(1), loadGroups(inventoryStore.filters.search)])
+  } catch (e: any) {
+    showToast(e.response?.data?.detail || 'Erro ao renomear grupo', 'error')
+  }
 }
 
 async function handleUngroup(groupKey: string) {
@@ -826,7 +867,8 @@ onMounted(async () => {
 
 <style scoped>
 .inventory-view { min-height: 100vh; background: #f9fafb; }
-.page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; position: sticky; top: 0; z-index: 30; }
+.sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
 .header-content { display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
 .header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }
@@ -845,7 +887,7 @@ onMounted(async () => {
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
 }
-.search-section { padding: 1rem; max-width: 1400px; margin: 0 auto; position: relative; z-index: 20; }
+.search-section { padding: 0.6rem 1rem 0.75rem; max-width: 1400px; margin: 0 auto; position: relative; border-bottom: 1px solid #f3f4f6; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
 .search-box { flex: 1; position: relative; }
 .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
@@ -976,6 +1018,11 @@ onMounted(async () => {
 .thumb-clickable { cursor: zoom-in; }
 .group-title-area { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; flex-wrap: wrap; }
 .group-name { font-weight: 700; font-size: 0.85rem; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-name-editable { cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem; border-radius: 4px; padding: 0.05rem 0.25rem; transition: background 0.15s; }
+.group-name-editable:hover { background: #eff6ff; color: #2563eb; }
+.edit-pencil { opacity: 0; flex-shrink: 0; transition: opacity 0.15s; }
+.group-name-editable:hover .edit-pencil { opacity: 1; }
+.group-name-input { font-weight: 700; font-size: 0.85rem; color: #111827; border: 1.5px solid #3b82f6; border-radius: 5px; padding: 0.05rem 0.35rem; outline: none; background: #eff6ff; min-width: 80px; max-width: 200px; }
 .group-total-stock { font-size: 0.72rem; color: #6b7280; white-space: nowrap; }
 .group-barcode { font-family: monospace; font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
 .group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
