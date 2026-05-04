@@ -364,7 +364,7 @@ def group_items_batch(
 def ungroup_items(
     group_key_value: str,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+    current_user: Usuario = Depends(get_current_active_user),
 ):
     items = db.query(Item).filter(Item.group_key == group_key_value).all()
     if not items:
@@ -373,6 +373,24 @@ def ungroup_items(
         item.group_key = None
     db.commit()
     return {"message": f"Ungrouped {len(items)} items", "count": len(items)}
+
+
+@router.delete("/items/{item_id}/group", status_code=200)
+def remove_item_from_group(
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Remove a single item from its group (set group_key to None)"""
+    item_uuid = validate_uuid(item_id)
+    item = db.query(Item).filter(Item.id == item_uuid).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if not item.group_key:
+        raise HTTPException(status_code=400, detail="Item is not in any group")
+    item.group_key = None
+    db.commit()
+    return {"message": "Item removed from group"}
 
 
 @router.patch("/items/batch", status_code=200)

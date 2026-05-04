@@ -189,10 +189,14 @@
               :key="v.id"
               class="size-chip"
               :class="'chip-alert-' + v.alert_level"
-              @click="openEdit(v)"
               :title="v.name + ' · ' + v.sku_internal"
             >
-              {{ v.size || v.name }} &nbsp;{{ v.current_stock }}
+              <span class="chip-label" @click="openEdit(v)">{{ v.size || v.name }} &nbsp;{{ v.current_stock }}</span>
+              <button
+                class="chip-remove"
+                title="Remover do grupo"
+                @click.stop="removeItemFromGroup(v.id, entry.group.group_key)"
+              >×</button>
             </span>
           </div>
         </div>
@@ -590,6 +594,16 @@ async function handleUngroup(groupKey: string) {
   }
 }
 
+async function removeItemFromGroup(itemId: string, groupKey: string) {
+  try {
+    await inventoryAPI.removeFromGroup(itemId)
+    showToast(`Item removido do grupo "${groupKey}"`, 'success')
+    await Promise.all([inventoryStore.loadItems(1), loadGroups(inventoryStore.filters.search)])
+  } catch (e: any) {
+    showToast(e.response?.data?.detail || 'Erro ao remover do grupo', 'error')
+  }
+}
+
 const statusChips = computed(() => [
   { value: '', label: 'Todos' },
   { value: 'low_stock', label: 'Baixo', count: inventoryStore.alerts?.low_stock_count },
@@ -944,7 +958,10 @@ onMounted(async () => {
 .group-barcode { font-family: monospace; font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
 .group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
 .size-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.size-chip { font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 20px; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
+.size-chip { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.35rem 0.18rem 0.55rem; border-radius: 20px; border: 1px solid transparent; white-space: nowrap; }
+.chip-label { cursor: pointer; }
+.chip-remove { background: none; border: none; cursor: pointer; font-size: 0.75rem; line-height: 1; padding: 0 0.1rem; opacity: 0.45; font-weight: 700; }
+.chip-remove:hover { opacity: 1; }
 .chip-alert-out      { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
 .chip-alert-low      { background: #fef3c7; color: #d97706; border-color: #fcd34d; }
 .chip-alert-high     { background: #ede9fe; color: #7c3aed; border-color: #c4b5fd; }
