@@ -14,7 +14,7 @@
         <!-- ── Shared fields ── -->
         <section class="section">
           <h3 class="section-title">Campos compartilhados</h3>
-          <p class="section-hint">Deixe em branco para não alterar o campo nos itens selecionados.</p>
+          <p class="section-hint">Deixe em branco para não alterar nesses itens.</p>
 
           <!-- Image -->
           <div class="form-group">
@@ -26,55 +26,81 @@
               </div>
               <div v-else class="image-placeholder" @click="triggerFileInput">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span>Clique para selecionar imagem</span>
+                <span>Clique para selecionar</span>
               </div>
               <input ref="fileInputRef" type="file" accept="image/*" class="hidden-input" @change="onImageFile" />
             </div>
           </div>
 
-          <!-- Brand -->
-          <div class="form-group">
-            <label>Marca</label>
-            <input v-model="sharedBrand" type="text" class="form-input" placeholder="Ex: Nike, Adidas... (vazio = não alterar)" :list="'bulk-brand-list'" />
-            <datalist id="bulk-brand-list">
-              <option v-for="b in distinctBrands" :key="b" :value="b" />
-            </datalist>
-          </div>
-
-          <!-- Category -->
-          <div class="form-group">
-            <label>Categoria</label>
-            <input v-model="sharedCategory" type="text" class="form-input" placeholder="Ex: Camisetas > Masculino (vazio = não alterar)" :list="'bulk-cat-list'" />
-            <datalist id="bulk-cat-list">
-              <option v-for="c in distinctCategories" :key="c" :value="c" />
-            </datalist>
+          <!-- Brand + Category in a row -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Marca</label>
+              <input v-model="sharedBrand" type="text" class="form-input" placeholder="Ex: Nike (vazio = não alterar)" :list="'bulk-brand-list'" />
+              <datalist id="bulk-brand-list">
+                <option v-for="b in distinctBrands" :key="b" :value="b" />
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label>Categoria</label>
+              <input v-model="sharedCategory" type="text" class="form-input" placeholder="Ex: Camisetas (vazio = não alterar)" :list="'bulk-cat-list'" />
+              <datalist id="bulk-cat-list">
+                <option v-for="c in distinctCategories" :key="c" :value="c" />
+              </datalist>
+            </div>
           </div>
         </section>
 
-        <!-- ── Per-item sizes ── -->
+        <!-- ── Per-item fields ── -->
         <section class="section">
-          <h3 class="section-title">Tamanhos por item</h3>
-          <p class="section-hint">Cada item pode ter um tamanho diferente. Deixe "— manter —" para não alterar.</p>
-          <div class="sizes-list">
-            <div v-for="item in items" :key="item.id" class="size-row">
-              <div class="size-row-info">
-                <img v-if="item.image_data || sharedImage" :src="sharedImage || item.image_data" class="row-thumb" alt="" />
-                <div v-else class="row-thumb-placeholder"></div>
-                <span class="row-name">{{ item.name }}</span>
-                <span v-if="item.size" class="row-current-size">atual: {{ item.size }}</span>
+          <h3 class="section-title">Campos por item</h3>
+          <p class="section-hint">Deixe em branco para manter o valor atual de cada item.</p>
+          <div class="items-list">
+            <div v-for="item in items" :key="item.id" class="item-card">
+              <!-- Item header -->
+              <div class="item-card-header">
+                <img v-if="sharedImage || item.image_data" :src="sharedImage || item.image_data" class="card-thumb" alt="" />
+                <div v-else class="card-thumb-placeholder"></div>
+                <span class="card-original-name">{{ item.name }}</span>
               </div>
-              <div class="size-input-wrap">
-                <select v-model="itemSizes[item.id]" class="size-select">
-                  <option value="">— manter —</option>
-                  <option v-for="s in sizeOptions" :key="s" :value="s">{{ s }}</option>
-                </select>
-                <input
-                  v-if="itemSizes[item.id] === '__custom__'"
-                  v-model="customSizes[item.id]"
-                  type="text"
-                  class="size-custom-input"
-                  placeholder="Digite o tamanho"
-                />
+              <!-- Editable fields grid -->
+              <div class="item-fields">
+                <div class="field-group">
+                  <label>Nome</label>
+                  <input
+                    v-model="itemNames[item.id]"
+                    type="text"
+                    class="field-input"
+                    :placeholder="item.name"
+                  />
+                </div>
+                <div class="field-group">
+                  <label>Cor</label>
+                  <input
+                    v-model="itemColors[item.id]"
+                    type="text"
+                    class="field-input"
+                    :placeholder="item.color || 'Cor'"
+                  />
+                </div>
+                <div class="field-group">
+                  <label>Tamanho</label>
+                  <input
+                    v-model="itemSizes[item.id]"
+                    type="text"
+                    class="field-input"
+                    :placeholder="item.size || 'Tam'"
+                  />
+                </div>
+                <div class="field-group field-group-wide">
+                  <label>Código de barras</label>
+                  <input
+                    v-model="itemBarcodes[item.id]"
+                    type="text"
+                    class="field-input"
+                    :placeholder="item.barcode || 'Código de barras'"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -113,17 +139,19 @@ const sharedCategory = ref('')
 const saving = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-const sizeOptions = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'XXG', 'XXXG', 'U', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '__custom__']
-
-// Per-item size maps
+// Per-item field maps (empty = keep as-is)
+const itemNames = reactive<Record<string, string>>({})
+const itemColors = reactive<Record<string, string>>({})
 const itemSizes = reactive<Record<string, string>>({})
-const customSizes = reactive<Record<string, string>>({})
+const itemBarcodes = reactive<Record<string, string>>({})
 
-const hasChanges = computed(() =>
-  !!sharedImage.value || !!sharedBrand.value || !!sharedCategory.value ||
-  Object.values(itemSizes).some(v => v && v !== '__custom__') ||
-  Object.values(customSizes).some(v => !!v)
-)
+const hasChanges = computed(() => {
+  if (sharedImage.value || sharedBrand.value || sharedCategory.value) return true
+  return props.items.some(item =>
+    itemNames[item.id] || itemColors[item.id] ||
+    itemSizes[item.id] || itemBarcodes[item.id]
+  )
+})
 
 function triggerFileInput() {
   fileInputRef.value?.click()
@@ -156,22 +184,23 @@ async function save() {
   if (!hasChanges.value || saving.value) return
   saving.value = true
   try {
-    const sizes: Array<{ id: string; size: string }> = []
+    const perItems: Array<{ id: string; size?: string; name?: string; color?: string; barcode?: string }> = []
     for (const item of props.items) {
-      const selected = itemSizes[item.id]
-      if (selected && selected !== '__custom__') {
-        sizes.push({ id: item.id, size: selected })
-      } else if (selected === '__custom__' && customSizes[item.id]) {
-        sizes.push({ id: item.id, size: customSizes[item.id] })
-      }
+      const entry: { id: string; size?: string; name?: string; color?: string; barcode?: string } = { id: item.id }
+      let hasEntry = false
+      if (itemSizes[item.id])    { entry.size    = itemSizes[item.id];    hasEntry = true }
+      if (itemNames[item.id])    { entry.name    = itemNames[item.id];    hasEntry = true }
+      if (itemColors[item.id])   { entry.color   = itemColors[item.id];   hasEntry = true }
+      if (itemBarcodes[item.id]) { entry.barcode = itemBarcodes[item.id]; hasEntry = true }
+      if (hasEntry) perItems.push(entry)
     }
 
     await inventoryAPI.batchEdit({
       item_ids: props.items.map(i => i.id),
-      brand: sharedBrand.value || undefined,
-      category: sharedCategory.value || undefined,
-      image_data: sharedImage.value || undefined,
-      sizes: sizes.length ? sizes : undefined,
+      brand:      sharedBrand.value    || undefined,
+      category:   sharedCategory.value || undefined,
+      image_data: sharedImage.value    || undefined,
+      sizes: perItems.length ? perItems : undefined,
     })
 
     emit('saved')
@@ -191,55 +220,62 @@ async function save() {
 }
 .modal-container {
   background: white; border-radius: 12px; width: 100%;
-  max-width: 560px; max-height: 90vh;
+  max-width: 600px; max-height: 92vh;
   display: flex; flex-direction: column; overflow: hidden;
 }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb;
-  flex-shrink: 0;
+  padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
 }
 .modal-header h2 { font-size: 1rem; font-weight: 700; color: #111827; margin: 0; }
 .item-count { font-weight: 400; color: #6b7280; font-size: 0.875rem; }
 .close-btn { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
 .modal-body { overflow-y: auto; padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 1.25rem; }
-.section { display: flex; flex-direction: column; gap: 0.75rem; }
+.section { display: flex; flex-direction: column; gap: 0.6rem; }
 .section-title { font-size: 0.875rem; font-weight: 600; color: #374151; margin: 0; }
-.section-hint { font-size: 0.75rem; color: #9ca3af; margin: 0; }
-.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-.form-group label { font-size: 0.8rem; font-weight: 500; color: #374151; }
-.form-input { padding: 0.45rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; }
+.section-hint { font-size: 0.72rem; color: #9ca3af; margin: 0; }
+.form-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+.form-group label { font-size: 0.78rem; font-weight: 500; color: #374151; }
+.form-row { display: flex; gap: 0.75rem; }
+.form-input { padding: 0.42rem 0.7rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.85rem; }
 .form-input:focus { outline: none; border-color: #3b82f6; }
+
+/* Image */
 .image-area { }
 .image-preview { position: relative; display: inline-block; }
-.image-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
-.remove-img-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; line-height: 1; }
-.image-placeholder { width: 80px; height: 80px; border: 2px dashed #d1d5db; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; cursor: pointer; color: #9ca3af; font-size: 0.6rem; text-align: center; }
+.image-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
+.remove-img-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
+.image-placeholder { width: 72px; height: 72px; border: 2px dashed #d1d5db; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; cursor: pointer; color: #9ca3af; font-size: 0.58rem; text-align: center; }
 .image-placeholder:hover { border-color: #3b82f6; color: #3b82f6; }
 .hidden-input { display: none; }
-/* Sizes list */
-.sizes-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; }
-.size-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border: 1px solid #f3f4f6; border-radius: 8px; background: #fafafa; }
-.size-row-info { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; }
-.row-thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
-.row-thumb-placeholder { width: 32px; height: 32px; background: #e5e7eb; border-radius: 4px; flex-shrink: 0; }
-.row-name { font-size: 0.8rem; font-weight: 500; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row-current-size { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; flex-shrink: 0; }
-.size-input-wrap { display: flex; gap: 0.35rem; flex-shrink: 0; }
-.size-select { padding: 0.3rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; background: white; }
-.size-custom-input { width: 80px; padding: 0.3rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; }
+
+/* Per-item list */
+.items-list { display: flex; flex-direction: column; gap: 0.6rem; max-height: 340px; overflow-y: auto; }
+.item-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.6rem 0.75rem; background: #fafafa; display: flex; flex-direction: column; gap: 0.5rem; }
+.item-card-header { display: flex; align-items: center; gap: 0.5rem; }
+.card-thumb { width: 28px; height: 28px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.card-thumb-placeholder { width: 28px; height: 28px; background: #e5e7eb; border-radius: 4px; flex-shrink: 0; }
+.card-original-name { font-size: 0.78rem; font-weight: 600; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Fields grid inside card */
+.item-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 0.6rem; }
+.field-group { display: flex; flex-direction: column; gap: 0.15rem; }
+.field-group-wide { grid-column: 1 / -1; }
+.field-group label { font-size: 0.68rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; }
+.field-input { padding: 0.3rem 0.5rem; border: 1px solid #e5e7eb; border-radius: 5px; font-size: 0.82rem; background: white; }
+.field-input:focus { outline: none; border-color: #3b82f6; background: #eff6ff; }
+
 /* Footer */
-.modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; flex-shrink: 0; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.875rem 1.25rem; border-top: 1px solid #e5e7eb; flex-shrink: 0; }
 .btn { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
 @media (max-width: 600px) {
-  .modal-container { max-height: 95vh; }
-  .size-row { flex-wrap: wrap; }
-  .size-row-info { flex: 1 1 100%; }
-  .size-input-wrap { flex: 1 1 100%; }
-  .size-select { flex: 1; }
+  .modal-container { max-height: 96vh; }
+  .form-row { flex-direction: column; gap: 0.5rem; }
+  .item-fields { grid-template-columns: 1fr 1fr; }
 }
 </style>

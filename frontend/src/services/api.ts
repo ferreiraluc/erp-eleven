@@ -667,7 +667,7 @@ export const inventoryAPI = {
     brand?: string
     category?: string
     image_data?: string
-    sizes?: Array<{ id: string; size: string }>
+    sizes?: Array<{ id: string; size?: string; name?: string; color?: string; barcode?: string }>
   }): Promise<{ message: string; count: number }> =>
     api.patch('/api/inventory/items/batch', data).then(res => res.data),
 

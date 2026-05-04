@@ -84,6 +84,9 @@ class GroupItemsRequest(BaseModel):
 class BatchSizeEntry(BaseModel):
     id: uuid.UUID
     size: Optional[str] = None
+    name: Optional[str] = None
+    color: Optional[str] = None
+    barcode: Optional[str] = None
 
 
 class BatchEditRequest(BaseModel):
@@ -92,7 +95,7 @@ class BatchEditRequest(BaseModel):
     brand: Optional[str] = None
     category: Optional[str] = None
     image_data: Optional[str] = None
-    # Per-item sizes (optional)
+    # Per-item fields (optional)
     sizes: Optional[List[BatchSizeEntry]] = None
 
 

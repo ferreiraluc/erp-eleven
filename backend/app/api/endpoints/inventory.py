@@ -379,14 +379,14 @@ def ungroup_items(
 def batch_edit_items(
     request: BatchEditRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+    current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Bulk edit shared fields (brand, category, image) and per-item sizes"""
+    """Bulk edit shared fields (brand, category, image) and per-item fields"""
     items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found")
 
-    sizes_map = {str(s.id): s.size for s in (request.sizes or [])}
+    per_item_map = {str(s.id): s for s in (request.sizes or [])}
 
     for item in items:
         if request.brand is not None:
@@ -395,9 +395,16 @@ def batch_edit_items(
             item.category = request.category
         if request.image_data is not None:
             item.image_data = request.image_data
-        item_id_str = str(item.id)
-        if item_id_str in sizes_map:
-            item.size = sizes_map[item_id_str]
+        entry = per_item_map.get(str(item.id))
+        if entry:
+            if entry.size is not None:
+                item.size = entry.size
+            if entry.name is not None:
+                item.name = entry.name
+            if entry.color is not None:
+                item.color = entry.color
+            if entry.barcode is not None:
+                item.barcode = entry.barcode
 
     db.commit()
     return {"message": f"Updated {len(items)} items", "count": len(items)}
