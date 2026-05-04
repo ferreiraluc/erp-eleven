@@ -205,7 +205,14 @@ async function save() {
 
     emit('saved')
   } catch (e: any) {
-    alert(e.response?.data?.detail || 'Erro ao salvar')
+    console.error('Bulk edit error:', e.response?.status, e.response?.data, e.message)
+    const detail = e.response?.data?.detail
+    const msg = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d: any) => d.msg || d.loc?.join('.') || JSON.stringify(d)).join('\n')
+        : e.message || 'Erro ao salvar'
+    alert(msg)
   } finally {
     saving.value = false
   }
@@ -216,7 +223,7 @@ async function save() {
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000; padding: 1rem;
+  z-index: 2500; padding: 1rem;
 }
 .modal-container {
   background: white; border-radius: 12px; width: 100%;

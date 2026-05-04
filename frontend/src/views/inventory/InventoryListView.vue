@@ -325,7 +325,7 @@
 
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
-      <div v-if="selectionMode && selectedIds.length > 0" class="selection-bar">
+      <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit" class="selection-bar">
         <span class="sel-count">{{ selectedIds.length }} item{{ selectedIds.length !== 1 ? 's' : '' }} selecionado{{ selectedIds.length !== 1 ? 's' : '' }}</span>
         <div class="sel-actions">
           <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">Agrupar</button>
