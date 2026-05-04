@@ -457,6 +457,16 @@ function toggleExpand(groupKey: string) {
 async function loadGroups(search = '') {
   try {
     backendGroups.value = await inventoryAPI.getGroups(search)
+    // Auto-expand groups when a search term is active, but only add — never remove.
+    // This lets the user collapse a group manually even while searching.
+    if (search.trim()) {
+      const newKeys = backendGroups.value.map(g => g.group_key)
+      for (const key of newKeys) {
+        if (!expandedGroups.value.includes(key)) {
+          expandedGroups.value.push(key)
+        }
+      }
+    }
   } catch {}
 }
 
@@ -567,8 +577,7 @@ const flatList = computed<FlatEntry[]>(() => {
       total_stock: g.total_stock,
     }})
 
-    // Auto-expande grupos quando há busca ativa
-    if (expandedGroups.value.includes(g.group_key) || term) {
+    if (expandedGroups.value.includes(g.group_key)) {
       for (const item of visibleItems) result.push({ type: 'item', item })
     }
   }
