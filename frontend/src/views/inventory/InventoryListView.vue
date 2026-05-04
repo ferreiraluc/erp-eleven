@@ -38,7 +38,10 @@
           <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input v-model="searchQuery" type="text" placeholder="Buscar por nome, SKU, código..." class="search-input" />
+          <input v-model="searchQuery" type="text" placeholder="Buscar por nome, SKU, código..." class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
+          <button v-if="searchQuery" @click="searchQuery = ''" class="search-clear-btn" title="Limpar busca" type="button">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
         <button @click="showScanner = true" class="camera-btn" title="Escanear código">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
@@ -879,6 +882,9 @@ onMounted(async () => {
 .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
 .search-input { width: 100%; padding: 0.625rem 0.75rem 0.625rem 2.25rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none; box-sizing: border-box; }
 .search-input:focus { border-color: #3b82f6; }
+.search-input-clearable { padding-right: 2rem; }
+.search-clear-btn { position: absolute; right: 0.55rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; padding: 0.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.search-clear-btn:hover { color: #374151; background: #f3f4f6; }
 .camera-btn { padding: 0.625rem; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; color: #374151; }
 .chip { padding: 0.375rem 0.75rem; border-radius: 20px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 0.8rem; cursor: pointer; color: #374151; display: flex; align-items: center; gap: 0.25rem; }
 .chip.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
