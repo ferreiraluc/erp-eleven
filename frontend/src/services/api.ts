@@ -654,8 +654,10 @@ export const inventoryAPI = {
   ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
     api.post(`/api/inventory/items/ungroup/${encodeURIComponent(groupKey)}`).then(res => res.data),
 
-  getGroups: (): Promise<GroupResponse[]> =>
-    api.get('/api/inventory/groups').then(res => res.data),
+  getGroups: (search = ''): Promise<GroupResponse[]> => {
+    const qs = search ? `?search=${encodeURIComponent(search)}` : ''
+    return api.get(`/api/inventory/groups${qs}`).then(res => res.data)
+  },
 
   getSuggestions: (): Promise<SuggestionResponse[]> =>
     api.get('/api/inventory/suggestions').then(res => res.data),

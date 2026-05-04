@@ -421,9 +421,9 @@ function toggleExpand(groupKey: string) {
   else expandedGroups.value.splice(idx, 1)
 }
 
-async function loadGroups() {
+async function loadGroups(search = '') {
   try {
-    backendGroups.value = await inventoryAPI.getGroups()
+    backendGroups.value = await inventoryAPI.getGroups(search)
   } catch {}
 }
 
@@ -514,38 +514,23 @@ const flatList = computed<FlatEntry[]>(() => {
     return inventoryStore.items.map(item => ({ type: 'item' as const, item }))
   }
 
-  // In group mode: filter backendGroups by search term (frontend-side)
+  // Em modo grupo: backendGroups já vem filtrado pelo backend quando há busca
   const term = searchQuery.value.toLowerCase().trim()
   const groupedItemIds = new Set<string>()
   const result: FlatEntry[] = []
 
   for (const g of backendGroups.value) {
-    let visibleItems = g.items as InventoryItem[]
-
-    if (term) {
-      const groupNameMatches = g.group_key.toLowerCase().includes(term)
-      const matchingItems = g.items.filter(i =>
-        i.name.toLowerCase().includes(term) ||
-        i.sku_internal.toLowerCase().includes(term) ||
-        (i.barcode ?? '').toLowerCase().includes(term) ||
-        (i.category ?? '').toLowerCase().includes(term)
-      ) as InventoryItem[]
-
-      if (!groupNameMatches && matchingItems.length === 0) continue // grupo sem match: ocultar
-      if (!groupNameMatches) visibleItems = matchingItems // só itens que batem
-    }
-
+    const visibleItems = g.items as InventoryItem[]
     for (const item of visibleItems) groupedItemIds.add(item.id)
 
-    const entry: GroupEntry = {
+    result.push({ type: 'group', group: {
       _isGroup: true,
       group_key: g.group_key,
       items: visibleItems,
-      total_stock: visibleItems.reduce((s, i) => s + i.current_stock, 0),
-    }
-    result.push({ type: 'group', group: entry })
+      total_stock: g.total_stock,
+    }})
 
-    // Auto-expande grupos durante busca para mostrar os itens que bateram
+    // Auto-expande grupos quando há busca ativa
     if (expandedGroups.value.includes(g.group_key) || term) {
       for (const item of visibleItems) result.push({ type: 'item', item })
     }
@@ -601,8 +586,14 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(searchQuery, (val) => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
-    inventoryStore.filters.search = val
-    inventoryStore.loadItems(1)
+    const trimmed = val.trim()
+    inventoryStore.filters.search = trimmed
+    if (groupMode.value) {
+      // Em modo grupo: busca nos grupos (backend) + itens soltos
+      Promise.all([loadGroups(trimmed), inventoryStore.loadItems(1)])
+    } else {
+      inventoryStore.loadItems(1)
+    }
   }, 300)
 })
 

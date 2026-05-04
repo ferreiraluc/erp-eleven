@@ -101,13 +101,14 @@ def list_items(
     query = db.query(Item)
 
     if search:
-        like = f"%{search}%"
+        like = f"%{search.strip()}%"
         query = query.filter(
             or_(
                 Item.name.ilike(like),
                 Item.sku_internal.ilike(like),
                 Item.barcode.ilike(like),
                 Item.category.ilike(like),
+                Item.brand.ilike(like),
             )
         )
     if category:
@@ -220,16 +221,46 @@ def get_alerts_summary(
 
 @router.get("/groups", response_model=List[GroupResponse])
 def get_groups(
+    search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Returns all groups with their items from DB"""
-    items = (
-        db.query(Item)
-        .filter(Item.group_key.isnot(None), Item.is_active == True)
-        .order_by(Item.group_key, Item.name)
-        .all()
-    )
+    """Returns all groups with their items from DB, optionally filtered by search term"""
+    if search:
+        like = f"%{search.strip()}%"
+        # Find group_keys that match the search term directly OR contain matching items
+        matching_keys_query = (
+            db.query(Item.group_key)
+            .filter(
+                Item.group_key.isnot(None),
+                Item.is_active == True,
+                or_(
+                    Item.group_key.ilike(like),
+                    Item.name.ilike(like),
+                    Item.barcode.ilike(like),
+                    Item.brand.ilike(like),
+                    Item.category.ilike(like),
+                    Item.sku_internal.ilike(like),
+                ),
+            )
+            .distinct()
+        )
+        matching_keys = [r[0] for r in matching_keys_query.all()]
+        if not matching_keys:
+            return []
+        items = (
+            db.query(Item)
+            .filter(Item.group_key.in_(matching_keys), Item.is_active == True)
+            .order_by(Item.group_key, Item.name)
+            .all()
+        )
+    else:
+        items = (
+            db.query(Item)
+            .filter(Item.group_key.isnot(None), Item.is_active == True)
+            .order_by(Item.group_key, Item.name)
+            .all()
+        )
     groups_dict: dict = {}
     for item in items:
         key = item.group_key
