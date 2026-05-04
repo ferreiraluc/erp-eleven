@@ -308,14 +308,14 @@ def get_groups(
     return result
 
 
-@router.patch("/groups/{old_key}", status_code=200)
+@router.patch("/groups", status_code=200)
 def rename_group(
-    old_key: str,
     body: RenameGroupRequest,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Rename a group — updates group_key on all items in the group without touching item names"""
+    old_key = body.old_key.strip()
     new_key = body.new_key.strip()
     if not new_key:
         raise HTTPException(status_code=400, detail="O nome do grupo não pode ser vazio")

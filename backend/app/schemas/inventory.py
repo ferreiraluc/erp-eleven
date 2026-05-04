@@ -82,6 +82,7 @@ class GroupItemsRequest(BaseModel):
 
 
 class RenameGroupRequest(BaseModel):
+    old_key: str
     new_key: str
 
 
