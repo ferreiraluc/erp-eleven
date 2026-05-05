@@ -115,23 +115,20 @@ const credentials = ref({
 const handleLogin = async () => {
   try {
     await authStore.login(credentials.value)
-    router.push('/dashboard')
+    const lastRoute = localStorage.getItem('erp_last_route')
+    router.push(lastRoute || '/dashboard')
   } catch (error) {
     // Error handled by store
   }
 }
 
 onMounted(() => {
-  // Clear any previous errors
   authStore.clearError()
 
-  // DEBUG: Verifica se API base foi carregada corretamente
-  console.log('🌐 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
-
-  
-  // If already authenticated, redirect to dashboard
+  // If already authenticated, restore last visited page
   if (authStore.isAuthenticated) {
-    router.push('/dashboard')
+    const lastRoute = localStorage.getItem('erp_last_route')
+    router.push(lastRoute || '/dashboard')
   }
 })
 </script>

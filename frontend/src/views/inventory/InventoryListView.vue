@@ -151,7 +151,7 @@
     </div>
 
     <!-- Items list -->
-    <div v-else class="items-container" :class="`view-${viewMode}`">
+    <div v-else class="items-container" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
@@ -224,8 +224,10 @@
         <div
           v-else
           class="item-card"
+          :data-item-id="entry.item.id"
           :class="['alert-' + entry.item.alert_level, { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id) }]"
-          @click="selectionMode && toggleSelection(entry.item.id)"
+          @click="selectionMode && !isDragSelecting && toggleSelection(entry.item.id)"
+          @pointerdown="onItemPointerDown(entry.item.id, $event)"
         >
           <!-- Checkbox de seleção -->
           <div v-if="selectionMode" class="card-check" @click.stop="toggleSelection(entry.item.id)">
@@ -447,6 +449,7 @@ const editingGroupKey = ref<string | null>(null)
 const editingGroupName = ref('')
 const grouping = ref(false)
 const showBulkEdit = ref(false)
+const isDragSelecting = ref(false)
 const showSuggestionModal = ref(false)
 const suggestionModalItems = ref<InventoryItem[]>([])
 const suggestionModalName = ref('')
@@ -490,6 +493,50 @@ function toggleSelectionMode() {
   } else {
     loadSuggestions()
   }
+}
+
+function onItemPointerDown(itemId: string, e: PointerEvent) {
+  if (!selectionMode.value) return
+  // Don't trigger from buttons/links inside the card
+  if ((e.target as HTMLElement).closest('button, a')) return
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+
+  const startX = e.clientX
+  const startY = e.clientY
+  let dragged = false
+
+  const onMove = (ev: PointerEvent) => {
+    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 10) return
+    ev.preventDefault() // prevent scroll on touch while drag-selecting
+
+    if (!dragged) {
+      dragged = true
+      isDragSelecting.value = true
+      // Ensure the starting item is selected
+      if (!selectedIds.value.includes(itemId)) selectedIds.value.push(itemId)
+    }
+
+    const el = document.elementFromPoint(ev.clientX, ev.clientY)
+    const card = el?.closest('[data-item-id]') as HTMLElement | null
+    const id = card?.dataset.itemId
+    if (id && !selectedIds.value.includes(id)) selectedIds.value.push(id)
+  }
+
+  const onUp = () => {
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    isDragSelecting.value = false
+    if (dragged) {
+      // Suppress the click that fires right after pointerup so it doesn't toggle off
+      document.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        ev.preventDefault()
+      }, { capture: true, once: true })
+    }
+  }
+
+  document.addEventListener('pointermove', onMove, { passive: false })
+  document.addEventListener('pointerup', onUp)
 }
 
 function selectAll() {
@@ -1294,4 +1341,9 @@ onMounted(async () => {
 .toast-success { background: #065f46; color: white; }
 .toast-error   { background: #7f1d1d; color: white; }
 .toast-warning { background: #78350f; color: white; }
+
+/* ── Drag-to-select ──────────────────────────────────────────────────────────── */
+.items-container.drag-selecting { user-select: none; }
+.items-container.drag-selecting .item-card { cursor: crosshair; }
+.items-container.drag-selecting .item-card .item-actions { pointer-events: none; opacity: 0.4; }
 </style>

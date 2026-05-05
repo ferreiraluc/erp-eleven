@@ -26,7 +26,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user_data')
-      window.location.href = '/login'
+      localStorage.removeItem('erp_last_route')
+      // Use hash-based URL to work correctly with the hash router in production
+      window.location.replace('/#/login')
     }
     return Promise.reject(error)
   }

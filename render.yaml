@@ -30,6 +30,10 @@ services:
     name: erp-eleven-frontend
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: NODE_ENV
         value: production

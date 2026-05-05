@@ -79,16 +79,25 @@ const router = createRouter({
   ],
 })
 
+const LAST_ROUTE_KEY = 'erp_last_route'
+
+// Save last authenticated route so we can restore it after a full reload
+router.afterEach((to) => {
+  if (to.meta.requiresAuth) {
+    localStorage.setItem(LAST_ROUTE_KEY, to.fullPath)
+  }
+})
+
 // Navigation guards
 router.beforeEach(async (to, _from, next) => {
   try {
     const authStore = useAuthStore()
-    
+
     // Load stored auth if not already loaded
     if (!authStore.token) {
       authStore.loadStoredAuth()
     }
-    
+
     // Check if route requires authentication
     if (to.meta.requiresAuth) {
       if (authStore.isAuthenticated) {
@@ -100,7 +109,9 @@ router.beforeEach(async (to, _from, next) => {
     // Check if route requires guest (user not logged in)
     else if (to.meta.requiresGuest) {
       if (authStore.isAuthenticated) {
-        next('/dashboard')
+        // Restore the last visited page instead of always going to /dashboard
+        const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
+        next(lastRoute || '/dashboard')
       } else {
         next()
       }
