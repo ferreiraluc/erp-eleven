@@ -206,12 +206,61 @@
             <label>Modelo de grade</label>
             <div class="grade-presets">
               <button
-                v-for="preset in gradePresets"
+                v-for="preset in allPresets"
                 :key="preset.label"
                 @click="applyPreset(preset)"
                 :class="['preset-btn', { active: activePreset === preset.label }]"
                 type="button"
-              >{{ preset.label }}</button>
+              >
+                {{ preset.label }}
+                <span
+                  v-if="preset.custom"
+                  class="preset-remove"
+                  @click.stop="removeCustomPreset(preset.label)"
+                  title="Remover modelo"
+                >×</span>
+              </button>
+              <button
+                @click="showNewPreset = !showNewPreset"
+                :class="['preset-btn', 'preset-add-btn', { active: showNewPreset }]"
+                type="button"
+                title="Novo modelo de grade"
+              >+</button>
+            </div>
+
+            <!-- Inline new-preset form -->
+            <div v-if="showNewPreset" class="new-preset-form">
+              <input
+                v-model="newPresetName"
+                class="form-input"
+                placeholder="Nome do modelo (ex: Numeração EU)"
+                @keydown.enter.prevent="addNewPresetSize"
+              />
+              <div class="grade-chips" @click="$refs.newPresetInputRef?.focus()">
+                <span v-for="(s, i) in newPresetSizes" :key="i" class="grade-chip">
+                  {{ s }}
+                  <button @click.stop="newPresetSizes.splice(i, 1)" class="chip-x" type="button">×</button>
+                </span>
+                <input
+                  ref="newPresetInputRef"
+                  v-model="newPresetInput"
+                  @keydown.enter.prevent="addNewPresetSize"
+                  @keydown.188.prevent="addNewPresetSize"
+                  @keydown.space.prevent="addNewPresetSize"
+                  type="text"
+                  class="chip-input"
+                  placeholder="Ex: XS ↵"
+                />
+              </div>
+              <div class="new-preset-actions">
+                <button
+                  @click="saveCustomPreset"
+                  type="button"
+                  class="preset-btn preset-save-btn"
+                  :disabled="!newPresetName.trim() || newPresetSizes.length === 0"
+                >Salvar modelo</button>
+                <button @click="showNewPreset = false" type="button" class="preset-btn">Cancelar</button>
+              </div>
             </div>
           </div>
 
@@ -385,19 +434,64 @@ const activePreset = ref('')
 const customSizeInput = ref('')
 const gradeInitialStock = ref(0)
 const initialStock = ref(0)
-const stockLocation = ref<'loja' | 'deposito'>('loja')
+const stockLocation = ref<'loja' | 'deposito'>(
+  (localStorage.getItem('inv_stock_location') as 'loja' | 'deposito') || 'loja'
+)
 
-const gradePresets = [
-  { label: 'P → 2XL',       sizes: ['P', 'M', 'G', 'GG', 'XG', '2XL'] },
-  { label: '46 → 54',       sizes: ['46', '48', '50', '52', '54'] },
+watch(stockLocation, (val) => {
+  localStorage.setItem('inv_stock_location', val)
+})
+
+type GradePreset = { label: string; sizes: string[]; custom?: true }
+
+const gradePresets: GradePreset[] = [
+  { label: 'P → 2XL',        sizes: ['P', 'M', 'L', 'XL', '2XL'] },
+  { label: '46 → 54',        sizes: ['46', '48', '50', '52', '54'] },
   { label: 'Calçados 38–42', sizes: ['38', '39', '40', '41', '42'] },
   { label: 'Calçados 38–44', sizes: ['38', '39', '40', '41', '42', '43', '44'] },
-  { label: 'Calças 30–40',  sizes: ['30', '31', '32', '33', '34', '36', '38', '40'] },
+  { label: 'Calças 30–40',   sizes: ['30', '31', '32', '33', '34', '36', '38', '40'] },
 ]
 
-function applyPreset(preset: (typeof gradePresets)[0]) {
+const customPresets = ref<GradePreset[]>(
+  JSON.parse(localStorage.getItem('inv_grade_custom_presets') || '[]').map((p: GradePreset) => ({ ...p, custom: true as const }))
+)
+
+const allPresets = computed<GradePreset[]>(() => [...gradePresets, ...customPresets.value])
+
+// New-preset inline form state
+const showNewPreset = ref(false)
+const newPresetName = ref('')
+const newPresetSizes = ref<string[]>([])
+const newPresetInput = ref('')
+
+function applyPreset(preset: GradePreset) {
   gradeSizes.value = [...preset.sizes]
   activePreset.value = preset.label
+}
+
+function addNewPresetSize() {
+  const s = newPresetInput.value.trim().toUpperCase()
+  if (s && !newPresetSizes.value.includes(s)) newPresetSizes.value.push(s)
+  newPresetInput.value = ''
+}
+
+function saveCustomPreset() {
+  const name = newPresetName.value.trim()
+  if (!name || newPresetSizes.value.length === 0) return
+  const p: GradePreset = { label: name, sizes: [...newPresetSizes.value], custom: true }
+  customPresets.value.push(p)
+  localStorage.setItem('inv_grade_custom_presets', JSON.stringify(customPresets.value))
+  applyPreset(p)
+  showNewPreset.value = false
+  newPresetName.value = ''
+  newPresetSizes.value = []
+  newPresetInput.value = ''
+}
+
+function removeCustomPreset(label: string) {
+  customPresets.value = customPresets.value.filter(p => p.label !== label)
+  localStorage.setItem('inv_grade_custom_presets', JSON.stringify(customPresets.value))
+  if (activePreset.value === label) activePreset.value = ''
 }
 
 function removeGradeSize(index: number) {
@@ -804,6 +898,16 @@ function capturePhoto() {
 }
 .preset-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
 .preset-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+.preset-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.preset-add-btn { padding: 0.3rem 0.6rem; font-size: 1rem; font-weight: 700; line-height: 1; border-style: dashed; color: #6b7280; }
+.preset-add-btn:hover { border-color: #10b981; color: #10b981; background: #ecfdf5; }
+.preset-add-btn.active { background: #ecfdf5; border-color: #10b981; color: #059669; border-style: solid; }
+.preset-save-btn { background: #10b981; border-color: #10b981; color: white; }
+.preset-save-btn:hover { background: #059669; border-color: #059669; color: white; }
+.preset-remove { margin-left: 0.25rem; opacity: 0.55; font-size: 0.85rem; font-weight: 700; line-height: 1; }
+.preset-remove:hover { opacity: 1; }
+.new-preset-form { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
+.new-preset-actions { display: flex; gap: 0.5rem; }
 
 .size-count { font-size: 0.72rem; color: #6b7280; font-weight: 400; }
 
