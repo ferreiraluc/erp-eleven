@@ -156,44 +156,39 @@
           <!-- Layout Mobile: Card Dropdown -->
           <div class="mobile-dropdown-card">
               <!-- Cabeçalho sempre visível -->
-              <div 
+              <div
                 class="mobile-card-header"
                 @click="toggleCard(rastreamento.id)"
               >
-                <div class="mobile-header-top">
-                  <div class="mobile-name-section">
-                    <span class="mobile-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
-                  </div>
+                <!-- Linha 1: Nome + Badge + Chevron -->
+                <div class="mch-top">
+                  <span class="mch-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
+                  <span class="status-badge-inline mch-badge" :class="getStatusBadgeClass(rastreamento.status)">{{ getStatusText(rastreamento.status) }}</span>
                   <div class="mobile-expand-icon">
-                    <svg 
-                      width="20" 
-                      height="20" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                      :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
                 </div>
-                
-                <div class="mobile-header-main">
-                  <div class="mobile-code-section">
-                    <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
-                    <button
-                      @click.stop="copiarCodigo(rastreamento)"
-                      class="mobile-copy-btn"
-                      title="Copiar"
-                    >
-                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <span class="status-badge-inline" :class="getStatusBadgeClass(rastreamento.status)">
-                    {{ getStatusText(rastreamento.status) }}
-                  </span>
+                <!-- Linha 2: Código + Serviço + Copiar -->
+                <div class="mch-code-row">
+                  <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
+                  <span v-if="getBadgeText(rastreamento.rastreio_info)" class="mch-service">{{ getBadgeText(rastreamento.rastreio_info) }}</span>
+                  <button @click.stop="copiarCodigo(rastreamento)" class="mobile-copy-btn" title="Copiar">
+                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <!-- Linha 3: Descrição sutil -->
+                <p v-if="rastreamento.descricao" class="mch-desc">{{ rastreamento.descricao }}</p>
+                <!-- Barra de progresso sutil -->
+                <div class="mch-progress">
+                  <div
+                    class="mch-progress-fill"
+                    :class="'mpf-' + rastreamento.status.toLowerCase().replace('_', '-')"
+                    :style="{ width: (rastreamento.status === 'ERRO' || rastreamento.status === 'NAO_ENCONTRADO') ? '5%' : ((trackingProgressStep(rastreamento) / 4) * 100) + '%' }"
+                  ></div>
                 </div>
               </div>
               
@@ -1742,36 +1737,112 @@ onMounted(() => {
   }
 
 
-  /* Mobile — cards compactos estilo tabela, largura total */
+  /* Mobile — cards com borda esquerda de acento por status */
   .mobile-dropdown-card {
     background: white;
     border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    border-left-width: 3px;
+    border-left-color: #d1d5db;
+    border-radius: 0.5rem;
     margin: 0 0 3px 0;
     overflow: hidden;
-    box-shadow: none;
-    transition: border-color 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: border-color 0.15s, box-shadow 0.15s;
     width: 100%;
   }
 
   .mobile-dropdown-card:hover {
-    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }
 
   /* Cabeçalho compacto */
   .mobile-card-header {
     display: flex;
     flex-direction: column;
-    padding: 7px 10px;
-    background: #f8fafc;
+    padding: 6px 9px 5px;
     cursor: pointer;
     transition: background 0.15s;
-    gap: 4px;
+    gap: 3px;
   }
 
   .mobile-card-header:hover {
-    background: #f1f5f9;
+    background: rgba(0,0,0,0.015);
   }
+
+  /* Linha 1: nome + badge + chevron */
+  .mch-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mch-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1e293b;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
+  .mch-badge {
+    font-size: 7px !important;
+    padding: 0.1rem 0.38rem !important;
+    flex-shrink: 0;
+  }
+
+  /* Linha 2: código + serviço + copiar */
+  .mch-code-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mch-service {
+    font-size: 7.5px;
+    font-weight: 700;
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 1px 4px;
+    border-radius: 99px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Linha 3: descrição */
+  .mch-desc {
+    margin: 0;
+    font-size: 9px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+    line-height: 1.2;
+  }
+
+  /* Barra de progresso sutil */
+  .mch-progress {
+    height: 2px;
+    background: rgba(0,0,0,0.07);
+    border-radius: 1px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .mch-progress-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.6s ease;
+    min-width: 4px;
+  }
+
+  .mpf-em-transito { background: #3b82f6; }
+  .mpf-entregue    { background: #10b981; }
+  .mpf-pendente    { background: #f59e0b; }
+  .mpf-erro, .mpf-nao-encontrado { background: #ef4444; }
 
   .mobile-header-top {
     display: flex;
@@ -2174,42 +2245,47 @@ onMounted(() => {
   border: none;
 }
 
-/* Cores para o container completo do mobile (cabeçalho + dropdown) - APENAS NO MOBILE */
+/* Acento lateral colorido por status — apenas no mobile */
 @media (max-width: 1100px) {
-  .mobile-rastreamento-row-status-entregue {
-    background-color: #dcfce7 !important; /* Verde claro */
-    border: 1px solid #16a34a !important;
-    border-radius: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .mobile-rastreamento-row-status-em-transito {
-    background-color: #dbeafe !important; /* Azul claro */
-    border: 1px solid #2563eb !important;
-    border-radius: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .mobile-rastreamento-row-status-pendente {
-    background-color: #fef3c7 !important; /* Amarelo/laranja */
-    border: 1px solid #d97706 !important;
-    border-radius: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
+  /* Outer row: sem fundo/borda própria */
+  .mobile-rastreamento-row-status-entregue,
+  .mobile-rastreamento-row-status-em-transito,
+  .mobile-rastreamento-row-status-pendente,
   .mobile-rastreamento-row-status-erro,
   .mobile-rastreamento-row-status-nao-encontrado {
-    background-color: #fecaca !important; /* Vermelho claro */
-    border: 1px solid #dc2626 !important;
-    border-radius: 0.75rem;
-    margin-bottom: 0.5rem;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+
+  /* A cor aparece como acento lateral no card filho */
+  .mobile-rastreamento-row-status-entregue .mobile-dropdown-card {
+    border-left-color: #10b981;
+    background: #f5fdf8;
+  }
+
+  .mobile-rastreamento-row-status-em-transito .mobile-dropdown-card {
+    border-left-color: #3b82f6;
+    background: #f8fbff;
+  }
+
+  .mobile-rastreamento-row-status-pendente .mobile-dropdown-card {
+    border-left-color: #f59e0b;
+    background: #fffdf5;
+  }
+
+  .mobile-rastreamento-row-status-erro .mobile-dropdown-card,
+  .mobile-rastreamento-row-status-nao-encontrado .mobile-dropdown-card {
+    border-left-color: #ef4444;
+    background: #fff8f8;
   }
 }
 
-/* Mobile: 5% compact over iPad base */
+/* Mobile pequeno: leve compactação adicional */
 @media (max-width: 768px) {
-  .mobile-card-header { padding: 6px 9px; }
-  .mobile-name { font-size: 10.5px; }
+  .mobile-card-header { padding: 5px 8px 4px; }
+  .mch-name { font-size: 10.5px; }
   .mobile-code { font-size: 9px; max-width: 130px; padding: 2px 5px; }
   .mobile-card-inner { padding: 7px 9px; }
   .mobile-content-label { font-size: 9.5px; }
