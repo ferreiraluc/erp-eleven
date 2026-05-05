@@ -343,21 +343,26 @@ def get_suggestions(
         .order_by(Item.name)
         .all()
     )
+    # key = (base_name, normalized_color) so different colors stay as separate groups
     map_: dict = {}
     for item in items:
-        base = re.sub(r'\s+(PP|P|M|G|GG|XG|XGG|XXG|\d+)\s*$', '', item.name, flags=re.IGNORECASE).strip()
+        base = re.sub(r'\s+(PP|P|M|G|GG|XG|XGG|XXG|XXX|XXXG|\d+)\s*$', '', item.name, flags=re.IGNORECASE).strip()
         if len(base) < 4:
             continue
-        if base not in map_:
-            map_[base] = []
+        color_key = (item.color or '').strip().upper()
+        # Suggestion name shown to user: base + color if color is in the separate field
+        suggestion_name = f"{base} {item.color.strip()}".strip() if item.color and item.color.strip() else base
+        group_key = (base, color_key)
+        if group_key not in map_:
+            map_[group_key] = {'name': suggestion_name, 'items': []}
         resp = ItemResponse.model_validate(item)
         resp.alert_level = _compute_alert_level(item)
-        map_[base].append(resp)
+        map_[group_key]['items'].append(resp)
 
     return [
-        SuggestionResponse(name=name, items=item_list)
-        for name, item_list in sorted(map_.items(), key=lambda x: len(x[1]), reverse=True)
-        if len(item_list) >= 2
+        SuggestionResponse(name=v['name'], items=v['items'])
+        for v in sorted(map_.values(), key=lambda x: len(x['items']), reverse=True)
+        if len(v['items']) >= 2
     ]
 
 

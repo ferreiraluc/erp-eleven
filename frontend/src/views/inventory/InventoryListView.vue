@@ -346,6 +346,15 @@
       @saved="onBulkEditSaved"
     />
 
+    <GroupingSuggestionModal
+      v-if="showSuggestionModal"
+      :items="suggestionModalItems"
+      :suggested-name="suggestionModalName"
+      :existing-group-keys="existingGroupKeys"
+      @close="showSuggestionModal = false"
+      @grouped="onSuggestionGrouped"
+    />
+
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
       <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit" class="selection-bar">
@@ -398,6 +407,7 @@ import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
 import ImportModal from '@/components/inventory/ImportModal.vue'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
+import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
@@ -437,6 +447,9 @@ const editingGroupKey = ref<string | null>(null)
 const editingGroupName = ref('')
 const grouping = ref(false)
 const showBulkEdit = ref(false)
+const showSuggestionModal = ref(false)
+const suggestionModalItems = ref<InventoryItem[]>([])
+const suggestionModalName = ref('')
 const scrollSentinel = ref<HTMLElement | null>(null)
 const confirmExitId = ref<string | null>(null)
 let scrollObserver: IntersectionObserver | null = null
@@ -738,9 +751,17 @@ function clearAdvancedFilters() {
 const suggestedGroups = computed(() => backendSuggestions.value)
 
 function selectSuggestedGroup(sg: SuggestionResponse) {
-  selectedIds.value = sg.items.map(i => i.id)
-  groupNameInput.value = sg.name
-  showGroupModal.value = true
+  suggestionModalItems.value = sg.items as InventoryItem[]
+  suggestionModalName.value = sg.name
+  showSuggestionModal.value = true
+}
+
+async function onSuggestionGrouped(groupKey: string, count: number) {
+  showSuggestionModal.value = false
+  showToast(`${count} itens agrupados como "${groupKey}"`, 'success')
+  groupMode.value = true
+  localStorage.setItem('inv_group_mode', 'true')
+  await Promise.all([inventoryStore.loadItems(1), loadGroups()])
 }
 
 function loadMore() {
@@ -790,12 +811,12 @@ function onMovementSaved() {
   inventoryStore.loadItems(1)
 }
 
-function onBulkEditSaved() {
+async function onBulkEditSaved() {
   showBulkEdit.value = false
   selectionMode.value = false
   selectedIds.value = []
   showToast('Itens atualizados com sucesso', 'success')
-  inventoryStore.loadItems(1)
+  await Promise.all([inventoryStore.loadItems(1), loadGroups(inventoryStore.filters.search)])
 }
 
 function alertLabel(level: string | undefined) {
