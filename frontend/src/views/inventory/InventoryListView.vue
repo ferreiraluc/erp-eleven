@@ -382,7 +382,7 @@
 
     <BulkEditModal
       v-if="showBulkEdit"
-      :items="inventoryStore.items.filter(i => selectedIds.includes(i.id))"
+      :items="selectedIds.map(id => allVisibleItems.get(id)).filter(Boolean) as InventoryItem[]"
       :distinct-brands="distinctBrands"
       :distinct-categories="distinctCategories"
       @close="showBulkEdit = false"
@@ -497,6 +497,17 @@ const filterChipsRef = ref<HTMLElement | null>(null)
 const backendGroups = ref<GroupResponse[]>([])
 const backendSuggestions = ref<SuggestionResponse[]>([])
 const hasGroups = computed(() => backendGroups.value.length > 0 || inventoryStore.items.some(i => i.group_key))
+
+// All items visible in the current view — combines ungrouped store items + items from expanded groups.
+// Needed so BulkEditModal can find grouped items (which are NOT in inventoryStore.items in group mode).
+const allVisibleItems = computed(() => {
+  const map = new Map<string, InventoryItem>()
+  for (const item of inventoryStore.items) map.set(item.id, item)
+  for (const g of backendGroups.value) {
+    for (const item of g.items as InventoryItem[]) map.set(item.id, item)
+  }
+  return map
+})
 const imageModalSrc = ref<string | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
