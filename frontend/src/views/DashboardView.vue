@@ -1599,7 +1599,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 1024px) {

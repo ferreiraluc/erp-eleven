@@ -395,6 +395,8 @@ onMounted(() => {
   background-color: white;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .rastreamento-card:hover {
