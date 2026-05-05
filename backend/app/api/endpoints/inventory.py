@@ -561,20 +561,35 @@ def batch_edit_items(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Bulk edit shared fields (brand, category, image) and per-item fields"""
+    """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
     items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found")
 
+    # Validate stock reasons
+    if request.stock_delta and request.stock_delta != 0 and not request.stock_reason:
+        raise HTTPException(status_code=422, detail="Motivo é obrigatório para ajuste de estoque compartilhado")
+    for entry in (request.sizes or []):
+        if entry.stock_delta and entry.stock_delta != 0 and not entry.stock_reason:
+            raise HTTPException(status_code=422, detail=f"Motivo é obrigatório para ajuste de estoque do item {entry.id}")
+
     per_item_map = {str(s.id): s for s in (request.sizes or [])}
 
     for item in items:
+        # Shared fields
         if request.brand is not None:
             item.brand = request.brand
         if request.category is not None:
             item.category = request.category
         if request.image_data is not None:
             item.image_data = request.image_data
+        if request.cost_price is not None:
+            item.cost_price = request.cost_price
+        if request.sale_price is not None:
+            item.sale_price = request.sale_price
+        if request.currency is not None:
+            item.currency = request.currency
+        # Per-item fields
         entry = per_item_map.get(str(item.id))
         if entry:
             if entry.size is not None:
@@ -585,8 +600,41 @@ def batch_edit_items(
                 item.color = entry.color
             if entry.barcode is not None:
                 item.barcode = entry.barcode
+            if entry.cost_price is not None:
+                item.cost_price = entry.cost_price
+            if entry.sale_price is not None:
+                item.sale_price = entry.sale_price
 
     db.commit()
+
+    # Stock adjustments — run after main commit so item state is persisted
+    has_stock_changes = False
+    for item in items:
+        entry = per_item_map.get(str(item.id))
+        # Per-item delta takes precedence over shared delta
+        if entry and entry.stock_delta is not None and entry.stock_delta != 0:
+            delta = entry.stock_delta
+            reason = entry.stock_reason or "Ajuste massivo"
+        elif request.stock_delta is not None and request.stock_delta != 0:
+            delta = request.stock_delta
+            reason = request.stock_reason or "Ajuste massivo"
+        else:
+            continue
+
+        movement_type = "entry" if delta > 0 else "exit"
+        create_movement(
+            db=db,
+            item_id=item.id,
+            movement_type=movement_type,
+            quantity=abs(delta),
+            reason=reason,
+            created_by=current_user.id,
+        )
+        has_stock_changes = True
+
+    if has_stock_changes:
+        db.commit()
+
     return {"message": f"Updated {len(items)} items", "count": len(items)}
 
 

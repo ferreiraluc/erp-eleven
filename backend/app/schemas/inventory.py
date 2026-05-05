@@ -96,6 +96,10 @@ class BatchSizeEntry(BaseModel):
     name: Optional[str] = None
     color: Optional[str] = None
     barcode: Optional[str] = None
+    cost_price: Optional[Decimal] = None
+    sale_price: Optional[Decimal] = None
+    stock_delta: Optional[int] = None    # positive=entry, negative=exit
+    stock_reason: Optional[str] = None  # required if stock_delta != 0
 
 
 class BatchEditRequest(BaseModel):
@@ -104,6 +108,11 @@ class BatchEditRequest(BaseModel):
     brand: Optional[str] = None
     category: Optional[str] = None
     image_data: Optional[str] = None
+    cost_price: Optional[Decimal] = None
+    sale_price: Optional[Decimal] = None
+    currency: Optional[str] = None
+    stock_delta: Optional[int] = None    # applied to all items without per-item override
+    stock_reason: Optional[str] = None
     # Per-item fields (optional)
     sizes: Optional[List[BatchSizeEntry]] = None
 
