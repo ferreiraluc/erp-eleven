@@ -210,153 +210,161 @@
 
       <!-- Dashboard Content -->
       <div v-else class="dashboard-content">
-        <!-- Quick Actions Grid -->
-        <div class="actions-grid">
-          <!-- Quick Actions - Main Card -->
-          <div class="action-card quick-actions-card">
-            <h3 class="card-title">{{ $t('dashboard.quickActions') }}</h3>
-            <div class="quick-actions">
-              <button class="action-button primary" @click="navigateToNewSale">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <div class="action-content">
-                  <span class="action-title">Nova Venda</span>
-                  <span class="action-subtitle">Registrar venda</span>
-                </div>
-              </button>
 
-              <button class="action-button orange" @click="navigateToInventory">
-                <div class="action-icon">
+        <!-- Row 1: Large Inventory Card + Rastreamento -->
+        <div class="main-top-grid">
+
+          <!-- Inventory Card (large) -->
+          <div class="inv-card">
+            <div class="inv-card-header">
+              <div class="inv-header-left">
+                <div class="inv-icon-wrap">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
-                <div class="action-content">
-                  <span class="action-title">Estoque</span>
-                  <span class="action-subtitle">Gerenciar itens</span>
+                <div>
+                  <h3 class="inv-title">Estoque</h3>
+                  <p class="inv-subtitle">{{ stockAlerts?.total_active_items || 0 }} itens ativos · {{ stockAlerts?.group_count || 0 }} grades</p>
                 </div>
-              </button>
+              </div>
+              <router-link to="/inventory" class="inv-link-all">Ver tudo →</router-link>
+            </div>
 
-              <button class="action-button green" @click="navigateToVendors">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div class="action-content">
-                  <span class="action-title">Gestionar Vendedores</span>
-                  <span class="action-subtitle">Comissões e metas</span>
-                </div>
-              </button>
+            <!-- Alert stats -->
+            <div class="inv-stats-row">
+              <router-link to="/inventory?status=out_of_stock" class="inv-stat inv-stat-red">
+                <span class="inv-stat-count">{{ stockAlerts?.out_of_stock_count || 0 }}</span>
+                <span class="inv-stat-label">Sem estoque</span>
+              </router-link>
+              <router-link to="/inventory?status=low_stock" class="inv-stat inv-stat-yellow">
+                <span class="inv-stat-count">{{ stockAlerts?.low_stock_count || 0 }}</span>
+                <span class="inv-stat-label">Estoque baixo</span>
+              </router-link>
+              <router-link to="/inventory?status=overstocked" class="inv-stat inv-stat-purple">
+                <span class="inv-stat-count">{{ stockAlerts?.overstocked_count || 0 }}</span>
+                <span class="inv-stat-label">Em excesso</span>
+              </router-link>
+              <router-link to="/inventory" class="inv-stat inv-stat-blue">
+                <span class="inv-stat-count">{{ stockAlerts?.grouped_items_count || 0 }}</span>
+                <span class="inv-stat-label">Em grades</span>
+              </router-link>
+            </div>
 
-              <button class="action-button purple" @click="navigateToPedidos">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                </div>
-                <div class="action-content">
-                  <span class="action-title">Ver Pedidos</span>
-                  <span class="action-subtitle">Gerenciar pedidos</span>
-                </div>
-              </button>
-
-              <button class="action-button teal" @click="navigateToRastreamento">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <div class="action-content">
-                  <span class="action-title">Rastreamento</span>
-                  <span class="action-subtitle">Acompanhar envios</span>
-                </div>
-              </button>
-
-              <button class="action-button indigo" @click="navigateToClientes">
-                <div class="action-icon">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div class="action-content">
-                  <span class="action-title">Clientes</span>
-                  <span class="action-subtitle">Cadastro e histórico</span>
-                </div>
-              </button>
+            <!-- Recent products list -->
+            <div class="inv-products-section">
+              <p class="inv-section-label">Últimos atualizados</p>
+              <div v-if="recentInventoryItems.length" class="inv-products-list">
+                <router-link
+                  v-for="item in recentInventoryItems.slice(0, 8)"
+                  :key="item.id"
+                  to="/inventory"
+                  class="inv-product-row"
+                >
+                  <div class="inv-product-alert-dot" :class="`adot-${item.alert_level || 'ok'}`"></div>
+                  <div v-if="item.image_data" class="inv-product-thumb">
+                    <img :src="item.image_data" :alt="item.name" />
+                  </div>
+                  <div v-else class="inv-product-thumb inv-product-no-img">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                  </div>
+                  <div class="inv-product-info">
+                    <span class="inv-product-name">{{ item.name }}</span>
+                    <span class="inv-product-meta">{{ [item.category, item.size, item.color].filter(Boolean).join(' · ') || item.unit }}</span>
+                  </div>
+                  <div class="inv-product-stock" :class="`slevel-${item.alert_level || 'ok'}`">
+                    <span class="inv-stock-num">{{ item.current_stock }}</span>
+                    <span class="inv-stock-unit">{{ item.unit }}</span>
+                  </div>
+                </router-link>
+              </div>
+              <div v-else class="inv-no-items">
+                <p>Nenhum produto ainda</p>
+                <router-link to="/inventory" class="inv-no-items-link">Ir para estoque →</router-link>
+              </div>
             </div>
           </div>
 
           <!-- Rastreamento Card -->
           <RastreamentoCard />
-
-          <!-- Stock Card -->
-          <div v-if="stockAlerts" class="action-card stock-alerts-card">
-            <div class="stock-card-header">
-              <h3 class="card-title">Estoque</h3>
-              <router-link to="/inventory" class="view-inventory-link">Ver tudo →</router-link>
-            </div>
-            <!-- 3 mini squares -->
-            <div class="stock-mini-stats">
-              <router-link to="/inventory?status=out_of_stock" class="mini-stat mini-red">
-                <span class="mini-count">{{ stockAlerts.out_of_stock_count }}</span>
-                <span class="mini-label">Sem estoque</span>
-              </router-link>
-              <router-link to="/inventory?status=low_stock" class="mini-stat mini-yellow">
-                <span class="mini-count">{{ stockAlerts.low_stock_count }}</span>
-                <span class="mini-label">Estoque baixo</span>
-              </router-link>
-              <router-link to="/inventory" class="mini-stat mini-gray">
-                <span class="mini-count">{{ stockAlerts.total_active_items }}</span>
-                <span class="mini-label">Ativos</span>
-              </router-link>
-            </div>
-            <!-- Recent items list -->
-            <div v-if="recentInventoryItems.length" class="recent-inv-list">
-              <p class="recent-inv-title">Últimos atualizados</p>
-              <router-link
-                v-for="item in recentInventoryItems"
-                :key="item.id"
-                to="/inventory"
-                class="recent-inv-row"
-              >
-                <span class="recent-inv-dot" :class="`dot-${item.alert_level || 'ok'}`"></span>
-                <span class="recent-inv-name">{{ item.name }}</span>
-                <span class="recent-inv-stock">{{ item.current_stock }} {{ item.unit }}</span>
-              </router-link>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Calendar and Sales Grid -->
-        <div class="calendar-sales-grid">
+        <!-- Row 2: Quick Actions compact strip -->
+        <div class="quick-strip-card">
+          <p class="quick-strip-title">Ações Rápidas</p>
+          <div class="quick-strip">
+            <button class="quick-btn q-primary" @click="navigateToNewSale">
+              <div class="quick-btn-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <span>Nova Venda</span>
+            </button>
+            <button class="quick-btn q-orange" @click="navigateToInventory">
+              <div class="quick-btn-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <span>Estoque</span>
+            </button>
+            <button class="quick-btn q-green" @click="navigateToVendors">
+              <div class="quick-btn-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <span>Vendedores</span>
+            </button>
+            <button class="quick-btn q-purple" @click="navigateToPedidos">
+              <div class="quick-btn-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <span>Pedidos</span>
+            </button>
+            <button class="quick-btn q-teal" @click="navigateToRastreamento">
+              <div class="quick-btn-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <span>Rastreamento</span>
+            </button>
+            <button class="quick-btn q-indigo" @click="navigateToClientes">
+              <div class="quick-btn-icon">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <span>Clientes</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Row 3: Folgas + Status + Exchange (no gap) -->
+        <div class="bottom-grid">
+
           <!-- Folgas Card -->
           <FolgasCard />
 
-        </div>
-
-        <!-- Status and Exchange Rate Grid (1x1) -->
-        <div class="status-exchange-grid">
           <!-- System Status Card -->
-          <div class="activity-card-status">
+          <div class="action-card status-card-inline">
             <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
             <div class="status-grid">
               <div class="status-box">
                 <div :class="['status-icon', apiStatus]">
-                  <!-- online: check mark -->
                   <svg v-if="apiStatus === 'online'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7"></path>
                   </svg>
-                  <!-- offline: X -->
                   <svg v-else-if="apiStatus === 'offline'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
-                  <!-- checking: dots -->
                   <svg v-else fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01"></path>
                   </svg>
@@ -403,8 +411,8 @@
             </div>
           </div>
 
-          <!-- Exchange Rate Card (Compact) -->
-          <div class="activity-card-status exchange-rate-compact" @click="navigateToExchangeRates" style="cursor: pointer;">
+          <!-- Exchange Rate Card -->
+          <div class="action-card exchange-rate-compact" @click="navigateToExchangeRates" style="cursor: pointer;">
             <div class="card-header-compact">
               <h3 class="card-title">Taxa de Câmbio</h3>
               <div class="card-actions-compact">
@@ -420,20 +428,19 @@
                 </button>
               </div>
             </div>
-            <div class="exchange-rate-compact">
-              <div class="rate-grid-compact">
-                <div class="rate-item-compact">
-                  <span class="rate-label-compact">USD → G$</span>
-                  <span class="rate-value-compact">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '6400' }}</span>
-                </div>
-                <div class="rate-item-compact">
-                  <span class="rate-label-compact">USD → R$</span>
-                  <span class="rate-value-compact">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.45' }}</span>
-                </div>
+            <div class="rate-grid-compact">
+              <div class="rate-item-compact">
+                <span class="rate-label-compact">USD → G$</span>
+                <span class="rate-value-compact">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '6400' }}</span>
               </div>
-              <p class="rate-updated-compact">Atualizado: {{ formatDate(new Date().toISOString()) }}</p>
+              <div class="rate-item-compact">
+                <span class="rate-label-compact">USD → R$</span>
+                <span class="rate-value-compact">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.45' }}</span>
+              </div>
             </div>
+            <p class="rate-updated-compact">Atualizado: {{ formatDate(new Date().toISOString()) }}</p>
           </div>
+
         </div>
       </div>
     </main>
@@ -897,89 +904,283 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Stock Card */
-.stock-alerts-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+/* ── Inventory Card (large dashboard card) ───────────────────────────── */
+.inv-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
 }
-.stock-card-header {
+
+.inv-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 1.125rem 1.25rem 0.75rem;
 }
-.view-inventory-link {
-  font-size: 0.78rem;
-  color: #3b82f6;
-  text-decoration: none;
-}
-.view-inventory-link:hover { text-decoration: underline; }
 
-/* 3 mini squares */
-.stock-mini-stats {
+.inv-header-left {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
 }
-.mini-stat {
-  flex: 1;
+
+.inv-icon-wrap {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-radius: 0.625rem;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.25rem;
-  border-radius: 8px;
-  text-decoration: none;
-  gap: 0.2rem;
-  transition: opacity 0.15s;
+  color: white;
+  flex-shrink: 0;
 }
-.mini-stat:hover { opacity: 0.85; }
-.mini-red   { background: #fee2e2; }
-.mini-yellow { background: #fef3c7; }
-.mini-gray  { background: #f3f4f6; }
-.mini-count { font-size: 1.1rem; font-weight: 700; color: #111827; line-height: 1; }
-.mini-label { font-size: 0.62rem; color: #6b7280; text-align: center; line-height: 1.2; }
+.inv-icon-wrap svg { width: 1.25rem; height: 1.25rem; }
 
-/* Recent items */
-.recent-inv-list {
+.inv-title { margin: 0; font-size: 1.125rem; font-weight: 700; color: #111827; line-height: 1.2; }
+.inv-subtitle { margin: 0; font-size: 0.72rem; color: #9ca3af; margin-top: 0.1rem; }
+
+.inv-link-all {
+  font-size: 0.8rem;
+  color: #f97316;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0.25rem 0.625rem;
+  background: #fff7ed;
+  border-radius: 0.375rem;
+  transition: background 0.15s;
+}
+.inv-link-all:hover { background: #fed7aa; }
+
+/* Alert stats row */
+.inv-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  padding: 0 1.25rem 1rem;
+}
+
+.inv-stat {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  border-top: 1px solid #f3f4f6;
-  padding-top: 0.5rem;
+  align-items: center;
+  padding: 0.75rem 0.375rem;
+  border-radius: 0.625rem;
+  text-decoration: none;
+  gap: 0.25rem;
+  transition: transform 0.15s, opacity 0.15s;
 }
-.recent-inv-title {
-  font-size: 0.72rem;
-  font-weight: 600;
+.inv-stat:hover { transform: translateY(-2px); opacity: 0.88; }
+
+.inv-stat-red    { background: #fef2f2; }
+.inv-stat-yellow { background: #fffbeb; }
+.inv-stat-purple { background: #faf5ff; }
+.inv-stat-blue   { background: #eff6ff; }
+
+.inv-stat-count  { font-size: 1.5rem; font-weight: 800; color: #111827; line-height: 1; }
+.inv-stat-red .inv-stat-count    { color: #dc2626; }
+.inv-stat-yellow .inv-stat-count { color: #d97706; }
+.inv-stat-purple .inv-stat-count { color: #7c3aed; }
+.inv-stat-blue .inv-stat-count   { color: #2563eb; }
+.inv-stat-label  { font-size: 0.6rem; color: #6b7280; text-align: center; line-height: 1.3; font-weight: 500; }
+
+/* Products list */
+.inv-products-section {
+  border-top: 1px solid #f3f4f6;
+  padding: 0.875rem 1.25rem 1.125rem;
+}
+
+.inv-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
   color: #9ca3af;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 0.35rem;
+  letter-spacing: 0.07em;
+  margin: 0 0 0.5rem;
 }
-.recent-inv-row {
+
+.inv-products-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-product-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid #f9fafb;
+  gap: 0.625rem;
+  padding: 0.4rem 0.375rem;
+  border-radius: 0.5rem;
   text-decoration: none;
   transition: background 0.1s;
 }
-.recent-inv-row:last-child { border-bottom: none; }
-.recent-inv-row:hover { background: #f9fafb; border-radius: 4px; }
-.recent-inv-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+.inv-product-row:hover { background: #f9fafb; }
+
+.inv-product-alert-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
 }
-.dot-out    { background: #ef4444; }
-.dot-low    { background: #f59e0b; }
-.dot-high   { background: #8b5cf6; }
-.dot-ok     { background: #10b981; }
-.dot-inactive { background: #9ca3af; }
-.recent-inv-name {
-  flex: 1; font-size: 0.78rem; color: #374151;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.adot-out      { background: #ef4444; }
+.adot-low      { background: #f59e0b; }
+.adot-high     { background: #8b5cf6; }
+.adot-ok       { background: #10b981; }
+.adot-inactive { background: #d1d5db; }
+
+.inv-product-thumb {
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid #f3f4f6;
 }
-.recent-inv-stock {
-  font-size: 0.72rem; font-weight: 600; color: #6b7280; flex-shrink: 0;
+.inv-product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.inv-product-no-img {
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d1d5db;
+}
+.inv-product-no-img svg { width: 1rem; height: 1rem; }
+
+.inv-product-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.inv-product-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.inv-product-meta {
+  font-size: 0.67rem;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.inv-product-stock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 0;
+}
+.inv-stock-num { font-size: 0.875rem; font-weight: 700; line-height: 1.2; color: #374151; }
+.slevel-out  .inv-stock-num  { color: #ef4444; }
+.slevel-low  .inv-stock-num  { color: #d97706; }
+.slevel-high .inv-stock-num  { color: #7c3aed; }
+.slevel-ok   .inv-stock-num  { color: #059669; }
+.inv-stock-unit { font-size: 0.6rem; color: #9ca3af; }
+
+.inv-no-items {
+  text-align: center;
+  padding: 1.5rem 0;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+.inv-no-items-link {
+  display: inline-block;
+  margin-top: 0.375rem;
+  color: #f97316;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.78rem;
+}
+.inv-no-items-link:hover { text-decoration: underline; }
+
+/* ── Quick Actions Strip ─────────────────────────────────────────────── */
+.quick-strip-card {
+  background: white;
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border: 1px solid #e5e7eb;
+  padding: 0.875rem 1.25rem 1rem;
+}
+
+.quick-strip-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 0.625rem;
+}
+
+.quick-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+.quick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.625rem 0.375rem;
+  border: none;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  gap: 0.375rem;
+  transition: all 0.15s;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.quick-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+.quick-btn-icon {
+  width: 2.125rem;
+  height: 2.125rem;
+  background: rgba(0,0,0,0.07);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quick-btn-icon svg { width: 1.1rem; height: 1.1rem; stroke: currentColor; }
+
+.q-primary { background: #eff6ff; color: #2563eb; }
+.q-primary:hover { background: #dbeafe; }
+.q-orange  { background: #fff7ed; color: #ea580c; }
+.q-orange:hover  { background: #fed7aa; }
+.q-green   { background: #f0fdf4; color: #16a34a; }
+.q-green:hover   { background: #dcfce7; }
+.q-purple  { background: #faf5ff; color: #9333ea; }
+.q-purple:hover  { background: #f3e8ff; }
+.q-teal    { background: #f0fdfa; color: #0d9488; }
+.q-teal:hover    { background: #ccfbf1; }
+.q-indigo  { background: #eef2ff; color: #4338ca; }
+.q-indigo:hover  { background: #e0e7ff; }
+
+/* ── Bottom Grid (merged Folgas + Status + Exchange) ─────────────────── */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.status-card-inline {
+  /* inherits .action-card */
+}
+
+.status-card-inline .status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .dashboard {
@@ -1393,18 +1594,23 @@ onUnmounted(() => {
 }
 
 
-.actions-grid {
+/* ── Main top grid (Inventory + Rastreamento) ────────────────────────── */
+.main-top-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  grid-template-rows: auto;
+  grid-template-columns: 1.6fr 1fr;
   gap: 1rem;
   align-items: start;
 }
 
 @media (max-width: 1024px) {
-  .actions-grid {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+  .main-top-grid {
+    grid-template-columns: 1fr;
+  }
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .quick-strip {
+    grid-template-columns: repeat(3, 1fr);
   }
   /* Header: single compact row for iPad/tablet */
   .header-content { padding: 0.45rem 0.75rem; flex-direction: row; align-items: center; }
@@ -1445,13 +1651,10 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 
-/* Compact square cards */
+/* activity-card-status — now used inside bottom-grid, auto sizing */
 .activity-card-status {
   width: 100%;
-  max-width: 200px;
-  height: 200px;
   padding: 0.75rem;
-  justify-self: center;
   display: flex;
   flex-direction: column;
 }
@@ -1532,13 +1735,7 @@ onUnmounted(() => {
 
 /* Exchange Rate compact styles - REMOVED - Using new exchange-stats-card design */
 
-/* Regular cards - maintain normal size */
-.action-card.quick-actions-card {
-  width: 100%;
-  max-width: none;
-  aspect-ratio: unset;
-  padding: 1rem;
-}
+/* quick-actions-card removed — replaced by quick-strip-card */
 
 /* Old exchange rate card hover - REMOVED */
 
@@ -1736,12 +1933,7 @@ onUnmounted(() => {
   line-height: 1.2;
 }
 
-.calendar-sales-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1.5rem;
-  align-items: start;
-}
+/* .calendar-sales-grid removed — merged into bottom-grid */
 
 .activity-grid {
   display: grid;
@@ -2756,18 +2948,7 @@ onUnmounted(() => {
 }
 
 /* Status and Exchange Rate Grid */
-.status-exchange-grid {
-  display: flex;
-  gap: 1rem;
-  align-items: start;
-  justify-content: center;
-}
-
-.status-exchange-grid .activity-card-status {
-  width: 280px;
-  height: 220px;
-  flex-shrink: 0;
-}
+/* .status-exchange-grid removed — merged into bottom-grid */
 
 /* Exchange Rate Compact Styles */
 .exchange-rate-compact {
@@ -2819,14 +3000,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin: 0.75rem 0 0.5rem;
 }
 
 .rate-item-compact {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.25rem 0;
+  padding: 0.375rem 0.5rem;
+  background: #f9fafb;
+  border-radius: 0.375rem;
 }
 
 .rate-label-compact {
@@ -2850,14 +3033,20 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .status-exchange-grid {
-    flex-direction: row;
-    gap: 0.75rem;
+  .main-top-grid {
+    grid-template-columns: 1fr;
   }
-
-  .status-exchange-grid .activity-card-status {
-    width: 180px;
-    height: 160px;
+  .quick-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .inv-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-main {
+    padding: 1rem 0.875rem 2rem;
   }
 }
 </style>
