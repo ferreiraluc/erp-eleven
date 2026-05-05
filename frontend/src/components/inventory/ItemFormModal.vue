@@ -213,6 +213,15 @@
             <span class="form-hint">Enter ou espaço para adicionar. Clique no × para remover.</span>
           </div>
 
+          <!-- Initial stock -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estoque inicial por tamanho</label>
+              <input v-model.number="gradeInitialStock" type="number" min="0" class="form-input" placeholder="0" />
+              <span class="form-hint">Quantidade adicionada a cada item da grade ao criar.</span>
+            </div>
+          </div>
+
           <!-- Barcode suffix info -->
           <div v-if="form.barcode" class="grade-barcode-hint">
             <span class="hint-label">Cod. de barras base:</span>
@@ -342,14 +351,14 @@ let photoStream: MediaStream | null = null
 const gradeSizes = ref<string[]>([])
 const activePreset = ref('')
 const customSizeInput = ref('')
+const gradeInitialStock = ref(0)
 
 const gradePresets = [
-  { label: 'PP–XG',        sizes: ['PP', 'P', 'M', 'G', 'GG', 'XG'] },
-  { label: 'P–2XL',        sizes: ['P', 'M', 'L', 'XL', '2XL'] },
-  { label: 'Calçados 34–44', sizes: ['34','35','36','37','38','39','40','41','42','43','44'] },
-  { label: 'Calçados 38–44', sizes: ['38','39','40','41','42','43','44'] },
-  { label: 'Calças 38–52',  sizes: ['38','40','42','44','46','48','50','52'] },
-  { label: 'Calças 30–46',  sizes: ['30','32','34','36','38','40','42','44','46'] },
+  { label: 'P → 2XL',       sizes: ['P', 'M', 'G', 'GG', 'XG', '2XL'] },
+  { label: '46 → 54',       sizes: ['46', '48', '50', '52', '54'] },
+  { label: 'Calçados 38–42', sizes: ['38', '39', '40', '41', '42'] },
+  { label: 'Calçados 38–44', sizes: ['38', '39', '40', '41', '42', '43', '44'] },
+  { label: 'Calças 30–40',  sizes: ['30', '31', '32', '33', '34', '36', '38', '40'] },
 ]
 
 function applyPreset(preset: (typeof gradePresets)[0]) {
@@ -535,6 +544,7 @@ async function handleSubmit() {
         image_data: form.image_data || null,
         group_key: form.group_key || null,
         sizes: gradeSizes.value,
+        initial_stock: gradeInitialStock.value || 0,
       }
       const result = await inventoryAPI.createGrade(gradePayload)
       emit('saved', result.items[0])

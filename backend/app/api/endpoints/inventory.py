@@ -494,6 +494,21 @@ def create_grade(
     for item in created_items:
         db.refresh(item)
 
+    # Create initial stock movements if requested
+    if grade.initial_stock and grade.initial_stock > 0:
+        for item in created_items:
+            create_movement(
+                db=db,
+                item_id=item.id,
+                movement_type="entry",
+                quantity=grade.initial_stock,
+                reason="Estoque inicial — criação de grade",
+                created_by=current_user.id,
+            )
+        db.commit()
+        for item in created_items:
+            db.refresh(item)
+
     item_responses = []
     for item in created_items:
         resp = ItemResponse.model_validate(item)

@@ -238,6 +238,7 @@ class GradeCreateRequest(BaseModel):
     image_data: Optional[str] = None
     group_key: Optional[str] = None      # auto-generated from name+color if None
     sizes: List[str]                     # e.g. ["P","M","G","GG"] or ["38","39","40"]
+    initial_stock: Optional[int] = 0    # entry movement created for each item if > 0
 
 
 class GradeCreateResponse(BaseModel):
