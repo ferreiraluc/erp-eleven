@@ -215,3 +215,32 @@ class AlertSummary(BaseModel):
     inactive_count: int = 0
     group_count: int = 0        # distinct groups
     grouped_items_count: int = 0  # items that belong to a group
+
+
+class GradeCreateRequest(BaseModel):
+    """Create a group of items (grade) all at once from a base product + list of sizes."""
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    color: Optional[str] = None
+    brand: Optional[str] = None
+    unit: Optional[str] = "un"
+    location: Optional[str] = None
+    base_barcode: Optional[str] = None   # barcode prefix; each item gets base_barcode+size
+    supplier_id: Optional[uuid.UUID] = None
+    cost_price: Optional[Decimal] = Decimal("0")
+    sale_price: Optional[Decimal] = Decimal("0")
+    currency: Optional[str] = "PYG"
+    cost_currency: Optional[str] = "BRL"
+    sale_currency: Optional[str] = "USD"
+    min_stock: Optional[int] = 0
+    max_stock: Optional[int] = 0
+    image_data: Optional[str] = None
+    group_key: Optional[str] = None      # auto-generated from name+color if None
+    sizes: List[str]                     # e.g. ["P","M","G","GG"] or ["38","39","40"]
+
+
+class GradeCreateResponse(BaseModel):
+    group_key: str
+    items: List[ItemResponse]
+    total_created: int

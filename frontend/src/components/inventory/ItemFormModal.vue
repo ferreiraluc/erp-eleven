@@ -14,6 +14,10 @@
       <div class="tabs">
         <button @click="activeTab = 'basic'" :class="['tab', { active: activeTab === 'basic' }]">Básico</button>
         <button @click="activeTab = 'stock'" :class="['tab', { active: activeTab === 'stock' }]">Estoque</button>
+        <button v-if="!isEdit" @click="activeTab = 'grade'" :class="['tab', { active: activeTab === 'grade' }]">
+          Grade
+          <span v-if="gradeSizes.length > 0" class="tab-badge">{{ gradeSizes.length }}</span>
+        </button>
         <button @click="activeTab = 'photo'" :class="['tab', { active: activeTab === 'photo' }]">
           Foto
           <span v-if="form.image_data" class="tab-dot"></span>
@@ -164,6 +168,77 @@
           </div>
         </div>
 
+        <!-- ── Grade Tab ── -->
+        <div v-if="activeTab === 'grade'" class="tab-content">
+          <div class="grade-banner">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="flex-shrink:0">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            <p>Cria todos os tamanhos de uma vez — cada tamanho vira um item separado agrupado automaticamente.</p>
+          </div>
+
+          <!-- Preset buttons -->
+          <div class="form-group">
+            <label>Modelo de grade</label>
+            <div class="grade-presets">
+              <button
+                v-for="preset in gradePresets"
+                :key="preset.label"
+                @click="applyPreset(preset)"
+                :class="['preset-btn', { active: activePreset === preset.label }]"
+                type="button"
+              >{{ preset.label }}</button>
+            </div>
+          </div>
+
+          <!-- Size chips -->
+          <div class="form-group">
+            <label>Tamanhos <span class="size-count">({{ gradeSizes.length }})</span></label>
+            <div class="grade-chips" @click="focusChipInput">
+              <span v-for="(size, i) in gradeSizes" :key="i" class="grade-chip">
+                {{ size }}
+                <button @click.stop="removeGradeSize(i)" class="chip-x" type="button">×</button>
+              </span>
+              <input
+                ref="chipInputRef"
+                v-model="customSizeInput"
+                @keydown.enter.prevent="addCustomSize"
+                @keydown.188.prevent="addCustomSize"
+                @keydown.space.prevent="addCustomSize"
+                type="text"
+                class="chip-input"
+                placeholder="Ex: 36 ↵"
+              />
+            </div>
+            <span class="form-hint">Enter ou espaço para adicionar. Clique no × para remover.</span>
+          </div>
+
+          <!-- Barcode suffix info -->
+          <div v-if="form.barcode" class="grade-barcode-hint">
+            <span class="hint-label">Cod. de barras base:</span>
+            <code class="hint-code">{{ form.barcode }}</code>
+            <span class="hint-arrow">→</span>
+            <code class="hint-code">{{ form.barcode }}<strong>{{ gradeSizes[0] || 'P' }}</strong></code>
+            <span class="hint-etc">…</span>
+          </div>
+
+          <!-- Preview -->
+          <div v-if="gradeSizes.length > 0" class="form-group">
+            <label>Prévia — {{ gradeSizes.length }} {{ gradeSizes.length === 1 ? 'item' : 'itens' }} serão criados</label>
+            <div class="grade-preview">
+              <div v-for="size in gradeSizes" :key="size" class="gp-row">
+                <span class="gp-size">{{ size }}</span>
+                <span class="gp-name">{{ (form.name || '(nome)') + ' ' + size }}</span>
+                <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="grade-empty">
+            Selecione um modelo acima ou adicione tamanhos manualmente.
+          </div>
+        </div>
+
         <!-- ── Photo Tab ── -->
         <div v-if="activeTab === 'photo'" class="tab-content">
           <!-- Current image preview -->
@@ -219,7 +294,10 @@
       <div class="modal-footer">
         <button @click="emit('close')" class="btn btn-secondary">Cancelar</button>
         <button @click="handleSubmit" class="btn btn-primary" :disabled="saving">
-          {{ saving ? 'Salvando...' : (isEdit ? 'Atualizar' : 'Criar') }}
+          <template v-if="saving">Salvando...</template>
+          <template v-else-if="isEdit">Atualizar</template>
+          <template v-else-if="gradeSizes.length > 0">Criar Grade ({{ gradeSizes.length }} itens)</template>
+          <template v-else>Criar</template>
         </button>
       </div>
     </div>
@@ -257,7 +335,45 @@ const barcodeDuplicateWarning = ref(false)
 const unitAutoSet = ref(false)
 const photoInputRef = ref<HTMLInputElement>()
 const photoVideoRef = ref<HTMLVideoElement>()
+const chipInputRef = ref<HTMLInputElement>()
 let photoStream: MediaStream | null = null
+
+// ── Grade state ──────────────────────────────────────────────────────────────
+const gradeSizes = ref<string[]>([])
+const activePreset = ref('')
+const customSizeInput = ref('')
+
+const gradePresets = [
+  { label: 'PP–XG',        sizes: ['PP', 'P', 'M', 'G', 'GG', 'XG'] },
+  { label: 'P–2XL',        sizes: ['P', 'M', 'L', 'XL', '2XL'] },
+  { label: 'Calçados 34–44', sizes: ['34','35','36','37','38','39','40','41','42','43','44'] },
+  { label: 'Calçados 38–44', sizes: ['38','39','40','41','42','43','44'] },
+  { label: 'Calças 38–52',  sizes: ['38','40','42','44','46','48','50','52'] },
+  { label: 'Calças 30–46',  sizes: ['30','32','34','36','38','40','42','44','46'] },
+]
+
+function applyPreset(preset: (typeof gradePresets)[0]) {
+  gradeSizes.value = [...preset.sizes]
+  activePreset.value = preset.label
+}
+
+function removeGradeSize(index: number) {
+  gradeSizes.value.splice(index, 1)
+  activePreset.value = ''
+}
+
+function addCustomSize() {
+  const s = customSizeInput.value.trim().toUpperCase()
+  if (s && !gradeSizes.value.includes(s)) {
+    gradeSizes.value.push(s)
+    activePreset.value = ''
+  }
+  customSizeInput.value = ''
+}
+
+function focusChipInput() {
+  chipInputRef.value?.focus()
+}
 
 // Hierarchical category
 const parentCategories = ['Camisetas', 'Calças', 'Vestidos', 'Acessórios', 'Calçados', 'Outros']
@@ -397,6 +513,35 @@ async function handleSubmit() {
   }
   saving.value = true
   try {
+    // ── Grade creation ───────────────────────────────────────────────────────
+    if (!isEdit.value && gradeSizes.value.length > 0) {
+      const gradePayload = {
+        name: form.name,
+        description: form.description || null,
+        category: form.category || null,
+        color: form.color || null,
+        brand: form.brand || null,
+        unit: form.unit || 'un',
+        location: form.location || null,
+        base_barcode: form.barcode || null,
+        supplier_id: form.supplier_id || null,
+        cost_price: form.cost_price,
+        sale_price: form.sale_price,
+        currency: form.currency,
+        cost_currency: form.cost_currency,
+        sale_currency: form.sale_currency,
+        min_stock: form.min_stock,
+        max_stock: form.max_stock,
+        image_data: form.image_data || null,
+        group_key: form.group_key || null,
+        sizes: gradeSizes.value,
+      }
+      const result = await inventoryAPI.createGrade(gradePayload)
+      emit('saved', result.items[0])
+      return
+    }
+
+    // ── Single item ───────────────────────────────────────────────────────────
     const payload = {
       ...form,
       supplier_id: form.supplier_id || null,
@@ -560,4 +705,91 @@ function capturePhoto() {
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
 .field-hint { font-size: 0.7rem; color: #9ca3af; margin-top: 0.15rem; }
+.form-hint { font-size: 0.72rem; color: #9ca3af; }
+
+/* ── Grade Tab ─────────────────────────────────────────────────────────────── */
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  background: #3b82f6; color: white; border-radius: 99px;
+  font-size: 0.6rem; font-weight: 700; margin-left: 4px; vertical-align: middle;
+}
+
+.grade-banner {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 0.65rem 0.75rem; color: #1d4ed8;
+}
+.grade-banner p { margin: 0; font-size: 0.8rem; line-height: 1.4; }
+
+.grade-presets {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+}
+.preset-btn {
+  padding: 0.3rem 0.7rem; border: 1px solid #d1d5db; border-radius: 99px;
+  background: white; color: #374151; font-size: 0.78rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.preset-btn:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+.preset-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+
+.size-count { font-size: 0.72rem; color: #6b7280; font-weight: 400; }
+
+.grade-chips {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+  border: 1px solid #d1d5db; border-radius: 8px; padding: 0.4rem 0.5rem;
+  min-height: 42px; cursor: text; background: white; transition: border-color 0.15s;
+}
+.grade-chips:focus-within { border-color: #3b82f6; }
+
+.grade-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: #e0e7ff; color: #3730a3; border-radius: 99px;
+  padding: 0.15rem 0.5rem 0.15rem 0.6rem; font-size: 0.8rem; font-weight: 600;
+}
+.chip-x {
+  background: none; border: none; cursor: pointer; color: #6366f1;
+  font-size: 1rem; line-height: 1; padding: 0; display: flex; align-items: center;
+  transition: color 0.1s;
+}
+.chip-x:hover { color: #ef4444; }
+
+.chip-input {
+  border: none; outline: none; font-size: 0.85rem; min-width: 70px;
+  flex: 1; padding: 0.1rem 0.2rem; background: transparent;
+}
+
+.grade-barcode-hint {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 0.5rem 0.65rem; font-size: 0.78rem; color: #475569;
+}
+.hint-label { font-weight: 500; }
+.hint-code { background: #e2e8f0; border-radius: 3px; padding: 0.1rem 0.35rem; font-size: 0.78rem; }
+.hint-arrow { color: #9ca3af; }
+.hint-etc { color: #9ca3af; font-size: 0.7rem; }
+
+.grade-preview {
+  border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;
+  max-height: 200px; overflow-y: auto;
+}
+.gp-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0.65rem; font-size: 0.8rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+.gp-row:last-child { border-bottom: none; }
+.gp-row:nth-child(even) { background: #f9fafb; }
+.gp-size {
+  width: 40px; flex-shrink: 0; font-weight: 700; color: #4f46e5;
+  background: #e0e7ff; border-radius: 4px; padding: 0.1rem 0.3rem;
+  text-align: center; font-size: 0.75rem;
+}
+.gp-name { flex: 1; color: #111827; }
+.gp-barcode { font-family: monospace; font-size: 0.72rem; color: #9ca3af; flex-shrink: 0; }
+
+.grade-empty {
+  text-align: center; color: #9ca3af; font-size: 0.85rem; padding: 1.5rem;
+  border: 2px dashed #e5e7eb; border-radius: 8px;
+}
 </style>

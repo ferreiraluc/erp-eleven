@@ -24,7 +24,7 @@ from ...schemas.inventory import (
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
     SessionItemResponse, AlertSummary, GroupItemsRequest,
     GroupResponse, SuggestionResponse, RenameGroupRequest, UngroupRequest,
-    BatchEditRequest, BatchSizeEntry,
+    BatchEditRequest, BatchSizeEntry, GradeCreateRequest, GradeCreateResponse,
 )
 from ...dependencies import get_current_active_user, require_role
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level
@@ -428,6 +428,83 @@ def group_items_batch(
         item.group_key = request.group_key
     db.commit()
     return {"message": f"Grouped {len(items)} items", "count": len(items)}
+
+
+@router.post("/items/grade", response_model=GradeCreateResponse, status_code=201)
+def create_grade(
+    grade: GradeCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
+):
+    """Create a full size grid (grade) — one item per size, all sharing the same group_key."""
+    sizes = [s.strip() for s in grade.sizes if s.strip()]
+    if not sizes:
+        raise HTTPException(status_code=400, detail="Informe ao menos um tamanho para criar a grade")
+
+    # Auto-generate group_key from name + color
+    group_key = (grade.group_key or "").strip()
+    if not group_key:
+        color_part = f" {grade.color.strip()}" if grade.color and grade.color.strip() else ""
+        group_key = f"{grade.name.strip()}{color_part}"
+
+    created_items: list[Item] = []
+    for size in sizes:
+        # Barcode: base_barcode + size (e.g. "7891234P" or "789123438")
+        item_barcode = f"{grade.base_barcode}{size}" if grade.base_barcode else None
+        item_name = f"{grade.name.strip()} {size}"
+
+        sku = _generate_sku()
+        while db.query(Item).filter(Item.sku_internal == sku).first():
+            sku = _generate_sku()
+
+        db_item = Item(
+            name=item_name,
+            description=grade.description,
+            category=grade.category,
+            size=size,
+            color=grade.color,
+            brand=grade.brand,
+            unit=grade.unit or "un",
+            location=grade.location,
+            barcode=item_barcode,
+            sku_internal=sku,
+            supplier_id=grade.supplier_id,
+            cost_price=grade.cost_price or 0,
+            sale_price=grade.sale_price or 0,
+            currency=grade.currency or "PYG",
+            cost_currency=grade.cost_currency or "BRL",
+            sale_currency=grade.sale_currency or "USD",
+            min_stock=grade.min_stock or 0,
+            max_stock=grade.max_stock or 0,
+            current_stock=0,
+            image_data=grade.image_data,
+            group_key=group_key,
+            is_active=True,
+            created_by=current_user.id,
+        )
+        db.add(db_item)
+        created_items.append(db_item)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Erro ao criar grade — possível conflito de SKU")
+
+    for item in created_items:
+        db.refresh(item)
+
+    item_responses = []
+    for item in created_items:
+        resp = ItemResponse.model_validate(item)
+        resp.alert_level = _compute_alert_level(item)
+        item_responses.append(resp)
+
+    return GradeCreateResponse(
+        group_key=group_key,
+        items=item_responses,
+        total_created=len(item_responses),
+    )
 
 
 @router.post("/items/ungroup")

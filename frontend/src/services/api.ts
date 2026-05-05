@@ -653,6 +653,14 @@ export const inventoryAPI = {
   quickExit: (id: string): Promise<{ message: string; new_stock: number }> =>
     api.post(`/api/inventory/items/${id}/quick-exit`).then(res => res.data),
 
+  createGrade: (data: {
+    name: string
+    sizes: string[]
+    base_barcode?: string | null
+    [key: string]: any
+  }): Promise<{ group_key: string; items: InventoryItem[]; total_created: number }> =>
+    api.post('/api/inventory/items/grade', data).then(res => res.data),
+
   groupItems: (itemIds: string[], groupKey: string): Promise<{ message: string; count: number }> =>
     api.post('/api/inventory/items/group', { item_ids: itemIds, group_key: groupKey }).then(res => res.data),
 
