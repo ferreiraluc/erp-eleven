@@ -557,7 +557,7 @@ onMounted(() => {
   gap: 0.25rem;
   flex: 1;
   overflow-y: auto;
-  max-height: 260px;
+  max-height: 420px;
   padding-right: 0.25rem;
 }
 

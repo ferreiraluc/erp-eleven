@@ -281,10 +281,10 @@ def obter_resumo_dashboard(
         Rastreamento.status.in_([RastreamentoStatus.ERRO, RastreamentoStatus.NAO_ENCONTRADO])
     ).count()
     
-    # Rastreamentos recentes (últimos 5)
+    # Rastreamentos recentes (últimos 12)
     recentes = db.query(Rastreamento).filter(
         Rastreamento.ativo == True
-    ).order_by(desc(Rastreamento.updated_at)).limit(5).all()
+    ).order_by(desc(Rastreamento.updated_at)).limit(12).all()
     
     return RastreamentoResumo(
         total_rastreamentos=total,
