@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="header-left">
           <div class="header-top">
-            <button @click="$router.back()" class="back-button">
+            <button @click="$router.replace('/dashboard')" class="back-button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
