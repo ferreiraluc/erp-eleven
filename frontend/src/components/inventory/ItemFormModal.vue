@@ -28,12 +28,20 @@
         <!-- ── Basic Tab ── -->
         <div v-if="activeTab === 'basic'" class="tab-content">
           <!-- OCR button -->
-          <button @click="showOcr = true" class="ocr-btn" type="button">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            Ler etiqueta com câmera (OCR)
-          </button>
+          <div class="ocr-btn-row">
+            <button @click="showOcr = true" class="ocr-btn" type="button">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Ler etiqueta com câmera (OCR)
+            </button>
+            <button @click="showLabelTemplates = true" class="ocr-btn ocr-btn-templates" type="button">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              Modelos IA salvos
+            </button>
+          </div>
 
           <div class="form-group">
             <label>Nome *</label>
@@ -313,6 +321,7 @@
 
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
     <OcrScanner v-if="showOcr" @result="onOcrResult" @close="showOcr = false" />
+    <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
   </div>
 </template>
 
@@ -321,6 +330,7 @@ import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import BarcodeScanner from './BarcodeScanner.vue'
 import OcrScanner from './OcrScanner.vue'
+import LabelTemplatesModal from './LabelTemplatesModal.vue'
 
 const props = defineProps<{
   item?: InventoryItem | null
@@ -338,6 +348,7 @@ const isEdit = computed(() => !!props.item)
 const activeTab = ref('basic')
 const showScanner = ref(false)
 const showOcr = ref(false)
+const showLabelTemplates = ref(false)
 const showCameraPhoto = ref(false)
 const saving = ref(false)
 const barcodeDuplicateWarning = ref(false)
@@ -672,12 +683,24 @@ function capturePhoto() {
 .tab-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; display: inline-block; margin-left: 4px; vertical-align: middle; }
 .modal-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
 .tab-content { display: flex; flex-direction: column; gap: 1rem; }
+.ocr-btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
 .ocr-btn {
   display: flex; align-items: center; gap: 0.5rem; width: 100%;
   padding: 0.6rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0;
   border-radius: 8px; cursor: pointer; color: #15803d; font-size: 0.85rem; font-weight: 500;
 }
 .ocr-btn:hover { background: #dcfce7; }
+.ocr-btn-templates {
+  background: #faf5ff; border-color: #e9d5ff; color: #7c3aed;
+}
+.ocr-btn-templates:hover { background: #f3e8ff; }
+@media (min-width: 601px) {
+  .ocr-btn-templates { display: none; }
+}
 .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .form-group label { font-size: 0.8rem; font-weight: 500; color: #374151; display: flex; align-items: center; gap: 0.35rem; }

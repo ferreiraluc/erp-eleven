@@ -15,7 +15,7 @@
           <p class="page-subtitle">Gerencie os itens do inventário</p>
         </div>
         <div class="header-right">
-          <button @click="showLabelTemplates = true" class="btn btn-secondary">
+          <button @click="showLabelTemplates = true" class="btn btn-secondary btn-modelos-ia-desktop">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
@@ -1046,6 +1046,7 @@ onMounted(async () => {
   .header-top { gap: 0.5rem; }
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
+  .btn-modelos-ia-desktop { display: none; }
 }
 .search-section { padding: 0.6rem 1rem 0.75rem; max-width: 1400px; margin: 0 auto; position: relative; border-bottom: 1px solid #f3f4f6; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }

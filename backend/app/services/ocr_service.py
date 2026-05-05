@@ -92,7 +92,7 @@ def parse_label_image(image_base64: str, brand: Optional[str] = None, templates=
     })
 
     response = client.messages.create(
-        model="claude-opus-4-6",
+        model="claude-haiku-3-5",
         max_tokens=1024,
         system=system_prompt,
         messages=messages,
