@@ -502,6 +502,7 @@ def create_grade(
 
     # Create initial stock movements if requested
     if grade.initial_stock and grade.initial_stock > 0:
+        stock_loc = grade.stock_location or "loja"
         for item in created_items:
             create_movement(
                 db=db,
@@ -510,7 +511,7 @@ def create_grade(
                 quantity=grade.initial_stock,
                 reason="Estoque inicial — criação de grade",
                 created_by=current_user.id,
-                location="loja",
+                location=stock_loc,
             )
         db.commit()
         for item in created_items:

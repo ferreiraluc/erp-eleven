@@ -174,6 +174,22 @@
               <input v-model.number="form.max_stock" type="number" min="0" class="form-input" />
             </div>
           </div>
+
+          <!-- Initial stock + location — only when creating -->
+          <template v-if="!isEdit">
+            <div class="form-group">
+              <label>Cadastrar em</label>
+              <div class="loc-toggle">
+                <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">Loja</button>
+                <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">Depósito</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Estoque inicial</label>
+              <input v-model.number="initialStock" type="number" min="0" class="form-input" placeholder="0" />
+              <span class="form-hint">Quantidade adicionada ao {{ stockLocation === 'loja' ? 'estoque da loja' : 'depósito' }} ao criar o item.</span>
+            </div>
+          </template>
         </div>
 
         <!-- ── Grade Tab ── -->
@@ -221,12 +237,17 @@
             <span class="form-hint">Enter ou espaço para adicionar. Clique no × para remover.</span>
           </div>
 
-          <!-- Initial stock -->
-          <div class="form-row">
-            <div class="form-group">
-              <label>Estoque inicial por tamanho</label>
-              <input v-model.number="gradeInitialStock" type="number" min="0" class="form-input" placeholder="0" />
-              <span class="form-hint">Quantidade adicionada a cada item da grade ao criar.</span>
+          <!-- Initial stock + location -->
+          <div class="form-group">
+            <label>Estoque inicial por tamanho</label>
+            <input v-model.number="gradeInitialStock" type="number" min="0" class="form-input" placeholder="0" />
+            <span class="form-hint">Quantidade adicionada a cada item da grade ao criar.</span>
+          </div>
+          <div class="form-group" v-if="gradeInitialStock > 0">
+            <label>Cadastrar em</label>
+            <div class="loc-toggle">
+              <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">Loja</button>
+              <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">Depósito</button>
             </div>
           </div>
 
@@ -363,6 +384,8 @@ const gradeSizes = ref<string[]>([])
 const activePreset = ref('')
 const customSizeInput = ref('')
 const gradeInitialStock = ref(0)
+const initialStock = ref(0)
+const stockLocation = ref<'loja' | 'deposito'>('loja')
 
 const gradePresets = [
   { label: 'P → 2XL',       sizes: ['P', 'M', 'G', 'GG', 'XG', '2XL'] },
@@ -556,6 +579,7 @@ async function handleSubmit() {
         group_key: form.group_key || null,
         sizes: gradeSizes.value,
         initial_stock: gradeInitialStock.value || 0,
+        stock_location: stockLocation.value,
       }
       const result = await inventoryAPI.createGrade(gradePayload)
       emit('saved', result.items[0])
@@ -575,6 +599,18 @@ async function handleSubmit() {
       result = await inventoryAPI.updateItem(props.item.id, payload)
     } else {
       result = await inventoryAPI.createItem(payload)
+      // Create initial stock movement if quantity > 0
+      if (initialStock.value > 0) {
+        try {
+          await inventoryAPI.createMovement({
+            item_id: result.id,
+            movement_type: 'entry',
+            quantity: initialStock.value,
+            reason: 'Estoque inicial',
+            location: stockLocation.value,
+          })
+        } catch {}
+      }
     }
     emit('saved', result)
   } catch (e: any) {
@@ -739,6 +775,9 @@ function capturePhoto() {
 .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
 .field-hint { font-size: 0.7rem; color: #9ca3af; margin-top: 0.15rem; }
 .form-hint { font-size: 0.72rem; color: #9ca3af; }
+.loc-toggle { display: flex; gap: 0.5rem; }
+.loc-btn { flex: 1; padding: 0.45rem 0; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; background: white; font-size: 0.85rem; font-weight: 500; transition: all 0.15s; }
+.loc-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
 
 /* ── Grade Tab ─────────────────────────────────────────────────────────────── */
 .tab-badge {
