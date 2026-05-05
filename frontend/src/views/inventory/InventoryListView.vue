@@ -382,7 +382,7 @@
 
     <BulkEditModal
       v-if="showBulkEdit"
-      :items="selectedIds.map(id => allVisibleItems.get(id)).filter(Boolean) as InventoryItem[]"
+      :items="selectedItemsForBulkEdit"
       :distinct-brands="distinctBrands"
       :distinct-categories="distinctCategories"
       @close="showBulkEdit = false"
@@ -409,8 +409,14 @@
         <span class="sel-count">{{ selectedIds.length }} item{{ selectedIds.length !== 1 ? 's' : '' }} selecionado{{ selectedIds.length !== 1 ? 's' : '' }}</span>
         <div class="sel-actions">
           <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">Agrupar</button>
-          <button @click="showBulkEdit = true" class="sel-btn sel-btn-primary">Editar massivo</button>
-          <button @click="selectAll" class="sel-btn">Sel. todos</button>
+          <button @click="openBulkEdit" class="sel-btn sel-btn-primary">
+            <span class="sel-label-full">Editar massivo</span>
+            <span class="sel-label-short">Editar</span>
+          </button>
+          <button @click="selectAll" class="sel-btn">
+            <span class="sel-label-full">Sel. todos</span>
+            <span class="sel-label-short">Todos</span>
+          </button>
           <button @click="selectedIds = []" class="sel-btn">Limpar</button>
         </div>
       </div>
@@ -621,7 +627,24 @@ function onItemPointerDown(itemId: string, e: PointerEvent) {
 }
 
 function selectAll() {
-  selectedIds.value = inventoryStore.items.map(i => i.id)
+  const all = new Set<string>()
+  for (const item of inventoryStore.items) all.add(item.id)
+  for (const g of backendGroups.value) {
+    for (const item of g.items) all.add(item.id)
+  }
+  selectedIds.value = [...all]
+}
+
+const selectedItemsForBulkEdit = ref<InventoryItem[]>([])
+
+function openBulkEdit() {
+  // Capture items eagerly at click time to avoid reactivity timing issues.
+  // backendGroups may reload while the modal is open, so we snapshot now.
+  const map = allVisibleItems.value
+  selectedItemsForBulkEdit.value = selectedIds.value
+    .map(id => map.get(id))
+    .filter(Boolean) as InventoryItem[]
+  showBulkEdit.value = true
 }
 
 function toggleSelection(id: string) {
@@ -1405,18 +1428,32 @@ onMounted(async () => {
 .selection-bar {
   position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: #1e293b; color: white; border-radius: 12px;
-  padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 1rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000; white-space: nowrap;
+  padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000;
+  max-width: calc(100vw - 2rem);
 }
-.sel-count { font-size: 0.875rem; font-weight: 500; }
-.sel-actions { display: flex; gap: 0.5rem; }
-.sel-btn { padding: 0.4rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; background: rgba(255,255,255,0.15); color: white; }
+.sel-count { font-size: 0.82rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.sel-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.sel-btn { padding: 0.38rem 0.75rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 600; background: rgba(255,255,255,0.15); color: white; white-space: nowrap; }
 .sel-btn:hover { background: rgba(255,255,255,0.25); }
 .sel-btn-primary { background: #3b82f6; }
 .sel-btn-primary:hover { background: #2563eb; }
 .sel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sel-label-short { display: none; }
 .sel-bar-enter-active, .sel-bar-leave-active { transition: all 0.25s ease; }
 .sel-bar-enter-from, .sel-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(1rem); }
+@media (max-width: 500px) {
+  .selection-bar {
+    left: 0.75rem; right: 0.75rem; bottom: 0.75rem;
+    transform: none; max-width: none;
+    flex-wrap: wrap; gap: 0.4rem;
+  }
+  .sel-bar-enter-from, .sel-bar-leave-to { opacity: 0; transform: translateY(1rem); }
+  .sel-actions { gap: 0.35rem; }
+  .sel-btn { padding: 0.35rem 0.55rem; font-size: 0.72rem; }
+  .sel-label-full { display: none; }
+  .sel-label-short { display: inline; }
+}
 
 /* ── Group modal ─────────────────────────────────────────────────────────────── */
 .gmodal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
