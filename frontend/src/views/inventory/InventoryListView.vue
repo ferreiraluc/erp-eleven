@@ -97,9 +97,9 @@
         <button @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">Loja</button>
         <button @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">Depósito</button>
 
-        <!-- Ver grupos (só aparece se existem grupos) -->
+        <!-- Ver grades (só aparece se existem grupos) -->
         <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
-          Ver grupos
+          Ver grades
           <span v-if="inventoryStore.alerts?.group_count" class="chip-count">{{ inventoryStore.alerts.group_count }}</span>
           <span v-if="groupMode" class="chip-check">✓</span>
         </button>
@@ -235,6 +235,14 @@
                 title="Clique para renomear o grupo"
               >{{ entry.group.group_key }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
               <span class="group-total-stock">Total: {{ entry.group.total_stock }}</span>
+              <span
+                v-if="groupLocationBadge(entry.group.items) === 'deposito'"
+                class="group-loc-badge badge-deposito"
+              >Depósito</span>
+              <span
+                v-else-if="groupLocationBadge(entry.group.items) === 'mixed'"
+                class="group-loc-badge badge-mixed"
+              >Loja + Dep.</span>
               <span v-if="entry.group.items.find(i => i.barcode)" class="group-barcode">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="9" height="9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
                 {{ entry.group.items.find(i => i.barcode)!.barcode }}
@@ -255,7 +263,11 @@
               :class="'chip-alert-' + v.alert_level"
               :title="v.name + ' · ' + v.sku_internal"
             >
-              <span class="chip-label" @click="openEdit(v)">{{ v.size || v.name }} &nbsp;{{ v.current_stock }}</span>
+              <span class="chip-label" @click="openEdit(v)">
+                {{ v.size || v.name }}&nbsp;
+                <template v-if="v.stock_deposito > 0 && v.stock_loja > 0">{{ v.stock_loja }}|{{ v.stock_deposito }}</template>
+                <template v-else>{{ v.current_stock }}</template>
+              </span>
               <button
                 class="chip-remove"
                 title="Remover do grupo"
@@ -567,8 +579,8 @@ function setView(mode: 'list' | 'compact' | 'grid') {
 function toggleGroupMode() {
   groupMode.value = !groupMode.value
   localStorage.setItem('inv_group_mode', String(groupMode.value))
-  // When switching modes, reload items with the correct ungrouped_only setting
   inventoryStore.loadItems(1, false, groupMode.value)
+  if (groupMode.value) loadGroupsFiltered()
 }
 
 function toggleExpand(groupKey: string) {
@@ -582,10 +594,24 @@ function reloadItems(page = 1, append = false) {
   return inventoryStore.loadItems(page, append, groupMode.value)
 }
 
-async function loadGroups(search = '') {
+async function loadGroups(params: Record<string, any> = {}) {
   try {
-    backendGroups.value = await inventoryAPI.getGroups(search)
+    backendGroups.value = await inventoryAPI.getGroups(params)
   } catch {}
+}
+
+function groupFilterParams(): Record<string, any> {
+  const p: Record<string, any> = {}
+  if (inventoryStore.filters.search) p.search = inventoryStore.filters.search
+  if (filterBrand.value) p.brand = filterBrand.value
+  if (filterCategory.value) p.category = filterCategory.value
+  if (activeStatus.value) p.status = activeStatus.value
+  if (filterLocation.value) p.location_stock = filterLocation.value
+  return p
+}
+
+function loadGroupsFiltered() {
+  return loadGroups(groupFilterParams())
 }
 
 async function loadSuggestions() {
@@ -683,6 +709,7 @@ function setLocationFilter(loc: string) {
   filterLocation.value = loc
   inventoryStore.filters.location_stock = loc
   inventoryStore.loadItems(1, false, groupMode.value)
+  if (groupMode.value) loadGroupsFiltered()
 }
 
 function toggleSelection(id: string) {
@@ -805,6 +832,15 @@ function groupAlertLevel(items: InventoryItem[]): string {
   return 'ok'
 }
 
+/** Returns 'deposito' if ALL stock is in depósito, 'loja' if all in loja, 'mixed' otherwise. */
+function groupLocationBadge(items: InventoryItem[]): 'deposito' | 'loja' | 'mixed' | null {
+  const hasStock = items.some(i => i.current_stock > 0)
+  if (!hasStock) return null
+  if (items.every(i => (i.stock_loja ?? 0) === 0)) return 'deposito'
+  if (items.every(i => (i.stock_deposito ?? 0) === 0)) return 'loja'
+  return 'mixed'
+}
+
 const existingGroupKeys = computed<string[]>(() =>
   backendGroups.value.map(g => g.group_key).sort()
 )
@@ -856,7 +892,7 @@ async function saveGroupName(oldKey: string) {
   try {
     await inventoryAPI.renameGroup(oldKey, newKey)
     showToast(`Grupo renomeado para "${newKey}"`, 'success')
-    await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
+    await Promise.all([reloadItems(), loadGroupsFiltered()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao renomear grupo', 'error')
   }
@@ -876,7 +912,7 @@ async function removeItemFromGroup(itemId: string, groupKey: string) {
   try {
     await inventoryAPI.removeFromGroup(itemId)
     showToast(`Item removido do grupo "${groupKey}"`, 'success')
-    await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
+    await Promise.all([reloadItems(), loadGroupsFiltered()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao remover do grupo', 'error')
   }
@@ -897,7 +933,7 @@ watch(searchQuery, (val) => {
     const trimmed = val.trim()
     inventoryStore.filters.search = trimmed
     if (groupMode.value) {
-      Promise.all([loadGroups(trimmed), inventoryStore.loadItems(1, false, true)])
+      Promise.all([loadGroupsFiltered(), inventoryStore.loadItems(1, false, true)])
     } else {
       reloadItems()
     }
@@ -909,7 +945,7 @@ function clearSearch() {
   searchQuery.value = ''
   inventoryStore.filters.search = ''
   if (groupMode.value) {
-    Promise.all([loadGroups(''), inventoryStore.loadItems(1, false, true)])
+    Promise.all([loadGroupsFiltered(), inventoryStore.loadItems(1, false, true)])
   } else {
     reloadItems()
   }
@@ -919,6 +955,7 @@ function setStatusFilter(status: string) {
   activeStatus.value = status
   inventoryStore.filters.status = status
   inventoryStore.loadItems(1, false, groupMode.value)
+  if (groupMode.value) loadGroupsFiltered()
 }
 
 function toggleFilter(key: string) {
@@ -932,6 +969,7 @@ function setFilter(key: 'brand' | 'category', value: string) {
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
   inventoryStore.loadItems(1, false, groupMode.value)
+  if (groupMode.value) loadGroupsFiltered()
 }
 
 function applyAdvancedFilter() {
@@ -946,6 +984,7 @@ function clearAdvancedFilters() {
   inventoryStore.filters.brand = ''
   inventoryStore.filters.category = ''
   reloadItems()
+  if (groupMode.value) loadGroupsFiltered()
 }
 
 // Backend-driven suggestions (works across ALL items, not just loaded page)
@@ -1017,7 +1056,7 @@ async function onBulkEditSaved() {
   selectionMode.value = false
   selectedIds.value = []
   showToast('Itens atualizados com sucesso', 'success')
-  await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
+  await Promise.all([reloadItems(), loadGroupsFiltered()])
 }
 
 async function onBulkTransferSaved() {
@@ -1270,6 +1309,9 @@ onMounted(async () => {
 .group-name-editable:hover .edit-pencil { opacity: 1; }
 .group-name-input { font-weight: 700; font-size: 0.85rem; color: #111827; border: 1.5px solid #3b82f6; border-radius: 5px; padding: 0.05rem 0.35rem; outline: none; background: #eff6ff; min-width: 80px; max-width: 200px; }
 .group-total-stock { font-size: 0.72rem; color: #6b7280; white-space: nowrap; }
+.group-loc-badge { font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 10px; white-space: nowrap; }
+.badge-deposito { background: #ede9fe; color: #7c3aed; }
+.badge-mixed { background: #e0f2fe; color: #0369a1; }
 .group-barcode { font-family: monospace; font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
 .group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
 .size-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }

@@ -675,9 +675,11 @@ export const inventoryAPI = {
   renameGroup: (oldKey: string, newKey: string): Promise<{ message: string; count: number }> =>
     api.patch('/api/inventory/groups', { old_key: oldKey, new_key: newKey }).then(res => res.data),
 
-  getGroups: (search = ''): Promise<GroupResponse[]> => {
-    const qs = search ? `?search=${encodeURIComponent(search)}` : ''
-    return api.get(`/api/inventory/groups${qs}`).then(res => res.data)
+  getGroups: (params: Record<string, any> = {}): Promise<GroupResponse[]> => {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.append(k, String(v)) })
+    const q = qs.toString()
+    return api.get(`/api/inventory/groups${q ? '?' + q : ''}`).then(res => res.data)
   },
 
   getSuggestions: (): Promise<SuggestionResponse[]> =>

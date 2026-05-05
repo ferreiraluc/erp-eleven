@@ -261,15 +261,47 @@ def get_alerts_summary(
 @router.get("/groups", response_model=List[GroupResponse])
 def get_groups(
     search: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    item_status: Optional[str] = Query(None, alias="status"),
+    location_stock: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Returns all groups with their items from DB, optionally filtered by search term"""
+    """Returns all groups with their items from DB, with optional filters.
+    Filters are applied at the group level: a group is included if at least
+    one of its items matches the filter criteria."""
+
+    # Step 1: Find group_keys that pass extra filters (brand/category/status/location)
+    # A group is included if ANY item matches — then ALL items of that group are shown.
+    filter_keys: Optional[set] = None
+    if brand or category or item_status or location_stock:
+        kq = db.query(Item.group_key).filter(
+            Item.group_key.isnot(None),
+            Item.is_active == True,
+        )
+        if brand:
+            kq = kq.filter(Item.brand.ilike(f"%{brand}%"))
+        if category:
+            kq = kq.filter(Item.category.ilike(f"%{category}%"))
+        if item_status == "low_stock":
+            kq = kq.filter(Item.current_stock > 0, Item.current_stock < Item.min_stock)
+        elif item_status == "out_of_stock":
+            kq = kq.filter(Item.current_stock <= 0)
+        elif item_status == "overstocked":
+            kq = kq.filter(Item.max_stock > 0, Item.current_stock > Item.max_stock)
+        if location_stock == "loja":
+            kq = kq.filter(Item.stock_loja > 0)
+        elif location_stock == "deposito":
+            kq = kq.filter(Item.stock_deposito > 0)
+        filter_keys = {r[0] for r in kq.distinct().all()}
+        if not filter_keys:
+            return []
+
+    # Step 2: Find group_keys that match search tokens
+    search_keys: Optional[set] = None
     if search:
-        # For each token, find group_keys where ANY item (or the key itself) matches.
-        # Intersect results so ALL tokens must be present somewhere in the group.
         tokens = [t for t in search.strip().split() if t]
-        key_sets = []
         for token in tokens:
             like = f"%{token}%"
             rows = (
@@ -290,26 +322,31 @@ def get_groups(
                 .distinct()
                 .all()
             )
-            key_sets.append({r[0] for r in rows})
+            token_keys = {r[0] for r in rows}
+            search_keys = token_keys if search_keys is None else search_keys & token_keys
+        if not search_keys:
+            return []
 
-        if not key_sets:
-            return []
-        matching_keys = list(key_sets[0].intersection(*key_sets[1:]))
-        if not matching_keys:
-            return []
-        items = (
-            db.query(Item)
-            .filter(Item.group_key.in_(matching_keys), Item.is_active == True)
-            .order_by(Item.group_key, Item.name)
-            .all()
-        )
+    # Step 3: Intersect filter_keys and search_keys
+    if filter_keys is not None and search_keys is not None:
+        matching_keys: Optional[list] = list(filter_keys & search_keys)
+    elif filter_keys is not None:
+        matching_keys = list(filter_keys)
+    elif search_keys is not None:
+        matching_keys = list(search_keys)
     else:
-        items = (
-            db.query(Item)
-            .filter(Item.group_key.isnot(None), Item.is_active == True)
-            .order_by(Item.group_key, Item.name)
-            .all()
-        )
+        matching_keys = None  # no filter → all groups
+
+    if matching_keys is not None and not matching_keys:
+        return []
+
+    # Step 4: Load all items from matching groups
+    item_query = db.query(Item).filter(Item.group_key.isnot(None), Item.is_active == True)
+    if matching_keys is not None:
+        item_query = item_query.filter(Item.group_key.in_(matching_keys))
+    items = item_query.order_by(Item.group_key, Item.name).all()
+
+    # Step 5: Build GroupResponse objects
     groups_dict: dict = {}
     for item in items:
         key = item.group_key
