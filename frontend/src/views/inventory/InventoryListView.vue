@@ -170,13 +170,13 @@
     </div><!-- /sticky-toolbar -->
 
     <!-- Loading -->
-    <div v-if="inventoryStore.loading && inventoryStore.items.length === 0" class="loading-state">
+    <div v-if="inventoryStore.loading && flatList.length === 0" class="loading-state">
       <div class="spinner"></div>
       <p>Carregando itens...</p>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="!inventoryStore.loading && inventoryStore.items.length === 0" class="empty-state">
+    <div v-else-if="!inventoryStore.loading && flatList.length === 0" class="empty-state">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
