@@ -752,6 +752,39 @@ export const inventoryAPI = {
   },
 }
 
+// ── OCR / Label Intelligence ──────────────────────────────────────────────────
+export const ocrAPI = {
+  parseLabel: (image: string, brand?: string): Promise<any> =>
+    api.post('/api/ocr/parse', { image, brand }).then(r => r.data),
+
+  getBrands: (): Promise<Array<{ brand: string; count: number }>> =>
+    api.get('/api/ocr/brands').then(r => r.data),
+
+  getTemplates: (brand?: string): Promise<any[]> => {
+    const qs = brand ? `?brand=${encodeURIComponent(brand)}` : ''
+    return api.get(`/api/ocr/templates${qs}`).then(r => r.data)
+  },
+
+  getTemplate: (id: string): Promise<any> =>
+    api.get(`/api/ocr/templates/${id}`).then(r => r.data),
+
+  saveTemplate: (data: {
+    brand: string
+    notes?: string
+    sample_image: string
+    parsed_name?: string
+    parsed_size?: string
+    parsed_color?: string
+    parsed_barcode?: string
+    parsed_price?: string
+    parsed_currency?: string
+  }): Promise<{ id: string; brand: string; message: string }> =>
+    api.post('/api/ocr/templates', data).then(r => r.data),
+
+  deleteTemplate: (id: string): Promise<void> =>
+    api.delete(`/api/ocr/templates/${id}`).then(r => r.data),
+}
+
 // Freight Calculator API
 export const freteAPI = {
   calcular: (cep_origem: string, cep_destino: string, peso = 0.3) =>

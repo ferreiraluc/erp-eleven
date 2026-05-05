@@ -12,6 +12,7 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))  # legacy fallback; real expiry is midnight+7d
     WONCA_API_KEY: str = os.getenv("WONCA_API_KEY", "")
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     
     # Timezone configuration
     TIMEZONE: str = os.getenv("TIMEZONE", "America/Sao_Paulo")  # GMT-3
