@@ -25,6 +25,7 @@ from ...schemas.inventory import (
     SessionItemResponse, AlertSummary, GroupItemsRequest,
     GroupResponse, SuggestionResponse, RenameGroupRequest, UngroupRequest,
     BatchEditRequest, BatchSizeEntry, GradeCreateRequest, GradeCreateResponse,
+    BulkTransferRequest,
 )
 from ...dependencies import get_current_active_user, require_role
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level
@@ -112,6 +113,7 @@ def list_items(
     supplier_id: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None),
     ungrouped_only: bool = Query(False),
+    location_stock: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -148,6 +150,10 @@ def list_items(
         query = query.filter(Item.supplier_id == sup_uuid)
     if ungrouped_only:
         query = query.filter(Item.group_key == None)
+    if location_stock == "loja":
+        query = query.filter(Item.stock_loja > 0)
+    elif location_stock == "deposito":
+        query = query.filter(Item.stock_deposito > 0)
 
     # Status filters
     if item_status == "low_stock":
@@ -504,6 +510,7 @@ def create_grade(
                 quantity=grade.initial_stock,
                 reason="Estoque inicial — criação de grade",
                 created_by=current_user.id,
+                location="loja",
             )
         db.commit()
         for item in created_items:
@@ -629,6 +636,7 @@ def batch_edit_items(
             quantity=abs(delta),
             reason=reason,
             created_by=current_user.id,
+            location="loja",
         )
         has_stock_changes = True
 
@@ -636,6 +644,43 @@ def batch_edit_items(
         db.commit()
 
     return {"message": f"Updated {len(items)} items", "count": len(items)}
+
+
+@router.post("/items/transfer-bulk", status_code=200)
+def bulk_transfer_items(
+    request: BulkTransferRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Transfer stock between loja and depósito for multiple items at once."""
+    if request.direction == "deposito_to_loja":
+        loc_from, loc_to = "deposito", "loja"
+    elif request.direction == "loja_to_deposito":
+        loc_from, loc_to = "loja", "deposito"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid direction. Use 'deposito_to_loja' or 'loja_to_deposito'")
+
+    count = 0
+    for entry in request.items:
+        if entry.quantity <= 0:
+            continue
+        try:
+            create_movement(
+                db=db,
+                item_id=entry.item_id,
+                movement_type="transfer",
+                quantity=entry.quantity,
+                created_by=current_user.id,
+                reason=request.reason or f"Transferência {loc_from} → {loc_to}",
+                location_from=loc_from,
+                location_to=loc_to,
+            )
+            count += 1
+        except ValueError:
+            continue
+
+    db.commit()
+    return {"message": f"Transferred {count} items", "count": count}
 
 
 @router.delete("/items/{item_id}")
@@ -668,6 +713,7 @@ def quick_exit(
             quantity=1,
             created_by=current_user.id,
             reason="Saída rápida",
+            location="loja",
         )
         db.commit()
     except ValueError as e:
@@ -694,6 +740,7 @@ def create_movement_endpoint(
             reference_type=movement.reference_type,
             reference_id=movement.reference_id,
             unit_cost=movement.unit_cost,
+            location=movement.location,
             location_from=movement.location_from,
             location_to=movement.location_to,
             notes=movement.notes,

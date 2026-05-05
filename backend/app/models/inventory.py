@@ -57,6 +57,8 @@ class Item(Base):
     min_stock = Column(Integer, default=0)
     max_stock = Column(Integer, default=0)
     current_stock = Column(Integer, default=0)
+    stock_loja = Column(Integer, default=0)
+    stock_deposito = Column(Integer, default=0)
     brand = Column(String(100), nullable=True)
     group_key = Column(String(100), nullable=True, index=True)
     is_active = Column(Boolean, default=True)

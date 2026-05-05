@@ -13,7 +13,11 @@
       <div class="modal-body">
         <div v-if="item" class="item-info">
           <span class="item-name">{{ item.name }}</span>
-          <span class="item-stock">Estoque atual: {{ item.current_stock }}</span>
+          <div class="item-stock-row">
+            <span class="item-stock">Loja: <strong>{{ item.stock_loja ?? item.current_stock }}</strong></span>
+            <span class="item-stock-sep">·</span>
+            <span class="item-stock">Depósito: <strong>{{ item.stock_deposito ?? 0 }}</strong></span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -28,6 +32,24 @@
             >
               {{ t.label }}
             </button>
+          </div>
+        </div>
+
+        <!-- Location selector (entry / exit) -->
+        <div v-if="form.movement_type === 'entry' || form.movement_type === 'exit'" class="form-group">
+          <label>Local *</label>
+          <div class="loc-toggle">
+            <button type="button" :class="['loc-btn', { active: form.location === 'loja' }]" @click="form.location = 'loja'">Loja</button>
+            <button type="button" :class="['loc-btn', { active: form.location === 'deposito' }]" @click="form.location = 'deposito'">Depósito</button>
+          </div>
+        </div>
+
+        <!-- Transfer direction -->
+        <div v-if="form.movement_type === 'transfer'" class="form-group">
+          <label>Direção *</label>
+          <div class="loc-toggle">
+            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'deposito' }]" @click="form.location_from = 'deposito'; form.location_to = 'loja'">Depósito → Loja</button>
+            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'loja' }]" @click="form.location_from = 'loja'; form.location_to = 'deposito'">Loja → Depósito</button>
           </div>
         </div>
 
@@ -50,17 +72,6 @@
             <div class="form-group" v-if="form.movement_type === 'entry'">
               <label>Custo Unitário</label>
               <input v-model.number="form.unit_cost" type="number" step="0.01" min="0" class="form-input" />
-            </div>
-          </div>
-
-          <div class="form-row" v-if="form.movement_type === 'transfer'">
-            <div class="form-group">
-              <label>Localização Origem</label>
-              <input v-model="form.location_from" type="text" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Localização Destino</label>
-              <input v-model="form.location_to" type="text" class="form-input" />
             </div>
           </div>
 
@@ -134,8 +145,9 @@ const form = reactive({
   quantity: 1,
   reason: '',
   unit_cost: undefined as number | undefined,
-  location_from: '',
-  location_to: '',
+  location: 'loja' as 'loja' | 'deposito',
+  location_from: 'deposito',
+  location_to: 'loja',
   notes: '',
 })
 
@@ -167,6 +179,7 @@ async function handleSubmit() {
         quantity: form.quantity,
         reason: form.reason || undefined,
         unit_cost: form.movement_type === 'entry' ? form.unit_cost : undefined,
+        location: (form.movement_type === 'entry' || form.movement_type === 'exit') ? form.location : undefined,
         location_from: form.movement_type === 'transfer' ? form.location_from : undefined,
         location_to: form.movement_type === 'transfer' ? form.location_to : undefined,
         notes: form.notes || undefined,
@@ -216,4 +229,10 @@ async function handleSubmit() {
 .btn-primary { background: #3b82f6; color: white; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.item-stock-row { display: flex; align-items: center; gap: 0.5rem; }
+.item-stock-sep { color: #d1d5db; }
+.loc-toggle { display: flex; gap: 0.5rem; }
+.loc-btn { flex: 1; padding: 0.5rem; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; background: white; font-size: 0.85rem; font-weight: 500; transition: all 0.15s; }
+.loc-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.loc-btn-wide { font-size: 0.8rem; }
 </style>

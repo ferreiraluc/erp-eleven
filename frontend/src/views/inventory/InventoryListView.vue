@@ -92,6 +92,11 @@
           </div>
         </div>
 
+        <!-- Location chips -->
+        <button @click="setLocationFilter('')" :class="['chip', 'chip-loc', { active: filterLocation === '' }]">Todos</button>
+        <button @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">Loja</button>
+        <button @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">Depósito</button>
+
         <!-- Ver grupos (só aparece se existem grupos) -->
         <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
           Ver grupos
@@ -313,7 +318,10 @@
               </div>
               <div class="item-bottom-row">
                 <div class="item-left-info">
-                  <span class="stock-number" :class="'stock-' + entry.item.alert_level">Estoque:&nbsp;{{ entry.item.current_stock }}</span>
+                  <span class="stock-number" :class="'stock-' + entry.item.alert_level">
+                    <template v-if="entry.item.stock_loja !== undefined">Loja:&nbsp;{{ entry.item.stock_loja }}&nbsp;·&nbsp;Dep.:&nbsp;{{ entry.item.stock_deposito ?? 0 }}</template>
+                    <template v-else>Estoque:&nbsp;{{ entry.item.current_stock }}</template>
+                  </span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
                   <span v-if="entry.item.alert_level && entry.item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + entry.item.alert_level">{{ alertLabel(entry.item.alert_level) }}</span>
@@ -389,6 +397,13 @@
       @saved="onBulkEditSaved"
     />
 
+    <BulkTransferModal
+      v-if="showBulkTransfer"
+      :items="selectedItemsForTransfer"
+      @saved="onBulkTransferSaved"
+      @close="showBulkTransfer = false"
+    />
+
     <GroupingSuggestionModal
       v-if="showSuggestionModal"
       :items="suggestionModalItems"
@@ -412,6 +427,10 @@
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary">
             <span class="sel-label-full">Editar massivo</span>
             <span class="sel-label-short">Editar</span>
+          </button>
+          <button @click="openBulkTransfer" class="sel-btn sel-btn-transfer">
+            <span class="sel-label-full">Transferir</span>
+            <span class="sel-label-short">Transf.</span>
           </button>
           <button @click="selectAll" class="sel-btn">
             <span class="sel-label-full">Sel. todos</span>
@@ -476,6 +495,7 @@ import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
 import ImportModal from '@/components/inventory/ImportModal.vue'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
+import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
 
@@ -529,6 +549,8 @@ const editingGroupKey = ref<string | null>(null)
 const editingGroupName = ref('')
 const grouping = ref(false)
 const showBulkEdit = ref(false)
+const showBulkTransfer = ref(false)
+const filterLocation = ref('')
 const isDragSelecting = ref(false)
 const showSuggestionModal = ref(false)
 const suggestionModalItems = ref<InventoryItem[]>([])
@@ -645,6 +667,22 @@ function openBulkEdit() {
     .map(id => map.get(id))
     .filter(Boolean) as InventoryItem[]
   showBulkEdit.value = true
+}
+
+const selectedItemsForTransfer = ref<InventoryItem[]>([])
+
+function openBulkTransfer() {
+  const map = allVisibleItems.value
+  selectedItemsForTransfer.value = selectedIds.value
+    .map(id => map.get(id))
+    .filter(Boolean) as InventoryItem[]
+  showBulkTransfer.value = true
+}
+
+function setLocationFilter(loc: string) {
+  filterLocation.value = loc
+  inventoryStore.filters.location_stock = loc
+  inventoryStore.loadItems(1, false, groupMode.value)
 }
 
 function toggleSelection(id: string) {
@@ -982,6 +1020,14 @@ async function onBulkEditSaved() {
   await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
 }
 
+async function onBulkTransferSaved() {
+  showBulkTransfer.value = false
+  selectionMode.value = false
+  selectedIds.value = []
+  showToast('Transferência realizada com sucesso', 'success')
+  reloadItems()
+}
+
 function alertLabel(level: string | undefined) {
   const labels: Record<string, string> = {
     out: 'Sem estoque', low: 'Baixo', high: 'Excesso', ok: 'OK', inactive: 'Inativo'
@@ -1094,6 +1140,8 @@ onMounted(async () => {
 .camera-btn { padding: 0.625rem; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; color: #374151; }
 .chip { padding: 0.375rem 0.75rem; border-radius: 20px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 0.8rem; cursor: pointer; color: #374151; display: flex; align-items: center; gap: 0.25rem; }
 .chip.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.chip-loc { border-style: dashed; }
+.chip-loc.active { background: #f0fdf4; border-color: #16a34a; color: #15803d; border-style: solid; }
 .chip-count { background: #ef4444; color: white; border-radius: 10px; padding: 0 5px; font-size: 0.7rem; min-width: 16px; text-align: center; }
 .loading-state { display: flex; flex-direction: column; align-items: center; padding: 3rem; color: #6b7280; gap: 1rem; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -1438,6 +1486,8 @@ onMounted(async () => {
 .sel-btn:hover { background: rgba(255,255,255,0.25); }
 .sel-btn-primary { background: #3b82f6; }
 .sel-btn-primary:hover { background: #2563eb; }
+.sel-btn-transfer { background: #7c3aed; }
+.sel-btn-transfer:hover { background: #6d28d9; }
 .sel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sel-label-short { display: none; }
 .sel-bar-enter-active, .sel-bar-leave-active { transition: all 0.25s ease; }

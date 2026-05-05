@@ -28,6 +28,7 @@ def create_movement(
     reference_type: Optional[str] = None,
     reference_id: Optional[str] = None,
     unit_cost: Optional[Decimal] = None,
+    location: Optional[str] = "loja",
     location_from: Optional[str] = None,
     location_to: Optional[str] = None,
     notes: Optional[str] = None,
@@ -41,39 +42,68 @@ def create_movement(
 
     if mv_type == MovementType.entry:
         delta = quantity
+        # Route to the correct location column
+        loc = location or "loja"
+        if loc == "deposito":
+            item.stock_deposito = (item.stock_deposito or 0) + quantity
+        else:
+            item.stock_loja = (item.stock_loja or 0) + quantity
+
     elif mv_type == MovementType.exit:
         delta = -quantity
+        loc = location or "loja"
+        if loc == "deposito":
+            item.stock_deposito = max(0, (item.stock_deposito or 0) - quantity)
+        else:
+            item.stock_loja = max(0, (item.stock_loja or 0) - quantity)
+
     elif mv_type == MovementType.adjustment:
-        # quantity is the new absolute value
+        # quantity is the new absolute value; adjustment applies to loja by default
         delta = quantity - item.current_stock
+        loc = location or "loja"
+        if loc == "deposito":
+            item.stock_deposito = quantity
+        else:
+            item.stock_loja = quantity
+
     elif mv_type == MovementType.transfer:
-        delta = 0  # stock stays the same, just changes location
+        # Move stock between columns — no net change to current_stock
+        delta = 0
+        loc_from = location_from or "loja"
+        loc_to = location_to or "deposito"
+        if loc_from == "deposito":
+            item.stock_deposito = max(0, (item.stock_deposito or 0) - quantity)
+            item.stock_loja = (item.stock_loja or 0) + quantity
+        else:
+            item.stock_loja = max(0, (item.stock_loja or 0) - quantity)
+            item.stock_deposito = (item.stock_deposito or 0) + quantity
+
     else:
         delta = quantity
 
     quantity_after = quantity_before + delta
+    # Always keep current_stock in sync with sum of location stocks
+    item.current_stock = (item.stock_loja or 0) + (item.stock_deposito or 0)
 
     # Recalculate weighted average cost on entries
     if mv_type == MovementType.entry and unit_cost is not None:
-        existing_stock = item.current_stock if item.current_stock > 0 else 0
+        existing_stock = quantity_before if quantity_before > 0 else 0
         existing_cost = item.cost_price or Decimal("0")
         if existing_stock + quantity > 0:
             new_cost = (existing_stock * existing_cost + quantity * unit_cost) / (existing_stock + quantity)
             item.cost_price = new_cost
-
-    item.current_stock = quantity_after
 
     movement = StockMovement(
         item_id=item_id,
         movement_type=mv_type,
         quantity=abs(quantity) if mv_type != MovementType.adjustment else quantity,
         quantity_before=quantity_before,
-        quantity_after=quantity_after,
+        quantity_after=item.current_stock,
         reason=reason,
         reference_type=reference_type,
         reference_id=reference_id,
         unit_cost=unit_cost,
-        location_from=location_from,
+        location_from=location_from or (location if mv_type in (MovementType.entry, MovementType.exit, MovementType.adjustment) else None),
         location_to=location_to,
         notes=notes,
         created_by=created_by,
@@ -90,7 +120,7 @@ def apply_sale_exit(
     items: List[dict],
     created_by: uuid.UUID,
 ):
-    """Hook for sales integration — creates exit movements in batch"""
+    """Hook for sales integration — creates exit movements in batch (always from loja)"""
     movements = []
     for item_data in items:
         movement = create_movement(
@@ -102,6 +132,7 @@ def apply_sale_exit(
             reason="Venda",
             reference_type="venda",
             reference_id=sale_id,
+            location="loja",
         )
         movements.append(movement)
     db.commit()
@@ -130,6 +161,7 @@ def apply_session(
                 reason=f"Ajuste de inventário - Sessão {session.name}",
                 reference_type="inventory_session",
                 reference_id=str(session_id),
+                location="loja",
             )
             movements.append(movement)
 

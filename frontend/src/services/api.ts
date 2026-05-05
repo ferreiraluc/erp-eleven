@@ -561,6 +561,8 @@ export interface InventoryItem {
   min_stock: number
   max_stock: number
   current_stock: number
+  stock_loja: number
+  stock_deposito: number
   is_active: boolean
   alert_level?: string
   image_data?: string
@@ -765,6 +767,13 @@ export const inventoryAPI = {
     fd.append('currency', opts.currency ?? 'BRL')
     return api.post('/api/inventory/import/nfe', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
   },
+
+  transferBulk: (data: {
+    items: Array<{ item_id: string; quantity: number }>
+    direction: 'deposito_to_loja' | 'loja_to_deposito'
+    reason?: string
+  }): Promise<{ message: string; count: number }> =>
+    api.post('/api/inventory/items/transfer-bulk', data).then(r => r.data),
 }
 
 // ── OCR / Label Intelligence ──────────────────────────────────────────────────

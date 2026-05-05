@@ -58,6 +58,8 @@ class ItemResponse(ItemBase):
     id: uuid.UUID
     sku_internal: str
     current_stock: int
+    stock_loja: int = 0
+    stock_deposito: int = 0
     created_at: datetime
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
@@ -136,6 +138,7 @@ class MovementBase(BaseModel):
     reference_type: Optional[str] = None
     reference_id: Optional[str] = None
     unit_cost: Optional[Decimal] = None
+    location: Optional[str] = "loja"
     location_from: Optional[str] = None
     location_to: Optional[str] = None
     notes: Optional[str] = None
@@ -254,3 +257,14 @@ class GradeCreateResponse(BaseModel):
     group_key: str
     items: List[ItemResponse]
     total_created: int
+
+
+class BulkTransferItem(BaseModel):
+    item_id: uuid.UUID
+    quantity: int
+
+
+class BulkTransferRequest(BaseModel):
+    items: List[BulkTransferItem]
+    direction: str   # "deposito_to_loja" | "loja_to_deposito"
+    reason: Optional[str] = None
