@@ -111,6 +111,7 @@ def list_items(
     item_status: Optional[str] = Query(None, alias="status"),
     supplier_id: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None),
+    ungrouped_only: bool = Query(False),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -145,6 +146,8 @@ def list_items(
     if supplier_id:
         sup_uuid = validate_uuid(supplier_id, "supplier_id")
         query = query.filter(Item.supplier_id == sup_uuid)
+    if ungrouped_only:
+        query = query.filter(Item.group_key == None)
 
     # Status filters
     if item_status == "low_stock":
@@ -228,15 +231,24 @@ def get_alerts_summary(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
+    from sqlalchemy import func as sqlfunc
     active_items = db.query(Item).filter(Item.is_active == True).all()
     low_stock = sum(1 for i in active_items if 0 < i.current_stock < i.min_stock)
     out_of_stock = sum(1 for i in active_items if i.current_stock <= 0)
     overstocked = sum(1 for i in active_items if i.max_stock > 0 and i.current_stock > i.max_stock)
+    inactive_count = db.query(Item).filter(Item.is_active == False).count()
+    grouped_items_count = sum(1 for i in active_items if i.group_key)
+    group_count = db.query(Item.group_key).filter(
+        Item.group_key.isnot(None), Item.is_active == True
+    ).distinct().count()
     return AlertSummary(
         low_stock_count=low_stock,
         out_of_stock_count=out_of_stock,
         overstocked_count=overstocked,
         total_active_items=len(active_items),
+        inactive_count=inactive_count,
+        group_count=group_count,
+        grouped_items_count=grouped_items_count,
     )
 
 

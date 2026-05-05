@@ -88,7 +88,9 @@
 
         <!-- Ver grupos (só aparece se existem grupos) -->
         <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
-          {{ groupMode ? 'Ver grupos ✓' : 'Ver grupos' }}
+          Ver grupos
+          <span v-if="inventoryStore.alerts?.group_count" class="chip-count">{{ inventoryStore.alerts.group_count }}</span>
+          <span v-if="groupMode" class="chip-check">✓</span>
         </button>
       </div>
 
@@ -104,6 +106,38 @@
         >
           {{ sg.name }} ({{ sg.items.length }})
         </button>
+      </div>
+
+      <!-- Inventory summary stats -->
+      <div v-if="inventoryStore.alerts" class="inv-stats">
+        <span class="inv-stat">
+          <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items }}</span>
+          <span class="inv-stat-label">itens</span>
+        </span>
+        <span class="inv-stat-sep">·</span>
+        <span class="inv-stat">
+          <span class="inv-stat-num">{{ inventoryStore.alerts.group_count }}</span>
+          <span class="inv-stat-label">grupos</span>
+        </span>
+        <span class="inv-stat-sep">·</span>
+        <span class="inv-stat">
+          <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items - inventoryStore.alerts.grouped_items_count }}</span>
+          <span class="inv-stat-label">sem grupo</span>
+        </span>
+        <template v-if="inventoryStore.alerts.low_stock_count > 0">
+          <span class="inv-stat-sep">·</span>
+          <span class="inv-stat inv-stat-warn">
+            <span class="inv-stat-num">{{ inventoryStore.alerts.low_stock_count }}</span>
+            <span class="inv-stat-label">baixo</span>
+          </span>
+        </template>
+        <template v-if="inventoryStore.alerts.out_of_stock_count > 0">
+          <span class="inv-stat-sep">·</span>
+          <span class="inv-stat inv-stat-danger">
+            <span class="inv-stat-num">{{ inventoryStore.alerts.out_of_stock_count }}</span>
+            <span class="inv-stat-label">sem estoque</span>
+          </span>
+        </template>
       </div>
 
       <!-- View mode switcher -->
@@ -335,7 +369,7 @@
 
     <ImportModal
       v-if="showImport"
-      @imported="() => { inventoryStore.loadItems(1); inventoryStore.loadAlerts() }"
+      @imported="() => { reloadItems(); inventoryStore.loadAlerts() }"
       @close="showImport = false"
     />
 
@@ -465,12 +499,19 @@ function setView(mode: 'list' | 'compact' | 'grid') {
 function toggleGroupMode() {
   groupMode.value = !groupMode.value
   localStorage.setItem('inv_group_mode', String(groupMode.value))
+  // When switching modes, reload items with the correct ungrouped_only setting
+  inventoryStore.loadItems(1, false, groupMode.value)
 }
 
 function toggleExpand(groupKey: string) {
   const idx = expandedGroups.value.indexOf(groupKey)
   if (idx === -1) expandedGroups.value.push(groupKey)
   else expandedGroups.value.splice(idx, 1)
+}
+
+/** Reloads items always respecting the current groupMode (ungrouped_only when in group mode) */
+function reloadItems(page = 1, append = false) {
+  return inventoryStore.loadItems(page, append, groupMode.value)
 }
 
 async function loadGroups(search = '') {
@@ -583,7 +624,7 @@ async function confirmGroup() {
     groupNameInput.value = ''
     groupMode.value = true
     localStorage.setItem('inv_group_mode', 'true')
-    await Promise.all([inventoryStore.loadItems(1), loadGroups()])
+    await Promise.all([reloadItems(), loadGroups()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao agrupar', 'error')
   } finally {
@@ -703,7 +744,7 @@ async function saveGroupName(oldKey: string) {
   try {
     await inventoryAPI.renameGroup(oldKey, newKey)
     showToast(`Grupo renomeado para "${newKey}"`, 'success')
-    await Promise.all([inventoryStore.loadItems(1), loadGroups(inventoryStore.filters.search)])
+    await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao renomear grupo', 'error')
   }
@@ -713,7 +754,7 @@ async function handleUngroup(groupKey: string) {
   try {
     await inventoryAPI.ungroup(groupKey)
     showToast(`Grupo "${groupKey}" desagrupado`, 'success')
-    await Promise.all([inventoryStore.loadItems(1), loadGroups()])
+    await Promise.all([reloadItems(), loadGroups()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao desagrupar', 'error')
   }
@@ -723,17 +764,18 @@ async function removeItemFromGroup(itemId: string, groupKey: string) {
   try {
     await inventoryAPI.removeFromGroup(itemId)
     showToast(`Item removido do grupo "${groupKey}"`, 'success')
-    await Promise.all([inventoryStore.loadItems(1), loadGroups(inventoryStore.filters.search)])
+    await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao remover do grupo', 'error')
   }
 }
 
 const statusChips = computed(() => [
-  { value: '', label: 'Todos' },
+  { value: '', label: 'Todos', count: inventoryStore.alerts?.total_active_items },
   { value: 'low_stock', label: 'Baixo', count: inventoryStore.alerts?.low_stock_count },
   { value: 'out_of_stock', label: 'Sem estoque', count: inventoryStore.alerts?.out_of_stock_count },
-  { value: 'inactive', label: 'Inativos' },
+  { value: 'overstocked', label: 'Excesso', count: inventoryStore.alerts?.overstocked_count },
+  { value: 'inactive', label: 'Inativos', count: inventoryStore.alerts?.inactive_count },
 ])
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -743,9 +785,9 @@ watch(searchQuery, (val) => {
     const trimmed = val.trim()
     inventoryStore.filters.search = trimmed
     if (groupMode.value) {
-      Promise.all([loadGroups(trimmed), inventoryStore.loadItems(1)])
+      Promise.all([loadGroups(trimmed), inventoryStore.loadItems(1, false, true)])
     } else {
-      inventoryStore.loadItems(1)
+      reloadItems()
     }
   }, 300)
 })
@@ -755,16 +797,16 @@ function clearSearch() {
   searchQuery.value = ''
   inventoryStore.filters.search = ''
   if (groupMode.value) {
-    Promise.all([loadGroups(''), inventoryStore.loadItems(1)])
+    Promise.all([loadGroups(''), inventoryStore.loadItems(1, false, true)])
   } else {
-    inventoryStore.loadItems(1)
+    reloadItems()
   }
 }
 
 function setStatusFilter(status: string) {
   activeStatus.value = status
   inventoryStore.filters.status = status
-  inventoryStore.loadItems(1)
+  inventoryStore.loadItems(1, false, groupMode.value)
 }
 
 function toggleFilter(key: string) {
@@ -777,13 +819,13 @@ function setFilter(key: 'brand' | 'category', value: string) {
   openFilter.value = null
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
-  inventoryStore.loadItems(1)
+  inventoryStore.loadItems(1, false, groupMode.value)
 }
 
 function applyAdvancedFilter() {
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
-  inventoryStore.loadItems(1)
+  reloadItems()
 }
 
 function clearAdvancedFilters() {
@@ -791,7 +833,7 @@ function clearAdvancedFilters() {
   filterCategory.value = ''
   inventoryStore.filters.brand = ''
   inventoryStore.filters.category = ''
-  inventoryStore.loadItems(1)
+  reloadItems()
 }
 
 // Backend-driven suggestions (works across ALL items, not just loaded page)
@@ -808,12 +850,12 @@ async function onSuggestionGrouped(groupKey: string, count: number) {
   showToast(`${count} itens agrupados como "${groupKey}"`, 'success')
   groupMode.value = true
   localStorage.setItem('inv_group_mode', 'true')
-  await Promise.all([inventoryStore.loadItems(1), loadGroups()])
+  await Promise.all([reloadItems(), loadGroups()])
 }
 
 function loadMore() {
   const nextPage = inventoryStore.pagination.page + 1
-  inventoryStore.loadItems(nextPage, true)
+  reloadItems(nextPage, true)
 }
 
 function openCreate() {
@@ -849,13 +891,13 @@ function onBarcodeDetected(code: string) {
 function onItemSaved(item: InventoryItem) {
   showItemForm.value = false
   showToast(`Item "${item.name}" salvo com sucesso`, 'success')
-  inventoryStore.loadItems(1)
+  reloadItems()
 }
 
 function onMovementSaved() {
   showMovementModal.value = false
   showToast('Movimentação registrada', 'success')
-  inventoryStore.loadItems(1)
+  reloadItems()
 }
 
 async function onBulkEditSaved() {
@@ -863,7 +905,7 @@ async function onBulkEditSaved() {
   selectionMode.value = false
   selectedIds.value = []
   showToast('Itens atualizados com sucesso', 'success')
-  await Promise.all([inventoryStore.loadItems(1), loadGroups(inventoryStore.filters.search)])
+  await Promise.all([reloadItems(), loadGroups(inventoryStore.filters.search)])
 }
 
 function alertLabel(level: string | undefined) {
@@ -895,9 +937,10 @@ onUnmounted(() => {
 
 async function autoLoadRemainingPages() {
   const { total_pages } = inventoryStore.pagination
+  const isGrouped = groupMode.value
   for (let p = 2; p <= total_pages; p++) {
     if (inventoryStore.filters.search || inventoryStore.filters.status) return
-    await inventoryStore.loadItems(p, true)
+    await inventoryStore.loadItems(p, true, isGrouped)
   }
 }
 
@@ -907,7 +950,7 @@ onMounted(async () => {
     activeStatus.value = route.query.status as string
   }
   await Promise.all([
-    inventoryStore.loadItems(1),
+    inventoryStore.loadItems(1, false, groupMode.value),
     inventoryStore.loadAlerts(),
     loadGroups(),
   ])
@@ -1341,6 +1384,22 @@ onMounted(async () => {
 .toast-success { background: #065f46; color: white; }
 .toast-error   { background: #7f1d1d; color: white; }
 .toast-warning { background: #78350f; color: white; }
+
+/* ── Inventory stats bar ─────────────────────────────────────────────────────── */
+.inv-stats {
+  display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.1rem 0.15rem;
+  font-size: 0.75rem; flex-wrap: wrap;
+}
+.inv-stat { display: flex; align-items: baseline; gap: 0.2rem; }
+.inv-stat-num { font-weight: 700; color: #374151; }
+.inv-stat-label { color: #9ca3af; }
+.inv-stat-sep { color: #d1d5db; }
+.inv-stat-warn .inv-stat-num { color: #d97706; }
+.inv-stat-warn .inv-stat-label { color: #d97706; opacity: 0.8; }
+.inv-stat-danger .inv-stat-num { color: #dc2626; }
+.inv-stat-danger .inv-stat-label { color: #dc2626; opacity: 0.8; }
+.chip-check { margin-left: 0.2rem; font-size: 0.7rem; }
 
 /* ── Drag-to-select ──────────────────────────────────────────────────────────── */
 .items-container.drag-selecting { user-select: none; }

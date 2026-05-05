@@ -15,7 +15,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const lowStockItems = computed(() => items.value.filter(i => i.alert_level === 'low'))
   const outOfStockItems = computed(() => items.value.filter(i => i.alert_level === 'out'))
 
-  async function loadItems(page = 1, append = false) {
+  async function loadItems(page = 1, append = false, ungroupedOnly = false) {
     try {
       loading.value = true
       error.value = null
@@ -24,7 +24,8 @@ export const useInventoryStore = defineStore('inventory', () => {
         page_size: pagination.value.page_size,
         ...filters.value,
       }
-      Object.keys(params).forEach(k => { if (!params[k]) delete params[k] })
+      if (ungroupedOnly) params.ungrouped_only = true
+      Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === false || params[k] === undefined) delete params[k] })
       const result = await inventoryAPI.getItems(params)
       if (append) {
         items.value = [...items.value, ...result.items]

@@ -584,6 +584,9 @@ export interface AlertSummary {
   out_of_stock_count: number
   overstocked_count: number
   total_active_items: number
+  inactive_count: number
+  group_count: number
+  grouped_items_count: number
 }
 
 export interface StockMovement {

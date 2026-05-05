@@ -212,3 +212,6 @@ class AlertSummary(BaseModel):
     out_of_stock_count: int
     overstocked_count: int
     total_active_items: int
+    inactive_count: int = 0
+    group_count: int = 0        # distinct groups
+    grouped_items_count: int = 0  # items that belong to a group
