@@ -654,7 +654,7 @@ export const inventoryAPI = {
     api.post('/api/inventory/items/group', { item_ids: itemIds, group_key: groupKey }).then(res => res.data),
 
   ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
-    api.post(`/api/inventory/items/ungroup/${encodeURIComponent(groupKey)}`).then(res => res.data),
+    api.post('/api/inventory/items/ungroup', { group_key: groupKey }).then(res => res.data),
 
   removeFromGroup: (itemId: string): Promise<{ message: string }> =>
     api.delete(`/api/inventory/items/${itemId}/group`).then(res => res.data),

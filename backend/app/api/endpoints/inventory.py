@@ -23,7 +23,7 @@ from ...schemas.inventory import (
     MovementCreate, MovementResponse, BatchMovementCreate,
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
     SessionItemResponse, AlertSummary, GroupItemsRequest,
-    GroupResponse, SuggestionResponse, RenameGroupRequest,
+    GroupResponse, SuggestionResponse, RenameGroupRequest, UngroupRequest,
     BatchEditRequest, BatchSizeEntry,
 )
 from ...dependencies import get_current_active_user, require_role
@@ -418,13 +418,13 @@ def group_items_batch(
     return {"message": f"Grouped {len(items)} items", "count": len(items)}
 
 
-@router.post("/items/ungroup/{group_key_value}")
+@router.post("/items/ungroup")
 def ungroup_items(
-    group_key_value: str,
+    body: UngroupRequest,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    items = db.query(Item).filter(Item.group_key == group_key_value).all()
+    items = db.query(Item).filter(Item.group_key == body.group_key).all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found with this group_key")
     for item in items:
