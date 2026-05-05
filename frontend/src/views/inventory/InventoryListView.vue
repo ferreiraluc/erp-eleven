@@ -265,9 +265,10 @@
         >
           <!-- Checkbox de seleção -->
           <div v-if="selectionMode" class="card-check" @click.stop="toggleSelection(entry.item.id)">
-            <span :class="['check-box', { checked: selectedIds.includes(entry.item.id) }]">
+            <span :class="['check-box', { checked: selectedIds.includes(entry.item.id), 'check-grouped': !!entry.item.group_key }]">
               <svg v-if="selectedIds.includes(entry.item.id)" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </span>
+            <span v-if="entry.item.group_key" class="in-group-badge" :title="`Já pertence ao grupo: ${entry.item.group_key}`">grade</span>
           </div>
           <!-- Imagem topo (grid view) -->
           <div class="item-grid-image" @click.stop="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
@@ -408,7 +409,20 @@
     <div v-if="showGroupModal" class="gmodal-overlay" @click.self="showGroupModal = false">
       <div class="gmodal">
         <h3 class="gmodal-title">Definir nome do grupo</h3>
-        <p class="gmodal-sub">{{ selectedIds.length }} itens serão agrupados. Defina um código ou nome de modelo:</p>
+        <p class="gmodal-sub">
+          {{ selectedUngrouped.length }} ite{{ selectedUngrouped.length !== 1 ? 'ns' : 'm' }} serão agrupados. Defina um código ou nome de modelo:
+        </p>
+        <!-- Warning: some selected items are already in a group -->
+        <div v-if="selectedAlreadyGrouped.length > 0" class="gmodal-warn">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          {{ selectedAlreadyGrouped.length }} item{{ selectedAlreadyGrouped.length !== 1 ? 'ns' : '' }} já
+          {{ selectedAlreadyGrouped.length !== 1 ? 'pertencem' : 'pertence' }} a um grupo e
+          {{ selectedAlreadyGrouped.length !== 1 ? 'serão ignorados' : 'será ignorado' }}.
+        </div>
+        <div v-if="selectedUngrouped.length < 2" class="gmodal-error">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          Selecione pelo menos 2 itens sem grupo para poder agrupar.
+        </div>
         <input
           v-model="groupNameInput"
           type="text"
@@ -417,6 +431,7 @@
           list="gname-list"
           ref="groupNameInputRef"
           @keydown.enter="confirmGroup"
+          :disabled="selectedUngrouped.length < 2"
         />
         <datalist id="gname-list">
           <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
@@ -424,8 +439,9 @@
         <p class="gmodal-hint">Sugestão baseada nos nomes: <strong>{{ groupNameSuggestion }}</strong></p>
         <div class="gmodal-footer">
           <button @click="showGroupModal = false" class="sel-btn">Cancelar</button>
-          <button @click="confirmGroup" class="sel-btn sel-btn-primary" :disabled="!groupNameInput.trim() || grouping">
-            {{ grouping ? 'Agrupando...' : 'Agrupar' }}
+          <button @click="confirmGroup" class="sel-btn sel-btn-primary"
+            :disabled="!groupNameInput.trim() || grouping || selectedUngrouped.length < 2">
+            {{ grouping ? 'Agrupando...' : `Agrupar ${selectedUngrouped.length}` }}
           </button>
         </div>
       </div>
@@ -590,6 +606,15 @@ function toggleSelection(id: string) {
   else selectedIds.value.splice(idx, 1)
 }
 
+// Items selected that are NOT already in a group — only these can be grouped
+const selectedUngrouped = computed(() =>
+  inventoryStore.items.filter(i => selectedIds.value.includes(i.id) && !i.group_key)
+)
+// Items selected that ARE already in a group — will be excluded from grouping
+const selectedAlreadyGrouped = computed(() =>
+  inventoryStore.items.filter(i => selectedIds.value.includes(i.id) && !!i.group_key)
+)
+
 const groupNameSuggestion = computed(() => {
   if (selectedIds.value.length < 2) return ''
   const selected = inventoryStore.items.filter(i => selectedIds.value.includes(i.id))
@@ -614,10 +639,12 @@ watch(showGroupModal, (val) => {
 async function confirmGroup() {
   const name = groupNameInput.value.trim()
   if (!name || grouping.value) return
+  const idsToGroup = selectedUngrouped.value.map(i => i.id)
+  if (idsToGroup.length < 2) return
   grouping.value = true
   try {
-    await inventoryAPI.groupItems(selectedIds.value, name)
-    showToast(`${selectedIds.value.length} itens agrupados como "${name}"`, 'success')
+    await inventoryAPI.groupItems(idsToGroup, name)
+    showToast(`${idsToGroup.length} itens agrupados como "${name}"`, 'success')
     showGroupModal.value = false
     selectionMode.value = false
     selectedIds.value = []
@@ -1384,6 +1411,27 @@ onMounted(async () => {
 .toast-success { background: #065f46; color: white; }
 .toast-error   { background: #7f1d1d; color: white; }
 .toast-warning { background: #78350f; color: white; }
+
+/* ── Already-grouped badge in selection mode ─────────────────────────────────── */
+.check-grouped { border-color: #9ca3af; background: #f3f4f6; }
+.check-grouped.checked { background: #9ca3af; border-color: #9ca3af; }
+.in-group-badge {
+  font-size: 0.55rem; font-weight: 700; letter-spacing: 0.04em;
+  background: #e0e7ff; color: #4338ca;
+  border-radius: 3px; padding: 0.1rem 0.3rem;
+  margin-top: 0.15rem; text-transform: uppercase;
+  white-space: nowrap;
+}
+.gmodal-warn {
+  display: flex; align-items: flex-start; gap: 0.4rem;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+  padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #92400e; margin-bottom: 0.5rem;
+}
+.gmodal-error {
+  display: flex; align-items: flex-start; gap: 0.4rem;
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;
+  padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #991b1b; margin-bottom: 0.5rem;
+}
 
 /* ── Inventory stats bar ─────────────────────────────────────────────────────── */
 .inv-stats {
