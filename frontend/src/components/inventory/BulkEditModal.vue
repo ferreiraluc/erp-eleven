@@ -476,9 +476,25 @@ async function save() {
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 600px) {
-  .modal-container { max-height: 96vh; }
-  .form-row { flex-direction: column; gap: 0.5rem; }
-  .item-fields { grid-template-columns: 1fr 1fr; }
-  .items-list { max-height: none; }
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-container {
+    max-height: 88vh;
+    border-radius: 14px 14px 0 0;
+    max-width: 100%;
+  }
+  .modal-header { padding: 0.65rem 1rem; }
+  .modal-header h2 { font-size: 0.9rem; }
+  .modal-body { padding: 0.65rem 1rem; gap: 0.75rem; }
+  .modal-footer { padding: 0.6rem 1rem; }
+  .section-title { font-size: 0.8rem; }
+  .form-input { padding: 0.35rem 0.6rem; font-size: 0.82rem; }
+  .form-row { flex-direction: column; gap: 0.4rem; }
+  .item-card { padding: 0.45rem 0.6rem; gap: 0.35rem; }
+  .item-fields { grid-template-columns: 1fr 1fr; gap: 0.3rem 0.45rem; }
+  .field-input { padding: 0.25rem 0.4rem; font-size: 0.78rem; }
+  .items-list { gap: 0.4rem; max-height: none; }
+  .stock-adjust-block { padding: 0.55rem; gap: 0.35rem; }
+  .btn { padding: 0.42rem 0.85rem; font-size: 0.82rem; }
+  .image-placeholder, .image-preview img { width: 56px; height: 56px; }
 }
 </style>
