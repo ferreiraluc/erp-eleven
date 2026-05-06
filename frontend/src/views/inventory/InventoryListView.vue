@@ -335,8 +335,7 @@
               <template v-if="entry.item.category">
                 <span class="list-sep">·</span><span class="list-attr list-cat-tag">{{ formatCategory(entry.item.category) }}</span>
               </template>
-            </div>
-            <div class="list-right">
+              <span class="list-sep list-sep-spaced">·</span>
               <span class="list-stock" :class="'stock-' + entry.item.alert_level">
                 <template v-if="entry.item.stock_loja !== undefined">L:{{ entry.item.stock_loja }}&nbsp;D:{{ entry.item.stock_deposito ?? 0 }}</template>
                 <template v-else>{{ entry.item.current_stock }}</template>
@@ -349,18 +348,18 @@
                 <span class="list-sep list-sep-subtle">·</span>
                 <span class="list-barcode">{{ entry.item.barcode }}</span>
               </template>
-              <div class="list-actions">
-                <div class="exit-wrap">
-                  <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="entry.item.current_stock <= 0">−1</button>
-                  <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
-                    <span class="confirm-question">Confirmar saída?</span>
-                    <button @click.stop="handleQuickExit(entry.item)" class="confirm-yes">Sim</button>
-                    <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
-                  </div>
+            </div>
+            <div class="list-actions">
+              <div class="exit-wrap">
+                <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="entry.item.current_stock <= 0">−1</button>
+                <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
+                  <span class="confirm-question">Confirmar saída?</span>
+                  <button @click.stop="handleQuickExit(entry.item)" class="confirm-yes">Sim</button>
+                  <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
                 </div>
-                <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">Mov.</button>
-                <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">Ed.</button>
               </div>
+              <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">Movimentar</button>
+              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">Editar</button>
             </div>
           </div>
 
@@ -1350,21 +1349,21 @@ onMounted(async () => {
 .view-list .item-thumb-wrap { display: none; }
 
 /* ── List single-line row ──────────────────────────────────────────────────── */
-.item-list-row { display: flex; align-items: center; width: 100%; min-width: 0; gap: 0; min-height: 30px; }
+.item-list-row { display: flex; align-items: center; width: 100%; min-width: 0; gap: 0; min-height: 32px; }
 .list-left { display: flex; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
-.list-right { display: flex; align-items: center; flex-shrink: 0; gap: 0; }
 .list-name { font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 40px; }
 .list-sep { color: #d1d5db; margin: 0 0.18rem; font-size: 0.72rem; flex-shrink: 0; }
 .list-sep-subtle { opacity: 0.5; }
+.list-sep-spaced { margin: 0 0.3rem; }
 .list-attr { font-size: 0.72rem; color: #6b7280; white-space: nowrap; flex-shrink: 0; }
 .list-brand-tag { font-size: 0.72rem; font-weight: 600; color: #374151; white-space: nowrap; flex-shrink: 0; }
 .list-size-badge { font-size: 0.62rem; font-weight: 700; color: #374151; background: #f3f4f6; border-radius: 3px; padding: 0.05rem 0.28rem; white-space: nowrap; flex-shrink: 0; }
 .list-cat-tag { flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 20px; }
-.list-stock { font-size: 0.72rem; font-weight: 700; white-space: nowrap; margin-left: 0.5rem; }
-.list-price { font-size: 0.72rem; color: #059669; font-weight: 600; white-space: nowrap; }
-.list-barcode { font-family: monospace; font-size: 0.66rem; color: #9ca3af; white-space: nowrap; }
-.list-actions { display: flex; gap: 0.2rem; margin-left: 0.45rem; flex-shrink: 0; }
-.list-btn { padding: 0.1rem 0.35rem !important; font-size: 0.63rem !important; }
+.list-stock { font-size: 0.72rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.list-price { font-size: 0.72rem; color: #059669; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.list-barcode { font-family: monospace; font-size: 0.66rem; color: #111827; white-space: nowrap; flex-shrink: 0; }
+.list-actions { display: flex; gap: 0.35rem; margin-left: 0.75rem; flex-shrink: 0; }
+.list-btn { padding: 0.25rem 0.65rem !important; font-size: 0.72rem !important; }
 
 /* --- GRID view (imagem em destaque, infos em linhas) --- */
 .view-grid {
