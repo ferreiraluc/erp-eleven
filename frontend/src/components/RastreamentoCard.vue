@@ -482,7 +482,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  flex: 1;
   overflow: hidden;
 }
 
@@ -574,9 +573,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  flex: 1;
   overflow-y: auto;
-  min-height: 0;
+  max-height: 420px;
   padding-right: 0.25rem;
 }
 
