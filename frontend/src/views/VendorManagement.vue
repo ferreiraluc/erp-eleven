@@ -455,7 +455,7 @@ const formatDate = (dateString: string) => {
 }
 
 const goBack = () => {
-  router.go(-1)
+  router.replace('/dashboard')
 }
 
 // Lifecycle

@@ -409,6 +409,8 @@ onMounted(() => {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   height: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .rastreamento-card:hover {
@@ -480,8 +482,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: 220px;
-  max-height: 380px;
+  flex: 1;
+  overflow: hidden;
 }
 
 .rastreamento-stats {
@@ -556,6 +558,7 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .recentes-title {
@@ -573,7 +576,7 @@ onMounted(() => {
   gap: 0.375rem;
   flex: 1;
   overflow-y: auto;
-  max-height: 420px;
+  min-height: 0;
   padding-right: 0.25rem;
 }
 

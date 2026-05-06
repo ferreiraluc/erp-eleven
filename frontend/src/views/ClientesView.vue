@@ -3,7 +3,7 @@
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
-          <button @click="$router.back()" class="back-btn">
+          <button @click="$router.replace('/dashboard')" class="back-btn">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
