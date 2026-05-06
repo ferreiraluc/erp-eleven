@@ -92,10 +92,13 @@
                       class="rastreio-item"
                       @mousedown.prevent="selectRastreio(r)"
                     >
-                      <span class="rastreio-code">{{ r.codigo_rastreio }}</span>
-                      <span class="rastreio-status-dot" :style="{ background: rastreioStatusColor(r.status) }"></span>
-                      <span class="rastreio-status-text">{{ rastreioStatusLabel(r.status) }}</span>
-                      <span v-if="r.destinatario" class="rastreio-dest">· {{ r.destinatario }}</span>
+                      <span class="rastreio-name">{{ r.destinatario || 'Sem destinatário' }}</span>
+                      <div class="rastreio-meta">
+                        <span class="rastreio-code">{{ r.codigo_rastreio }}</span>
+                        <span v-if="r.numero_pedido" class="rastreio-pedido-badge">#{{ r.numero_pedido }}</span>
+                        <span class="rastreio-status-dot" :style="{ background: rastreioStatusColor(r.status) }"></span>
+                        <span class="rastreio-status-text">{{ rastreioStatusLabel(r.status) }}</span>
+                      </div>
                     </button>
                     <div v-if="!rastreioFiltered.length" class="rastreio-empty">Nenhum resultado</div>
                   </div>
@@ -1033,17 +1036,18 @@ onMounted(() => {
   max-height: 240px; overflow-y: auto;
 }
 .rastreio-item {
-  display: flex; align-items: center; gap: .4rem;
-  width: 100%; text-align: left; padding: .55rem .85rem;
+  display: flex; flex-direction: column; align-items: flex-start; gap: .15rem;
+  width: 100%; text-align: left; padding: .5rem .85rem;
   background: none; border: none; cursor: pointer; border-bottom: 1px solid #f3f4f6;
-  font-size: .8rem;
 }
 .rastreio-item:last-child { border-bottom: none; }
 .rastreio-item:hover { background: #f9fafb; }
-.rastreio-code { font-weight: 700; color: #111827; font-family: monospace; }
-.rastreio-status-dot { width: .5rem; height: .5rem; border-radius: 50%; flex-shrink: 0; display: inline-block; }
-.rastreio-status-text { font-size: .72rem; color: #6b7280; }
-.rastreio-dest { font-size: .72rem; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rastreio-name { font-size: .82rem; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.rastreio-meta { display: flex; align-items: center; gap: .35rem; }
+.rastreio-code { font-size: .72rem; font-weight: 600; color: #6b7280; font-family: monospace; }
+.rastreio-pedido-badge { font-size: .65rem; font-weight: 700; background: #dbeafe; color: #1d4ed8; padding: .08rem .35rem; border-radius: 4px; }
+.rastreio-status-dot { width: .45rem; height: .45rem; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.rastreio-status-text { font-size: .7rem; color: #9ca3af; }
 .rastreio-empty { padding: .75rem; font-size: .8rem; color: #9ca3af; text-align: center; }
 .rastreio-ok {
   margin: .3rem 0 0; font-size: .72rem; color: #10b981;

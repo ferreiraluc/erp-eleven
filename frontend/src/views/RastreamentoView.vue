@@ -162,7 +162,10 @@
               >
                 <!-- Linha 1: Nome + Badge + Chevron -->
                 <div class="mch-top">
-                  <span class="mch-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
+                  <div class="mch-name-wrap">
+                    <span class="mch-name">{{ (rastreamento.pedido_id && rastreamento.cliente_nome) ? rastreamento.cliente_nome : (rastreamento.destinatario || 'Sem destinatário') }}</span>
+                    <span v-if="rastreamento.pedido_id" class="mch-pedido-badge">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0, 8) }}</span>
+                  </div>
                   <span class="status-badge-inline mch-badge" :class="getStatusBadgeClass(rastreamento.status)">{{ getStatusText(rastreamento.status) }}</span>
                   <div class="mobile-expand-icon">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }">
@@ -1776,15 +1779,35 @@ onMounted(() => {
     gap: 4px;
   }
 
+  .mch-name-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
   .mch-name {
     font-size: 11px;
     font-weight: 700;
     color: #1e293b;
-    flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.2;
+  }
+
+  .mch-pedido-badge {
+    display: inline-block;
+    width: fit-content;
+    font-size: 0.58rem;
+    font-weight: 700;
+    background: #dbeafe;
+    color: #1d4ed8;
+    padding: 0.08rem 0.38rem;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+    line-height: 1.4;
   }
 
   .mch-badge {
