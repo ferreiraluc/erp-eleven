@@ -227,6 +227,8 @@ class AlertSummary(BaseModel):
     inactive_count: int = 0
     group_count: int = 0        # distinct groups
     grouped_items_count: int = 0  # items that belong to a group
+    loja_count: int = 0          # active items with stock_loja > 0
+    deposito_count: int = 0      # active items with stock_deposito > 0
 
 
 class GradeCreateRequest(BaseModel):

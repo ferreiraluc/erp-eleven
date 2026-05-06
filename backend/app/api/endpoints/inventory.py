@@ -247,6 +247,8 @@ def get_alerts_summary(
     group_count = db.query(Item.group_key).filter(
         Item.group_key.isnot(None), Item.is_active == True
     ).distinct().count()
+    loja_count = sum(1 for i in active_items if (i.stock_loja or 0) > 0)
+    deposito_count = sum(1 for i in active_items if (i.stock_deposito or 0) > 0)
     return AlertSummary(
         low_stock_count=low_stock,
         out_of_stock_count=out_of_stock,
@@ -255,6 +257,8 @@ def get_alerts_summary(
         inactive_count=inactive_count,
         group_count=group_count,
         grouped_items_count=grouped_items_count,
+        loja_count=loja_count,
+        deposito_count=deposito_count,
     )
 
 

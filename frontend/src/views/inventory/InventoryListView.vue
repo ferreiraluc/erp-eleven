@@ -64,7 +64,7 @@
           v-for="chip in statusChips"
           :key="chip.value"
           @click="setStatusFilter(chip.value)"
-          :class="['chip', { active: activeStatus === chip.value }]"
+          :class="['chip', { active: activeStatus === chip.value, 'chip-inactive': chip.value === 'inactive' }]"
         >
           {{ chip.label }}
           <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
@@ -76,8 +76,11 @@
             {{ filterBrand || 'Marca' }} <span class="chip-caret">▾</span>
           </button>
           <div v-if="openFilter === 'brand'" class="chip-dropdown">
+            <div class="chip-dd-search-wrap">
+              <input v-model="brandSearch" class="chip-dd-search" placeholder="Buscar marca..." @click.stop type="text" autocomplete="off" />
+            </div>
             <button @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">Todas as marcas</button>
-            <button v-for="b in distinctBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
+            <button v-for="b in filteredBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
           </div>
         </div>
 
@@ -87,15 +90,23 @@
             {{ filterCategory ? formatCategory(filterCategory) : 'Categoria' }} <span class="chip-caret">▾</span>
           </button>
           <div v-if="openFilter === 'category'" class="chip-dropdown">
+            <div class="chip-dd-search-wrap">
+              <input v-model="categorySearch" class="chip-dd-search" placeholder="Buscar categoria..." @click.stop type="text" autocomplete="off" />
+            </div>
             <button @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">Todas as categorias</button>
-            <button v-for="c in distinctCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
+            <button v-for="c in filteredCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
           </div>
         </div>
 
         <!-- Location chips -->
-        <button @click="setLocationFilter('')" :class="['chip', 'chip-loc', { active: filterLocation === '' }]">Todos</button>
-        <button @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">Loja</button>
-        <button @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">Depósito</button>
+        <button @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">
+          Loja
+          <span v-if="inventoryStore.alerts?.loja_count !== undefined" class="chip-count">{{ inventoryStore.alerts.loja_count }}</span>
+        </button>
+        <button @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">
+          Depósito
+          <span v-if="inventoryStore.alerts?.deposito_count !== undefined" class="chip-count">{{ inventoryStore.alerts.deposito_count }}</span>
+        </button>
 
         <!-- Ver grades (só aparece se existem grupos) -->
         <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
@@ -128,12 +139,12 @@
         <span class="inv-stat-sep">·</span>
         <span class="inv-stat">
           <span class="inv-stat-num">{{ inventoryStore.alerts.group_count }}</span>
-          <span class="inv-stat-label">grupos</span>
+          <span class="inv-stat-label">grades</span>
         </span>
         <span class="inv-stat-sep">·</span>
         <span class="inv-stat">
           <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items - inventoryStore.alerts.grouped_items_count }}</span>
-          <span class="inv-stat-label">sem grupo</span>
+          <span class="inv-stat-label">sem grade</span>
         </span>
         <template v-if="inventoryStore.alerts.low_stock_count > 0">
           <span class="inv-stat-sep">·</span>
@@ -268,11 +279,18 @@
                 <template v-if="v.stock_deposito > 0 && v.stock_loja > 0">{{ v.stock_loja }}|{{ v.stock_deposito }}</template>
                 <template v-else>{{ v.current_stock }}</template>
               </span>
-              <button
-                class="chip-remove"
-                title="Remover do grupo"
-                @click.stop="removeItemFromGroup(v.id, entry.group.group_key)"
-              >×</button>
+              <div class="chip-remove-wrap">
+                <button
+                  class="chip-remove"
+                  title="Remover do grupo"
+                  @click.stop="confirmRemoveChip = v.id"
+                >×</button>
+                <div v-if="confirmRemoveChip === v.id" class="chip-remove-confirm">
+                  <span>Remover?</span>
+                  <button @click.stop="doRemoveFromGroup(v.id, entry.group.group_key)">Sim</button>
+                  <button @click.stop="confirmRemoveChip = null">Não</button>
+                </div>
+              </div>
             </span>
           </div>
         </div>
@@ -282,8 +300,8 @@
           v-else
           class="item-card"
           :data-item-id="entry.item.id"
-          :class="['alert-' + entry.item.alert_level, { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id) }]"
-          @click="selectionMode && !isDragSelecting && toggleSelection(entry.item.id)"
+          :class="['alert-' + entry.item.alert_level, { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id), 'card-expanded': expandedCardIds.includes(entry.item.id) }]"
+          @click="onCardClick(entry.item.id, $event)"
           @pointerdown="onItemPointerDown(entry.item.id, $event)"
         >
           <!-- Checkbox de seleção -->
@@ -347,10 +365,30 @@
                       <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
                     </div>
                   </div>
-                  <button @click="openMovement(entry.item)" class="action-btn move-btn">Movimentar</button>
-                  <button @click="openEdit(entry.item)" class="action-btn edit-btn">Editar</button>
+                  <button @click.stop="openMovement(entry.item)" class="action-btn move-btn">Movimentar</button>
+                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn">Editar</button>
                 </div>
               </div>
+            </div>
+          </div><!-- /item-row-main -->
+
+          <!-- Expanded detail section -->
+          <div v-if="expandedCardIds.includes(entry.item.id)" class="item-extra" @click.stop>
+            <div class="item-extra-row">
+              <span class="item-extra-label">SKU</span>
+              <span class="item-extra-val mono">{{ entry.item.sku_internal }}</span>
+            </div>
+            <div v-if="entry.item.min_stock || entry.item.max_stock" class="item-extra-row">
+              <span class="item-extra-label">Limites</span>
+              <span class="item-extra-val">mín {{ entry.item.min_stock }} · máx {{ entry.item.max_stock }}</span>
+            </div>
+            <div v-if="Number(entry.item.cost_price) > 0" class="item-extra-row">
+              <span class="item-extra-label">Custo</span>
+              <span class="item-extra-val">{{ currencySymbol(entry.item.cost_currency || entry.item.currency) }} {{ Number(entry.item.cost_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div v-if="entry.item.description" class="item-extra-row">
+              <span class="item-extra-label">Descrição</span>
+              <span class="item-extra-val item-extra-desc">{{ entry.item.description }}</span>
             </div>
           </div>
         </div>
@@ -531,6 +569,20 @@ const filterBrand = ref('')
 const filterCategory = ref('')
 const openFilter = ref<string | null>(null)
 const filterChipsRef = ref<HTMLElement | null>(null)
+const brandSearch = ref('')
+const categorySearch = ref('')
+const filteredBrands = computed(() =>
+  brandSearch.value.trim()
+    ? distinctBrands.value.filter(b => b.toLowerCase().includes(brandSearch.value.toLowerCase()))
+    : distinctBrands.value
+)
+const filteredCategories = computed(() =>
+  categorySearch.value.trim()
+    ? distinctCategories.value.filter(c => c.toLowerCase().includes(categorySearch.value.toLowerCase()))
+    : distinctCategories.value
+)
+const expandedCardIds = ref<string[]>([])
+const confirmRemoveChip = ref<string | null>(null)
 
 const backendGroups = ref<GroupResponse[]>([])
 const backendSuggestions = ref<SuggestionResponse[]>([])
@@ -706,10 +758,33 @@ function openBulkTransfer() {
 }
 
 function setLocationFilter(loc: string) {
-  filterLocation.value = loc
-  inventoryStore.filters.location_stock = loc
+  // Toggle off if already active
+  filterLocation.value = filterLocation.value === loc ? '' : loc
+  inventoryStore.filters.location_stock = filterLocation.value
   inventoryStore.loadItems(1, false, groupMode.value)
   if (groupMode.value) loadGroupsFiltered()
+}
+
+function toggleCardExpand(id: string) {
+  const idx = expandedCardIds.value.indexOf(id)
+  if (idx === -1) expandedCardIds.value.push(id)
+  else expandedCardIds.value.splice(idx, 1)
+}
+
+function onCardClick(itemId: string, e: MouseEvent) {
+  const target = e.target as HTMLElement
+  // Don't expand when clicking interactive elements or images
+  if (target.closest('button, a, .item-thumb-wrap, .item-grid-image, .card-check')) return
+  if (selectionMode.value) {
+    if (!isDragSelecting.value) toggleSelection(itemId)
+  } else {
+    toggleCardExpand(itemId)
+  }
+}
+
+async function doRemoveFromGroup(itemId: string, groupKey: string) {
+  confirmRemoveChip.value = null
+  await removeItemFromGroup(itemId, groupKey)
 }
 
 function toggleSelection(id: string) {
@@ -959,13 +1034,23 @@ function setStatusFilter(status: string) {
 }
 
 function toggleFilter(key: string) {
-  openFilter.value = openFilter.value === key ? null : key
+  if (openFilter.value === key) {
+    openFilter.value = null
+    brandSearch.value = ''
+    categorySearch.value = ''
+  } else {
+    openFilter.value = key
+    brandSearch.value = ''
+    categorySearch.value = ''
+  }
 }
 
 function setFilter(key: 'brand' | 'category', value: string) {
   if (key === 'brand') filterBrand.value = value
   else filterCategory.value = value
   openFilter.value = null
+  brandSearch.value = ''
+  categorySearch.value = ''
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
   inventoryStore.loadItems(1, false, groupMode.value)
@@ -1082,10 +1167,15 @@ function showToast(message: string, type: string) {
 function onDocClick(e: MouseEvent) {
   if (filterChipsRef.value && !filterChipsRef.value.contains(e.target as Node)) {
     openFilter.value = null
+    brandSearch.value = ''
+    categorySearch.value = ''
   }
   const target = e.target as HTMLElement
   if (!target.closest('.exit-wrap')) {
     confirmExitId.value = null
+  }
+  if (!target.closest('.chip-remove-wrap')) {
+    confirmRemoveChip.value = null
   }
 }
 
@@ -1179,9 +1269,12 @@ onMounted(async () => {
 .camera-btn { padding: 0.625rem; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; color: #374151; }
 .chip { padding: 0.375rem 0.75rem; border-radius: 20px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 0.8rem; cursor: pointer; color: #374151; display: flex; align-items: center; gap: 0.25rem; }
 .chip.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
-.chip-loc { border-style: dashed; }
-.chip-loc.active { background: #f0fdf4; border-color: #16a34a; color: #15803d; border-style: solid; }
-.chip-count { background: #ef4444; color: white; border-radius: 10px; padding: 0 5px; font-size: 0.7rem; min-width: 16px; text-align: center; }
+.chip-loc { }
+.chip-loc.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.chip-inactive.active { background: #fee2e2; border-color: #ef4444; color: #dc2626; }
+.chip-inactive.active .chip-count { background: #dc2626; color: white; }
+.chip-count { background: #bfdbfe; color: #1e40af; border-radius: 10px; padding: 0 5px; font-size: 0.7rem; min-width: 16px; text-align: center; }
+.chip.active .chip-count { background: #2563eb; color: white; }
 .loading-state { display: flex; flex-direction: column; align-items: center; padding: 3rem; color: #6b7280; gap: 1rem; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1268,7 +1361,11 @@ onMounted(async () => {
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
   background: white; border: 1px solid #e5e7eb; border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 160px; overflow: hidden;
+  max-height: 240px; overflow-y: auto;
 }
+.chip-dd-search-wrap { padding: 0.35rem 0.5rem; border-bottom: 1px solid #f3f4f6; position: sticky; top: 0; background: white; z-index: 1; }
+.chip-dd-search { width: 100%; font-size: 0.78rem; border: 1px solid #e5e7eb; border-radius: 5px; padding: 0.25rem 0.5rem; outline: none; box-sizing: border-box; color: #374151; }
+.chip-dd-search:focus { border-color: #93c5fd; }
 .chip-dd-opt {
   display: block; width: 100%; text-align: left;
   padding: 0.45rem 0.85rem; font-size: 0.82rem; color: #374151;
@@ -1607,4 +1704,43 @@ onMounted(async () => {
 .items-container.drag-selecting { user-select: none; }
 .items-container.drag-selecting .item-card { cursor: crosshair; }
 .items-container.drag-selecting .item-card .item-actions { pointer-events: none; opacity: 0.4; }
+
+/* ── Card expand ─────────────────────────────────────────────────────────────── */
+.item-extra {
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+.item-extra-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.68rem; }
+.item-extra-label { color: #9ca3af; min-width: 52px; flex-shrink: 0; }
+.item-extra-val { color: #374151; font-weight: 500; }
+.item-extra-val.mono { font-family: monospace; letter-spacing: 0.03em; }
+.item-extra-desc { color: #6b7280; font-weight: 400; white-space: pre-wrap; word-break: break-word; }
+
+/* ── Chip remove confirm popover ──────────────────────────────────────────────── */
+.chip-remove-wrap { position: relative; display: inline-flex; align-items: center; }
+.chip-remove-confirm {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  padding: 0.3rem 0.45rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.chip-remove-confirm span { font-size: 0.65rem; color: #374151; }
+.chip-remove-confirm button { font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; }
+.chip-remove-confirm button:first-of-type { background: #ef4444; color: white; }
+.chip-remove-confirm button:first-of-type:hover { background: #dc2626; }
+.chip-remove-confirm button:last-of-type { background: #f3f4f6; color: #6b7280; }
+.chip-remove-confirm button:last-of-type:hover { background: #e5e7eb; }
 </style>

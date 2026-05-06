@@ -589,6 +589,8 @@ export interface AlertSummary {
   inactive_count: number
   group_count: number
   grouped_items_count: number
+  loja_count: number
+  deposito_count: number
 }
 
 export interface StockMovement {
