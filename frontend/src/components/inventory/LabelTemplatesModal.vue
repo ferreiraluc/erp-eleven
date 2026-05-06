@@ -1,5 +1,5 @@
 <template>
-  <div class="lt-overlay" @click.self="emit('close')">
+  <div class="lt-overlay">
     <div class="lt-modal">
       <div class="lt-header">
         <div class="lt-header-left">

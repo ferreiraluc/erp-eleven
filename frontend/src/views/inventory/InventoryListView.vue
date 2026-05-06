@@ -319,7 +319,52 @@
             </div>
           </div>
 
-          <div class="item-row-main">
+          <!-- ── MODO LISTA: linha única ── -->
+          <div v-if="viewMode === 'list'" class="item-list-row" :style="selectionMode ? 'padding-left:1.85rem' : ''">
+            <div class="list-left">
+              <span class="list-name" :class="'stock-' + entry.item.alert_level">{{ entry.item.name }}</span>
+              <template v-if="entry.item.color">
+                <span class="list-sep">·</span><span class="list-attr">{{ entry.item.color }}</span>
+              </template>
+              <template v-if="entry.item.size">
+                <span class="list-sep">·</span><span class="list-size-badge">{{ entry.item.size }}</span>
+              </template>
+              <template v-if="entry.item.brand">
+                <span class="list-sep">·</span><span class="list-brand-tag">{{ entry.item.brand }}</span>
+              </template>
+              <template v-if="entry.item.category">
+                <span class="list-sep">·</span><span class="list-attr list-cat-tag">{{ formatCategory(entry.item.category) }}</span>
+              </template>
+            </div>
+            <div class="list-right">
+              <span class="list-stock" :class="'stock-' + entry.item.alert_level">
+                <template v-if="entry.item.stock_loja !== undefined">L:{{ entry.item.stock_loja }}&nbsp;D:{{ entry.item.stock_deposito ?? 0 }}</template>
+                <template v-else>{{ entry.item.current_stock }}</template>
+              </span>
+              <template v-if="Number(entry.item.sale_price) > 0">
+                <span class="list-sep">·</span>
+                <span class="list-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }}&nbsp;{{ Number(entry.item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+              </template>
+              <template v-if="entry.item.barcode">
+                <span class="list-sep list-sep-subtle">·</span>
+                <span class="list-barcode">{{ entry.item.barcode }}</span>
+              </template>
+              <div class="list-actions">
+                <div class="exit-wrap">
+                  <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="entry.item.current_stock <= 0">−1</button>
+                  <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
+                    <span class="confirm-question">Confirmar saída?</span>
+                    <button @click.stop="handleQuickExit(entry.item)" class="confirm-yes">Sim</button>
+                    <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
+                  </div>
+                </div>
+                <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">Mov.</button>
+                <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">Ed.</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="item-row-main" v-show="viewMode !== 'list'">
             <!-- Thumb -->
             <div class="item-thumb-wrap" @click="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
               <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-thumb" />
@@ -1294,15 +1339,32 @@ onMounted(async () => {
 }
 .view-compact .item-grid-image { display: none; }
 
-/* --- LIST view (1 col, todas as infos em linhas separadas) --- */
+/* --- LIST view (1 col, linha única por item) --- */
 .view-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
-.view-list .item-card { padding: 0.35rem 0.75rem; }
+.view-list .item-card { padding: 0.18rem 0.65rem; border-radius: 5px; }
 .view-list .item-grid-image { display: none; }
 .view-list .item-thumb-wrap { display: none; }
+
+/* ── List single-line row ──────────────────────────────────────────────────── */
+.item-list-row { display: flex; align-items: center; width: 100%; min-width: 0; gap: 0; min-height: 30px; }
+.list-left { display: flex; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
+.list-right { display: flex; align-items: center; flex-shrink: 0; gap: 0; }
+.list-name { font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 40px; }
+.list-sep { color: #d1d5db; margin: 0 0.18rem; font-size: 0.72rem; flex-shrink: 0; }
+.list-sep-subtle { opacity: 0.5; }
+.list-attr { font-size: 0.72rem; color: #6b7280; white-space: nowrap; flex-shrink: 0; }
+.list-brand-tag { font-size: 0.72rem; font-weight: 600; color: #374151; white-space: nowrap; flex-shrink: 0; }
+.list-size-badge { font-size: 0.62rem; font-weight: 700; color: #374151; background: #f3f4f6; border-radius: 3px; padding: 0.05rem 0.28rem; white-space: nowrap; flex-shrink: 0; }
+.list-cat-tag { flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 20px; }
+.list-stock { font-size: 0.72rem; font-weight: 700; white-space: nowrap; margin-left: 0.5rem; }
+.list-price { font-size: 0.72rem; color: #059669; font-weight: 600; white-space: nowrap; }
+.list-barcode { font-family: monospace; font-size: 0.66rem; color: #9ca3af; white-space: nowrap; }
+.list-actions { display: flex; gap: 0.2rem; margin-left: 0.45rem; flex-shrink: 0; }
+.list-btn { padding: 0.1rem 0.35rem !important; font-size: 0.63rem !important; }
 
 /* --- GRID view (imagem em destaque, infos em linhas) --- */
 .view-grid {
@@ -1714,6 +1776,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.18rem;
 }
+.view-list .item-extra { margin-top: 0.25rem; padding: 0.25rem 0 0.1rem; }
 .item-extra-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.68rem; }
 .item-extra-label { color: #9ca3af; min-width: 52px; flex-shrink: 0; }
 .item-extra-val { color: #374151; font-weight: 500; }
