@@ -57,7 +57,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Marca</label>
-              <input v-model="form.brand" type="text" class="form-input" placeholder="Ex: Nike, Adidas..." list="brand-list" />
+              <input v-model="form.brand" type="text" class="form-input" placeholder="Ex: Armani, Boss..." list="brand-list" />
               <datalist id="brand-list">
                 <option v-for="b in existingBrands" :key="b" :value="b" />
               </datalist>
@@ -283,7 +283,50 @@
                 placeholder="Ex: 36 ↵"
               />
             </div>
-            <span class="form-hint">Enter ou espaço para adicionar. Clique no × para remover.</span>
+            <div class="add-size-row">
+              <input
+                v-model="customSizeInput"
+                @keydown.enter.prevent="addCustomSize"
+                type="text"
+                class="form-input add-size-input"
+                placeholder="Adicionar tamanho (ex: 3XL, 46...)"
+              />
+              <button @click="addCustomSize" type="button" class="btn-add-chip">+ Add</button>
+            </div>
+          </div>
+
+          <!-- Color chips -->
+          <div class="form-group">
+            <label>Cores <span class="size-count">({{ gradeColors.length }}{{ gradeColors.length > 0 && gradeSizes.length > 0 ? ' × ' + gradeSizes.length + ' tam.' : '' }})</span></label>
+            <div class="quick-colors">
+              <button
+                v-for="c in QUICK_COLORS"
+                :key="c"
+                @click="toggleQuickColor(c)"
+                :class="['quick-color-btn', { active: gradeColors.includes(c) }]"
+                type="button"
+              >{{ c }}</button>
+            </div>
+            <div class="grade-chips" @click="focusColorInput">
+              <span v-for="(color, i) in gradeColors" :key="i" class="grade-chip grade-chip-color">
+                {{ color }}
+                <button @click.stop="gradeColors.splice(i, 1)" class="chip-x" type="button">×</button>
+              </span>
+              <input
+                ref="colorInputRef"
+                v-model="colorInput"
+                @keydown.enter.prevent="addGradeColor"
+                @keydown.188.prevent="addGradeColor"
+                type="text"
+                class="chip-input"
+                placeholder="Outra cor ↵"
+              />
+            </div>
+            <span class="form-hint">
+              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">Criará {{ gradeColors.length }} × {{ gradeSizes.length }} = {{ gradeColors.length * gradeSizes.length }} itens (cor × tamanho).</template>
+              <template v-else-if="gradeColors.length > 0">Criará {{ gradeColors.length }} {{ gradeColors.length === 1 ? 'item' : 'itens' }}, um por cor.</template>
+              <template v-else>Cores opcionais — deixe vazio para criar apenas os tamanhos.</template>
+            </span>
           </div>
 
           <!-- Initial stock + location -->
@@ -310,19 +353,36 @@
           </div>
 
           <!-- Preview -->
-          <div v-if="gradeSizes.length > 0" class="form-group">
-            <label>Prévia — {{ gradeSizes.length }} {{ gradeSizes.length === 1 ? 'item' : 'itens' }} serão criados</label>
+          <div v-if="gradeSizes.length > 0 || gradeColors.length > 0" class="form-group">
+            <label>Prévia — {{ gradeItemCount }} {{ gradeItemCount === 1 ? 'item' : 'itens' }} serão criados</label>
             <div class="grade-preview">
-              <div v-for="size in gradeSizes" :key="size" class="gp-row">
-                <span class="gp-size">{{ size }}</span>
-                <span class="gp-name">{{ (form.name || '(nome)') + ' ' + size }}</span>
-                <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
-              </div>
+              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">
+                <template v-for="color in gradeColors" :key="color">
+                  <div v-for="size in gradeSizes" :key="color + size" class="gp-row">
+                    <span class="gp-size">{{ size }}</span>
+                    <span class="gp-color-badge">{{ color }}</span>
+                    <span class="gp-name">{{ (form.name || '(nome)') + ' ' + size + ' ' + color }}</span>
+                  </div>
+                </template>
+              </template>
+              <template v-else-if="gradeColors.length > 0">
+                <div v-for="color in gradeColors" :key="color" class="gp-row">
+                  <span class="gp-color-badge">{{ color }}</span>
+                  <span class="gp-name">{{ (form.name || '(nome)') + ' ' + color }}</span>
+                </div>
+              </template>
+              <template v-else>
+                <div v-for="size in gradeSizes" :key="size" class="gp-row">
+                  <span class="gp-size">{{ size }}</span>
+                  <span class="gp-name">{{ (form.name || '(nome)') + ' ' + size }}</span>
+                  <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
+                </div>
+              </template>
             </div>
           </div>
 
           <div v-else class="grade-empty">
-            Selecione um modelo acima ou adicione tamanhos manualmente.
+            Selecione um modelo acima ou adicione tamanhos e/ou cores.
           </div>
         </div>
 
@@ -383,7 +443,7 @@
         <button @click="handleSubmit" class="btn btn-primary" :disabled="saving">
           <template v-if="saving">Salvando...</template>
           <template v-else-if="isEdit">Atualizar</template>
-          <template v-else-if="gradeSizes.length > 0">Criar Grade ({{ gradeSizes.length }} itens)</template>
+          <template v-else-if="gradeItemCount > 0">Criar Grade ({{ gradeItemCount }} {{ gradeItemCount === 1 ? 'item' : 'itens' }})</template>
           <template v-else>Criar</template>
         </button>
       </div>
@@ -434,6 +494,31 @@ const activePreset = ref('')
 const customSizeInput = ref('')
 const gradeInitialStock = ref(0)
 const initialStock = ref(0)
+
+// ── Color grade state ─────────────────────────────────────────────────────────
+const QUICK_COLORS = ['Navy', 'Branco', 'Preto', 'Red', 'Green']
+const gradeColors = ref<string[]>([])
+const colorInput = ref('')
+const colorInputRef = ref<HTMLInputElement>()
+
+function focusColorInput() { colorInputRef.value?.focus() }
+function addGradeColor() {
+  const c = colorInput.value.trim()
+  if (c && !gradeColors.value.includes(c)) gradeColors.value.push(c)
+  colorInput.value = ''
+}
+function toggleQuickColor(c: string) {
+  const idx = gradeColors.value.indexOf(c)
+  if (idx >= 0) gradeColors.value.splice(idx, 1)
+  else gradeColors.value.push(c)
+}
+const gradeItemCount = computed(() => {
+  const s = gradeSizes.value.length
+  const c = gradeColors.value.length
+  if (s > 0 && c > 0) return s * c
+  if (s > 0) return s
+  return c
+})
 const stockLocation = ref<'loja' | 'deposito'>(
   (localStorage.getItem('inv_stock_location') as 'loja' | 'deposito') || 'loja'
 )
@@ -650,13 +735,13 @@ async function handleSubmit() {
   }
   saving.value = true
   try {
-    // ── Grade creation ───────────────────────────────────────────────────────
-    if (!isEdit.value && gradeSizes.value.length > 0) {
-      const gradePayload = {
+    // ── Grade / color creation ────────────────────────────────────────────────
+    if (!isEdit.value && (gradeSizes.value.length > 0 || gradeColors.value.length > 0)) {
+      const sharedGroupKey = form.group_key || `grade-${Date.now()}`
+      const baseGradePayload = {
         name: form.name,
         description: form.description || null,
         category: form.category || null,
-        color: form.color || null,
         brand: form.brand || null,
         unit: form.unit || 'un',
         location: form.location || null,
@@ -670,13 +755,51 @@ async function handleSubmit() {
         min_stock: form.min_stock,
         max_stock: form.max_stock,
         image_data: form.image_data || null,
-        group_key: form.group_key || null,
+        group_key: sharedGroupKey,
         sizes: gradeSizes.value,
         initial_stock: gradeInitialStock.value || 0,
         stock_location: stockLocation.value,
       }
-      const result = await inventoryAPI.createGrade(gradePayload)
-      emit('saved', result.items[0])
+
+      let firstItem: InventoryItem | null = null
+
+      if (gradeSizes.value.length > 0 && gradeColors.value.length > 0) {
+        // Size × color matrix
+        for (const color of gradeColors.value) {
+          const result = await inventoryAPI.createGrade({ ...baseGradePayload, color })
+          if (!firstItem) firstItem = result.items[0]
+        }
+      } else if (gradeSizes.value.length > 0) {
+        // Only sizes (original behavior)
+        const result = await inventoryAPI.createGrade({ ...baseGradePayload, color: form.color || null })
+        firstItem = result.items[0]
+      } else {
+        // Only colors — create one item per color
+        const baseSinglePayload = {
+          ...form,
+          supplier_id: form.supplier_id || null,
+          image_data: form.image_data || null,
+          brand: form.brand || null,
+          group_key: sharedGroupKey,
+        }
+        for (const color of gradeColors.value) {
+          const result = await inventoryAPI.createItem({ ...baseSinglePayload, color })
+          if (gradeInitialStock.value > 0) {
+            try {
+              await inventoryAPI.createMovement({
+                item_id: result.id,
+                movement_type: 'entry',
+                quantity: gradeInitialStock.value,
+                reason: 'Estoque inicial',
+                location: stockLocation.value,
+              })
+            } catch {}
+          }
+          if (!firstItem) firstItem = result
+        }
+      }
+
+      emit('saved', firstItem!)
       return
     }
 
@@ -723,6 +846,7 @@ function onBarcodeDetected(code: string) {
 function onOcrResult(data: any) {
   showOcr.value = false
   if (data.name) form.name = data.name
+  if (data.brand) form.brand = data.brand
   if (data.size) form.size = data.size
   if (data.color) form.color = data.color
   if (data.barcode) form.barcode = data.barcode
@@ -963,6 +1087,40 @@ function capturePhoto() {
 }
 .gp-name { flex: 1; color: #111827; }
 .gp-barcode { font-family: monospace; font-size: 0.72rem; color: #9ca3af; flex-shrink: 0; }
+
+/* Add-size row */
+.add-size-row {
+  display: flex; gap: 0.4rem; margin-top: 0.35rem;
+}
+.add-size-input { font-size: 0.82rem !important; }
+.btn-add-chip {
+  flex-shrink: 0; padding: 0.45rem 0.75rem; background: #f0f9ff; border: 1px solid #bae6fd;
+  border-radius: 6px; color: #0369a1; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.btn-add-chip:hover { background: #e0f2fe; }
+
+/* Quick color buttons */
+.quick-colors {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem;
+}
+.quick-color-btn {
+  padding: 0.25rem 0.7rem; border: 1.5px solid #d1d5db; border-radius: 99px;
+  background: white; font-size: 0.78rem; font-weight: 500; color: #374151; cursor: pointer;
+  transition: all 0.15s;
+}
+.quick-color-btn:hover { border-color: #6366f1; color: #4f46e5; }
+.quick-color-btn.active { background: #e0e7ff; border-color: #6366f1; color: #4338ca; font-weight: 700; }
+
+/* Color chips (slightly different from size chips) */
+.grade-chip-color {
+  background: #fce7f3; color: #9d174d;
+}
+
+/* Color badge in preview */
+.gp-color-badge {
+  font-size: 0.7rem; font-weight: 700; background: #fce7f3; color: #9d174d;
+  border-radius: 4px; padding: 0.1rem 0.4rem; flex-shrink: 0;
+}
 
 .grade-empty {
   text-align: center; color: #9ca3af; font-size: 0.85rem; padding: 1.5rem;
