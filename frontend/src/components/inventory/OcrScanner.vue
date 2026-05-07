@@ -385,6 +385,10 @@ function applyFields() {
       (result as any)[f.key] = f.value.trim()
     }
   })
+  // Fallback: if brand wasn't in editableFields (empty field), use selectedBrand
+  if (!result.brand && selectedBrand.value) {
+    result.brand = selectedBrand.value
+  }
   emit('result', result)
 }
 </script>

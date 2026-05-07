@@ -304,8 +304,12 @@
                 :key="c"
                 @click="toggleQuickColor(c)"
                 :class="['quick-color-btn', { active: gradeColors.includes(c) }]"
+                :title="gradeColors.includes(c) ? 'Já adicionada (remova pelo ×)' : 'Adicionar'"
                 type="button"
-              >{{ c }}</button>
+              >
+                <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
+                {{ c }}
+              </button>
             </div>
             <div class="grade-chips" @click="focusColorInput">
               <span v-for="(color, i) in gradeColors" :key="i" class="grade-chip grade-chip-color">
@@ -508,9 +512,10 @@ function addGradeColor() {
   colorInput.value = ''
 }
 function toggleQuickColor(c: string) {
-  const idx = gradeColors.value.indexOf(c)
-  if (idx >= 0) gradeColors.value.splice(idx, 1)
-  else gradeColors.value.push(c)
+  if (!gradeColors.value.includes(c)) {
+    gradeColors.value.push(c)
+  }
+  // To remove, use × on the chip
 }
 const gradeItemCount = computed(() => {
   const s = gradeSizes.value.length
@@ -1114,7 +1119,8 @@ function capturePhoto() {
   transition: all 0.15s;
 }
 .quick-color-btn:hover { border-color: #6366f1; color: #4f46e5; }
-.quick-color-btn.active { background: #e0e7ff; border-color: #6366f1; color: #4338ca; font-weight: 700; }
+.quick-color-btn.active { background: #e0e7ff; border-color: #6366f1; color: #4338ca; font-weight: 700; cursor: default; }
+.quick-check { font-size: 0.7rem; margin-right: 1px; }
 
 /* Color chips (slightly different from size chips) */
 .grade-chip-color {
