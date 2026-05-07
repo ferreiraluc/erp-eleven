@@ -190,6 +190,7 @@ import { ocrAPI } from '@/services/api'
 
 interface OcrResult {
   name?: string
+  brand?: string
   size?: string
   color?: string
   barcode?: string
@@ -217,7 +218,7 @@ const saveForm = reactive({ brand: '', notes: '' })
 let stream: MediaStream | null = null
 
 interface EditableField {
-  key: keyof OcrResult | 'brand'
+  key: keyof OcrResult
   label: string
   placeholder: string
   value: string
@@ -380,7 +381,7 @@ function applyFields() {
     if (f.key === 'sale_price') {
       const n = parseFloat(f.value.replace(',', '.'))
       if (!isNaN(n)) result.sale_price = n
-    } else if (f.key !== 'brand') {
+    } else {
       (result as any)[f.key] = f.value.trim()
     }
   })

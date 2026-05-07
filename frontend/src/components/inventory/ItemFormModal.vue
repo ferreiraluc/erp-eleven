@@ -852,6 +852,11 @@ function onOcrResult(data: any) {
   if (data.barcode) form.barcode = data.barcode
   if (data.sale_price) form.sale_price = data.sale_price
   if (data.currency) form.currency = data.currency
+
+  // Pre-populate grade color with detected color
+  if (!isEdit.value && data.color && !gradeColors.value.includes(data.color)) {
+    gradeColors.value = [data.color]
+  }
 }
 
 // Photo handling
