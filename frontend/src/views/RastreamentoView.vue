@@ -615,16 +615,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import type { Rastreamento, RastreamentoCreate } from '@/stores/rastreamento'
 import { pedidosAPI, type Pedido } from '@/services/api'
 
 const router = useRouter()
+const route = useRoute()
 const rastreamentoStore = useRastreamentoStore()
 
 function goToPedido(rastreamento: Rastreamento) {
-  router.push({ path: '/pedidos', query: { search: rastreamento.numero_pedido || rastreamento.pedido_id } })
+  if (rastreamento.pedido_id) {
+    router.push({ path: '/pedidos', query: { pedido_id: rastreamento.pedido_id } })
+  }
 }
 
 // Estado da página
@@ -1055,8 +1058,12 @@ function trackingProgressStep(rastreamento: Rastreamento): number {
 }
 
 // Lifecycle
-onMounted(() => {
-  carregarDados()
+onMounted(async () => {
+  await carregarDados()
+  // Pré-filtrar se veio com ?search= na URL (ex: clique no badge de pedido)
+  if (route.query.search) {
+    filtros.value.busca = String(route.query.search)
+  }
 })
 </script>
 

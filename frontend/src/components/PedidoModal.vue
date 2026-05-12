@@ -121,6 +121,21 @@
                 <button type="button" @click="rastreioManual = !rastreioManual; clearRastreio()" class="rastreio-toggle">
                   {{ rastreioManual ? '← Buscar rastreamentos cadastrados' : 'Digitar código manualmente' }}
                 </button>
+                <!-- Ver Rastreamento (apenas no modo edição) -->
+                <div v-if="isEditing" class="ver-rastreio-row">
+                  <button
+                    v-if="selectedRastreio || (rastreioManual && formData.codigo_rastreio)"
+                    type="button"
+                    class="btn-ver-rastreio"
+                    @click="verRastreamento"
+                  >
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    Ver Rastreamento
+                  </button>
+                  <p v-else class="rastreio-nao-vinculado">
+                    Nenhum rastreamento vinculado a este pedido.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -310,6 +325,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { pedidosAPI, pedidoAnexosAPI, tagsAPI, clientesAPI, rastreamentosAPI, type Pedido, type PedidoCreate, type PedidoAnexo, type Tag, type Cliente, type RastreamentoSimple } from '@/services/api'
 import TagManagerModal from './TagManagerModal.vue'
 import AnexosCarousel from './AnexosCarousel.vue'
@@ -447,7 +463,16 @@ const formData = ref<PedidoCreate>({
 
 
 // Computed
+const router = useRouter()
 const isEditing = computed(() => !!props.pedido)
+
+function verRastreamento() {
+  const code = selectedRastreio.value?.codigo_rastreio || formData.value.codigo_rastreio
+  if (code) {
+    router.push({ path: '/rastreamento', query: { search: code } })
+    closeModal()
+  }
+}
 
 const isFormValid = computed(() => {
   return !!(
@@ -1058,6 +1083,15 @@ onMounted(() => {
   color: #6b7280; text-decoration: underline; padding: 0; margin-top: .25rem;
 }
 .rastreio-toggle:hover { color: #374151; }
+.ver-rastreio-row { margin-top: 0.5rem; }
+.btn-ver-rastreio {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.35rem 0.7rem; background: #eff6ff; color: #2563eb;
+  border: 1px solid #bfdbfe; border-radius: 6px; font-size: 0.78rem;
+  font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.btn-ver-rastreio:hover { background: #dbeafe; }
+.rastreio-nao-vinculado { font-size: 0.75rem; color: #9ca3af; margin: 0.25rem 0 0; font-style: italic; }
 
 /* Valor + moeda combo */
 .valor-with-moeda {

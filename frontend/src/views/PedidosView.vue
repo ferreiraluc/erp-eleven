@@ -237,7 +237,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import PedidoCard from '@/components/PedidoCard.vue'
 import PedidoModal from '@/components/PedidoModal.vue'
 import PedidoDetailsModal from '@/components/PedidoDetailsModal.vue'
@@ -245,6 +245,7 @@ import { pedidosAPI, tagsAPI, type Pedido, type Tag } from '@/services/api'
 
 // State
 const router = useRouter()
+const route = useRoute()
 const pedidos = ref<Pedido[]>([])
 const tags = ref<Tag[]>([])
 const isLoading = ref(true)
@@ -459,6 +460,11 @@ watch(searchQuery, () => {
 // Lifecycle
 onMounted(async () => {
   await Promise.all([loadPedidos(), loadTags()])
+  // Abrir modal diretamente se veio com ?pedido_id= na URL (ex: clique no badge de rastreamento)
+  if (route.query.pedido_id) {
+    const pedido = pedidos.value.find(p => p.id === route.query.pedido_id)
+    if (pedido) openDetailsModal(pedido)
+  }
 })
 </script>
 
