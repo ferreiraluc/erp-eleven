@@ -274,7 +274,7 @@
               :class="'chip-alert-' + v.alert_level"
               :title="v.name + ' · ' + v.sku_internal"
             >
-              <span class="chip-label" @click="openEdit(v)">
+              <span class="chip-label" @click.stop="openEdit(v)">
                 {{ v.size || v.name }}&nbsp;
                 <template v-if="v.stock_deposito > 0 && v.stock_loja > 0">{{ v.stock_loja }}|{{ v.stock_deposito }}</template>
                 <template v-else>{{ v.current_stock }}</template>
@@ -292,6 +292,39 @@
                 </div>
               </div>
             </span>
+          </div>
+
+          <!-- ── Itens expandidos (dentro do card, nunca invadem colunas adjacentes) ── -->
+          <div v-if="expandedGroups.includes(entry.group.group_key)" class="group-exp-section" @click.stop>
+            <div
+              v-for="item in sortedBySize(entry.group.items)"
+              :key="item.id"
+              class="group-exp-row"
+              :class="'exp-alert-' + item.alert_level"
+            >
+              <div class="exp-left">
+                <span class="exp-size">{{ item.size || item.name }}</span>
+                <span v-if="item.color" class="exp-color">{{ item.color }}</span>
+              </div>
+              <div class="exp-stock-info">
+                <template v-if="item.stock_loja !== undefined">
+                  <span class="exp-stock-val">L:{{ item.stock_loja }}</span>
+                  <span class="exp-stock-sep">·</span>
+                  <span class="exp-stock-val">D:{{ item.stock_deposito ?? 0 }}</span>
+                </template>
+                <template v-else>
+                  <span class="exp-stock-val">{{ item.current_stock }}</span>
+                </template>
+              </div>
+              <span v-if="Number(item.sale_price) > 0" class="exp-price">
+                {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 0 }) }}
+              </span>
+              <div class="exp-actions">
+                <button @click.stop="handleQuickExit(item)" class="exp-btn exp-exit" title="Consumir 1">−1</button>
+                <button @click.stop="openMovement(item)" class="exp-btn exp-move" title="Movimentar">⇅</button>
+                <button @click.stop="openEdit(item)" class="exp-btn exp-edit" title="Editar">✏</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -928,10 +961,7 @@ const flatList = computed<FlatEntry[]>(() => {
       items: visibleItems,
       total_stock: g.total_stock,
     }})
-
-    if (expandedGroups.value.includes(g.group_key)) {
-      for (const item of visibleItems) result.push({ type: 'item', item })
-    }
+    // Itens expandidos são renderizados DENTRO do card de grupo (não como vizinhos no grid)
   }
 
   // Itens soltos da página atual (já filtrados pelo backend via API)
@@ -1446,11 +1476,64 @@ onMounted(async () => {
   border: 1px solid #e5e7eb;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
+  grid-column: 1 / -1; /* padrão: largura total em list e grid */
+  transition: box-shadow 0.15s;
 }
+.group-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
 .group-card.alert-out  { border-left: 3px solid #ef4444; }
 .group-card.alert-low  { border-left: 3px solid #f59e0b; }
 .group-card.alert-high { border-left: 3px solid #8b5cf6; }
 .group-card.alert-ok   { border-left: 3px solid #10b981; }
+
+/* Compact: 2 cards de grade por linha */
+.view-compact .group-card { grid-column: span 1; }
+
+/* ── Itens expandidos dentro do card ─────────────────────────────── */
+.group-exp-section {
+  margin-top: 0.5rem;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.group-exp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 5px;
+  border-left: 2px solid transparent;
+  background: #fafafa;
+  transition: background 0.12s;
+}
+.group-exp-row:hover { background: #f3f4f6; }
+.exp-alert-out  { border-left-color: #ef4444; }
+.exp-alert-low  { border-left-color: #f59e0b; }
+.exp-alert-high { border-left-color: #8b5cf6; }
+.exp-alert-ok   { border-left-color: #d1d5db; }
+.exp-left { display: flex; align-items: center; gap: 0.35rem; flex: 1; min-width: 0; }
+.exp-size { font-size: 0.75rem; font-weight: 700; color: #111827; white-space: nowrap; }
+.exp-color { font-size: 0.7rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exp-stock-info { display: flex; align-items: center; gap: 0.2rem; flex-shrink: 0; }
+.exp-stock-val { font-size: 0.7rem; font-weight: 600; color: #374151; }
+.exp-stock-sep { font-size: 0.65rem; color: #d1d5db; }
+.exp-price { font-size: 0.7rem; font-weight: 600; color: #059669; white-space: nowrap; flex-shrink: 0; }
+.exp-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
+.exp-btn {
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: opacity 0.12s;
+}
+.exp-btn:hover { opacity: 0.8; }
+.exp-exit { background: #fef3c7; color: #b45309; }
+.exp-move { background: #e0f2fe; color: #0369a1; }
+.exp-edit { background: #eff6ff; color: #2563eb; }
 
 .group-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
 .group-thumb-wrap { flex-shrink: 0; width: 36px; height: 36px; border-radius: 5px; overflow: hidden; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; }
