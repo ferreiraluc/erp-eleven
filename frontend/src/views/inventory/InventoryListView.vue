@@ -211,7 +211,7 @@
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
-        <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)">
+        <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)" @click="toggleExpand(entry.group.group_key)">
           <div class="group-header">
             <!-- Imagem do grupo (primeira imagem disponível) -->
             <div
@@ -260,10 +260,10 @@
               </span>
             </div>
             <div class="group-btns">
-              <button @click="toggleExpand(entry.group.group_key)" class="action-btn expand-btn">
+              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn">
                 {{ expandedGroups.includes(entry.group.group_key) ? '▲ Recolher' : '▼ Expandir' }}
               </button>
-              <button @click="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn">Desagrupar</button>
+              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn">Desagrupar</button>
             </div>
           </div>
           <div class="size-chips">
@@ -1445,7 +1445,7 @@ onMounted(async () => {
   border-radius: 7px;
   border: 1px solid #e5e7eb;
   padding: 0.5rem 0.75rem;
-  grid-column: 1 / -1;
+  cursor: pointer;
 }
 .group-card.alert-out  { border-left: 3px solid #ef4444; }
 .group-card.alert-low  { border-left: 3px solid #f59e0b; }
