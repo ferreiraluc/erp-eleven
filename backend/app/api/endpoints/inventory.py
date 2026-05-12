@@ -34,6 +34,20 @@ from datetime import datetime as dt
 
 router = APIRouter()
 
+# ── Text normalization ────────────────────────────────────────────────────────
+def _title_case(value: Optional[str]) -> Optional[str]:
+    """Normalize to Title Case: 'PRADA' → 'Prada', 'branco' → 'Branco'."""
+    if not value:
+        return value
+    return ' '.join(word.capitalize() for word in value.strip().split())
+
+def _normalize_item(data: dict) -> dict:
+    """Apply Title Case to text fields before persisting."""
+    for field in ('name', 'brand', 'color', 'category'):
+        if field in data and data[field]:
+            data[field] = _title_case(data[field])
+    return data
+
 # ── Size ordering ─────────────────────────────────────────────────────────────
 _LETTER_SIZES = ["PP", "P", "M", "G", "GG", "XG", "XGG", "XXG", "XXXG", "U"]
 _LETTER_SIZE_ORDER = {s: i for i, s in enumerate(_LETTER_SIZES)}
@@ -204,7 +218,8 @@ def create_item(
     while db.query(Item).filter(Item.sku_internal == sku).first():
         sku = _generate_sku()
 
-    db_item = Item(**item.dict(), sku_internal=sku, created_by=current_user.id)
+    item_data = _normalize_item(item.dict())
+    db_item = Item(**item_data, sku_internal=sku, created_by=current_user.id)
     db.add(db_item)
     try:
         db.commit()
@@ -452,7 +467,8 @@ def update_item(
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    for field, value in item_update.dict(exclude_unset=True).items():
+    update_data = _normalize_item(item_update.dict(exclude_unset=True))
+    for field, value in update_data.items():
         setattr(db_item, field, value)
 
     db.commit()
@@ -488,17 +504,23 @@ def create_grade(
     if not sizes:
         raise HTTPException(status_code=400, detail="Informe ao menos um tamanho para criar a grade")
 
+    # Normalize text fields
+    norm_name     = _title_case(grade.name)     or grade.name
+    norm_color    = _title_case(grade.color)    if grade.color else None
+    norm_brand    = _title_case(grade.brand)    if grade.brand else None
+    norm_category = _title_case(grade.category) if grade.category else None
+
     # Auto-generate group_key from name + color
     group_key = (grade.group_key or "").strip()
     if not group_key:
-        color_part = f" {grade.color.strip()}" if grade.color and grade.color.strip() else ""
-        group_key = f"{grade.name.strip()}{color_part}"
+        color_part = f" {norm_color}" if norm_color else ""
+        group_key = f"{norm_name.strip()}{color_part}"
 
     created_items: list[Item] = []
     for size in sizes:
         # Barcode: base_barcode + size (e.g. "7891234P" or "789123438")
         item_barcode = f"{grade.base_barcode}{size}" if grade.base_barcode else None
-        item_name = f"{grade.name.strip()} {size}"
+        item_name = f"{norm_name.strip()} {size}"
 
         sku = _generate_sku()
         while db.query(Item).filter(Item.sku_internal == sku).first():
@@ -507,10 +529,10 @@ def create_grade(
         db_item = Item(
             name=item_name,
             description=grade.description,
-            category=grade.category,
+            category=norm_category,
             size=size,
-            color=grade.color,
-            brand=grade.brand,
+            color=norm_color,
+            brand=norm_brand,
             unit=grade.unit or "un",
             location=grade.location,
             barcode=item_barcode,

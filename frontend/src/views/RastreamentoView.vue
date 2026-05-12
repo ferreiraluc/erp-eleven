@@ -164,7 +164,7 @@
                 <div class="mch-top">
                   <div class="mch-name-wrap">
                     <span class="mch-name">{{ (rastreamento.pedido_id && rastreamento.cliente_nome) ? rastreamento.cliente_nome : (rastreamento.destinatario || 'Sem destinatário') }}</span>
-                    <span v-if="rastreamento.pedido_id" class="mch-pedido-badge">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0, 8) }}</span>
+                    <button v-if="rastreamento.pedido_id" class="mch-pedido-badge mch-pedido-btn" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0, 8) }}</button>
                   </div>
                   <span class="status-badge-inline mch-badge" :class="getStatusBadgeClass(rastreamento.status)">{{ getStatusText(rastreamento.status) }}</span>
                   <div class="mobile-expand-icon">
@@ -212,7 +212,7 @@
                   <!-- Detalhes -->
                   <div v-if="rastreamento.pedido_id" class="mobile-content-row">
                     <span class="mobile-content-label">Pedido:</span>
-                    <span class="mobile-content-value pedido-link-badge">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0,8) }}</span>
+                    <button class="mobile-content-value pedido-link-badge pedido-link-btn" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0,8) }}</button>
                   </div>
                   <div class="mobile-content-row" v-if="rastreamento.destinatario">
                     <span class="mobile-content-label">Destinatário:</span>
@@ -335,8 +335,8 @@
 
           <!-- Destinatário + Pedido -->
           <div class="row-destinatario">
-            <span v-if="rastreamento.pedido_id" class="pedido-link-badge">#{{ rastreamento.numero_pedido || '?' }}</span>
-            {{ rastreamento.destinatario || '-' }}
+            <span class="row-dest-name">{{ (rastreamento.pedido_id && rastreamento.cliente_nome) ? rastreamento.cliente_nome : (rastreamento.destinatario || '-') }}</span>
+            <button v-if="rastreamento.pedido_id" class="pedido-link-badge pedido-link-btn" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || '?' }}</button>
           </div>
 
           <!-- Descrição -->
@@ -615,11 +615,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import type { Rastreamento, RastreamentoCreate } from '@/stores/rastreamento'
 import { pedidosAPI, type Pedido } from '@/services/api'
 
+const router = useRouter()
 const rastreamentoStore = useRastreamentoStore()
+
+function goToPedido(rastreamento: Rastreamento) {
+  router.push({ path: '/pedidos', query: { search: rastreamento.numero_pedido || rastreamento.pedido_id } })
+}
 
 // Estado da página
 const loading = ref(false)
@@ -1068,8 +1074,6 @@ onMounted(() => {
 }
 
 .header-content {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 1.5rem;
   display: flex;
   align-items: center;
@@ -1127,8 +1131,6 @@ onMounted(() => {
 
 /* Stats Section */
 .stats-section {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 0.75rem 1.5rem 0.5rem;
 }
 
@@ -1203,8 +1205,6 @@ onMounted(() => {
 
 /* Filters */
 .filters-section {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 0 1.5rem 1.5rem;
 }
 
@@ -1289,8 +1289,6 @@ onMounted(() => {
 
 /* Rastreamentos Grid */
 .rastreamentos-section {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 0 1.5rem 2rem;
 }
 
@@ -1810,6 +1808,15 @@ onMounted(() => {
     line-height: 1.4;
   }
 
+  .mch-pedido-btn {
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mch-pedido-btn:hover {
+    background: #bfdbfe;
+  }
+
   .mch-badge {
     font-size: 7px !important;
     padding: 0.1rem 0.38rem !important;
@@ -2182,8 +2189,6 @@ onMounted(() => {
 
 /* Estilos da Lista */
 .rastreamentos-list {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 0rem 2rem;
 }
 
@@ -2348,7 +2353,20 @@ onMounted(() => {
   color: #374151;
 }
 
-.row-destinatario,
+.row-destinatario {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+}
+.row-dest-name {
+  font-size: 0.875rem;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .row-descricao {
   font-size: 0.875rem;
   color: #111827;
@@ -2717,8 +2735,6 @@ onMounted(() => {
 
 /* ── Freight Calculator (fixed section) ─────────────────────────────────────── */
 .freight-section {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 0 1.5rem 0.75rem;
 }
 .freight-inner {
@@ -3165,6 +3181,16 @@ onMounted(() => {
   margin-right: 0.35rem;
   border: 1px solid #bfdbfe;
   white-space: nowrap;
+  width: fit-content;
+}
+.pedido-link-btn {
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+.pedido-link-btn:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 /* ── Pedido autocomplete in rastreamento modal ──────────────────────────────── */

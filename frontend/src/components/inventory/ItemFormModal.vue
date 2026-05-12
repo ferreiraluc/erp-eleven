@@ -303,8 +303,8 @@
                 v-for="c in QUICK_COLORS"
                 :key="c"
                 @click="toggleQuickColor(c)"
-                :class="['quick-color-btn', { active: gradeColors.includes(c) }]"
-                :title="gradeColors.includes(c) ? 'Já adicionada (remova pelo ×)' : 'Adicionar'"
+                :class="['quick-color-btn', { active: gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) }]"
+                :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? 'Já adicionada (remova pelo ×)' : 'Adicionar'"
                 type="button"
               >
                 <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
@@ -466,6 +466,12 @@ import BarcodeScanner from './BarcodeScanner.vue'
 import OcrScanner from './OcrScanner.vue'
 import LabelTemplatesModal from './LabelTemplatesModal.vue'
 
+// ── Text normalization ────────────────────────────────────────────────────────
+function toTitleCase(s: string | undefined | null): string {
+  if (!s) return ''
+  return s.trim().toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 const props = defineProps<{
   item?: InventoryItem | null
   suppliers?: Array<{ id: string; name: string }>
@@ -507,12 +513,12 @@ const colorInputRef = ref<HTMLInputElement>()
 
 function focusColorInput() { colorInputRef.value?.focus() }
 function addGradeColor() {
-  const c = colorInput.value.trim()
-  if (c && !gradeColors.value.includes(c)) gradeColors.value.push(c)
+  const c = toTitleCase(colorInput.value)
+  if (c && !gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) gradeColors.value.push(c)
   colorInput.value = ''
 }
 function toggleQuickColor(c: string) {
-  if (!gradeColors.value.includes(c)) {
+  if (!gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) {
     gradeColors.value.push(c)
   }
   // To remove, use × on the chip
@@ -850,17 +856,20 @@ function onBarcodeDetected(code: string) {
 
 function onOcrResult(data: any) {
   showOcr.value = false
-  if (data.name) form.name = data.name
-  if (data.brand) form.brand = data.brand
-  if (data.size) form.size = data.size
-  if (data.color) form.color = data.color
-  if (data.barcode) form.barcode = data.barcode
+  if (data.name)       form.name  = toTitleCase(data.name)
+  if (data.brand)      form.brand = toTitleCase(data.brand)
+  if (data.size)       form.size  = data.size.trim().toUpperCase()
+  if (data.color)      form.color = toTitleCase(data.color)
+  if (data.barcode)    form.barcode   = data.barcode
   if (data.sale_price) form.sale_price = data.sale_price
-  if (data.currency) form.currency = data.currency
+  if (data.currency)   form.currency  = data.currency
 
-  // Pre-populate grade color with detected color
-  if (!isEdit.value && data.color && !gradeColors.value.includes(data.color)) {
-    gradeColors.value = [data.color]
+  // Pre-populate grade color with detected color (normalized)
+  if (!isEdit.value && data.color) {
+    const normalized = toTitleCase(data.color)
+    if (!gradeColors.value.some(c => c.toLowerCase() === normalized.toLowerCase())) {
+      gradeColors.value = [normalized]
+    }
   }
 }
 

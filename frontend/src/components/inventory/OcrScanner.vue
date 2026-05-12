@@ -301,14 +301,20 @@ async function runOcr(imageBase64: string) {
   }
 }
 
+function toTitleCase(s: string | undefined | null): string {
+  if (!s) return ''
+  return s.trim().toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 function populateFields(data: any) {
   rawText.value = data.texto_bruto || ''
 
+  const rawBrand = data.marca || selectedBrand.value || ''
   const map: Record<string, string> = {
-    name:       data.nome       || '',
-    brand:      data.marca      || selectedBrand.value || '',
-    size:       data.tamanho    || '',
-    color:      data.cor        || '',
+    name:       toTitleCase(data.nome),
+    brand:      toTitleCase(rawBrand),
+    size:       (data.tamanho || '').trim().toUpperCase(),
+    color:      toTitleCase(data.cor),
     barcode:    data.codigo_barras || '',
     sale_price: data.preco != null ? String(data.preco) : '',
   }
@@ -317,8 +323,8 @@ function populateFields(data: any) {
     f.value = map[f.key] || ''
   })
 
-  // Sync brand selector
-  if (data.marca) selectedBrand.value = data.marca
+  // Sync brand selector (normalized)
+  if (data.marca) selectedBrand.value = toTitleCase(data.marca)
 }
 
 function retake() {

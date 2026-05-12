@@ -18,7 +18,9 @@
       "Bash(rm:*)",
       "Bash(npm run build:*)",
       "WebFetch(domain:github.com)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(python3:*)",
+      "WebSearch"
     ],
     "deny": []
   }

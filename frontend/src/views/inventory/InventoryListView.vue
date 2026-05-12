@@ -1282,7 +1282,7 @@ onMounted(async () => {
 .inventory-view { min-height: 100vh; background: #f9fafb; }
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
-.header-content { display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; padding: 0 1rem; }
+.header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; }
 .header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }
 .back-button { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
@@ -1301,7 +1301,7 @@ onMounted(async () => {
   .btn svg { width: 13px !important; height: 13px !important; }
   .btn-modelos-ia-desktop { display: none; }
 }
-.search-section { padding: 0.6rem 1rem 0.75rem; max-width: 1400px; margin: 0 auto; position: relative; border-bottom: 1px solid #f3f4f6; }
+.search-section { padding: 0.6rem 1rem 0.75rem; position: relative; border-bottom: 1px solid #f3f4f6; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
 .search-box { flex: 1; position: relative; }
 .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
@@ -1326,8 +1326,6 @@ onMounted(async () => {
 /* ── View container ──────────────────────────────────────────────────────────── */
 .items-container {
   padding: 0 1rem 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
 }
 
 /* --- COMPACT view (default, 2 cols) --- */
