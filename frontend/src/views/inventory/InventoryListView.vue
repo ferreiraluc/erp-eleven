@@ -142,23 +142,38 @@
           <span class="inv-stat-label">grades</span>
         </span>
         <span class="inv-stat-sep">·</span>
-        <span class="inv-stat">
+        <button
+          class="inv-stat inv-stat-btn"
+          :class="{ 'inv-stat-btn-active': filterUngroupedOnly }"
+          @click="toggleUngroupedFilter"
+          title="Filtrar itens sem grade"
+        >
           <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items - inventoryStore.alerts.grouped_items_count }}</span>
           <span class="inv-stat-label">sem grade</span>
-        </span>
+        </button>
         <template v-if="inventoryStore.alerts.low_stock_count > 0">
           <span class="inv-stat-sep">·</span>
-          <span class="inv-stat inv-stat-warn">
+          <button
+            class="inv-stat inv-stat-btn inv-stat-warn"
+            :class="{ 'inv-stat-btn-active inv-stat-warn-active': activeStatus === 'low_stock' }"
+            @click="setStatusFilter(activeStatus === 'low_stock' ? '' : 'low_stock')"
+            title="Filtrar estoque baixo"
+          >
             <span class="inv-stat-num">{{ inventoryStore.alerts.low_stock_count }}</span>
             <span class="inv-stat-label">baixo</span>
-          </span>
+          </button>
         </template>
         <template v-if="inventoryStore.alerts.out_of_stock_count > 0">
           <span class="inv-stat-sep">·</span>
-          <span class="inv-stat inv-stat-danger">
+          <button
+            class="inv-stat inv-stat-btn inv-stat-danger"
+            :class="{ 'inv-stat-btn-active inv-stat-danger-active': activeStatus === 'out_of_stock' }"
+            @click="setStatusFilter(activeStatus === 'out_of_stock' ? '' : 'out_of_stock')"
+            title="Filtrar sem estoque"
+          >
             <span class="inv-stat-num">{{ inventoryStore.alerts.out_of_stock_count }}</span>
             <span class="inv-stat-label">sem estoque</span>
-          </span>
+          </button>
         </template>
       </div>
 
@@ -762,9 +777,21 @@ function toggleExpand(groupKey: string) {
   else expandedGroups.value.splice(idx, 1)
 }
 
-/** Reloads items always respecting the current groupMode (ungrouped_only when in group mode) */
+const filterUngroupedOnly = ref(false)
+
+/** Reloads items always respecting the current groupMode (ungrouped_only when in group mode or when filterUngroupedOnly is active) */
 function reloadItems(page = 1, append = false) {
-  return inventoryStore.loadItems(page, append, groupMode.value)
+  return inventoryStore.loadItems(page, append, groupMode.value || filterUngroupedOnly.value)
+}
+
+function toggleUngroupedFilter() {
+  filterUngroupedOnly.value = !filterUngroupedOnly.value
+  if (filterUngroupedOnly.value) {
+    // Clear status filter so they don't stack
+    activeStatus.value = ''
+    inventoryStore.filters.status = ''
+  }
+  reloadItems()
 }
 
 async function loadGroups(params: Record<string, any> = {}) {
@@ -1147,6 +1174,7 @@ function clearSearch() {
 function setStatusFilter(status: string) {
   activeStatus.value = status
   inventoryStore.filters.status = status
+  filterUngroupedOnly.value = false
   inventoryStore.loadItems(1, false, groupMode.value)
   if (groupMode.value) loadGroupsFiltered()
 }
@@ -1921,6 +1949,19 @@ onMounted(async () => {
 .inv-stat-warn .inv-stat-label { color: #d97706; opacity: 0.8; }
 .inv-stat-danger .inv-stat-num { color: #dc2626; }
 .inv-stat-danger .inv-stat-label { color: #dc2626; opacity: 0.8; }
+.inv-stat-btn {
+  background: none; border: none; padding: 0.1rem 0.3rem;
+  border-radius: 0.3rem; cursor: pointer;
+  transition: background 0.15s;
+}
+.inv-stat-btn:hover { background: #f3f4f6; }
+.inv-stat-btn-active { background: #e5e7eb !important; }
+.inv-stat-btn-active .inv-stat-num { color: #111827; }
+.inv-stat-btn-active .inv-stat-label { color: #374151; opacity: 1; }
+.inv-stat-warn.inv-stat-btn:hover { background: #fef3c7; }
+.inv-stat-warn-active { background: #fef3c7 !important; }
+.inv-stat-danger.inv-stat-btn:hover { background: #fee2e2; }
+.inv-stat-danger-active { background: #fee2e2 !important; }
 .chip-check { margin-left: 0.2rem; font-size: 0.7rem; }
 
 /* ── Drag-to-select ──────────────────────────────────────────────────────────── */
