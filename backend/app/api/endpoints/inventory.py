@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Body
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
@@ -762,13 +763,18 @@ def delete_item(
     return {"message": "Item deactivated successfully"}
 
 
+class QuickExitRequest(BaseModel):
+    location: Optional[str] = "loja"
+
 @router.post("/items/{item_id}/quick-exit")
 def quick_exit(
     item_id: str,
+    body: QuickExitRequest = Body(default_factory=QuickExitRequest),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     item_uuid = validate_uuid(item_id)
+    location = body.location if body.location in ("loja", "deposito") else "loja"
     try:
         movement = create_movement(
             db=db,
@@ -777,12 +783,12 @@ def quick_exit(
             quantity=1,
             created_by=current_user.id,
             reason="Saída rápida",
-            location="loja",
+            location=location,
         )
         db.commit()
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return {"message": "Quick exit registered", "new_stock": movement.quantity_after}
+    return {"message": "Quick exit registered", "new_stock": movement.quantity_after, "location": location}
 
 
 # --- Movements ---------------------------------------------------------------

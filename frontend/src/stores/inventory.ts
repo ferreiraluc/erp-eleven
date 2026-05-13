@@ -60,8 +60,8 @@ export const useInventoryStore = defineStore('inventory', () => {
     if (idx !== -1) items.value[idx].is_active = false
   }
 
-  async function quickExit(id: string) {
-    const result = await inventoryAPI.quickExit(id)
+  async function quickExit(id: string, location: string = 'loja') {
+    const result = await inventoryAPI.quickExit(id, location)
     const idx = items.value.findIndex(i => i.id === id)
     if (idx !== -1) {
       items.value[idx].current_stock = result.new_stock

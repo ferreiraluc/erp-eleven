@@ -654,8 +654,8 @@ export const inventoryAPI = {
   getByBarcode: (code: string): Promise<InventoryItem[]> =>
     api.get(`/api/inventory/items/barcode/${encodeURIComponent(code)}`).then(res => res.data),
 
-  quickExit: (id: string): Promise<{ message: string; new_stock: number }> =>
-    api.post(`/api/inventory/items/${id}/quick-exit`).then(res => res.data),
+  quickExit: (id: string, location: string = 'loja'): Promise<{ message: string; new_stock: number; location: string }> =>
+    api.post(`/api/inventory/items/${id}/quick-exit`, { location }).then(res => res.data),
 
   createGrade: (data: {
     name: string

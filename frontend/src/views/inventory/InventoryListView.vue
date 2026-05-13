@@ -260,10 +260,14 @@
               </span>
             </div>
             <div class="group-btns">
-              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn">
-                {{ expandedGroups.includes(entry.group.group_key) ? '▲ Recolher' : '▼ Expandir' }}
+              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn" :title="expandedGroups.includes(entry.group.group_key) ? 'Recolher' : 'Expandir'">
+                <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                </svg>
               </button>
-              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn">Desagrupar</button>
+              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn" title="Desagrupar">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+              </button>
             </div>
           </div>
           <div class="size-chips">
@@ -320,7 +324,25 @@
                 {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 0 }) }}
               </span>
               <div class="exp-actions">
-                <button @click.stop="handleQuickExit(item)" class="exp-btn exp-exit" title="Consumir 1">−1</button>
+                <div class="exit-wrap">
+                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit" title="Consumir 1" :disabled="item.current_stock <= 0">−1</button>
+                  <div v-if="confirmExitId === item.id" class="exit-confirm-popover">
+                    <template v-if="exitLocations(item).loja && exitLocations(item).deposito">
+                      <span class="confirm-question">Retirar de:</span>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja">Loja ({{ item.stock_loja }})</button>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep">Dep. ({{ item.stock_deposito }})</button>
+                    </template>
+                    <template v-else-if="exitLocations(item).deposito">
+                      <span class="confirm-question">Retirar do Depósito?</span>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-yes">Sim</button>
+                    </template>
+                    <template v-else>
+                      <span class="confirm-question">Retirar da Loja?</span>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-yes">Sim</button>
+                    </template>
+                    <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
+                  </div>
+                </div>
                 <button @click.stop="openMovement(item)" class="exp-btn exp-move" title="Movimentar">⇅</button>
                 <button @click.stop="openEdit(item)" class="exp-btn exp-edit" title="Editar">✏</button>
               </div>
@@ -386,9 +408,20 @@
               <div class="exit-wrap">
                 <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="entry.item.current_stock <= 0">−1</button>
                 <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
-                  <span class="confirm-question">Confirmar saída?</span>
-                  <button @click.stop="handleQuickExit(entry.item)" class="confirm-yes">Sim</button>
-                  <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
+                  <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
+                    <span class="confirm-question">Retirar de:</span>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">Loja ({{ entry.item.stock_loja }})</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">Dep. ({{ entry.item.stock_deposito }})</button>
+                  </template>
+                  <template v-else-if="exitLocations(entry.item).deposito">
+                    <span class="confirm-question">Retirar do Depósito?</span>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">Sim</button>
+                  </template>
+                  <template v-else>
+                    <span class="confirm-question">Retirar da Loja?</span>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">Sim</button>
+                  </template>
+                  <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                 </div>
               </div>
               <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">Movimentar</button>
@@ -435,11 +468,22 @@
                 </div>
                 <div class="item-actions">
                   <div class="exit-wrap">
-                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">Diminuir</button>
+                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">−1</button>
                     <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
-                      <span class="confirm-question">Confirmar saída?</span>
-                      <button @click.stop="handleQuickExit(entry.item)" class="confirm-yes">Sim</button>
-                      <button @click.stop="confirmExitId = null" class="confirm-no">Cancelar</button>
+                      <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
+                        <span class="confirm-question">Retirar de:</span>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">Loja ({{ entry.item.stock_loja }})</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">Dep. ({{ entry.item.stock_deposito }})</button>
+                      </template>
+                      <template v-else-if="exitLocations(entry.item).deposito">
+                        <span class="confirm-question">Retirar do Depósito?</span>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">Sim</button>
+                      </template>
+                      <template v-else>
+                        <span class="confirm-question">Retirar da Loja?</span>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">Sim</button>
+                      </template>
+                      <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                     </div>
                   </div>
                   <button @click.stop="openMovement(entry.item)" class="action-btn move-btn">Movimentar</button>
@@ -1183,14 +1227,23 @@ function openMovement(item: InventoryItem) {
   showMovementModal.value = true
 }
 
-async function handleQuickExit(item: InventoryItem) {
+async function handleQuickExit(item: InventoryItem, location: string = 'loja') {
   confirmExitId.value = null
   try {
-    const result = await inventoryStore.quickExit(item.id)
-    showToast(`Saída registrada. Estoque: ${result.new_stock}`, 'success')
+    const result = await inventoryStore.quickExit(item.id, location)
+    const loc = location === 'deposito' ? 'Depósito' : 'Loja'
+    showToast(`Saída (${loc}) registrada. Estoque: ${result.new_stock}`, 'success')
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao registrar saída', 'error')
   }
+}
+
+/** Retorna quais locais têm estoque disponível para saída rápida */
+function exitLocations(item: InventoryItem): { loja: boolean; deposito: boolean } {
+  const hasLoja = (item.stock_loja ?? 0) > 0
+  const hasDeposito = (item.stock_deposito ?? 0) > 0
+  if (hasLoja || hasDeposito) return { loja: hasLoja, deposito: hasDeposito }
+  return { loja: true, deposito: false } // fallback sem info de split
 }
 
 function onBarcodeDetected(code: string) {
@@ -1476,8 +1529,9 @@ onMounted(async () => {
   border: 1px solid #e5e7eb;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
-  grid-column: 1 / -1; /* padrão: largura total em list e grid */
+  grid-column: 1 / -1; /* sempre largura total — nunca invadem colunas */
   transition: box-shadow 0.15s;
+  user-select: none;
 }
 .group-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
 .group-card.alert-out  { border-left: 3px solid #ef4444; }
@@ -1485,8 +1539,27 @@ onMounted(async () => {
 .group-card.alert-high { border-left: 3px solid #8b5cf6; }
 .group-card.alert-ok   { border-left: 3px solid #10b981; }
 
-/* Compact: 2 cards de grade por linha */
-.view-compact .group-card { grid-column: span 1; }
+/* Lista: card compacto como linha de lista */
+.view-list .group-card {
+  border-radius: 5px;
+  padding: 0.35rem 0.65rem;
+  border-left-width: 3px;
+}
+.view-list .group-thumb-wrap { width: 26px; height: 26px; }
+.view-list .group-header { margin-bottom: 0.25rem; }
+
+/* Grade (grid): fundo levemente diferente para distinguir das tiles de item */
+.view-grid .group-card {
+  background: #f8fafc;
+  border-style: solid;
+  border-color: #e2e8f0;
+}
+
+/* Chevron animado do botão expandir */
+.expand-chevron { transition: transform 0.2s ease; display: block; }
+.chevron-open { transform: rotate(180deg); }
+.expand-btn { display: flex; align-items: center; justify-content: center; padding: 0.25rem 0.4rem !important; }
+.ungroup-btn { display: flex; align-items: center; justify-content: center; padding: 0.25rem 0.4rem !important; }
 
 /* ── Itens expandidos dentro do card ─────────────────────────────── */
 .group-exp-section {
@@ -1699,8 +1772,13 @@ onMounted(async () => {
 .confirm-question { font-size: 0.72rem; color: #374151; font-weight: 500; }
 .confirm-yes { background: #ef4444; color: white; border: none; border-radius: 5px; padding: 0.2rem 0.55rem; font-size: 0.7rem; cursor: pointer; font-weight: 700; }
 .confirm-yes:hover { background: #dc2626; }
-.confirm-no { background: #f3f4f6; color: #6b7280; border: none; border-radius: 5px; padding: 0.2rem 0.5rem; font-size: 0.7rem; cursor: pointer; }
+.confirm-no { background: #f3f4f6; color: #6b7280; border: none; border-radius: 5px; padding: 0.2rem 0.45rem; font-size: 0.72rem; cursor: pointer; font-weight: 700; line-height: 1; }
 .confirm-no:hover { background: #e5e7eb; }
+.confirm-loc { border: none; border-radius: 5px; padding: 0.22rem 0.55rem; font-size: 0.7rem; cursor: pointer; font-weight: 700; transition: opacity 0.12s; }
+.confirm-loja { background: #dcfce7; color: #15803d; }
+.confirm-loja:hover { background: #bbf7d0; }
+.confirm-dep { background: #ede9fe; color: #6d28d9; }
+.confirm-dep:hover { background: #ddd6fe; }
 
 /* ── Image modal ─────────────────────────────────────────────────────────────── */
 .image-modal-overlay {
