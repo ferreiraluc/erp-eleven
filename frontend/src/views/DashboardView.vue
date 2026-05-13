@@ -215,7 +215,7 @@
         <div class="main-top-grid">
 
           <!-- Inventory Card (large) -->
-          <div class="inv-card">
+          <div class="inv-card" @click="navigateToInventory" style="cursor: pointer;">
             <div class="inv-card-header">
               <div class="inv-header-left">
                 <div class="inv-icon-wrap">
@@ -228,24 +228,32 @@
                   <p class="inv-subtitle">{{ stockAlerts?.total_active_items || 0 }} itens ativos · {{ stockAlerts?.group_count || 0 }} grades</p>
                 </div>
               </div>
-              <router-link to="/inventory" class="inv-link-all">Ver tudo →</router-link>
+              <div class="inv-header-actions" @click.stop>
+                <button class="inv-add-btn" @click="navigateToNewProduct" title="Novo produto">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Novo produto
+                </button>
+                <router-link to="/inventory" class="inv-link-all" @click.stop>Ver tudo →</router-link>
+              </div>
             </div>
 
             <!-- Alert stats -->
             <div class="inv-stats-row">
-              <router-link to="/inventory?status=out_of_stock" class="inv-stat inv-stat-red">
+              <router-link to="/inventory?status=out_of_stock" class="inv-stat inv-stat-red" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.out_of_stock_count || 0 }}</span>
                 <span class="inv-stat-label">Sem estoque</span>
               </router-link>
-              <router-link to="/inventory?status=low_stock" class="inv-stat inv-stat-yellow">
+              <router-link to="/inventory?status=low_stock" class="inv-stat inv-stat-yellow" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.low_stock_count || 0 }}</span>
                 <span class="inv-stat-label">Estoque baixo</span>
               </router-link>
-              <router-link to="/inventory?status=overstocked" class="inv-stat inv-stat-purple">
+              <router-link to="/inventory?status=overstocked" class="inv-stat inv-stat-purple" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.overstocked_count || 0 }}</span>
                 <span class="inv-stat-label">Em excesso</span>
               </router-link>
-              <router-link to="/inventory" class="inv-stat inv-stat-blue">
+              <router-link to="/inventory" class="inv-stat inv-stat-blue" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.grouped_items_count || 0 }}</span>
                 <span class="inv-stat-label">Em grades</span>
               </router-link>
@@ -260,6 +268,7 @@
                   :key="item.id"
                   to="/inventory"
                   class="inv-product-row"
+                  @click.stop
                 >
                   <div class="inv-product-alert-dot" :class="`adot-${item.alert_level || 'ok'}`"></div>
                   <div v-if="item.image_data" class="inv-product-thumb">
@@ -282,7 +291,7 @@
               </div>
               <div v-else class="inv-no-items">
                 <p>Nenhum produto ainda</p>
-                <router-link to="/inventory" class="inv-no-items-link">Ir para estoque →</router-link>
+                <router-link to="/inventory" class="inv-no-items-link" @click.stop>Ir para estoque →</router-link>
               </div>
             </div>
           </div>
@@ -783,6 +792,10 @@ const navigateToInventory = () => {
   router.push('/inventory')
 }
 
+const navigateToNewProduct = () => {
+  router.push('/inventory?new=1')
+}
+
 const navigateToPedidos = () => {
   router.push('/pedidos')
 }
@@ -941,6 +954,29 @@ onUnmounted(() => {
 
 .inv-title { margin: 0; font-size: 1.125rem; font-weight: 700; color: #111827; line-height: 1.2; }
 .inv-subtitle { margin: 0; font-size: 0.72rem; color: #9ca3af; margin-top: 0.1rem; }
+
+.inv-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inv-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #16a34a;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0.25rem 0.625rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.inv-add-btn:hover { background: #dcfce7; }
 
 .inv-link-all {
   font-size: 0.8rem;

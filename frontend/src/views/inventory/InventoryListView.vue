@@ -1330,6 +1330,9 @@ onMounted(async () => {
     inventoryStore.loadAlerts(),
     loadGroups(),
   ])
+  if (route.query.new === '1') {
+    showItemForm.value = true
+  }
   // Load remaining pages in background so full catalog is available immediately
   autoLoadRemainingPages()
   try {
