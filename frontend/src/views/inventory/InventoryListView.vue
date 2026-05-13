@@ -287,7 +287,7 @@
           </div>
           <div class="size-chips">
             <span
-              v-for="v in sortedBySize(entry.group.items)"
+              v-for="v in sortedByColorThenSize(entry.group.items)"
               :key="v.id"
               class="size-chip"
               :class="'chip-alert-' + v.alert_level"
@@ -316,7 +316,7 @@
           <!-- ── Itens expandidos (dentro do card, nunca invadem colunas adjacentes) ── -->
           <div v-if="expandedGroups.includes(entry.group.group_key)" class="group-exp-section" @click.stop>
             <div
-              v-for="item in sortedBySize(entry.group.items)"
+              v-for="item in sortedByColorThenSize(entry.group.items)"
               :key="item.id"
               class="group-exp-row"
               :class="'exp-alert-' + item.alert_level"
@@ -1085,8 +1085,11 @@ function sizeSortKey(size?: string | null): [number, number, string] {
   if (!isNaN(n)) return [0, n, s]
   return [2, 0, s]
 }
-function sortedBySize<T extends { size?: string | null }>(items: T[]): T[] {
+function sortedByColorThenSize<T extends { size?: string | null; color?: string | null }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
+    const ca = (a.color || '').toLowerCase()
+    const cb = (b.color || '').toLowerCase()
+    if (ca !== cb) return ca.localeCompare(cb)
     const [at, an, as_] = sizeSortKey(a.size)
     const [bt, bn, bs] = sizeSortKey(b.size)
     if (at !== bt) return at - bt

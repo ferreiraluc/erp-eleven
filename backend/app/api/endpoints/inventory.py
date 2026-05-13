@@ -378,7 +378,7 @@ def get_groups(
 
     result = []
     for key, item_list in groups_dict.items():
-        sorted_items = sorted(item_list, key=lambda i: _size_sort_key(i.size))
+        sorted_items = sorted(item_list, key=lambda i: ((i.color or '').lower(), _size_sort_key(i.size)))
         total_stock = sum(i.current_stock for i in sorted_items)
         result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock))
     return result
