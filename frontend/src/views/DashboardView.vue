@@ -223,10 +223,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
-                <div>
-                  <h3 class="inv-title">Estoque</h3>
-                  <p class="inv-subtitle">{{ stockAlerts?.total_active_items || 0 }} itens ativos · {{ stockAlerts?.group_count || 0 }} grades</p>
-                </div>
+                <h3 class="inv-title">Estoque</h3>
               </div>
               <div class="inv-header-actions" @click.stop>
                 <button class="inv-add-btn" @click="navigateToNewProduct" title="Novo produto">
@@ -3078,8 +3075,53 @@ onUnmounted(() => {
   .bottom-grid {
     grid-template-columns: 1fr;
   }
+  .inv-card-header {
+    padding: 0.875rem 0.875rem 0.5rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .inv-header-left {
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .inv-icon-wrap {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    flex-shrink: 0;
+  }
+  .inv-icon-wrap svg { width: 1rem; height: 1rem; }
+  .inv-title { font-size: 0.95rem; }
+  .inv-subtitle { font-size: 0.65rem; }
+  .inv-header-actions {
+    gap: 0.3rem;
+    margin-left: auto;
+  }
+  .inv-add-btn {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.45rem;
+    gap: 0.2rem;
+  }
+  .inv-add-btn svg { width: 11px; height: 11px; }
+  .inv-link-all {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.45rem;
+  }
   .inv-stats-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.3rem;
+    padding: 0 0.875rem 0.75rem;
+  }
+  .inv-stat {
+    padding: 0.45rem 0.2rem;
+    border-radius: 0.45rem;
+    gap: 0.15rem;
+  }
+  .inv-stat-count {
+    font-size: 1.05rem;
+  }
+  .inv-stat-label {
+    font-size: 0.52rem;
   }
   .dashboard-main {
     padding: 1rem 0.875rem 2rem;
