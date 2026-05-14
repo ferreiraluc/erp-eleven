@@ -50,20 +50,30 @@ def _normalize_item(data: dict) -> dict:
     return data
 
 # ── Size ordering ─────────────────────────────────────────────────────────────
-_LETTER_SIZES = ["PP", "P", "M", "G", "GG", "XG", "XGG", "XXG", "XXXG", "U"]
-_LETTER_SIZE_ORDER = {s: i for i, s in enumerate(_LETTER_SIZES)}
+import re as _re
+
+_KNOWN_SIZE_ORDER = {
+    # International
+    "XXS": 0, "XS": 1, "S": 2, "M": 3, "L": 4, "XL": 5,
+    "2XL": 6, "XXL": 6, "3XL": 7, "XXXL": 7,
+    "4XL": 8, "XXXXL": 8, "5XL": 9, "XXXXXL": 9,
+    # Brazilian/Portuguese
+    "PP": 10, "P": 11, "G": 12, "GG": 13, "XG": 14, "XGG": 15, "XXG": 16, "XXXG": 17,
+    # Universal
+    "U": 99, "UN": 99,
+}
 
 def _size_sort_key(size):
-    """Returns a tuple for correct size ordering: numeric < letter < unknown < null."""
+    """Returns a tuple for correct size ordering: numeric shoe sizes < clothing sizes < unknown < null."""
     if size is None:
         return (3, 0.0, "")
     s = size.strip().upper()
-    if s in _LETTER_SIZE_ORDER:
-        return (1, float(_LETTER_SIZE_ORDER[s]), s)
-    try:
+    if s in _KNOWN_SIZE_ORDER:
+        return (1, float(_KNOWN_SIZE_ORDER[s]), s)
+    # Pure numeric only (shoe/pant sizes: 36, 37, 38...) — avoids "2XL" matching as 2.0
+    if _re.match(r'^\d+(\.\d+)?$', s):
         return (0, float(s), s)
-    except ValueError:
-        return (2, 0.0, s)
+    return (2, 0.0, s)
 
 
 def _generate_sku() -> str:

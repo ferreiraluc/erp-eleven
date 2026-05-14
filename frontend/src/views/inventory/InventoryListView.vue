@@ -1074,15 +1074,23 @@ const existingBrands = computed<string[]>(() => {
 })
 
 // ── Size ordering ────────────────────────────────────────────────────────────
-const LETTER_SIZE_ORDER: Record<string, number> = {
-  PP: 0, P: 1, M: 2, G: 3, GG: 4, XG: 5, XGG: 6, XXG: 7, XXXG: 8, U: 9
+// Comprehensive clothing size order — covers international and Brazilian/Portuguese
+const KNOWN_SIZE_ORDER: Record<string, number> = {
+  // International
+  XXS: 0, XS: 1, S: 2, M: 3, L: 4, XL: 5,
+  '2XL': 6, XXL: 6, '3XL': 7, XXXL: 7,
+  '4XL': 8, XXXXL: 8, '5XL': 9, XXXXXL: 9,
+  // Brazilian/Portuguese
+  PP: 10, P: 11, G: 12, GG: 13, XG: 14, XGG: 15, XXG: 16, XXXG: 17,
+  // Universal
+  U: 99, UN: 99,
 }
 function sizeSortKey(size?: string | null): [number, number, string] {
   if (!size) return [3, 0, '']
   const s = size.trim().toUpperCase()
-  if (s in LETTER_SIZE_ORDER) return [1, LETTER_SIZE_ORDER[s], s]
-  const n = parseFloat(s)
-  if (!isNaN(n)) return [0, n, s]
+  if (s in KNOWN_SIZE_ORDER) return [1, KNOWN_SIZE_ORDER[s], s]
+  // Pure numeric only (shoe sizes: 36, 37, 38...) — strict regex avoids "2XL" → 2
+  if (/^\d+(\.\d+)?$/.test(s)) return [0, parseFloat(s), s]
   return [2, 0, s]
 }
 function sortedByColorThenSize<T extends { size?: string | null; color?: string | null }>(items: T[]): T[] {
