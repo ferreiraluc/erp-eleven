@@ -819,4 +819,149 @@ export const freteAPI = {
     api.post('/api/rastreamento/calcular-frete', { cep_origem, cep_destino, peso }).then(r => r.data),
 }
 
+// ── PDV Types ─────────────────────────────────────────────────────────────────
+
+export interface PdvSaleItemCreate {
+  item_id?: string
+  item_name: string
+  item_sku?: string
+  item_category?: string
+  item_size?: string
+  item_color?: string
+  quantity: number
+  unit_price_gs: number
+  original_price_gs?: number
+  discount_gs: number
+  is_avulso: boolean
+  location: string
+}
+
+export interface PdvPaymentCreate {
+  method: string
+  currency: string
+  amount_original: number
+  exchange_rate: number
+  amount_gs: number
+  cambista_id?: string
+  reference?: string
+}
+
+export interface PdvSaleCreate {
+  vendedor_id?: string
+  cliente_id?: string
+  cliente_nome?: string
+  items: PdvSaleItemCreate[]
+  desconto_gs: number
+  payments: PdvPaymentCreate[]
+  notas?: string
+}
+
+export interface PdvSaleItemResponse {
+  id: string
+  item_id: string | null
+  item_name: string
+  item_sku: string | null
+  item_category: string | null
+  item_size: string | null
+  item_color: string | null
+  quantity: number
+  unit_price_gs: number
+  original_price_gs: number | null
+  discount_gs: number
+  total_gs: number
+  is_avulso: boolean
+  location: string
+}
+
+export interface PdvPaymentResponse {
+  id: string
+  method: string
+  currency: string
+  amount_original: number
+  exchange_rate: number
+  amount_gs: number
+  cambista_id: string | null
+  reference: string | null
+  created_at: string
+}
+
+export interface PdvSaleResponse {
+  id: string
+  vendedor_id: string | null
+  cliente_id: string | null
+  cliente_nome: string | null
+  subtotal_gs: number
+  desconto_gs: number
+  total_gs: number
+  status: string
+  stock_applied: boolean
+  notas: string | null
+  items: PdvSaleItemResponse[]
+  payments: PdvPaymentResponse[]
+  created_at: string
+}
+
+export interface PdvSaleListItem {
+  id: string
+  cliente_nome: string | null
+  total_gs: number
+  desconto_gs: number
+  status: string
+  items_count: number
+  payment_methods: string[]
+  created_at: string
+}
+
+export interface PdvClienteResponse {
+  id: string
+  nome: string
+  doc: string | null
+  telefone: string | null
+  email: string | null
+  tipo: string
+  limite_fiado_gs: number
+  saldo_fiado_gs: number
+  notas: string | null
+  ativo: boolean
+  created_at: string
+}
+
+export interface PdvFiadoMovementResponse {
+  id: string
+  tipo: string
+  valor_gs: number
+  saldo_gs: number
+  notas: string | null
+  sale_id: string | null
+  created_at: string
+}
+
+// ── PDV API ───────────────────────────────────────────────────────────────────
+
+export const pdvAPI = {
+  // Sales
+  createSale: (data: PdvSaleCreate): Promise<PdvSaleResponse> =>
+    api.post('/api/pdv/sales', data).then(r => r.data),
+  listSales: (params?: Record<string, any>): Promise<PdvSaleListItem[]> =>
+    api.get('/api/pdv/sales', { params }).then(r => r.data),
+  getSale: (id: string): Promise<PdvSaleResponse> =>
+    api.get(`/api/pdv/sales/${id}`).then(r => r.data),
+  cancelSale: (id: string) =>
+    api.post(`/api/pdv/sales/${id}/cancel`).then(r => r.data),
+
+  // Clients / Fiado
+  getClients: (params?: Record<string, any>): Promise<PdvClienteResponse[]> =>
+    api.get('/api/pdv/clients', { params }).then(r => r.data),
+  createClient: (data: Partial<PdvClienteResponse>): Promise<PdvClienteResponse> =>
+    api.post('/api/pdv/clients', data).then(r => r.data),
+  updateClient: (id: string, data: Partial<PdvClienteResponse>): Promise<PdvClienteResponse> =>
+    api.put(`/api/pdv/clients/${id}`, data).then(r => r.data),
+  getClient: (id: string): Promise<PdvClienteResponse> =>
+    api.get(`/api/pdv/clients/${id}`).then(r => r.data),
+  getFiadoHistory: (id: string, params?: Record<string, any>): Promise<PdvFiadoMovementResponse[]> =>
+    api.get(`/api/pdv/clients/${id}/fiado`, { params }).then(r => r.data),
+  recordFiadoPayment: (id: string, data: { valor_gs: number; notas?: string }) =>
+    api.post(`/api/pdv/clients/${id}/fiado/payment`, data).then(r => r.data),
+}
+
 export default api

@@ -13,3 +13,4 @@ from .money_transfer import MoneyTransfer
 from .rastreamento import Rastreamento
 from .inventory import Supplier, Item, StockMovement, InventorySession, InventorySessionItem, MovementType, SessionStatus
 from .pedido_anexo import PedidoAnexo
+from .pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement

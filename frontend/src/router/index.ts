@@ -9,6 +9,8 @@ import VendasView from '@/views/VendasView.vue'
 import PedidosView from '@/views/PedidosView.vue'
 import InventoryListView from '@/views/inventory/InventoryListView.vue'
 import ClientesView from '@/views/ClientesView.vue'
+import PDVView from '@/views/PDVView.vue'
+import FiadoView from '@/views/FiadoView.vue'
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
@@ -69,6 +71,18 @@ const router = createRouter({
       path: '/clientes',
       name: 'clientes',
       component: ClientesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/pdv',
+      name: 'pdv',
+      component: PDVView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/fiado',
+      name: 'fiado',
+      component: FiadoView,
       meta: { requiresAuth: true }
     },
     // Catch all route
