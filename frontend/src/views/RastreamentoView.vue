@@ -1564,6 +1564,7 @@ onMounted(async () => {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 .modal-content {
@@ -1573,6 +1574,7 @@ onMounted(async () => {
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
+  max-height: 90dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2142,9 +2144,32 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: center;
+  }
+
   .modal-content {
-    margin: 0.5rem;
-    max-height: 95vh;
+    margin: 0;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    border-radius: 0.5rem;
+  }
+
+  .modal-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.05rem;
+  }
+
+  .modal-body {
+    padding: 0.875rem 1rem;
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1rem;
   }
 
   .rastreamentos-list {
