@@ -34,13 +34,13 @@ def _apply_stock(db: Session, sale: PdvSale, created_by_id):
         location = item.location or "loja"
 
         qty_before = inv_item.current_stock
-        inv_item.current_stock = max(0, inv_item.current_stock - qty)
+        inv_item.current_stock = inv_item.current_stock - qty
 
         # Update split stock
         if location == "deposito":
-            inv_item.stock_deposito = max(0, (inv_item.stock_deposito or 0) - qty)
+            inv_item.stock_deposito = (inv_item.stock_deposito or 0) - qty
         else:
-            inv_item.stock_loja = max(0, (inv_item.stock_loja or 0) - qty)
+            inv_item.stock_loja = (inv_item.stock_loja or 0) - qty
 
         mv = StockMovement(
             item_id=inv_item.id,
@@ -152,6 +152,7 @@ def create_sale(
             reference=p.reference,
         ))
 
+    db.flush()
     _apply_stock(db, sale, current_user.id)
     _update_fiado(db, sale, current_user.id)
 

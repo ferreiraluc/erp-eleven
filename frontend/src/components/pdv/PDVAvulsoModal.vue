@@ -78,6 +78,9 @@ const emit = defineEmits<{
     item_name: string
     quantity: number
     unit_price_gs: number
+    original_price: number
+    sale_currency: string
+    image_data: null
     is_avulso: true
     item_id: null
     item_sku: null
@@ -125,6 +128,9 @@ function submit() {
     quantity: form.value.quantity,
     unit_price_gs: form.value.unit_price_gs,
     original_price_gs: null,
+    original_price: form.value.unit_price_gs,
+    sale_currency: 'PYG',
+    image_data: null,
     discount_gs: 0,
     is_avulso: true,
     location: 'loja',

@@ -85,10 +85,13 @@ const router = createRouter({
       component: FiadoView,
       meta: { requiresAuth: true }
     },
-    // Catch all route
+    // Catch all route — redirect to dashboard if authenticated, otherwise login
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/login'
+      redirect: () => {
+        const token = localStorage.getItem('auth_token')
+        return token ? '/dashboard' : '/login'
+      }
     }
   ],
 })
