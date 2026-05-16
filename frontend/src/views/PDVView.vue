@@ -388,15 +388,24 @@ const canEditRates = computed(() =>
   !!authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
 )
 
-function openRateModal() {
+async function openRateModal() {
   editingRates.value = {
     usd_to_pyg: exchangeRates.value.usd,
     usd_to_brl: exchangeRates.value.brlPerUsd,
-    eur_to_usd: exchangeRates.value.eur / exchangeRates.value.usd,
-    eur_to_brl: (exchangeRates.value.eur / exchangeRates.value.usd) * exchangeRates.value.brlPerUsd,
+    eur_to_usd: exchangeRates.value.usd > 0 ? exchangeRates.value.eur / exchangeRates.value.usd : 0,
+    eur_to_brl: 0,
   }
   rateError.value = null
   showRateModal.value = true
+  // Silently try to fetch latest rates without triggering 401 redirect
+  try {
+    const rates = await exchangeRateAPI.getCurrentRates()
+    if (rates.usd_to_pyg) { exchangeRates.value.usd = rates.usd_to_pyg; editingRates.value.usd_to_pyg = rates.usd_to_pyg }
+    if (rates.usd_to_brl) { exchangeRates.value.brlPerUsd = rates.usd_to_brl; editingRates.value.usd_to_brl = rates.usd_to_brl }
+    if (rates.eur_to_usd) editingRates.value.eur_to_usd = rates.eur_to_usd
+    if (rates.eur_to_brl) editingRates.value.eur_to_brl = rates.eur_to_brl
+    if (rates.eur_to_usd && rates.usd_to_pyg) exchangeRates.value.eur = Math.round(rates.eur_to_usd * rates.usd_to_pyg)
+  } catch { /* keep current values */ }
 }
 
 async function saveRates() {
@@ -419,7 +428,7 @@ async function saveRates() {
     if (editingRates.value.eur_to_usd && editingRates.value.usd_to_pyg)
       exchangeRates.value.eur = Math.round(editingRates.value.eur_to_usd * editingRates.value.usd_to_pyg)
     // Persist so dashboard picks up changes
-    try { localStorage.setItem('erp_exchange_rates', JSON.stringify({ 'G$': exchangeRates.value.usd, 'R$': exchangeRates.value.brlPerUsd })) } catch { /* */ }
+    try { localStorage.setItem('erp_exchange_rates', JSON.stringify({ 'G$': exchangeRates.value.usd, 'R$': exchangeRates.value.brlPerUsd, 'EUR': exchangeRates.value.eur })) } catch { /* */ }
     showRateModal.value = false
     showToast('Taxas atualizadas', 'success')
   } catch (e: any) {
@@ -662,21 +671,20 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('keydown', onKeydown)
   searchInput.value?.focus()
+  // Load cached rates from localStorage (populated by dashboard)
+  // Do NOT call the API here — a 401 response would trigger the global
+  // redirect interceptor and blank the page mid-session.
   try {
-    // Try localStorage cache first (populated by dashboard)
-    const cached = (() => { try { return JSON.parse(localStorage.getItem('erp_exchange_rates') || 'null') } catch { return null } })()
-    if (cached?.['G$']) { exchangeRates.value.usd = cached['G$']; newRate.value = cached['G$'] }
-    if (cached?.['R$']) exchangeRates.value.brlPerUsd = cached['R$']
-
-    // Then fetch fresh rates from API
-    const rates = await exchangeRateAPI.getCurrentRates()
-    if (rates.usd_to_pyg) { exchangeRates.value.usd = rates.usd_to_pyg; newRate.value = rates.usd_to_pyg }
-    if (rates.usd_to_brl) exchangeRates.value.brlPerUsd = rates.usd_to_brl
-    if (rates.eur_to_usd && rates.usd_to_pyg)
-      exchangeRates.value.eur = Math.round(rates.eur_to_usd * rates.usd_to_pyg)
+    const cached = JSON.parse(localStorage.getItem('erp_exchange_rates') || 'null')
+    if (cached?.['G$'] && cached['G$'] > 0) {
+      exchangeRates.value.usd = cached['G$']
+      newRate.value = cached['G$']
+    }
+    if (cached?.['R$'] && cached['R$'] > 0) exchangeRates.value.brlPerUsd = cached['R$']
+    if (cached?.['EUR'] && cached['EUR'] > 0) exchangeRates.value.eur = cached['EUR']
   } catch { /* keep defaults */ }
 })
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
