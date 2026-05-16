@@ -388,24 +388,16 @@ const canEditRates = computed(() =>
   !!authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
 )
 
-async function openRateModal() {
+function openRateModal() {
+  const eurToUsd = exchangeRates.value.usd > 0 ? exchangeRates.value.eur / exchangeRates.value.usd : 0
   editingRates.value = {
     usd_to_pyg: exchangeRates.value.usd,
     usd_to_brl: exchangeRates.value.brlPerUsd,
-    eur_to_usd: exchangeRates.value.usd > 0 ? exchangeRates.value.eur / exchangeRates.value.usd : 0,
-    eur_to_brl: 0,
+    eur_to_usd: eurToUsd,
+    eur_to_brl: eurToUsd * exchangeRates.value.brlPerUsd,
   }
   rateError.value = null
   showRateModal.value = true
-  // Silently try to fetch latest rates without triggering 401 redirect
-  try {
-    const rates = await exchangeRateAPI.getCurrentRates()
-    if (rates.usd_to_pyg) { exchangeRates.value.usd = rates.usd_to_pyg; editingRates.value.usd_to_pyg = rates.usd_to_pyg }
-    if (rates.usd_to_brl) { exchangeRates.value.brlPerUsd = rates.usd_to_brl; editingRates.value.usd_to_brl = rates.usd_to_brl }
-    if (rates.eur_to_usd) editingRates.value.eur_to_usd = rates.eur_to_usd
-    if (rates.eur_to_brl) editingRates.value.eur_to_brl = rates.eur_to_brl
-    if (rates.eur_to_usd && rates.usd_to_pyg) exchangeRates.value.eur = Math.round(rates.eur_to_usd * rates.usd_to_pyg)
-  } catch { /* keep current values */ }
 }
 
 async function saveRates() {
