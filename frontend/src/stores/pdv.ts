@@ -91,6 +91,14 @@ export const usePdvStore = defineStore('pdv', () => {
     if (item) item.discount_gs = Math.max(0, discount)
   }
 
+  // Update price in native currency and recalculate G$ equivalent
+  function updateItemOriginalPrice(id: string, originalPrice: number, rateToGs: number) {
+    const item = cart.value.find(i => i.id === id)
+    if (!item) return
+    item.original_price = Math.max(0, originalPrice)
+    item.unit_price_gs = Math.round(originalPrice * rateToGs)
+  }
+
   function addPayment(payment: Omit<CartPayment, 'id'>) {
     payments.value.push({ ...payment, id: crypto.randomUUID() })
   }
@@ -159,7 +167,7 @@ export const usePdvStore = defineStore('pdv', () => {
     cart, payments, discountGs, clienteId, clienteNome, notas,
     loading, lastSale, clients,
     subtotal, total, totalPaid, troco, remaining, cartCount,
-    addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount,
+    addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount, updateItemOriginalPrice,
     addPayment, removePayment, clearCart, completeSale, loadClients,
   }
 })

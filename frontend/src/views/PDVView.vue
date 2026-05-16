@@ -8,11 +8,13 @@
         Dashboard
       </button>
       <span class="pdv-header-title">PDV</span>
-      <div class="pdv-header-rates">
-        <span>U$ {{ fmtRateShort(exchangeRates.usd) }}</span>
-        <span>R$ {{ fmtRateShort(exchangeRates.brl) }}</span>
-        <span>€ {{ fmtRateShort(exchangeRates.eur) }}</span>
-      </div>
+
+      <!-- Exchange rate button (same as dashboard) -->
+      <button class="pdv-rate-btn" @click="openRateModal" :title="canEditRates ? 'Editar taxas de câmbio' : 'Taxas de câmbio'">
+        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ exchangeRates.usd.toLocaleString('es-PY') }}</span>
+        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ exchangeRates.brlPerUsd.toFixed(2) }}</span>
+        <svg v-if="canEditRates" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="13" height="13" class="pdv-rate-edit-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      </button>
     </div>
 
     <!-- Mobile tab bar -->
@@ -33,20 +35,12 @@
 
       <!-- LEFT: Product search panel -->
       <div class="pdv-panel-products" :class="{ 'mobile-hidden': mobileTab !== 'products' }">
-
-        <!-- Search bar -->
         <div class="pdv-search-bar">
           <div class="pdv-search-input-wrap">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="pdv-search-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input
-              ref="searchInput"
-              v-model="searchQuery"
-              type="text"
+            <input ref="searchInput" v-model="searchQuery" type="text"
               placeholder="Buscar produto, SKU ou código de barras… (F2)"
-              class="pdv-search-input"
-              @keydown.enter="onSearchEnter"
-              @input="onSearchInput"
-            />
+              class="pdv-search-input" @keydown.enter="onSearchEnter" @input="onSearchInput" />
             <button v-if="searchQuery" class="pdv-search-clear" @click="clearSearch">×</button>
           </div>
           <button class="pdv-scan-btn" @click="showScanner = true" title="Escanear código">
@@ -54,14 +48,8 @@
           </button>
         </div>
 
-        <!-- Search results -->
         <div v-if="searchResults.length" class="pdv-results">
-          <div
-            v-for="item in searchResults"
-            :key="item.id"
-            class="pdv-result-row"
-            @click="addToCart(item)"
-          >
+          <div v-for="item in searchResults" :key="item.id" class="pdv-result-row" @click="addToCart(item)">
             <div class="pdv-result-thumb">
               <img v-if="item.image_data" class="pdv-result-img" :src="imgSrc(item.image_data)" />
               <div v-else class="pdv-result-no-img">{{ item.name.charAt(0).toUpperCase() }}</div>
@@ -78,10 +66,10 @@
               <div class="pdv-result-price">
                 <template v-if="isNativeCurrency(item.sale_currency)">
                   <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(item.sale_price) }}</span>
-                  <span class="pdv-price-gs">G$ {{ fmtNum(Math.round(item.sale_price * getRate(item.sale_currency))) }}</span>
+                  <span class="pdv-price-gs">≈ G$ {{ fmtNum(Math.round(item.sale_price * getRate(item.sale_currency))) }}</span>
                 </template>
                 <template v-else>
-                  <span>{{ fmtGs(item.sale_price || 0) }}</span>
+                  <span class="pdv-price-orig">{{ fmtGs(item.sale_price || 0) }}</span>
                 </template>
               </div>
               <button class="pdv-result-add">+</button>
@@ -95,7 +83,7 @@
         <div v-else-if="!searchQuery" class="pdv-search-hint">
           <div class="pdv-search-hint-icon">🔍</div>
           <p>Digite o nome, SKU ou escaneie o código de barras para adicionar produtos</p>
-          <p class="pdv-shortcut-hint">Atalho: <kbd>F2</kbd> para focar a busca · <kbd>F5</kbd> para pagar</p>
+          <p class="pdv-shortcut-hint">Atalho: <kbd>F2</kbd> busca · <kbd>F5</kbd> pagar · <kbd>Esc</kbd> voltar</p>
         </div>
         <div v-else-if="loadingSearch" class="pdv-search-loading">Buscando…</div>
         <div v-else class="pdv-no-results">
@@ -116,13 +104,8 @@
           </div>
 
           <div class="pdv-client-row">
-            <input
-              v-model="clienteNomeInput"
-              type="text"
-              placeholder="Cliente (opcional)"
-              class="pdv-client-input"
-              @input="pdv.clienteNome = clienteNomeInput"
-            />
+            <input v-model="clienteNomeInput" type="text" placeholder="Cliente (opcional)"
+              class="pdv-client-input" @input="pdv.clienteNome = clienteNomeInput" />
           </div>
 
           <div class="pdv-cart-items" v-if="pdv.cart.length">
@@ -139,8 +122,9 @@
                   </div>
                   <div class="pdv-ci-meta">
                     <span v-if="item.item_size || item.item_color">{{ [item.item_size, item.item_color].filter(Boolean).join(' · ') }}</span>
-                    <span v-if="isNativeCurrency(item.sale_currency)" class="ci-orig-price">
-                      {{ currencyLabel(item.sale_currency) }} {{ fmtNum(item.original_price) }}
+                    <!-- G$ equivalent for non-PYG items -->
+                    <span v-if="isNativeCurrency(item.sale_currency)" class="ci-gs-equiv">
+                      ≈ {{ fmtGs(item.unit_price_gs) }}
                     </span>
                   </div>
                 </div>
@@ -151,10 +135,12 @@
                       @change="pdv.updateItemQty(item.id, Number(($event.target as HTMLInputElement).value))" />
                     <button class="qty-btn" @click="pdv.updateItemQty(item.id, item.quantity + 1)">+</button>
                   </div>
+                  <!-- Price in native currency -->
                   <div class="pdv-ci-price-wrap">
-                    <span class="pdv-ci-currency">G$</span>
-                    <input type="number" :value="item.unit_price_gs" min="0" class="pdv-ci-price"
-                      @change="pdv.updateItemPrice(item.id, Number(($event.target as HTMLInputElement).value))" />
+                    <span class="pdv-ci-currency">{{ currencyLabel(item.sale_currency) }}</span>
+                    <input type="number" :value="item.original_price" min="0" class="pdv-ci-price"
+                      :title="`Preço em ${currencyLabel(item.sale_currency)}`"
+                      @change="pdv.updateItemOriginalPrice(item.id, Number(($event.target as HTMLInputElement).value), getRate(item.sale_currency))" />
                   </div>
                   <span class="pdv-ci-total">{{ fmtGs(item.quantity * item.unit_price_gs - item.discount_gs) }}</span>
                   <button class="pdv-ci-remove" @click="pdv.removeItem(item.id)">×</button>
@@ -181,6 +167,10 @@
               <span>TOTAL</span>
               <span>{{ fmtGs(pdv.total) }}</span>
             </div>
+            <!-- USD equivalent of total -->
+            <div class="pdv-total-usd">
+              ≈ U$ {{ fmtNum(pdv.total / exchangeRates.usd) }}
+            </div>
           </div>
 
           <div class="pdv-pay-area">
@@ -193,7 +183,6 @@
 
         <!-- ═══ PAYMENT VIEW ═══ -->
         <template v-else>
-          <!-- Payment header -->
           <div class="pay-panel-header">
             <button class="pay-back-btn" @click="panelMode = 'cart'">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -202,6 +191,7 @@
             <div class="pay-panel-title-wrap">
               <span class="pay-panel-title">Pagamento</span>
               <span class="pay-panel-total">{{ fmtGs(pdv.total) }}</span>
+              <span class="pay-panel-total-usd">≈ U$ {{ fmtNum(pdv.total / exchangeRates.usd) }}</span>
             </div>
           </div>
 
@@ -234,17 +224,19 @@
 
           <!-- Add payment form -->
           <div class="pay-add-section">
+            <!-- Method + currency row -->
             <div class="pay-add-row">
               <select v-model="newMethod" class="pay-select">
                 <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
               </select>
               <select v-model="newCurrency" class="pay-select pay-select-sm">
+                <option value="USD">U$</option>
                 <option value="GS">G$</option>
                 <option value="BRL">R$</option>
-                <option value="USD">U$</option>
                 <option value="EUR">€</option>
               </select>
             </div>
+            <!-- Amount row -->
             <div class="pay-add-row">
               <div class="pay-input-wrap">
                 <span class="pay-currency-prefix">{{ currencySymbol }}</span>
@@ -253,10 +245,15 @@
                   :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
                   @keydown.enter="addPayment" />
               </div>
+              <!-- Quick-fill: remaining total -->
+              <button class="pay-btn-total" @click="fillTotal" title="Preencher valor total restante">
+                Total
+              </button>
               <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input"
                 :placeholder="referencePlaceholder" />
               <button class="pay-btn-add" @click="addPayment" :disabled="!newAmount">+ Add</button>
             </div>
+            <!-- Exchange rate row (non-GS) -->
             <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
               <span>Taxa:</span>
               <input v-model.number="newRate" type="number" min="0" step="0.01" class="pay-rate-input" />
@@ -285,7 +282,6 @@
             </div>
           </div>
 
-          <!-- Confirm button -->
           <div class="pdv-pay-area">
             <button class="pay-confirm-btn" :disabled="!canConfirmPayment || pdv.loading" @click="confirmPayment">
               <span v-if="pdv.loading">Processando…</span>
@@ -296,25 +292,50 @@
       </div>
     </div>
 
-    <!-- Modals (barcode, avulso, receipt) -->
-    <BarcodeScanner
-      v-if="showScanner"
-      @barcode-detected="onBarcodeDetected"
-      @close="showScanner = false"
-    />
+    <!-- Modals -->
+    <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
+    <PDVAvulsoModal v-if="showAvulso" :scanned-code="avulsoCode" @add="onAvulsoAdd" @close="showAvulso = false" />
+    <PDVReceiptModal v-if="showReceipt && pdv.lastSale" :sale="pdv.lastSale" @close="showReceipt = false" />
 
-    <PDVAvulsoModal
-      v-if="showAvulso"
-      :scanned-code="avulsoCode"
-      @add="onAvulsoAdd"
-      @close="showAvulso = false"
-    />
-
-    <PDVReceiptModal
-      v-if="showReceipt && pdv.lastSale"
-      :sale="pdv.lastSale"
-      @close="showReceipt = false"
-    />
+    <!-- Exchange Rate Modal (same as dashboard) -->
+    <div v-if="showRateModal" class="er-overlay" @click.self="showRateModal = false">
+      <div class="er-modal">
+        <div class="er-header">
+          <h2>Taxas de Câmbio</h2>
+          <button class="er-close" @click="showRateModal = false">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="er-body">
+          <div v-if="rateError" class="er-error">{{ rateError }}</div>
+          <div class="er-form">
+            <div class="er-group">
+              <label>USD → Guarani (G$)</label>
+              <input type="number" step="1" v-model.number="editingRates.usd_to_pyg" placeholder="6400" class="er-input" :disabled="!canEditRates" />
+            </div>
+            <div class="er-group">
+              <label>USD → Real (R$)</label>
+              <input type="number" step="0.01" v-model.number="editingRates.usd_to_brl" placeholder="5.85" class="er-input" :disabled="!canEditRates" />
+            </div>
+            <div class="er-group">
+              <label>EUR → USD ($)</label>
+              <input type="number" step="0.001" v-model.number="editingRates.eur_to_usd" placeholder="1.085" class="er-input" :disabled="!canEditRates" />
+            </div>
+            <div class="er-group">
+              <label>EUR → Real (R$)</label>
+              <input type="number" step="0.01" v-model.number="editingRates.eur_to_brl" placeholder="6.20" class="er-input" :disabled="!canEditRates" />
+            </div>
+          </div>
+        </div>
+        <div class="er-footer">
+          <button class="er-btn-cancel" @click="showRateModal = false">Cancelar</button>
+          <button v-if="canEditRates" class="er-btn-save" @click="saveRates" :disabled="savingRates">
+            <span v-if="savingRates">Salvando…</span>
+            <span v-else>Salvar Taxas</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Toast -->
     <transition name="toast-fade">
@@ -327,6 +348,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePdvStore } from '@/stores/pdv'
+import { useAuthStore } from '@/stores/auth'
 import { inventoryAPI, exchangeRateAPI, type InventoryItem } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
@@ -335,12 +357,13 @@ import type { CartPayment } from '@/stores/pdv'
 
 const router = useRouter()
 const pdv = usePdvStore()
+const authStore = useAuthStore()
 
 // ── Panel / tab state ─────────────────────────────────────────────────────────
 const mobileTab = ref<'products' | 'cart'>('products')
 const panelMode = ref<'cart' | 'payment'>('cart')
 
-// ── Search state ──────────────────────────────────────────────────────────────
+// ── Search ────────────────────────────────────────────────────────────────────
 const searchQuery = ref('')
 const searchResults = ref<InventoryItem[]>([])
 const loadingSearch = ref(false)
@@ -352,22 +375,74 @@ const searchInput = ref<HTMLInputElement>()
 const clienteNomeInput = ref('')
 
 // ── Exchange rates ────────────────────────────────────────────────────────────
-const exchangeRates = ref({ brl: 1150, usd: 6400, eur: 7200 })
+// usd: G$ per 1 USD; brlPerUsd: BRL per 1 USD; eur: G$ per 1 EUR
+const exchangeRates = ref({ usd: 6400, brlPerUsd: 5.85, eur: 7200 })
+
+// ── Exchange rate modal ───────────────────────────────────────────────────────
+const showRateModal = ref(false)
+const savingRates = ref(false)
+const rateError = ref<string | null>(null)
+const editingRates = ref({ usd_to_pyg: 0, usd_to_brl: 0, eur_to_usd: 0, eur_to_brl: 0 })
+
+const canEditRates = computed(() =>
+  !!authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
+)
+
+function openRateModal() {
+  editingRates.value = {
+    usd_to_pyg: exchangeRates.value.usd,
+    usd_to_brl: exchangeRates.value.brlPerUsd,
+    eur_to_usd: exchangeRates.value.eur / exchangeRates.value.usd,
+    eur_to_brl: (exchangeRates.value.eur / exchangeRates.value.usd) * exchangeRates.value.brlPerUsd,
+  }
+  rateError.value = null
+  showRateModal.value = true
+}
+
+async function saveRates() {
+  if (!canEditRates.value || !authStore.user) return
+  try {
+    savingRates.value = true
+    rateError.value = null
+    await exchangeRateAPI.quickUpdate({
+      usd_to_pyg: editingRates.value.usd_to_pyg || undefined,
+      usd_to_brl: editingRates.value.usd_to_brl || undefined,
+      eur_to_usd: editingRates.value.eur_to_usd || undefined,
+      eur_to_brl: editingRates.value.eur_to_brl || undefined,
+      source: 'PDV',
+      updated_by: authStore.user.nome,
+      notes: 'Updated from PDV',
+    })
+    // Apply new rates locally
+    if (editingRates.value.usd_to_pyg) exchangeRates.value.usd = editingRates.value.usd_to_pyg
+    if (editingRates.value.usd_to_brl) exchangeRates.value.brlPerUsd = editingRates.value.usd_to_brl
+    if (editingRates.value.eur_to_usd && editingRates.value.usd_to_pyg)
+      exchangeRates.value.eur = Math.round(editingRates.value.eur_to_usd * editingRates.value.usd_to_pyg)
+    // Persist so dashboard picks up changes
+    try { localStorage.setItem('erp_exchange_rates', JSON.stringify({ 'G$': exchangeRates.value.usd, 'R$': exchangeRates.value.brlPerUsd })) } catch { /* */ }
+    showRateModal.value = false
+    showToast('Taxas atualizadas', 'success')
+  } catch (e: any) {
+    rateError.value = e?.response?.data?.detail || e?.message || 'Erro ao salvar taxas'
+  } finally {
+    savingRates.value = false
+  }
+}
 
 // ── Payment state (inline) ────────────────────────────────────────────────────
 const localPayments = ref<CartPayment[]>([])
 const localDiscount = ref(0)
-const newMethod = ref('cash_gs')
-const newCurrency = ref('GS')
+const newMethod = ref('cash_usd')
+const newCurrency = ref('USD')
 const newAmount = ref<number>(0)
-const newRate = ref(1)
+const newRate = ref(6400)
 const newReference = ref('')
 const amountInput = ref<HTMLInputElement>()
 
 const PAYMENT_METHODS = [
+  { value: 'cash_usd',     label: '💵 Dinheiro U$' },
   { value: 'cash_gs',      label: '💵 Dinheiro G$' },
   { value: 'cash_brl',     label: '💵 Dinheiro R$' },
-  { value: 'cash_usd',     label: '💵 Dinheiro U$' },
   { value: 'cash_eur',     label: '💵 Dinheiro €' },
   { value: 'card',         label: '💳 Cartão' },
   { value: 'pix',          label: '📱 PIX' },
@@ -382,12 +457,12 @@ const PAYMENT_METHODS = [
 
 function methodCurrency(m: string) {
   if (['cash_brl', 'pix', 'transfer_br', 'pix_cambista', 'mercadopago'].includes(m)) return 'BRL'
-  if (m === 'cash_usd') return 'USD'
+  if (m === 'cash_gs' || m === 'transfer_py' || m === 'qr_py' || m === 'tigo_money') return 'GS'
   if (m === 'cash_eur') return 'EUR'
-  return 'GS'
+  return 'USD' // cash_usd, card default to USD
 }
 function defaultRate(c: string) {
-  if (c === 'BRL') return exchangeRates.value.brl
+  if (c === 'BRL') return exchangeRates.value.brlPerUsd > 0 ? Math.round(exchangeRates.value.usd / exchangeRates.value.brlPerUsd) : 1150
   if (c === 'USD') return exchangeRates.value.usd
   if (c === 'EUR') return exchangeRates.value.eur
   return 1
@@ -418,6 +493,11 @@ const remainingInCurrency = computed(() =>
   newCurrency.value === 'GS' ? payRemaining.value : payRemaining.value / (newRate.value || 1)
 )
 const canConfirmPayment = computed(() => payTotalPaid.value >= pdv.total && localPayments.value.length > 0)
+
+function fillTotal() {
+  newAmount.value = Math.ceil(remainingInCurrency.value * 100) / 100
+  nextTick(() => amountInput.value?.focus())
+}
 
 function addPayment() {
   if (!newAmount.value || newAmount.value <= 0) return
@@ -459,7 +539,7 @@ function showToast(msg: string, type: Toast['type'] = 'success') {
 function getRate(currency: string): number {
   const c = (currency || 'PYG').toUpperCase()
   if (c === 'USD') return exchangeRates.value.usd
-  if (c === 'BRL') return exchangeRates.value.brl
+  if (c === 'BRL') return exchangeRates.value.brlPerUsd > 0 ? Math.round(exchangeRates.value.usd / exchangeRates.value.brlPerUsd) : 1150
   if (c === 'EUR') return exchangeRates.value.eur
   return 1
 }
@@ -474,11 +554,7 @@ function currencyLabel(currency: string): string {
 }
 function fmtGs(v: number) { return 'G$ ' + Math.round(v).toLocaleString('es-PY') }
 function fmtNum(v: number) { return v.toLocaleString('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }
-function fmtRateShort(v: number) {
-  return (v / 1000).toLocaleString('es-PY', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'k'
-}
 function imgSrc(data: string): string {
-  if (!data) return ''
   return data.startsWith('data:') ? data : `data:image/jpeg;base64,${data}`
 }
 
@@ -531,20 +607,14 @@ function addToCart(item: InventoryItem) {
   clearSearch()
   mobileTab.value = 'cart'
 }
-
-function openAvulso(prefill?: string) {
-  avulsoCode.value = prefill || null
-  showAvulso.value = true
-}
+function openAvulso(prefill?: string) { avulsoCode.value = prefill || null; showAvulso.value = true }
 function onAvulsoAdd(item: any) {
   pdv.addItem(item)
   showAvulso.value = false
   showToast(`${item.item_name} adicionado`)
   mobileTab.value = 'cart'
 }
-function confirmClear() {
-  if (confirm('Limpar o carrinho?')) pdv.clearCart()
-}
+function confirmClear() { if (confirm('Limpar o carrinho?')) pdv.clearCart() }
 
 // ── Barcode ───────────────────────────────────────────────────────────────────
 async function onBarcodeDetected(code: string) {
@@ -561,14 +631,14 @@ async function onBarcodeDetected(code: string) {
 function openPayment() {
   localPayments.value = []
   localDiscount.value = pdv.discountGs
-  newMethod.value = 'cash_gs'
-  newCurrency.value = 'GS'
+  newMethod.value = 'cash_usd'
+  newCurrency.value = 'USD'
+  newRate.value = exchangeRates.value.usd
   newAmount.value = 0
   panelMode.value = 'payment'
   mobileTab.value = 'cart'
   nextTick(() => amountInput.value?.focus())
 }
-
 async function confirmPayment() {
   pdv.discountGs = localDiscount.value
   pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
@@ -582,20 +652,13 @@ async function confirmPayment() {
   }
 }
 
-// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// ── Keyboard ──────────────────────────────────────────────────────────────────
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'F2' || (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as Element).tagName))) {
-    e.preventDefault()
-    searchInput.value?.focus()
-    mobileTab.value = 'products'
+    e.preventDefault(); searchInput.value?.focus(); mobileTab.value = 'products'
   }
-  if (e.key === 'F5') {
-    e.preventDefault()
-    if (pdv.cart.length && panelMode.value === 'cart') openPayment()
-  }
-  if (e.key === 'Escape' && panelMode.value === 'payment') {
-    panelMode.value = 'cart'
-  }
+  if (e.key === 'F5') { e.preventDefault(); if (pdv.cart.length && panelMode.value === 'cart') openPayment() }
+  if (e.key === 'Escape') { if (panelMode.value === 'payment') panelMode.value = 'cart'; else if (showRateModal.value) showRateModal.value = false }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -603,10 +666,15 @@ onMounted(async () => {
   document.addEventListener('keydown', onKeydown)
   searchInput.value?.focus()
   try {
+    // Try localStorage cache first (populated by dashboard)
+    const cached = (() => { try { return JSON.parse(localStorage.getItem('erp_exchange_rates') || 'null') } catch { return null } })()
+    if (cached?.['G$']) { exchangeRates.value.usd = cached['G$']; newRate.value = cached['G$'] }
+    if (cached?.['R$']) exchangeRates.value.brlPerUsd = cached['R$']
+
+    // Then fetch fresh rates from API
     const rates = await exchangeRateAPI.getCurrentRates()
-    if (rates.usd_to_pyg) exchangeRates.value.usd = rates.usd_to_pyg
-    if (rates.usd_to_pyg && rates.usd_to_brl && rates.usd_to_brl > 0)
-      exchangeRates.value.brl = Math.round(rates.usd_to_pyg / rates.usd_to_brl)
+    if (rates.usd_to_pyg) { exchangeRates.value.usd = rates.usd_to_pyg; newRate.value = rates.usd_to_pyg }
+    if (rates.usd_to_brl) exchangeRates.value.brlPerUsd = rates.usd_to_brl
     if (rates.eur_to_usd && rates.usd_to_pyg)
       exchangeRates.value.eur = Math.round(rates.eur_to_usd * rates.usd_to_pyg)
   } catch { /* keep defaults */ }
@@ -616,91 +684,47 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 <style scoped>
 /* ── Root ─────────────────────────────────────────────────────────────────── */
-.pdv-root {
-  display: flex; flex-direction: column;
-  height: 100dvh; height: 100vh;
-  background: #f3f4f6; overflow: hidden;
-}
+.pdv-root { display: flex; flex-direction: column; height: 100dvh; height: 100vh; background: #f3f4f6; overflow: hidden; }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
-.pdv-header {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.5rem 0.875rem;
-  background: #1f2937; color: white;
-  flex-shrink: 0; min-height: 44px;
-}
-.pdv-back-btn {
-  display: flex; align-items: center; gap: 0.3rem;
-  background: rgba(255,255,255,0.1); border: none;
-  color: #d1d5db; padding: 0.3rem 0.625rem;
-  border-radius: 0.375rem; cursor: pointer; font-size: 0.8rem; font-weight: 600;
-  transition: background 0.15s; white-space: nowrap;
-}
+.pdv-header { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.875rem; background: #1f2937; color: white; flex-shrink: 0; min-height: 44px; }
+.pdv-back-btn { display: flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.1); border: none; color: #d1d5db; padding: 0.3rem 0.625rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background 0.15s; white-space: nowrap; }
 .pdv-back-btn:hover { background: rgba(255,255,255,0.2); color: white; }
-.pdv-header-title { font-size: 0.95rem; font-weight: 800; color: white; letter-spacing: 0.05em; flex: 1; }
-.pdv-header-rates { display: flex; gap: 0.75rem; font-size: 0.72rem; color: #9ca3af; font-family: monospace; white-space: nowrap; }
-.pdv-header-rates span { background: rgba(255,255,255,0.07); padding: 0.15rem 0.4rem; border-radius: 0.25rem; }
+.pdv-header-title { font-size: 0.95rem; font-weight: 800; color: white; letter-spacing: 0.05em; }
+
+/* Exchange rate button */
+.pdv-rate-btn { margin-left: auto; display: flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 0.5rem; padding: 0.3rem 0.6rem; cursor: pointer; transition: background 0.15s; }
+.pdv-rate-btn:hover { background: rgba(255,255,255,0.15); }
+.pdv-rate-pill { font-size: 0.72rem; color: #d1d5db; font-family: monospace; white-space: nowrap; }
+.pdv-rate-edit-icon { color: #9ca3af; flex-shrink: 0; }
 
 /* ── Mobile tabs ──────────────────────────────────────────────────────────── */
 .pdv-tab-bar { display: flex; background: white; border-bottom: 2px solid #e5e7eb; flex-shrink: 0; }
-.pdv-tab {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-  padding: 0.75rem 0.5rem; border: none; background: none;
-  font-size: 0.85rem; font-weight: 600; color: #6b7280; cursor: pointer;
-  position: relative; transition: color 0.15s;
-}
+.pdv-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.75rem 0.5rem; border: none; background: none; font-size: 0.85rem; font-weight: 600; color: #6b7280; cursor: pointer; position: relative; transition: color 0.15s; }
 .pdv-tab.active { color: #f97316; border-bottom: 2px solid #f97316; margin-bottom: -2px; }
-.pdv-tab-badge {
-  position: absolute; top: 6px; right: calc(50% - 28px);
-  background: #f97316; color: white; border-radius: 9999px;
-  font-size: 0.6rem; font-weight: 800; min-width: 16px; height: 16px;
-  display: flex; align-items: center; justify-content: center; padding: 0 3px;
-}
+.pdv-tab-badge { position: absolute; top: 6px; right: calc(50% - 28px); background: #f97316; color: white; border-radius: 9999px; font-size: 0.6rem; font-weight: 800; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
 .mobile-only { display: none; }
 
 /* ── Layout ───────────────────────────────────────────────────────────────── */
 .pdv-layout { display: grid; grid-template-columns: 60fr 40fr; flex: 1; overflow: hidden; }
 
 /* ── Products panel ───────────────────────────────────────────────────────── */
-.pdv-panel-products {
-  display: flex; flex-direction: column; overflow: hidden;
-  border-right: 1px solid #e5e7eb; background: white;
-}
-.pdv-search-bar {
-  display: flex; gap: 0.5rem; padding: 0.75rem;
-  border-bottom: 1px solid #f3f4f6; background: white; flex-shrink: 0;
-}
-.pdv-search-input-wrap {
-  flex: 1; display: flex; align-items: center;
-  border: 2px solid #e5e7eb; border-radius: 0.625rem; overflow: hidden;
-  transition: border-color 0.15s; background: #f9fafb;
-}
+.pdv-panel-products { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid #e5e7eb; background: white; }
+.pdv-search-bar { display: flex; gap: 0.5rem; padding: 0.75rem; border-bottom: 1px solid #f3f4f6; background: white; flex-shrink: 0; }
+.pdv-search-input-wrap { flex: 1; display: flex; align-items: center; border: 2px solid #e5e7eb; border-radius: 0.625rem; overflow: hidden; transition: border-color 0.15s; background: #f9fafb; }
 .pdv-search-input-wrap:focus-within { border-color: #f97316; background: white; }
 .pdv-search-icon { width: 18px; height: 18px; color: #9ca3af; margin: 0 0.5rem; flex-shrink: 0; }
 .pdv-search-input { flex: 1; border: none; outline: none; padding: 0.625rem 0.5rem 0.625rem 0; font-size: 0.9rem; background: transparent; }
 .pdv-search-clear { background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0 0.5rem; font-size: 1.2rem; }
-.pdv-scan-btn {
-  width: 44px; height: 44px; border-radius: 0.625rem;
-  border: 2px solid #e5e7eb; background: white; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; color: #374151; flex-shrink: 0;
-}
+.pdv-scan-btn { width: 44px; height: 44px; border-radius: 0.625rem; border: 2px solid #e5e7eb; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #374151; flex-shrink: 0; }
 .pdv-scan-btn:hover { border-color: #f97316; color: #f97316; }
+
 .pdv-results { flex: 1; overflow-y: auto; }
-.pdv-result-row {
-  display: flex; align-items: center; gap: 0.625rem;
-  padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6;
-  cursor: pointer; transition: background 0.1s;
-}
+.pdv-result-row { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.1s; }
 .pdv-result-row:hover { background: #fff7ed; }
-.pdv-result-thumb {
-  width: 46px; height: 46px; border-radius: 0.375rem; overflow: hidden;
-  flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb;
-}
+.pdv-result-thumb { width: 46px; height: 46px; border-radius: 0.375rem; overflow: hidden; flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb; }
 .pdv-result-img { width: 100%; height: 100%; object-fit: cover; }
-.pdv-result-no-img {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; font-weight: 800; color: #9ca3af;
-}
+.pdv-result-no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; color: #9ca3af; }
 .pdv-result-left { flex: 1; min-width: 0; }
 .pdv-result-name { font-weight: 600; font-size: 0.85rem; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdv-result-meta { font-size: 0.72rem; color: #9ca3af; }
@@ -712,16 +736,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .stock-out { background: #fee2e2; color: #991b1b; }
 .pdv-result-price { text-align: right; }
 .pdv-price-orig { display: block; font-size: 0.82rem; font-weight: 700; color: #1d4ed8; white-space: nowrap; }
-.pdv-price-gs { display: block; font-size: 0.7rem; color: #6b7280; white-space: nowrap; }
-.pdv-result-add {
-  width: 28px; height: 28px; border-radius: 50%; border: none;
-  background: #f97316; color: white; font-size: 1.1rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.pdv-result-avulso {
-  padding: 0.75rem 0.875rem; font-size: 0.8rem; color: #d97706;
-  border-top: 1px dashed #fcd34d; cursor: pointer; text-align: center;
-}
+.pdv-price-gs { display: block; font-size: 0.68rem; color: #9ca3af; white-space: nowrap; }
+.pdv-result-add { width: 28px; height: 28px; border-radius: 50%; border: none; background: #f97316; color: white; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pdv-result-avulso { padding: 0.75rem; font-size: 0.8rem; color: #d97706; border-top: 1px dashed #fcd34d; cursor: pointer; text-align: center; }
 .pdv-result-avulso:hover { background: #fffbeb; }
 .pdv-search-hint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; }
 .pdv-search-hint-icon { font-size: 3rem; margin-bottom: 0.75rem; }
@@ -735,41 +752,26 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 
 /* ── Cart panel ───────────────────────────────────────────────────────────── */
 .pdv-panel-cart { display: flex; flex-direction: column; overflow: hidden; background: white; }
-.pdv-cart-header {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.75rem 0.875rem; border-bottom: 1px solid #f3f4f6; flex-shrink: 0;
-}
+.pdv-cart-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 0.875rem; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; }
 .pdv-cart-title { font-size: 0.95rem; font-weight: 700; color: #111827; }
 .pdv-cart-count { font-size: 0.75rem; color: #9ca3af; flex: 1; }
 .pdv-cart-clear { background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem; padding: 0.2rem; }
 .pdv-client-row { padding: 0.5rem 0.875rem; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; }
-.pdv-client-input {
-  width: 100%; box-sizing: border-box;
-  border: 1.5px solid #e5e7eb; border-radius: 0.4rem;
-  padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; color: #374151;
-}
+.pdv-client-input { width: 100%; box-sizing: border-box; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; color: #374151; }
 .pdv-client-input:focus { border-color: #f97316; }
+
 .pdv-cart-items { flex: 1; overflow-y: auto; }
-.pdv-cart-item {
-  display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #f3f4f6; align-items: flex-start;
-}
+.pdv-cart-item { display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; align-items: flex-start; }
 .pdv-cart-item.item-avulso { background: #fffbeb; }
-.pdv-ci-thumb {
-  width: 40px; height: 40px; border-radius: 0.3rem; overflow: hidden;
-  flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb; margin-top: 2px;
-}
+.pdv-ci-thumb { width: 40px; height: 40px; border-radius: 0.3rem; overflow: hidden; flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb; margin-top: 2px; }
 .pdv-ci-img { width: 100%; height: 100%; object-fit: cover; }
-.pdv-ci-no-img {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  font-size: 0.9rem; font-weight: 800; color: #9ca3af;
-}
+.pdv-ci-no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; color: #9ca3af; }
 .pdv-ci-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 .pdv-ci-info { display: flex; flex-direction: column; }
 .pdv-ci-name { font-size: 0.83rem; font-weight: 600; color: #111827; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .ci-avulso-badge { background: #fef3c7; color: #92400e; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.3rem; border-radius: 0.2rem; }
-.pdv-ci-meta { font-size: 0.68rem; color: #9ca3af; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.ci-orig-price { background: #dbeafe; color: #1e40af; padding: 0.1rem 0.3rem; border-radius: 0.2rem; font-weight: 700; font-size: 0.68rem; }
+.pdv-ci-meta { font-size: 0.68rem; color: #9ca3af; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.ci-gs-equiv { color: #6b7280; font-style: italic; }
 .pdv-ci-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .pdv-qty-stepper { display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; }
 .qty-btn { width: 26px; height: 26px; border: none; background: #f9fafb; cursor: pointer; font-size: 1rem; color: #374151; }
@@ -785,59 +787,38 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pdv-cart-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: #9ca3af; }
 .pdv-cart-empty-icon { font-size: 2.5rem; }
 .pdv-cart-empty p { margin: 0; font-size: 0.88rem; }
+
 .pdv-totals { padding: 0.625rem 0.875rem; border-top: 1px solid #f3f4f6; background: #f9fafb; flex-shrink: 0; }
 .pdv-total-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #374151; padding: 0.15rem 0; }
 .pdv-discount-row { color: #dc2626; }
 .pdv-grand-total { font-size: 1rem; font-weight: 800; color: #111827; border-top: 1px solid #e5e7eb; margin-top: 0.25rem; padding-top: 0.375rem; }
+.pdv-total-usd { font-size: 0.72rem; color: #9ca3af; text-align: right; margin-top: 0.1rem; }
+
 .pdv-pay-area { padding: 0.75rem; flex-shrink: 0; border-top: 1px solid #f3f4f6; }
-.pdv-pay-btn {
-  width: 100%; padding: 0.875rem;
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  color: white; border: none; border-radius: 0.75rem;
-  font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s;
-}
+.pdv-pay-btn { width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: none; border-radius: 0.75rem; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s; }
 .pdv-pay-btn:hover:not(:disabled) { opacity: 0.9; }
 .pdv-pay-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Payment panel (inline) ───────────────────────────────────────────────── */
-.pay-panel-header {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.625rem 0.875rem;
-  background: #f97316; flex-shrink: 0;
-}
-.pay-back-btn {
-  display: flex; align-items: center; gap: 0.25rem;
-  background: rgba(255,255,255,0.2); border: none; color: white;
-  padding: 0.3rem 0.6rem; border-radius: 0.35rem; cursor: pointer;
-  font-size: 0.78rem; font-weight: 600; white-space: nowrap;
-}
+.pay-panel-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.875rem; background: #f97316; flex-shrink: 0; }
+.pay-back-btn { display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.2); border: none; color: white; padding: 0.3rem 0.6rem; border-radius: 0.35rem; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
 .pay-back-btn:hover { background: rgba(255,255,255,0.3); }
 .pay-panel-title-wrap { flex: 1; }
-.pay-panel-title { display: block; font-size: 0.75rem; color: rgba(255,255,255,0.8); font-weight: 600; }
-.pay-panel-total { display: block; font-size: 1.25rem; font-weight: 900; color: white; line-height: 1.1; }
+.pay-panel-title { display: block; font-size: 0.72rem; color: rgba(255,255,255,0.8); font-weight: 600; }
+.pay-panel-total { display: block; font-size: 1.2rem; font-weight: 900; color: white; line-height: 1.1; }
+.pay-panel-total-usd { display: block; font-size: 0.7rem; color: rgba(255,255,255,0.7); }
 
-.pay-discount-row {
-  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-  padding: 0.5rem 0.875rem; border-bottom: 1px solid #f3f4f6;
-  background: #fff7ed; flex-shrink: 0;
-}
+.pay-discount-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem 0.875rem; border-bottom: 1px solid #f3f4f6; background: #fff7ed; flex-shrink: 0; }
 .pay-discount-label { font-size: 0.75rem; font-weight: 600; color: #92400e; flex-shrink: 0; }
 .pay-discount-input-wrap { display: flex; align-items: center; border: 1.5px solid #fed7aa; border-radius: 0.35rem; overflow: hidden; background: white; }
 .pay-currency-prefix { padding: 0.25rem 0.35rem; font-size: 0.72rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; }
 .pay-discount-input { border: none; outline: none; width: 80px; padding: 0.25rem 0.35rem; font-size: 0.88rem; }
 .pay-subtotal-hint { font-size: 0.7rem; color: #9ca3af; margin-left: auto; }
 
-.pay-entries { flex: 1; overflow-y: auto; padding: 0.5rem 0.875rem; min-height: 60px; }
-.pay-entry {
-  display: flex; align-items: center; gap: 0.4rem;
-  padding: 0.375rem 0.5rem; border-radius: 0.4rem;
-  margin-bottom: 0.3rem; background: #f9fafb;
-}
+.pay-entries { flex: 1; overflow-y: auto; padding: 0.5rem 0.875rem; min-height: 50px; }
+.pay-entry { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.5rem; border-radius: 0.4rem; margin-bottom: 0.3rem; background: #f9fafb; }
 .pay-entry-method { flex: 1; display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
-.pay-method-badge {
-  font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.35rem;
-  border-radius: 0.25rem; background: #e5e7eb; color: #374151; white-space: nowrap;
-}
+.pay-method-badge { font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.35rem; border-radius: 0.25rem; background: #e5e7eb; color: #374151; white-space: nowrap; }
 .method-cash_gs  { background: #d1fae5; color: #065f46; }
 .method-cash_brl { background: #dbeafe; color: #1e40af; }
 .method-cash_usd { background: #fef9c3; color: #713f12; }
@@ -845,27 +826,23 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .method-card     { background: #f0fdf4; color: #166534; }
 .method-pix      { background: #ecfdf5; color: #065f46; }
 .method-fiado    { background: #fef3c7; color: #92400e; }
-.pay-entry-ref { font-size: 0.68rem; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
+.pay-entry-ref { font-size: 0.68rem; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
 .pay-entry-amounts { display: flex; flex-direction: column; align-items: flex-end; }
 .pay-orig-amount { font-size: 0.68rem; color: #9ca3af; }
 .pay-gs-amount { font-size: 0.82rem; font-weight: 700; color: #111827; }
 .pay-entry-remove { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.1rem; padding: 0; flex-shrink: 0; }
 .pay-empty { font-size: 0.8rem; color: #d1d5db; text-align: center; padding: 0.75rem 0; }
 
-.pay-add-section {
-  padding: 0.625rem 0.875rem; border-top: 1px solid #f3f4f6;
-  border-bottom: 1px solid #f3f4f6; background: #f9fafb; flex-shrink: 0;
-}
-.pay-add-row { display: flex; gap: 0.4rem; margin-bottom: 0.35rem; }
-.pay-select { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.4rem 0.4rem; font-size: 0.8rem; background: white; outline: none; }
-.pay-select-sm { flex: 0 0 60px; }
+.pay-add-section { padding: 0.625rem 0.875rem; border-top: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; background: #f9fafb; flex-shrink: 0; }
+.pay-add-row { display: flex; gap: 0.35rem; margin-bottom: 0.35rem; align-items: center; }
+.pay-select { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.4rem; font-size: 0.8rem; background: white; outline: none; }
+.pay-select-sm { flex: 0 0 58px; }
 .pay-input-wrap { flex: 1; display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; background: white; }
-.pay-amount-input { flex: 1; border: none; outline: none; padding: 0.4rem 0.4rem; font-size: 0.88rem; min-width: 0; }
+.pay-amount-input { flex: 1; border: none; outline: none; padding: 0.4rem; font-size: 0.88rem; min-width: 0; }
+.pay-btn-total { background: #1d4ed8; color: white; border: none; border-radius: 0.4rem; padding: 0.4rem 0.5rem; font-weight: 700; cursor: pointer; font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
+.pay-btn-total:hover { background: #1e40af; }
 .pay-ref-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.4rem; font-size: 0.8rem; outline: none; }
-.pay-btn-add {
-  background: #111827; color: white; border: none; border-radius: 0.4rem;
-  padding: 0.4rem 0.625rem; font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
-}
+.pay-btn-add { background: #111827; color: white; border: none; border-radius: 0.4rem; padding: 0.4rem 0.625rem; font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
 .pay-btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
 .pay-rate-row { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: #6b7280; margin-top: 0.25rem; }
 .pay-rate-input { width: 70px; border: 1px solid #e5e7eb; border-radius: 0.3rem; padding: 0.2rem 0.35rem; font-size: 0.78rem; outline: none; }
@@ -879,20 +856,32 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pay-troco { color: #059669; }
 .pay-remaining-row { font-weight: 700; color: #dc2626; border-top: 1px solid #e5e7eb; margin-top: 0.2rem; padding-top: 0.3rem; }
 .pay-remaining { color: #dc2626; }
-.pay-confirm-btn {
-  width: 100%; padding: 0.875rem; border: none; border-radius: 0.75rem;
-  background: linear-gradient(135deg, #16a34a, #15803d);
-  color: white; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s;
-}
+.pay-confirm-btn { width: 100%; padding: 0.875rem; border: none; border-radius: 0.75rem; background: linear-gradient(135deg, #16a34a, #15803d); color: white; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s; }
 .pay-confirm-btn:hover:not(:disabled) { opacity: 0.9; }
 .pay-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Exchange Rate Modal ───────────────────────────────────────────────────── */
+.er-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 1rem; box-sizing: border-box; }
+.er-modal { background: white; border-radius: 0.75rem; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.er-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }
+.er-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #111827; }
+.er-close { background: none; border: none; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.25rem; border-radius: 0.375rem; }
+.er-close:hover { background: #f3f4f6; color: #374151; }
+.er-body { padding: 1.25rem; }
+.er-error { background: #fee2e2; color: #991b1b; padding: 0.625rem 0.875rem; border-radius: 0.5rem; font-size: 0.85rem; margin-bottom: 1rem; }
+.er-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
+.er-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.er-group label { font-size: 0.78rem; font-weight: 600; color: #374151; }
+.er-input { border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.5rem 0.625rem; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
+.er-input:focus { border-color: #f97316; }
+.er-input:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+.er-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.875rem 1.25rem; border-top: 1px solid #e5e7eb; }
+.er-btn-cancel { padding: 0.5rem 1rem; border: 1.5px solid #e5e7eb; border-radius: 0.5rem; background: white; color: #6b7280; font-weight: 600; cursor: pointer; }
+.er-btn-save { padding: 0.5rem 1.25rem; border: none; border-radius: 0.5rem; background: #f97316; color: white; font-weight: 700; cursor: pointer; }
+.er-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ── Toast ────────────────────────────────────────────────────────────────── */
-.pdv-toast {
-  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-  padding: 0.6rem 1.25rem; border-radius: 2rem; font-size: 0.85rem; font-weight: 600;
-  z-index: 9999; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
+.pdv-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.6rem 1.25rem; border-radius: 2rem; font-size: 0.85rem; font-weight: 600; z-index: 9999; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
 .toast-success { background: #111827; color: white; }
 .toast-error   { background: #dc2626; color: white; }
 .toast-fade-enter-active, .toast-fade-leave-active { transition: all 0.25s; }
@@ -902,12 +891,11 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 @media (max-width: 768px) {
   .mobile-only { display: flex; }
   .pdv-layout { grid-template-columns: 1fr; }
-  .pdv-panel-products, .pdv-panel-cart {
-    height: calc(100dvh - 100px); height: calc(100vh - 100px);
-  }
+  .pdv-panel-products, .pdv-panel-cart { height: calc(100dvh - 100px); height: calc(100vh - 100px); }
   .mobile-hidden { display: none !important; }
   .pdv-panel-products, .pdv-panel-cart { border-right: none; }
-  .pdv-header-rates { display: none; }
   .pdv-header-title { font-size: 0.85rem; }
+  .pdv-rate-btn { padding: 0.25rem 0.4rem; }
+  .pdv-rate-pill { font-size: 0.65rem; }
 }
 </style>
