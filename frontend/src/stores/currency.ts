@@ -12,17 +12,47 @@ interface ExchangeRates {
   'EUR': number
 }
 
+// Primary key used by the currency store; dashboard writes to LEGACY_KEY
+const RATES_CACHE_KEY = 'erp_rates'
+const LEGACY_KEY = 'erp_exchange_rates' // written by DashboardView.vue
+
+function loadCachedRates(): Partial<ExchangeRates> {
+  try {
+    // Prefer our own key; fall back to the dashboard's legacy key
+    const raw = localStorage.getItem(RATES_CACHE_KEY) || localStorage.getItem(LEGACY_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return {
+      'G$': parsed['G$'] > 0 ? parsed['G$'] : undefined,
+      'R$': parsed['R$'] > 0 ? parsed['R$'] : undefined,
+      'EUR': parsed['EUR'] > 0 ? parsed['EUR'] : undefined,
+    }
+  } catch { return {} }
+}
+
+function saveCachedRates(rates: ExchangeRates) {
+  try {
+    const data = { 'G$': rates['G$'], 'R$': rates['R$'], 'EUR': rates['EUR'] }
+    localStorage.setItem(RATES_CACHE_KEY, JSON.stringify(data))
+    // Also update the legacy key so the dashboard widget stays in sync
+    localStorage.setItem(LEGACY_KEY, JSON.stringify(data))
+  } catch { /* ignore storage errors */ }
+}
+
 export const useCurrencyStore = defineStore('currency', () => {
   const selectedCurrency = ref<CurrencyCode>(
     (localStorage.getItem('selectedCurrency') as CurrencyCode) || 'USD'
   )
-  
+
+  // Seed from localStorage so rates survive page reloads and navigation
+  const cached = loadCachedRates()
+
   // Base exchange rates (all relative to USD)
   const exchangeRates = ref<ExchangeRates>({
-    'USD': 1.0, // Base currency
-    'G$': 7300, // 1 USD = 7,300 Guaranies (approximate)
-    'R$': 5.20, // 1 USD = 5.20 Brazilian Real (approximate)
-    'EUR': 0.92 // 1 USD = 0.92 Euro (approximate)
+    'USD': 1.0,
+    'G$': cached['G$'] ?? 7300,
+    'R$': cached['R$'] ?? 5.20,
+    'EUR': cached['EUR'] ?? 0.92,
   })
 
   const availableCurrencies = computed(() => [
@@ -92,12 +122,12 @@ export const useCurrencyStore = defineStore('currency', () => {
       // Update exchange rates with API data
       if (response.usd_to_pyg) exchangeRates.value['G$'] = response.usd_to_pyg
       if (response.usd_to_brl) exchangeRates.value['R$'] = response.usd_to_brl
-      if (response.eur_to_usd) {
-        // Use direct EUR->USD rate
-        exchangeRates.value['EUR'] = 1 / response.eur_to_usd
-      }
-      
+      if (response.eur_to_usd) exchangeRates.value['EUR'] = 1 / response.eur_to_usd
+
       lastUpdate.value = response.last_updated
+
+      // Persist so other views (PDV, etc.) pick up real values immediately
+      saveCachedRates(exchangeRates.value)
       
     } catch (err: any) {
       error.value = err.message || 'Failed to load exchange rates'
