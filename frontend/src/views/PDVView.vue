@@ -11,8 +11,8 @@
 
       <!-- Exchange rate button (same as dashboard) -->
       <button class="pdv-rate-btn" @click="openRateModal" :title="canEditRates ? 'Editar taxas de câmbio' : 'Taxas de câmbio'">
-        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ exchangeRates.usd.toLocaleString('es-PY') }}</span>
-        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ exchangeRates.brlPerUsd.toFixed(2) }}</span>
+        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ rateUsd.toLocaleString('es-PY') }}</span>
+        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ currencyStore.exchangeRates['R$'].toFixed(2) }}</span>
         <svg v-if="canEditRates" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="13" height="13" class="pdv-rate-edit-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
       </button>
     </div>
@@ -161,7 +161,7 @@
             <div class="pdv-total-row pdv-grand-total">
               <span>TOTAL</span><span>{{ fmtGs(pdv.total) }}</span>
             </div>
-            <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / exchangeRates.usd) }}</div>
+            <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / rateUsd) }}</div>
           </div>
 
           <!-- ── Payment section ── -->
@@ -317,7 +317,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePdvStore } from '@/stores/pdv'
 import { useAuthStore } from '@/stores/auth'
-import { inventoryAPI, exchangeRateAPI, type InventoryItem } from '@/services/api'
+import { useCurrencyStore } from '@/stores/currency'
+import { inventoryAPI, type InventoryItem } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
@@ -326,6 +327,7 @@ import type { CartPayment } from '@/stores/pdv'
 const router = useRouter()
 const pdv = usePdvStore()
 const authStore = useAuthStore()
+const currencyStore = useCurrencyStore()
 
 // ── Panel / tab state ─────────────────────────────────────────────────────────
 const mobileTab = ref<'products' | 'cart'>('products')
@@ -341,9 +343,21 @@ const avulsoCode = ref<string | null>(null)
 const searchInput = ref<HTMLInputElement>()
 const clienteNomeInput = ref('')
 
-// ── Exchange rates ────────────────────────────────────────────────────────────
-// usd: G$ per 1 USD; brlPerUsd: BRL per 1 USD; eur: G$ per 1 EUR
-const exchangeRates = ref({ usd: 6400, brlPerUsd: 5.85, eur: 7200 })
+// ── Exchange rates (from shared currency store) ───────────────────────────────
+// G$ per 1 USD
+const rateUsd = computed(() => currencyStore.exchangeRates['G$'])
+// G$ per 1 BRL
+const rateBrl = computed(() =>
+  currencyStore.exchangeRates['R$'] > 0
+    ? Math.round(currencyStore.exchangeRates['G$'] / currencyStore.exchangeRates['R$'])
+    : 1150
+)
+// G$ per 1 EUR  (store['EUR'] = EUR per USD, so G$/EUR = G$/USD / EUR/USD)
+const rateEur = computed(() =>
+  currencyStore.exchangeRates['EUR'] > 0
+    ? Math.round(currencyStore.exchangeRates['G$'] / currencyStore.exchangeRates['EUR'])
+    : 7900
+)
 
 // ── Exchange rate modal ───────────────────────────────────────────────────────
 const showRateModal = ref(false)
@@ -356,38 +370,31 @@ const canEditRates = computed(() =>
 )
 
 function openRateModal() {
-  const eurToUsd = exchangeRates.value.usd > 0 ? exchangeRates.value.eur / exchangeRates.value.usd : 0
+  const rates = currencyStore.exchangeRates
+  // rates['EUR'] = EUR per USD (e.g. 0.92), so eur_to_usd = 1 / rates['EUR']
+  const eurPerUsd = rates['EUR'] > 0 ? rates['EUR'] : 0.92
+  const eurToUsd = 1 / eurPerUsd
   editingRates.value = {
-    usd_to_pyg: exchangeRates.value.usd,
-    usd_to_brl: exchangeRates.value.brlPerUsd,
-    eur_to_usd: eurToUsd,
-    eur_to_brl: eurToUsd * exchangeRates.value.brlPerUsd,
+    usd_to_pyg: rates['G$'],
+    usd_to_brl: rates['R$'],
+    eur_to_usd: Math.round(eurToUsd * 10000) / 10000,
+    eur_to_brl: Math.round(rates['R$'] / eurPerUsd * 100) / 100,
   }
   rateError.value = null
   showRateModal.value = true
 }
 
 async function saveRates() {
-  if (!canEditRates.value || !authStore.user) return
+  if (!canEditRates.value) return
   try {
     savingRates.value = true
     rateError.value = null
-    await exchangeRateAPI.quickUpdate({
+    await currencyStore.updateRatesAPI({
       usd_to_pyg: editingRates.value.usd_to_pyg || undefined,
       usd_to_brl: editingRates.value.usd_to_brl || undefined,
       eur_to_usd: editingRates.value.eur_to_usd || undefined,
       eur_to_brl: editingRates.value.eur_to_brl || undefined,
-      source: 'PDV',
-      updated_by: authStore.user.nome,
-      notes: 'Updated from PDV',
     })
-    // Apply new rates locally
-    if (editingRates.value.usd_to_pyg) exchangeRates.value.usd = editingRates.value.usd_to_pyg
-    if (editingRates.value.usd_to_brl) exchangeRates.value.brlPerUsd = editingRates.value.usd_to_brl
-    if (editingRates.value.eur_to_usd && editingRates.value.usd_to_pyg)
-      exchangeRates.value.eur = Math.round(editingRates.value.eur_to_usd * editingRates.value.usd_to_pyg)
-    // Persist so dashboard picks up changes
-    try { localStorage.setItem('erp_exchange_rates', JSON.stringify({ 'G$': exchangeRates.value.usd, 'R$': exchangeRates.value.brlPerUsd, 'EUR': exchangeRates.value.eur })) } catch { /* */ }
     showRateModal.value = false
     showToast('Taxas atualizadas', 'success')
   } catch (e: any) {
@@ -402,7 +409,7 @@ const localPayments = ref<CartPayment[]>([])
 const newMethod = ref('cash_usd')
 const newCurrency = ref('USD')
 const newAmount = ref<number>(0)
-const newRate = ref(6400)
+const newRate = ref(0)
 const newReference = ref('')
 const amountInput = ref<HTMLInputElement>()
 
@@ -429,9 +436,9 @@ function methodCurrency(m: string) {
   return 'USD' // cash_usd, card default to USD
 }
 function defaultRate(c: string) {
-  if (c === 'BRL') return exchangeRates.value.brlPerUsd > 0 ? Math.round(exchangeRates.value.usd / exchangeRates.value.brlPerUsd) : 1150
-  if (c === 'USD') return exchangeRates.value.usd
-  if (c === 'EUR') return exchangeRates.value.eur
+  if (c === 'BRL') return rateBrl.value
+  if (c === 'USD') return rateUsd.value
+  if (c === 'EUR') return rateEur.value
   return 1
 }
 function methodLabel(m: string) {
@@ -506,9 +513,9 @@ function showToast(msg: string, type: Toast['type'] = 'success') {
 // ── Currency helpers ──────────────────────────────────────────────────────────
 function getRate(currency: string): number {
   const c = (currency || 'PYG').toUpperCase()
-  if (c === 'USD') return exchangeRates.value.usd
-  if (c === 'BRL') return exchangeRates.value.brlPerUsd > 0 ? Math.round(exchangeRates.value.usd / exchangeRates.value.brlPerUsd) : 1150
-  if (c === 'EUR') return exchangeRates.value.eur
+  if (c === 'USD') return rateUsd.value
+  if (c === 'BRL') return rateBrl.value
+  if (c === 'EUR') return rateEur.value
   return 1
 }
 function isNativeCurrency(currency: string): boolean {
@@ -627,18 +634,8 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
   searchInput.value?.focus()
-  // Load cached rates from localStorage (populated by dashboard)
-  // Do NOT call the API here — a 401 response would trigger the global
-  // redirect interceptor and blank the page mid-session.
-  try {
-    const cached = JSON.parse(localStorage.getItem('erp_exchange_rates') || 'null')
-    if (cached?.['G$'] && cached['G$'] > 0) {
-      exchangeRates.value.usd = cached['G$']
-      newRate.value = cached['G$']
-    }
-    if (cached?.['R$'] && cached['R$'] > 0) exchangeRates.value.brlPerUsd = cached['R$']
-    if (cached?.['EUR'] && cached['EUR'] > 0) exchangeRates.value.eur = cached['EUR']
-  } catch { /* keep defaults */ }
+  // Initialise newRate from the shared currency store (no API call needed)
+  newRate.value = defaultRate(newCurrency.value)
 })
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
