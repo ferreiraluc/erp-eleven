@@ -92,23 +92,27 @@
         </div>
       </div>
 
-      <!-- RIGHT: Cart / Payment panel -->
+      <!-- RIGHT: Cart + Payment (unified panel) -->
       <div class="pdv-panel-cart" :class="{ 'mobile-hidden': mobileTab !== 'cart' }">
 
-        <!-- ═══ CART VIEW ═══ -->
-        <template v-if="panelMode === 'cart'">
-          <div class="pdv-cart-header">
-            <span class="pdv-cart-title">Carrinho</span>
-            <span class="pdv-cart-count">{{ pdv.cartCount }} item{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
-            <button v-if="pdv.cart.length" class="pdv-cart-clear" @click="confirmClear">🗑</button>
-          </div>
+        <!-- Fixed header -->
+        <div class="pdv-cart-header">
+          <span class="pdv-cart-title">Carrinho</span>
+          <span class="pdv-cart-count">{{ pdv.cartCount }} item{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
+          <button v-if="pdv.cart.length" class="pdv-cart-clear" @click="confirmClear">🗑</button>
+        </div>
 
+        <!-- Scrollable body -->
+        <div class="pdv-cart-scroll">
+
+          <!-- Client -->
           <div class="pdv-client-row">
             <input v-model="clienteNomeInput" type="text" placeholder="Cliente (opcional)"
               class="pdv-client-input" @input="pdv.clienteNome = clienteNomeInput" />
           </div>
 
-          <div class="pdv-cart-items" v-if="pdv.cart.length">
+          <!-- Cart items -->
+          <div v-if="pdv.cart.length" class="pdv-cart-items">
             <div v-for="item in pdv.cart" :key="item.id" class="pdv-cart-item" :class="{ 'item-avulso': item.is_avulso }">
               <div class="pdv-ci-thumb">
                 <img v-if="item.image_data" class="pdv-ci-img" :src="imgSrc(item.image_data)" />
@@ -122,10 +126,7 @@
                   </div>
                   <div class="pdv-ci-meta">
                     <span v-if="item.item_size || item.item_color">{{ [item.item_size, item.item_color].filter(Boolean).join(' · ') }}</span>
-                    <!-- G$ equivalent for non-PYG items -->
-                    <span v-if="isNativeCurrency(item.sale_currency)" class="ci-gs-equiv">
-                      ≈ {{ fmtGs(item.unit_price_gs) }}
-                    </span>
+                    <span v-if="isNativeCurrency(item.sale_currency)" class="ci-gs-equiv">≈ {{ fmtGs(item.unit_price_gs) }}</span>
                   </div>
                 </div>
                 <div class="pdv-ci-controls">
@@ -135,11 +136,9 @@
                       @change="pdv.updateItemQty(item.id, Number(($event.target as HTMLInputElement).value))" />
                     <button class="qty-btn" @click="pdv.updateItemQty(item.id, item.quantity + 1)">+</button>
                   </div>
-                  <!-- Price in native currency -->
                   <div class="pdv-ci-price-wrap">
                     <span class="pdv-ci-currency">{{ currencyLabel(item.sale_currency) }}</span>
                     <input type="number" :value="item.original_price" min="0" class="pdv-ci-price"
-                      :title="`Preço em ${currencyLabel(item.sale_currency)}`"
                       @change="pdv.updateItemOriginalPrice(item.id, Number(($event.target as HTMLInputElement).value), getRate(item.sale_currency))" />
                   </div>
                   <span class="pdv-ci-total">{{ fmtGs(item.quantity * item.unit_price_gs - item.discount_gs) }}</span>
@@ -148,147 +147,116 @@
               </div>
             </div>
           </div>
-
           <div v-else class="pdv-cart-empty">
             <div class="pdv-cart-empty-icon">🛒</div>
             <p>Carrinho vazio</p>
           </div>
 
+          <!-- Totals -->
           <div class="pdv-totals" v-if="pdv.cart.length">
-            <div class="pdv-total-row">
-              <span>Subtotal</span>
-              <span>{{ fmtGs(pdv.subtotal) }}</span>
-            </div>
+            <div class="pdv-total-row"><span>Subtotal</span><span>{{ fmtGs(pdv.subtotal) }}</span></div>
             <div v-if="pdv.discountGs > 0" class="pdv-total-row pdv-discount-row">
-              <span>Desconto</span>
-              <span>-{{ fmtGs(pdv.discountGs) }}</span>
+              <span>Desconto</span><span>-{{ fmtGs(pdv.discountGs) }}</span>
             </div>
             <div class="pdv-total-row pdv-grand-total">
-              <span>TOTAL</span>
-              <span>{{ fmtGs(pdv.total) }}</span>
+              <span>TOTAL</span><span>{{ fmtGs(pdv.total) }}</span>
             </div>
-            <!-- USD equivalent of total -->
-            <div class="pdv-total-usd">
-              ≈ U$ {{ fmtNum(pdv.total / exchangeRates.usd) }}
-            </div>
+            <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / exchangeRates.usd) }}</div>
           </div>
 
-          <div class="pdv-pay-area">
-            <button class="pdv-pay-btn" :disabled="!pdv.cart.length || pdv.loading" @click="openPayment">
-              <span v-if="pdv.loading">Processando…</span>
-              <span v-else>💳 Pagar {{ pdv.cart.length ? fmtGs(pdv.total) : '' }}</span>
-            </button>
-          </div>
-        </template>
+          <!-- ── Payment section ── -->
+          <div class="pdv-payment-section" v-if="pdv.cart.length">
 
-        <!-- ═══ PAYMENT VIEW ═══ -->
-        <template v-else>
-          <div class="pay-panel-header">
-            <button class="pay-back-btn" @click="panelMode = 'cart'">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              Carrinho
-            </button>
-            <div class="pay-panel-title-wrap">
-              <span class="pay-panel-title">Pagamento</span>
-              <span class="pay-panel-total">{{ fmtGs(pdv.total) }}</span>
-              <span class="pay-panel-total-usd">≈ U$ {{ fmtNum(pdv.total / exchangeRates.usd) }}</span>
-            </div>
-          </div>
+            <div class="pdv-payment-divider">💳 Pagamento</div>
 
-          <!-- Discount -->
-          <div class="pay-discount-row">
-            <span class="pay-discount-label">Desconto global</span>
-            <div class="pay-discount-input-wrap">
-              <span class="pay-currency-prefix">G$</span>
-              <input v-model.number="localDiscount" type="number" min="0" class="pay-discount-input"
-                placeholder="0" @input="pdv.discountGs = localDiscount" />
-            </div>
-            <span class="pay-subtotal-hint">Sub: {{ fmtGs(pdv.subtotal) }}</span>
-          </div>
-
-          <!-- Payments added -->
-          <div class="pay-entries">
-            <div v-for="p in localPayments" :key="p.id" class="pay-entry">
-              <div class="pay-entry-method">
-                <span class="pay-method-badge" :class="`method-${p.method}`">{{ methodLabel(p.method) }}</span>
-                <span v-if="p.reference" class="pay-entry-ref">{{ p.reference }}</span>
+            <!-- Discount -->
+            <div class="pay-discount-row">
+              <span class="pay-discount-label">Desconto (G$)</span>
+              <div class="pay-discount-input-wrap">
+                <span class="pay-currency-prefix">G$</span>
+                <input v-model.number="pdv.discountGs" type="number" min="0" class="pay-discount-input" placeholder="0" />
               </div>
-              <div class="pay-entry-amounts">
-                <span v-if="p.currency !== 'GS'" class="pay-orig-amount">{{ p.currency }} {{ fmtNum(p.amount_original) }}</span>
-                <span class="pay-gs-amount">{{ fmtGs(p.amount_gs) }}</span>
+            </div>
+
+            <!-- Payments added -->
+            <div class="pay-entries-inline">
+              <div v-for="p in localPayments" :key="p.id" class="pay-entry">
+                <div class="pay-entry-method">
+                  <span class="pay-method-badge" :class="`method-${p.method}`">{{ methodLabel(p.method) }}</span>
+                  <span v-if="p.reference" class="pay-entry-ref">{{ p.reference }}</span>
+                </div>
+                <div class="pay-entry-amounts">
+                  <span v-if="p.currency !== 'GS'" class="pay-orig-amount">{{ p.currency }} {{ fmtNum(p.amount_original) }}</span>
+                  <span class="pay-gs-amount">{{ fmtGs(p.amount_gs) }}</span>
+                </div>
+                <button class="pay-entry-remove" @click="removePayment(p.id)">×</button>
               </div>
-              <button class="pay-entry-remove" @click="removePayment(p.id)">×</button>
+              <div v-if="!localPayments.length" class="pay-empty">Nenhum pagamento adicionado</div>
             </div>
-            <div v-if="!localPayments.length" class="pay-empty">Nenhum pagamento adicionado</div>
-          </div>
 
-          <!-- Add payment form -->
-          <div class="pay-add-section">
-            <!-- Method + currency row -->
-            <div class="pay-add-row">
-              <select v-model="newMethod" class="pay-select">
-                <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
-              </select>
-              <select v-model="newCurrency" class="pay-select pay-select-sm">
-                <option value="USD">U$</option>
-                <option value="GS">G$</option>
-                <option value="BRL">R$</option>
-                <option value="EUR">€</option>
-              </select>
-            </div>
-            <!-- Amount row -->
-            <div class="pay-add-row">
-              <div class="pay-input-wrap">
-                <span class="pay-currency-prefix">{{ currencySymbol }}</span>
-                <input v-model.number="newAmount" ref="amountInput" type="number" min="0"
-                  class="pay-amount-input"
-                  :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
-                  @keydown.enter="addPayment" />
+            <!-- Add payment form -->
+            <div class="pay-add-section">
+              <div class="pay-add-row">
+                <select v-model="newMethod" class="pay-select">
+                  <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
+                </select>
+                <select v-model="newCurrency" class="pay-select pay-select-sm">
+                  <option value="USD">U$</option>
+                  <option value="GS">G$</option>
+                  <option value="BRL">R$</option>
+                  <option value="EUR">€</option>
+                </select>
               </div>
-              <!-- Quick-fill: remaining total -->
-              <button class="pay-btn-total" @click="fillTotal" title="Preencher valor total restante">
-                Total
-              </button>
-              <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input"
-                :placeholder="referencePlaceholder" />
-              <button class="pay-btn-add" @click="addPayment" :disabled="!newAmount">+ Add</button>
+              <div class="pay-add-row">
+                <div class="pay-input-wrap">
+                  <span class="pay-currency-prefix">{{ currencySymbol }}</span>
+                  <input v-model.number="newAmount" ref="amountInput" type="number" min="0"
+                    class="pay-amount-input"
+                    :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
+                    @keydown.enter="addPayment" />
+                </div>
+                <button class="pay-btn-total" @click="fillTotal" title="Preencher valor restante">Total</button>
+                <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
+                <button class="pay-btn-add" @click="addPayment" :disabled="!newAmount">+ Add</button>
+              </div>
+              <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
+                <span>Taxa:</span>
+                <input v-model.number="newRate" type="number" min="0" step="0.01" class="pay-rate-input" />
+                <span>{{ newCurrency }}/G$</span>
+                <span class="pay-converted">= {{ fmtGs(newAmount * newRate) }}</span>
+              </div>
             </div>
-            <!-- Exchange rate row (non-GS) -->
-            <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
-              <span>Taxa:</span>
-              <input v-model.number="newRate" type="number" min="0" step="0.01" class="pay-rate-input" />
-              <span>{{ newCurrency }}/G$</span>
-              <span class="pay-converted">= {{ fmtGs(newAmount * newRate) }}</span>
+
+            <!-- Payment summary -->
+            <div class="pay-summary-inline">
+              <div class="pay-sum-row">
+                <span>Pago</span>
+                <span :class="payTotalPaid >= pdv.total ? 'pay-ok' : 'pay-short'">{{ fmtGs(payTotalPaid) }}</span>
+              </div>
+              <div v-if="payTroco > 0" class="pay-sum-row pay-troco-row">
+                <span>Troco</span><span class="pay-troco">{{ fmtGs(payTroco) }}</span>
+              </div>
+              <div v-if="payRemaining > 0" class="pay-sum-row pay-remaining-row">
+                <span>Faltando</span><span class="pay-remaining">{{ fmtGs(payRemaining) }}</span>
+              </div>
             </div>
+
           </div>
 
-          <!-- Summary -->
-          <div class="pay-summary">
-            <div class="pay-sum-row">
-              <span>Total</span>
-              <span>{{ fmtGs(pdv.total) }}</span>
-            </div>
-            <div class="pay-sum-row">
-              <span>Pago</span>
-              <span :class="payTotalPaid >= pdv.total ? 'pay-ok' : 'pay-short'">{{ fmtGs(payTotalPaid) }}</span>
-            </div>
-            <div v-if="payTroco > 0" class="pay-sum-row pay-troco-row">
-              <span>Troco</span>
-              <span class="pay-troco">{{ fmtGs(payTroco) }}</span>
-            </div>
-            <div v-if="payRemaining > 0" class="pay-sum-row pay-remaining-row">
-              <span>Faltando</span>
-              <span class="pay-remaining">{{ fmtGs(payRemaining) }}</span>
-            </div>
-          </div>
+        </div><!-- end pdv-cart-scroll -->
 
-          <div class="pdv-pay-area">
-            <button class="pay-confirm-btn" :disabled="!canConfirmPayment || pdv.loading" @click="confirmPayment">
-              <span v-if="pdv.loading">Processando…</span>
-              <span v-else>✓ Confirmar pagamento</span>
-            </button>
-          </div>
-        </template>
+        <!-- Sticky confirm button -->
+        <div class="pdv-pay-area">
+          <button class="pay-confirm-btn"
+            :disabled="!canConfirmPayment || pdv.loading || !pdv.cart.length"
+            @click="confirmPayment">
+            <span v-if="pdv.loading">Processando…</span>
+            <span v-else-if="!pdv.cart.length">Carrinho vazio</span>
+            <span v-else-if="payRemaining > 0">Faltando {{ fmtGs(payRemaining) }}</span>
+            <span v-else>✓ Confirmar e imprimir</span>
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -361,7 +329,6 @@ const authStore = useAuthStore()
 
 // ── Panel / tab state ─────────────────────────────────────────────────────────
 const mobileTab = ref<'products' | 'cart'>('products')
-const panelMode = ref<'cart' | 'payment'>('cart')
 
 // ── Search ────────────────────────────────────────────────────────────────────
 const searchQuery = ref('')
@@ -430,9 +397,8 @@ async function saveRates() {
   }
 }
 
-// ── Payment state (inline) ────────────────────────────────────────────────────
+// ── Payment state ────────────────────────────────────────────────────────────
 const localPayments = ref<CartPayment[]>([])
-const localDiscount = ref(0)
 const newMethod = ref('cash_usd')
 const newCurrency = ref('USD')
 const newAmount = ref<number>(0)
@@ -478,6 +444,7 @@ watch(newMethod, (m) => {
   newReference.value = ''
 })
 watch(newCurrency, (c) => { newRate.value = defaultRate(c) })
+watch(() => pdv.cart.length, (len) => { if (len === 0) resetPayment() })
 
 const currencySymbol = computed(() => ({ GS: 'G$', BRL: 'R$', USD: 'U$', EUR: '€' }[newCurrency.value] ?? newCurrency.value))
 const showReference = computed(() => ['card', 'pix', 'transfer_br', 'transfer_py', 'pix_cambista', 'mercadopago'].includes(newMethod.value))
@@ -629,23 +596,17 @@ async function onBarcodeDetected(code: string) {
 }
 
 // ── Payment ───────────────────────────────────────────────────────────────────
-function openPayment() {
+function resetPayment() {
   localPayments.value = []
-  localDiscount.value = pdv.discountGs
-  newMethod.value = 'cash_usd'
-  newCurrency.value = 'USD'
-  newRate.value = exchangeRates.value.usd
   newAmount.value = 0
-  panelMode.value = 'payment'
-  mobileTab.value = 'cart'
-  nextTick(() => amountInput.value?.focus())
+  newReference.value = ''
 }
+
 async function confirmPayment() {
-  pdv.discountGs = localDiscount.value
   pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
   try {
     await pdv.completeSale()
-    panelMode.value = 'cart'
+    resetPayment()
     showReceipt.value = true
     showToast('Venda concluída!', 'success')
   } catch (e: any) {
@@ -658,8 +619,8 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'F2' || (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as Element).tagName))) {
     e.preventDefault(); searchInput.value?.focus(); mobileTab.value = 'products'
   }
-  if (e.key === 'F5') { e.preventDefault(); if (pdv.cart.length && panelMode.value === 'cart') openPayment() }
-  if (e.key === 'Escape') { if (panelMode.value === 'payment') panelMode.value = 'cart'; else if (showRateModal.value) showRateModal.value = false }
+  if (e.key === 'F5') { e.preventDefault(); nextTick(() => amountInput.value?.focus()); mobileTab.value = 'cart' }
+  if (e.key === 'Escape') { if (showRateModal.value) showRateModal.value = false }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -750,17 +711,21 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pdv-no-results p { color: #9ca3af; font-size: 0.88rem; margin: 0; }
 .pdv-btn-avulso { padding: 0.5rem 1.25rem; background: #fef3c7; color: #92400e; border: 1.5px solid #fcd34d; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
 
-/* ── Cart panel ───────────────────────────────────────────────────────────── */
+/* ── Cart panel (unified) ─────────────────────────────────────────────────── */
 .pdv-panel-cart { display: flex; flex-direction: column; overflow: hidden; background: white; }
-.pdv-cart-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 0.875rem; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; }
+.pdv-cart-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 0.875rem; border-bottom: 2px solid #f3f4f6; flex-shrink: 0; }
 .pdv-cart-title { font-size: 0.95rem; font-weight: 700; color: #111827; }
 .pdv-cart-count { font-size: 0.75rem; color: #9ca3af; flex: 1; }
 .pdv-cart-clear { background: none; border: none; cursor: pointer; color: #dc2626; font-size: 1rem; padding: 0.2rem; }
+
+/* Scrollable body */
+.pdv-cart-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
 .pdv-client-row { padding: 0.5rem 0.875rem; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; }
 .pdv-client-input { width: 100%; box-sizing: border-box; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; color: #374151; }
 .pdv-client-input:focus { border-color: #f97316; }
 
-.pdv-cart-items { flex: 1; overflow-y: auto; }
+.pdv-cart-items { }
 .pdv-cart-item { display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; align-items: flex-start; }
 .pdv-cart-item.item-avulso { background: #fffbeb; }
 .pdv-ci-thumb { width: 40px; height: 40px; border-radius: 0.3rem; overflow: hidden; flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb; margin-top: 2px; }
@@ -784,41 +749,30 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pdv-ci-price:focus { background: #fff7ed; }
 .pdv-ci-total { font-size: 0.85rem; font-weight: 700; color: #111827; white-space: nowrap; margin-left: auto; }
 .pdv-ci-remove { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.1rem; padding: 0; }
-.pdv-cart-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: #9ca3af; }
+.pdv-cart-empty { padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: #9ca3af; }
 .pdv-cart-empty-icon { font-size: 2.5rem; }
 .pdv-cart-empty p { margin: 0; font-size: 0.88rem; }
 
-.pdv-totals { padding: 0.625rem 0.875rem; border-top: 1px solid #f3f4f6; background: #f9fafb; flex-shrink: 0; }
-.pdv-total-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #374151; padding: 0.15rem 0; }
+.pdv-totals { padding: 0.5rem 0.875rem; background: #f9fafb; border-top: 2px solid #f3f4f6; }
+.pdv-total-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #374151; padding: 0.12rem 0; }
 .pdv-discount-row { color: #dc2626; }
-.pdv-grand-total { font-size: 1rem; font-weight: 800; color: #111827; border-top: 1px solid #e5e7eb; margin-top: 0.25rem; padding-top: 0.375rem; }
-.pdv-total-usd { font-size: 0.72rem; color: #9ca3af; text-align: right; margin-top: 0.1rem; }
+.pdv-grand-total { font-size: 1rem; font-weight: 800; color: #111827; border-top: 1px solid #e5e7eb; margin-top: 0.2rem; padding-top: 0.3rem; }
+.pdv-total-usd { font-size: 0.7rem; color: #9ca3af; text-align: right; margin-top: 0.1rem; }
 
-.pdv-pay-area { padding: 0.75rem; flex-shrink: 0; border-top: 1px solid #f3f4f6; }
-.pdv-pay-btn { width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: none; border-radius: 0.75rem; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s; }
-.pdv-pay-btn:hover:not(:disabled) { opacity: 0.9; }
-.pdv-pay-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* ── Payment section (inline below cart) ──────────────────────────────────── */
+.pdv-payment-section { border-top: 2px solid #e5e7eb; margin-top: auto; }
+.pdv-payment-divider { padding: 0.5rem 0.875rem; font-size: 0.78rem; font-weight: 700; color: #374151; background: #f9fafb; border-bottom: 1px solid #f3f4f6; letter-spacing: 0.03em; }
 
-/* ── Payment panel (inline) ───────────────────────────────────────────────── */
-.pay-panel-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.875rem; background: #f97316; flex-shrink: 0; }
-.pay-back-btn { display: flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.2); border: none; color: white; padding: 0.3rem 0.6rem; border-radius: 0.35rem; cursor: pointer; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
-.pay-back-btn:hover { background: rgba(255,255,255,0.3); }
-.pay-panel-title-wrap { flex: 1; }
-.pay-panel-title { display: block; font-size: 0.72rem; color: rgba(255,255,255,0.8); font-weight: 600; }
-.pay-panel-total { display: block; font-size: 1.2rem; font-weight: 900; color: white; line-height: 1.1; }
-.pay-panel-total-usd { display: block; font-size: 0.7rem; color: rgba(255,255,255,0.7); }
-
-.pay-discount-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.5rem 0.875rem; border-bottom: 1px solid #f3f4f6; background: #fff7ed; flex-shrink: 0; }
-.pay-discount-label { font-size: 0.75rem; font-weight: 600; color: #92400e; flex-shrink: 0; }
+.pay-discount-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.875rem; border-bottom: 1px solid #f3f4f6; background: #fff7ed; }
+.pay-discount-label { font-size: 0.72rem; font-weight: 600; color: #92400e; white-space: nowrap; }
 .pay-discount-input-wrap { display: flex; align-items: center; border: 1.5px solid #fed7aa; border-radius: 0.35rem; overflow: hidden; background: white; }
-.pay-currency-prefix { padding: 0.25rem 0.35rem; font-size: 0.72rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; }
-.pay-discount-input { border: none; outline: none; width: 80px; padding: 0.25rem 0.35rem; font-size: 0.88rem; }
-.pay-subtotal-hint { font-size: 0.7rem; color: #9ca3af; margin-left: auto; }
+.pay-currency-prefix { padding: 0.2rem 0.3rem; font-size: 0.7rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; }
+.pay-discount-input { border: none; outline: none; width: 80px; padding: 0.2rem 0.35rem; font-size: 0.85rem; }
 
-.pay-entries { flex: 1; overflow-y: auto; padding: 0.5rem 0.875rem; min-height: 50px; }
-.pay-entry { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.5rem; border-radius: 0.4rem; margin-bottom: 0.3rem; background: #f9fafb; }
+.pay-entries-inline { padding: 0.375rem 0.875rem; }
+.pay-entry { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.4rem; border-radius: 0.4rem; margin-bottom: 0.25rem; background: #f9fafb; }
 .pay-entry-method { flex: 1; display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
-.pay-method-badge { font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.35rem; border-radius: 0.25rem; background: #e5e7eb; color: #374151; white-space: nowrap; }
+.pay-method-badge { font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.3rem; border-radius: 0.25rem; background: #e5e7eb; color: #374151; white-space: nowrap; }
 .method-cash_gs  { background: #d1fae5; color: #065f46; }
 .method-cash_brl { background: #dbeafe; color: #1e40af; }
 .method-cash_usd { background: #fef9c3; color: #713f12; }
@@ -826,39 +780,42 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .method-card     { background: #f0fdf4; color: #166534; }
 .method-pix      { background: #ecfdf5; color: #065f46; }
 .method-fiado    { background: #fef3c7; color: #92400e; }
-.pay-entry-ref { font-size: 0.68rem; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
+.pay-entry-ref { font-size: 0.65rem; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; max-width: 55px; }
 .pay-entry-amounts { display: flex; flex-direction: column; align-items: flex-end; }
-.pay-orig-amount { font-size: 0.68rem; color: #9ca3af; }
-.pay-gs-amount { font-size: 0.82rem; font-weight: 700; color: #111827; }
+.pay-orig-amount { font-size: 0.65rem; color: #9ca3af; }
+.pay-gs-amount { font-size: 0.8rem; font-weight: 700; color: #111827; }
 .pay-entry-remove { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.1rem; padding: 0; flex-shrink: 0; }
-.pay-empty { font-size: 0.8rem; color: #d1d5db; text-align: center; padding: 0.75rem 0; }
+.pay-empty { font-size: 0.75rem; color: #d1d5db; text-align: center; padding: 0.4rem 0; }
 
-.pay-add-section { padding: 0.625rem 0.875rem; border-top: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; background: #f9fafb; flex-shrink: 0; }
-.pay-add-row { display: flex; gap: 0.35rem; margin-bottom: 0.35rem; align-items: center; }
-.pay-select { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.4rem; font-size: 0.8rem; background: white; outline: none; }
-.pay-select-sm { flex: 0 0 58px; }
+.pay-add-section { padding: 0.5rem 0.875rem; background: #f9fafb; border-top: 1px solid #f3f4f6; }
+.pay-add-row { display: flex; gap: 0.3rem; margin-bottom: 0.3rem; align-items: center; }
+.pay-select { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; background: white; outline: none; }
+.pay-select-sm { flex: 0 0 54px; }
 .pay-input-wrap { flex: 1; display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; background: white; }
-.pay-amount-input { flex: 1; border: none; outline: none; padding: 0.4rem; font-size: 0.88rem; min-width: 0; }
-.pay-btn-total { background: #1d4ed8; color: white; border: none; border-radius: 0.4rem; padding: 0.4rem 0.5rem; font-weight: 700; cursor: pointer; font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
+.pay-amount-input { flex: 1; border: none; outline: none; padding: 0.35rem; font-size: 0.85rem; min-width: 0; }
+.pay-btn-total { background: #1d4ed8; color: white; border: none; border-radius: 0.4rem; padding: 0.35rem 0.45rem; font-weight: 700; cursor: pointer; font-size: 0.72rem; white-space: nowrap; flex-shrink: 0; }
 .pay-btn-total:hover { background: #1e40af; }
-.pay-ref-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.4rem; font-size: 0.8rem; outline: none; }
-.pay-btn-add { background: #111827; color: white; border: none; border-radius: 0.4rem; padding: 0.4rem 0.625rem; font-weight: 700; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+.pay-ref-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; outline: none; min-width: 0; }
+.pay-btn-add { background: #111827; color: white; border: none; border-radius: 0.4rem; padding: 0.35rem 0.55rem; font-weight: 700; cursor: pointer; font-size: 0.78rem; white-space: nowrap; }
 .pay-btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
-.pay-rate-row { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: #6b7280; margin-top: 0.25rem; }
-.pay-rate-input { width: 70px; border: 1px solid #e5e7eb; border-radius: 0.3rem; padding: 0.2rem 0.35rem; font-size: 0.78rem; outline: none; }
+.pay-rate-row { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: #6b7280; margin-top: 0.2rem; }
+.pay-rate-input { width: 65px; border: 1px solid #e5e7eb; border-radius: 0.3rem; padding: 0.15rem 0.3rem; font-size: 0.75rem; outline: none; }
 .pay-converted { font-weight: 700; color: #059669; }
 
-.pay-summary { padding: 0.5rem 0.875rem; flex-shrink: 0; }
-.pay-sum-row { display: flex; justify-content: space-between; font-size: 0.88rem; padding: 0.15rem 0; color: #374151; }
+.pay-summary-inline { padding: 0.375rem 0.875rem 0.5rem; border-top: 1px solid #f3f4f6; }
+.pay-sum-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 0.1rem 0; color: #374151; }
 .pay-ok { color: #059669; font-weight: 700; }
 .pay-short { color: #dc2626; font-weight: 700; }
-.pay-troco-row { font-weight: 700; color: #059669; border-top: 1px solid #e5e7eb; margin-top: 0.2rem; padding-top: 0.3rem; }
+.pay-troco-row { font-weight: 700; color: #059669; border-top: 1px solid #e5e7eb; margin-top: 0.15rem; padding-top: 0.25rem; }
 .pay-troco { color: #059669; }
-.pay-remaining-row { font-weight: 700; color: #dc2626; border-top: 1px solid #e5e7eb; margin-top: 0.2rem; padding-top: 0.3rem; }
+.pay-remaining-row { font-weight: 700; color: #dc2626; border-top: 1px solid #e5e7eb; margin-top: 0.15rem; padding-top: 0.25rem; }
 .pay-remaining { color: #dc2626; }
-.pay-confirm-btn { width: 100%; padding: 0.875rem; border: none; border-radius: 0.75rem; background: linear-gradient(135deg, #16a34a, #15803d); color: white; font-size: 1rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s; }
+
+/* Sticky confirm button */
+.pdv-pay-area { padding: 0.625rem 0.75rem; flex-shrink: 0; border-top: 2px solid #e5e7eb; background: white; }
+.pay-confirm-btn { width: 100%; padding: 0.8rem; border: none; border-radius: 0.75rem; background: linear-gradient(135deg, #16a34a, #15803d); color: white; font-size: 0.95rem; font-weight: 800; cursor: pointer; transition: opacity 0.15s; }
 .pay-confirm-btn:hover:not(:disabled) { opacity: 0.9; }
-.pay-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pay-confirm-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #6b7280; }
 
 /* ── Exchange Rate Modal ───────────────────────────────────────────────────── */
 .er-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 1rem; box-sizing: border-box; }
