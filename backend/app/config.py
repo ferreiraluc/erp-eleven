@@ -13,6 +13,21 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))  # legacy fallback; real expiry is midnight+7d
     WONCA_API_KEY: str = os.getenv("WONCA_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ASSISTANT_ENABLED: bool = os.getenv("ASSISTANT_ENABLED", "false").lower() == "true"
+    ASSISTANT_TELEGRAM_ENABLED: bool = os.getenv("ASSISTANT_TELEGRAM_ENABLED", "true").lower() == "true"
+    ASSISTANT_WHATSAPP_ENABLED: bool = os.getenv("ASSISTANT_WHATSAPP_ENABLED", "false").lower() == "true"
+    ASSISTANT_EMBEDDED_WORKER: bool = os.getenv("ASSISTANT_EMBEDDED_WORKER", "false").lower() == "true"
+    ASSISTANT_DAILY_MESSAGES: int = int(os.getenv("ASSISTANT_DAILY_MESSAGES", "100"))
+    DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_MODEL: str = os.getenv("DEEPSEEK_MODEL", "deepseek-flash")
+    TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
+    TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
+    TWILIO_WHATSAPP_FROM: str = os.getenv("TWILIO_WHATSAPP_FROM", "")
+    TWILIO_WEBHOOK_URL: str = os.getenv("TWILIO_WEBHOOK_URL", "")
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+    TELEGRAM_BOT_USERNAME: str = os.getenv("TELEGRAM_BOT_USERNAME", "").lstrip("@")
+    TELEGRAM_GROUP_ID: str = os.getenv("TELEGRAM_GROUP_ID", "")
     
     # Timezone configuration
     TIMEZONE: str = os.getenv("TIMEZONE", "America/Sao_Paulo")  # GMT-3

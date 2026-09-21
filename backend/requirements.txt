@@ -16,3 +16,4 @@ msal==1.36.0
 APScheduler==3.10.4
 anthropic==0.40.0
 cryptography>=46.0.7
+twilio==9.11.1

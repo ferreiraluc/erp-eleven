@@ -16,6 +16,12 @@ const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/assistente',
+      name: 'assistente',
+      component: () => import('@/views/AssistantView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
       path: '/',
       redirect: '/login'
     },
@@ -118,6 +124,10 @@ router.beforeEach(async (to, _from, next) => {
     // Check if route requires authentication
     if (to.meta.requiresAuth) {
       if (authStore.isAuthenticated) {
+        if (to.meta.requiresAdmin && authStore.user?.role !== 'ADMIN') {
+          next('/dashboard')
+          return
+        }
         next()
       } else {
         next('/login')

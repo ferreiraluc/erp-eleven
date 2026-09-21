@@ -6,12 +6,16 @@ import time
 import traceback
 import logging
 import sys
+import threading
+import asyncio
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory, clientes, ocr, pdv
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
 from .config import settings
+from .api.endpoints import assistant
+from .services import assistant_events  # register atomic tracking outbox listener
 
 # Main
 # Setup logging
@@ -116,10 +120,29 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("[SCHEDULER] Job de atualização diária de rastreamentos agendado (19:00 BRT)")
 
-    yield
+    worker_stop = threading.Event()
+    app.state.assistant_worker = None
+    if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER:
+        # Dedicated thread: provider requests never block the API event loop.
+        # PostgreSQL locks also serialize workers during overlapping deploys.
+        from .assistant_worker import main as run_assistant_worker
+        from sqlalchemy import inspect
+        required = {"assistant_identities", "assistant_messages", "assistant_notes", "assistant_deliveries"}
+        if not required.issubset(set(inspect(engine).get_table_names())):
+            raise RuntimeError("Assistant tables missing; apply the migration before activation")
+        app.state.assistant_worker = threading.Thread(
+            target=run_assistant_worker, args=(worker_stop,), name="assistant-worker", daemon=True)
+        app.state.assistant_worker.start()
+        logger.info("[ASSISTANT] Embedded worker started")
 
-    scheduler.shutdown(wait=False)
-    logger.info("[SHUTDOWN] Shutting down ERP Eleven API")
+    try:
+        yield
+    finally:
+        worker_stop.set()
+        if app.state.assistant_worker:
+            await asyncio.to_thread(app.state.assistant_worker.join, 5)
+        scheduler.shutdown(wait=False)
+        logger.info("[SHUTDOWN] Shutting down ERP Eleven API")
 
 app = FastAPI(
     title="ERP Eleven API", 
@@ -160,6 +183,7 @@ app.include_router(inventory.router, prefix="/api/inventory", tags=["inventory"]
 app.include_router(clientes.router, prefix="/api/clientes", tags=["clientes"])
 app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
 app.include_router(pdv.router, prefix="/api/pdv", tags=["pdv"])
+app.include_router(assistant.router, prefix="/api/assistant", tags=["assistant"])
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
@@ -272,10 +296,15 @@ async def health_check():
     except Exception as e:
         logger.warning(f"[HEALTH] Database check failed: {e}")
 
+    worker_status = "disabled"
+    if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER:
+        worker = getattr(app.state, "assistant_worker", None)
+        worker_status = "online" if worker and worker.is_alive() else "offline"
+        if worker_status == "offline":
+            return JSONResponse(status_code=503, content={"api": "online", "database": db_status, "assistant_worker": worker_status})
     return {
         "api": "online",
         "database": db_status,
+        "assistant_worker": worker_status,
         "timestamp": time.time(),
     }
-
-

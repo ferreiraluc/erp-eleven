@@ -358,6 +358,12 @@
               </div>
               <span>Fiado</span>
             </button>
+            <button v-if="authStore.user?.role === 'ADMIN'" class="quick-btn q-indigo" @click="router.push('/assistente')">
+              <div class="quick-btn-icon" aria-hidden="true">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H9l-5 2V6a2 2 0 012-2z" /></svg>
+              </div>
+              <span>Assistente IA</span>
+            </button>
           </div>
         </div>
 
