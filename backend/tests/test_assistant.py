@@ -20,7 +20,12 @@ from app.database import Base, get_db
 from app.config import settings
 from app.models import Usuario, Cliente, Pedido, Rastreamento
 from app.models.usuario import UsuarioRole
-from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, utcnow
+from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, utcnow
+from app.models.vendedor import Vendedor
+from app.models.folga import Folga
+from app.models.inventory import Item
+from app.models.pdv import PdvCliente, PdvSale
+from app.models.venda import Venda
 from app.services import assistant_channels as channels, assistant_agent as agent, assistant_tools as tools
 from app.services import assistant_events  # register event listener
 from app.api.endpoints.assistant import router
@@ -36,7 +41,8 @@ def sqlite_jsonb(element, compiler, **kwargs):
 def setup(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     tables = [m.__table__ for m in (Usuario, Cliente, Pedido, Rastreamento, AssistantIdentity,
-                                   AssistantMessage, AssistantNote, AssistantDelivery)]
+                                   AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction,
+                                   Vendedor, Folga, Item, PdvCliente, PdvSale, Venda)]
     Base.metadata.create_all(engine, tables=tables)
     factory = sessionmaker(bind=engine, autoflush=False)
     monkeypatch.setattr(worker, "SessionLocal", factory)

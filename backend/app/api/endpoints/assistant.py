@@ -15,7 +15,7 @@ from twilio.request_validator import RequestValidator
 from ...config import settings
 from ...database import get_db
 from ...dependencies import require_role
-from ...models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, utcnow
+from ...models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, utcnow
 from ...models.usuario import Usuario
 from ...services.assistant_channels import enqueue_incoming, telegram_message, twilio_message
 
@@ -106,7 +106,7 @@ def assistant_status(db: Session = Depends(get_db)):
         "telegram_configured": all((settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_WEBHOOK_SECRET, settings.TELEGRAM_GROUP_ID, settings.TELEGRAM_BOT_USERNAME)),
         "telegram_group_id": settings.TELEGRAM_GROUP_ID,
         "messages": counts(AssistantMessage), "deliveries": counts(AssistantDelivery),
-        "notes": counts(AssistantNote), "daily_messages_per_user": settings.ASSISTANT_DAILY_MESSAGES,
+        "notes": counts(AssistantNote), "actions": counts(AssistantAction), "daily_messages_per_user": settings.ASSISTANT_DAILY_MESSAGES,
     }
 
 
@@ -160,6 +160,16 @@ def list_queue(db: Session = Depends(get_db)):
             result.append({"id": str(item.id), "kind": kind, "channel": item.channel, "status": item.status,
                            "attempts": item.attempts, "error_code": item.error_code, "created_at": item.created_at})
     return result
+
+
+@router.get("/actions", dependencies=[admin])
+def list_actions(db: Session = Depends(get_db)):
+    return [{"id": str(a.id), "kind": a.kind, "status": a.status, "user_id": str(a.user_id),
+             "vendedor": a.payload.get("vendedor_nome"), "data": a.payload.get("data"),
+             "tipo": a.payload.get("tipo"), "periodo": a.payload.get("periodo"),
+             "created_at": a.created_at, "executed_at": a.executed_at,
+             "result_id": str(a.result_id) if a.result_id else None}
+            for a in db.query(AssistantAction).order_by(AssistantAction.created_at.desc()).limit(100).all()]
 
 
 @router.post("/messages/{message_id}/retry", dependencies=[admin])

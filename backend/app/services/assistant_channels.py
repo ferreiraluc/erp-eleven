@@ -63,7 +63,7 @@ def telegram_message(update):
     mentioned = bool(username and re.search(r"@" + re.escape(username) + r"\b", content, re.I))
     addressed = command in {"/eleven", "/rastreio", "/memoria", "/registrar", "/confirmar", "/cancelar", "/ajuda", "/help", "/start"}
     addressed |= mentioned or bool(username and reply_from.get("username", "").lower() == username)
-    addressed |= bool(re.search(r"^(tem|qual|quais|consulta|consulte|cadê|cade|pode|consegue)\b.{0,60}\b(rastreio|rastreamento|envio)\b", content, re.I))
+    addressed |= bool(re.search(r"^(tem|qual|quais|quem|quantos|quantas|consulta|consulte|cadê|cade|pode|consegue|mostre|liste|últimos|ultimos)\b.{0,90}\b(rastreios?|rastreamentos?|envios?|pedidos?|estoque|folgas?|vendas?)\b", content, re.I))
     # Remove only our command suffix, preserving the rest of the user's message.
     if first.startswith("/") and "@" in first:
         content = first.split("@", 1)[0] + content[len(first):]

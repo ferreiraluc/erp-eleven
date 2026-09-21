@@ -6,6 +6,7 @@ and is never automatically repeated (review it in the administrator panel).
 """
 import logging
 import threading
+import uuid
 from datetime import timedelta
 
 from sqlalchemy import text, or_, and_
@@ -59,12 +60,17 @@ def process_inbox():
                 message.response = answer
                 message.status = "done"
                 if answer:
-                    db.add(AssistantDelivery(
-                        event_key=f"reply:{message.id}", channel=message.channel,
-                        destination=message.conversation_id, text=answer, user_id=message.user_id,
-                        # Free-form Twilio responses are limited to the customer service window.
-                        expires_at=message.created_at + timedelta(hours=23) if message.channel == "whatsapp" else None,
-                    ))
+                    predecessor = None
+                    for index, part in enumerate(getattr(answer, "parts", [answer])):
+                        delivery_id = uuid.uuid4()
+                        db.add(AssistantDelivery(
+                            id=delivery_id, depends_on_id=predecessor,
+                            event_key=f"reply:{message.id}" + (f":{index}" if index else ""), channel=message.channel,
+                            destination=message.conversation_id, text=part, user_id=message.user_id,
+                            expires_at=message.created_at + timedelta(hours=23) if message.channel == "whatsapp" else None,
+                        ))
+                        db.flush()  # persist predecessor before its FK-dependent message
+                        predecessor = delivery_id
                 db.flush()
         except Exception as exc:
             # Savepoint rolls back any tool writes from the unsuccessful attempt.
@@ -88,9 +94,14 @@ def process_outbox():
             AssistantDelivery.status == "sending",
             AssistantDelivery.available_at < utcnow() - timedelta(minutes=5),
         ).update({"status": "uncertain", "error_code": "interrupted_send"}, synchronize_session=False)
+        predecessor = aliased(AssistantDelivery)
+        predecessor_accepted = db.query(predecessor.id).filter(
+            predecessor.id == AssistantDelivery.depends_on_id, predecessor.status == "accepted",
+        ).exists()
         delivery = db.query(AssistantDelivery).filter(
             AssistantDelivery.channel.in_(enabled_channels()),
             AssistantDelivery.status == "pending", AssistantDelivery.available_at <= utcnow(),
+            or_(AssistantDelivery.depends_on_id.is_(None), predecessor_accepted),
         ).order_by(AssistantDelivery.created_at).with_for_update(skip_locked=True).first()
         if not delivery:
             db.commit()

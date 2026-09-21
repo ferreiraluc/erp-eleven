@@ -1,14 +1,16 @@
-"""Narrow ERP tools: lookup and draft operational notes, never arbitrary database edits."""
+"""Validated operational tools; no arbitrary SQL or unrestricted database writes."""
 import uuid
 from typing import Literal
 from datetime import timedelta
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_
 
 from ..models.assistant import AssistantNote, utcnow
-from ..models.pedido import Pedido
-from ..models.rastreamento import Rastreamento
+from .assistant_queries import (
+    ShipmentArgs, OrderArgs, StockArgs, CustomerArgs, SalesArgs, literal_pattern,
+    query_shipments, query_orders, query_stock, query_customers, query_sales,
+)
+from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule, prepare_schedule
 
 
 class SearchArgs(BaseModel):
@@ -22,36 +24,9 @@ class NoteArgs(BaseModel):
     conteudo: str = Field(min_length=5, max_length=900)
 
 
-def literal_pattern(value):
-    return "%" + value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-
-
 def search_orders(db, termo):
-    pattern = literal_pattern(termo.strip())
-    orders = db.query(Pedido).filter(or_(
-        Pedido.cliente_nome.ilike(pattern, escape="\\"),
-        Pedido.numero_pedido.ilike(pattern, escape="\\"),
-        Pedido.codigo_rastreio.ilike(pattern, escape="\\"),
-        Pedido.cliente_telefone.ilike(pattern, escape="\\"),
-    )).order_by(Pedido.created_at.desc()).limit(6).all()
-    results = []
-    for order in orders:
-        tracks = db.query(Rastreamento).filter_by(pedido_id=order.id, ativo=True).all()
-        results.append({
-            "pedido": order.numero_pedido, "cliente": order.cliente_nome,
-            "data": order.created_at.isoformat() if order.created_at else None,
-            "status_pedido": order.status.value, "codigo_cadastrado": order.codigo_rastreio,
-            "rastreios": [{"codigo": r.codigo_rastreio, "status": r.status.value,
-                           "consultado_em": r.ultima_atualizacao.isoformat() if r.ultima_atualizacao else None} for r in tracks],
-        })
-    # Independent shipments need to be searchable too.
-    unlinked = db.query(Rastreamento).filter(
-        Rastreamento.ativo.is_(True), Rastreamento.pedido_id.is_(None),
-        or_(Rastreamento.destinatario.ilike(pattern, escape="\\"), Rastreamento.codigo_rastreio.ilike(pattern, escape="\\")),
-    ).order_by(Rastreamento.created_at.desc()).limit(6).all()
-    results.extend({"pedido": None, "cliente": r.destinatario, "codigo_cadastrado": r.codigo_rastreio,
-                    "status": r.status.value, "consultado_em": r.ultima_atualizacao.isoformat() if r.ultima_atualizacao else None} for r in unlinked)
-    return {"resultados": results, "instrucao": "Se houver múltiplos clientes/envios, peça identificação. Dados do ERP; não é consulta online aos Correios."}
+    # Compatibility for internal callers; tool calls validate their complete filters below.
+    return query_shipments(db, ShipmentArgs.model_construct(termo=termo, ordem="priorizar_abertos"))
 
 
 def search_memory(db, termo):
@@ -98,16 +73,44 @@ def confirm_note(db, message, identity, note_id, cancel=False):
     return f"Registro {note.id} salvo na memória da equipe, disponível no WhatsApp e Telegram. Isso não altera vendas, estoque ou pagamentos."
 
 
+class TrackingReplyArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    codigo: str = Field(min_length=2, max_length=100, description="Código exato retornado pela consulta atual, nunca inventado.")
+
+
+def tool(name, description, schema):
+    return {"type": "function", "function": {"name": name, "description": description, "parameters": schema.model_json_schema()}}
+
+
 TOOLS = [
-    {"type": "function", "function": {"name": "buscar_rastreios", "description": "Busca pedidos e rastreios por nome, número de pedido, telefone ou código.", "parameters": SearchArgs.model_json_schema()}},
-    {"type": "function", "function": {"name": "buscar_memoria", "description": "Consulta registros operacionais compartilhados e confirmados pela equipe nos dois canais.", "parameters": SearchArgs.model_json_schema()}},
-    {"type": "function", "function": {"name": "preparar_registro", "description": "Prepara um único rascunho factual de ocorrência relatada nesta mensagem. Exige confirmação humana para compartilhar. Não altera o pedido/venda/estoque.", "parameters": NoteArgs.model_json_schema()}},
+    tool("buscar_rastreios", "Consulta envios e códigos por nome/telefone/pedido/código OU sem termo para listagens, períodos e totais por status. em_aberto inclui PENDENTE, EM_TRANSITO e falhas. Para rastreio individual use ordem=priorizar_abertos; para último/mais recente use recentes.", ShipmentArgs),
+    tool("responder_rastreio", "FINALIZA rastreio individual em duas mensagens: código sozinho e depois detalhes do ERP. Use após buscar_rastreios, com um código retornado e inequivocamente identificado. Não use para listagens ou se faltou identificar o cliente.", TrackingReplyArgs),
+    tool("consultar_pedidos", "Consulta cadastro/status administrativo dos pedidos, inclusive sem código, por nome, período e situação. Entrega física é em buscar_rastreios.", OrderArgs),
+    tool("consultar_estoque", "Consulta produtos ativos: nome/SKU/marca/categoria, tamanho, cor, saldos na loja/depósito, zerados e abaixo do mínimo; preço de venda com moeda. Não altera estoque.", StockArgs),
+    tool("consultar_clientes", "Procura clientes ativos nos cadastros separados de pedidos e PDV. Envios avulsos podem não ter cliente cadastrado.", CustomerArgs),
+    tool("consultar_vendas", "Lista vendas e totais por período/vendedor, separados por módulo (vendas/PDV) e moeda. ADMIN/GERENTE. Nunca somar módulos como faturamento consolidado.", SalesArgs),
+    tool("consultar_folgas", "Consulta calendário de folgas/férias/faltas/licenças dos vendedores, por nome, período, tipo e aprovação. Sem período pode listar histórico; para agenda futura use datas ou proximos_7_dias.", ScheduleArgs),
+    tool("preparar_folga", "Prepara cadastro REAL no calendário do ERP. Apenas solicitação explícita de ADMIN/GERENTE habilitado. Exige vendedor e data; não invente dados. Aplicação mostra prévia e exige confirmação do autor antes de gravar. Não aprova folgas.", ScheduleWriteArgs),
+    tool("buscar_memoria", "Consulta registros operacionais compartilhados e confirmados pela equipe nos dois canais.", SearchArgs),
+    tool("preparar_registro", "Prepara um único rascunho factual de ocorrência relatada nesta mensagem. Exige confirmação humana para compartilhar. Não altera pedido/venda/estoque; folgas usam preparar_folga.", NoteArgs),
 ]
 
 
 def execute_tool(db, message, identity, name, arguments):
-    if name == "buscar_rastreios":
-        return search_orders(db, **SearchArgs.model_validate(arguments).model_dump())
+    queries = {
+        "buscar_rastreios": (ShipmentArgs, query_shipments),
+        "consultar_pedidos": (OrderArgs, query_orders),
+        "consultar_estoque": (StockArgs, query_stock),
+        "consultar_clientes": (CustomerArgs, query_customers),
+        "consultar_folgas": (ScheduleArgs, query_schedule),
+    }
+    if name in queries:
+        schema, function = queries[name]
+        return function(db, schema.model_validate(arguments))
+    if name == "consultar_vendas":
+        return query_sales(db, SalesArgs.model_validate(arguments), message.user_id)
+    if name == "preparar_folga":
+        return prepare_schedule(db, message, identity, ScheduleWriteArgs.model_validate(arguments))
     if name == "buscar_memoria":
         return search_memory(db, **SearchArgs.model_validate(arguments).model_dump())
     if name == "preparar_registro":

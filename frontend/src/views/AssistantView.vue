@@ -24,7 +24,7 @@
           <label>Identificador<input v-model.trim="form.external_id" required :placeholder="form.channel === 'whatsapp' ? 'whatsapp:+5511999999999' : 'ID numérico do usuário'" /></label>
           <label>Usuário ERP<select v-model="form.user_id" required aria-label="Usuário ERP"><option disabled value="">Selecione</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ u.role }}</option></select></label>
           <label class="check"><input v-model="form.active" type="checkbox" /> Acesso ativo</label>
-          <label class="check"><input v-model="form.can_register" type="checkbox" /> Pode registrar ocorrências</label>
+          <label class="check"><input v-model="form.can_register" type="checkbox" /> Pode registrar ocorrências e preparar folgas (gestores)</label>
           <button :disabled="saving" type="submit">{{ saving ? 'Salvando…' : 'Salvar acesso' }}</button>
         </form>
         <div class="scroll"><table><thead><tr><th>Canal</th><th>Identificador</th><th>Funcionário</th><th>Acesso</th><th>Registros</th><th></th></tr></thead>
@@ -40,6 +40,14 @@
           <p>{{ n.content }}</p><small>{{ userName(n.user_id) }} · {{ date(n.created_at) }}</small>
           <code>{{ n.id }}</code>
         </article><p v-if="!notes.length">Nenhum registro ainda. Os últimos 100 aparecerão aqui.</p></div>
+      </section>
+
+      <section class="card">
+        <h2>Cadastros de folgas pelo assistente</h2>
+        <p>O bot mostra a prévia e exige confirmação do autor na mesma conversa. Apenas administradores e gerentes com permissão de registro podem cadastrar. Folgas cadastradas aguardam aprovação no calendário.</p>
+        <div class="scroll"><table><thead><tr><th>Solicitado por</th><th>Vendedor</th><th>Dia</th><th>Tipo / período</th><th>Estado</th></tr></thead>
+          <tbody><tr v-for="a in actions" :key="a.id"><td>{{ userName(a.user_id) }}</td><td>{{ a.vendedor }}</td><td>{{ a.data?.split('-').reverse().join('/') }}</td><td>{{ a.tipo }} / {{ a.periodo }}</td><td>{{ actionState(a.status) }}</td></tr>
+          <tr v-if="!actions.length"><td colspan="5">Nenhuma solicitação de cadastro.</td></tr></tbody></table></div>
       </section>
 
       <section class="card">
@@ -61,18 +69,21 @@ import api from '@/services/api'
 interface Identity { id: string; channel: 'whatsapp' | 'telegram'; external_id: string; user_id: string; active: boolean; can_register: boolean }
 interface User { id: string; nome: string; role: string }
 interface Note { id: string; kind: string; content: string; status: string; user_id: string; created_at: string }
+interface Action { id: string; status: string; user_id: string; vendedor?: string; data?: string; tipo?: string; periodo?: string }
 interface QueueItem { id: string; kind: string; channel: string; status: string; error_code?: string; created_at: string }
 interface Status { enabled: boolean; telegram_enabled: boolean; whatsapp_enabled: boolean; model: string; deepseek_configured: boolean; twilio_configured: boolean; telegram_configured: boolean; telegram_group_id: string; daily_messages_per_user: number }
 const status = ref<Status | null>(null)
 const users = ref<User[]>([])
 const identities = ref<Identity[]>([])
 const notes = ref<Note[]>([])
+const actions = ref<Action[]>([])
 const queue = ref<QueueItem[]>([])
 const loading = ref(false), saving = ref(false), error = ref(''), notice = ref('')
 const form = ref<Omit<Identity, 'id'>>({ channel: 'whatsapp', external_id: '', user_id: '', active: true, can_register: false })
 const userName = (id: string) => users.value.find(u => u.id === id)?.nome || id
 const date = (value: string) => new Date(value).toLocaleString('pt-BR')
 const noteState = (state: string) => ({ draft: 'Aguardando autor · expira em 24h', shared: 'Compartilhado', cancelled: 'Cancelado' }[state] || state)
+const actionState = (state: string) => ({ draft: 'Aguardando confirmação · expira em 24h', executed: 'Cadastrada no ERP', cancelled: 'Cancelada' }[state] || state)
 const queueState = (state: string) => ({ pending: 'Na fila', done: 'Processado', failed: 'Falha', sending: 'Enviando', accepted: 'Aceito pelo provedor', uncertain: 'Envio incerto', expired: 'Janela expirada', cancelled: 'Cancelado', rejected: 'Acesso revogado' }[state] || state)
 function explainError(e: unknown) {
   const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
@@ -81,9 +92,10 @@ function explainError(e: unknown) {
 async function load() {
   loading.value = true; error.value = ''
   try {
-    const results = await Promise.all(['status', 'users', 'identities', 'notes', 'queue'].map(path => api.get(`/api/assistant/${path}`)))
+    const results = await Promise.all(['status', 'users', 'identities', 'notes', 'queue', 'actions'].map(path => api.get(`/api/assistant/${path}`)))
     status.value = results[0]!.data; users.value = results[1]!.data; identities.value = results[2]!.data
     notes.value = results[3]!.data; queue.value = results[4]!.data
+    actions.value = results[5]!.data
   } catch (e) { error.value = explainError(e) }
   finally { loading.value = false }
 }

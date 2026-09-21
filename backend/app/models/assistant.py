@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from ..database import Base
 
@@ -70,3 +70,18 @@ class AssistantDelivery(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     available_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     expires_at = Column(DateTime(timezone=True))
+    depends_on_id = Column(UUID(as_uuid=True), ForeignKey("assistant_deliveries.id"), nullable=True)
+
+
+class AssistantAction(Base):
+    """A concrete ERP write awaiting its author's confirmation in the same conversation."""
+    __tablename__ = "assistant_actions"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_message_id = Column(UUID(as_uuid=True), ForeignKey("assistant_messages.id"), nullable=False, unique=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
+    kind = Column(String(20), nullable=False)
+    payload = Column(JSONB, nullable=False)
+    status = Column(String(20), nullable=False, default="draft", index=True)
+    result_id = Column(UUID(as_uuid=True))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    executed_at = Column(DateTime(timezone=True))

@@ -53,3 +53,24 @@ Para testar respostas dinâmicas no WhatsApp, é necessário disponibilizar uma 
 - Ainda faltam implantação da API/worker, migração no ambiente de destino, vínculo dos usuários reais e configuração dos webhooks.
 
 As mensagens iniciais são demonstrações com dados fictícios. A mensagem posterior identificada como **TESTE SOMENTE LEITURA — DADOS REAIS DO ERP** contém o resultado da consulta real. Ambas informam que o atendimento contínuo ainda não está ativo.
+
+## Ampliação do coordenador — 21/09/2026
+
+- Consultas sem termo obrigatório: últimos envios, períodos relativos no fuso America/Sao_Paulo, status, contagens e paginação (até 20 registros por página).
+- Busca individual prioriza um único envio em aberto do cliente; histórico entregue não gera pergunta desnecessária. Homônimos distintos continuam exigindo identificação. Pedido e rastreio com o mesmo código são contados uma vez, e o status do rastreamento prevalece na consulta de entrega.
+- Rastreio individual: mensagem apenas com o código, seguida de cliente/status/data/última consulta salva. A segunda mensagem depende da aceitação da primeira pelo provedor. Sem atualização online aos Correios durante a conversa.
+- Consultas adicionais: pedidos, clientes, estoque por produto/SKU/categoria/tamanho/cor e local, vendas tradicionais/PDV e calendário de folgas. Vendas exigem ADMIN/GERENTE; módulos e moedas ficam separados.
+- Folgas: ADMIN/GERENTE com `can_register=true` pode pedir um cadastro; uma prévia é armazenada em `assistant_actions`. `confirmo` (única prévia pendente) ou `/confirmar ID` executa na mesma conversa, pelo mesmo autor, em até 24h. A nova folga fica pendente de aprovação, como no cadastro padrão. Sem alteração/exclusão/aprovação automática. Cancelamento de prévia: `/cancelar ID`.
+- A página `/assistente` mostra a auditoria das solicitações de folgas. Motivos pessoais não aparecem nas consultas do calendário do grupo.
+- Migração `o5p6q7r8s9t0` cria a auditoria de ações e acrescenta a dependência entre mensagens de saída.
+- O Telegram permanece com privacidade de grupo: mencionar o bot, responder à mensagem dele ou usar `/eleven pergunta`. O entendimento é livre dentro dessas mensagens; não é necessário decorar comandos de cada consulta.
+- WhatsApp permanece em standby; usa o mesmo agente quando o canal for habilitado.
+
+Validação antes da publicação:
+
+- Regressões automatizadas cobrem períodos/dias no fuso local, contagens e paginação, histórico versus envio aberto, homônimos fora da primeira página, deduplicação/status, filtros de estoque, Decimal/moedas/PDV cancelado, permissões/expiração/duplicidade/rollback de folgas e ordem das mensagens.
+- Consultas SQL executadas contra PostgreSQL real em transação somente leitura: envios recentes, ontem, em aberto, cliente Vandilson, estoque, pedidos, clientes, vendas e folgas.
+- Migração validada com upgrade/downgrade/upgrade em schema isolado e rollback completo; nenhum cadastro de teste deixado em produção.
+- Oito cenários com DeepSeek real e banco isolado: últimos 5 envios, ontem, pendências, rastreio individual, camiseta M na loja, folgas de amanhã, cadastro completo e pedido de folga sem data. Todos escolheram as ferramentas/filtros corretos; o pedido sem data solicitou a informação faltante.
+- 44 testes automatizados passaram; build do frontend concluído. Migração testada no PostgreSQL.
+- Dois diálogos adicionais com DeepSeek real passaram: consulta de últimos envios seguida de “e ontem?”; pedido de folga sem data, complementação da data e “confirmo”. O cadastro de folga ocorreu apenas no banco isolado do teste.

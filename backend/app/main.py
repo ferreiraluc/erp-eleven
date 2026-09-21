@@ -127,7 +127,7 @@ async def lifespan(app: FastAPI):
         # PostgreSQL locks also serialize workers during overlapping deploys.
         from .assistant_worker import main as run_assistant_worker
         from sqlalchemy import inspect
-        required = {"assistant_identities", "assistant_messages", "assistant_notes", "assistant_deliveries"}
+        required = {"assistant_identities", "assistant_messages", "assistant_notes", "assistant_deliveries", "assistant_actions"}
         if not required.issubset(set(inspect(engine).get_table_names())):
             raise RuntimeError("Assistant tables missing; apply the migration before activation")
         app.state.assistant_worker = threading.Thread(
