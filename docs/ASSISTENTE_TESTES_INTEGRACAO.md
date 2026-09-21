@@ -74,3 +74,13 @@ Validação antes da publicação:
 - Oito cenários com DeepSeek real e banco isolado: últimos 5 envios, ontem, pendências, rastreio individual, camiseta M na loja, folgas de amanhã, cadastro completo e pedido de folga sem data. Todos escolheram as ferramentas/filtros corretos; o pedido sem data solicitou a informação faltante.
 - 44 testes automatizados passaram; build do frontend concluído. Migração testada no PostgreSQL.
 - Dois diálogos adicionais com DeepSeek real passaram: consulta de últimos envios seguida de “e ontem?”; pedido de folga sem data, complementação da data e “confirmo”. O cadastro de folga ocorreu apenas no banco isolado do teste.
+
+### Conversa sem comandos
+
+A pedido do usuário, o recebimento do Telegram passou a tratar mensagens comuns dos funcionários autorizados como solicitações ao coordenador, incluindo continuações (“e ontem?”), “confirmo” e “cancela”. Os comandos existentes continuam compatíveis, mas não são necessários. Confirmações em linguagem natural também atendem aos rascunhos de ocorrências, mantendo autoria, conversa e validade de 24 horas.
+
+A ativação do recebimento sem comandos/menções depende de desativar Group Privacy no BotFather e readicionar o bot ao grupo existente, conforme https://core.telegram.org/bots/features#privacy-mode. O ERP continua aceitando apenas o grupo configurado e funcionários autorizados. WhatsApp individual já envia textos comuns, mas o canal permanece em standby.
+
+O resumo de estoque agora devolve explicitamente os totais de loja e depósito para todos os produtos filtrados, evitando que a IA use apenas os itens da página ou peça um produto desnecessariamente. Validação: 46 testes automatizados passaram.
+
+Primeiro deploy da ampliação: commit `c222f13`, Render `dep-daos47e8bjmc73aho0vg`, migração `o5p6q7r8s9t0`, backend/worker/banco online. Testes reais no grupo confirmaram últimos 5 envios e rastreio do Vandilson em duas mensagens (IDs 36 e 37 aceitos, na ordem). Cadastro real de folga foi testado em banco isolado, sem criar folgas fictícias na operação. Permissão de registro ativada apenas para o administrador Telegram já verificado.

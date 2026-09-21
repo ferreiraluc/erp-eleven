@@ -142,7 +142,7 @@ def test_unknown_sender_other_group_bots_and_anonymous_ignored(setup):
 
 def test_group_addressing_and_topics(setup):
     update = telegram_update("Amanhã vemos isso")
-    assert channels.telegram_message(update).should_reply is False
+    assert channels.telegram_message(update).should_reply is True
     update["message"]["text"] = "@eleven_test_bot tem rastreio?"
     update["message"]["message_thread_id"] = 19
     message = channels.telegram_message(update)
@@ -383,7 +383,7 @@ def test_full_model_tool_round_trip_creates_only_draft(setup, monkeypatch):
     with factory() as db:
         msg = incoming(db, user_id, "Chegou a devolução do João", channel="telegram", reply=False)
         answer = agent.respond(db, msg, channels.authorized_identity(db, "telegram", "123"))
-        assert "Rascunho" in answer and "/confirmar" in answer
+        assert "Rascunho" in answer and "confirmo" in answer
         assert "Já lancei" not in answer
         assert db.query(AssistantNote).one().status == "draft"
         assert tools.search_memory(db, "João") == []

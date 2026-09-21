@@ -282,9 +282,13 @@ def query_stock(db, args):
         if args.local != "total":
             return {"erro": "O estoque mínimo é global por produto; use local=total para abaixo_minimo."}
         q = q.filter(qty < i.min_stock)
-    units = q.with_entities(func.coalesce(func.sum(qty), 0)).scalar()
+    totals = q.with_entities(*(func.coalesce(func.sum(column), 0) for column in
+                              (i.current_stock, i.stock_loja, i.stock_deposito))).one()
+    by_location = dict(zip(("total", "loja", "deposito"), totals))
     rows, info = page(q.order_by(i.name, i.size, i.id), args)
-    return {**info, "local": args.local, "unidades": units,
+    return {**info, "local": args.local, "unidades": by_location[args.local],
+            "saldos_por_local": by_location,
+            "escopo_dos_saldos": "Todos os produtos filtrados, não só a página exibida.",
             "resultados": [{"produto": x.name, "sku": x.sku_internal, "categoria": x.category,
                             "tamanho": x.size, "cor": x.color, "marca": x.brand,
                             "total": x.current_stock, "loja": x.stock_loja, "deposito": x.stock_deposito,

@@ -63,8 +63,8 @@ def action_preview(action):
     return (f"Cadastrar no calendário: {p['vendedor_nome']} — {p['data']} — {p['tipo']} — {p['periodo']}.\n"
             + (f"Motivo informado: {p['motivo']}\n" if p.get("motivo") else "") +
             "Será registrada como pendente de aprovação, igual ao cadastro pelo ERP.\n"
-            f"Confirme com ‘confirmo’ ou /confirmar {action.id}. Para descartar: /cancelar {action.id}. "
-            "Ainda não foi cadastrada. A confirmação expira em 24 horas.")
+            "Diga ‘confirmo’ para cadastrar ou ‘cancela’ para descartar. "
+            f"Ainda não foi cadastrada. A confirmação expira em 24 horas.\nIdentificador da prévia: {action.id}")
 
 
 def prepare_schedule(db, message, identity, args):

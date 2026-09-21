@@ -127,6 +127,7 @@ def test_stock_filters_and_aggregate_units_ignore_inactive(setup):
         db.flush()
         result = query_stock(db, StockArgs(termo="Camiseta", tamanho="M", local="loja", limite=1))
         assert result["total"] == 2 and result["unidades"] == 3
+        assert result["saldos_por_local"] == {"total": 8, "loja": 3, "deposito": 5}
         assert result["resultados"][0]["preco_venda"] == "15.90"
         assert query_stock(db, StockArgs(situacao="abaixo_minimo"))["total"] == 1
         assert "erro" in query_stock(db, StockArgs(situacao="abaixo_minimo", local="loja"))
@@ -271,8 +272,27 @@ def test_calendar_confirmation_with_multiple_previews_requires_id(setup):
         msg = incoming(db, user_id, "Cadastre outra", channel="telegram")
         prepare_schedule(db, msg, identity, ScheduleWriteArgs(vendedor="Maria", data=date(2026, 9, 25)))
         confirm = incoming(db, user_id, "confirmo", channel="telegram")
-        assert "Use /confirmar ID" in agent.respond(db, confirm, identity)
+        assert "Há mais de uma prévia" in agent.respond(db, confirm, identity)
         assert db.query(Folga).count() == 0
+
+
+def test_normal_telegram_followups_and_confirmations_need_no_commands(setup):
+    for text in ("Últimos cinco envios", "E ontem?", "Quem folga amanhã?", "Cadastre folga para Maria amanhã", "confirmo", "cancela"):
+        assert channels.telegram_message(telegram_update(text)).should_reply
+
+
+def test_natural_cancel_and_note_confirmation(setup):
+    factory, _, user_id = setup
+    with factory() as db:
+        action, identity = prepare_calendar(db, user_id)
+        cancel = incoming(db, user_id, "cancela", channel="telegram")
+        assert "cancelado" in agent.respond(db, cancel, identity)
+        assert action.status == "cancelled" and db.query(Folga).count() == 0
+        from app.services.assistant_tools import draft_note
+        note_msg = incoming(db, user_id, "Recebemos a devolução da Ana", channel="telegram")
+        draft_note(db, note_msg, identity, "devolucao", note_msg.text)
+        confirm = incoming(db, user_id, "confirmo", channel="telegram")
+        assert "salvo na memória" in agent.respond(db, confirm, identity)
 
 
 def test_long_answers_are_split_without_discarding_the_end():

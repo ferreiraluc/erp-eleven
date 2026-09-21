@@ -55,15 +55,9 @@ def telegram_message(update):
     first = content.split()[0] if content.split() else ""
     if first.startswith("/") and "@" in first and first.split("@", 1)[1].lower() != username:
         return None
-    reply = message.get("reply_to_message")
-    reply_from = reply.get("from", {}) if isinstance(reply, dict) else {}
-    if not isinstance(reply_from, dict):
-        reply_from = {}
-    command = first.split("@", 1)[0].lower()
-    mentioned = bool(username and re.search(r"@" + re.escape(username) + r"\b", content, re.I))
-    addressed = command in {"/eleven", "/rastreio", "/memoria", "/registrar", "/confirmar", "/cancelar", "/ajuda", "/help", "/start"}
-    addressed |= mentioned or bool(username and reply_from.get("username", "").lower() == username)
-    addressed |= bool(re.search(r"^(tem|qual|quais|quem|quantos|quantas|consulta|consulte|cadê|cade|pode|consegue|mostre|liste|últimos|ultimos)\b.{0,90}\b(rastreios?|rastreamentos?|envios?|pedidos?|estoque|folgas?|vendas?)\b", content, re.I))
+    # Every text from an authorized employee in the configured group can address the
+    # coordinator, including follow-ups like "e ontem?" and confirmations. Telegram
+    # group privacy must separately be disabled for ordinary messages to reach us.
     # Remove only our command suffix, preserving the rest of the user's message.
     if first.startswith("/") and "@" in first:
         content = first.split("@", 1)[0] + content[len(first):]
@@ -72,7 +66,7 @@ def telegram_message(update):
         conversation += ":" + str(message["message_thread_id"])
     if not isinstance(update.get("update_id"), int):
         return None
-    return Incoming("telegram", str(update["update_id"]), conversation, str(sender["id"]), content, addressed)
+    return Incoming("telegram", str(update["update_id"]), conversation, str(sender["id"]), content, True)
 
 
 def twilio_message(form):

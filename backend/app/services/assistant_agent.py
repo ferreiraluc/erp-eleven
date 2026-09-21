@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import timedelta
 import requests
@@ -31,6 +32,8 @@ CONHECIMENTO DO ERP:
   Listagens de vários envios usam resposta normal, nunca responder_rastreio. Se não encontrar, consulte pedidos; não invente.
 - consultar_pedidos: cadastro e status administrativo. Pode divergir do rastreio; entregue/pendente de entrega vem de buscar_rastreios.
 - consultar_estoque: produtos, SKU, marca/categoria, tamanho/cor, saldo total/loja/depósito, disponibilidade e preço/moeda.
+  saldos_por_local contém os totais da loja e depósito de TODOS os produtos filtrados, mesmo que haja paginação.
+  É possível consultar saldos gerais por local sem informar produto. Nunca some só os itens da página como total geral.
 - consultar_clientes: cadastros separados de pedidos e PDV. Pode existir destinatário sem cadastro.
 - consultar_vendas: vendas tradicionais e PDV separados; valores por moeda. Só ADMIN/GERENTE. Não some módulos ou moedas.
 - consultar_folgas: calendário de vendedores, folgas/férias/faltas/licenças, datas/períodos e aprovação. Para 'quem folga'
@@ -58,8 +61,8 @@ HELP = (
     "‘Tem o rastreio do João?’, ‘Tem camiseta M no estoque?’ ou ‘Quem folga esta semana?’.\n"
     "Também consulto pedidos, clientes e resumos de vendas conforme sua permissão.\n"
     "Para cadastrar folga: ‘Cadastre folga para NOME em DATA’. Mostro a prévia; confirme para salvar no ERP.\n"
-    "No Telegram, me mencione, responda a uma mensagem minha ou use /eleven seguido da pergunta.\n"
-    "Ocorrências: /registrar descrição, depois /confirmar ID. Ainda não imprimo, lanço vendas ou altero estoque."
+    "Converse normalmente no grupo, sem comandos ou menções. Também entendo continuações como ‘e ontem?’.\n"
+    "Para confirmar uma prévia, diga ‘confirmo’; para descartá-la, ‘cancela’. Ainda não imprimo, lanço vendas ou altero estoque."
 )
 
 
@@ -91,8 +94,8 @@ def complete(messages):
 
 def draft_response(note):
     return (f"Rascunho de {note.kind}:\n{note.content}\n\n"
-            f"Para compartilhar com a equipe nos dois canais: /confirmar {note.id}\n"
-            f"Para descartar: /cancelar {note.id}\n"
+            "Diga ‘confirmo’ para compartilhar com a equipe nos dois canais, ou ‘cancela’ para descartar.\n"
+            f"Identificador da prévia: {note.id}\n"
             "Não altera vendas, estoque ou pagamentos. Expira em 24 horas.")
 
 
@@ -116,15 +119,33 @@ def respond(db, message, identity):
     natural = rest if command == "/eleven" else content
     if settings.TELEGRAM_BOT_USERNAME:
         natural = natural.replace("@" + settings.TELEGRAM_BOT_USERNAME, "").strip()
-    if natural.lower().rstrip(".! ") in ("confirmo", "confirmar", "pode cadastrar", "pode salvar"):
+    confirmation = re.fullmatch(r"(confirmo|confirmar|pode cadastrar|pode salvar|cancelo|cancelar|cancele|cancela)(?:\s+([0-9a-f-]{36}))?[.! ]*", natural, re.I)
+    if confirmation and message.should_reply:
+        cancel = confirmation.group(1).lower().startswith("cancel")
+        selected_id = confirmation.group(2)
+        if selected_id:
+            try:
+                selected_id = uuid.UUID(selected_id)
+            except ValueError:
+                return "Não reconheci o identificador da prévia."
         actions = db.query(AssistantAction).join(AssistantMessage, AssistantMessage.id == AssistantAction.source_message_id).filter(
             AssistantAction.user_id == message.user_id, AssistantAction.status == "draft",
             AssistantAction.created_at >= utcnow() - timedelta(hours=24),
             AssistantMessage.channel == message.channel, AssistantMessage.conversation_id == message.conversation_id,
         ).with_for_update(of=AssistantAction).all()
-        if len(actions) == 1:
-            return confirm_action(db, message, identity, actions[0])
-        return "Use /confirmar ID da prévia desejada." if actions else "Não há cadastro de folga aguardando sua confirmação nesta conversa."
+        notes = db.query(AssistantNote).join(AssistantMessage, AssistantMessage.id == AssistantNote.source_message_id).filter(
+            AssistantNote.user_id == message.user_id, AssistantNote.status == "draft",
+            AssistantNote.created_at >= utcnow() - timedelta(hours=24),
+            AssistantMessage.channel == message.channel, AssistantMessage.conversation_id == message.conversation_id,
+        ).with_for_update(of=AssistantNote).all()
+        pending = [item for item in actions + notes if not selected_id or item.id == selected_id]
+        if len(pending) == 1:
+            if isinstance(pending[0], AssistantAction):
+                return confirm_action(db, message, identity, pending[0], cancel=cancel)
+            return confirm_note(db, message, identity, str(pending[0].id), cancel=cancel)
+        if pending:
+            return "Há mais de uma prévia. Diga ‘confirmo ID’ ou ‘cancela ID’ usando o identificador da prévia desejada."
+        return "Não há prévia aguardando sua confirmação nesta conversa."
     if command == "/registrar":
         if not 5 <= len(rest.strip()) <= 900:
             return "Use /registrar seguido de uma descrição entre 5 e 900 caracteres."
