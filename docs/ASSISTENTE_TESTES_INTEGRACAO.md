@@ -1,5 +1,23 @@
 # Verificação de integração — 20/09/2026
 
+## Atualização: piloto Telegram publicado às 23h10 (Brasília)
+
+- Código em produção: `7c09d7697026417f9aac4167b97386e8189c8598`, branch `main`.
+- Backend: [deploy concluído no Render](https://dashboard.render.com/web/srv-d29uhc6r433s739t1b30/deploys/dep-dao924ks728c73bf89f0), usando o serviço Starter existente. Nenhum serviço pago adicional foi criado.
+- Frontend: [deploy concluído](https://dashboard.render.com/static/srv-d2a0imogjchc73e4250g/deploys/dep-dao924ks728c73bf89cg). Painel em [Assistente IA](https://erp-eleven-frontend.onrender.com/assistente), com login ADMIN.
+- As variáveis DeepSeek, Telegram e Twilio foram copiadas para o ambiente do backend. A conexão de banco e os demais segredos já existentes no Render foram preservados.
+- No Render: `ASSISTANT_ENABLED=true`, `ASSISTANT_TELEGRAM_ENABLED=true`, `ASSISTANT_EMBEDDED_WORKER=true` e `ASSISTANT_WHATSAPP_ENABLED=false`.
+- Migração `n4o5p6q7r8s9` aplicada pelo deploy. Antes, a criação das quatro tabelas e suas referências foi validada em esquema temporário do PostgreSQL, revertido integralmente após o teste.
+- `/health` respondeu HTTP 200 com API, banco e worker `online`. O Render foi configurado para monitorar esse endpoint.
+- Webhook Telegram registrado no backend público com segredo. Mensagens sem o segredo retornam HTTP 403. O webhook WhatsApp retorna HTTP 503 porque o canal está em standby.
+- O proprietário do grupo Telegram foi vinculado ao usuário administrador existente, com permissão de consulta. Outros funcionários precisam ser vinculados no painel.
+- Uma consulta real enviada pelo Telegram foi recebida pelo webhook, processada no servidor e respondida no grupo. A fila registrou `done` e `accepted`, e o código da resposta foi comparado ao cadastrado no ERP. Nenhum pedido foi alterado; nenhuma mensagem WhatsApp foi processada.
+- 28 testes automatizados passaram e o frontend compilou.
+
+Uso no piloto: envie `/rastreio Nome do cliente` em uma única mensagem, `/rastreio NUMERO-DO-PEDIDO`, ou mencione `@ElevenParis11_Bot` na pergunta. Em caso de vários bots no grupo, use `/rastreio@ElevenParis11_Bot Nome`. A privacidade do Telegram permanece ativa; ainda não há leitura geral da conversa. O bot funciona no servidor independentemente do computador local, onde a ativação continua desabilitada.
+
+Os registros abaixo descrevem a etapa anterior à publicação.
+
 ## Resultado
 
 | Componente | Verificação | Resultado |
