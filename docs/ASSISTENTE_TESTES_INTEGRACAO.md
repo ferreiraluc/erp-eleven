@@ -10,7 +10,8 @@
 - Telegram: conversa normal sem comandos comprovada. Após a correção, “Qual o rastreio do Vandilson?” gerou duas mensagens distintas aceitas em ordem (55 e 56), com código sozinho e dados atuais do ERP.
 - Teste completo WhatsApp ainda aguardando a primeira mensagem do proprietário ao número aprovado. Não houve mensagem recebida pelo ERP até esta verificação; portanto, a entrega de uma resposta WhatsApp ainda não está comprovada.
 - Correção adicional: a IA não pode apresentar uma prévia textual sem persistir a solicitação correspondente. Teste reproduziu o caso e confirmou cadastro somente após “confirmo”, em banco isolado; nenhum cadastro fictício foi criado em produção. Um teste com data já ocupada foi corretamente recusado sem duplicação.
-- Validação atual: 54 testes automatizados passaram. Chamadas reais à DeepSeek validaram recuperação de rastreio antigo e preparação/confirmacão de folga com permissões preservadas.
+- Versão final `997ac27`: [deploy concluído às 21h46](https://dashboard.render.com/web/srv-d29uhc6r433s739t1b30/deploys/dep-daosve0473hc739nt130), incluindo a correção das prévias.
+- Validação atual: 54 testes automatizados passaram. Chamadas reais à DeepSeek validaram recuperação de rastreio antigo e preparação/confirmação de folga com permissões preservadas.
 
 Os registros abaixo são históricos e descrevem os estados anteriores do piloto.
 
