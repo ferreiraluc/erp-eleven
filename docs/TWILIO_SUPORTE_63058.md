@@ -10,6 +10,7 @@ Our primary Trust Hub compliance profile is now `twilio-approved` (updated 2026-
 - Sender SID: `XEe0e7640dc06dcd6907db7b395f4d0c0a`
 - Inbound Message SID: `SMe33b35180f97a281481cdebef4d67e4f`, received 2026-09-22 00:45:40 UTC
 - Outbound Message SID: `SM0d1a14e94ac754cda080e045aa4dada9`, sent 2026-09-22 01:07:15 UTC
+- Additional test after the account owner reported registering the business in Brazil: `SM78a0860b29122122bf7987f4be008e96`, sent 2026-09-22 01:22:58 UTC, also `undelivered / 63058`
 - Destination country: Brazil (+55), responding to the same WhatsApp user who sent the inbound message
 - Purpose: an internal retail-store ERP assistant answering an authorized employee's request for recent shipment tracking records
 
