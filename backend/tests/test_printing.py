@@ -184,3 +184,20 @@ def test_placeholder_cpf_is_not_rendered(monkeypatch):
     payload['endereco']['cpf'] = '12345678901'
     printing.render_address(payload)
     assert 'CPF: 123.456.789-01' in captured
+
+
+def test_paraguay_prints_supplied_fields_without_street(monkeypatch):
+    from app.services import assistant_printing as printing
+    args = printing.AddressArgs(pais='PY', nome='Cliente Teste', telefone='+595 900 123456', cidade='Asunción')
+    assert args.endereco == ''
+    assert printing.AddressArgs(pais='PY', telefone='123456').nome == ''
+    captured = []
+    original = printing.Paragraph
+    def paragraph(text, style):
+        captured.append(text)
+        return original(text, style)
+    monkeypatch.setattr(printing, 'Paragraph', paragraph)
+    printing.render_address({'endereco': args.model_dump(), 'remetente': None})
+    assert 'Cliente Teste' in captured and 'Asunción' in captured
+    assert 'Tel.: +595 900 123456' in captured
+    assert not any('REMETENTE' in t or 'CPF' in t or 'CEP' in t for t in captured)

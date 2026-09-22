@@ -87,3 +87,5 @@ O bot informa envio à fila, sem afirmar impressão física. Agente Windows exis
 Teste físico inicial confirmado pelo responsável em 22/09/2026: papel A4 saiu na HP da loja.
 
 A validação do CPF informado confere formato, não consulta a Receita Federal.
+
+PY aceita apenas os campos fornecidos (por exemplo nome, telefone e cidade), sem exigir rua ou demais detalhes; campos vazios não aparecem no PDF.

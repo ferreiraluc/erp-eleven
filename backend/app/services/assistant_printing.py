@@ -31,9 +31,9 @@ def printable_cpf(value):
 class AddressArgs(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     pais: Literal['BR', 'PY']
-    nome: str = Field(min_length=2, max_length=120)
-    endereco: str = Field(min_length=5, max_length=250, description='Rua, número ou indicação sem número e complemento, como informado.')
-    cidade: str = Field(min_length=2, max_length=100)
+    nome: str = Field(default='', max_length=120)
+    endereco: str = Field(default='', max_length=250, description='Rua ou detalhes fornecidos. Opcional no PY: deixe vazio quando ausente, nunca invente.')
+    cidade: str = Field(default='', max_length=100)
     estado: str = Field(default='', max_length=60, description='UF obrigatória no Brasil; departamento opcional no Paraguai.')
     cep: str = Field(default='', max_length=15)
     cpf: str = Field(default='', max_length=20, description='CPF opcional do destinatário. Extraia do endereço informado. Ausente ou pedido sem CPF: string vazia. Nunca preencha zeros nem use CPF do remetente.')
@@ -51,6 +51,8 @@ class AddressArgs(BaseModel):
             if isinstance(value, str) and any(ord(c) < 32 and c not in '\n\r' for c in value):
                 raise ValueError('Caracteres de controle não permitidos.')
         if self.pais == 'BR':
+            if len(self.nome) < 2 or len(self.endereco) < 5 or len(self.cidade) < 2:
+                raise ValueError('Para Brasil, informe nome, endereço e cidade.')
             self.estado = self.estado.upper()
             if self.estado not in 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split():
                 raise ValueError('Informe uma UF válida para o Brasil.')
@@ -75,7 +77,7 @@ def render_address(payload):
     body = ParagraphStyle('address', fontName='Helvetica-Bold', fontSize=17, leading=23)
     sender_style = ParagraphStyle('sender', fontName='Helvetica', fontSize=12, leading=17)
     p = payload['endereco']
-    rows = [p['nome'], p['endereco'], p['cidade'] + (' - ' + p['estado'] if p['estado'] else ''),
+    rows = [p['nome'], p['endereco'], ' - '.join(value for value in (p['cidade'], p['estado']) if value),
             ('CEP ' + p['cep']) if p['cep'] else '', 'Brasil' if p['pais'] == 'BR' else 'Paraguay',
             ('Tel.: ' + p['telefone']) if p['telefone'] else '']
     if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
@@ -95,7 +97,7 @@ def render_address(payload):
 
 def print_preview(action):
     p = action.payload['endereco']
-    lines = [p['nome'], p['endereco'], p['cidade'] + (' - ' + p['estado'] if p['estado'] else ''), p['cep'], p['telefone']]
+    lines = [p['nome'], p['endereco'], ' - '.join(value for value in (p['cidade'], p['estado']) if value), p['cep'], p['telefone']]
     if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
         lines.append('CPF do destinatário: ' + printable_cpf(p.get('cpf')))
     sender = action.payload.get('remetente')
