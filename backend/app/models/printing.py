@@ -1,6 +1,6 @@
 """Printer-scoped credentials and durable, at-most-once dispatch."""
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, LargeBinary, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, LargeBinary, String, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from ..database import Base
 from .assistant import utcnow
@@ -30,3 +30,10 @@ class PrintJob(Base):
     claimed_at = Column(DateTime(timezone=True))
     finished_at = Column(DateTime(timezone=True))
 
+
+
+class PrintSender(Base):
+    __tablename__ = "print_senders"
+    id = Column(String(30), primary_key=True)
+    name = Column(String(100), nullable=False)
+    lines = Column(JSON, nullable=False)

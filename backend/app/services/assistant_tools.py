@@ -13,6 +13,9 @@ from .assistant_queries import (
 from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule, prepare_schedule
 
 
+from .assistant_printing import AddressArgs, prepare_print
+
+
 class SearchArgs(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     termo: str = Field(min_length=2, max_length=100)
@@ -83,6 +86,7 @@ def tool(name, description, schema):
 
 
 TOOLS = [
+    tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. BR exige CEP, UF e remetente debora ou mona; PY nunca imprime remetente. Pergunte dados faltantes, não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
     tool("buscar_rastreios", "Consulta envios e códigos por nome/telefone/pedido/código OU sem termo para listagens, períodos e totais por status. em_aberto inclui PENDENTE, EM_TRANSITO e falhas. Para rastreio individual use ordem=priorizar_abertos; para último/mais recente use recentes.", ShipmentArgs),
     tool("responder_rastreio", "FINALIZA rastreio individual em duas mensagens: código sozinho e depois detalhes do ERP. Use após buscar_rastreios, com um código retornado e inequivocamente identificado. Não use para listagens ou se faltou identificar o cliente.", TrackingReplyArgs),
     tool("consultar_pedidos", "Consulta cadastro/status administrativo dos pedidos, inclusive sem código, por nome, período e situação. Entrega física é em buscar_rastreios.", OrderArgs),
@@ -97,6 +101,8 @@ TOOLS = [
 
 
 def execute_tool(db, message, identity, name, arguments):
+    if name == "preparar_impressao":
+        return prepare_print(db, message, identity, AddressArgs.model_validate(arguments))
     queries = {
         "buscar_rastreios": (ShipmentArgs, query_shipments),
         "consultar_pedidos": (OrderArgs, query_orders),

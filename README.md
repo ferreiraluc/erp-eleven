@@ -21,7 +21,7 @@
 
 O projeto inclui uma primeira versão do assistente DeepSeek para WhatsApp individual (Twilio) e grupo Telegram: consultas de rastreio, avisos automáticos no Telegram, registros operacionais confirmados e memória compartilhada entre os canais. O painel fica em **Dashboard → Assistente IA**, restrito a administradores.
 
-A integração vem desabilitada e exige credenciais, migração e worker separado. Consulte [o guia de ativação](docs/ASSISTENTE_ATIVACAO.md) e [o estudo técnico](docs/ASSISTENTE_DEEPSEEK_WHATSAPP.md). Registros desta versão não movimentam vendas, estoque ou pagamentos; impressão e leitura de mídia ainda não estão integradas ao bot.
+A integração vem desabilitada e exige credenciais, migração e worker separado. Consulte [o guia de ativação](docs/ASSISTENTE_ATIVACAO.md) e [o estudo técnico](docs/ASSISTENTE_DEEPSEEK_WHATSAPP.md). Registros desta versão não movimentam vendas, estoque ou pagamentos; endereços em texto podem ser impressos em A4 com prévia e confirmação por ADMIN/GERENTE habilitado. Leitura de mídia, declaração de conteúdo e SuperFrete ainda não estão integrados. Consulte [a impressão Windows](docs/IMPRESSAO_WINDOWS.md).
 
 O **ERP Eleven** é um sistema completo de gestão empresarial desenvolvido para lojas de roupas, com foco em:
 

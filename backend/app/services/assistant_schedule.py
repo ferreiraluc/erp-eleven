@@ -59,6 +59,9 @@ def may_schedule(db, message, identity):
 
 
 def action_preview(action):
+    if action.kind == "impressao":
+        from .assistant_printing import print_preview
+        return print_preview(action)
     p = action.payload
     return (f"Cadastrar no calendário: {p['vendedor_nome']} — {p['data']} — {p['tipo']} — {p['periodo']}.\n"
             + (f"Motivo informado: {p['motivo']}\n" if p.get("motivo") else "") +
@@ -97,17 +100,20 @@ def confirm_action(db, message, identity, action, cancel=False):
     if action.user_id != message.user_id or source.channel != message.channel or source.conversation_id != message.conversation_id:
         return "Confirme na mesma conversa e com o usuário que pediu o cadastro."
     if not may_schedule(db, message, identity):
-        return "Você não tem permissão para cadastrar folgas pelo assistente."
+        return "Você não tem permissão para executar esta ação pelo assistente."
     if action.status != "draft":
         return f"Essa solicitação está {action.status}. Nenhuma alteração foi repetida."
     created = action.created_at
     if created.tzinfo is None:
         created = created.replace(tzinfo=utcnow().tzinfo)
     if created < utcnow() - timedelta(hours=24):
-        return "Solicitação expirada. Peça novamente o cadastro da folga."
+        return "Solicitação expirada. Envie o pedido novamente."
     if cancel:
         action.status = "cancelled"
-        return "Cadastro de folga cancelado. O calendário não foi alterado."
+        return "Pedido cancelado. Nenhuma ação executada."
+    if action.kind == "impressao":
+        from .assistant_printing import enqueue_print
+        return enqueue_print(db, action)
     if action.kind != "folga":
         return "Tipo de ação não permitido."
     p = action.payload

@@ -88,3 +88,63 @@ def test_admin_routes_reject_anonymous():
     app.include_router(printing.router, prefix='/api/printing')
     with TestClient(app) as client:
         assert client.get('/api/printing/devices').status_code in (401, 403)
+
+
+def test_bot_print_confirm_permissions_and_duplicate(print_env):
+    from app.models.assistant import AssistantAction, AssistantIdentity
+    from app.models.usuario import UsuarioRole
+    from app.services.assistant_printing import AddressArgs, prepare_print
+    from app.services.assistant_schedule import confirm_action
+    from app.services.assistant_agent import respond
+    from test_assistant import incoming
+    factory, client = print_env
+    device(client)
+    with factory() as db:
+        user = db.query(Usuario).one()
+        identity = db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        args = AddressArgs(pais='PY', nome='Cliente Teste', endereco='Calle de Prueba 123', cidade='Asunción', remetente='mona')
+        msg = incoming(db, user.id, 'Imprime este endereço', channel='telegram')
+        assert 'erro' in prepare_print(db, msg, identity, args)
+        user.role = UsuarioRole.ADMIN
+        assert 'confirmacao' in prepare_print(db, msg, identity, args)
+        assert db.query(PrintJob).count() == 0
+        action = db.query(AssistantAction).one()
+        assert action.payload['remetente'] is None
+        foreign = incoming(db, user.id, 'confirmo', channel='whatsapp')
+        assert 'mesma conversa' in confirm_action(db, foreign, identity, action)
+        confirm = incoming(db, user.id, 'pode imprimir', channel='telegram')
+        assert 'fila de impressão' in respond(db, confirm, identity)
+        assert db.query(PrintJob).one().pdf.startswith(b'%PDF-')
+        assert 'Nenhuma alteração' in confirm_action(db, confirm, identity, action)
+        assert db.query(PrintJob).count() == 1
+
+
+def test_brazil_validation_sender_snapshot_cancel(print_env):
+    from pydantic import ValidationError
+    from app.models.printing import PrintSender
+    from app.models.assistant import AssistantAction, AssistantIdentity
+    from app.models.usuario import UsuarioRole
+    from app.services.assistant_printing import AddressArgs, prepare_print, render_address
+    from app.services.assistant_schedule import confirm_action
+    from test_assistant import incoming
+    factory, client = print_env
+    device(client)
+    values = dict(pais='BR', nome='Cliente Teste', endereco='Rua Teste 123', cidade='Curitiba')
+    with pytest.raises(ValidationError): AddressArgs(**values)
+    args = AddressArgs(**values, estado='PR', cep='80000-000', remetente='debora')
+    with factory() as db:
+        Base.metadata.create_all(db.get_bind(), tables=[PrintSender.__table__])
+        user = db.query(Usuario).one(); user.role = UsuarioRole.ADMIN
+        identity = db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        msg = incoming(db, user.id, 'Imprime com remetente Débora', channel='telegram')
+        assert 'erro' in prepare_print(db, msg, identity, args)
+        sender = PrintSender(id='debora', name='Remetente de Teste', lines=['Remetente de Teste', 'Rua Exemplo 10'])
+        db.add(sender); db.flush()
+        assert 'confirmacao' in prepare_print(db, msg, identity, args)
+        action = db.query(AssistantAction).one()
+        sender.lines = ['Alterado depois da prévia']
+        assert action.payload['remetente']['linhas'][0] == 'Remetente de Teste'
+        assert render_address(action.payload).startswith(b'%PDF-')
+        confirm = incoming(db, user.id, 'cancela', channel='telegram')
+        assert 'cancelado' in confirm_action(db, confirm, identity, action, cancel=True)
+        assert db.query(PrintJob).count() == 0
