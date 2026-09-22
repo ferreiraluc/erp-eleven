@@ -86,7 +86,7 @@ def tool(name, description, schema):
 
 
 TOOLS = [
-    tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. BR exige CEP, UF e remetente debora ou mona; PY nunca imprime remetente. Pergunte dados faltantes, não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
+    tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. BR exige CPF do destinatário, CEP, UF e remetente debora ou mona; PY nunca imprime remetente. Pergunte dados faltantes, não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
     tool("buscar_rastreios", "Consulta envios e códigos por nome/telefone/pedido/código OU sem termo para listagens, períodos e totais por status. em_aberto inclui PENDENTE, EM_TRANSITO e falhas. Para rastreio individual use ordem=priorizar_abertos; para último/mais recente use recentes.", ShipmentArgs),
     tool("responder_rastreio", "FINALIZA rastreio individual em duas mensagens: código sozinho e depois detalhes do ERP. Use após buscar_rastreios, com um código retornado e inequivocamente identificado. Não use para listagens ou se faltou identificar o cliente.", TrackingReplyArgs),
     tool("consultar_pedidos", "Consulta cadastro/status administrativo dos pedidos, inclusive sem código, por nome, período e situação. Entrega física é em buscar_rastreios.", OrderArgs),

@@ -131,7 +131,7 @@ def test_brazil_validation_sender_snapshot_cancel(print_env):
     device(client)
     values = dict(pais='BR', nome='Cliente Teste', endereco='Rua Teste 123', cidade='Curitiba')
     with pytest.raises(ValidationError): AddressArgs(**values)
-    args = AddressArgs(**values, estado='PR', cep='80000-000', remetente='debora')
+    args = AddressArgs(**values, estado='PR', cep='80000-000', cpf='12345678901', remetente='debora')
     with factory() as db:
         Base.metadata.create_all(db.get_bind(), tables=[PrintSender.__table__])
         user = db.query(Usuario).one(); user.role = UsuarioRole.ADMIN
@@ -148,3 +148,23 @@ def test_brazil_validation_sender_snapshot_cancel(print_env):
         confirm = incoming(db, user.id, 'cancela', channel='telegram')
         assert 'cancelado' in confirm_action(db, confirm, identity, action, cancel=True)
         assert db.query(PrintJob).count() == 0
+
+
+def test_recipient_cpf_required_formatted_and_only_for_brazil():
+    from pydantic import ValidationError
+    from app.services.assistant_printing import AddressArgs
+    values = dict(pais='BR', nome='Cliente Teste', endereco='Rua Exemplo 123',
+                  cidade='Curitiba', estado='PR', cep='80000-000', remetente='mona')
+    for cpf in ['', '123', '12345678901abc']:
+        with pytest.raises(ValidationError): AddressArgs(**values, cpf=cpf)
+    assert AddressArgs(**values, cpf='12345678901').cpf == '123.456.789-01'
+    assert AddressArgs(**values, cpf='123.456.789-01').cpf == '123.456.789-01'
+    values['pais'] = 'PY'
+    assert AddressArgs(**values, cpf='12345678901').cpf == ''
+
+
+def test_old_brazil_draft_cannot_print_without_recipient_cpf():
+    from types import SimpleNamespace
+    from app.services.assistant_printing import enqueue_print
+    draft = SimpleNamespace(payload={'endereco': {'pais': 'BR'}})
+    assert 'CPF do destinatário' in enqueue_print(None, draft)

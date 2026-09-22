@@ -25,10 +25,11 @@ class AddressArgs(BaseModel):
     cidade: str = Field(min_length=2, max_length=100)
     estado: str = Field(default='', max_length=60, description='UF obrigatória no Brasil; departamento opcional no Paraguai.')
     cep: str = Field(default='', max_length=15)
+    cpf: str = Field(default='', max_length=20, description='CPF do destinatário, obrigatório para Brasil. Use somente o informado pelo usuário, nunca o CPF do remetente.')
     telefone: str = Field(default='', max_length=40)
     remetente: Literal['debora', 'mona'] | None = None
 
-    @field_validator('nome', 'endereco', 'cidade', 'estado', 'cep', 'telefone', mode='before')
+    @field_validator('nome', 'endereco', 'cidade', 'estado', 'cep', 'cpf', 'telefone', mode='before')
     @classmethod
     def plain_text(cls, value):
         return ' '.join(value.split()) if isinstance(value, str) else value
@@ -46,10 +47,15 @@ class AddressArgs(BaseModel):
             if len(digits) != 8 or not re.fullmatch(r'[0-9 -]+', self.cep):
                 raise ValueError('Informe o CEP com 8 dígitos.')
             self.cep = digits[:5] + '-' + digits[5:]
+            cpf_digits = re.sub(r'[^0-9]', '', self.cpf)
+            if len(cpf_digits) != 11 or not re.fullmatch(r'[0-9. -]+', self.cpf):
+                raise ValueError('Informe o CPF do destinatário com 11 dígitos para o Brasil.')
+            self.cpf = f'{cpf_digits[:3]}.{cpf_digits[3:6]}.{cpf_digits[6:9]}-{cpf_digits[9:]}'
             if not self.remetente:
                 raise ValueError('Escolha o remetente: Débora ou Mona.')
         else:
             self.remetente = None
+            self.cpf = ''
         return self
 
 
@@ -64,6 +70,8 @@ def render_address(payload):
     rows = [p['nome'], p['endereco'], p['cidade'] + (' - ' + p['estado'] if p['estado'] else ''),
             ('CEP ' + p['cep']) if p['cep'] else '', 'Brasil' if p['pais'] == 'BR' else 'Paraguay',
             ('Tel.: ' + p['telefone']) if p['telefone'] else '']
+    if p['pais'] == 'BR' and p.get('cpf'):
+        rows.append('CPF: ' + p['cpf'])
     def paragraph(text, style):
         return Paragraph(escape(text).replace('\n', '<br/>'), style)
     story = [Paragraph('DESTINATÁRIO', title)]
@@ -80,6 +88,8 @@ def render_address(payload):
 def print_preview(action):
     p = action.payload['endereco']
     lines = [p['nome'], p['endereco'], p['cidade'] + (' - ' + p['estado'] if p['estado'] else ''), p['cep'], p['telefone']]
+    if p['pais'] == 'BR' and p.get('cpf'):
+        lines.append('CPF do destinatário: ' + p['cpf'])
     sender = action.payload.get('remetente')
     return ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
             '\nPaís: ' + ('Brasil' if p['pais'] == 'BR' else 'Paraguai') +
@@ -112,6 +122,8 @@ def prepare_print(db, message, identity, args):
 
 
 def enqueue_print(db, action):
+    if action.payload['endereco']['pais'] == 'BR' and not action.payload['endereco'].get('cpf'):
+        return 'Esta prévia não contém o CPF do destinatário. Cancele e envie novamente o endereço com CPF para imprimir.'
     device = db.query(PrintDevice).filter_by(id=uuid.UUID(action.payload['device_id']), active=True).with_for_update().first()
     if not device:
         return 'A impressora foi desativada. Nenhuma impressão enviada.'
