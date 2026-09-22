@@ -2,8 +2,10 @@
 
 ## Estado da implementação
 
-Primeira etapa: agente Windows e API privada de fila implementados, ainda sem
-publicação ou pareamento. Não há ferramenta de impressão no Telegram nesta etapa.
+Primeira etapa: agente Windows e API privada de fila implementados. API publicada
+em 22/09/2026 (commit 96b0f4b, deploy dep-dap7f33rjlhs73fc004g). Dispositivo
+c427707d-c8c0-416f-92a1-14f21ea3522e cadastrado; aguardando instalação da
+credencial no Windows e confirmação de conexão. Não há ferramenta de impressão no Telegram nesta etapa.
 A geração dos documentos a partir dos modelos do usuário é a próxima integração.
 Não comunicar que o bot já imprime antes de concluir essa integração e um teste
 real no Windows da loja.
