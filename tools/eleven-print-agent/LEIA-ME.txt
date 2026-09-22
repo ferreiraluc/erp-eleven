@@ -1,0 +1,45 @@
+ELEVEN IMPRESSAO - WINDOWS DA LOJA
+
+Este pacote deve ser instalado no computador Windows conectado a HP.
+Nao instale no laptop usado para desenvolver o ERP.
+
+PREPARACAO
+1. SumatraPDF e driver da HP instalados; teste de impressao concluido.
+2. Extraia TODOS os arquivos do ZIP para uma pasta no Windows da loja.
+3. Abra Instalar.cmd. Nao e necessario executar como administrador.
+4. A impressora sugerida e HP Laserjet M14-M17.
+5. Informe somente a credencial exclusiva de impressao emitida pelo ERP.
+   Sem credencial, pressione Enter: a instalacao fica preparada e desconectada.
+6. Abra Eleven Impressao na Area de Trabalho depois do pareamento.
+
+O processo usa A4, uma copia, preto e branco, frente unica. Nao amplia A5
+para A4; reduz somente quando necessario para caber na area imprimivel.
+Mantenha computador ligado, conectado a internet e janela do agente aberta.
+Fechar a janela para o agente. Nao ha inicializacao automatica nesta versao.
+O instalador nao altera permanentemente a politica de PowerShell do Windows.
+Nao desative politicas da empresa caso a execucao seja bloqueada.
+
+ESTADOS
+submitted: Sumatra aceitou o envio a fila do Windows; nao comprova saida do papel.
+uncertain: envio interrompido ou resposta inconclusiva. Confira a fila e a HP.
+O agente nunca reimprime automaticamente um trabalho ja despachado.
+
+O token fica protegido pelo Windows (DPAPI), ligado ao usuario que instalou.
+Nao copie config.json entre computadores ou contas Windows.
+Nenhuma porta de rede e aberta. O agente acessa somente o ERP por HTTPS.
+Os PDFs locais sao removidos apos o resultado ser confirmado pelo servidor.
+
+ESTADO DESTA ENTREGA
+Agente e API da fila preparados. A API ainda precisa ser publicada e pareada.
+A interpretacao de enderecos pelo Telegram e os dois modelos de documento
+ainda precisam ser integrados. Instalar este pacote nao ativa isso sozinho.
+
+REGRAS DOS DOCUMENTOS A INTEGRAR
+- Folha A4 comum; documento novo somente com destinatarios solicitados.
+- Paraguai: somente destinatario.
+- Brasil: destinatario e remetente escolhido entre os cadastrados.
+- Nunca imprimir a lista historica inteira do Word.
+
+REMOVER
+Feche o agente, apague o atalho e a pasta %LOCALAPPDATA%\ElevenPrint.
+Revogue tambem a credencial do dispositivo no ERP.
