@@ -15,6 +15,7 @@ import FiadoView from '@/views/FiadoView.vue'
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {path:'/enderecos',name:'enderecos',component:()=>import('@/views/AddressesView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {
       path: '/assistente',
       name: 'assistente',
@@ -124,6 +125,7 @@ router.beforeEach(async (to, _from, next) => {
     // Check if route requires authentication
     if (to.meta.requiresAuth) {
       if (authStore.isAuthenticated) {
+        if (to.meta.requiresManager && !['ADMIN','GERENTE'].includes(authStore.user?.role || '')) { next('/dashboard'); return }
         if (to.meta.requiresAdmin && authStore.user?.role !== 'ADMIN') {
           next('/dashboard')
           return

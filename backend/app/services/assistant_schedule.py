@@ -59,6 +59,9 @@ def may_schedule(db, message, identity):
 
 
 def action_preview(action):
+    if action.kind in ("frete_emitir","frete_imprimir"):
+        from .assistant_freight import preview
+        return preview(action)
     if action.kind == "impressao":
         from .assistant_printing import print_preview
         return print_preview(action)
@@ -110,7 +113,11 @@ def confirm_action(db, message, identity, action, cancel=False):
         return "Solicitação expirada. Envie o pedido novamente."
     if cancel:
         action.status = "cancelled"
+        if action.kind=="frete_imprimir":return "Impressão cancelada. A etiqueta já emitida não foi cancelada nem reembolsada."
         return "Pedido cancelado. Nenhuma ação executada."
+    if action.kind in ("frete_emitir","frete_imprimir"):
+        from .assistant_freight import confirm
+        return confirm(db,message,action)
     if action.kind == "impressao":
         from .assistant_printing import enqueue_print
         return enqueue_print(db, action)

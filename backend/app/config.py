@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy.sql import func
 
 load_dotenv()
+load_dotenv("/etc/secrets/superfrete.env")
 
 class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/eleven")
@@ -29,6 +30,10 @@ class Settings:
     TELEGRAM_BOT_USERNAME: str = os.getenv("TELEGRAM_BOT_USERNAME", "").lstrip("@")
     TELEGRAM_GROUP_ID: str = os.getenv("TELEGRAM_GROUP_ID", "")
     
+    SUPERFRETE_TOKEN: str = os.getenv('SUPERFRETE_TOKEN', '')
+    SUPERFRETE_CONTACT_EMAIL: str = os.getenv('SUPERFRETE_CONTACT_EMAIL', '')
+    SUPERFRETE_SANDBOX: bool = os.getenv('SUPERFRETE_SANDBOX', 'true').lower() == 'true'
+
     # Timezone configuration
     TIMEZONE: str = os.getenv("TIMEZONE", "America/Sao_Paulo")  # GMT-3
     

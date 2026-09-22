@@ -66,6 +66,7 @@ class AssistantDelivery(Base):
     status = Column(String(20), nullable=False, default="pending", index=True)
     attempts = Column(Integer, nullable=False, default=0)
     provider_id = Column(String(120))
+    document_url = Column(String(2000))
     error_code = Column(String(80))
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     available_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)

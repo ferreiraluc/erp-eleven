@@ -14,7 +14,7 @@ from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboa
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base
 from .config import settings
-from .api.endpoints import assistant, printing
+from .api.endpoints import assistant, printing, address_manager, freight
 from .services import assistant_events  # register atomic tracking outbox listener
 
 # Main
@@ -184,6 +184,8 @@ app.include_router(clientes.router, prefix="/api/clientes", tags=["clientes"])
 app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
 app.include_router(pdv.router, prefix="/api/pdv", tags=["pdv"])
 app.include_router(assistant.router, prefix="/api/assistant", tags=["assistant"])
+app.include_router(freight.router, prefix='/api/freight', tags=['freight'])
+app.include_router(address_manager.router, prefix='/api/address-manager', tags=['address-manager'])
 app.include_router(printing.router, prefix="/api/printing", tags=["printing"])
 
 @app.middleware("http")

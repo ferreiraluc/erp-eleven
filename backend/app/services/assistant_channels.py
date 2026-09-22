@@ -150,8 +150,15 @@ def send_delivery(delivery):
             payload = {"chat_id": chat, "text": delivery.text, "link_preview_options": {"is_disabled": True}}
             if thread:
                 payload["message_thread_id"] = int(thread)
+            method = 'sendMessage'
+            if getattr(delivery, 'document_url', None):
+                from .superfrete import safe_label
+                if not safe_label(delivery.document_url):raise DeliveryError('invalid_document_url')
+                method = 'sendDocument'
+                payload = {'chat_id':chat,'document':delivery.document_url,'caption':delivery.text[:1024]}
+                if thread:payload['message_thread_id']=int(thread)
             result = requests.post(
-                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
+                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/{method}",
                 json=payload, timeout=(5, 25),
             )
             if result.status_code != 200:

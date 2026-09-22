@@ -44,3 +44,10 @@ def tracking_reply(row):
         details.append(f"Atualização no ERP: {stamp.astimezone(settings.tz).strftime('%d/%m/%Y %H:%M')} ({settings.TIMEZONE})")
     details.append("Dados salvos no ERP.")
     return Reply([row["codigo"], "\n".join(details)])
+
+
+class DocumentReply(str):
+    def __new__(cls,text,url):
+        result=super().__new__(cls,text)
+        result.document_url=url
+        return result

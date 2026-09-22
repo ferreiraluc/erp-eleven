@@ -1,6 +1,6 @@
 """Printer-scoped credentials and durable, at-most-once dispatch."""
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, LargeBinary, String, JSON
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, LargeBinary, String, JSON, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from ..database import Base
 from .assistant import utcnow
@@ -22,6 +22,10 @@ class PrintJob(Base):
     device_id = Column(UUID(as_uuid=True), ForeignKey("print_devices.id"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     request_key = Column(UUID(as_uuid=True), nullable=False, unique=True)
+    snapshot = Column(JSON)
+    address_id = Column(UUID(as_uuid=True), ForeignKey('saved_addresses.id'))
+    source = Column(String(20), nullable=False, default='upload')
+    parent_id = Column(UUID(as_uuid=True), ForeignKey('print_jobs.id'))
     pdf = Column(LargeBinary, nullable=False)
     sha256 = Column(String(64), nullable=False)
     status = Column(String(20), nullable=False, default="pending", index=True)
@@ -37,3 +41,8 @@ class PrintSender(Base):
     id = Column(String(30), primary_key=True)
     name = Column(String(100), nullable=False)
     lines = Column(JSON, nullable=False)
+    data = Column(JSON)
+    active = Column(Boolean, default=True, nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+
+from .address_book import SavedAddress, PrintLayout, FreightOrder  # register FK targets

@@ -14,6 +14,7 @@ from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule,
 
 
 from .assistant_printing import AddressArgs, prepare_print
+from .assistant_freight import BotQuote, SelectFreight, FreightId
 
 
 class SearchArgs(BaseModel):
@@ -86,7 +87,12 @@ def tool(name, description, schema):
 
 
 TOOLS = [
-    tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. CPF opcional: extraia do endereço; ausente ou pedido sem CPF = vazio, nunca zeros. BR exige CEP, UF e remetente debora ou mona; PY aceita quaisquer dados fornecidos, inclusive só nome, telefone e cidade; todos os campos do destinatário são opcionais. Não peça rua nem outros campos ausentes para PY. PY nunca imprime remetente. Não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
+    tool("consultar_enderecos", "Busca endereços salvos, remetentes ativos e fretes recentes do autor no gestor. Somente ADMIN/GERENTE habilitado. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
+    tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos informados, remetente cadastrado com dados estruturados, peso/medidas reais e produtos/valores. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário na próxima mensagem.", BotQuote),
+    tool("preparar_etiqueta", "Após escolha explícita do serviço de uma cotação anterior: prepara o frete, mostra valor final e exige confirmação humana antes de pagar e emitir. Não imprime automaticamente.", SelectFreight),
+    tool("consultar_etiqueta", "Atualiza estado/rastreio e obtém PDF de uma etiqueta do autor. Nunca refaz pagamento incerto.", FreightId),
+    tool("preparar_impressao_etiqueta", "Após emissão: devolve PDF da etiqueta para conferência e prepara confirmação separada para imprimir uma cópia A4.", FreightId),
+    tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. CPF opcional: extraia do endereço; ausente ou pedido sem CPF = vazio, nunca zeros. BR exige CEP, UF e remetente ativo cadastrado no gestor; PY aceita quaisquer dados fornecidos, inclusive só nome, telefone e cidade; todos os campos do destinatário são opcionais. Não peça rua nem outros campos ausentes para PY. PY nunca imprime remetente. Não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
     tool("buscar_rastreios", "Consulta envios e códigos por nome/telefone/pedido/código OU sem termo para listagens, períodos e totais por status. em_aberto inclui PENDENTE, EM_TRANSITO e falhas. Para rastreio individual use ordem=priorizar_abertos; para último/mais recente use recentes.", ShipmentArgs),
     tool("responder_rastreio", "FINALIZA rastreio individual em duas mensagens: código sozinho e depois detalhes do ERP. Use após buscar_rastreios, com um código retornado e inequivocamente identificado. Não use para listagens ou se faltou identificar o cliente.", TrackingReplyArgs),
     tool("consultar_pedidos", "Consulta cadastro/status administrativo dos pedidos, inclusive sem código, por nome, período e situação. Entrega física é em buscar_rastreios.", OrderArgs),
@@ -101,6 +107,22 @@ TOOLS = [
 
 
 def execute_tool(db, message, identity, name, arguments):
+    if name in ("cotar_superfrete","preparar_etiqueta","consultar_etiqueta","preparar_impressao_etiqueta"):
+        from .assistant_freight import execute
+        return execute(db,message,identity,name,arguments)
+    if name == "consultar_enderecos":
+        from .assistant_schedule import may_schedule
+        from ..models.address_book import SavedAddress,FreightOrder
+        from ..models.printing import PrintSender
+        from sqlalchemy import cast,String,or_
+        if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
+        term=SearchArgs.model_validate(arguments).termo
+        q=db.query(SavedAddress).filter(SavedAddress.active.is_(True))
+        if term not in ('todos','remetentes'):
+            q=q.filter(or_(SavedAddress.label.ilike(literal_pattern(term),escape="\\"),cast(SavedAddress.data,String).ilike(literal_pattern(term),escape="\\")))
+        return {"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
+                "remetentes":[{"id":s.id,"nome":s.name,"frete_configurado":bool(s.data)} for s in db.query(PrintSender).filter_by(active=True)],
+                "fretes_recentes":[{"id":str(f.id),"destinatario":f.payload.get('to',{}).get('name'),"estado":f.state} for f in db.query(FreightOrder).filter_by(user_id=message.user_id).order_by(FreightOrder.created_at.desc()).limit(5)]}
     if name == "preparar_impressao":
         return prepare_print(db, message, identity, AddressArgs.model_validate(arguments))
     queries = {

@@ -38,7 +38,7 @@ class AddressArgs(BaseModel):
     cep: str = Field(default='', max_length=15)
     cpf: str = Field(default='', max_length=20, description='CPF opcional do destinatário. Extraia do endereço informado. Ausente ou pedido sem CPF: string vazia. Nunca preencha zeros nem use CPF do remetente.')
     telefone: str = Field(default='', max_length=40)
-    remetente: Literal['debora', 'mona'] | None = None
+    remetente: str | None = Field(default=None, max_length=30, description='ID do remetente ativo cadastrado no gestor; debora e mona são os iniciais.')
 
     @field_validator('nome', 'endereco', 'cidade', 'estado', 'cep', 'cpf', 'telefone', mode='before')
     @classmethod
@@ -62,7 +62,7 @@ class AddressArgs(BaseModel):
             self.cep = digits[:5] + '-' + digits[5:]
             self.cpf = printable_cpf(self.cpf)
             if not self.remetente:
-                raise ValueError('Escolha o remetente: Débora ou Mona.')
+                raise ValueError('Escolha um remetente ativo cadastrado no gestor.')
         else:
             self.remetente = None
             self.cpf = ''
@@ -72,22 +72,25 @@ class AddressArgs(BaseModel):
 def render_address(payload):
     """One fresh A4 sheet, only the requested recipient; no legacy document history."""
     data = io.BytesIO()
-    doc = SimpleDocTemplate(data, pagesize=A4, leftMargin=42, rightMargin=42, topMargin=42, bottomMargin=42)
+    from ..schemas.address_book import LayoutConfig
+    layout = LayoutConfig.model_validate(payload.get('layout', {}))
+    doc = SimpleDocTemplate(data, pagesize=A4, leftMargin=layout.margin, rightMargin=layout.margin, topMargin=layout.margin, bottomMargin=layout.margin)
     title = ParagraphStyle('label', fontName='Helvetica-Bold', fontSize=13, leading=17, spaceAfter=10)
-    body = ParagraphStyle('address', fontName='Helvetica-Bold', fontSize=17, leading=23)
-    sender_style = ParagraphStyle('sender', fontName='Helvetica', fontSize=12, leading=17)
+    body = ParagraphStyle('address', fontName='Helvetica-Bold' if layout.bold else 'Helvetica', fontSize=layout.font_size, leading=layout.font_size+6)
+    sender_style = ParagraphStyle('sender', fontName='Helvetica', fontSize=layout.sender_font_size, leading=layout.sender_font_size+5)
     p = payload['endereco']
-    rows = [p['nome'], p['endereco'], ' - '.join(value for value in (p['cidade'], p['estado']) if value),
-            ('CEP ' + p['cep']) if p['cep'] else '', 'Brasil' if p['pais'] == 'BR' else 'Paraguay',
-            ('Tel.: ' + p['telefone']) if p['telefone'] else '']
-    if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
-        rows.append('CPF: ' + printable_cpf(p.get('cpf')))
+    fields = {'nome':p['nome'], 'endereco':p['endereco'],
+              'cidade':' - '.join(value for value in (p['cidade'],p['estado']) if value),
+              'cep':'CEP '+p['cep'] if p['cep'] else '', 'pais':'Brasil' if p['pais']=='BR' else 'Paraguay',
+              'telefone':'Tel.: '+p['telefone'] if p['telefone'] else '',
+              'cpf':'CPF: '+printable_cpf(p.get('cpf')) if p['pais']=='BR' and printable_cpf(p.get('cpf')) else ''}
+    rows = [fields[key] for key in layout.fields]
     def paragraph(text, style):
         return Paragraph(escape(text).replace('\n', '<br/>'), style)
-    story = [Paragraph('DESTINATÁRIO', title)]
+    story = [paragraph(layout.title, title)]
     story.extend(paragraph(row, body) for row in rows if row)
     if p['pais'] == 'BR':
-        story += [Spacer(1, 40), Paragraph('REMETENTE', title)]
+        story += [Spacer(1, layout.sender_gap), Paragraph('REMETENTE', title)]
         story.extend(paragraph(row, sender_style) for row in payload['remetente']['linhas'])
     doc.build(story)
     if doc.page != 1:
@@ -123,10 +126,11 @@ def prepare_print(db, message, identity, args):
     sender = None
     if args.pais == 'BR':
         profile = db.get(PrintSender, args.remetente)
-        if not profile:
+        if not profile or not profile.active:
             return {'erro': 'Remetente ainda não configurado no ERP. Nenhuma impressão enviada.'}
         sender = {'nome': profile.name, 'linhas': list(profile.lines)}
-    payload = {'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id)}
+    from .address_manager import get_layout
+    payload = {'layout': get_layout(db, args.pais), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id)}
     action = AssistantAction(source_message_id=message.id, user_id=message.user_id, kind='impressao', payload=payload)
     db.add(action)
     db.flush()
@@ -145,7 +149,7 @@ def enqueue_print(db, action):
         except ValueError:
             return 'O endereço excedeu uma folha A4. Cancele esta prévia e envie um endereço mais curto.'
         job = PrintJob(device_id=device.id, user_id=action.user_id, request_key=action.id,
-                       pdf=pdf, sha256=hashlib.sha256(pdf).hexdigest(), expires_at=utcnow()+timedelta(hours=24))
+                       pdf=pdf, snapshot=action.payload, source='bot', sha256=hashlib.sha256(pdf).hexdigest(), expires_at=utcnow()+timedelta(hours=24))
         db.add(job)
         db.flush()
     action.status, action.result_id, action.executed_at = 'executed', job.id, utcnow()

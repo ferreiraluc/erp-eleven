@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.database import Base, get_db
 from app.models.printing import PrintDevice, PrintJob
+from app.models.address_book import SavedAddress, PrintLayout
 from app.models.usuario import Usuario
 from app.models.assistant import utcnow
 from app.api.endpoints import printing
@@ -17,7 +18,7 @@ from test_assistant import setup
 def print_env(setup):
     factory, _, user_id = setup
     with factory() as db:
-        Base.metadata.create_all(db.get_bind(), tables=[PrintDevice.__table__, PrintJob.__table__])
+        Base.metadata.create_all(db.get_bind(), tables=[SavedAddress.__table__, PrintLayout.__table__, PrintDevice.__table__, PrintJob.__table__])
     app = FastAPI()
     app.include_router(printing.router, prefix="/api/printing")
     def session():

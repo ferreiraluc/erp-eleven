@@ -89,6 +89,7 @@
             </div>
           </div>
           <div class="cliente-actions">
+            <RouterLink :to="{path:'/enderecos',query:{customer_id:c.id}}" class="action-btn edit-btn" title="Endereços deste cliente">Endereços</RouterLink>
             <!-- Histórico toggle -->
             <button
               @click="toggleHistory(c.id)"

@@ -67,6 +67,7 @@ def process_inbox():
                             id=delivery_id, depends_on_id=predecessor,
                             event_key=f"reply:{message.id}" + (f":{index}" if index else ""), channel=message.channel,
                             destination=message.conversation_id, text=part, user_id=message.user_id,
+                            document_url=getattr(answer,"document_url",None) if index==0 else None,
                             expires_at=message.created_at + timedelta(hours=23) if message.channel == "whatsapp" else None,
                         ))
                         db.flush()  # persist predecessor before its FK-dependent message

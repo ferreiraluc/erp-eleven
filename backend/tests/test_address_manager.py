@@ -1,0 +1,161 @@
+import uuid
+from decimal import Decimal
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from app.database import Base,get_db
+from app.models.address_book import SavedAddress,PrintLayout,FreightOrder
+from app.models.printing import PrintDevice,PrintJob,PrintSender
+from app.models.usuario import Usuario,UsuarioRole
+from app.models.cliente import Cliente
+from app.api.endpoints import address_manager as api,freight
+from app.services import superfrete as sf
+from test_assistant import setup
+
+
+@pytest.fixture
+def env(setup):
+    factory,_,uid=setup
+    with factory() as db:
+        Base.metadata.create_all(db.get_bind(),tables=[m.__table__ for m in [SavedAddress,PrintLayout,PrintDevice,PrintJob,PrintSender,FreightOrder]])
+        user=db.get(Usuario,uid);user.role=UsuarioRole.ADMIN
+        device=PrintDevice(name='Teste',token_hash='x'*64)
+        db.add(device);db.flush();did=str(device.id);db.commit()
+    app=FastAPI();app.include_router(api.router,prefix='/manager');app.include_router(freight.router,prefix='/freight')
+    def session():
+        with factory() as db:yield db
+    def user():
+        with factory() as db:return db.get(Usuario,uid)
+    app.dependency_overrides[get_db]=session;app.dependency_overrides[api.manager]=user
+    return factory,TestClient(app),uid,did
+
+
+def test_addresses_customer_link_version_and_history(env):
+    factory,c,uid,did=env
+    with factory() as db:
+        customer=Cliente(nome='Teste',telefone='123');db.add(customer);db.commit();cid=str(customer.id)
+    payload={'label':'Casa teste','data':{'pais':'PY','nome':'Cliente Teste','cidade':'Asunción','telefone':'123'},'cliente_id':cid}
+    r=c.post('/manager/addresses',json=payload);assert r.status_code==200,r.text
+    address=r.json();assert c.get('/manager/addresses',params={'customer_id':cid}).json()['total']==1
+    body={**payload,'version':address['version'],'label':'Novo nome'}
+    assert c.put('/manager/addresses/'+address['id'],json=body).status_code==200
+    assert c.put('/manager/addresses/'+address['id'],json=body).status_code==409
+    printing={'request_key':str(uuid.uuid4()),'device_id':did,'address_id':address['id'],'data':payload['data']}
+    assert c.post('/manager/preview',json=printing).content.startswith(b'%PDF-')
+    job=c.post('/manager/print',json=printing);assert job.status_code==200,job.text
+    assert c.post('/manager/print',json=printing).json()['id']==job.json()['id']
+    assert c.post('/manager/print',json={**printing,'data':{**payload['data'],'nome':'Outro'}}).status_code==409
+    jid=job.json()['id']
+    with factory() as db:
+        j=db.get(PrintJob,uuid.UUID(jid));j.pdf=b'';j.status='submitted';db.commit()
+    assert c.get('/manager/history/'+jid+'/pdf').content.startswith(b'%PDF-')
+    assert c.post('/manager/history/'+jid+'/cancel').status_code==409
+    assert c.get('/manager/history').json()['items'][0]['recipient']=='Cliente Teste'
+
+
+def test_layout_sender_and_anonymous():
+    app=FastAPI();app.include_router(api.router,prefix='/manager')
+    with TestClient(app) as c:
+        for path in ['/addresses','/history','/senders','/layouts']:assert c.get('/manager'+path).status_code in (401,403)
+
+
+def sf_order(factory,uid,state='quoted'):
+    with factory() as db:
+        order=FreightOrder(request_key=uuid.uuid4(),user_id=uid,environment=sf.environment(),state=state,
+            payload={'to':{'name':'Cliente Teste'},'from':{'city':'Teste'}},rates=[{'id':1,'price':20,'name':'PAC'}])
+        db.add(order);db.commit();return order.id
+
+
+def test_checkout_requires_exact_price_and_never_retries_uncertain(env,monkeypatch):
+    factory,c,uid,did=env
+    key=sf_order(factory,uid)
+    calls=[]
+    def provider(method,path,body):
+        calls.append(path)
+        if path=='cart':return {'id':'provider-test','price':21,'status':'pending'}
+        raise sf.HTTPException(502,'timeout')
+    monkeypatch.setattr(sf,'call',provider)
+    assert c.post(f'/freight/orders/{key}/cart',json={'service':1}).json()['state']=='pending'
+    assert c.post(f'/freight/orders/{key}/cart',json={'service':1}).json()['state']=='pending'
+    assert calls==['cart']
+    assert c.post(f'/freight/orders/{key}/pay',json={'expected_price':'20.00'}).status_code==409
+    assert c.post(f'/freight/orders/{key}/pay',json={'expected_price':'21.00'}).json()['state']=='uncertain'
+    assert c.post(f'/freight/orders/{key}/pay',json={'expected_price':'21.00'}).status_code==409
+    assert calls==['cart','checkout']
+
+
+def test_safe_label_and_document_validation():
+    assert sf.safe_label('https://evil.example/a.pdf') is None
+    assert sf.safe_label('http://api.superfrete.com/x') is None
+    assert sf.safe_label('https://sandbox.superfrete.com/_etiqueta/pdf/test')
+    with pytest.raises(sf.HTTPException):sf.party({'pais':'PY'})
+
+
+def test_bot_paid_pdf_then_separate_print_confirmation(env,monkeypatch):
+    from app.services import assistant_freight as bot
+    from app.services.assistant_schedule import confirm_action
+    from app.models.assistant import AssistantIdentity,AssistantAction
+    from app.services.assistant_replies import DocumentReply
+    from test_assistant import incoming
+    factory,c,uid,did=env
+    monkeypatch.setattr(bot,'SessionLocal',factory)
+    monkeypatch.setattr(sf,'sync_tracking',lambda db,row:None)
+    key=sf_order(factory,uid,'pending')
+    with factory() as db:
+        f=db.get(FreightOrder,key);f.provider_id='provider-test';f.price=Decimal('20.00');db.commit()
+    calls=[]
+    def provider(method,path,body=None):
+        calls.append(path)
+        if path=='checkout':return {'success':True,'purchase':{'orders':[{'id':'provider-test','tracking':'TEST123','print':{'url':'https://sandbox.superfrete.com/_etiqueta/pdf/test'}}]}}
+        if path.startswith('order/info'):return {'id':'provider-test','status':'released','tracking':'TEST123'}
+        if path=='tag/print':return {'url':'https://sandbox.superfrete.com/_etiqueta/pdf/test'}
+        raise AssertionError(path)
+    monkeypatch.setattr(sf,'call',provider)
+    monkeypatch.setattr(sf,'label_pdf',lambda url:b'%PDF-1.4\nmock')
+    with factory() as db:
+        source=incoming(db,uid,'Emitir etiqueta',channel='telegram')
+        action=AssistantAction(source_message_id=source.id,user_id=uid,kind='frete_emitir',payload={'freight_id':str(key),'price':'20.00','recipient':'Teste','environment':sf.environment(),'service_name':'PAC'})
+        db.add(action);db.commit();aid=action.id
+    with factory() as db:
+        action=db.get(AssistantAction,aid)
+        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        message=incoming(db,uid,'confirmo',channel='telegram');db.commit()
+        response=confirm_action(db,message,identity,action)
+        assert isinstance(response,DocumentReply)
+        assert response.document_url.endswith('/test')
+        assert db.query(PrintJob).count()==0
+        next_action=db.query(AssistantAction).filter_by(kind='frete_imprimir').one()
+        db.commit();nid=next_action.id
+    with factory() as db:
+        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        message=incoming(db,uid,'confirmo',channel='telegram')
+        response=confirm_action(db,message,identity,db.get(AssistantAction,nid))
+        assert 'fila' in response
+        assert db.query(PrintJob).count()==1
+        db.commit()
+    assert calls.count('checkout')==1
+
+
+def test_layout_optimistic_version_and_telegram_document(env,monkeypatch):
+    from types import SimpleNamespace
+    from app.services import assistant_channels as channel
+    from app.schemas.address_book import LayoutConfig
+    factory,c,uid,did=env
+    body={'name':'Teste','config':LayoutConfig().model_dump(),'version':0}
+    assert c.put('/manager/layouts/py',json=body).status_code==200
+    assert c.put('/manager/layouts/py',json=body).status_code==409
+    body['version']=1;body['config']['title']='ENTREGA'
+    assert c.put('/manager/layouts/py',json=body).status_code==200
+    sent=[]
+    monkeypatch.setattr(channel,'enabled_channels',lambda:{'telegram'})
+    monkeypatch.setattr(channel.settings,'TELEGRAM_BOT_TOKEN','test-token')
+    monkeypatch.setattr(channel.settings,'TELEGRAM_GROUP_ID','-123')
+    def send(url,**kwargs):
+        sent.append((url,kwargs['json']))
+        return SimpleNamespace(status_code=200,json=lambda:{'ok':True,'result':{'message_id':9}})
+    monkeypatch.setattr(channel.requests,'post',send)
+    delivery=SimpleNamespace(channel='telegram',destination='-123:4',text='Confira antes de imprimir.',document_url='https://sandbox.superfrete.com/_etiqueta/pdf/test')
+    assert channel.send_delivery(delivery)=='9'
+    assert sent[0][0].endswith('/sendDocument')
+    assert sent[0][1]['document']==delivery.document_url
+    assert sent[0][1]['message_thread_id']==4
