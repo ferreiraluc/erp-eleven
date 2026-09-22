@@ -281,6 +281,15 @@ def test_normal_telegram_followups_and_confirmations_need_no_commands(setup):
         assert channels.telegram_message(telegram_update(text)).should_reply
 
 
+def test_group_service_events_do_not_trigger_conversation(setup):
+    update = telegram_update("")
+    update["message"]["new_chat_members"] = [{"id": 999, "is_bot": True}]
+    assert channels.telegram_message(update) is None
+    update["message"].pop("new_chat_members")
+    update["message"]["photo"] = [{"file_id": "image-test"}]
+    assert channels.telegram_message(update).text.startswith("[Mídia recebida.")
+
+
 def test_natural_cancel_and_note_confirmation(setup):
     factory, _, user_id = setup
     with factory() as db:

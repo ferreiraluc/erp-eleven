@@ -49,6 +49,9 @@ def telegram_message(update):
     if not isinstance(content, str) or len(content) > 6000:
         return None
     if not content:
+        if not any(message.get(kind) for kind in ("photo", "audio", "voice", "video", "document", "sticker",
+                                                 "video_note", "contact", "location", "venue", "poll")):
+            return None  # membership changes, pins and other service events are not user requests
         content = "[Mídia recebida. Leitura de imagem/áudio ainda não habilitada; solicite descrição em texto.]"
     content = content.strip()
     username = settings.TELEGRAM_BOT_USERNAME.lower()
