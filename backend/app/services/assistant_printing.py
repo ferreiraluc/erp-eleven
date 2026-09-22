@@ -17,6 +17,17 @@ from ..models.printing import PrintDevice, PrintJob, PrintSender
 from .assistant_schedule import may_schedule
 
 
+def printable_cpf(value):
+    if not value:
+        return ''
+    digits = re.sub(r'[^0-9]', '', value)
+    if len(digits) == 11 and len(set(digits)) == 1:
+        return ''  # Placeholders, including legacy all-zero drafts, never reach paper.
+    if len(digits) != 11 or not re.fullmatch(r'[0-9. -]+', value):
+        raise ValueError('CPF informado deve conter 11 dígitos; se ausente, deixe vazio.')
+    return f'{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}'
+
+
 class AddressArgs(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     pais: Literal['BR', 'PY']
@@ -25,7 +36,7 @@ class AddressArgs(BaseModel):
     cidade: str = Field(min_length=2, max_length=100)
     estado: str = Field(default='', max_length=60, description='UF obrigatória no Brasil; departamento opcional no Paraguai.')
     cep: str = Field(default='', max_length=15)
-    cpf: str = Field(default='', max_length=20, description='CPF do destinatário, obrigatório para Brasil. Use somente o informado pelo usuário, nunca o CPF do remetente.')
+    cpf: str = Field(default='', max_length=20, description='CPF opcional do destinatário. Extraia do endereço informado. Ausente ou pedido sem CPF: string vazia. Nunca preencha zeros nem use CPF do remetente.')
     telefone: str = Field(default='', max_length=40)
     remetente: Literal['debora', 'mona'] | None = None
 
@@ -47,10 +58,7 @@ class AddressArgs(BaseModel):
             if len(digits) != 8 or not re.fullmatch(r'[0-9 -]+', self.cep):
                 raise ValueError('Informe o CEP com 8 dígitos.')
             self.cep = digits[:5] + '-' + digits[5:]
-            cpf_digits = re.sub(r'[^0-9]', '', self.cpf)
-            if len(cpf_digits) != 11 or not re.fullmatch(r'[0-9. -]+', self.cpf):
-                raise ValueError('Informe o CPF do destinatário com 11 dígitos para o Brasil.')
-            self.cpf = f'{cpf_digits[:3]}.{cpf_digits[3:6]}.{cpf_digits[6:9]}-{cpf_digits[9:]}'
+            self.cpf = printable_cpf(self.cpf)
             if not self.remetente:
                 raise ValueError('Escolha o remetente: Débora ou Mona.')
         else:
@@ -70,8 +78,8 @@ def render_address(payload):
     rows = [p['nome'], p['endereco'], p['cidade'] + (' - ' + p['estado'] if p['estado'] else ''),
             ('CEP ' + p['cep']) if p['cep'] else '', 'Brasil' if p['pais'] == 'BR' else 'Paraguay',
             ('Tel.: ' + p['telefone']) if p['telefone'] else '']
-    if p['pais'] == 'BR' and p.get('cpf'):
-        rows.append('CPF: ' + p['cpf'])
+    if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
+        rows.append('CPF: ' + printable_cpf(p.get('cpf')))
     def paragraph(text, style):
         return Paragraph(escape(text).replace('\n', '<br/>'), style)
     story = [Paragraph('DESTINATÁRIO', title)]
@@ -88,8 +96,8 @@ def render_address(payload):
 def print_preview(action):
     p = action.payload['endereco']
     lines = [p['nome'], p['endereco'], p['cidade'] + (' - ' + p['estado'] if p['estado'] else ''), p['cep'], p['telefone']]
-    if p['pais'] == 'BR' and p.get('cpf'):
-        lines.append('CPF do destinatário: ' + p['cpf'])
+    if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
+        lines.append('CPF do destinatário: ' + printable_cpf(p.get('cpf')))
     sender = action.payload.get('remetente')
     return ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
             '\nPaís: ' + ('Brasil' if p['pais'] == 'BR' else 'Paraguai') +
@@ -101,6 +109,8 @@ def print_preview(action):
 def prepare_print(db, message, identity, args):
     if not message.should_reply or not may_schedule(db, message, identity):
         return {'erro': 'Impressão exige pedido direto de ADMIN/GERENTE habilitado para registros.'}
+    if re.search(r'\bsem\s+(?:o\s+)?cpf\b', message.text, re.I):
+        args = args.model_copy(update={'cpf': ''})
     previous = db.query(AssistantAction).filter_by(source_message_id=message.id).first()
     if previous:
         from .assistant_schedule import action_preview
@@ -122,8 +132,6 @@ def prepare_print(db, message, identity, args):
 
 
 def enqueue_print(db, action):
-    if action.payload['endereco']['pais'] == 'BR' and not action.payload['endereco'].get('cpf'):
-        return 'Esta prévia não contém o CPF do destinatário. Cancele e envie novamente o endereço com CPF para imprimir.'
     device = db.query(PrintDevice).filter_by(id=uuid.UUID(action.payload['device_id']), active=True).with_for_update().first()
     if not device:
         return 'A impressora foi desativada. Nenhuma impressão enviada.'

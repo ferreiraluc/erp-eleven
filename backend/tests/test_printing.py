@@ -150,21 +150,37 @@ def test_brazil_validation_sender_snapshot_cancel(print_env):
         assert db.query(PrintJob).count() == 0
 
 
-def test_recipient_cpf_required_formatted_and_only_for_brazil():
+def test_recipient_cpf_optional_formatted_and_only_for_brazil():
     from pydantic import ValidationError
     from app.services.assistant_printing import AddressArgs
     values = dict(pais='BR', nome='Cliente Teste', endereco='Rua Exemplo 123',
                   cidade='Curitiba', estado='PR', cep='80000-000', remetente='mona')
-    for cpf in ['', '123', '12345678901abc']:
+    for cpf in ['123', '12345678901abc']:
         with pytest.raises(ValidationError): AddressArgs(**values, cpf=cpf)
+    for empty in ['', '000.000.000-00', '11111111111']:
+        assert AddressArgs(**values, cpf=empty).cpf == ''
     assert AddressArgs(**values, cpf='12345678901').cpf == '123.456.789-01'
     assert AddressArgs(**values, cpf='123.456.789-01').cpf == '123.456.789-01'
     values['pais'] = 'PY'
+    for empty in ['', '000.000.000-00', '11111111111']:
+        assert AddressArgs(**values, cpf=empty).cpf == ''
     assert AddressArgs(**values, cpf='12345678901').cpf == ''
 
 
-def test_old_brazil_draft_cannot_print_without_recipient_cpf():
-    from types import SimpleNamespace
-    from app.services.assistant_printing import enqueue_print
-    draft = SimpleNamespace(payload={'endereco': {'pais': 'BR'}})
-    assert 'CPF do destinatário' in enqueue_print(None, draft)
+def test_placeholder_cpf_is_not_rendered(monkeypatch):
+    from app.services import assistant_printing as printing
+    captured = []
+    original = printing.Paragraph
+    def paragraph(text, style):
+        captured.append(text)
+        return original(text, style)
+    monkeypatch.setattr(printing, 'Paragraph', paragraph)
+    payload = {'endereco': dict(pais='BR', nome='Teste', endereco='Rua Exemplo 10', cidade='Curitiba',
+                               estado='PR', cep='80000-000', telefone='', cpf='000.000.000-00'),
+               'remetente': {'nome': 'Teste', 'linhas': ['Remetente Teste']}}
+    printing.render_address(payload)
+    assert not any('CPF' in text or '000.000.000-00' in text for text in captured)
+    captured.clear()
+    payload['endereco']['cpf'] = '12345678901'
+    printing.render_address(payload)
+    assert 'CPF: 123.456.789-01' in captured

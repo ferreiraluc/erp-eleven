@@ -78,7 +78,7 @@ PowerShell dependem do Windows da loja; não foram executados no laptop macOS.
 O assistente possui `preparar_impressao`, para endereço em texto, um destinatário por folha A4.
 ADMIN/GERENTE com `can_register` recebe prévia e confirma na mesma conversa. A confirmação
 cria o trabalho na mesma transação da ação; a chave é o UUID da ação, impedindo reenvio em retries.
-PY nunca inclui remetente. BR exige CPF do destinatário (11 dígitos, formatado na prévia e PDF), UF, CEP e escolha de `debora` ou `mona`, cujos perfis
+PY nunca inclui remetente. CPF do destinatário é opcional: quando informado, aparece formatado no final do destinatário. Ausente ou pedido sem CPF omite a linha, inclusive placeholders de zeros. BR exige UF, CEP e escolha de `debora` ou `mona`, cujos perfis
 ficam em `print_senders` no banco (dados pessoais não pertencem ao código/instalador).
 A prévia congela o perfil do remetente. PDF novo não inclui destinatários antigos do Word.
 Esta etapa usa layout simples A4 e não emite declaração de conteúdo, SuperFrete nem lê fotos.
@@ -86,4 +86,4 @@ O bot informa envio à fila, sem afirmar impressão física. Agente Windows exis
 
 Teste físico inicial confirmado pelo responsável em 22/09/2026: papel A4 saiu na HP da loja.
 
-Prévias antigas de Brasil sem CPF não são enviadas à fila: cancele e prepare novamente com o documento. A validação confere formato, não consulta a Receita Federal.
+A validação do CPF informado confere formato, não consulta a Receita Federal.
