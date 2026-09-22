@@ -311,3 +311,67 @@ def test_long_answers_are_split_without_discarding_the_end():
     assert len(result.parts) > 1
     assert all(len(x) <= 3500 for x in result.parts)
     assert result.parts[-1].endswith("Última linha relevante.")
+
+
+def tool_call(name, arguments, call_id="lookup"):
+    return {"tool_calls": [{"id": call_id, "type": "function", "function": {
+        "name": name, "arguments": json.dumps(arguments)}}]}
+
+
+@pytest.mark.parametrize("channel", ["telegram", "whatsapp"])
+def test_tracking_plain_answer_is_split_and_uses_current_database_status(setup, monkeypatch, channel):
+    factory, _, user_id = setup
+    replies = iter([
+        tool_call("buscar_rastreios", {"termo": "Peter", "ordem": "priorizar_abertos"}),
+        {"content": "OY859210230BR\nPeter: entregue ontem."},
+    ])
+    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    with factory() as db:
+        shipment(db, "OY859210230BR", name="Peter", status="EM_TRANSITO")
+        msg = incoming(db, user_id, "Qual o rastreio do Peter?", channel=channel)
+        answer = agent.respond(db, msg, channels.authorized_identity(db, channel, msg.sender_id))
+        assert len(answer.parts) == 2 and answer.parts[0] == "OY859210230BR"
+        assert "Em trânsito" in answer.parts[1] and "entregue ontem" not in answer.parts[1]
+
+
+def test_cached_tracking_answer_forces_fresh_customer_lookup(setup, monkeypatch):
+    factory, _, user_id = setup
+    replies = iter([
+        {"content": "AA123456789BR\nPeter: entregue."},
+        tool_call("buscar_rastreios", {"termo": "Peter", "ordem": "priorizar_abertos"}),
+        {"content": "OY859210230BR\nPeter: em trânsito."},
+    ])
+    choices = []
+    def complete(messages, **kwargs):
+        choices.append(kwargs.get("tool_choice"))
+        return next(replies)
+    monkeypatch.setattr(agent, "complete", complete)
+    with factory() as db:
+        shipment(db, "AA123456789BR", name="Peter", status="ENTREGUE", day=date(2026, 8, 1))
+        shipment(db, "OY859210230BR", name="Peter", status="EM_TRANSITO")
+        msg = incoming(db, user_id, "Qual o rastreio do Peter?")
+        answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
+        assert answer.parts[0] == "OY859210230BR" and len(answer.parts) == 2
+        assert choices == [None, {"type": "function", "function": {"name": "buscar_rastreios"}}, None]
+
+
+def test_unverified_code_in_plain_answer_is_never_delivered(setup, monkeypatch):
+    factory, _, user_id = setup
+    monkeypatch.setattr(agent, "complete", lambda _, **kwargs: {"content": "AA123456789BR"})
+    with factory() as db:
+        msg = incoming(db, user_id, "Qual o rastreio do Peter?")
+        answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
+        assert "AA123456789BR" not in answer and "verificar" in answer
+
+
+def test_tracking_list_remains_one_message(setup, monkeypatch):
+    factory, _, user_id = setup
+    text = "1. Peter: OY859210230BR\n2. Maria: AA123456789BR"
+    replies = iter([tool_call("buscar_rastreios", {"limite": 5}), {"content": text}])
+    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    with factory() as db:
+        shipment(db, "OY859210230BR", name="Peter")
+        shipment(db, "AA123456789BR", name="Maria")
+        msg = incoming(db, user_id, "Quais os últimos 5 envios?")
+        answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
+        assert answer.parts == [text]

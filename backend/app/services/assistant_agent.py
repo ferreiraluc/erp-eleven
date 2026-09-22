@@ -71,15 +71,18 @@ class AgentError(Exception):
     pass
 
 
-def complete(messages):
+def complete(messages, *, tool_choice=None):
     if not settings.DEEPSEEK_API_KEY:
         raise AgentError("deepseek_not_configured")
+    payload = {"model": settings.DEEPSEEK_MODEL, "messages": messages, "tools": TOOLS,
+               "max_tokens": 1800, "temperature": 0.1, "thinking": {"type": "disabled"}}
+    if tool_choice:
+        payload["tool_choice"] = tool_choice
     try:
         response = requests.post(
             "https://api.deepseek.com/chat/completions",
             headers={"Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}"},
-            json={"model": settings.DEEPSEEK_MODEL, "messages": messages, "tools": TOOLS,
-                  "max_tokens": 1800, "temperature": 0.1, "thinking": {"type": "disabled"}},
+            json=payload,
             timeout=(5, 35),
         )
         if response.status_code != 200:
@@ -168,13 +171,17 @@ def respond(db, message, identity):
     context = f"\nAgora na loja: {now.isoformat()} ({settings.TIMEZONE}). Hoje: {now.date().isoformat()}."
     messages = [{"role": "system", "content": SYSTEM + context + "\n" + mode}]
     tracking_candidates = {}
+    queried_codes = set()
+    refresh_attempts = 0
+    tool_choice = None
     for previous in reversed(history):
         messages.append({"role": "user", "content": f"Autor {previous.user_id}, em {previous.created_at.isoformat()}: {previous.text[:1200]}"})
         if previous.response:
             messages.append({"role": "assistant", "content": previous.response[:2200]})
     messages.append({"role": "user", "content": f"Autor {message.user_id}: {content}"})
     for _ in range(6):
-        result = complete(messages)
+        result = complete(messages, tool_choice=tool_choice) if tool_choice else complete(messages)
+        tool_choice = None
         calls = result.get("tool_calls") or []
         if not calls:
             action = db.query(AssistantAction).filter_by(source_message_id=message.id).first()
@@ -183,8 +190,28 @@ def respond(db, message, identity):
             note = db.query(AssistantNote).filter_by(source_message_id=message.id).first()
             if note:
                 return draft_response(note)  # server-owned disclosure and confirmation syntax
-            answer = result.get("content")
-            return (text_reply(str(answer or "Não consegui concluir essa consulta. Tente reformular a pergunta."), message.channel)
+            answer = str(result.get("content") or "Não consegui concluir essa consulta. Tente reformular a pergunta.")
+            # History is context, never evidence of a shipment's current status.
+            # Also enforce the two-message contract when the model skips the formatter.
+            codes = set(re.findall(r"\b[A-Z]{2}\d{9}[A-Z]{2}\b", answer, re.I))
+            codes = {code.upper() for code in codes}
+            codes.update(code for code in queried_codes if re.search(
+                r"(?<!\w)" + re.escape(code) + r"(?!\w)", answer, re.I))
+            if codes - queried_codes and message.should_reply:
+                if refresh_attempts >= 2:
+                    return "Não consegui verificar esse rastreio no ERP agora. Tente consultar novamente."
+                refresh_attempts += 1
+                messages.append({"role": "system", "content":
+                    "A resposta foi retida porque contém rastreio não consultado nesta solicitação. "
+                    "Use buscar_rastreios com os filtros da pergunta atual e o contexto para identificar o cliente; "
+                    "não escolha um código só porque apareceu no histórico. Responda somente com dados desta consulta."})
+                tool_choice = {"type": "function", "function": {"name": "buscar_rastreios"}}
+                continue
+            if len(codes) == 1 and message.should_reply:
+                code = next(iter(codes))
+                if code in tracking_candidates:
+                    return tracking_reply(tracking_candidates[code])
+            return (text_reply(answer, message.channel)
                     if message.should_reply else None)
         if len(calls) > 3:
             raise AgentError("too_many_tool_calls")
@@ -194,17 +221,20 @@ def respond(db, message, identity):
                 name = call["function"]["name"]
                 arguments = json.loads(call["function"]["arguments"])
                 if name == "responder_rastreio":
-                    code = TrackingReplyArgs.model_validate(arguments).codigo
+                    code = TrackingReplyArgs.model_validate(arguments).codigo.upper()
                     if code in tracking_candidates and message.should_reply:
                         return tracking_reply(tracking_candidates[code])
                     output = {"erro": "Consulte e identifique um único rastreio primeiro. Se houver ambiguidade, pergunte qual cliente/envio."}
                 else:
                     output = execute_tool(db, message, identity, name, arguments)
-                    if name == "buscar_rastreios" and output.get("recomendado"):
-                        code = output["recomendado"]["codigo"]
-                        for row in output["resultados"]:
-                            if row["codigo"] == code:
-                                tracking_candidates[code] = row
+                    if name == "buscar_rastreios":
+                        rows = output.get("resultados", [])
+                        queried_codes.update(row["codigo"].upper() for row in rows)
+                        if output.get("recomendado"):
+                            code = output["recomendado"]["codigo"]
+                            for row in rows:
+                                if row["codigo"] == code:
+                                    tracking_candidates[code.upper()] = row
             except (ValueError, KeyError, TypeError, ValidationError):
                 output = {"erro": "Argumentos inválidos; corrija os campos da ferramenta."}
             messages.append({"role": "tool", "tool_call_id": call.get("id", ""),
