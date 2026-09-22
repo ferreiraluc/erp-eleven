@@ -32,7 +32,7 @@
 - O proprietário informou ter registrado a empresa no Brasil e solicitou novo teste. A API da conta Twilio continua retornando um único CustomerProfile (`Lucas Adriano`, `twilio-approved`, atualização 22h05), sem página adicional; o remetente e WABA permanecem os mesmos. Isso não permite verificar o status de um eventual cadastro feito diretamente na Meta.
 - A tentativa anterior foi confirmada `undelivered`. Foi criada uma única nova entrega de teste vinculada pelo evento à tentativa anterior, preservando o histórico e a janela de atendimento da mensagem recebida.
 - Resultado: `SM78a0860b29122122bf7987f4be008e96`, enviado às 22h22min58s, voltou **undelivered / 63058**. A fila local foi reconciliada para `failed / twilio_63058`, preservando esse Message SID. Nenhuma resposta WhatsApp teve entrega comprovada.
-- Solicitado ao proprietário identificar se o cadastro foi feito em Meta/Facebook Business ou Twilio/Trust Hub, para conferir o vínculo e a aprovação no local correto. Não presumir aprovação do cadastro novo nem remoção da restrição por país.
+- O proprietário confirmou que o cadastro foi feito no Twilio/Trust Hub. O painel autenticado da mesma conta do ERP exibe `Lucas Adriano`, `Primary compliance profile • Individual`, `Approved`, com o botão `Convert to a business profile` disponível. Perfis secundários estão indisponíveis até a conversão do principal em empresarial. A policy retornada pela API também é `Primary customer profile for individual`. Não há evidência de conversão empresarial concluída nesta conta; isso, por si só, não determina a causa nem garante a resolução do erro WhatsApp 63058.
 
 Os registros abaixo são históricos e descrevem os estados anteriores do piloto.
 
