@@ -34,7 +34,7 @@
 
       <section class="card">
         <h2>Memória da equipe</h2>
-        <p>O funcionário prepara um registro com <code>/registrar descrição</code> e compartilha com <code>/confirmar ID</code>. Conversas privadas não são copiadas para o grupo. Registros são relatos; não lançam vendas ou movimentam estoque.</p>
+        <p>O funcionário descreve a ocorrência em uma mensagem normal. O bot prepara a prévia; basta responder “confirmo” para compartilhar ou “cancela” para descartar. Conversas privadas não são copiadas para o grupo. Registros são relatos; não lançam vendas ou movimentam estoque.</p>
         <div class="notes"><article v-for="n in notes" :key="n.id" class="note">
           <div class="note-top"><strong>{{ n.kind }}</strong><span>{{ noteState(n.status) }}</span></div>
           <p>{{ n.content }}</p><small>{{ userName(n.user_id) }} · {{ date(n.created_at) }}</small>
