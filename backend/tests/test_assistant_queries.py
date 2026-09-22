@@ -375,3 +375,34 @@ def test_tracking_list_remains_one_message(setup, monkeypatch):
         msg = incoming(db, user_id, "Quais os últimos 5 envios?")
         answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
         assert answer.parts == [text]
+
+
+def test_prose_calendar_preview_must_be_persisted_before_confirmation(setup, monkeypatch):
+    factory, _, user_id = setup
+    replies = iter([
+        {"content": "A prévia é:\nVendedor: Maria Souza\nData: 23/09/2026\nConfirma o cadastro?"},
+        tool_call("preparar_folga", {"vendedor": "Maria Souza", "data": "2026-09-23"}),
+        {"content": "Confirma o cadastro?"},
+    ])
+    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    with factory() as db:
+        db.get(Usuario, user_id).role = UsuarioRole.ADMIN
+        db.add(Vendedor(nome="Maria Souza")); db.flush()
+        msg = incoming(db, user_id, "Cadastre folga para Maria Souza em 23/09/2026", channel="telegram")
+        identity = channels.authorized_identity(db, msg.channel, msg.sender_id)
+        answer = agent.respond(db, msg, identity)
+        action = db.query(AssistantAction).one()
+        assert str(action.id) in answer and db.query(Folga).count() == 0
+        confirmation = incoming(db, user_id, "confirmo", channel="telegram")
+        agent.respond(db, confirmation, identity)
+        assert db.query(Folga).count() == 1 and action.status == "executed"
+
+
+def test_unpersisted_preview_is_not_delivered(setup, monkeypatch):
+    factory, _, user_id = setup
+    monkeypatch.setattr(agent, "complete", lambda _: {"content": "A prévia é:\nMaria Souza\nConfirma o cadastro?"})
+    with factory() as db:
+        msg = incoming(db, user_id, "Cadastre uma folga")
+        answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
+        assert "Nenhum cadastro foi realizado" in answer
+        assert db.query(AssistantAction).count() == db.query(Folga).count() == 0

@@ -1,4 +1,18 @@
-# Verificação de integração — 20/09/2026
+# Verificação de integração — 20 e 21/09/2026
+
+## Estado atual — 21/09/2026, ativação do WhatsApp
+
+- Twilio: conta `Full`, status `active`; remetente `+595 992 036654` confirmado `ONLINE` pela API v2. O remetente antigo de teste não é mais usado pelo ERP.
+- Webhook do remetente salvo como POST para `https://erp-eleven-backend.onrender.com/api/assistant/webhooks/twilio` e relido pela API para confirmar a configuração.
+- Render: `ASSISTANT_WHATSAPP_ENABLED=true`, `TWILIO_WHATSAPP_FROM` atualizado e `TWILIO_WEBHOOK_URL` canônico. Outras credenciais e a ativação do Telegram foram preservadas. O worker local permanece desabilitado.
+- O WhatsApp previamente verificado do proprietário foi vinculado ao mesmo usuário ADMIN do Telegram, com as mesmas permissões. A memória de ocorrências confirmadas continua compartilhada; histórico e confirmação de prévias permanecem na conversa de origem.
+- Publicação `2eb3093`: [deploy concluído](https://dashboard.render.com/web/srv-d29uhc6r433s739t1b30/deploys/dep-daoss20473hc739nqh30). API, banco e worker online. Webhook WhatsApp sem assinatura retornou 403; payload de verificação assinado, sem mensagem, retornou 200 sem gerar resposta.
+- Telegram: conversa normal sem comandos comprovada. Após a correção, “Qual o rastreio do Vandilson?” gerou duas mensagens distintas aceitas em ordem (55 e 56), com código sozinho e dados atuais do ERP.
+- Teste completo WhatsApp ainda aguardando a primeira mensagem do proprietário ao número aprovado. Não houve mensagem recebida pelo ERP até esta verificação; portanto, a entrega de uma resposta WhatsApp ainda não está comprovada.
+- Correção adicional: a IA não pode apresentar uma prévia textual sem persistir a solicitação correspondente. Teste reproduziu o caso e confirmou cadastro somente após “confirmo”, em banco isolado; nenhum cadastro fictício foi criado em produção. Um teste com data já ocupada foi corretamente recusado sem duplicação.
+- Validação atual: 54 testes automatizados passaram. Chamadas reais à DeepSeek validaram recuperação de rastreio antigo e preparação/confirmacão de folga com permissões preservadas.
+
+Os registros abaixo são históricos e descrevem os estados anteriores do piloto.
 
 ## Atualização: piloto Telegram publicado às 23h10 (Brasília)
 
@@ -63,7 +77,7 @@ As mensagens iniciais são demonstrações com dados fictícios. A mensagem post
 - Folgas: ADMIN/GERENTE com `can_register=true` pode pedir um cadastro; uma prévia é armazenada em `assistant_actions`. `confirmo` (única prévia pendente) ou `/confirmar ID` executa na mesma conversa, pelo mesmo autor, em até 24h. A nova folga fica pendente de aprovação, como no cadastro padrão. Sem alteração/exclusão/aprovação automática. Cancelamento de prévia: `/cancelar ID`.
 - A página `/assistente` mostra a auditoria das solicitações de folgas. Motivos pessoais não aparecem nas consultas do calendário do grupo.
 - Migração `o5p6q7r8s9t0` cria a auditoria de ações e acrescenta a dependência entre mensagens de saída.
-- O Telegram permanece com privacidade de grupo: mencionar o bot, responder à mensagem dele ou usar `/eleven pergunta`. O entendimento é livre dentro dessas mensagens; não é necessário decorar comandos de cada consulta.
+- No primeiro deploy da ampliação, a privacidade de grupo ainda exigia menção/resposta/comando. A ativação posterior de mensagens normais está registrada abaixo.
 - WhatsApp permanece em standby; usa o mesmo agente quando o canal for habilitado.
 
 Validação antes da publicação:
@@ -79,12 +93,14 @@ Validação antes da publicação:
 
 A pedido do usuário, o recebimento do Telegram passou a tratar mensagens comuns dos funcionários autorizados como solicitações ao coordenador, incluindo continuações (“e ontem?”), “confirmo” e “cancela”. Os comandos existentes continuam compatíveis, mas não são necessários. Confirmações em linguagem natural também atendem aos rascunhos de ocorrências, mantendo autoria, conversa e validade de 24 horas.
 
-A ativação do recebimento sem comandos/menções depende de desativar Group Privacy no BotFather e readicionar o bot ao grupo existente, conforme https://core.telegram.org/bots/features#privacy-mode. O ERP continua aceitando apenas o grupo configurado e funcionários autorizados. WhatsApp individual já envia textos comuns, mas o canal permanece em standby.
+O recebimento sem comandos/menções usa Group Privacy desativado no BotFather e a readição do bot ao grupo existente, conforme https://core.telegram.org/bots/features#privacy-mode. O ERP continua aceitando apenas o grupo configurado e funcionários autorizados. A conclusão da ativação e os testes estão registrados abaixo.
 
 O resumo de estoque agora devolve explicitamente os totais de loja e depósito para todos os produtos filtrados, evitando que a IA use apenas os itens da página ou peça um produto desnecessariamente. Validação: 46 testes automatizados passaram.
 
 Primeiro deploy da ampliação: commit `c222f13`, Render `dep-daos47e8bjmc73aho0vg`, migração `o5p6q7r8s9t0`, backend/worker/banco online. Testes reais no grupo confirmaram últimos 5 envios e rastreio do Vandilson em duas mensagens (IDs 36 e 37 aceitos, na ordem). Cadastro real de folga foi testado em banco isolado, sem criar folgas fictícias na operação. Permissão de registro ativada apenas para o administrador Telegram já verificado.
 
-Estado da ativação sem comandos: código publicado em `160dd8a` (47 testes passando, build do frontend aprovado). BotFather está em `/setprivacy` para `@ElevenParis11_Bot`, exibindo `Current status is: ENABLED`. A alteração para `Disable` e a remoção/readição do bot ao grupo aguardam a confirmação solicitada ao usuário; **não afirmar que mensagens comuns do grupo já chegam ao webhook enquanto essa etapa não estiver concluída**. Nenhum privilégio de administrador do Telegram é necessário para esse fluxo.
+Ativação sem comandos concluída em 21/09/2026 após autorização explícita: BotFather confirmou `DISABLED`; `getMe` retornou `can_read_all_group_messages=true`. O bot foi removido e readicionado ao grupo como membro comum, sem compartilhar as últimas 100 mensagens. A pergunta normal “Quantas unidades temos na loja e no depósito?” chegou ao webhook, terminou como `done` e recebeu resposta no grupo (envio 43 aceito), com os totais corretos. Nenhum privilégio de administrador do Telegram foi necessário.
+
+O teste repetido de rastreio revelou que a IA podia copiar uma resposta antiga em texto único e ignorar a ferramenta de formatação. A correção verifica códigos contra consultas feitas na solicitação atual, força nova busca quando necessário e aplica a resposta em duas mensagens no servidor. Listagens continuam em formato normal. Validação: 52 testes passaram; teste com DeepSeek real e PostgreSQL somente leitura forçou a recuperação após resposta antiga e retornou código mais status atual em duas partes. Nenhum pedido foi alterado.
 
 A aplicação aceita mensagens normais apenas do grupo configurado e de identidades autorizadas; eventos de entrada/saída de membros são ignorados. Textos de ajuda e confirmação passaram a orientar “confirmo”/“cancela”, mantendo comandos antigos opcionais. Resumo por local conferido diretamente: loja 248 unidades, depósito 480, total 728 (fotografia do teste de 21/09/2026, não dado permanente).
