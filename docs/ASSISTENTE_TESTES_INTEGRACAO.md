@@ -18,6 +18,15 @@
 - Versão final `997ac27`: [deploy concluído às 21h46](https://dashboard.render.com/web/srv-d29uhc6r433s739t1b30/deploys/dep-daosve0473hc739nt130), incluindo a correção das prévias.
 - Validação atual: 54 testes automatizados passaram. Chamadas reais à DeepSeek validaram recuperação de rastreio antigo e preparação/confirmação de folga com permissões preservadas.
 
+### Revalidação às 22h07 — Trust Hub aprovado, restrição de destino
+
+- Após o proprietário concluir a verificação, o perfil principal retornou `twilio-approved`, atualizado às 22h05 (America/Sao_Paulo). Uma chamada sem destinatário passou da recusa 20003 para a validação normal 21604; nenhuma mensagem foi criada nesse diagnóstico.
+- A entrega existente foi recolocada na fila uma única vez, mantendo a entrada já processada e a janela de atendimento. O worker de produção conseguiu enviá-la à API e recebeu `SM0d1a14e94ac754cda080e045aa4dada9`.
+- A consulta posterior à Twilio retornou **undelivered**, erro **63058**. A documentação define esse código como restrição do negócio ao envio para o país do destinatário. Neste teste, o destinatário é o WhatsApp brasileiro confirmado pelo proprietário, final 2052. Não há evidência de proibição geral de mensagens ao Brasil; a causa específica desta conta depende de revisão do provedor.
+- O remetente permanece ONLINE. A aprovação do Trust Hub foi resolvida; a restrição de destino é um bloqueio externo distinto. Não foram alterados números, países, identidades ou permissões geográficas para tentar contorná-la.
+- A entrega local foi reconciliada para `failed` / `twilio_63058`, preservando o Message SID para auditoria. Não repetir envios enquanto a restrição persistir. O ERP segue online, com Telegram operacional.
+- Referência: [Twilio 63058](https://www.twilio.com/docs/api/errors/63058). Foi preparado um texto para revisão do suporte em `docs/TWILIO_SUPORTE_63058.md`; não foi enviado a terceiros.
+
 Os registros abaixo são históricos e descrevem os estados anteriores do piloto.
 
 ## Atualização: piloto Telegram publicado às 23h10 (Brasília)
