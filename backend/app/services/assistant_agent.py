@@ -192,6 +192,11 @@ def respond(db, message, identity):
     if content.startswith("[Mídia recebida."):
         return "Ainda não leio imagens ou áudios neste canal. Envie as informações em texto." if message.should_reply else None
 
+    from .assistant_freight import service_choice, quote_preview
+    from ..models.address_book import FreightOrder
+    choice=service_choice(db,message,identity,content)
+    if choice is not None:return choice
+
     history = db.query(AssistantMessage).filter(
         AssistantMessage.channel == message.channel,
         AssistantMessage.conversation_id == message.conversation_id,
@@ -283,6 +288,9 @@ def respond(db, message, identity):
                     output = {"erro": "Consulte e identifique um único rastreio primeiro. Se houver ambiguidade, pergunte qual cliente/envio."}
                 else:
                     output = execute_tool(db, message, identity, name, arguments)
+                    if name == "cotar_superfrete" and "erro" not in output:
+                        quote=db.query(FreightOrder).filter_by(request_key=message.id).first()
+                        if quote:return quote_preview(quote)
                     if name == "buscar_rastreios":
                         rows = output.get("resultados", [])
                         queried_codes.update(row["codigo"].upper() for row in rows)

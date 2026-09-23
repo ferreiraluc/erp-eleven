@@ -268,3 +268,37 @@ def test_legacy_sender_parsing_does_not_turn_name_or_phone_into_district():
     assert data['bairro']==''
     profile.data={**data,'bairro':'Centro','endereco':'Rua Atualizada'}
     assert 'Rua Atualizada, 10' in sender_lines(profile)
+
+
+def test_service_number_uses_saved_quote_and_creates_confirmable_preview(env,monkeypatch):
+    from app.services import assistant_agent as agent,assistant_freight as bot
+    from app.models.assistant import AssistantIdentity,AssistantAction
+    from test_assistant import incoming
+    factory,c,uid,did=env
+    monkeypatch.setattr(bot,'SessionLocal',factory)
+    monkeypatch.setattr(agent,'complete',lambda *a,**kw:pytest.fail('Service selection must not depend on AI'))
+    calls=[]
+    def provider(method,path,body=None):
+        calls.append((path,body))
+        assert path=='cart'
+        return {'id':'cart-test','price':46.49,'status':'pending'}
+    monkeypatch.setattr(sf,'call',provider)
+    with factory() as db:
+        source=incoming(db,uid,'Cotar etiqueta',channel='telegram')
+        order=FreightOrder(request_key=source.id,user_id=uid,environment=sf.environment(),state='quoted',payload={'to':{'name':'Cliente'},'from':{'name':'Remetente'}},rates=[{'id':1,'name':'PAC','price':25.65},{'id':2,'name':'SEDEX','price':46.49}])
+        db.add(order);db.flush();source.response=bot.quote_preview(order);source.status='done';db.commit();key=order.id
+    with factory() as db:
+        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        message=incoming(db,uid,'2',channel='telegram');db.commit()
+        result=agent.respond(db,message,identity)
+        assert 'SEDEX' in result and '46.49' in result and 'confirmo' in result
+        action=db.query(AssistantAction).filter_by(source_message_id=message.id).one()
+        assert action.kind=='frete_emitir' and action.payload['freight_id']==str(key)
+        db.commit()
+    with factory() as db:
+        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        message=incoming(db,uid,'2',channel='telegram');db.commit()
+        assert 'SEDEX' in agent.respond(db,message,identity)
+        assert db.query(AssistantAction).filter_by(status='draft').count()==1
+    assert len(calls)==1 and calls[0][1]['service']==2
+    assert not any(path=='checkout' for path,_ in calls)

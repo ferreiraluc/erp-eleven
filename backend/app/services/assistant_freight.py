@@ -124,3 +124,49 @@ def confirm(db,message,action):
         action.status='executed';action.result_id=job.id;action.executed_at=utcnow()
         return 'Etiqueta enviada à fila da loja: uma cópia A4. Confira a saída na impressora.'
     except HTTPException as e:return str(e.detail)
+
+
+def quote_preview(order):
+    """Stable option order and quote identity, persisted with the bot response."""
+    lines=[f"Cotação para {order.payload['to']['name']}, remetente {order.payload['from']['name']}:"]
+    for index,rate in enumerate(order.rates,1):
+        price=f"{float(rate['price']):.2f}".replace('.',',')
+        days=rate.get('delivery_time')
+        lines.append(f"{index}. {rate.get('name',rate['id'])} — R$ {price}"+(f" — prazo estimado {days} dias" if days is not None else ''))
+    lines += ['Responda com o número ou nome do serviço. Depois mostrarei o valor final para você confirmar o pagamento.',f'Cotação: {order.id}']
+    return '\n'.join(lines)
+
+
+def service_choice(db,message,identity,content):
+    import re
+    from datetime import timedelta
+    from ..models.assistant import AssistantMessage
+    match=re.fullmatch(r'(?:(?:opção|opcao|quero|escolho)\s+)?(\d{1,2}|sedex|pac|mini\s*envios)[.! ]*',content,re.I)
+    if not match or not message.should_reply or not may_schedule(db,message,identity):return None
+    order=db.query(FreightOrder).join(AssistantMessage,AssistantMessage.id==FreightOrder.request_key).filter(
+        FreightOrder.user_id==message.user_id,
+        AssistantMessage.channel==message.channel,
+        AssistantMessage.conversation_id==message.conversation_id,
+        AssistantMessage.created_at<=message.created_at,
+    ).order_by(FreightOrder.created_at.desc()).first()
+    if not order:return None
+    if order.state not in ('quoted','pending'):
+        return 'Esta cotação já avançou ou precisa de conferência. Consulte a etiqueta existente antes de emitir outra.'
+    created=order.created_at.replace(tzinfo=utcnow().tzinfo) if order.created_at.tzinfo is None else order.created_at
+    if order.state=='quoted' and utcnow()-created>timedelta(minutes=30):return 'Essa cotação expirou. Peça uma nova cotação com os mesmos dados; nenhuma etiqueta foi comprada.'
+    value=match[1].lower()
+    if value.isdigit():
+        index=int(value)-1
+        rate=order.rates[index] if 0<=index<len(order.rates) else None
+    else:rate=next((r for r in order.rates if re.sub(r'\s','',str(r.get('name','')).lower())==re.sub(r'\s','',value)),None)
+    if not rate:return 'Escolha uma das opções disponíveis:\n'+quote_preview(order)
+    if order.state=='pending' and order.service!=rate['id']:return 'Já há uma prévia com outro serviço. Cancele essa solicitação e peça uma nova cotação para trocar o serviço.'
+    existing=db.query(AssistantAction).join(AssistantMessage,AssistantMessage.id==AssistantAction.source_message_id).filter(
+        AssistantAction.user_id==message.user_id,AssistantAction.kind=='frete_emitir',AssistantAction.status=='draft',
+        AssistantAction.payload['freight_id'].as_string()==str(order.id),
+        AssistantMessage.channel==message.channel,AssistantMessage.conversation_id==message.conversation_id,
+        AssistantAction.created_at>=utcnow()-timedelta(hours=24),
+    ).first()
+    if existing:return preview(existing)
+    result=execute(db,message,identity,'preparar_etiqueta',{'freight_id':str(order.id),'service':rate['id']})
+    return result.get('confirmacao') or result.get('erro') or result.get('error') or 'Não foi possível preparar a etiqueta. Nenhum pagamento foi realizado; confira o frete no gestor.'
