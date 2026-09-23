@@ -159,3 +159,38 @@ def test_layout_optimistic_version_and_telegram_document(env,monkeypatch):
     assert sent[0][0].endswith('/sendDocument')
     assert sent[0][1]['document']==delivery.document_url
     assert sent[0][1]['message_thread_id']==4
+
+
+def test_bot_quotes_with_sender_in_message_without_sender_registration(env,monkeypatch):
+    from app.services import assistant_freight as bot
+    from app.models.assistant import AssistantIdentity
+    from test_assistant import incoming
+    factory,c,uid,did=env
+    calls=[]
+    def provider(method,path,body=None):
+        calls.append((path,body))
+        return [{'id':1,'name':'PAC','price':20,'delivery_time':5}]
+    monkeypatch.setattr(sf,'call',provider)
+    address={'pais':'BR','nome':'Cliente Teste','endereco':'Rua Teste','numero':'10','bairro':'Centro','cidade':'São Paulo','estado':'SP','cep':'01001000','cpf':'12345678909'}
+    sender={**address,'nome':'Remetente da conversa','cep':'85865010','cidade':'Foz do Iguaçu','estado':'PR'}
+    with factory() as db:
+        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        message=incoming(db,uid,'Cotar com remetente enviado e declaração não comercial',channel='telegram')
+        args={'endereco':address,'remetente':sender,'package':{'weight':0.3,'height':5,'width':15,'length':20},'products':[{'name':'Camiseta','quantity':5,'unitary_value':'50.00'}],'non_commercial':True}
+        result=bot.execute(db,message,identity,'cotar_superfrete',args)
+        assert result.get('state')=='quoted',result
+        order=db.get(FreightOrder,uuid.UUID(result['id']))
+        assert order.payload['from']['name']=='Remetente da conversa'
+        assert order.payload['products'][0]['quantity']==5
+        assert order.payload['options']['non_commercial'] is True
+        assert db.query(PrintSender).count()==0
+        assert bot.execute(db,message,identity,'cotar_superfrete',args)['id']==result['id']
+        assert [p for p,_ in calls]==['calculator']
+        assert calls[0][1]['from']['postal_code']=='85865010'
+        assert db.query(PrintJob).count()==0
+
+
+def test_sender_missing_fields_are_specific():
+    with pytest.raises(sf.HTTPException) as exc:
+        sf.party({'pais':'BR','nome':'Teste','endereco':'Rua teste','cidade':'Foz do Iguaçu','estado':'PR','cep':'85865010'})
+    assert exc.value.detail=='Complete no remetente: bairro.'

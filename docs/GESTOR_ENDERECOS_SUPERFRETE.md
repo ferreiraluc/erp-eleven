@@ -24,7 +24,7 @@ A impressão simples continua aceitando CPF ausente e dados parciais do Paraguai
 
 Exemplo: “Quero cotar uma etiqueta para este endereço: [dados]. Remetente [nome], pacote [peso e medidas], conteúdo [descrição, quantidade e valor], [nota fiscal ou envio não comercial].”
 
-O bot consulta cadastros, pede dados faltantes e apresenta serviços/valores. Após a escolha do serviço, pede confirmação do pagamento. Depois da emissão, envia o PDF no Telegram e pede uma segunda confirmação para imprimir. Não exige comandos com barra.
+O bot aceita destinatário e remetente informados na conversa, sem exigir cadastro prévio do remetente. Pode também extrair os dados do bloco de impressão dos remetentes existentes; pede somente campos faltantes. Os dados ficam preservados na cotação sem sobrescrever o cadastro-base. Descrição, quantidade e valor unitário dos itens são usados na declaração informada pelo usuário. O bot apresenta serviços/valores. Após a escolha do serviço, pede confirmação do pagamento. Depois da emissão, envia o PDF no Telegram e pede uma segunda confirmação para imprimir. Não exige comandos com barra.
 
 Confirmações pertencem ao usuário autorizado e à conversa de origem. Cotar não paga. Cancelar a impressão de uma etiqueta paga não cancela nem reembolsa a compra.
 

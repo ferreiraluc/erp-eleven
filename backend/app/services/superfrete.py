@@ -10,6 +10,7 @@ from uuid import UUID
 from ..config import settings
 from ..models.address_book import SavedAddress, FreightOrder
 from ..models.printing import PrintSender
+from ..schemas.address_book import AddressData
 from ..models.assistant import utcnow
 
 
@@ -32,13 +33,16 @@ class QuoteInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     request_key:UUID
     address_id:UUID
-    sender_id:str=Field(max_length=30)
+    sender_id:str|None=Field(default=None,max_length=30)
+    remetente:AddressData|None=None
     package:Package
     products:list[Product]=Field(min_length=1,max_length=50)
     non_commercial:bool=False
     invoice:str=Field(default='',max_length=44)
     @model_validator(mode='after')
     def fiscal(self):
+        if bool(self.sender_id)==bool(self.remetente):
+            raise ValueError('Informe um remetente cadastrado OU os dados do remetente nesta conversa.')
         if not self.non_commercial and not re.fullmatch(r'[0-9]{44}',self.invoice):
             raise ValueError('Informe a chave de nota fiscal (44 dígitos) ou selecione declaração de conteúdo para envio não comercial.')
         return self
@@ -75,8 +79,12 @@ def party(data,recipient=False):
     p['postal_code']=re.sub(r'\D','',p['postal_code']);p['document']=re.sub(r'\D','',p['document']);p['state_abbr']=p['state_abbr'].upper()
     limits={'name':50,'address':50,'number':10,'district':50,'complement':20,'city':50}
     if any(len(p[k])>n for k,n in limits.items()):raise HTTPException(400,'Endereço excede limites da transportadora (nome/rua/cidade: 50; complemento: 20).')
-    if not all(p[k] for k in ['name','address','district','city']) or len(p['postal_code'])!=8 or p['state_abbr'] not in 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split():
-        raise HTTPException(400,'Para frete, complete nome, rua, bairro, cidade, UF e CEP de remetente e destinatário.')
+    missing=[label for key,label in [('name','nome'),('address','rua'),('district','bairro'),('city','cidade')] if not p[key]]
+    if len(p['postal_code'])!=8:missing.append('CEP válido com 8 dígitos')
+    if p['state_abbr'] not in 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split():missing.append('UF válida')
+    if missing:
+        who='destinatário' if recipient else 'remetente'
+        raise HTTPException(400,f'Complete no {who}: '+', '.join(missing)+'.')
     if recipient and (len(p['document']) not in (11,14) or len(set(p['document']))==1):raise HTTPException(400,'A emissão SuperFrete exige CPF/CNPJ do destinatário.')
     return p
 
@@ -86,10 +94,16 @@ def quote_order(db,body,user_id):
     if previous:
         if previous.user_id!=user_id or previous.payload.get('_request')!=body.model_dump(mode='json',exclude={'request_key'}):raise HTTPException(409,'Identificador já utilizado com outros dados.')
         return previous
-    address=db.get(SavedAddress,body.address_id);sender=db.get(PrintSender,body.sender_id)
-    if not address or not address.active or not sender or not sender.active:raise HTTPException(400,'Escolha endereço e remetente ativos.')
-    if not sender.data:raise HTTPException(400,'Complete os campos de frete do remetente no gestor.')
-    origin=party(sender.data);destination=party(address.data,True)
+    address=db.get(SavedAddress,body.address_id)
+    if not address or not address.active:raise HTTPException(400,'Escolha um endereço ativo.')
+    if body.remetente:
+        sender_data=body.remetente.model_dump()
+    else:
+        sender=db.get(PrintSender,body.sender_id)
+        if not sender or not sender.active:raise HTTPException(400,'Escolha um remetente ativo.')
+        if not sender.data:raise HTTPException(400,'Remetente possui apenas texto de impressão. Envie os dados do remetente nesta conversa ou preencha os campos SuperFrete no ERP.')
+        sender_data=sender.data
+    origin=party(sender_data);destination=party(address.data,True)
     payload={'from':origin,'to':destination,'volumes':body.package.model_dump(),
              'products':[{'name':p.name,'quantity':p.quantity,'unitary_value':float(p.unitary_value)} for p in body.products],
              'options':{'non_commercial':body.non_commercial,'own_hand':False,'receipt':False},'platform':'ERP Eleven',

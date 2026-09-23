@@ -15,7 +15,8 @@ class BotQuote(BaseModel):
     model_config=ConfigDict(extra='forbid')
     address_id:uuid.UUID|None=None
     endereco:AddressData|None=None
-    sender_id:str=Field(max_length=30)
+    sender_id:str|None=Field(default=None,max_length=30)
+    remetente:AddressData|None=None
     package:sf.Package
     products:list[sf.Product]=Field(min_length=1,max_length=50)
     non_commercial:bool=False
@@ -23,6 +24,7 @@ class BotQuote(BaseModel):
     @model_validator(mode='after')
     def destination(self):
         if bool(self.address_id)==bool(self.endereco):raise ValueError('Informe endereço salvo OU dados do endereço.')
+        if bool(self.sender_id)==bool(self.remetente):raise ValueError('Informe remetente cadastrado OU dados do remetente.')
         return self
 
 
@@ -60,7 +62,7 @@ def execute(db,message,identity,name,args):
             if not address_id:
                 saved=SavedAddress(label=a.endereco.nome or 'Endereço do bot',data=a.endereco.model_dump(),created_by=message.user_id)
                 db.add(saved);db.flush();address_id=saved.id
-            q=sf.QuoteInput(request_key=message.id,address_id=address_id,sender_id=a.sender_id,package=a.package,products=a.products,non_commercial=a.non_commercial,invoice=a.invoice)
+            q=sf.QuoteInput(request_key=message.id,address_id=address_id,sender_id=a.sender_id,remetente=a.remetente,package=a.package,products=a.products,non_commercial=a.non_commercial,invoice=a.invoice)
             row=sf.quote_order(db,q,message.user_id)
             return {**sf.summary(row),'instrucao':'Mostre serviços e valores e peça que o usuário escolha. Não emita nesta mensagem.'}
         if name=='preparar_etiqueta':
