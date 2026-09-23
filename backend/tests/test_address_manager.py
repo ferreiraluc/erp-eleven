@@ -257,3 +257,14 @@ def test_agent_quote_serializes_dates_and_retains_failed_user_details(env,monkey
         assert 'PAC' in answer
         assert db.query(FreightOrder).count()==1
         assert db.query(PrintJob).count()==0
+
+
+def test_legacy_sender_parsing_does_not_turn_name_or_phone_into_district():
+    from types import SimpleNamespace
+    from app.services.sender_addresses import sender_address,sender_lines
+    profile=SimpleNamespace(name='Nome completo',data=None,lines=['Nome curto','Rua Exemplo 10','Curitiba - PR','CEP 80010000'])
+    data=sender_address(profile)
+    assert data['endereco']=='Rua Exemplo' and data['numero']=='10'
+    assert data['bairro']==''
+    profile.data={**data,'bairro':'Centro','endereco':'Rua Atualizada'}
+    assert 'Rua Atualizada, 10' in sender_lines(profile)

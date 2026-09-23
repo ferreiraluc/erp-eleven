@@ -21,6 +21,8 @@ def sender_address(sender):
         city=re.fullmatch(r'(.+?)\s*[-–/]\s*([A-Z]{2})',line,re.I)
         if city:data['cidade']=city[1].strip();data['estado']=city[2].upper();continue
         street=re.fullmatch(r'(.+?),\s*(\d+[A-Za-z]?|s/?n)',line,re.I)
+        if not street and re.match(r'^(?:Rua|R\.|Avenida|Av\.?|Alameda|Travessa|Estrada|Rodovia)\s',line,re.I):
+            street=re.fullmatch(r'(.+?)\s+(\d+[A-Za-z]?|s/?n)',line,re.I)
         if street:data['endereco']=street[1].strip();data['numero']=street[2];continue
         district=re.fullmatch(r'(?:bairro)\s*:?\s*(.+)',line,re.I)
         if district:data['bairro']=district[1].strip();continue
