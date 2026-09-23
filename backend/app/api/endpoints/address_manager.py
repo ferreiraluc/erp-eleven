@@ -16,6 +16,7 @@ from ...models.assistant import utcnow
 from ...schemas.address_book import AddressInput, SenderInput, LayoutInput, LayoutConfig, PrintInput
 from ...services.address_manager import compose, enqueue_address
 from ...services.assistant_printing import render_address
+from ...services.sender_addresses import sender_address
 
 router=APIRouter()
 manager=require_role(['ADMIN','GERENTE'])
@@ -75,7 +76,7 @@ def update_address(key:uuid.UUID,body:AddressInput,user=Depends(manager),db:Sess
 
 @router.get('/senders')
 def senders(user=Depends(manager),db:Session=Depends(get_db)):
-    return [{'id':r.id,'name':r.name,'lines':r.lines,'data':r.data,'active':r.active,'version':r.version} for r in db.query(PrintSender).order_by(PrintSender.name)]
+    return [{'id':r.id,'name':r.name,'lines':r.lines,'data':sender_address(r),'active':r.active,'version':r.version} for r in db.query(PrintSender).order_by(PrintSender.name)]
 
 
 @router.post('/senders')

@@ -24,7 +24,7 @@ class BotQuote(BaseModel):
     @model_validator(mode='after')
     def destination(self):
         if bool(self.address_id)==bool(self.endereco):raise ValueError('Informe endereço salvo OU dados do endereço.')
-        if bool(self.sender_id)==bool(self.remetente):raise ValueError('Informe remetente cadastrado OU dados do remetente.')
+        if not self.sender_id and not self.remetente:raise ValueError('Informe remetente cadastrado ou dados do remetente.')
         return self
 
 

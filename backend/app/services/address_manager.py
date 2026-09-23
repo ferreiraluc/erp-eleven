@@ -1,3 +1,4 @@
+from .sender_addresses import sender_lines
 import hashlib
 from datetime import timedelta
 from fastapi import HTTPException
@@ -21,7 +22,7 @@ def compose(db, body):
     if args.pais=='BR':
         row = db.get(PrintSender,body.sender_id)
         if not row or not row.active: raise HTTPException(400,'Escolha um remetente ativo.')
-        sender = {'nome':row.name,'linhas':row.lines}
+        sender = {'nome':row.name,'linhas':sender_lines(row)}
     return {'endereco':args.model_dump(),'remetente':sender,'layout':get_layout(db,args.pais),'editor':body.data.model_dump(),'sender_id':body.sender_id}
 
 

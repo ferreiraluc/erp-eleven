@@ -194,3 +194,66 @@ def test_sender_missing_fields_are_specific():
     with pytest.raises(sf.HTTPException) as exc:
         sf.party({'pais':'BR','nome':'Teste','endereco':'Rua teste','cidade':'Foz do Iguaçu','estado':'PR','cep':'85865010'})
     assert exc.value.detail=='Complete no remetente: bairro.'
+
+
+def test_legacy_print_sender_is_same_freight_address(env,monkeypatch):
+    from app.services.sender_addresses import sender_address
+    factory,c,uid,did=env
+    with factory() as db:
+        sender=PrintSender(id='legacy',name='Remetente Teste',lines=['Rua Exemplo, 330','Centro','Foz do Iguaçu - PR','CEP 85865-310','CPF: 123.456.789-09'])
+        db.add(sender);db.commit()
+        data=sender_address(sender)
+        assert data['bairro']=='Centro' and data['numero']=='330'
+        assert data['cep']=='85865310'
+    address=c.post('/manager/addresses',json={'label':'Destino','data':{**data,'nome':'Cliente'}}).json()
+    calls=[]
+    monkeypatch.setattr(sf,'call',lambda method,path,body:(calls.append(body) or [{'id':1,'price':20,'name':'PAC'}]))
+    payload={'request_key':str(uuid.uuid4()),'address_id':address['id'],'sender_id':'legacy','package':{'weight':1,'height':15,'width':20,'length':15},'products':[{'name':'Camiseta','quantity':5,'unitary_value':50}],'non_commercial':True}
+    r=c.post('/freight/quotes',json=payload)
+    assert r.status_code==200,r.text
+    assert calls[0]['from']['postal_code']=='85865310'
+    assert c.get('/manager/senders').json()[0]['data']['bairro']=='Centro'
+    with factory() as db:
+        f=db.get(FreightOrder,uuid.UUID(r.json()['id']))
+        assert f.payload['from']['address']=='Rua Exemplo'
+        assert f.payload['from']['district']=='Centro'
+    # A conversational complement overrides only the supplied field.
+    payload['request_key']=str(uuid.uuid4());payload['remetente']={'bairro':'Porto Meira'}
+    r=c.post('/freight/quotes',json=payload);assert r.status_code==200,r.text
+    with factory() as db:
+        f=db.get(FreightOrder,uuid.UUID(r.json()['id']))
+        assert f.payload['from']['district']=='Porto Meira'
+        assert f.payload['from']['postal_code']=='85865310'
+
+
+def test_agent_quote_serializes_dates_and_retains_failed_user_details(env,monkeypatch):
+    import json
+    from app.services import assistant_agent as agent
+    from app.models.assistant import AssistantIdentity
+    from test_assistant import incoming
+    factory,c,uid,did=env
+    address={'pais':'BR','nome':'Teste','endereco':'Rua Teste','numero':'10','bairro':'Centro','cidade':'São Paulo','estado':'SP','cep':'01001000','cpf':'12345678909'}
+    args={'endereco':address,'remetente':address,'package':{'weight':1,'height':15,'width':20,'length':15},'products':[{'name':'Camiseta','quantity':5,'unitary_value':50}],'non_commercial':True}
+    monkeypatch.setattr(sf,'call',lambda *a,**kw:[{'id':1,'name':'PAC','price':20}])
+    seen=[]
+    def complete(messages,**kwargs):
+        if not seen:
+            assert kwargs['tool_choice']['function']['name']=='consultar_enderecos'
+            assert not any('frete não configurado' in (m.get('content') or '') for m in messages)
+            assert any('Bairro Porto Meira' in m.get('content','') for m in messages)
+            seen.append(True)
+            return {'tool_calls':[{'id':'quote','type':'function','function':{'name':'cotar_superfrete','arguments':json.dumps(args)}}]}
+        output=json.loads(messages[-1]['content'])
+        assert output['state']=='quoted'
+        assert isinstance(output['created_at'],str)
+        return {'content':'PAC R$ 20. Escolha o serviço.'}
+    monkeypatch.setattr(agent,'complete',complete)
+    with factory() as db:
+        stale=incoming(db,uid,'Use o remetente salvo',channel='telegram');stale.status='done';stale.response='O remetente está com frete não configurado no gestor.';db.flush()
+        previous=incoming(db,uid,'Bairro Porto Meira',channel='telegram');previous.status='failed';db.flush()
+        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        msg=incoming(db,uid,'Cote a etiqueta com os dados enviados',channel='telegram')
+        answer=agent.respond(db,msg,identity)
+        assert 'PAC' in answer
+        assert db.query(FreightOrder).count()==1
+        assert db.query(PrintJob).count()==0

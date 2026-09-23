@@ -1,4 +1,5 @@
 """Confirmed address printing through the existing device queue."""
+from .sender_addresses import sender_lines
 import hashlib
 import io
 import re
@@ -128,7 +129,7 @@ def prepare_print(db, message, identity, args):
         profile = db.get(PrintSender, args.remetente)
         if not profile or not profile.active:
             return {'erro': 'Remetente ainda não configurado no ERP. Nenhuma impressão enviada.'}
-        sender = {'nome': profile.name, 'linhas': list(profile.lines)}
+        sender = {'nome': profile.name, 'linhas': sender_lines(profile)}
     from .address_manager import get_layout
     payload = {'layout': get_layout(db, args.pais), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id)}
     action = AssistantAction(source_message_id=message.id, user_id=message.user_id, kind='impressao', payload=payload)

@@ -4,7 +4,7 @@ Acesso: Dashboard → **Endereços e envios** (`/enderecos`), para ADMIN e GEREN
 
 - **Endereços:** cadastros Brasil/Paraguai, com vínculo opcional a clientes de pedidos ou PDV, sem sobrescrever o cadastro original do cliente.
 - **Impressões:** histórico do bot e do ERP, PDF, edição como nova cópia e cancelamento de trabalhos ainda não retirados pelo agente.
-- **Remetentes:** bloco de texto para impressão simples e campos estruturados para frete. Complete os campos estruturados antes da primeira cotação. Remetentes antigos continuam funcionando na impressão simples.
+- **Remetentes:** endereço compartilhado entre impressão e frete. Blocos antigos são lidos automaticamente quando os campos são reconhecíveis. Confira os campos recuperados e complete apenas os ausentes; o bot também aceita complementos na conversa.
 - **Padrões:** fonte, margens, título, campos e ordem dos modelos A4. Alterações afetam apenas novas solicitações; o histórico preserva os dados originais.
 - **SuperFrete:** cotação, confirmação do pagamento, PDF e confirmação separada da impressão. Rastreios recebidos são registrados no ERP durante a consulta da etiqueta.
 
@@ -47,3 +47,5 @@ O agente Windows existente e o Sumatra continuam sendo usados. A máquina da loj
 Impressões usam chaves de idempotência. Pagamentos são marcados antes da chamada externa. Uma resposta incerta bloqueia novo pagamento automático e permite consultar o estado. Se não houver identificador de frete, confira o painel SuperFrete antes de criar nova emissão.
 
 Documentação oficial: https://superfrete.readme.io/reference/primeiros-passos
+
+O histórico consultável pelo bot inclui endereços impressos. Pedidos de frete consultam novamente os cadastros antes de responder; recusas antigas sobre remetentes não configurados não são reaproveitadas. Mensagens do usuário cujo processamento falhou permanecem disponíveis no contexto, para não perder complementos de endereço.

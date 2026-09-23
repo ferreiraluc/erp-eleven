@@ -87,8 +87,8 @@ def tool(name, description, schema):
 
 
 TOOLS = [
-    tool("consultar_enderecos", "Busca endereços salvos, remetentes ativos e fretes recentes do autor no gestor. Somente ADMIN/GERENTE habilitado. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
-    tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos informados, remetente por sender_id OU dados completos em remetente (não exige cadastro prévio), peso/medidas reais e produtos/valores. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário na próxima mensagem.", BotQuote),
+    tool("consultar_enderecos", "Busca endereços salvos e histórico de endereços impressos, remetentes ativos e fretes recentes do autor no gestor. Somente ADMIN/GERENTE habilitado. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
+    tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos informados, remetente por sender_id (mesmo endereço de impressão) ou dados em remetente; ambos juntos permitem complementar campos faltantes, peso/medidas reais e produtos/valores. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário na próxima mensagem.", BotQuote),
     tool("preparar_etiqueta", "Após escolha explícita do serviço de uma cotação anterior: prepara o frete, mostra valor final e exige confirmação humana antes de pagar e emitir. Não imprime automaticamente.", SelectFreight),
     tool("consultar_etiqueta", "Atualiza estado/rastreio e obtém PDF de uma etiqueta do autor. Nunca refaz pagamento incerto.", FreightId),
     tool("preparar_impressao_etiqueta", "Após emissão: devolve PDF da etiqueta para conferência e prepara confirmação separada para imprimir uma cópia A4.", FreightId),
@@ -113,15 +113,23 @@ def execute_tool(db, message, identity, name, arguments):
     if name == "consultar_enderecos":
         from .assistant_schedule import may_schedule
         from ..models.address_book import SavedAddress,FreightOrder
-        from ..models.printing import PrintSender
+        from ..models.printing import PrintSender,PrintJob
+        from .sender_addresses import sender_address
         from sqlalchemy import cast,String,or_
         if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
         term=SearchArgs.model_validate(arguments).termo
         q=db.query(SavedAddress).filter(SavedAddress.active.is_(True))
         if term not in ('todos','remetentes'):
             q=q.filter(or_(SavedAddress.label.ilike(literal_pattern(term),escape="\\"),cast(SavedAddress.data,String).ilike(literal_pattern(term),escape="\\")))
-        return {"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
-                "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":s.data,"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in db.query(PrintSender).filter_by(active=True)],
+        jobs=db.query(PrintJob).filter(PrintJob.snapshot.isnot(None),PrintJob.source!='superfrete')
+        if term not in ('todos','remetentes'):
+            jobs=jobs.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(term),escape="\\"))
+        printed=[] if term=='remetentes' else [
+            {'print_job_id':str(j.id),'data':(j.snapshot or {}).get('editor') or (j.snapshot or {}).get('endereco'),
+             'remetente':(j.snapshot or {}).get('remetente'),'created_at':j.created_at.isoformat()}
+            for j in jobs.order_by(PrintJob.created_at.desc()).limit(10)]
+        return {"enderecos_impressos":printed,"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
+                "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":sender_address(s),"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in db.query(PrintSender).filter_by(active=True)],
                 "fretes_recentes":[{"id":str(f.id),"destinatario":f.payload.get('to',{}).get('name'),"estado":f.state} for f in db.query(FreightOrder).filter_by(user_id=message.user_id).order_by(FreightOrder.created_at.desc()).limit(5)]}
     if name == "preparar_impressao":
         return prepare_print(db, message, identity, AddressArgs.model_validate(arguments))

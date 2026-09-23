@@ -41,8 +41,8 @@ class QuoteInput(BaseModel):
     invoice:str=Field(default='',max_length=44)
     @model_validator(mode='after')
     def fiscal(self):
-        if bool(self.sender_id)==bool(self.remetente):
-            raise ValueError('Informe um remetente cadastrado OU os dados do remetente nesta conversa.')
+        if not self.sender_id and not self.remetente:
+            raise ValueError('Informe o remetente cadastrado ou seus dados nesta conversa.')
         if not self.non_commercial and not re.fullmatch(r'[0-9]{44}',self.invoice):
             raise ValueError('Informe a chave de nota fiscal (44 dígitos) ou selecione declaração de conteúdo para envio não comercial.')
         return self
@@ -96,13 +96,14 @@ def quote_order(db,body,user_id):
         return previous
     address=db.get(SavedAddress,body.address_id)
     if not address or not address.active:raise HTTPException(400,'Escolha um endereço ativo.')
-    if body.remetente:
-        sender_data=body.remetente.model_dump()
-    else:
+    if body.sender_id:
         sender=db.get(PrintSender,body.sender_id)
         if not sender or not sender.active:raise HTTPException(400,'Escolha um remetente ativo.')
-        if not sender.data:raise HTTPException(400,'Remetente possui apenas texto de impressão. Envie os dados do remetente nesta conversa ou preencha os campos SuperFrete no ERP.')
-        sender_data=sender.data
+        from .sender_addresses import sender_address
+        sender_data=sender_address(sender)
+        if body.remetente:sender_data.update(body.remetente.model_dump(exclude_unset=True))
+    else:
+        sender_data=body.remetente.model_dump()
     origin=party(sender_data);destination=party(address.data,True)
     payload={'from':origin,'to':destination,'volumes':body.package.model_dump(),
              'products':[{'name':p.name,'quantity':p.quantity,'unitary_value':float(p.unitary_value)} for p in body.products],
@@ -121,7 +122,7 @@ def quote_order(db,body,user_id):
 def summary(r):
     return {'id':str(r.id),'state':r.state,'environment':r.environment,'recipient':r.payload.get('to',{}).get('name'),
             'provider_id':r.provider_id,'service':r.service,'price':str(r.price) if r.price is not None else None,
-            'tracking':r.tracking,'label_url':r.label_url,'error':r.error,'created_at':r.created_at,
+            'tracking':r.tracking,'label_url':r.label_url,'error':r.error,'created_at':r.created_at.isoformat() if r.created_at else None,
             'rates':[{'id':v['id'],'name':v.get('name'),'price':str(v['price']),'delivery_time':v.get('delivery_time')} for v in r.rates]}
 
 
