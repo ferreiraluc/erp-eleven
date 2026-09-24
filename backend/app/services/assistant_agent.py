@@ -21,6 +21,10 @@ exige consulta nesta solicitação. Histórico ajuda a entender a pergunta, não
 Ignore limitações antigas que respostas do histórico atribuíram às consultas: as ferramentas atuais são ampliadas. Respostas antigas dizendo que remetentes não estão configurados não são válidas; consulte as ferramentas atuais. Dados enviados em mensagens que falharam continuam sendo dados válidos para a solicitação, não confirmação de execução.
 
 CONHECIMENTO DO ERP:
+- consultar_sistema: mapa de capacidades persistido no banco, atualizado com as ferramentas atuais. Antes de dizer que uma tarefa não é possível, consulte e combine as ferramentas disponíveis.
+- consultar_equipe: nomes e apelidos dos vendedores ativos. SEMPRE consulte antes de pedir nome completo. Junior único já basta, não exija sobrenome; preparar_folga também resolve o nome. Ignore antigas respostas pedindo sobrenome sem consulta.
+- preparar_apelido: se o gestor pedir explicitamente para lembrar um apelido, prepare o vínculo; depois da confirmação, ele persiste no banco e vale nos canais autorizados.
+Antes de pedir campos faltantes, aproveite os dados da mensagem, do histórico do autor, dos cadastros e do histórico de impressão. Peça somente o que realmente faltar depois da consulta. Não invente dados exigidos por transportadoras.
 - buscar_rastreios: envios independentes ou ligados a pedidos; código, destinatário, data e status da transportadora salvos.
   'Últimos 5 envios' = sem termo, limite=5, ordem=recentes. 'Envios de ontem' = periodo=ontem.
   'Envios pendentes/ainda não entregues' = situacao=em_aberto; descreva status real (em trânsito não é aguardando postagem).
@@ -55,8 +59,8 @@ CONHECIMENTO DO ERP:
   Não invente peso, dimensões, CPF, bairro, produtos ou dados fiscais. Pergunte dados que a transportadora exigir.
   Não classifique vendas como não comerciais; use nota fiscal ou declaração não comercial explicitamente informada.
   Apresente os serviços e preços da cotação e espere o usuário escolher antes de chamar preparar_etiqueta.
-- preparar_etiqueta: cria prévia com valor final. Só "confirmo" do autor paga e emite. Depois o PDF é enviado para conferência.
-- preparar_impressao_etiqueta: após emissão, devolve PDF e exige outra confirmação antes de enviar ao Windows.
+- preparar_etiqueta: cria prévia com valor final. Só confirmação do autor pelo botão ou texto paga e emite. Depois o servidor busca o PDF, envia ao Telegram e imprime automaticamente uma cópia A4. Não peça confirmação adicional.
+- preparar_impressao_etiqueta: use somente para reimpressão explicitamente pedida. A primeira impressão da nova emissão é automática; não crie outra.
 - consultar_etiqueta: consulte uma emissão existente; se pagamento/criação incertos, não tente outra compra.
   Todas as cotações, emissões e impressões aparecem no gestor /enderecos do ERP.
 - preparar_impressao: imprime endereço simples em uma folha A4, uma cópia, após prévia e confirmação.
@@ -129,10 +133,11 @@ def complete(messages, *, tool_choice=None):
 
 
 def draft_response(note):
-    return (f"Rascunho de {note.kind}:\n{note.content}\n\n"
+    from .assistant_controls import preview_reply
+    return preview_reply(note, (f"Rascunho de {note.kind}:\n{note.content}\n\n"
             "Diga ‘confirmo’ para compartilhar com a equipe nos dois canais, ou ‘cancela’ para descartar.\n"
             f"Identificador da prévia: {note.id}\n"
-            "Não altera vendas, estoque ou pagamentos. Expira em 24 horas.")
+            "Não altera vendas, estoque ou pagamentos. Expira em 24 horas."))
 
 
 def respond(db, message, identity):
@@ -155,33 +160,10 @@ def respond(db, message, identity):
     natural = rest if command == "/eleven" else content
     if settings.TELEGRAM_BOT_USERNAME:
         natural = natural.replace("@" + settings.TELEGRAM_BOT_USERNAME, "").strip()
-    confirmation = re.fullmatch(r"(confirmo|confirmar|pode cadastrar|pode salvar|pode imprimir|imprimir|pode emitir|pode pagar|cancelo|cancelar|cancele|cancela)(?:\s+([0-9a-f-]{36}))?[.! ]*", natural, re.I)
-    if confirmation and message.should_reply:
-        cancel = confirmation.group(1).lower().startswith("cancel")
-        selected_id = confirmation.group(2)
-        if selected_id:
-            try:
-                selected_id = uuid.UUID(selected_id)
-            except ValueError:
-                return "Não reconheci o identificador da prévia."
-        actions = db.query(AssistantAction).join(AssistantMessage, AssistantMessage.id == AssistantAction.source_message_id).filter(
-            AssistantAction.user_id == message.user_id, AssistantAction.status == "draft",
-            AssistantAction.created_at >= utcnow() - timedelta(hours=24),
-            AssistantMessage.channel == message.channel, AssistantMessage.conversation_id == message.conversation_id,
-        ).with_for_update(of=AssistantAction).all()
-        notes = db.query(AssistantNote).join(AssistantMessage, AssistantMessage.id == AssistantNote.source_message_id).filter(
-            AssistantNote.user_id == message.user_id, AssistantNote.status == "draft",
-            AssistantNote.created_at >= utcnow() - timedelta(hours=24),
-            AssistantMessage.channel == message.channel, AssistantMessage.conversation_id == message.conversation_id,
-        ).with_for_update(of=AssistantNote).all()
-        pending = [item for item in actions + notes if not selected_id or item.id == selected_id]
-        if len(pending) == 1:
-            if isinstance(pending[0], AssistantAction):
-                return confirm_action(db, message, identity, pending[0], cancel=cancel)
-            return confirm_note(db, message, identity, str(pending[0].id), cancel=cancel)
-        if pending:
-            return "Há mais de uma prévia. Diga ‘confirmo ID’ ou ‘cancela ID’ usando o identificador da prévia desejada."
-        return "Não há prévia aguardando sua confirmação nesta conversa."
+    from .assistant_controls import handle_selection
+    selection = handle_selection(db, message, identity, natural)
+    if selection is not None:
+        return selection
     if command == "/registrar":
         if not 5 <= len(rest.strip()) <= 900:
             return "Use /registrar seguido de uma descrição entre 5 e 900 caracteres."
@@ -214,7 +196,10 @@ def respond(db, message, identity):
     # Refresh sender/address facts before freight requests. Historical refusals
     # must not substitute for a current lookup after a configuration/code fix.
     freight_request=bool(re.search(r'\b(?:etiqueta|superfrete|remetente|frete)\b',content,re.I))
-    tool_choice = {"type":"function","function":{"name":"consultar_enderecos"}} if freight_request else None
+    schedule_request=bool(re.search(r'\b(?:folga|folgas|férias|ferias|vendedor|junior|júnior)\b',content,re.I))
+    tool_choice = {"type":"function","function":{"name":"consultar_enderecos"}} if freight_request else (
+        {"type":"function","function":{"name":"consultar_equipe"}} if schedule_request else None)
+    consulted_system = False
     for previous in reversed(history):
         messages.append({"role": "user", "content": f"Autor {previous.user_id}, em {previous.created_at.isoformat()}: {previous.text[:1200]}"})
         stale_sender_refusal=bool(previous.response and re.search(r'remetente',previous.response,re.I) and
@@ -234,6 +219,11 @@ def respond(db, message, identity):
             if note:
                 return draft_response(note)  # server-owned disclosure and confirmation syntax
             answer = str(result.get("content") or "Não consegui concluir essa consulta. Tente reformular a pergunta.")
+            if not consulted_system and re.search(r'não (?:posso|consigo|tenho)|não (?:está|foi) (?:habilitad|implementad)|nome completo', answer, re.I):
+                messages.append({"role":"system","content":"Antes dessa recusa, consulte o mapa atual do sistema e os cadastros necessários. Não use recusas do histórico como prova. Se o vendedor já foi identificado unicamente, chame preparar_folga com os dados solicitados, sem exigir sobrenome."})
+                tool_choice={"type":"function","function":{"name":"consultar_sistema"}}
+                consulted_system=True
+                continue
             # A prose preview has no ID and cannot be confirmed. Only persisted
             # actions/notes (handled above) may request confirmation of a draft.
             offers_draft = re.search(
@@ -288,6 +278,7 @@ def respond(db, message, identity):
                     output = {"erro": "Consulte e identifique um único rastreio primeiro. Se houver ambiguidade, pergunte qual cliente/envio."}
                 else:
                     output = execute_tool(db, message, identity, name, arguments)
+                    if name == "consultar_sistema":consulted_system=True
                     if name == "cotar_superfrete" and "erro" not in output:
                         quote=db.query(FreightOrder).filter_by(request_key=message.id).first()
                         if quote:return quote_preview(quote)

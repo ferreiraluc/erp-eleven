@@ -20,7 +20,7 @@ from app.database import Base, get_db
 from app.config import settings
 from app.models import Usuario, Cliente, Pedido, Rastreamento
 from app.models.usuario import UsuarioRole
-from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, utcnow
+from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge, utcnow
 from app.models.vendedor import Vendedor
 from app.models.folga import Folga
 from app.models.inventory import Item
@@ -41,7 +41,7 @@ def sqlite_jsonb(element, compiler, **kwargs):
 def setup(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     tables = [m.__table__ for m in (Usuario, Cliente, Pedido, Rastreamento, AssistantIdentity,
-                                   AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction,
+                                   AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge,
                                    Vendedor, Folga, Item, PdvCliente, PdvSale, Venda)]
     Base.metadata.create_all(engine, tables=tables)
     factory = sessionmaker(bind=engine, autoflush=False)
@@ -176,15 +176,19 @@ def test_operational_memory_shared_only_after_owner_confirmation(setup):
         identity = channels.authorized_identity(db, msg.channel, msg.sender_id)
         answer = agent.respond(db, msg, identity)
         note = db.query(AssistantNote).one()
-        assert str(note.id) in answer
+        assert answer.reply_markup["inline_keyboard"][0][0]["callback_data"] == "a:" + note.id.hex
         assert tools.search_memory(db, "João") == []
         group_msg = incoming(db, user_id, f"/confirmar {note.id}", channel="telegram")
         group_identity = channels.authorized_identity(db, "telegram", "123")
         answer = agent.respond(db, group_msg, group_identity)
         db.flush()
+        assert "mesma conversa" in answer
+        original_confirmation = incoming(db, user_id, f"/confirmar {note.id}")
+        answer = agent.respond(db, original_confirmation, identity)
+        db.flush()
         assert "salvo" in answer
         assert len(tools.search_memory(db, "João")) == 1
-        assert "Nenhuma alteração" in agent.respond(db, group_msg, group_identity)
+        assert "Nenhuma alteração" in agent.respond(db, original_confirmation, identity)
 
 
 def test_other_author_cannot_confirm_and_read_only_cannot_write(setup):

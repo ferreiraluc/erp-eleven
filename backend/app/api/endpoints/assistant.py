@@ -72,8 +72,13 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(400, "JSON inválido")
     if not isinstance(update, dict):
         raise HTTPException(400, "Update inválido")
-    enqueue_incoming(db, telegram_message(update))
+    status = enqueue_incoming(db, telegram_message(update))
     db.commit()
+    callback = update.get('callback_query')
+    if isinstance(callback, dict):
+        from ...services.assistant_channels import acknowledge_callback
+        from starlette.concurrency import run_in_threadpool
+        await run_in_threadpool(acknowledge_callback, callback.get('id'), status)
     return {"ok": True}
 
 

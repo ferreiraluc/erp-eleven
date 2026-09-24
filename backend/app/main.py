@@ -12,7 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboard, exchange_rates, money_transfers, rastreamento, excel_import, tags, inventory, clientes, ocr, pdv
 from .logging_config import setup_logging, get_logger
-from .database import engine, Base
+from .database import engine, Base, SessionLocal
 from .config import settings
 from .api.endpoints import assistant, printing, address_manager, freight
 from .services import assistant_events  # register atomic tracking outbox listener
@@ -120,7 +120,15 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("[SCHEDULER] Job de atualização diária de rastreamentos agendado (19:00 BRT)")
 
+    from .services.assistant_knowledge import system_catalog, KnowledgeArgs
+    with SessionLocal() as catalog_db:
+        system_catalog(catalog_db, KnowledgeArgs())
+        catalog_db.commit()
+
     worker_stop = threading.Event()
+    from .services.freight_labels import main as run_label_worker
+    app.state.label_worker = threading.Thread(target=run_label_worker, args=(worker_stop,), name="freight-label-worker", daemon=True)
+    app.state.label_worker.start()
     app.state.assistant_worker = None
     if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER:
         # Dedicated thread: provider requests never block the API event loop.
@@ -139,6 +147,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         worker_stop.set()
+        await asyncio.to_thread(app.state.label_worker.join, 5)
         if app.state.assistant_worker:
             await asyncio.to_thread(app.state.assistant_worker.join, 5)
         scheduler.shutdown(wait=False)
@@ -309,5 +318,6 @@ async def health_check():
         "api": "online",
         "database": db_status,
         "assistant_worker": worker_status,
+        "label_worker": "online" if getattr(app.state, "label_worker", None) and app.state.label_worker.is_alive() else "offline",
         "timestamp": time.time(),
     }

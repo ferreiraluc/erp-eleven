@@ -122,7 +122,7 @@ def quote_order(db,body,user_id):
 def summary(r):
     return {'id':str(r.id),'state':r.state,'environment':r.environment,'recipient':r.payload.get('to',{}).get('name'),
             'provider_id':r.provider_id,'service':r.service,'price':str(r.price) if r.price is not None else None,
-            'tracking':r.tracking,'label_url':r.label_url,'error':r.error,'created_at':r.created_at.isoformat() if r.created_at else None,
+            'tracking':r.tracking,'label_url':r.label_url,'label_status':r.label_status,'pdf_available':r.label_status=='ready','label_error':r.label_error,'auto_print':r.auto_print,'print_job_id':str(r.print_job_id) if r.print_job_id else None,'error':r.error,'created_at':r.created_at.isoformat() if r.created_at else None,
             'rates':[{'id':v['id'],'name':v.get('name'),'price':str(v['price']),'delivery_time':v.get('delivery_time')} for v in r.rates]}
 
 
@@ -176,7 +176,7 @@ def checkout(db,key,expected_price):
 def safe_label(url):
     if not url:return None
     parsed=urlparse(url)
-    if parsed.scheme!='https' or parsed.hostname not in {'api.superfrete.com','sandbox.superfrete.com','web.superfrete.com','storage.googleapis.com'} or parsed.username or parsed.password:return None
+    if parsed.scheme!='https' or parsed.hostname not in {'api.superfrete.com','sandbox.superfrete.com','web.superfrete.com','etiqueta.superfrete.com','storage.googleapis.com'} or parsed.username or parsed.password:return None
     return url
 
 
@@ -190,13 +190,20 @@ def refresh(db,key):
     result=call('GET','order/info/'+quote(row.provider_id,safe=''))
     if str(result.get('id'))!=row.provider_id:raise HTTPException(502,'Identificador retornado não confere.')
     state=result.get('status')
+    if state=='generated':state='released'
     if state in ('pending','released','posted','delivered','cancelled'):
         # Do not re-enable payment after an uncertain charge until manually reconciled.
         if not (row.state=='uncertain' and state=='pending'):row.state=state;row.error=None
     row.tracking=result.get('tracking') or row.tracking
-    if row.state in ('released','posted','delivered'):
-        label=call('POST','tag/print',{'orders':[row.provider_id]});row.label_url=safe_label(label.get('url'))
     sync_tracking(db,row)
+    if row.state in ('released','posted','delivered') and not row.label_pdf:
+        if row.label_status=='none':row.label_status='waiting';row.label_check_at=utcnow()
+        row.updated_at=utcnow();db.commit()  # preserve confirmed payment/tracking even while the PDF is pending
+        try:
+            label=call('POST','tag/print',{'orders':[row.provider_id]})
+            row.label_url=safe_label(label.get('url')) or row.label_url
+        except HTTPException:
+            row.label_error='Aguardando a SuperFrete liberar o PDF. A consulta será repetida automaticamente.'
     row.updated_at=utcnow();db.commit();return row
 
 
@@ -215,7 +222,7 @@ def label_pdf(url):
     if not url:raise HTTPException(400,'URL de etiqueta indisponível ou não autorizada.')
     try:
         with requests.get(url,timeout=(5,30),stream=True,allow_redirects=False) as r:
-            if r.status_code!=200:raise HTTPException(502,'Não foi possível baixar o PDF da etiqueta.')
+            if r.status_code!=200:raise HTTPException(502,f'SuperFrete retornou HTTP {r.status_code} ao baixar o PDF. Nova tentativa automática; não pague novamente.')
             data=bytearray()
             for chunk in r.iter_content(65536):
                 data.extend(chunk)
@@ -229,14 +236,14 @@ def print_label(db,key,device_id,request_key,user_id):
     import hashlib
     from ..models.printing import PrintDevice,PrintJob
     row=locked(db,key)
-    if row.state not in ('released','posted','delivered') or not row.label_url:raise HTTPException(400,'Consulte a etiqueta emitida antes de imprimir.')
+    if row.state not in ('released','posted','delivered') or not (row.label_url or row.label_pdf):raise HTTPException(400,'Consulte a etiqueta emitida antes de imprimir.')
     device=db.query(PrintDevice).filter_by(id=device_id,active=True).with_for_update().first()
     if not device:raise HTTPException(404,'Impressora não encontrada.')
     old=db.query(PrintJob).filter_by(request_key=request_key).first()
     if old:
         if old.user_id!=user_id or old.device_id!=device_id or (old.snapshot or {}).get('freight_id')!=str(key):raise HTTPException(409,'Identificador já utilizado.')
         return old
-    pdf=label_pdf(row.label_url)
+    pdf=row.label_pdf or label_pdf(row.label_url)
     job=PrintJob(user_id=user_id,device_id=device_id,request_key=request_key,pdf=pdf,sha256=hashlib.sha256(pdf).hexdigest(),
                  source='superfrete',address_id=row.address_id,
                  snapshot={'freight_id':str(key),'label_url':row.label_url,'endereco':{'nome':row.payload['to']['name'],'pais':'BR'}},

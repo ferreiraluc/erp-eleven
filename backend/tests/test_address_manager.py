@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.database import Base,get_db
-from app.models.address_book import SavedAddress,PrintLayout,FreightOrder
+from app.models.address_book import SavedAddress,PrintLayout,FreightOrder,FreightWebhook
 from app.models.printing import PrintDevice,PrintJob,PrintSender
 from app.models.usuario import Usuario,UsuarioRole
 from app.models.cliente import Cliente
@@ -17,7 +17,7 @@ from test_assistant import setup
 def env(setup):
     factory,_,uid=setup
     with factory() as db:
-        Base.metadata.create_all(db.get_bind(),tables=[m.__table__ for m in [SavedAddress,PrintLayout,PrintDevice,PrintJob,PrintSender,FreightOrder]])
+        Base.metadata.create_all(db.get_bind(),tables=[m.__table__ for m in [SavedAddress,PrintLayout,PrintDevice,PrintJob,PrintSender,FreightOrder,FreightWebhook]])
         user=db.get(Usuario,uid);user.role=UsuarioRole.ADMIN
         device=PrintDevice(name='Teste',token_hash='x'*64)
         db.add(device);db.flush();did=str(device.id);db.commit()
@@ -91,7 +91,7 @@ def test_safe_label_and_document_validation():
     with pytest.raises(sf.HTTPException):sf.party({'pais':'PY'})
 
 
-def test_bot_paid_pdf_then_separate_print_confirmation(env,monkeypatch):
+def test_bot_paid_pdf_delivered_and_printed_automatically(env,monkeypatch):
     from app.services import assistant_freight as bot
     from app.services.assistant_schedule import confirm_action
     from app.models.assistant import AssistantIdentity,AssistantAction
@@ -121,18 +121,21 @@ def test_bot_paid_pdf_then_separate_print_confirmation(env,monkeypatch):
         identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
         message=incoming(db,uid,'confirmo',channel='telegram');db.commit()
         response=confirm_action(db,message,identity,action)
-        assert isinstance(response,DocumentReply)
-        assert response.document_url.endswith('/test')
+        assert 'automaticamente' in response
         assert db.query(PrintJob).count()==0
-        next_action=db.query(AssistantAction).filter_by(kind='frete_imprimir').one()
-        db.commit();nid=next_action.id
-    with factory() as db:
-        identity=db.query(AssistantIdentity).filter_by(channel='telegram').one()
-        message=incoming(db,uid,'confirmo',channel='telegram')
-        response=confirm_action(db,message,identity,db.get(AssistantAction,nid))
-        assert 'fila' in response
-        assert db.query(PrintJob).count()==1
+        assert db.query(AssistantAction).filter_by(kind='frete_imprimir').count()==0
         db.commit()
+    from app.services import freight_labels
+    from app.models.assistant import utcnow,AssistantDelivery
+    monkeypatch.setattr(freight_labels,'SessionLocal',factory)
+    with factory() as db:
+        db.get(FreightOrder,key).label_check_at=utcnow();db.commit()
+    assert freight_labels.process_label()
+    assert not freight_labels.process_label()
+    with factory() as db:
+        assert db.query(PrintJob).count()==1
+        assert db.query(AssistantDelivery).one().document_pdf.startswith(b'%PDF-')
+        assert db.get(FreightOrder,key).print_job_id
     assert calls.count('checkout')==1
 
 

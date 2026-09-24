@@ -38,7 +38,8 @@ def query_schedule(db, args):
     q = db.query(Folga, Vendedor.nome).join(Vendedor, Vendedor.id == Folga.vendedor_id).filter(
         Folga.ativo.is_(True), Vendedor.ativo.is_(True))
     if args.termo:
-        q = q.filter(contains([Vendedor.nome], args.termo))
+        from .assistant_knowledge import employee_candidates
+        q = q.filter(Vendedor.id.in_([v.id for v in employee_candidates(db, args.termo)]))
     if args.tipo:
         q = q.filter(Folga.tipo == args.tipo)
     if args.aprovacao != "todas":
@@ -59,6 +60,9 @@ def may_schedule(db, message, identity):
 
 
 def action_preview(action):
+    if action.kind == "apelido":
+        from .assistant_knowledge import alias_preview
+        return alias_preview(action)
     if action.kind in ("frete_emitir","frete_imprimir"):
         from .assistant_freight import preview
         return preview(action)
@@ -66,11 +70,12 @@ def action_preview(action):
         from .assistant_printing import print_preview
         return print_preview(action)
     p = action.payload
-    return (f"Cadastrar no calendário: {p['vendedor_nome']} — {p['data']} — {p['tipo']} — {p['periodo']}.\n"
+    from .assistant_controls import preview_reply
+    return preview_reply(action, (f"Cadastrar no calendário: {p['vendedor_nome']} — {p['data']} — {p['tipo']} — {p['periodo']}.\n"
             + (f"Motivo informado: {p['motivo']}\n" if p.get("motivo") else "") +
             "Será registrada como pendente de aprovação, igual ao cadastro pelo ERP.\n"
             "Diga ‘confirmo’ para cadastrar ou ‘cancela’ para descartar. "
-            f"Ainda não foi cadastrada. A confirmação expira em 24 horas.\nIdentificador da prévia: {action.id}")
+            f"Ainda não foi cadastrada. A confirmação expira em 24 horas.\nIdentificador da prévia: {action.id}"))
 
 
 def prepare_schedule(db, message, identity, args):
@@ -79,13 +84,10 @@ def prepare_schedule(db, message, identity, args):
     previous = db.query(AssistantAction).filter_by(source_message_id=message.id).first()
     if previous:
         return {"confirmacao": action_preview(previous)}
-    q = db.query(Vendedor).filter(Vendedor.ativo.is_(True), contains([Vendedor.nome], args.vendedor))
-    candidates = q.limit(6).all()
-    exact = [v for v in candidates if v.nome.casefold() == args.vendedor.casefold()]
-    if len(exact) == 1:
-        candidates = exact
+    from .assistant_knowledge import employee_candidates
+    candidates = employee_candidates(db, args.vendedor)
     if len(candidates) != 1:
-        return {"erro": "Informe o nome completo do vendedor para identificar uma única pessoa.",
+        return {"erro": "Não foi possível identificar uma única pessoa. Consulte consultar_equipe e escolha entre os candidatos.",
                 "candidatos": [v.nome for v in candidates]}
     vendor = candidates[0]
     existing = db.query(Folga).filter_by(vendedor_id=vendor.id, data=args.data, ativo=True).first()
@@ -115,6 +117,9 @@ def confirm_action(db, message, identity, action, cancel=False):
         action.status = "cancelled"
         if action.kind=="frete_imprimir":return "Impressão cancelada. A etiqueta já emitida não foi cancelada nem reembolsada."
         return "Pedido cancelado. Nenhuma ação executada."
+    if action.kind == "apelido":
+        from .assistant_knowledge import confirm_alias
+        return confirm_alias(db, message, action)
     if action.kind in ("frete_emitir","frete_imprimir"):
         from .assistant_freight import confirm
         return confirm(db,message,action)

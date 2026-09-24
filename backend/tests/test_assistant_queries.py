@@ -236,7 +236,7 @@ def test_unverified_tracking_code_cannot_be_sent_as_verified_result(setup, monke
         {"tool_calls": [{"id": "fake", "type": "function", "function": {"name": "responder_rastreio", "arguments": '{"codigo":"FAKE123"}'}}]},
         {"content": "Não encontrei um rastreio identificado."},
     ])
-    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    monkeypatch.setattr(agent, "complete", lambda _, **kwargs: next(replies))
     with factory() as db:
         msg = incoming(db, user_id, "Qual o rastreio?")
         answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
@@ -265,14 +265,15 @@ def test_calendar_write_rolls_back_if_processing_fails(setup, monkeypatch):
         assert db.get(AssistantAction, action_id).status == "draft"
 
 
-def test_calendar_confirmation_with_multiple_previews_requires_id(setup):
+def test_calendar_confirmation_with_multiple_previews_shows_buttons(setup):
     factory, _, user_id = setup
     with factory() as db:
         action, identity = prepare_calendar(db, user_id)
         msg = incoming(db, user_id, "Cadastre outra", channel="telegram")
         prepare_schedule(db, msg, identity, ScheduleWriteArgs(vendedor="Maria", data=date(2026, 9, 25)))
         confirm = incoming(db, user_id, "confirmo", channel="telegram")
-        assert "Há mais de uma prévia" in agent.respond(db, confirm, identity)
+        answer=agent.respond(db, confirm, identity)
+        assert "Escolha a prévia" in answer and len(answer.reply_markup["inline_keyboard"])==2
         assert db.query(Folga).count() == 0
 
 
@@ -325,7 +326,7 @@ def test_tracking_plain_answer_is_split_and_uses_current_database_status(setup, 
         tool_call("buscar_rastreios", {"termo": "Peter", "ordem": "priorizar_abertos"}),
         {"content": "OY859210230BR\nPeter: entregue ontem."},
     ])
-    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    monkeypatch.setattr(agent, "complete", lambda _, **kwargs: next(replies))
     with factory() as db:
         shipment(db, "OY859210230BR", name="Peter", status="EM_TRANSITO")
         msg = incoming(db, user_id, "Qual o rastreio do Peter?", channel=channel)
@@ -368,7 +369,7 @@ def test_tracking_list_remains_one_message(setup, monkeypatch):
     factory, _, user_id = setup
     text = "1. Peter: OY859210230BR\n2. Maria: AA123456789BR"
     replies = iter([tool_call("buscar_rastreios", {"limite": 5}), {"content": text}])
-    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    monkeypatch.setattr(agent, "complete", lambda _, **kwargs: next(replies))
     with factory() as db:
         shipment(db, "OY859210230BR", name="Peter")
         shipment(db, "AA123456789BR", name="Maria")
@@ -384,7 +385,7 @@ def test_prose_calendar_preview_must_be_persisted_before_confirmation(setup, mon
         tool_call("preparar_folga", {"vendedor": "Maria Souza", "data": "2026-09-23"}),
         {"content": "Confirma o cadastro?"},
     ])
-    monkeypatch.setattr(agent, "complete", lambda _: next(replies))
+    monkeypatch.setattr(agent, "complete", lambda _, **kwargs: next(replies))
     with factory() as db:
         db.get(Usuario, user_id).role = UsuarioRole.ADMIN
         db.add(Vendedor(nome="Maria Souza")); db.flush()
@@ -392,7 +393,7 @@ def test_prose_calendar_preview_must_be_persisted_before_confirmation(setup, mon
         identity = channels.authorized_identity(db, msg.channel, msg.sender_id)
         answer = agent.respond(db, msg, identity)
         action = db.query(AssistantAction).one()
-        assert str(action.id) in answer and db.query(Folga).count() == 0
+        assert answer.reply_markup["inline_keyboard"][0][0]["callback_data"] == "a:"+action.id.hex and db.query(Folga).count() == 0
         confirmation = incoming(db, user_id, "confirmo", channel="telegram")
         agent.respond(db, confirmation, identity)
         assert db.query(Folga).count() == 1 and action.status == "executed"
@@ -400,7 +401,7 @@ def test_prose_calendar_preview_must_be_persisted_before_confirmation(setup, mon
 
 def test_unpersisted_preview_is_not_delivered(setup, monkeypatch):
     factory, _, user_id = setup
-    monkeypatch.setattr(agent, "complete", lambda _: {"content": "A prévia é:\nMaria Souza\nConfirma o cadastro?"})
+    monkeypatch.setattr(agent, "complete", lambda _, **kwargs: {"content": "A prévia é:\nMaria Souza\nConfirma o cadastro?"})
     with factory() as db:
         msg = incoming(db, user_id, "Cadastre uma folga")
         answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))

@@ -6,9 +6,9 @@ Acesso: Dashboard → **Endereços e envios** (`/enderecos`), para ADMIN e GEREN
 - **Impressões:** histórico do bot e do ERP, PDF, edição como nova cópia e cancelamento de trabalhos ainda não retirados pelo agente.
 - **Remetentes:** endereço compartilhado entre impressão e frete. Blocos antigos são lidos automaticamente quando os campos são reconhecíveis. Confira os campos recuperados e complete apenas os ausentes; o bot também aceita complementos na conversa.
 - **Padrões:** fonte, margens, título, campos e ordem dos modelos A4. Alterações afetam apenas novas solicitações; o histórico preserva os dados originais.
-- **SuperFrete:** cotação, confirmação do pagamento, PDF e confirmação separada da impressão. Rastreios recebidos são registrados no ERP durante a consulta da etiqueta.
+- **SuperFrete:** cotação, confirmação do pagamento, PDF recuperado automaticamente e impressão automática opcional no frontend (ativada no bot). Rastreios recebidos são registrados no ERP durante a consulta da etiqueta.
 
-A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDFs externos. Arquivos avulsos antigos podem deixar de estar disponíveis após a limpeza da fila. PDFs SuperFrete também dependem da disponibilidade do provedor.
+A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDFs externos. Arquivos avulsos antigos podem deixar de estar disponíveis após a limpeza da fila. PDFs SuperFrete são validados e guardados no banco assim que o provedor os disponibiliza.
 
 ## Frontend
 
@@ -16,7 +16,7 @@ A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDF
 2. No endereço, clique em **Frete**. Informe peso em kg, medidas em cm e conteúdo real. Informe a chave da nota fiscal ou selecione declaração de conteúdo quando o envio for não comercial.
 3. Faça a cotação e selecione um dos serviços disponíveis: PAC, SEDEX ou Mini Envios.
 4. Confira o preço final e clique em **Confirmar pagamento e emitir**. Essa etapa consome saldo SuperFrete.
-5. Abra o PDF para conferir. Só depois use **Enviar etiqueta à impressora**.
+5. A opção **Imprimir automaticamente quando o PDF estiver pronto** vem marcada. Desmarque antes do pagamento se quiser imprimir manualmente. O PDF aparece na tela automaticamente e pode ser baixado.
 
 A impressão simples continua aceitando CPF ausente e dados parciais do Paraguai. A emissão de frete tem validações próprias da transportadora, incluindo CPF/CNPJ do destinatário.
 
@@ -24,7 +24,7 @@ A impressão simples continua aceitando CPF ausente e dados parciais do Paraguai
 
 Exemplo: “Quero cotar uma etiqueta para este endereço: [dados]. Remetente [nome], pacote [peso e medidas], conteúdo [descrição, quantidade e valor], [nota fiscal ou envio não comercial].”
 
-O bot aceita destinatário e remetente informados na conversa, sem exigir cadastro prévio do remetente. Pode também extrair os dados do bloco de impressão dos remetentes existentes; pede somente campos faltantes. Os dados ficam preservados na cotação sem sobrescrever o cadastro-base. Descrição, quantidade e valor unitário dos itens são usados na declaração informada pelo usuário. O bot apresenta serviços/valores. Após a escolha do serviço, pede confirmação do pagamento. Depois da emissão, envia o PDF no Telegram e pede uma segunda confirmação para imprimir. Não exige comandos com barra.
+O bot aceita destinatário e remetente informados na conversa, sem exigir cadastro prévio do remetente. Pode também extrair os dados do bloco de impressão dos remetentes existentes; pede somente campos faltantes. Os dados ficam preservados na cotação sem sobrescrever o cadastro-base. Descrição, quantidade e valor unitário dos itens são usados na declaração informada pelo usuário. O bot apresenta serviços/valores. Após a escolha do serviço, pede confirmação do pagamento. Depois da confirmação do pagamento, busca o PDF, envia ao Telegram e coloca uma única cópia A4 na fila automaticamente. Não exige comandos com barra.
 
 Confirmações pertencem ao usuário autorizado e à conversa de origem. Cotar não paga. Cancelar a impressão de uma etiqueta paga não cancela nem reembolsa a compra.
 
@@ -38,7 +38,7 @@ SUPERFRETE_SANDBOX=false
 
 Tokens de produção e Sandbox são diferentes. O padrão é Sandbox. No Render, o backend também carrega `/etc/secrets/superfrete.env`, preservando variáveis já definidas no ambiente. Nunca versionar tokens.
 
-Migração: `r8s9t0u1v2w3`. Cria cadastros, padrões e fretes; adiciona anexos à entrega do bot e recupera conteúdo de impressões antigas vinculadas a ações do assistente.
+Migrações: `r8s9t0u1v2w3` e `s9t0u1v2w3x4`. Cria cadastros, padrões e fretes; adiciona anexos à entrega do bot e recupera conteúdo de impressões antigas vinculadas a ações do assistente.
 
 ## Operação
 
@@ -49,3 +49,26 @@ Impressões usam chaves de idempotência. Pagamentos são marcados antes da cham
 Documentação oficial: https://superfrete.readme.io/reference/primeiros-passos
 
 O histórico consultável pelo bot inclui endereços impressos. Pedidos de frete consultam novamente os cadastros antes de responder; recusas antigas sobre remetentes não configurados não são reaproveitadas. Mensagens do usuário cujo processamento falhou permanecem disponíveis no contexto, para não perder complementos de endereço.
+
+## Botões, nomes e memória
+
+Prévias do Telegram têm botões de confirmação/cancelamento. Havendo várias, o bot mostra uma lista paginada pelo nome e dados da solicitação. `confirmar impressão "Juan"` executa apenas se houver uma prévia inequívoca desse autor nessa conversa; homônimos abrem opções. Botões antigos continuam sujeitos a validade de 24 horas, permissões e execução única.
+
+`consultar_equipe` lê os vendedores ativos e resolve nomes sem diferenciar acentos. `Lembre que Juninho é o Junior` prepara um apelido; confirmar salva em `assistant_knowledge`. O catálogo de ferramentas também é persistido e sincronizado a cada versão. Saldos, rastreios e agenda são consultados de novo; a memória não congela fatos operacionais.
+
+## Recuperação automática dos PDFs
+
+O worker de etiquetas roda em uma thread separada, inclusive quando o assistente está pausado. Consulta a SuperFrete com intervalo progressivo até cinco minutos, persiste o PDF validado e usa uma chave única por frete para a impressão automática. Não repete pagamento. Depois de 400 tentativas sem conclusão, sinaliza falha; **Consultar** no gestor reinicia a recuperação. Problemas temporários da impressora não impedem salvar/enviar o PDF.
+
+Para ativar notificações, execute **no servidor**, após o deploy:
+
+```sh
+python -m app.assistant_setup telegram-webhook --url https://SEU-BACKEND/api/assistant/webhooks/telegram
+python -m app.superfrete_setup --url https://SEU-BACKEND/api/freight/webhooks/superfrete
+```
+
+Telegram precisa de `allowed_updates` com `message` e `callback_query`. A SuperFrete usa `order.generated`; o webhook valida HMAC-SHA256 sobre o corpo original, agenda uma consulta autenticada e nunca paga nem confia em URLs do evento. A assinatura fica cifrada em `freight_webhooks` com a chave do servidor; opcionalmente pode ser fornecida por `SUPERFRETE_WEBHOOK_SECRET`. A consulta periódica continua mesmo sem webhook.
+
+Etiquetas antigas pagas são recuperadas sem imprimir de novo. Para as antigas cujo PDF faltava, o canal original recebe o documento ao ficar pronto. Mantenha o agente Windows da loja aberto; não é necessário reinstalá-lo.
+
+Referências: [botões Telegram](https://core.telegram.org/bots/api#inlinekeyboardmarkup), [eventos e assinatura SuperFrete](https://superfrete.readme.io/reference/webhook).

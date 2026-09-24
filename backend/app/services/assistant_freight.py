@@ -40,15 +40,16 @@ class FreightId(BaseModel):
 
 
 def preview(action):
+    from .assistant_controls import preview_reply
     p=action.payload
     if action.kind=='frete_emitir':
-        return (f"Emitir etiqueta para {p['recipient']}, serviço {p['service_name']}, valor R$ {p['price']}. "
+        return preview_reply(action, (f"Emitir etiqueta para {p['recipient']}, serviço {p['service_name']}, valor R$ {p['price']}. "
                 f"Ambiente: {p['environment']}. O valor será debitado do saldo SuperFrete.\n"
-                f"Diga ‘confirmo’ para pagar e emitir ou ‘cancela’. Nenhuma compra realizada ainda.\nIdentificador da prévia: {action.id}")
+                f"Ao confirmar, o PDF será enviado ao Telegram e impresso automaticamente quando liberado.\nDiga ‘confirmo’ para pagar e emitir ou ‘cancela’. Nenhuma compra realizada ainda.\nIdentificador da prévia: {action.id}"))
     from .assistant_replies import DocumentReply
     text = (f"Conferiu a etiqueta de {p['recipient']}? Diga ‘confirmo’ para imprimir uma cópia A4 na loja ou ‘cancela’. "
             f"A compra já foi realizada; cancelar aqui cancela apenas a impressão.\nIdentificador da prévia: {action.id}")
-    return DocumentReply(text,p["label_url"])
+    return preview_reply(action,text,p["label_url"])
 
 
 def execute(db,message,identity,name,args):
@@ -105,18 +106,16 @@ def confirm(db,message,action):
     key=uuid.UUID(action.payload['freight_id'])
     try:
         if action.kind=='frete_emitir':
+            from .freight_labels import watch_label
             with SessionLocal() as external:
+                row=sf.locked(external,key)
+                watch_label(external,row,auto_print=True,message=message)
                 row=sf.checkout(external,key,Decimal(action.payload['price']))
+                external.commit()
                 if row.state not in ('released','posted','delivered'):
                     return row.error or 'Não foi possível confirmar a emissão. Consulte o frete no gestor.'
-                try:row=sf.refresh(external,key)
-                except HTTPException:pass
-                result=sf.summary(row)
             action.status='executed';action.result_id=key;action.executed_at=utcnow()
-            if not result['label_url']:return 'Etiqueta paga. O PDF ainda não foi disponibilizado; peça para consultar a etiqueta '+str(key)+'. Não pague novamente.'
-            next_action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind='frete_imprimir',payload={'freight_id':str(key),'recipient':result['recipient'],'label_url':result['label_url']})
-            db.add(next_action);db.flush()
-            return DocumentReply('Etiqueta emitida. '+preview(next_action),result['label_url'])
+            return 'Etiqueta paga. Vou buscar o PDF automaticamente, enviá-lo aqui e colocar uma cópia A4 na fila da loja assim que a SuperFrete liberar. O PDF também aparecerá no gestor. Não é necessário pagar novamente.'
         devices=db.query(PrintDevice).filter_by(active=True).limit(2).all()
         if len(devices)!=1:return 'Configure uma única impressora ativa no ERP.'
         # Printing is read-only externally; queue and confirmation commit together.
@@ -134,7 +133,8 @@ def quote_preview(order):
         days=rate.get('delivery_time')
         lines.append(f"{index}. {rate.get('name',rate['id'])} — R$ {price}"+(f" — prazo estimado {days} dias" if days is not None else ''))
     lines += ['Responda com o número ou nome do serviço. Depois mostrarei o valor final para você confirmar o pagamento.',f'Cotação: {order.id}']
-    return '\n'.join(lines)
+    from .assistant_controls import InteractiveReply, button
+    return InteractiveReply('\n'.join(lines[:-1]), [[button(f"{r.get('name',r['id'])} · R$ {float(r['price']):.2f}", f"q:{order.id.hex}:{r['id']}")] for r in order.rates])
 
 
 def service_choice(db,message,identity,content):
@@ -142,20 +142,25 @@ def service_choice(db,message,identity,content):
     from datetime import timedelta
     from ..models.assistant import AssistantMessage
     match=re.fullmatch(r'(?:(?:opção|opcao|quero|escolho)\s+)?(\d{1,2}|sedex|pac|mini\s*envios)[.! ]*',content,re.I)
-    if not match or not message.should_reply or not may_schedule(db,message,identity):return None
-    order=db.query(FreightOrder).join(AssistantMessage,AssistantMessage.id==FreightOrder.request_key).filter(
+    callback=re.fullmatch(r'/servico ([0-9a-f]{32}):(\d{1,3})',content)
+    if not (match or callback) or not message.should_reply or not may_schedule(db,message,identity):return None
+    query=db.query(FreightOrder).join(AssistantMessage,AssistantMessage.id==FreightOrder.request_key).filter(
         FreightOrder.user_id==message.user_id,
         AssistantMessage.channel==message.channel,
         AssistantMessage.conversation_id==message.conversation_id,
         AssistantMessage.created_at<=message.created_at,
-    ).order_by(FreightOrder.created_at.desc()).first()
-    if not order:return None
+    )
+    if callback:query=query.filter(FreightOrder.id==uuid.UUID(callback[1]))
+    order=query.order_by(FreightOrder.created_at.desc()).first()
+    if not order:return 'Cotação indisponível para seu usuário nesta conversa.' if callback else None
     if order.state not in ('quoted','pending'):
         return 'Esta cotação já avançou ou precisa de conferência. Consulte a etiqueta existente antes de emitir outra.'
     created=order.created_at.replace(tzinfo=utcnow().tzinfo) if order.created_at.tzinfo is None else order.created_at
     if order.state=='quoted' and utcnow()-created>timedelta(minutes=30):return 'Essa cotação expirou. Peça uma nova cotação com os mesmos dados; nenhuma etiqueta foi comprada.'
-    value=match[1].lower()
-    if value.isdigit():
+    value=match[1].lower() if match else ''
+    if callback:
+        rate=next((r for r in order.rates if r['id']==int(callback[2])),None)
+    elif value.isdigit():
         index=int(value)-1
         rate=order.rates[index] if 0<=index<len(order.rates) else None
     else:rate=next((r for r in order.rates if re.sub(r'\s','',str(r.get('name','')).lower())==re.sub(r'\s','',value)),None)

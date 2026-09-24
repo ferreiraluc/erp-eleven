@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from ..database import Base
@@ -67,6 +67,8 @@ class AssistantDelivery(Base):
     attempts = Column(Integer, nullable=False, default=0)
     provider_id = Column(String(120))
     document_url = Column(String(2000))
+    document_pdf = Column(LargeBinary)
+    reply_markup = Column(JSONB)
     error_code = Column(String(80))
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     available_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -86,3 +88,13 @@ class AssistantAction(Base):
     result_id = Column(UUID(as_uuid=True))
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     executed_at = Column(DateTime(timezone=True))
+
+
+class AssistantKnowledge(Base):
+    """Versioned capability catalog and explicitly confirmed employee aliases. No live balances."""
+    __tablename__ = "assistant_knowledge"
+    key = Column(String(160), primary_key=True)
+    kind = Column(String(30), nullable=False, index=True)
+    data = Column(JSONB, nullable=False)
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)

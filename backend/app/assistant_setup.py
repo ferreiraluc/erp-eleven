@@ -67,7 +67,7 @@ def main():
         if bot.get("username", "").lower() != settings.TELEGRAM_BOT_USERNAME.lower():
             raise SystemExit("O token e o username configurados pertencem a bots diferentes.")
         telegram("setWebhook", {"url": args.url, "secret_token": settings.TELEGRAM_WEBHOOK_SECRET,
-                                "allowed_updates": ["message"], "drop_pending_updates": False})
+                                "allowed_updates": ["message", "callback_query"], "drop_pending_updates": False})
         print("Webhook configurado. Nenhuma mensagem foi enviada e nenhuma atualização pendente foi descartada.")
 
 

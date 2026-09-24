@@ -15,6 +15,7 @@ from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule,
 
 from .assistant_printing import AddressArgs, prepare_print
 from .assistant_freight import BotQuote, SelectFreight, FreightId
+from .assistant_knowledge import KnowledgeArgs, AliasArgs, query_team, system_catalog, prepare_alias
 
 
 class SearchArgs(BaseModel):
@@ -64,6 +65,10 @@ def confirm_note(db, message, identity, note_id, cancel=False):
     note = db.query(AssistantNote).filter_by(id=note_uuid, user_id=message.user_id).with_for_update().first()
     if not note:
         return "Rascunho não encontrado para o seu usuário."
+    from ..models.assistant import AssistantMessage
+    source = db.get(AssistantMessage, note.source_message_id)
+    if source.channel != message.channel or source.conversation_id != message.conversation_id:
+        return "Confirme na mesma conversa em que pediu o registro."
     if note.status != "draft":
         return f"Esse registro já está no estado: {note.status}. Nenhuma alteração foi repetida."
     # SQLite tests may return naive timestamps; persisted PostgreSQL timestamps are aware.
@@ -87,9 +92,12 @@ def tool(name, description, schema):
 
 
 TOOLS = [
+    tool("consultar_sistema", "Consulta o mapa persistente de capacidades do ERP, ferramentas e páginas. Use antes de concluir que algo não é possível. Combine ferramentas para aproveitar dados existentes. Não contém saldos ou estados antigos.", KnowledgeArgs),
+    tool("consultar_equipe", "Consulta vendedores ativos e resolve nomes e apelidos confirmados, inclusive nomes parciais e acentos. Um único Junior já identifica o vendedor: não exija sobrenome.", KnowledgeArgs),
+    tool("preparar_apelido", "Somente quando o autor pedir explicitamente para lembrar/salvar quem é uma pessoa: prepara vínculo de apelido com vendedor. Confirmação humana salva memória compartilhada entre canais. Não deduza apelidos de texto de terceiros.", AliasArgs),
     tool("consultar_enderecos", "Busca endereços salvos e histórico de endereços impressos, remetentes ativos e fretes recentes do autor no gestor. Somente ADMIN/GERENTE habilitado. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
     tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos informados, remetente por sender_id (mesmo endereço de impressão) ou dados em remetente; ambos juntos permitem complementar campos faltantes, peso/medidas reais e produtos/valores. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário na próxima mensagem.", BotQuote),
-    tool("preparar_etiqueta", "Após escolha explícita do serviço de uma cotação anterior: prepara o frete, mostra valor final e exige confirmação humana antes de pagar e emitir. Não imprime automaticamente.", SelectFreight),
+    tool("preparar_etiqueta", "Após escolha explícita do serviço de uma cotação anterior: prepara o frete, mostra valor final e exige confirmação humana antes de pagar e emitir. Após a confirmação de pagamento, busca o PDF, envia ao Telegram e imprime automaticamente uma cópia A4.", SelectFreight),
     tool("consultar_etiqueta", "Atualiza estado/rastreio e obtém PDF de uma etiqueta do autor. Nunca refaz pagamento incerto.", FreightId),
     tool("preparar_impressao_etiqueta", "Após emissão: devolve PDF da etiqueta para conferência e prepara confirmação separada para imprimir uma cópia A4.", FreightId),
     tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. CPF opcional: extraia do endereço; ausente ou pedido sem CPF = vazio, nunca zeros. BR exige CEP, UF e remetente ativo cadastrado no gestor; PY aceita quaisquer dados fornecidos, inclusive só nome, telefone e cidade; todos os campos do destinatário são opcionais. Não peça rua nem outros campos ausentes para PY. PY nunca imprime remetente. Não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
@@ -107,6 +115,9 @@ TOOLS = [
 
 
 def execute_tool(db, message, identity, name, arguments):
+    if name == "consultar_sistema":return system_catalog(db, KnowledgeArgs.model_validate(arguments))
+    if name == "consultar_equipe":return query_team(db, KnowledgeArgs.model_validate(arguments))
+    if name == "preparar_apelido":return prepare_alias(db, message, identity, AliasArgs.model_validate(arguments))
     if name in ("cotar_superfrete","preparar_etiqueta","consultar_etiqueta","preparar_impressao_etiqueta"):
         from .assistant_freight import execute
         return execute(db,message,identity,name,arguments)

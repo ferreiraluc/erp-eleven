@@ -68,6 +68,7 @@ def process_inbox():
                             event_key=f"reply:{message.id}" + (f":{index}" if index else ""), channel=message.channel,
                             destination=message.conversation_id, text=part, user_id=message.user_id,
                             document_url=getattr(answer,"document_url",None) if index==0 else None,
+                            reply_markup=getattr(answer,"reply_markup",None) if index==0 and message.channel=='telegram' else None,
                             expires_at=message.created_at + timedelta(hours=23) if message.channel == "whatsapp" else None,
                         ))
                         db.flush()  # persist predecessor before its FK-dependent message
@@ -132,6 +133,7 @@ def process_outbox():
         try:
             delivery.provider_id = send_delivery(delivery)
             delivery.status = "accepted"  # provider accepted; not a claim of delivery/read
+            delivery.document_pdf = None  # the original remains cached on its freight order
             delivery.error_code = None
         except DeliveryError as exc:
             delivery.error_code = exc.code

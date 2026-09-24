@@ -33,6 +33,21 @@ def enabled_channels():
 
 def telegram_message(update):
     message = update.get("message")
+    callback = update.get("callback_query")
+    if isinstance(callback, dict):
+        original = callback.get("message")
+        data = callback.get("data", "")
+        if not isinstance(original, dict) or not isinstance(data, str):
+            return None
+        if re.fullmatch(r'[acv]:[0-9a-f]{32}', data):
+            content = '/acao ' + data
+        elif re.fullmatch(r'p:\d{1,6}', data):
+            content = '/previas ' + data[2:]
+        elif re.fullmatch(r'q:[0-9a-f]{32}:\d{1,3}', data):
+            content = '/servico ' + data[2:]
+        else:
+            return None
+        message = {**original, 'from': callback.get('from'), 'text': content}
     if not isinstance(message, dict) or message.get("sender_chat"):
         return None  # edits, channels, anonymous admins and service updates are not commands
     sender = message.get("from", {})
@@ -136,6 +151,18 @@ class DeliveryError(Exception):
         super().__init__(code)
 
 
+def acknowledge_callback(query_id, status):
+    """Stop Telegram's spinner; actual result is persisted and sent by the worker."""
+    if not isinstance(query_id, str) or len(query_id) > 200:
+        return
+    text = 'Recebido. Vou verificar sua solicitação.' if status in ('queued','duplicate') else 'Não foi possível aceitar esta ação para este usuário.'
+    try:
+        requests.post(f'https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery',
+                      json={'callback_query_id': query_id, 'text': text}, timeout=(2, 3))
+    except requests.RequestException:
+        pass  # acknowledgment failure must never discard or repeat a durable command
+
+
 def send_delivery(delivery):
     """Never put exceptions containing tokens, URLs or message bodies into logs."""
     if delivery.channel not in enabled_channels():
@@ -151,15 +178,25 @@ def send_delivery(delivery):
             if thread:
                 payload["message_thread_id"] = int(thread)
             method = 'sendMessage'
-            if getattr(delivery, 'document_url', None):
+            pdf = getattr(delivery, 'document_pdf', None)
+            if pdf or getattr(delivery, 'document_url', None):
                 from .superfrete import safe_label
-                if not safe_label(delivery.document_url):raise DeliveryError('invalid_document_url')
+                if not pdf and not safe_label(delivery.document_url):raise DeliveryError('invalid_document_url')
                 method = 'sendDocument'
                 payload = {'chat_id':chat,'document':delivery.document_url,'caption':delivery.text[:1024]}
                 if thread:payload['message_thread_id']=int(thread)
+            markup = getattr(delivery, 'reply_markup', None)
+            if markup:
+                payload['reply_markup'] = markup
+            request_body = {'json': payload}
+            if pdf:
+                import json
+                payload.pop('document', None)
+                if markup:payload['reply_markup'] = json.dumps(markup)
+                request_body = {'data': payload, 'files': {'document': ('etiqueta.pdf', pdf, 'application/pdf')}}
             result = requests.post(
                 f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/{method}",
-                json=payload, timeout=(5, 25),
+                **request_body, timeout=(5, 25),
             )
             if result.status_code != 200:
                 raise DeliveryError(f"telegram_http_{result.status_code}", retryable=result.status_code == 429,

@@ -33,6 +33,7 @@ class Settings:
     SUPERFRETE_TOKEN: str = os.getenv('SUPERFRETE_TOKEN', '')
     SUPERFRETE_CONTACT_EMAIL: str = os.getenv('SUPERFRETE_CONTACT_EMAIL', '')
     SUPERFRETE_SANDBOX: bool = os.getenv('SUPERFRETE_SANDBOX', 'true').lower() == 'true'
+    SUPERFRETE_WEBHOOK_SECRET: str = os.getenv('SUPERFRETE_WEBHOOK_SECRET', '')
 
     # Timezone configuration
     TIMEZONE: str = os.getenv("TIMEZONE", "America/Sao_Paulo")  # GMT-3

@@ -1,7 +1,8 @@
 """Reusable addresses, versioned layouts and durable freight operations."""
 import uuid
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, JSON, ForeignKey, Numeric
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, JSON, ForeignKey, Numeric, LargeBinary
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import deferred
 from ..database import Base
 from .assistant import utcnow
 
@@ -43,6 +44,24 @@ class FreightOrder(Base):
     price = Column(Numeric(12,2))
     tracking = Column(String(100))
     label_url = Column(String(2000))
+    label_pdf = deferred(Column(LargeBinary))
+    label_status = Column(String(20), nullable=False, default='none')
+    label_attempts = Column(Integer, nullable=False, default=0)
+    label_check_at = Column(DateTime(timezone=True), index=True)
+    label_error = Column(String(200))
+    auto_print = Column(Boolean, nullable=False, default=False)
+    print_device_id = Column(UUID(as_uuid=True), ForeignKey('print_devices.id'))
+    print_job_id = Column(UUID(as_uuid=True), ForeignKey('print_jobs.id'))
+    notify_channel = Column(String(16))
+    notify_destination = Column(String(120))
     error = Column(String(200))
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class FreightWebhook(Base):
+    __tablename__ = 'freight_webhooks'
+    environment = Column(String(16), primary_key=True)
+    provider_id = Column(String(100), nullable=False)
+    url = Column(String(500), nullable=False)
+    secret_encrypted = Column(String(2000), nullable=False)

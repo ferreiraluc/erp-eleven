@@ -105,11 +105,12 @@ def print_preview(action):
     if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
         lines.append('CPF do destinatário: ' + printable_cpf(p.get('cpf')))
     sender = action.payload.get('remetente')
-    return ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
+    from .assistant_controls import preview_reply
+    return preview_reply(action, ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
             '\nPaís: ' + ('Brasil' if p['pais'] == 'BR' else 'Paraguai') +
             '\nRemetente: ' + (sender['nome'] if sender else 'sem remetente') +
             '\nDiga “confirmo” para enviar à impressora da loja ou “cancela”.\n' +
-            'Ainda não foi enviado. Prévia válida por 24 horas.\nIdentificador da prévia: ' + str(action.id))
+            'Ainda não foi enviado. Prévia válida por 24 horas.\nIdentificador da prévia: ' + str(action.id)))
 
 
 def prepare_print(db, message, identity, args):
