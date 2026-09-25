@@ -26,14 +26,15 @@ def subject(action):
     if isinstance(action, AssistantNote):
         return f'{action.kind}: {action.content[:60]}'
     p = action.payload
-    return p.get('recipient') or p.get('endereco', {}).get('nome') or p.get('vendedor_nome') or p.get('apelido') or 'Endereço sem nome'
+    if action.kind=='arquivo_imprimir':return f"PDF · {p['pages']} página(s)"
+    return p.get('filename') or p.get('item_name') or p.get('recipient') or p.get('endereco', {}).get('nome') or p.get('vendedor_nome') or p.get('apelido') or 'Endereço sem nome'
 
 
 def action_label(action):
     kind = getattr(action, 'kind', '')
     if kind == 'frete_emitir':
         return 'Pagar R$ ' + action.payload['price'].replace('.', ',')
-    return {'impressao': 'Imprimir', 'frete_imprimir': 'Imprimir', 'folga': 'Cadastrar folga', 'apelido': 'Salvar apelido'}.get(kind, 'Confirmar registro')
+    return {'arquivo_imprimir':'Imprimir PDF','item_cadastrar':'Cadastrar item','estoque_entrada':'Registrar entrada','impressao': 'Imprimir', 'frete_imprimir': 'Imprimir', 'folga': 'Cadastrar folga', 'apelido': 'Salvar apelido'}.get(kind, 'Confirmar registro')
 
 
 def preview_reply(action, text, url=None):
@@ -117,7 +118,7 @@ def handle_selection(db, message, identity, content):
             target = re.sub(r'^(?:a\s+)?impress[aã]o\s*', '', target, flags=re.I).strip(' "“”\'')
             name = normalized(target)
             if printing:
-                values = [a for a in values if isinstance(a, AssistantAction) and a.kind in ('impressao','frete_imprimir')]
+                values = [a for a in values if isinstance(a, AssistantAction) and a.kind in ('impressao','frete_imprimir','arquivo_imprimir')]
             exact = [a for a in values if normalized(subject(a)) == name]
             values = exact or [a for a in values if name and set(name.split()).issubset(normalized(subject(a)).split())]
     if len(values) == 1:

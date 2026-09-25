@@ -34,6 +34,7 @@ class AssistantMessage(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     text = Column(Text, nullable=False)
     response = Column(Text)
+    attachment = Column(JSONB(none_as_null=True))
     should_reply = Column(Boolean, nullable=False, default=True)
     status = Column(String(20), nullable=False, default="pending", index=True)
     attempts = Column(Integer, nullable=False, default=0)

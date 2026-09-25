@@ -47,7 +47,7 @@ def system_catalog(db, args):
         db.execute(text("SELECT pg_advisory_xact_lock(711004)"))
     locations = {'rastreios':'/rastreamento', 'pedidos':'/pedidos', 'estoque':'/inventory', 'clientes':'/clientes',
                  'vendas':'/vendas', 'folga':'/vendors', 'endereco':'/enderecos', 'etiqueta':'/enderecos',
-                 'superfrete':'/enderecos', 'impressao':'/enderecos', 'equipe':'/vendors'}
+                 'superfrete':'/enderecos', 'impressao':'/enderecos', 'impressoes':'/enderecos', 'itens':'/inventory', 'equipe':'/vendors'}
     existing = {r.key:r for r in db.query(AssistantKnowledge).filter_by(kind='capability')}
     items = []
     active_keys = set()

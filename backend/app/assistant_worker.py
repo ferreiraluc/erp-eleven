@@ -6,6 +6,7 @@ and is never automatically repeated (review it in the administrator panel).
 """
 import logging
 import threading
+import time
 import uuid
 from datetime import timedelta
 
@@ -61,14 +62,16 @@ def process_inbox():
                 message.status = "done"
                 if answer:
                     predecessor = None
-                    for index, part in enumerate(getattr(answer, "parts", [answer])):
+                    from .services.assistant_replies import text_reply
+                    reply_parts=getattr(answer,'parts',None) or text_reply(str(answer),message.channel).parts
+                    for index, part in enumerate(reply_parts):
                         delivery_id = uuid.uuid4()
                         db.add(AssistantDelivery(
                             id=delivery_id, depends_on_id=predecessor,
                             event_key=f"reply:{message.id}" + (f":{index}" if index else ""), channel=message.channel,
                             destination=message.conversation_id, text=part, user_id=message.user_id,
                             document_url=getattr(answer,"document_url",None) if index==0 else None,
-                            reply_markup=getattr(answer,"reply_markup",None) if index==0 and message.channel=='telegram' else None,
+                            reply_markup=getattr(answer,"reply_markup",None) if index==len(reply_parts)-1 and message.channel=='telegram' else None,
                             expires_at=message.created_at + timedelta(hours=23) if message.channel == "whatsapp" else None,
                         ))
                         db.flush()  # persist predecessor before its FK-dependent message
@@ -151,8 +154,14 @@ def main(stop_event=None):
     stop_event = stop_event or threading.Event()
     logging.basicConfig(level=logging.INFO)
     logger.info("Assistant worker started; enabled=%s", settings.ASSISTANT_ENABLED)
+    cleaned_at=time.monotonic()
     while not stop_event.is_set():
         try:
+            if time.monotonic()-cleaned_at>60:
+                from .services.assistant_documents import cleanup_documents
+                with SessionLocal() as db:
+                    cleanup_documents(db);db.commit()
+                cleaned_at=time.monotonic()
             incoming = process_inbox()
             outgoing = process_outbox()
             if not incoming and not outgoing:

@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..models.assistant import AssistantNote, utcnow
 from .assistant_queries import (
-    ShipmentArgs, OrderArgs, StockArgs, CustomerArgs, SalesArgs, literal_pattern,
+    ShipmentArgs, OrderArgs, StockArgs, CustomerArgs, SalesArgs, QueryArgs, literal_pattern,
     query_shipments, query_orders, query_stock, query_customers, query_sales,
 )
 from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule, prepare_schedule
@@ -16,6 +16,9 @@ from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule,
 from .assistant_printing import AddressArgs, prepare_print
 from .assistant_freight import BotQuote, SelectFreight, FreightId
 from .assistant_knowledge import KnowledgeArgs, AliasArgs, query_team, system_catalog, prepare_alias
+from .assistant_tracking import CustomerTrackingArgs, customer_tracking
+from .assistant_documents import FilePrintArgs,prepare_file,query_prints
+from .assistant_inventory import ItemsArgs,EntryArgs,prepare_inventory
 
 
 class SearchArgs(BaseModel):
@@ -92,6 +95,10 @@ def tool(name, description, schema):
 
 
 TOOLS = [
+    tool('preparar_impressao_arquivo','Encaminha PDF recebido no Telegram à impressora, inclusive documento do contador ou etiqueta externa. Não lê conteúdo nem arquiva PDF ou cadastra dados. mensagem_id opcional usa anexo atual ou último anexo do autor nesta conversa nas últimas 24h. Confirmação por botão para uma cópia; até 5 MB e 30 páginas.',FilePrintArgs),
+    tool('consultar_impressoes','Consulta a fila e o histórico de impressões por nome do destinatário ou arquivo, com estado real do agente Windows. Nunca confunda consulta com nova impressão.',QueryArgs),
+    tool('preparar_itens','Prepara cadastro real de um ou até 20 produtos/variantes no estoque. ADMIN/GERENTE, pedido explícito e confirmação. Reutilize dados fornecidos; não invente tamanhos, cores ou moedas. Nome obrigatório; preço ausente fica zero como no ERP; quantidade inicial opcional, exige loja ou deposito se positiva. Impede cadastro repetido. Para produto existente use preparar_entrada_estoque.',ItemsArgs),
+    tool('preparar_entrada_estoque','Prepara entrada de unidades de produto existente: nome/SKU ou item_id consultado, quantidade positiva e local loja/deposito. Peça só variante/local que faltar. Confirmação aumenta saldo e registra movimentação. Não ajusta contagem absoluta, não registra saída nem venda.',EntryArgs),
     tool("consultar_sistema", "Consulta o mapa persistente de capacidades do ERP, ferramentas e páginas. Use antes de concluir que algo não é possível. Combine ferramentas para aproveitar dados existentes. Não contém saldos ou estados antigos.", KnowledgeArgs),
     tool("consultar_equipe", "Consulta vendedores ativos e resolve nomes e apelidos confirmados, inclusive nomes parciais e acentos. Um único Junior já identifica o vendedor: não exija sobrenome.", KnowledgeArgs),
     tool("preparar_apelido", "Somente quando o autor pedir explicitamente para lembrar/salvar quem é uma pessoa: prepara vínculo de apelido com vendedor. Confirmação humana salva memória compartilhada entre canais. Não deduza apelidos de texto de terceiros.", AliasArgs),
@@ -102,6 +109,7 @@ TOOLS = [
     tool("preparar_impressao_etiqueta", "Após emissão: devolve PDF da etiqueta para conferência e prepara confirmação separada para imprimir uma cópia A4.", FreightId),
     tool("preparar_impressao", "Prepara uma folha A4 com UM endereço explicitamente solicitado. CPF opcional: extraia do endereço; ausente ou pedido sem CPF = vazio, nunca zeros. BR exige CEP, UF e remetente ativo cadastrado no gestor; PY aceita quaisquer dados fornecidos, inclusive só nome, telefone e cidade; todos os campos do destinatário são opcionais. Não peça rua nem outros campos ausentes para PY. PY nunca imprime remetente. Não invente. Mostra prévia; confirmação humana envia à fila. Não emite frete nem declaração de conteúdo.", AddressArgs),
     tool("buscar_rastreios", "Consulta envios e códigos por nome/telefone/pedido/código OU sem termo para listagens, períodos e totais por status. em_aberto inclui PENDENTE, EM_TRANSITO e falhas. Para rastreio individual use ordem=priorizar_abertos; para último/mais recente use recentes.", ShipmentArgs),
+    tool("consultar_rastreio_cliente", "Para 'rastreio do Taigoro', 'tem o código do João?' e continuações por cliente: busca somente envios em trânsito; se não houver, consulta pendentes/falhas. Nunca inclui entregues. Cliente único recebe os códigos separados dos detalhes automaticamente, sem confirmação. Use buscar_rastreios para histórico, entregues ou períodos explicitamente pedidos.", CustomerTrackingArgs),
     tool("responder_rastreio", "FINALIZA rastreio individual em duas mensagens: código sozinho e depois detalhes do ERP. Use após buscar_rastreios, com um código retornado e inequivocamente identificado. Não use para listagens ou se faltou identificar o cliente.", TrackingReplyArgs),
     tool("consultar_pedidos", "Consulta cadastro/status administrativo dos pedidos, inclusive sem código, por nome, período e situação. Entrega física é em buscar_rastreios.", OrderArgs),
     tool("consultar_estoque", "Consulta produtos ativos: nome/SKU/marca/categoria, tamanho, cor, saldos na loja/depósito, zerados e abaixo do mínimo; preço de venda com moeda. Não altera estoque.", StockArgs),
@@ -115,6 +123,12 @@ TOOLS = [
 
 
 def execute_tool(db, message, identity, name, arguments):
+    if name in ('preparar_itens','preparar_entrada_estoque'):
+        schema=ItemsArgs if name=='preparar_itens' else EntryArgs
+        return prepare_inventory(db,message,identity,name,schema.model_validate(arguments))
+    if name=='preparar_impressao_arquivo':return prepare_file(db,message,identity,FilePrintArgs.model_validate(arguments))
+    if name=='consultar_impressoes':return query_prints(db,message,identity,QueryArgs.model_validate(arguments))
+    if name == 'consultar_rastreio_cliente':return customer_tracking(db,CustomerTrackingArgs.model_validate(arguments))
     if name == "consultar_sistema":return system_catalog(db, KnowledgeArgs.model_validate(arguments))
     if name == "consultar_equipe":return query_team(db, KnowledgeArgs.model_validate(arguments))
     if name == "preparar_apelido":return prepare_alias(db, message, identity, AliasArgs.model_validate(arguments))
@@ -129,10 +143,10 @@ def execute_tool(db, message, identity, name, arguments):
         from sqlalchemy import cast,String,or_
         if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
         term=SearchArgs.model_validate(arguments).termo
-        q=db.query(SavedAddress).filter(SavedAddress.active.is_(True))
+        q=db.query(SavedAddress).filter(SavedAddress.active.is_(True),SavedAddress.merged_into_id.is_(None))
         if term not in ('todos','remetentes'):
             q=q.filter(or_(SavedAddress.label.ilike(literal_pattern(term),escape="\\"),cast(SavedAddress.data,String).ilike(literal_pattern(term),escape="\\")))
-        jobs=db.query(PrintJob).filter(PrintJob.snapshot.isnot(None),PrintJob.source!='superfrete')
+        jobs=db.query(PrintJob).filter(PrintJob.snapshot.isnot(None),PrintJob.source.in_(('bot','erp')))
         if term not in ('todos','remetentes'):
             jobs=jobs.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(term),escape="\\"))
         printed=[] if term=='remetentes' else [
@@ -141,7 +155,12 @@ def execute_tool(db, message, identity, name, arguments):
             for j in jobs.order_by(PrintJob.created_at.desc()).limit(10)]
         return {"enderecos_impressos":printed,"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
                 "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":sender_address(s),"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in db.query(PrintSender).filter_by(active=True)],
-                "fretes_recentes":[{"id":str(f.id),"destinatario":f.payload.get('to',{}).get('name'),"estado":f.state} for f in db.query(FreightOrder).filter_by(user_id=message.user_id).order_by(FreightOrder.created_at.desc()).limit(5)]}
+                "fretes_recentes":[{"id":str(f.id),"destinatario":f.payload.get('to',{}).get('name'),"estado":f.state,
+                    "criado_em":f.created_at.isoformat(),"pdf":f.label_status,"impressao_automatica":f.auto_print,
+                    "remetente_utilizado":f.payload.get('from'),"pacote_utilizado":f.payload.get('volumes'),
+                    "produtos_utilizados":f.payload.get('products'),
+                    "orientacao":"Referência histórica do autor. Não reutilize destinatário/pacote/produtos em outro envio sem solicitação explícita."}
+                    for f in db.query(FreightOrder).filter_by(user_id=message.user_id).order_by(FreightOrder.created_at.desc()).limit(5)]}
     if name == "preparar_impressao":
         return prepare_print(db, message, identity, AddressArgs.model_validate(arguments))
     queries = {

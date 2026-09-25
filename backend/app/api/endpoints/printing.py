@@ -93,6 +93,8 @@ def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
 
 @router.post("/agent/claim")
 def claim(device=Depends(printer), db: Session = Depends(get_db)):
+    from ...services.assistant_documents import cleanup_documents
+    cleanup_documents(db)
     # Claim is permanent. Lost responses never cause a job to be dispatched again.
     device.last_seen_at = utcnow()
     db.query(PrintJob).filter(PrintJob.device_id == device.id, PrintJob.status == "pending",
@@ -113,7 +115,12 @@ def document(job_id: UUID, device=Depends(printer), db: Session = Depends(get_db
     job = db.query(PrintJob).filter_by(id=job_id, device_id=device.id, status="claimed").first()
     if not job:
         raise HTTPException(404, "Trabalho indisponível")
-    return Response(job.pdf, media_type="application/pdf", headers={"Cache-Control": "no-store"})
+    if job.source=='bot_pdf_ephemeral':
+        from ...services.assistant_documents import ephemeral_pdf
+        try:data=ephemeral_pdf(job)
+        except ValueError as exc:raise HTTPException(410,str(exc)) from None
+    else:data=job.pdf
+    return Response(data, media_type="application/pdf", headers={"Cache-Control": "no-store"})
 
 
 class ResultInput(BaseModel):
@@ -132,5 +139,6 @@ def result(job_id: UUID, body: ResultInput, device=Depends(printer), db: Session
     job.status, job.finished_at = body.status, utcnow()
     # Erase recipient data once the local agent no longer needs the document.
     job.pdf = b""
+    if job.source=='bot_pdf_ephemeral':job.snapshot=None
     db.commit()
     return {"status": job.status}

@@ -289,7 +289,7 @@ def query_stock(db, args):
     return {**info, "local": args.local, "unidades": by_location[args.local],
             "saldos_por_local": by_location,
             "escopo_dos_saldos": "Todos os produtos filtrados, não só a página exibida.",
-            "resultados": [{"produto": x.name, "sku": x.sku_internal, "categoria": x.category,
+            "resultados": [{"id":str(x.id),"produto": x.name, "sku": x.sku_internal, "categoria": x.category,
                             "tamanho": x.size, "cor": x.color, "marca": x.brand,
                             "total": x.current_stock, "loja": x.stock_loja, "deposito": x.stock_deposito,
                             "minimo": x.min_stock, "preco_venda": scalar(x.sale_price), "moeda": x.sale_currency} for x in rows]}

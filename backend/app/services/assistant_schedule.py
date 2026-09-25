@@ -60,6 +60,12 @@ def may_schedule(db, message, identity):
 
 
 def action_preview(action):
+    if action.kind in ('item_cadastrar','estoque_entrada'):
+        from .assistant_inventory import inventory_preview
+        return inventory_preview(action)
+    if action.kind=='arquivo_imprimir':
+        from .assistant_documents import file_preview
+        return file_preview(action)
     if action.kind == "apelido":
         from .assistant_knowledge import alias_preview
         return alias_preview(action)
@@ -115,11 +121,21 @@ def confirm_action(db, message, identity, action, cancel=False):
         return "Solicitação expirada. Envie o pedido novamente."
     if cancel:
         action.status = "cancelled"
+        if action.kind=='arquivo_imprimir':
+            attachment=db.get(AssistantMessage,uuid.UUID(action.payload['attachment_message_id']))
+            if attachment:attachment.attachment=None
+            return 'Impressão cancelada. A referência temporária do arquivo foi removida.'
         if action.kind=="frete_imprimir":return "Impressão cancelada. A etiqueta já emitida não foi cancelada nem reembolsada."
         return "Pedido cancelado. Nenhuma ação executada."
     if action.kind == "apelido":
         from .assistant_knowledge import confirm_alias
         return confirm_alias(db, message, action)
+    if action.kind=='arquivo_imprimir':
+        from .assistant_documents import confirm_file
+        return confirm_file(db,message,action)
+    if action.kind in ('item_cadastrar','estoque_entrada'):
+        from .assistant_inventory import confirm_inventory
+        return confirm_inventory(db,message,action)
     if action.kind in ("frete_emitir","frete_imprimir"):
         from .assistant_freight import confirm
         return confirm(db,message,action)

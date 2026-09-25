@@ -134,14 +134,14 @@ def overview(user=Depends(manager),db:Session=Depends(get_db)):
 def job_info(j,name=None):
     snapshot=j.snapshot or {}
     return {'id':str(j.id),'status':j.status,'source':j.source,'created_at':j.created_at,'finished_at':j.finished_at,
-            'user':name,'recipient':snapshot.get('endereco',{}).get('nome','Arquivo PDF'),
-            'country':snapshot.get('endereco',{}).get('pais',''),'editable':bool(j.snapshot) and j.source!='superfrete','pdf_available':bool(j.snapshot or j.pdf),
+            'user':name,'recipient':snapshot.get('filename') or snapshot.get('endereco',{}).get('nome','Arquivo PDF'),
+            'country':snapshot.get('endereco',{}).get('pais',''),'editable':bool(snapshot.get('endereco')) and j.source in ('erp','bot'),'pdf_available':bool(j.snapshot or j.pdf),
             'address_id':str(j.address_id) if j.address_id else None,'parent_id':str(j.parent_id) if j.parent_id else None}
 
 
 @router.get('/history')
 def history(q:str=Query('',max_length=100),status:str='',offset:int=Query(0,ge=0),limit:int=Query(30,ge=1,le=100),user=Depends(manager),db:Session=Depends(get_db)):
-    query=db.query(PrintJob,Usuario.nome).join(Usuario,Usuario.id==PrintJob.user_id)
+    query=db.query(PrintJob,Usuario.nome).join(Usuario,Usuario.id==PrintJob.user_id).filter(PrintJob.source!='bot_pdf_ephemeral')
     if status:query=query.filter(PrintJob.status==status)
     if q:query=query.filter(cast(PrintJob.snapshot,String).ilike(pattern(q),escape='\\'))
     return {'total':query.count(),'items':[job_info(j,n) for j,n in query.order_by(PrintJob.created_at.desc(),PrintJob.id).offset(offset).limit(limit)]}
@@ -151,6 +151,7 @@ def history(q:str=Query('',max_length=100),status:str='',offset:int=Query(0,ge=0
 def detail(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
     row=db.get(PrintJob,key)
     if not row:raise HTTPException(404,'Impressão não encontrada.')
+    if row.source=='bot_pdf_ephemeral':raise HTTPException(404,'Esse arquivo foi encaminhado sem arquivamento.')
     return {**job_info(row),'snapshot':row.snapshot,'device_id':str(row.device_id)}
 
 
@@ -158,6 +159,7 @@ def detail(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
 def pdf(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
     row=db.get(PrintJob,key)
     if not row:raise HTTPException(404,'Impressão não encontrada.')
+    if row.source=='bot_pdf_ephemeral':raise HTTPException(410,'Esse PDF é temporário e não fica arquivado no ERP.')
     data=row.pdf
     if not data and row.snapshot:
         if row.source=='superfrete':
@@ -173,7 +175,9 @@ def cancel(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
     row=db.query(PrintJob).filter_by(id=key).with_for_update().first()
     if not row:raise HTTPException(404,'Impressão não encontrada.')
     if row.status!='pending':raise HTTPException(409,'Já retirado pelo agente ou finalizado. Não é possível cancelar no servidor.')
-    row.status='cancelled';row.pdf=b'';row.finished_at=utcnow();db.commit();return {'status':row.status}
+    row.status='cancelled';row.pdf=b'';row.finished_at=utcnow()
+    if row.source=='bot_pdf_ephemeral':row.snapshot=None
+    db.commit();return {'status':row.status}
 
 
 @router.post('/preview')

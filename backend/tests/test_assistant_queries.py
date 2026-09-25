@@ -353,7 +353,7 @@ def test_cached_tracking_answer_forces_fresh_customer_lookup(setup, monkeypatch)
         msg = incoming(db, user_id, "Qual o rastreio do Peter?")
         answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
         assert answer.parts[0] == "OY859210230BR" and len(answer.parts) == 2
-        assert choices == [None, {"type": "function", "function": {"name": "buscar_rastreios"}}, None]
+        assert choices == [None, {"type": "function", "function": {"name": "buscar_rastreios"}}]
 
 
 def test_unverified_code_in_plain_answer_is_never_delivered(setup, monkeypatch):

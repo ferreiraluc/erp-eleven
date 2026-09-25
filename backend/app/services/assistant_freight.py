@@ -152,6 +152,15 @@ def service_choice(db,message,identity,content):
         AssistantMessage.created_at<=message.created_at,
     )
     if callback:query=query.filter(FreightOrder.id==uuid.UUID(callback[1]))
+    else:
+        # A short "2" answers the quote just shown, never an older customer's
+        # order after a failed/new request. Callback buttons already carry an ID.
+        latest=db.query(AssistantMessage).filter(AssistantMessage.user_id==message.user_id,
+            AssistantMessage.channel==message.channel,AssistantMessage.conversation_id==message.conversation_id,
+            AssistantMessage.created_at<=message.created_at,AssistantMessage.id!=message.id,
+            AssistantMessage.status=='done',AssistantMessage.response.isnot(None)).order_by(AssistantMessage.created_at.desc()).first()
+        if not latest:return None
+        query=query.filter(FreightOrder.request_key==latest.id)
     order=query.order_by(FreightOrder.created_at.desc()).first()
     if not order:return 'Cotação indisponível para seu usuário nesta conversa.' if callback else None
     if order.state not in ('quoted','pending'):

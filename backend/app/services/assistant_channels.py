@@ -22,6 +22,7 @@ class Incoming:
     sender_id: str
     text: str
     should_reply: bool = True
+    attachment: dict | None = None
 
 
 def enabled_channels():
@@ -60,7 +61,20 @@ def telegram_message(update):
         return None
     if not settings.TELEGRAM_GROUP_ID or str(chat.get("id")) != settings.TELEGRAM_GROUP_ID:
         return None
-    content = message.get("text") or message.get("caption") or ""
+    attachment=None
+    document=message.get('document')
+    # A direct reply to one's own file explicitly identifies it, even when another
+    # employee has since sent a document in the group.
+    replied=message.get('reply_to_message') or {}
+    if not document and str((replied.get('from') or {}).get('id'))==str(sender['id']):
+        document=replied.get('document')
+    if not callback and isinstance(document,dict) and isinstance(document.get('file_id'),str) and len(document['file_id'])<=500:
+        size=document.get('file_size')
+        is_pdf=document.get('mime_type')=='application/pdf' or str(document.get('file_name') or '').lower().endswith('.pdf')
+        attachment={'file_id':document['file_id'],'name':'PDF recebido' if is_pdf else 'Arquivo recebido',
+                    'mime_type':'application/pdf' if is_pdf else 'application/octet-stream',
+                    'size':size if isinstance(size,int) and size>=0 else None}
+    content = message.get("text") or message.get("caption") or ('[Arquivo recebido: anexo para impressão]' if attachment else "")
     if not isinstance(content, str) or len(content) > 6000:
         return None
     if not content:
@@ -84,7 +98,7 @@ def telegram_message(update):
         conversation += ":" + str(message["message_thread_id"])
     if not isinstance(update.get("update_id"), int):
         return None
-    return Incoming("telegram", str(update["update_id"]), conversation, str(sender["id"]), content, True)
+    return Incoming("telegram", str(update["update_id"]), conversation, str(sender["id"]), content, True,attachment)
 
 
 def twilio_message(form):
@@ -135,6 +149,7 @@ def enqueue_incoming(db, incoming):
         channel=incoming.channel, external_id=incoming.external_id,
         conversation_id=incoming.conversation_id, sender_id=incoming.sender_id,
         user_id=identity.user_id, text=incoming.text, should_reply=incoming.should_reply,
+        attachment=incoming.attachment,
     )
     try:
         with db.begin_nested():
