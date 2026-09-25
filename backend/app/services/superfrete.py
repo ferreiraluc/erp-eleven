@@ -94,7 +94,8 @@ def quote_order(db,body,user_id):
     if previous:
         if previous.user_id!=user_id or previous.payload.get('_request')!=body.model_dump(mode='json',exclude={'request_key'}):raise HTTPException(409,'Identificador já utilizado com outros dados.')
         return previous
-    address=db.get(SavedAddress,body.address_id)
+    from .address_book import resolve_address
+    address=resolve_address(db,body.address_id)
     if not address or not address.active:raise HTTPException(400,'Escolha um endereço ativo.')
     if body.sender_id:
         sender=db.get(PrintSender,body.sender_id)

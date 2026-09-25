@@ -61,8 +61,9 @@ def execute(db,message,identity,name,args):
             if previous:return sf.summary(previous)
             address_id=a.address_id
             if not address_id:
-                saved=SavedAddress(label=a.endereco.nome or 'Endereço do bot',data=a.endereco.model_dump(),created_by=message.user_id)
-                db.add(saved);db.flush();address_id=saved.id
+                from .address_book import save_or_reuse
+                saved,_=save_or_reuse(db,a.endereco.model_dump(),message.user_id)
+                address_id=saved.id
             q=sf.QuoteInput(request_key=message.id,address_id=address_id,sender_id=a.sender_id,remetente=a.remetente,package=a.package,products=a.products,non_commercial=a.non_commercial,invoice=a.invoice)
             row=sf.quote_order(db,q,message.user_id)
             return {**sf.summary(row),'instrucao':'Mostre serviços e valores e peça que o usuário escolha. Não emita nesta mensagem.'}

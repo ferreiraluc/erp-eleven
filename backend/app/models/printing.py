@@ -23,7 +23,7 @@ class PrintJob(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     request_key = Column(UUID(as_uuid=True), nullable=False, unique=True)
     snapshot = Column(JSON)
-    address_id = Column(UUID(as_uuid=True), ForeignKey('saved_addresses.id'))
+    address_id = Column(UUID(as_uuid=True), ForeignKey('saved_addresses.id'), index=True)
     source = Column(String(20), nullable=False, default='upload')
     parent_id = Column(UUID(as_uuid=True), ForeignKey('print_jobs.id'))
     pdf = Column(LargeBinary, nullable=False)

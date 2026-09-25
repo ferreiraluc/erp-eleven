@@ -72,3 +72,13 @@ Telegram precisa de `allowed_updates` com `message` e `callback_query`. A SuperF
 Etiquetas antigas pagas são recuperadas sem imprimir de novo. Para as antigas cujo PDF faltava, o canal original recebe o documento ao ficar pronto. Mantenha o agente Windows da loja aberto; não é necessário reinstalá-lo.
 
 Referências: [botões Telegram](https://core.telegram.org/bots/api#inlinekeyboardmarkup), [eventos e assinatura SuperFrete](https://superfrete.readme.io/reference/webhook).
+
+## Endereço único e histórico de utilização
+
+A agenda mantém um cadastro por destinatário e local de entrega. Acentos, maiúsculas, espaços, pontuação e a máscara do CEP são normalizados para reconhecer repetições. Nome, número, complemento, cidade ou outro local diferente continuam sendo cadastros distintos. Em endereços mínimos do Paraguai, o telefone ajuda na identificação. Blocos vazios ou somente com nome não são consolidados automaticamente.
+
+O bot, o cadastro manual e as impressões usam a mesma rotina de reutilização. Solicitações concorrentes são serializadas e um índice único protege o cadastro. Diferenças de CPF/CNPJ ou vínculos com clientes distintos exigem conferência, para não misturar pessoas.
+
+No cartão de cada endereço, **Histórico** mostra cotações, etiquetas e impressões, com data, responsável, estado, rastreio e dados do endereço usado na ocasião. Permite filtrar por tipo, paginar, abrir o frete e consultar o PDF da impressão. Uma cotação não comprova um pacote enviado. Repetir uma mesma requisição técnica não cria outra utilização; solicitar outro pacote cria outro frete, reutilizando o endereço.
+
+A migração `t0u1v2w3x4y5` consolida duplicatas já existentes. Os IDs antigos ficam preservados como referências ao cadastro principal; fretes, impressões e snapshots não são excluídos nem reescritos. Históricos de cópias antigas aparecem no endereço consolidado. Referências antigas continuam resolvendo para o endereço principal; editores abertos antes da consolidação precisam atualizar a agenda.

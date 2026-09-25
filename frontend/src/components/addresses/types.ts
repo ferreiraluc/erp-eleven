@@ -7,3 +7,5 @@ export interface Job {id:string;status:string;source:string;created_at:string;us
 export interface Freight {id:string;state:string;environment:string;recipient:string;provider_id:string|null;price:string|null;tracking:string|null;label_url:string|null;label_status:string;pdf_available:boolean;label_error:string|null;auto_print:boolean;print_job_id:string|null;error:string|null;created_at:string;rates:{id:number;name:string;price:string;delivery_time:number}[]}
 export interface Customer {id:string;kind:'pdv'|'pedidos';nome:string;telefone:string|null;cpf:string|null;endereco:string|null}
 export interface Overview {addresses:number;statuses:Record<string,number>;devices:{id:string;name:string;active:boolean;last_seen_at:string|null}[]}
+
+export interface AddressUsage {total:number;summary:{total:number;quotes:number;labels:number;prints:number;last_used_at:string|null};items:{id:string;kind:'frete'|'impressao';created_at:string;status:string;source:string;user:string;tracking:string|null;price:string|null;environment:string|null;recipient:string;address_text:string}[]}

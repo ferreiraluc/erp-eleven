@@ -15,6 +15,7 @@ from ...models.usuario import Usuario
 from ...models.assistant import utcnow
 from ...schemas.address_book import AddressInput, SenderInput, LayoutInput, LayoutConfig, PrintInput
 from ...services.address_manager import compose, enqueue_address
+from ...services.address_book import save_or_reuse, edit_address, resolve_address
 from ...services.assistant_printing import render_address
 from ...services.sender_addresses import sender_address
 
@@ -49,7 +50,7 @@ def customers(q:str=Query('',max_length=100),user=Depends(manager),db:Session=De
 @router.get('/addresses')
 def addresses(q:str=Query('',max_length=100),country:str='',customer_id:uuid.UUID|None=None,active:bool=True,
               offset:int=Query(0,ge=0),limit:int=Query(30,ge=1,le=100),user=Depends(manager),db:Session=Depends(get_db)):
-    query=db.query(SavedAddress).filter(SavedAddress.active==active)
+    query=db.query(SavedAddress).filter(SavedAddress.active==active,SavedAddress.merged_into_id.is_(None))
     if q:query=query.filter(or_(SavedAddress.label.ilike(pattern(q),escape='\\'),cast(SavedAddress.data,String).ilike(pattern(q),escape='\\')))
     if country:query=query.filter(SavedAddress.data['pais'].as_string()==country)
     if customer_id:query=query.filter(or_(SavedAddress.cliente_id==customer_id,SavedAddress.pdv_cliente_id==customer_id))
@@ -59,19 +60,24 @@ def addresses(q:str=Query('',max_length=100),country:str='',customer_id:uuid.UUI
 @router.post('/addresses')
 def create_address(body:AddressInput,user=Depends(manager),db:Session=Depends(get_db)):
     validate_customer(db,body)
-    row=SavedAddress(label=body.label,data=body.data.model_dump(),cliente_id=body.cliente_id,pdv_cliente_id=body.pdv_cliente_id,created_by=user.id,active=body.active)
-    db.add(row);db.commit();return item(row)
+    row,reused=save_or_reuse(db,body.data.model_dump(),user.id,label=body.label,cliente_id=body.cliente_id,pdv_cliente_id=body.pdv_cliente_id,active=body.active)
+    db.commit();return {**item(row),'reused':reused}
 
 
 @router.put('/addresses/{key}')
 def update_address(key:uuid.UUID,body:AddressInput,user=Depends(manager),db:Session=Depends(get_db)):
-    row=db.query(SavedAddress).filter_by(id=key).with_for_update().first()
-    if not row:raise HTTPException(404,'Endereço não encontrado.')
-    if row.version!=body.version:raise HTTPException(409,'Endereço alterado por outra pessoa. Atualize antes de salvar.')
     validate_customer(db,body)
-    for attr in ['label','cliente_id','pdv_cliente_id','active']:setattr(row,attr,getattr(body,attr))
-    row.data=body.data.model_dump();row.version+=1;row.updated_at=utcnow()
-    db.commit();return item(row)
+    row,merged=edit_address(db,key,body)
+    db.commit();return {**item(row),'reused':merged}
+
+
+@router.get('/addresses/{key}/usage')
+def address_usage(key:uuid.UUID,offset:int=Query(0,ge=0),limit:int=Query(30,ge=1,le=100),
+                  kind:str=Query('all',pattern='^(all|frete|impressao)$'),user=Depends(manager),db:Session=Depends(get_db)):
+    row=resolve_address(db,key)
+    if not row:raise HTTPException(404,'Endereço não encontrado.')
+    from ...services.address_usage import history as usage_history
+    return {'address':item(row),**usage_history(db,row,offset,limit,kind)}
 
 
 @router.get('/senders')
@@ -120,7 +126,7 @@ def save_layout(key:str,body:LayoutInput,user=Depends(manager),db:Session=Depend
 
 @router.get('/overview')
 def overview(user=Depends(manager),db:Session=Depends(get_db)):
-    return {'addresses':db.query(SavedAddress).filter_by(active=True).count(),
+    return {'addresses':db.query(SavedAddress).filter_by(active=True,merged_into_id=None).count(),
             'statuses':dict(db.query(PrintJob.status,func.count(PrintJob.id)).group_by(PrintJob.status).all()),
             'devices':[{'id':str(d.id),'name':d.name,'active':d.active,'last_seen_at':d.last_seen_at} for d in db.query(PrintDevice).order_by(PrintDevice.created_at)]}
 

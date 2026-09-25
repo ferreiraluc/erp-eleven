@@ -22,6 +22,13 @@ def orders(offset:int=Query(0,ge=0),user=Depends(manager),db:Session=Depends(get
     return {'total':q.count(),'items':[sf.summary(r) for r in q.order_by(FreightOrder.created_at.desc()).offset(offset).limit(30)]}
 
 
+@router.get('/orders/{key}')
+def get_order(key:UUID,user=Depends(manager),db:Session=Depends(get_db)):
+    row=db.get(FreightOrder,key)
+    if not row:raise HTTPException(404,'Frete não encontrado.')
+    return sf.summary(row)
+
+
 @router.post('/quotes')
 def quote(body:sf.QuoteInput,user=Depends(manager),db:Session=Depends(get_db)):
     row=sf.quote_order(db,body,user.id);db.commit();return sf.summary(row)
