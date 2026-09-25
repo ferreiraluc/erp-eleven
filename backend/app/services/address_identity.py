@@ -18,6 +18,7 @@ def fingerprint(data):
     country = normalized(data.get('pais'))
     name = normalized(data.get('nome'))
     street = normalized(' '.join(str(data.get(k) or '') for k in ('endereco','numero','bairro','complemento')))
+    street = re.sub(r'\b(?:apartamento|apto|apt|ap)\s+(?=[0-9])', 'apartamento ', street)
     city, state, postcode = normalized(data.get('cidade')), normalized(data.get('estado')), digits(data.get('cep'))
     # In Paraguay a city/telephone can be the entire delivery address. Blank or
     # name-only print blocks must never become a shared address for unrelated jobs.

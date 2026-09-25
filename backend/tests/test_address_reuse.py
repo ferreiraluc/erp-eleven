@@ -28,6 +28,8 @@ def create(client,data=None,label='Casa'):
 def test_normalized_identity_recipient_location_and_blank_blocks():
     equivalent={**BASE,'nome':' IZABELA   LIMA DA SILVA ','cidade':'sao paulo','bairro':'Jose Bonifacio','cep':'08250520'}
     assert fingerprint(BASE)==fingerprint(equivalent)
+    for apartment in ('Apartamento 12','apto. 12','APT 12','ap. 12'):
+        assert fingerprint(BASE)==fingerprint(BASE|{'complemento':apartment})
     for change in ({'nome':'Outro cliente'},{'numero':'26'},{'complemento':'Ap 13'},{'pais':'PY'},{'cidade':'Outra cidade'}):
         assert fingerprint(BASE)!=fingerprint(BASE|change)
     assert fingerprint({'pais':'PY','nome':'João'}) is None
@@ -145,6 +147,29 @@ def test_migration_consolidates_eight_variants_without_deleting_history(env):
     assert c.get('/manager/addresses').json()['total']==1
     assert c.get(f'/manager/addresses/{ids[-1]}/usage').json()['total']==8
     assert c.get(f'/manager/addresses/{ids[0]}/usage').json()['total']==8
+
+
+def test_apartment_migration_merges_roots_and_preserves_existing_aliases(env):
+    factory,c,uid,_=env
+    path=Path(__file__).parents[1]/'alembic/versions/u1v2w3x4y5z6_apartment_addresses.py'
+    spec=importlib.util.spec_from_file_location('apartment_migration',path)
+    migration=importlib.util.module_from_spec(spec);spec.loader.exec_module(migration)
+    target,abbreviated,alias=[uuid.uuid4() for _ in range(3)]
+    with factory() as db:
+        for key,apartment,cpf,parent in [(target,'Apartamento 12',BASE['cpf'],None),(abbreviated,'apto 12','',None),(alias,'apto 12','',abbreviated)]:
+            db.execute(insert(SavedAddress.__table__).values(id=key,label=BASE['nome'],data=BASE|{'complemento':apartment,'cpf':cpf},
+                created_by=uid,active=parent is None,version=1,updated_at=utcnow(),merged_into_id=parent))
+        for key in (target,abbreviated,alias):
+            db.add(FreightOrder(request_key=uuid.uuid4(),user_id=uid,address_id=key,environment='sandbox',state='quoted',rates=[],payload={'to':{'name':BASE['nome']}}))
+        db.flush();migration.consolidate(db.connection());db.expire_all()
+        assert db.query(SavedAddress).count()==3
+        assert db.query(SavedAddress).filter_by(merged_into_id=None).count()==1
+        assert resolve_address(db,alias).id==target
+        assert db.get(SavedAddress,target).dedup_key==fingerprint(BASE)
+        db.commit()
+    usage=c.get(f'/manager/addresses/{alias}/usage').json()
+    assert usage['summary']['quotes']==3
+    assert create(c,BASE|{'complemento':'Apt. 12'})['id']==str(target)
 
 
 def test_history_requires_manager_authentication():
