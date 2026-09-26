@@ -8,4 +8,4 @@ export interface Freight {id:string;state:string;environment:string;recipient:st
 export interface Customer {id:string;kind:'pdv'|'pedidos';nome:string;telefone:string|null;cpf:string|null;endereco:string|null}
 export interface Overview {addresses:number;statuses:Record<string,number>;devices:{id:string;name:string;active:boolean;last_seen_at:string|null}[]}
 
-export interface AddressUsage {total:number;summary:{total:number;quotes:number;labels:number;prints:number;last_used_at:string|null};items:{id:string;kind:'frete'|'impressao';created_at:string;status:string;source:string;user:string;tracking:string|null;price:string|null;environment:string|null;recipient:string;address_text:string}[]}
+export interface AddressUsage {total:number;summary:{total:number;quotes:number;labels:number;prints:number;completed_prints:number;address_prints:number;label_prints:number;last_used_at:string|null;last_printed_at:string|null};items:{id:string;kind:'frete'|'impressao';created_at:string;finished_at:string|null;status:string;source:string;user:string;tracking:string|null;price:string|null;environment:string|null;recipient:string;address_text:string}[]}

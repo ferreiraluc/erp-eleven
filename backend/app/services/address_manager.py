@@ -28,7 +28,7 @@ def compose(db, body):
 
 def enqueue_address(db, body, user_id):
     from .assistant_printing import render_address
-    from .address_book import lock_addresses, resolve_address, save_or_reuse
+    from .address_book import lock_addresses, resolve_address, save_print_address
     lock_addresses(db)
     device=db.query(PrintDevice).filter_by(id=body.device_id,active=True).with_for_update().first()
     if not device: raise HTTPException(404,'Impressora não encontrada.')
@@ -44,7 +44,7 @@ def enqueue_address(db, body, user_id):
     snapshot=compose(db,body)
     snapshot['requested_address_id']=str(body.address_id) if body.address_id else None
     pdf=render_address(snapshot)
-    saved,_=save_or_reuse(db,body.data.model_dump(),user_id)
+    saved=save_print_address(db,body.data.model_dump(),user_id)
     job=PrintJob(device_id=device.id,user_id=user_id,request_key=body.request_key,pdf=pdf,
                  sha256=hashlib.sha256(pdf).hexdigest(),expires_at=utcnow()+timedelta(hours=24),
                  snapshot=snapshot,address_id=saved.id,parent_id=body.parent_id,source='erp')

@@ -27,3 +27,27 @@ def fingerprint(data):
         return None
     identity = [country,name,street,city,state,postcode,phone]
     return hashlib.sha256(json.dumps(identity,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+
+
+def print_matches_saved(printed, saved):
+    """A BR print block may omit the district, but never the delivery location.
+
+    Compare the actual street/number/complement as well as name, city and CEP.
+    The caller must require a unique candidate; a name alone is never enough.
+    """
+    if normalized(printed.get('pais')) != 'br' or normalized(saved.get('pais')) != 'br':
+        return False
+    for key in ('nome', 'cidade', 'estado'):
+        if not normalized(printed.get(key)) or normalized(printed.get(key)) != normalized(saved.get(key)):
+            return False
+    if not digits(printed.get('cep')) or digits(printed.get('cep')) != digits(saved.get('cep')):
+        return False
+    def street(data, district=True):
+        keys = ('endereco', 'numero', 'bairro', 'complemento') if district else ('endereco', 'numero', 'complemento')
+        value = normalized(' '.join(str(data.get(k) or '') for k in keys))
+        return re.sub(r'\b(?:apartamento|apto|apt|ap)\s+(?=[0-9])', 'apartamento ', value)
+    printed_street = street(printed)
+    if not printed_street or not any(c.isdigit() for c in printed_street):
+        return False
+    return printed_street == street(saved) or (
+        not printed.get('bairro') and printed_street == street(saved, district=False))

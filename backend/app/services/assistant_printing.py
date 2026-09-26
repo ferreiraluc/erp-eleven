@@ -140,7 +140,7 @@ def prepare_print(db, message, identity, args):
 
 
 def enqueue_print(db, action):
-    from .address_book import lock_addresses, save_or_reuse
+    from .address_book import lock_addresses, save_print_address
     from ..schemas.address_book import AddressData
     lock_addresses(db)
     device = db.query(PrintDevice).filter_by(id=uuid.UUID(action.payload['device_id']), active=True).with_for_update().first()
@@ -154,7 +154,7 @@ def enqueue_print(db, action):
         except ValueError:
             return 'O endereço excedeu uma folha A4. Cancele esta prévia e envie um endereço mais curto.'
         data = {k:v for k,v in action.payload['endereco'].items() if k in AddressData.model_fields}
-        saved,_=save_or_reuse(db,AddressData.model_validate(data).model_dump(),action.user_id)
+        saved=save_print_address(db,AddressData.model_validate(data).model_dump(),action.user_id)
         job = PrintJob(device_id=device.id, user_id=action.user_id, request_key=action.id, address_id=saved.id,
                        pdf=pdf, snapshot=action.payload, source='bot', sha256=hashlib.sha256(pdf).hexdigest(), expires_at=utcnow()+timedelta(hours=24))
         db.add(job)

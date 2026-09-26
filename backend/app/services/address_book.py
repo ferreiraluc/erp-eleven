@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from ..models.address_book import SavedAddress
 from ..models.assistant import utcnow
-from .address_identity import fingerprint, digits
+from .address_identity import fingerprint, digits, print_matches_saved
 
 
 def lock_addresses(db):
@@ -53,6 +53,24 @@ def save_or_reuse(db, data, user_id, *, label=None, cliente_id=None, pdv_cliente
         cliente_id=cliente_id,pdv_cliente_id=pdv_cliente_id,active=active,dedup_key=key)
     db.add(row);db.flush()
     return row, False
+
+
+def save_print_address(db, data, user_id):
+    """Reuse a fuller saved BR address when the printed block omits its district."""
+    lock_addresses(db)
+    key = fingerprint(data)
+    exact = db.query(SavedAddress).filter_by(dedup_key=key, merged_into_id=None).first() if key else None
+    if not exact:
+        candidates = [row for row in db.query(SavedAddress).filter_by(merged_into_id=None)
+                      if print_matches_saved(data, row.data)]
+        if len(candidates) == 1:
+            row = candidates[0]
+            compatible(row, data)
+            if not row.active:
+                row.active = True; row.version += 1; row.updated_at = utcnow()
+            db.flush()
+            return row
+    return save_or_reuse(db, data, user_id)[0]
 
 
 def edit_address(db, key, body):
