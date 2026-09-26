@@ -15,6 +15,7 @@ import FiadoView from '@/views/FiadoView.vue'
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {path:'/bi-vendas',name:'bi-vendas',component:()=>import('@/views/SalesBiView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {path:'/enderecos',name:'enderecos',component:()=>import('@/views/AddressesView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {
       path: '/assistente',

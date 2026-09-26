@@ -370,6 +370,9 @@
         <button v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="address-dashboard-card" @click="router.push('/enderecos')">
           <span class="address-dash-icon">↗</span><div><h3>Endereços e envios</h3><p>Clientes, remetentes, impressões e etiquetas SuperFrete</p></div><span>Gerenciar →</span>
         </button>
+        <button v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="address-dashboard-card" @click="router.push('/bi-vendas')">
+          <span class="address-dash-icon">▥</span><div><h3>Visão de vendas</h3><p>Planilhas OneDrive, comparações, vendedores e melhores semanas</p></div><span>Analisar →</span>
+        </button>
         <!-- Row 3: Folgas + Status + Exchange (no gap) -->
         <div class="bottom-grid">
 

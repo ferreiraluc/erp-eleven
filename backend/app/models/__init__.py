@@ -15,3 +15,5 @@ from .inventory import Supplier, Item, StockMovement, InventorySession, Inventor
 from .pedido_anexo import PedidoAnexo
 from .pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
 from .assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction
+
+from .sales_bi import SalesBIConfig, SalesBIWorkbook

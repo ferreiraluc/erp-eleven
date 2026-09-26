@@ -14,7 +14,7 @@ from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboa
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base, SessionLocal
 from .config import settings
-from .api.endpoints import assistant, printing, address_manager, freight
+from .api.endpoints import assistant, printing, address_manager, freight, sales_bi
 from .services import assistant_events  # register atomic tracking outbox listener
 
 # Main
@@ -129,6 +129,9 @@ async def lifespan(app: FastAPI):
     from .services.freight_labels import main as run_label_worker
     app.state.label_worker = threading.Thread(target=run_label_worker, args=(worker_stop,), name="freight-label-worker", daemon=True)
     app.state.label_worker.start()
+    from .services.sales_bi_sync import main as run_sales_bi_worker
+    app.state.sales_bi_worker = threading.Thread(target=run_sales_bi_worker, args=(worker_stop,), name="sales-bi-worker", daemon=True)
+    app.state.sales_bi_worker.start()
     app.state.assistant_worker = None
     if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER:
         # Dedicated thread: provider requests never block the API event loop.
@@ -148,6 +151,7 @@ async def lifespan(app: FastAPI):
     finally:
         worker_stop.set()
         await asyncio.to_thread(app.state.label_worker.join, 5)
+        await asyncio.to_thread(app.state.sales_bi_worker.join, 5)
         if app.state.assistant_worker:
             await asyncio.to_thread(app.state.assistant_worker.join, 5)
         scheduler.shutdown(wait=False)
@@ -196,6 +200,7 @@ app.include_router(assistant.router, prefix="/api/assistant", tags=["assistant"]
 app.include_router(freight.router, prefix='/api/freight', tags=['freight'])
 app.include_router(address_manager.router, prefix='/api/address-manager', tags=['address-manager'])
 app.include_router(printing.router, prefix="/api/printing", tags=["printing"])
+app.include_router(sales_bi.router, prefix="/api/sales-bi", tags=["sales-bi"])
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
