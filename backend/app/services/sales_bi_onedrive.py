@@ -4,12 +4,17 @@ Microsoft REST reference: https://learn.microsoft.com/en-us/sharepoint/dev/sp-ad
 No upload, checkout, save, formula calculation or permission-changing API exists here.
 """
 import re
-from urllib.parse import urlsplit, urljoin, unquote
+from urllib.parse import urlsplit, urljoin, unquote, parse_qs
+from uuid import UUID
 import requests
 from .sales_bi_parser import WorkbookError, filename_month
 
 
 class SourceError(WorkbookError):
+    pass
+
+
+class SourceUnavailable(SourceError):
     pass
 
 
@@ -40,7 +45,7 @@ class OneDriveReader:
     def close(self):
         self.session.close()
 
-    def get(self, url, *, limit=20_000_000, params=None):
+    def get(self, url, *, limit=20_000_000, params=None, include_url=False):
         # Validate every redirect BEFORE the next request. Sharing URLs are never logged.
         try:
             for _ in range(8):
@@ -52,18 +57,37 @@ class OneDriveReader:
                         url = urljoin(url, response.headers.get('Location', ''))
                         continue
                     if response.status_code != 200:
-                        raise SourceError(f'OneDrive indisponível (HTTP {response.status_code}). Confira o compartilhamento das fontes.')
+                        raise SourceUnavailable(f'OneDrive indisponível (HTTP {response.status_code}). Confira o compartilhamento das fontes.')
                     output = bytearray()
                     for chunk in response.iter_content(65536):
                         output.extend(chunk)
                         if len(output) > limit:
                             raise SourceError('A fonte excede o tamanho permitido para leitura.')
-                    return bytes(output)
+                    return (bytes(output), response.url) if include_url else bytes(output)
             raise SourceError('Não foi possível resolver o link do OneDrive.')
         except requests.RequestException:
-            raise SourceError('Não foi possível ler o OneDrive. A última leitura válida foi preservada.') from None
+            raise SourceUnavailable('Não foi possível ler o OneDrive. A última leitura válida foi preservada.') from None
 
     def current(self):
+        # Resolve the supplied share itself, then read exactly that document by
+        # its returned GUID. The direct download gateway can return 503 from
+        # server networks even while the shared file REST endpoint is healthy.
+        try:
+            body, final_url = self.get(self.current_url, include_url=True)
+            if body.startswith(b'PK'):
+                return body
+            target = urlsplit(final_url)
+            site_path = re.fullmatch(r'(/personal/[a-fA-F0-9]{16})/_layouts/15/Doc.aspx', target.path)
+            doc = parse_qs(target.query).get('sourcedoc', [''])[0].strip('{}')
+            if target.hostname == 'onedrive.live.com' and site_path and doc:
+                try:
+                    doc = str(UUID(doc))
+                except ValueError:
+                    raise SourceError('Identificador de planilha inválido no compartilhamento.') from None
+                site = 'https://onedrive.live.com' + site_path[1]
+                return self.get(site + f"/_api/web/GetFileById('{doc}')/$value")
+        except SourceUnavailable:
+            pass
         return self.get(self.current_url, params={'download': '1'})
 
     def in_scope(self, path):

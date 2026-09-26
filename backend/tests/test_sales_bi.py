@@ -299,3 +299,22 @@ def test_live_month_uses_saved_week_results_even_if_manual_monthly_recap_is_stal
     assert data['sellers']['Lucas']['total_usd']=='700'
     assert data['weeks'][0]['total_usd']=='999'
     assert data['source_cell'] is None
+
+
+def test_current_workbook_resolves_only_the_shared_document_guid(monkeypatch):
+    reader=OneDriveReader(**CONFIG)
+    calls=[]
+    content=fixture_workbook()
+    class Response:
+        status_code=200
+        headers={}
+        url='https://onedrive.live.com/personal/0123456789abcdef/_layouts/15/Doc.aspx?sourcedoc=%7B11111111-2222-3333-4444-555555555555%7D'
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def iter_content(self,size):yield b'<html>Shared document</html>' if len(calls)==1 else content
+    def get(url,**kwargs):calls.append(url);return Response()
+    monkeypatch.setattr(reader.session,'get',get)
+    assert reader.current()==content
+    assert len(calls)==2
+    assert calls[1].endswith("/_api/web/GetFileById('11111111-2222-3333-4444-555555555555')/$value")
+    reader.close()
