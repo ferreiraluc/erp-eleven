@@ -16,7 +16,7 @@ O painel `/bi-vendas`, acessível pelo dashboard a administradores e gerentes, l
 
 ## Sincronização
 
-`app.services.sales_bi_sync` roda em uma thread independente do assistente e da impressão. Uma concessão temporária no banco impede execuções simultâneas durante deploys. A primeira leitura descobre as pastas anuais e arquivos XLSX. As seguintes baixam a planilha atual e apenas os históricos cuja versão mudou, a cada 15 minutos. Falhas voltam a ser tentadas após dois minutos.
+`app.services.sales_bi_sync` roda em uma thread independente do assistente e da impressão. Uma concessão temporária no banco impede execuções simultâneas durante deploys. A primeira leitura descobre as pastas anuais e arquivos XLSX. A leitura automática ocorre uma vez por dia, às **18h no fuso America/Sao_Paulo (Brasília)**, baixando a planilha atual e apenas os históricos cuja versão mudou. O botão **Atualizar dados** permite solicitar uma leitura imediata a qualquer hora, sem deslocar o próximo horário diário. Após falhas, a última leitura válida é preservada e a próxima tentativa ocorre no horário diário ou mediante o botão; não há repetição automática a cada dois minutos. Salvar a configuração das fontes agenda a próxima leitura diária, sem iniciar uma sincronização imediata.
 
 O conector só possui operações **GET**, com links compartilhados explicitamente configurados. Usa o acesso de leitura disponibilizado pelo compartilhamento OneDrive e a API de pastas/arquivos REST documentada pela Microsoft. Se o compartilhamento expirar ou passar a exigir login, o painel conserva o último resultado e mostra a falha. Não altera permissões para restabelecer acesso.
 

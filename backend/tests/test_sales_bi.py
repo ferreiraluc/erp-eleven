@@ -1,7 +1,7 @@
 """Isolated BI tests: generated workbooks, SQLite and stubbed GET sources only."""
 import copy
 import importlib.util
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from io import BytesIO
 import json
 import os
@@ -25,6 +25,7 @@ from app.services.sales_bi_parser import parse_workbook, WorkbookError, filename
 from app.services.sales_bi_onedrive import OneDriveReader, SourceError, validate_url, validate_root
 from app.services.sales_bi import build_overview, sources_status
 from app.services.sales_bi_sync import sync_once, claim
+from app.services.sales_bi_schedule import next_daily_sync
 from app.api.endpoints import sales_bi
 
 CONFIG = {'current_url': 'https://1drv.ms/x/example', 'archive_url': 'https://1drv.ms/f/example',
@@ -368,3 +369,55 @@ def test_currency_text_is_accepted_only_with_unambiguous_saved_format(value,expe
     from app.services.sales_bi_parser import number
     result=number(value)
     assert (str(result) if result is not None else None)==expected
+
+
+@pytest.mark.parametrize('instant,expected', [
+    ('2026-09-26T20:59:59+00:00','2026-09-26T21:00:00+00:00'),
+    ('2026-09-26T21:00:00+00:00','2026-09-27T21:00:00+00:00'),
+    ('2026-09-27T00:30:00+00:00','2026-09-27T21:00:00+00:00'),
+    ('2026-12-31T19:00:00-03:00','2027-01-01T21:00:00+00:00'),
+])
+def test_daily_schedule_uses_brasilia_cutoff_and_handles_date_rollover(instant,expected):
+    assert next_daily_sync(datetime.fromisoformat(instant))==datetime.fromisoformat(expected)
+
+
+def test_daily_worker_runs_once_and_failure_waits_until_next_daily_slot(factory,monkeypatch):
+    import app.services.sales_bi_sync as worker
+    clock=[datetime(2026,9,26,20,59,59,tzinfo=timezone.utc)]
+    monkeypatch.setattr(worker,'utcnow',lambda:clock[0])
+    with factory() as db:
+        db.add(SalesBIConfig(id=1,**CONFIG,requested_at=clock[0],
+                            next_sync_at=next_daily_sync(clock[0])))
+        db.commit()
+    assert not worker.sync_once(factory,Reader)
+    clock[0]=datetime(2026,9,26,21,tzinfo=timezone.utc)
+    class Broken(Reader):
+        def archive(self):raise SourceError('Falha de teste.')
+    assert worker.sync_once(factory,Broken)
+    with factory() as db:
+        c=db.get(SalesBIConfig,1)
+        assert c.last_error
+        assert c.next_sync_at.replace(tzinfo=timezone.utc)==datetime(2026,9,27,21,tzinfo=timezone.utc)
+    clock[0]+=timedelta(minutes=15)
+    assert not worker.sync_once(factory,Reader)
+    clock[0]=datetime(2026,9,27,21,tzinfo=timezone.utc)
+    assert worker.sync_once(factory,Reader)
+    assert not worker.sync_once(factory,Reader)
+
+
+def test_manual_button_runs_now_without_postponing_daily_schedule(client,factory,monkeypatch):
+    import app.services.sales_bi_sync as worker
+    now=datetime(2026,9,26,15,tzinfo=timezone.utc)
+    monkeypatch.setattr(worker,'utcnow',lambda:now)
+    monkeypatch.setattr(sales_bi,'utcnow',lambda:now)
+    c,_=client
+    assert c.put('/bi/config',json=CONFIG).status_code==200
+    assert not worker.sync_once(factory,Reader)
+    assert c.post('/bi/sync').status_code==202
+    assert worker.sync_once(factory,Reader)
+    with factory() as db:
+        config=db.get(SalesBIConfig,1)
+        assert config.next_sync_at.replace(tzinfo=timezone.utc)==datetime(2026,9,26,21,tzinfo=timezone.utc)
+    assert not worker.sync_once(factory,Reader)
+    assert c.put('/bi/config',json=CONFIG).status_code==200
+    assert not worker.sync_once(factory,Reader)

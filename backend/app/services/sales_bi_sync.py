@@ -9,9 +9,9 @@ from ..models.assistant import utcnow
 from ..models.sales_bi import SalesBIConfig, SalesBIWorkbook
 from .sales_bi_onedrive import OneDriveReader, SourceError
 from .sales_bi_parser import parse_workbook, WorkbookError, PARSER_VERSION
+from .sales_bi_schedule import next_daily_sync
 
 log = logging.getLogger(__name__)
-INTERVAL = timedelta(minutes=15)
 LEASE = timedelta(minutes=30)
 
 
@@ -89,7 +89,7 @@ def sync_once(session_factory=SessionLocal, reader_factory=OneDriveReader, stop=
         seen = {current_id}
         for f in files:
             if stop and stop.is_set():
-                raise SourceError('Leitura interrompida; será retomada automaticamente.')
+                raise SourceError('Leitura interrompida; tente novamente pelo botão ou aguarde o próximo horário diário.')
             key = sha256(('archive:' + f['remote_id']).encode()).hexdigest()
             seen.add(key)
             if not f['month']:
@@ -114,7 +114,7 @@ def sync_once(session_factory=SessionLocal, reader_factory=OneDriveReader, stop=
             c = db.query(SalesBIConfig).filter_by(id=1, lease_token=token).first()
             if c:
                 c.finished_at = utcnow()
-                c.next_sync_at = utcnow() + (timedelta(minutes=2) if errors else INTERVAL)
+                c.next_sync_at = next_daily_sync(c.finished_at)
                 c.lease_until = None
                 c.lease_token = None
                 c.last_error = f'{len(errors)} fonte(s) com falha. ' + errors[0][:350] if errors else None

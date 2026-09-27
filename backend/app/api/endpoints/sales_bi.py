@@ -7,6 +7,7 @@ from ...models.assistant import utcnow
 from ...models.sales_bi import SalesBIConfig, SalesBIWorkbook
 from ...services.sales_bi import build_overview, sources_status
 from ...services.sales_bi_onedrive import validate_url, validate_root, SourceError
+from ...services.sales_bi_schedule import next_daily_sync
 
 router = APIRouter()
 manager = require_role(['ADMIN', 'GERENTE'])
@@ -61,8 +62,7 @@ def save_config(body: SourceConfig, user=Depends(admin), db: Session = Depends(g
         db.add(c)
     for k, v in body.model_dump().items():
         setattr(c, k, v)
-    c.requested_at = utcnow()
-    c.next_sync_at = utcnow()
+    c.next_sync_at = next_daily_sync(utcnow())
     db.commit()
     return {'saved': True}
 
