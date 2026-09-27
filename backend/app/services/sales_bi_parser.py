@@ -1,5 +1,6 @@
 """Read saved Excel results. Never evaluate formulas or write to the source workbook."""
 from collections import Counter
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from io import BytesIO
@@ -11,7 +12,7 @@ from zipfile import ZipFile, BadZipFile
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
-PARSER_VERSION = 1
+PARSER_VERSION = 2
 MONTHS = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho',
           'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 CURRENCIES = {'g$': 'PYG', 'gs': 'PYG', 'r$': 'BRL', 'u$': 'USD', 'us$': 'USD', 'eur': 'EUR', '€': 'EUR'}
@@ -28,6 +29,10 @@ def normal(value):
 
 def number(value):
     # No parsing of formula strings: missing Excel caches remain missing.
+    # Some archived summaries were pasted as Brazilian-formatted USD text.
+    # Accept only that explicit currency format, never ambiguous bare numbers.
+    if isinstance(value, str) and re.fullmatch(r'(?:US\$|\$)\s*-?(?:\d{1,3}(?:\.\d{3})+|\d+),\d{2}', value.strip()):
+        value = Decimal(re.sub(r'^(?:US\$|\$)\s*', '', value.strip()).replace('.', '').replace(',', '.'))
     if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
         return None
     try:
@@ -74,12 +79,21 @@ def parse_workbook(content, *, year=None, month=None, current=False):
             rows = list(sheet.iter_rows(max_row=min(sheet.max_row or 20000, 20000), max_col=60, values_only=True))
             def get(r, c):
                 return rows[r - 1][c - 1] if 0 < r <= len(rows) else None
-            total_row = next((r for r in (8, 7) if normal(get(r, 2)) == 'total'), None)
-            sellers = {c: seller_name(get(2, c)) for c in range(4, 9) if isinstance(get(2, c), str) and normal(get(2, c))}
-            if not total_row or not sellers:
+            total_row = next((r for r in range(5, 13) if normal(get(r, 2)) == 'total'), None)
+            if not total_row:
                 continue
+            # A few archived weeks have an inserted/deleted row. Locate the
+            # seller header immediately above the currency summary instead of
+            # assuming row 2, or row 8 for the final USD results.
+            header_row = next((r for r in range(1, min(total_row, 6))
+                               if normal(get(r + 1, 3)) in CURRENCIES
+                               and sum(isinstance(get(r, c), str) and bool(normal(get(r, c))) for c in range(4, 9)) >= 2), None)
+            if header_row is None:
+                continue
+            sellers = {c: seller_name(get(header_row, c)) for c in range(4, 9)
+                       if isinstance(get(header_row, c), str) and normal(get(header_row, c))}
             totals = {name: number(get(total_row, col)) for col, name in sellers.items()}
-            currency_rows = {CURRENCIES[normal(get(r, 3))]: r for r in range(3, 7) if normal(get(r, 3)) in CURRENCIES}
+            currency_rows = {CURRENCIES[normal(get(r, 3))]: r for r in range(header_row + 1, total_row) if normal(get(r, 3)) in CURRENCIES}
             amounts = {name: {currency: packed(number(get(r, col))) for currency, r in currency_rows.items()} for col, name in sellers.items()}
             raw = [list(r[1:6]) for r in rows[total_row + 1:] if normal(r[1]) in CURRENCIES and number(r[2]) is not None]
             populated = bool(raw) or any(v is not None and v != 0 for v in totals.values())
@@ -100,6 +114,8 @@ def parse_workbook(content, *, year=None, month=None, current=False):
         total, total_cell = None, None
         for r in range(1, min(16, len(rows) + 1)):
             label = get(r, 18)
+            if isinstance(label, (date, datetime)):
+                label = label.strftime('%d/%m')
             if isinstance(label, str) and re.search(r'\d{1,2}\s*/\s*\d{1,2}', label):
                 val = number(get(r, 19))
                 pos = (r, 19)
@@ -196,6 +212,14 @@ def parse_workbook(content, *, year=None, month=None, current=False):
             warnings.append('Algumas semanas não têm detalhamento conciliado por vendedor ou moeda; o total mensal e os totais semanais vêm do resumo salvo.')
         if any(v['total_usd'] is None for v in monthly_sellers.values()):
             warnings.append('O ranking por vendedor não inclui este mês quando faltar o resultado do vendedor selecionado.')
+        seller_totals = [v['total_usd'] for v in monthly_sellers.values()]
+        if seller_totals and all(v is not None for v in seller_totals):
+            difference = sum((Decimal(v) for v in seller_totals), Decimal(0)) - total
+            if abs(difference) > Decimal('0.05'):
+                formatted = f'{abs(difference):,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
+                direction = 'acima' if difference > 0 else 'abaixo'
+                warnings.append(f'A soma por vendedor está US$ {formatted} {direction} do fechamento mensal. '
+                                'Pode haver ajustes gerais ou referências diferentes entre os resumos. Os resultados salvos foram preservados.')
         return {'version': PARSER_VERSION, 'year': year, 'month': month, 'current': current, 'total_usd': packed(total),
                 'source_cell': total_cell, 'sellers': monthly_sellers, 'weeks': weeks, 'warnings': warnings,
                 'currencies_complete': detailed, 'main_sheet': main_name}

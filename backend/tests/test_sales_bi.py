@@ -1,7 +1,7 @@
 """Isolated BI tests: generated workbooks, SQLite and stubbed GET sources only."""
 import copy
 import importlib.util
-from datetime import timedelta
+from datetime import timedelta, datetime
 from io import BytesIO
 import json
 import os
@@ -32,7 +32,7 @@ CONFIG = {'current_url': 'https://1drv.ms/x/example', 'archive_url': 'https://1d
 NS = {'s': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
 
 
-def fixture_workbook(*, old=False, duplicate=False, missing_cache=False, named='Planilha1', mismatch=False, monthly=True):
+def fixture_workbook(*, old=False, duplicate=False, missing_cache=False, named='Planilha1', mismatch=False, monthly=True, date_label=False, shifted=False, currency_text=False):
     w = Workbook(); w.active.title = named
     tr = 7 if old else 8
     for name, junior, lucas in [(named, 100, 450), ('semana 1', 200, 250)]:
@@ -43,7 +43,7 @@ def fixture_workbook(*, old=False, duplicate=False, missing_cache=False, named='
         s[f'B{tr}'] = 'total';s[f'D{tr}'] = junior;s[f'H{tr}'] = lucas;s[f'K{tr}'] = junior+lucas
         s['B12'], s['C12'], s['D12'], s['F12'] = 'U$', lucas, 'Lucas', lucas
     s = w[named]
-    s['R2'], s['S2'] = '01/09 - 07/09', 450
+    s['R2'], s['S2'] = datetime(2026,9,1) if date_label else '01/09 - 07/09', 450
     s['R3'], s['S3'] = '08/09 - 14/09', 550
     s['R10'], s['S10'], s['T12'] = 'Total:', '=SUM(S2:S3)+200-300', 2026
     if monthly:
@@ -52,6 +52,10 @@ def fixture_workbook(*, old=False, duplicate=False, missing_cache=False, named='
         w.copy_worksheet(s).title = 'semana2'
     if mismatch:
         w['semana 1'][f'K{tr}'] = 999
+    if currency_text:
+        w['semana 1'][f'D{tr}'] = '$200,00'
+        w['semana 1'][f'H{tr}'] = '$250,00'
+        w['semana 1'][f'K{tr}'] = '$450,00'
     s[f'H{tr}'] = '=SUM(H5:H6)+200-300'
     output=BytesIO();w.save(output)
     result=BytesIO()
@@ -66,6 +70,14 @@ def fixture_workbook(*, old=False, duplicate=False, missing_cache=False, named='
                         v=c.find('s:v',NS)
                         if v is None:v=ET.SubElement(c,'{'+NS['s']+'}v')
                         v.text='1000' if c.attrib['r']=='S10' else '450'
+                if shifted and name=='xl/worksheets/sheet2.xml':
+                    for row in root.findall('.//s:row',NS):
+                        if int(row.attrib['r'])<10:
+                            row.attrib['r']=str(int(row.attrib['r'])+1)
+                            for c in row.findall('s:c',NS):
+                                import re
+                                col,r=re.fullmatch(r'([A-Z]+)([0-9]+)',c.attrib['r']).groups()
+                                c.attrib['r']=col+str(int(r)+1)
                 content=ET.tostring(root)
             target.writestr(name,content)
     return result.getvalue()
@@ -318,3 +330,41 @@ def test_current_workbook_resolves_only_the_shared_document_guid(monkeypatch):
     assert len(calls)==2
     assert calls[1].endswith("/_api/web/GetFileById('11111111-2222-3333-4444-555555555555')/$value")
     reader.close()
+
+
+def test_excel_date_week_labels_remain_in_week_ranking_and_currency_breakdown():
+    data=snapshot(date_label=True)
+    assert len(data['weeks'])==2
+    assert data['weeks'][0]['label']=='01/09'
+    assert data['weeks'][0]['total_usd']=='450'
+    assert data['currencies_complete']
+
+
+def test_inserted_row_in_week_locates_header_currency_and_total_together():
+    data=snapshot(shifted=True,monthly=False)
+    assert data['weeks'][0]['sheet']=='semana 1'
+    assert data['weeks'][0]['sellers']['Lucas']=='250'
+    assert data['sellers']['Lucas']['total_usd']=='700'
+    assert data['currencies_complete']
+
+
+def test_manual_general_adjustment_is_preserved_and_disclosed_not_reallocated():
+    data=parse_workbook(fixture_workbook(mismatch=True),current=True)
+    assert data['total_usd']=='1549'
+    assert data['sellers']['Lucas']['total_usd']=='700'
+    assert any('549,00' in w and 'abaixo' in w for w in data['warnings'])
+
+
+def test_saved_usd_text_still_reconciles_week_and_individual_seller_results():
+    data=snapshot(currency_text=True,monthly=False)
+    assert data['weeks'][0]['detail_available']
+    assert data['weeks'][0]['sellers']['Lucas']=='250.00'
+    assert data['sellers']['Lucas']['total_usd']=='700.00'
+
+
+@pytest.mark.parametrize('value,expected', [('$9.301,01','9301.01'), ('$0,00','0.00'),
+    ('US$ -1.234,50','-1234.50'), ('1,234',None), ('$1,234.50',None), ('=SUM(A1:A2)',None)])
+def test_currency_text_is_accepted_only_with_unambiguous_saved_format(value,expected):
+    from app.services.sales_bi_parser import number
+    result=number(value)
+    assert (str(result) if result is not None else None)==expected
