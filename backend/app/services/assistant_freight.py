@@ -43,7 +43,7 @@ def preview(action):
     from .assistant_controls import preview_reply
     p=action.payload
     if action.kind=='frete_emitir':
-        return preview_reply(action, (f"Emitir etiqueta para {p['recipient']}, serviço {p['service_name']}, valor R$ {p['price']}. "
+        return preview_reply(action, ('\n'.join(p.get('postal_warnings',[])) + '\n' + f"Emitir etiqueta para {p['recipient']}, serviço {p['service_name']}, valor R$ {p['price']}. "
                 f"Ambiente: {p['environment']}. O valor será debitado do saldo SuperFrete.\n"
                 f"Ao confirmar, o PDF será enviado ao Telegram e impresso automaticamente quando liberado.\nDiga ‘confirmo’ para pagar e emitir ou ‘cancela’. Nenhuma compra realizada ainda.\nIdentificador da prévia: {action.id}"))
     from .assistant_replies import DocumentReply
@@ -62,7 +62,8 @@ def execute(db,message,identity,name,args):
             address_id=a.address_id
             if not address_id:
                 from .address_book import save_or_reuse
-                saved,_=save_or_reuse(db,a.endereco.model_dump(),message.user_id)
+                from .postal_codes import complete_address
+                saved,_=save_or_reuse(db,complete_address(a.endereco.model_dump())['data'],message.user_id)
                 address_id=saved.id
             q=sf.QuoteInput(request_key=message.id,address_id=address_id,sender_id=a.sender_id,remetente=a.remetente,package=a.package,products=a.products,non_commercial=a.non_commercial,invoice=a.invoice)
             row=sf.quote_order(db,q,message.user_id)
@@ -81,7 +82,7 @@ def execute(db,message,identity,name,args):
                 if row.state!='pending':return sf.summary(row)
                 selected=next((r for r in row.rates if r['id']==row.service),{})
                 payload={'freight_id':str(row.id),'recipient':row.payload['to']['name'],'price':str(row.price),
-                         'service_name':selected.get('name',str(row.service)),'environment':row.environment}
+                         'service_name':selected.get('name',str(row.service)),'environment':row.environment,'postal_warnings':row.payload.get('_postal_warnings',[])}
             action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind='frete_emitir',payload=payload)
             db.add(action);db.flush();return {'confirmacao':preview(action)}
         a=FreightId.model_validate(args)
@@ -129,6 +130,7 @@ def confirm(db,message,action):
 def quote_preview(order):
     """Stable option order and quote identity, persisted with the bot response."""
     lines=[f"Cotação para {order.payload['to']['name']}, remetente {order.payload['from']['name']}:"]
+    lines += order.payload.get('_postal_warnings', [])
     for index,rate in enumerate(order.rates,1):
         price=f"{float(rate['price']):.2f}".replace('.',',')
         days=rate.get('delivery_time')

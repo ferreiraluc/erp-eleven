@@ -34,6 +34,9 @@ class AddressArgs(BaseModel):
     pais: Literal['BR', 'PY']
     nome: str = Field(default='', max_length=120)
     endereco: str = Field(default='', max_length=250, description='Rua ou detalhes fornecidos. Opcional no PY: deixe vazio quando ausente, nunca invente.')
+    numero: str = Field(default='', max_length=10)
+    bairro: str = Field(default='', max_length=60)
+    complemento: str = Field(default='', max_length=60)
     cidade: str = Field(default='', max_length=100)
     estado: str = Field(default='', max_length=60, description='UF obrigatória no Brasil; departamento opcional no Paraguai.')
     cep: str = Field(default='', max_length=15)
@@ -80,7 +83,8 @@ def render_address(payload):
     body = ParagraphStyle('address', fontName='Helvetica-Bold' if layout.bold else 'Helvetica', fontSize=layout.font_size, leading=layout.font_size+6)
     sender_style = ParagraphStyle('sender', fontName='Helvetica', fontSize=layout.sender_font_size, leading=layout.sender_font_size+5)
     p = payload['endereco']
-    fields = {'nome':p['nome'], 'endereco':p['endereco'],
+    from .postal_codes import street_line
+    fields = {'nome':p['nome'], 'endereco':street_line(p),
               'cidade':' - '.join(value for value in (p['cidade'],p['estado']) if value),
               'cep':'CEP '+p['cep'] if p['cep'] else '', 'pais':'Brasil' if p['pais']=='BR' else 'Paraguay',
               'telefone':'Tel.: '+p['telefone'] if p['telefone'] else '',
@@ -101,7 +105,9 @@ def render_address(payload):
 
 def print_preview(action):
     p = action.payload['endereco']
-    lines = [p['nome'], p['endereco'], ' - '.join(value for value in (p['cidade'], p['estado']) if value), p['cep'], p['telefone']]
+    from .postal_codes import street_line
+    lines = [p['nome'], street_line(p), ' - '.join(value for value in (p['cidade'], p['estado']) if value), p['cep'], p['telefone']]
+    lines += action.payload.get('postal_warnings', [])
     if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
         lines.append('CPF do destinatário: ' + printable_cpf(p.get('cpf')))
     sender = action.payload.get('remetente')
@@ -113,7 +119,7 @@ def print_preview(action):
             'Ainda não foi enviado. Prévia válida por 24 horas.\nIdentificador da prévia: ' + str(action.id)))
 
 
-def prepare_print(db, message, identity, args):
+def prepare_print(db, message, identity, args, postal_check=None):
     if not message.should_reply or not may_schedule(db, message, identity):
         return {'erro': 'Impressão exige pedido direto de ADMIN/GERENTE habilitado para registros.'}
     if re.search(r'\bsem\s+(?:o\s+)?cpf\b', message.text, re.I):
@@ -133,6 +139,8 @@ def prepare_print(db, message, identity, args):
         sender = {'nome': profile.name, 'linhas': sender_lines(profile)}
     from .address_manager import get_layout
     payload = {'layout': get_layout(db, args.pais), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id)}
+    if postal_check:
+        payload['postal_warnings'] = postal_check['warnings']
     action = AssistantAction(source_message_id=message.id, user_id=message.user_id, kind='impressao', payload=payload)
     db.add(action)
     db.flush()

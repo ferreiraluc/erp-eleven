@@ -105,11 +105,15 @@ def quote_order(db,body,user_id):
         if body.remetente:sender_data.update(body.remetente.model_dump(exclude_unset=True))
     else:
         sender_data=body.remetente.model_dump()
-    origin=party(sender_data);destination=party(address.data,True)
+    from .postal_codes import complete_address
+    sender_check=complete_address(sender_data)
+    recipient_check=complete_address(address.data)
+    origin=party(sender_check['data']);destination=party(recipient_check['data'],True)
     payload={'from':origin,'to':destination,'volumes':body.package.model_dump(),
              'products':[{'name':p.name,'quantity':p.quantity,'unitary_value':float(p.unitary_value)} for p in body.products],
              'options':{'non_commercial':body.non_commercial,'own_hand':False,'receipt':False},'platform':'ERP Eleven',
              '_request':body.model_dump(mode='json',exclude={'request_key'})}
+    payload['_postal_warnings'] = ['Remetente: '+w for w in sender_check['warnings']] + ['Destinatário: '+w for w in recipient_check['warnings']]
     if not body.non_commercial:payload['options']['invoice']={'number':body.invoice}
     rates=call('POST','calculator',{'from':{'postal_code':origin['postal_code']},'to':{'postal_code':destination['postal_code']},
              'services':'1,2,17','options':{'own_hand':False,'receipt':False,'use_insurance_value':False},'package':body.package.model_dump()})
@@ -121,7 +125,7 @@ def quote_order(db,body,user_id):
 
 
 def summary(r):
-    return {'id':str(r.id),'state':r.state,'environment':r.environment,'recipient':r.payload.get('to',{}).get('name'),
+    return {'id':str(r.id),'state':r.state,'environment':r.environment,'recipient':r.payload.get('to',{}).get('name'),'postal_warnings':r.payload.get('_postal_warnings',[]),
             'provider_id':r.provider_id,'service':r.service,'price':str(r.price) if r.price is not None else None,
             'tracking':r.tracking,'label_url':r.label_url,'label_status':r.label_status,'pdf_available':r.label_status=='ready','label_error':r.label_error,'auto_print':r.auto_print,'print_job_id':str(r.print_job_id) if r.print_job_id else None,'error':r.error,'created_at':r.created_at.isoformat() if r.created_at else None,
             'rates':[{'id':v['id'],'name':v.get('name'),'price':str(v['price']),'delivery_time':v.get('delivery_time')} for v in r.rates]}

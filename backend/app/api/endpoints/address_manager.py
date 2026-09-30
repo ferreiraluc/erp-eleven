@@ -13,14 +13,20 @@ from ...models.cliente import Cliente
 from ...models.pdv import PdvCliente
 from ...models.usuario import Usuario
 from ...models.assistant import utcnow
-from ...schemas.address_book import AddressInput, SenderInput, LayoutInput, LayoutConfig, PrintInput
+from ...schemas.address_book import AddressInput, AddressData, SenderInput, LayoutInput, LayoutConfig, PrintInput
 from ...services.address_manager import compose, enqueue_address
 from ...services.address_book import save_or_reuse, edit_address, resolve_address
 from ...services.assistant_printing import render_address
 from ...services.sender_addresses import sender_address
+from ...services.postal_codes import complete_address
 
 router=APIRouter()
 manager=require_role(['ADMIN','GERENTE'])
+
+
+@router.post('/postal-code')
+def postal_code(body:AddressData,user=Depends(manager)):
+    return complete_address(body.model_dump())
 
 
 def item(row):
@@ -60,15 +66,17 @@ def addresses(q:str=Query('',max_length=100),country:str='',customer_id:uuid.UUI
 @router.post('/addresses')
 def create_address(body:AddressInput,user=Depends(manager),db:Session=Depends(get_db)):
     validate_customer(db,body)
-    row,reused=save_or_reuse(db,body.data.model_dump(),user.id,label=body.label,cliente_id=body.cliente_id,pdv_cliente_id=body.pdv_cliente_id,active=body.active)
-    db.commit();return {**item(row),'reused':reused}
+    check=complete_address(body.data.model_dump())
+    row,reused=save_or_reuse(db,check['data'],user.id,label=body.label,cliente_id=body.cliente_id,pdv_cliente_id=body.pdv_cliente_id,active=body.active)
+    db.commit();return {**item(row),'reused':reused,'postal_check':check}
 
 
 @router.put('/addresses/{key}')
 def update_address(key:uuid.UUID,body:AddressInput,user=Depends(manager),db:Session=Depends(get_db)):
     validate_customer(db,body)
-    row,merged=edit_address(db,key,body)
-    db.commit();return {**item(row),'reused':merged}
+    check=complete_address(body.data.model_dump())
+    row,merged=edit_address(db,key,body.model_copy(update={'data':AddressData.model_validate(check['data'])}))
+    db.commit();return {**item(row),'reused':merged,'postal_check':check}
 
 
 @router.get('/addresses/{key}/usage')

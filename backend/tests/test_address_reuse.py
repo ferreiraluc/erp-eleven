@@ -178,3 +178,38 @@ def test_history_requires_manager_authentication():
     from app.api.endpoints.address_manager import router
     app=FastAPI();app.include_router(router,prefix='/manager')
     assert TestClient(app).get('/manager/addresses/'+str(uuid.uuid4())+'/usage').status_code in (401,403)
+
+
+@pytest.mark.parametrize('first_full',[True,False])
+def test_cep_mask_and_missing_district_reuse_in_either_order(env,first_full):
+    _,c,_,_=env
+    partial={**BASE,'bairro':'','cep':'08250520'}
+    one=create(c,BASE if first_full else partial)
+    two=create(c,partial if first_full else BASE)
+    assert one['id']==two['id'] and two['data']['bairro']==BASE['bairro']
+    assert create(c,BASE|{'bairro':'Outro bairro'})['id']!=one['id']
+    assert create(c,partial|{'numero':'28'})['id']!=one['id']
+    conflict=c.post('/manager/addresses',json={'label':'Conflito','data':partial|{'cpf':'98765432100'}})
+    assert conflict.status_code==409
+
+
+def test_missing_district_migration_preserves_references_and_conflicts(env):
+    factory,_,uid,_=env
+    path=Path(__file__).parents[1]/'alembic/versions/y5z6a7b8c9d0_missing_district_addresses.py'
+    spec=importlib.util.spec_from_file_location('district_migration',path)
+    migration=importlib.util.module_from_spec(spec);spec.loader.exec_module(migration)
+    with factory() as db:
+        blank=SavedAddress(label='Antigo',data=BASE|{'bairro':'','cep':'08250520'},created_by=uid)
+        full=SavedAddress(label='Completo',data=BASE,created_by=uid)
+        other=SavedAddress(label='Outro',data=BASE|{'numero':'99'},created_by=uid)
+        db.add_all([blank,full,other]);db.flush()
+        freight=FreightOrder(request_key=uuid.uuid4(),user_id=uid,address_id=blank.id,environment='sandbox',state='quoted',rates=[],payload={'original':'intacto'})
+        db.add(freight);db.flush();keys=blank.id,full.id,other.id,freight.id
+        migration.consolidate(db.connection());db.expire_all()
+        assert resolve_address(db,keys[0]).id==keys[1]
+        assert db.get(SavedAddress,keys[0]).merged_into_id==keys[1]
+        assert db.get(SavedAddress,keys[2]).merged_into_id is None
+        assert db.get(FreightOrder,keys[3]).address_id==keys[0]
+        assert db.get(FreightOrder,keys[3]).payload=={'original':'intacto'}
+        migration.consolidate(db.connection())
+        assert db.query(SavedAddress).filter_by(merged_into_id=None).count()==2

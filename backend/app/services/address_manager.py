@@ -15,15 +15,16 @@ def get_layout(db, country):
 
 def compose(db, body):
     from .assistant_printing import AddressArgs
-    data = body.data.model_dump()
-    data['endereco'] = ', '.join(x for x in [data['endereco'],data['numero'],data['bairro'],data['complemento']] if x)
+    from .postal_codes import complete_address
+    check = complete_address(body.data.model_dump())
+    data = check['data']
     args = AddressArgs.model_validate({k:v for k,v in data.items() if k in AddressArgs.model_fields} | {'remetente':body.sender_id})
     sender = None
     if args.pais=='BR':
         row = db.get(PrintSender,body.sender_id)
         if not row or not row.active: raise HTTPException(400,'Escolha um remetente ativo.')
         sender = {'nome':row.name,'linhas':sender_lines(row)}
-    return {'endereco':args.model_dump(),'remetente':sender,'layout':get_layout(db,args.pais),'editor':body.data.model_dump(),'sender_id':body.sender_id}
+    return {'endereco':args.model_dump(),'address_data':data,'postal_warnings':check['warnings'],'remetente':sender,'layout':get_layout(db,args.pais),'editor':body.data.model_dump(),'sender_id':body.sender_id}
 
 
 def enqueue_address(db, body, user_id):
@@ -44,7 +45,7 @@ def enqueue_address(db, body, user_id):
     snapshot=compose(db,body)
     snapshot['requested_address_id']=str(body.address_id) if body.address_id else None
     pdf=render_address(snapshot)
-    saved=save_print_address(db,body.data.model_dump(),user_id)
+    saved=save_print_address(db,snapshot['address_data'],user_id)
     job=PrintJob(device_id=device.id,user_id=user_id,request_key=body.request_key,pdf=pdf,
                  sha256=hashlib.sha256(pdf).hexdigest(),expires_at=utcnow()+timedelta(hours=24),
                  snapshot=snapshot,address_id=saved.id,parent_id=body.parent_id,source='erp')

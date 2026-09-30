@@ -88,3 +88,11 @@ As migrações `t0u1v2w3x4y5` e `u1v2w3x4y5z6` consolidam duplicatas já existen
 Os modelos simples enviados pelo bot ou pelo ERP aparecem no mesmo **Histórico** das etiquetas. O resumo mostra endereços A4 impressos, etiquetas emitidas e total enviado à impressora. A contagem de impressão usa somente trabalhos `submitted`; fila, cancelamento, expiração, falha ou resultado incerto permanecem na lista, mas não aumentam o total. A data de conclusão do agente aparece em destaque, com a data da solicitação abaixo. Isso registra o envio à impressora, não um sensor de saída do papel.
 
 A migração `w3x4y5z6a7b8` recupera impressões antigas com endereço no snapshot que estavam sem vínculo com a agenda. Reutiliza o endereço existente ou cria um único cadastro a partir dos dados originais, preservando datas, responsável, resultado e documento histórico. Não cria trabalhos nem reimprime. Blocos brasileiros sem bairro podem usar um cadastro mais completo quando nome, cidade, UF, CEP e rua/número/complemento identificam um único endereço. Conflitos de documento ou candidatos ambíguos não são associados automaticamente. PDFs avulsos da ponte temporária continuam fora da agenda.
+
+### Consulta de CEP
+
+O bot (`consultar_cep` e prévias de impressão), o cadastro e a cotação usam o ViaCEP por CEP brasileiro. O formulário consulta ao sair do campo CEP ou pelo botão de conferência. Somente o CEP é enviado ao provedor; não é necessário token adicional.
+
+A consulta preenche rua, bairro, cidade e UF vazios quando os campos informados concordam. Divergências preservam o endereço informado e aparecem na prévia e na cotação. Número, complemento, telefone e CPF nunca são inferidos. CEP geral pode não informar rua/bairro; indisponibilidade não apaga dados nem bloqueia um endereço completo. PY permanece livre de exigências de CEP.
+
+O cache em memória dura 24h para resultados encontrados, 1h para inexistentes e 30s para falhas (limite 512 CEPs). Não há varredura automática da agenda. Cadastros BR com mesmo destinatário/localização/CEP e bairro ausente reutilizam o endereço único compatível; conflitos de CPF, cliente ou múltiplos bairros continuam exigindo conferência. A migração `y5z6a7b8c9d0` consolida pares existentes com bairro ausente, mantendo IDs antigos como redirecionamentos e os históricos intactos.

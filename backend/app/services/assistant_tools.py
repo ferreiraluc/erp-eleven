@@ -19,6 +19,7 @@ from .assistant_knowledge import KnowledgeArgs, AliasArgs, query_team, system_ca
 from .assistant_tracking import CustomerTrackingArgs, customer_tracking
 from .assistant_documents import FilePrintArgs,prepare_file,query_prints
 from .assistant_inventory import ItemsArgs,EntryArgs,prepare_inventory
+from .postal_codes import CepArgs, lookup_cep, complete_address
 
 
 class SearchArgs(BaseModel):
@@ -95,6 +96,7 @@ def tool(name, description, schema):
 
 
 TOOLS = [
+    tool('consultar_cep', 'Consulta CEP brasileiro para obter rua, bairro, cidade e UF. Use antes de pedir esses dados se o autor já enviou CEP. Não retorna número, apartamento, CPF ou telefone. Compare com o endereço recebido e peça esclarecimento se houver divergência; nunca substitua silenciosamente. CEP geral pode não ter rua/bairro.', CepArgs),
     tool('preparar_impressao_arquivo','Encaminha PDF recebido no Telegram à impressora, inclusive documento do contador ou etiqueta externa. Não lê conteúdo nem arquiva PDF ou cadastra dados. mensagem_id opcional usa anexo atual ou último anexo do autor nesta conversa nas últimas 24h. Confirmação por botão para uma cópia; até 5 MB e 30 páginas.',FilePrintArgs),
     tool('consultar_impressoes','Consulta a fila e o histórico de impressões por nome do destinatário ou arquivo, com estado real do agente Windows. Nunca confunda consulta com nova impressão.',QueryArgs),
     tool('preparar_itens','Prepara cadastro real de um ou até 20 produtos/variantes no estoque. ADMIN/GERENTE, pedido explícito e confirmação. Reutilize dados fornecidos; não invente tamanhos, cores ou moedas. Nome obrigatório; preço ausente fica zero como no ERP; quantidade inicial opcional, exige loja ou deposito se positiva. Impede cadastro repetido. Para produto existente use preparar_entrada_estoque.',ItemsArgs),
@@ -161,8 +163,11 @@ def execute_tool(db, message, identity, name, arguments):
                     "produtos_utilizados":f.payload.get('products'),
                     "orientacao":"Referência histórica do autor. Não reutilize destinatário/pacote/produtos em outro envio sem solicitação explícita."}
                     for f in db.query(FreightOrder).filter_by(user_id=message.user_id).order_by(FreightOrder.created_at.desc()).limit(5)]}
+    if name == 'consultar_cep':
+        return lookup_cep(CepArgs.model_validate(arguments).cep)
     if name == "preparar_impressao":
-        return prepare_print(db, message, identity, AddressArgs.model_validate(arguments))
+        check = complete_address(arguments)
+        return prepare_print(db, message, identity, AddressArgs.model_validate(check['data']), check)
     queries = {
         "buscar_rastreios": (ShipmentArgs, query_shipments),
         "consultar_pedidos": (OrderArgs, query_orders),

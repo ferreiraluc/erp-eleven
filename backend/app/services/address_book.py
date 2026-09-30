@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from ..models.address_book import SavedAddress
 from ..models.assistant import utcnow
-from .address_identity import fingerprint, digits, print_matches_saved
+from .address_identity import fingerprint, digits, matches_optional_district
 
 
 def lock_addresses(db):
@@ -32,10 +32,24 @@ def compatible(row, data, cliente_id=None, pdv_cliente_id=None):
         raise HTTPException(409,'Esse endereço já está vinculado a outro cadastro de cliente. Confira o vínculo antes de continuar.')
 
 
+def find_equivalent_address(db, data, exclude_id=None):
+    key = fingerprint(data)
+    roots = db.query(SavedAddress).filter_by(merged_into_id=None)
+    if exclude_id is not None:
+        roots = roots.filter(SavedAddress.id != exclude_id)
+    row = roots.filter_by(dedup_key=key).with_for_update().first() if key else None
+    if row:
+        return row
+    candidates = [row for row in roots.with_for_update() if matches_optional_district(data, row.data)]
+    if len(candidates) > 1:
+        raise HTTPException(409, 'Há mais de um endereço compatível. Informe o bairro para identificar o cadastro correto.')
+    return candidates[0] if candidates else None
+
+
 def save_or_reuse(db, data, user_id, *, label=None, cliente_id=None, pdv_cliente_id=None, active=True):
     lock_addresses(db)
     key = fingerprint(data)
-    row = db.query(SavedAddress).filter_by(dedup_key=key,merged_into_id=None).with_for_update().first() if key else None
+    row = find_equivalent_address(db, data)
     if row:
         compatible(row,data,cliente_id,pdv_cliente_id)
         changed = False
@@ -57,19 +71,6 @@ def save_or_reuse(db, data, user_id, *, label=None, cliente_id=None, pdv_cliente
 
 def save_print_address(db, data, user_id):
     """Reuse a fuller saved BR address when the printed block omits its district."""
-    lock_addresses(db)
-    key = fingerprint(data)
-    exact = db.query(SavedAddress).filter_by(dedup_key=key, merged_into_id=None).first() if key else None
-    if not exact:
-        candidates = [row for row in db.query(SavedAddress).filter_by(merged_into_id=None)
-                      if print_matches_saved(data, row.data)]
-        if len(candidates) == 1:
-            row = candidates[0]
-            compatible(row, data)
-            if not row.active:
-                row.active = True; row.version += 1; row.updated_at = utcnow()
-            db.flush()
-            return row
     return save_or_reuse(db, data, user_id)[0]
 
 
@@ -82,7 +83,7 @@ def edit_address(db, key, body):
     if not row:raise HTTPException(404,'Endereço não encontrado.')
     if row.version!=body.version:raise HTTPException(409,'Endereço alterado por outra pessoa. Atualize antes de salvar.')
     new_key=fingerprint(body.data.model_dump())
-    same=db.query(SavedAddress).filter(SavedAddress.id!=key,SavedAddress.dedup_key==new_key,SavedAddress.merged_into_id.is_(None)).with_for_update().first() if new_key else None
+    same=find_equivalent_address(db, body.data.model_dump(), exclude_id=row.id)
     if same:
         compatible(same,body.data.model_dump(),body.cliente_id,body.pdv_cliente_id)
         # Keep the old ID and its historical links as a redirect, never erase snapshots.

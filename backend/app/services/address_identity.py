@@ -51,3 +51,12 @@ def print_matches_saved(printed, saved):
         return False
     return printed_street == street(saved) or (
         not printed.get('bairro') and printed_street == street(saved, district=False))
+
+
+def matches_optional_district(left, right):
+    """A missing district can be enriched when a complete BR location agrees."""
+    if normalized(left.get('bairro')) and normalized(right.get('bairro')):
+        return False
+    if len(digits(left.get('cep'))) != 8 or len(digits(right.get('cep'))) != 8:
+        return False
+    return print_matches_saved(left, right) or print_matches_saved(right, left)
