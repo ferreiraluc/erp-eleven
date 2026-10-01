@@ -1,8 +1,8 @@
 # Evolução noturna — 30/09/2026
 
 Registro de continuidade do trabalho autorizado pelo responsável. Atualizado às
-00h24 de Brasília de 01/10/2026. **Última publicação concluída** no commit
-`b546b7563d50e684ca0e88e4bd2805be30e97acf` (rodada de estoque abaixo).
+01h22 de Brasília de 01/10/2026. **Última publicação concluída** no commit
+`eab8b677a0e9970e756573c3726982e89915ce4f` (rodada de saldos ausentes abaixo).
 A primeira rodada foi publicada em `78a9ea98918ddbe3220d53354c90498f9a96be79`.
 Frontend e backend confirmados Live no Render; CI GitHub concluída com sucesso.
 
@@ -103,7 +103,7 @@ de falhas reproduzíveis, mantendo confirmações do produto e histórico operac
 
 ## Rodada iniciada às 01h04 — saldos ausentes
 
-Implementação e validação concluídas, publicação em preparação. Reprodução isolada confirmou falha de
+Implementação, validação e publicação concluídas. Reprodução isolada confirmou falha de
 listagem/edição ao retornar NULL, soma parcial apresentada como total no bot e
 baixa/devolução do PDV tratando local ausente como zero. Divisão: receipt_tracking
 cuida da API/serviço de estoque; customer_links do frontend e consumidores dos
@@ -128,3 +128,15 @@ de quantidades ausentes continua exigindo procedimento explícito e auditado; es
 rodada não infere valores. Os bloqueios de NULL não substituem uma revisão das
 demais regras legadas do PDV (baixa direta, quantidade fracionária/insuficiente e
 fluxo financeiro); isso permanece como próximo escopo a reproduzir em testes.
+
+Publicação confirmada às 01h22: frontend e backend no commit
+`eab8b677a0e9970e756573c3726982e89915ce4f`, ambos com deploy concluído no Render,
+[CI aprovada](https://github.com/ferreiraluc/erp-eleven/actions/runs/36814577531)
+e `/health` com API, banco, assistente e worker de etiquetas online. Servidores
+locais de QA encerrados e abas temporárias removidas. Nenhuma impressão, mensagem,
+compra, sincronização de planilhas, senha ou saldo real foi usado para validar.
+
+Esta rodada resolveu a compatibilidade de leitura de NULL registrada às 00h24;
+não repetir esse trabalho na próxima execução. Permanece pendente somente um fluxo
+específico para restaurar quantidades ausentes, caso necessário. Não provisionar
+senhas novamente; continuar preservando as confirmações e o histórico.
