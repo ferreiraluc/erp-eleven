@@ -1,9 +1,10 @@
 # Evolução noturna — 30/09/2026
 
 Registro de continuidade do trabalho autorizado pelo responsável. Atualizado às
-00h02 de Brasília de 01/10/2026. **Publicação concluída** no commit
-`78a9ea98918ddbe3220d53354c90498f9a96be79`. Frontend e backend confirmados Live
-no Render; CI GitHub concluída com sucesso.
+00h24 de Brasília de 01/10/2026. **Última publicação concluída** no commit
+`b546b7563d50e684ca0e88e4bd2805be30e97acf` (rodada de estoque abaixo).
+A primeira rodada foi publicada em `78a9ea98918ddbe3220d53354c90498f9a96be79`.
+Frontend e backend confirmados Live no Render; CI GitHub concluída com sucesso.
 
 ## Implementação desta rodada
 
@@ -62,7 +63,7 @@ notificar somente entregas, falhas ou questões que precisem do responsável.
 
 ## Rodada iniciada às 00h04 — estoque
 
-Implementação e validação concluídas; publicação em preparação:
+Implementação, validação e publicação concluídas:
 
 - **Estoque → Conferir estoque** mostra divergências entre total/locais, saldos
   ausentes/negativos e códigos compartilhados, com busca, filtros e paginação.
@@ -85,3 +86,17 @@ nulos legados. O diagnóstico mostra os valores ausentes e o erro de abertura é
 recuperável; reparar esse contrato exige uma mudança específica, sem converter
 silenciosamente ausência em zero. Não existe tela de sessões de contagem; esta
 rodada corrige os endpoints existentes e seu wrapper.
+
+Publicação confirmada às 00h24: frontend e backend no commit
+`b546b7563d50e684ca0e88e4bd2805be30e97acf`, com
+[CI concluída](https://github.com/ferreiraluc/erp-eleven/actions/runs/36810147323).
+O Render executou a migração, e a consulta técnica de `alembic_version` confirmou
+`b8c9d0e1f2a3`. API, banco, assistente e worker de etiquetas reportam online.
+Backup privado anterior à migração: 7.105.884 bytes, permissões 0600 e catálogo
+validado. Servidores locais de QA encerrados após a revisão; nenhum print, compra,
+mensagem, sincronização de BI ou redefinição de senha foi feito nesta rodada.
+
+Na próxima continuação, não refazer estas entregas. Investigar o contrato de saldos
+nulos usando somente fixtures isoladas, antes de propor correção explícita; manter
+a distinção entre zero conhecido e valor ausente. Demais melhorias devem partir
+de falhas reproduzíveis, mantendo confirmações do produto e histórico operacional.
