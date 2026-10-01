@@ -25,6 +25,17 @@
       </div>
 
       <div class="modal-body">
+        <div v-if="isEdit && item" class="stock-readout">
+          <div class="stock-readout-values">
+            <span>{{ tr('Total salvo') }}: <strong>{{ displayStock(item.current_stock) }}</strong></span>
+            <span>{{ tr('Loja:') }} <strong>{{ displayStock(item.stock_loja) }}</strong></span>
+            <span>{{ tr('Depósito:') }} <strong>{{ displayStock(item.stock_deposito) }}</strong></span>
+          </div>
+          <div v-if="!hasKnownStock(item)" role="status" class="stock-readout-warning">
+            <strong>{{ tr('Revisar estoque') }}</strong>
+            <p>{{ tr('Os dados do produto podem ser editados. Salvar não preenche nem altera os saldos não informados.') }}</p>
+          </div>
+        </div>
         <div v-if="partialItems.length || uncertainSave" class="partial-save-warning" role="alert">
           <strong>{{ tr(partialItems.length ? 'Cadastro parcialmente concluído' : 'Não foi possível confirmar o cadastro') }}</strong>
           <p>{{ tr(partialItems.length ? 'Itens já criados: {count}. Uma etapa seguinte falhou; o estoque inicial pode estar incompleto.' : 'A conexão foi interrompida. Confira o inventário antes de tentar criar novamente.', { count: partialItems.length }) }}</p>
@@ -470,6 +481,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 import BarcodeScanner from './BarcodeScanner.vue'
 import OcrScanner from './OcrScanner.vue'
 import type { OcrAppliedFields } from '@/services/ocr'
@@ -986,6 +998,10 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.stock-readout { margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+.stock-readout-values { display: flex; flex-wrap: wrap; gap: 1rem; padding: .75rem; font-size: .85rem; }
+.stock-readout-warning { padding: .75rem; background: #fffbeb; color: #92400e; font-size: .85rem; }
+.stock-readout-warning p { margin: .35rem 0 0; }
 .partial-save-warning { padding: 1rem; margin-bottom: 1rem; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
 .partial-save-warning p { margin: .5rem 0; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 1rem; }

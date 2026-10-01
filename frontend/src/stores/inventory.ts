@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { inventoryAPI, type InventoryItem, type AlertSummary, type StockMovement } from '@/services/api'
+import { hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 
 export const useInventoryStore = defineStore('inventory', () => {
   const items = ref<InventoryItem[]>([])
@@ -12,8 +13,13 @@ export const useInventoryStore = defineStore('inventory', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const lowStockItems = computed(() => items.value.filter(i => i.alert_level === 'low'))
-  const outOfStockItems = computed(() => items.value.filter(i => i.alert_level === 'out'))
+  const lowStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'low'))
+  const outOfStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'out'))
+
+  function requireKnownCachedStock(id: string) {
+    const item = items.value.find(item => item.id === id)
+    if (item && !hasKnownStock(item)) throw new Error(UNKNOWN_STOCK_MESSAGE)
+  }
 
   async function loadItems(page = 1, append = false, ungroupedOnly = false) {
     try {
@@ -61,13 +67,15 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
   async function quickExit(id: string, location: string = 'loja') {
+    requireKnownCachedStock(id)
     const result = await inventoryAPI.quickExit(id, location)
     const idx = items.value.findIndex(i => i.id === id)
     if (idx !== -1) {
       items.value[idx].current_stock = result.new_stock
       // Recompute alert level
       const item = items.value[idx]
-      if (item.current_stock <= 0) item.alert_level = 'out'
+      if (!hasKnownStock(item)) item.alert_level = 'unknown'
+      else if (item.current_stock <= 0) item.alert_level = 'out'
       else if (item.current_stock < item.min_stock) item.alert_level = 'low'
       else item.alert_level = 'ok'
     }
@@ -83,6 +91,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
   async function createMovement(data: any) {
+    requireKnownCachedStock(data.item_id)
     const mv = await inventoryAPI.createMovement(data)
     // Reload item to get updated stock
     const idx = items.value.findIndex(i => i.id === data.item_id)
@@ -94,6 +103,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
   async function createBatchMovement(data: any) {
+    for (const item of data.items || []) requireKnownCachedStock(item.item_id)
     return await inventoryAPI.createBatchMovement(data)
   }
 

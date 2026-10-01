@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from typing import List, Optional, Literal
 from datetime import datetime, date
 import uuid
@@ -100,6 +100,10 @@ def _item_to_response(item: Item) -> dict:
     return data
 
 
+def _known_stock_filter():
+    return and_(Item.current_stock.isnot(None), Item.stock_loja.isnot(None), Item.stock_deposito.isnot(None))
+
+
 # --- Suppliers ---------------------------------------------------------------
 
 @router.get("/suppliers", response_model=List[SupplierResponse])
@@ -193,12 +197,16 @@ def list_items(
         query = query.filter(Item.stock_deposito > 0)
 
     # Status filters
+    if item_status in ('low_stock', 'out_of_stock', 'overstocked'):
+        query = query.filter(_known_stock_filter())
     if item_status == "low_stock":
         query = query.filter(Item.is_active == True, Item.current_stock > 0, Item.current_stock < Item.min_stock)
     elif item_status == "out_of_stock":
         query = query.filter(Item.is_active == True, Item.current_stock <= 0)
     elif item_status == "overstocked":
         query = query.filter(Item.is_active == True, Item.max_stock > 0, Item.current_stock > Item.max_stock)
+    elif item_status == "unknown_stock":
+        query = query.filter(Item.is_active == True, ~_known_stock_filter())
     elif item_status == "inactive":
         query = query.filter(Item.is_active == False)
     else:
@@ -277,20 +285,22 @@ def get_alerts_summary(
 ):
     from sqlalchemy import func as sqlfunc
     active_items = db.query(Item).filter(Item.is_active == True).all()
-    low_stock = sum(1 for i in active_items if 0 < i.current_stock < i.min_stock)
-    out_of_stock = sum(1 for i in active_items if i.current_stock <= 0)
-    overstocked = sum(1 for i in active_items if i.max_stock > 0 and i.current_stock > i.max_stock)
+    known_items = [i for i in active_items if _compute_alert_level(i) != 'unknown']
+    low_stock = sum(1 for i in known_items if i.min_stock is not None and 0 < i.current_stock < i.min_stock)
+    out_of_stock = sum(1 for i in known_items if i.current_stock <= 0)
+    overstocked = sum(1 for i in known_items if i.max_stock is not None and i.max_stock > 0 and i.current_stock > i.max_stock)
     inactive_count = db.query(Item).filter(Item.is_active == False).count()
     grouped_items_count = sum(1 for i in active_items if i.group_key)
     group_count = db.query(Item.group_key).filter(
         Item.group_key.isnot(None), Item.is_active == True
     ).distinct().count()
-    loja_count = sum(1 for i in active_items if (i.stock_loja or 0) > 0)
-    deposito_count = sum(1 for i in active_items if (i.stock_deposito or 0) > 0)
+    loja_count = sum(1 for i in active_items if i.stock_loja is not None and i.stock_loja > 0)
+    deposito_count = sum(1 for i in active_items if i.stock_deposito is not None and i.stock_deposito > 0)
     return AlertSummary(
         low_stock_count=low_stock,
         out_of_stock_count=out_of_stock,
         overstocked_count=overstocked,
+        unknown_stock_count=len(active_items) - len(known_items),
         total_active_items=len(active_items),
         inactive_count=inactive_count,
         group_count=group_count,
@@ -326,12 +336,16 @@ def get_groups(
             kq = kq.filter(Item.brand.ilike(f"%{brand}%"))
         if category:
             kq = kq.filter(Item.category.ilike(f"%{category}%"))
+        if item_status in ('low_stock', 'out_of_stock', 'overstocked'):
+            kq = kq.filter(_known_stock_filter())
         if item_status == "low_stock":
             kq = kq.filter(Item.current_stock > 0, Item.current_stock < Item.min_stock)
         elif item_status == "out_of_stock":
             kq = kq.filter(Item.current_stock <= 0)
         elif item_status == "overstocked":
             kq = kq.filter(Item.max_stock > 0, Item.current_stock > Item.max_stock)
+        elif item_status == "unknown_stock":
+            kq = kq.filter(~_known_stock_filter())
         if location_stock == "loja":
             kq = kq.filter(Item.stock_loja > 0)
         elif location_stock == "deposito":
@@ -401,7 +415,7 @@ def get_groups(
     result = []
     for key, item_list in groups_dict.items():
         sorted_items = sorted(item_list, key=lambda i: ((i.color or '').lower(), _size_sort_key(i.size)))
-        total_stock = sum(i.current_stock for i in sorted_items)
+        total_stock = None if any(i.current_stock is None for i in sorted_items) else sum(i.current_stock for i in sorted_items)
         result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock))
     return result
 

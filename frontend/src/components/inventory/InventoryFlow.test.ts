@@ -4,10 +4,11 @@ import { createI18n } from 'vue-i18n'
 import MovementModal from './MovementModal.vue'
 import ItemFormModal from './ItemFormModal.vue'
 import BulkTransferModal from './BulkTransferModal.vue'
+import BulkEditModal from './BulkEditModal.vue'
 import { inventoryMessages, useInventoryI18n } from './i18n'
 
 const api = vi.hoisted(() => ({ createMovement: vi.fn(), createBatchMovement: vi.fn(), transferBulk: vi.fn(),
-  createItem: vi.fn(), updateItem: vi.fn(), createGrade: vi.fn(), getByBarcode: vi.fn() }))
+  batchEdit: vi.fn(), createItem: vi.fn(), updateItem: vi.fn(), createGrade: vi.fn(), getByBarcode: vi.fn() }))
 vi.mock('@/services/api', () => ({ inventoryAPI: api, ocrAPI: {} }))
 let app: App | undefined, container: HTMLDivElement
 const item = { id: 'item-1', name: 'Loja', sku_internal: 'TEST-001', current_stock: 10, stock_loja: 5, stock_deposito: 5,
@@ -162,5 +163,75 @@ describe('Initial stock registration failures', () => {
     expect(saved).not.toHaveBeenCalled(); expect(api.createMovement).not.toHaveBeenCalled()
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Confira o inventário antes de tentar criar novamente.')
     expect(Array.from(container.querySelectorAll('.modal-footer button')).map(b => b.textContent?.trim())).toEqual(['Fechar'])
+  })
+})
+
+
+describe('Unknown balances remain unknown during product operations', () => {
+  const incomplete = { ...item, current_stock: null, stock_loja: null, stock_deposito: 0 }
+
+  it('shows missing and zero separately, blocks movement and translates the open warning', async () => {
+    const i18n = await mount(MovementModal, { item: incomplete })
+    expect(Array.from(container.querySelectorAll('.item-stock strong')).map(el => el.textContent)).toEqual(['—', '0'])
+    expect((container.querySelector('fieldset') as HTMLFieldSetElement).disabled).toBe(true)
+    expect(button('Registrar').disabled).toBe(true)
+    button('Registrar').click(); await nextTick()
+    expect(api.createMovement).not.toHaveBeenCalled()
+    expect(api.createBatchMovement).not.toHaveBeenCalled()
+    i18n.global.locale.value = 'es'; await nextTick()
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Uno o más saldos')
+    i18n.global.locale.value = 'en'; await nextTick()
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('One or more balances')
+  })
+
+  it('blocks a mixed transfer selection without inferring an unknown source from the total', async () => {
+    await mount(BulkTransferModal, { items: [{ ...item, stock_deposito: null }, { ...item, id: 'known' }] })
+    expect(container.querySelector('.row-stock')?.textContent).toContain('Dep.: —')
+    expect((container.querySelector('.qty-input') as HTMLInputElement).disabled).toBe(true)
+    expect(button('Máximo disponível').disabled).toBe(true)
+    expect(button('Transferir').disabled).toBe(true)
+    button('Transferir').click(); await nextTick()
+    expect(api.transferBulk).not.toHaveBeenCalled()
+    button('Loja → Depósito').click(); await nextTick()
+    expect(container.querySelector('.row-stock')?.textContent).toContain('Loja: 5')
+    expect(button('Transferir').disabled).toBe(true)
+  })
+
+  it('edits metadata while leaving all balance fields out of the item update', async () => {
+    api.updateItem.mockResolvedValue({ ...incomplete, name: 'Nome corrigido' })
+    const saved = vi.fn()
+    const i18n = await mount(ItemFormModal, { item: incomplete, onSaved: saved })
+    expect(Array.from(container.querySelectorAll('.stock-readout-values strong')).map(el => el.textContent)).toEqual(['—', '—', '0'])
+    expect(container.querySelector('.stock-readout-warning')?.textContent).toContain('Salvar não preenche nem altera')
+    button('Estoque').click(); await nextTick()
+    expect(container.querySelector('.stock-readout-warning')).not.toBeNull()
+    expect(container.querySelector('input[placeholder="Estoque inicial"]')).toBeNull()
+    button('Básico').click(); await nextTick()
+    setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Nome corrigido')
+    button('Atualizar').click()
+    await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+    expect(api.updateItem).toHaveBeenCalledWith('item-1', expect.objectContaining({ name: 'Nome corrigido' }))
+    const payload = api.updateItem.mock.calls[0][1]
+    for (const key of ['current_stock', 'stock_loja', 'stock_deposito']) expect(payload).not.toHaveProperty(key)
+    expect(api.createItem).not.toHaveBeenCalled()
+    expect(api.createMovement).not.toHaveBeenCalled()
+    i18n.global.locale.value = 'en'; await nextTick()
+    expect(container.querySelector('.stock-readout-warning')?.textContent).toContain('Saving does not fill')
+  })
+
+  it('allows bulk metadata editing but disables shared and per-item stock changes for unknown balances', async () => {
+    api.batchEdit.mockResolvedValue({})
+    const saved = vi.fn()
+    await mount(BulkEditModal, { items: [incomplete], onSaved: saved })
+    expect((container.querySelector('input[placeholder="Ex: +5 ou -3"]') as HTMLInputElement).disabled).toBe(true)
+    expect((container.querySelector('input[placeholder="Ex: +2 ou -1"]') as HTMLInputElement).disabled).toBe(true)
+    expect(container.querySelector('.card-stock-badge')?.textContent).toContain('Estoque: —')
+    setInput(container.querySelector('.item-fields input') as HTMLInputElement, 'Nome corrigido')
+    await nextTick(); button('Salvar 1 itens').click()
+    await vi.waitFor(() => expect(saved).toHaveBeenCalled())
+    const payload = api.batchEdit.mock.calls[0][0]
+    expect(payload.sizes).toEqual([{ id: 'item-1', name: 'Nome corrigido' }])
+    expect(payload.stock_delta).toBeUndefined()
+    for (const key of ['current_stock', 'stock_loja', 'stock_deposito']) expect(payload).not.toHaveProperty(key)
   })
 })

@@ -83,7 +83,7 @@ class OrderArgs(DatedArgs):
 
 
 class StockArgs(QueryArgs):
-    situacao: Literal["todos", "disponivel", "zerado", "abaixo_minimo"] = "todos"
+    situacao: Literal["todos", "disponivel", "zerado", "abaixo_minimo", "nao_informado"] = "todos"
     local: Literal["total", "loja", "deposito"] = "total"
     categoria: str | None = Field(default=None, min_length=1, max_length=100)
     tamanho: str | None = Field(default=None, min_length=1, max_length=50)
@@ -282,20 +282,32 @@ def query_stock(db, args):
         q = q.filter(qty > 0)
     elif args.situacao == "zerado":
         q = q.filter(qty <= 0)
+    elif args.situacao == "nao_informado":
+        q = q.filter(qty.is_(None))
     elif args.situacao == "abaixo_minimo":
         if args.local != "total":
             return {"erro": "O estoque mínimo é global por produto; use local=total para abaixo_minimo."}
         q = q.filter(qty < i.min_stock)
-    totals = q.with_entities(*(func.coalesce(func.sum(column), 0) for column in
-                              (i.current_stock, i.stock_loja, i.stock_deposito))).one()
-    by_location = dict(zip(("total", "loja", "deposito"), totals))
+    columns = (i.current_stock, i.stock_loja, i.stock_deposito)
+    aggregate = q.with_entities(func.count(), *(func.sum(column) for column in columns),
+                               *(func.count(column) for column in columns)).one()
+    locations = ("total", "loja", "deposito")
+    missing = {key: aggregate[0] - aggregate[index + 4] for index, key in enumerate(locations)}
+    known = {key: aggregate[index + 1] or 0 for index, key in enumerate(locations)}
+    # SQL SUM ignores NULL; a partial subtotal must not masquerade as the full balance.
+    by_location = {key: None if missing[key] else known[key] for key in locations}
     rows, info = page(q.order_by(i.name, i.size, i.id), args)
     return {**info, "local": args.local, "unidades": by_location[args.local],
             "saldos_por_local": by_location,
+            "subtotal_saldos_conhecidos": known, "itens_sem_saldo": missing,
             "escopo_dos_saldos": "Todos os produtos filtrados, não só a página exibida.",
+            "instrucao": "Saldo nulo significa não informado, nunca zero. Se faltarem saldos, informe "
+                         "a quantidade de cadastros incompletos; o subtotal conhecido não é o total. "
+                         "Não confirme disponibilidade de um valor ausente. A conferência está em Estoque → Conferir estoque.",
             "resultados": [{"id":str(x.id),"produto": x.name, "sku": x.sku_internal, "categoria": x.category,
                             "tamanho": x.size, "cor": x.color, "marca": x.brand,
                             "total": x.current_stock, "loja": x.stock_loja, "deposito": x.stock_deposito,
+                            "saldo_incompleto": any(value is None for value in (x.current_stock, x.stock_loja, x.stock_deposito)),
                             "minimo": x.min_stock, "preco_venda": scalar(x.sale_price), "moeda": x.sale_currency} for x in rows]}
 
 

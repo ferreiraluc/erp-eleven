@@ -14,12 +14,14 @@
         <div v-if="item" class="item-info">
           <span class="item-name">{{ item.name }}</span>
           <div class="item-stock-row">
-            <span class="item-stock">{{ tr('Loja:') }} <strong>{{ item.stock_loja ?? item.current_stock }}</strong></span>
+            <span class="item-stock">{{ tr('Loja:') }} <strong>{{ displayStock(item.stock_loja) }}</strong></span>
             <span class="item-stock-sep">·</span>
-            <span class="item-stock">{{ tr('Depósito:') }} <strong>{{ item.stock_deposito ?? 0 }}</strong></span>
+            <span class="item-stock">{{ tr('Depósito:') }} <strong>{{ displayStock(item.stock_deposito) }}</strong></span>
           </div>
         </div>
+        <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Um ou mais saldos não foram informados. Movimentações ficam bloqueadas até a revisão dos dados do estoque.') }}</p>
 
+        <fieldset :disabled="unknownStock" class="movement-fields">
         <div class="form-group">
           <label>{{ tr('Tipo de Movimentação *') }}</label>
           <div class="movement-type-grid">
@@ -105,11 +107,12 @@
             <input v-model="form.reason" type="text" class="form-input" :placeholder="tr('Motivo da entrada...')" />
           </div>
         </template>
+        </fieldset>
       </div>
 
       <div class="modal-footer">
         <button @click="emit('close')" class="btn btn-secondary">{{ tr('Cancelar') }}</button>
-        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving">
+        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving || unknownStock">
           {{ saving ? tr('Salvando...') : tr('Registrar') }}
         </button>
       </div>
@@ -120,8 +123,9 @@
 <script setup lang="ts">
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 
 const props = defineProps<{
   item?: InventoryItem | null
@@ -133,6 +137,7 @@ const emit = defineEmits<{
 }>()
 
 const saving = ref(false)
+const unknownStock = computed(() => !!props.item && !hasKnownStock(props.item))
 const batchMode = ref(false)
 
 const movementTypes = [
@@ -166,6 +171,7 @@ function validate() {
 }
 
 async function handleSubmit() {
+  if (saving.value || unknownStock.value) return
   if (!validate()) return
   saving.value = true
   try {
@@ -197,6 +203,8 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
+.movement-fields { display: contents; }
+.stock-warning { margin: 0; padding: .75rem; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .modal-container { background: white; border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }

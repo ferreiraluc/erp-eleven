@@ -56,7 +56,7 @@
                   <span v-if="item.sku_internal" class="meta-sku">{{ item.sku_internal }}</span>
                 </div>
               </div>
-              <div class="item-stock">{{ item.current_stock }}</div>
+              <div class="item-stock">{{ displayStock(item.current_stock) }}<small v-if="!hasKnownStock(item)"> · {{ tr('Revisar estoque') }}</small></div>
               <button class="remove-btn" @click="removeItem(item.id)" :title="tr('Remover da seleção')">×</button>
             </div>
           </div>
@@ -86,6 +86,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, nextTick, onMounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 
 const props = defineProps<{
   items: InventoryItem[]

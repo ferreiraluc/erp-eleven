@@ -100,3 +100,31 @@ Na próxima continuação, não refazer estas entregas. Investigar o contrato de
 nulos usando somente fixtures isoladas, antes de propor correção explícita; manter
 a distinção entre zero conhecido e valor ausente. Demais melhorias devem partir
 de falhas reproduzíveis, mantendo confirmações do produto e histórico operacional.
+
+## Rodada iniciada às 01h04 — saldos ausentes
+
+Implementação e validação concluídas, publicação em preparação. Reprodução isolada confirmou falha de
+listagem/edição ao retornar NULL, soma parcial apresentada como total no bot e
+baixa/devolução do PDV tratando local ausente como zero. Divisão: receipt_tracking
+cuida da API/serviço de estoque; customer_links do frontend e consumidores dos
+tipos; sales_intraday do bloqueio transacional no PDV; root da consulta do bot,
+documentação, integração e validação visual.
+
+Escopo: permitir leitura e edição de metadados com saldos desconhecidos, exibir
+ausência explicitamente, preservar totais incompletos e bloquear movimentações que
+pressupõem quantidade conhecida. Sem reparo automático, migração, compra, impressão
+ou consulta de estoque de produção. Os 29 testes de consultas do bot passaram.
+
+A suíte completa passou com **429 testes backend e 82 testes frontend**, incluindo
+os novos cenários de PostgreSQL isolado. TypeScript e build de produção aprovados.
+Lista e editor abriram no QA local com total/loja ausentes, depósito zero e um
+produto com saldo zero conhecido; filtro e bloqueios da lista confirmados.
+A edição de descrição pela interface foi conferida na base isolada: saldos
+permaneceram NULL, NULL e zero. PT/ES e busca do PDV revisados visualmente; a busca
+mostra saldo ausente e impede inclusão no carrinho, sem concluir venda/pagamento.
+
+Sem mudança de esquema: a revisão Alembic permanece `b8c9d0e1f2a3`. A restauração
+de quantidades ausentes continua exigindo procedimento explícito e auditado; esta
+rodada não infere valores. Os bloqueios de NULL não substituem uma revisão das
+demais regras legadas do PDV (baixa direta, quantidade fracionária/insuficiente e
+fluxo financeiro); isso permanece como próximo escopo a reproduzir em testes.

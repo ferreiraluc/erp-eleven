@@ -59,6 +59,10 @@ transação terminar. As regras são compartilhadas pela API e pelas entradas do
   para adicionar uma quantidade maior ao destino.
 - Total divergente dos locais ou saldo negativo exige conferência e ajuste explícito.
   A movimentação não corrige silenciosamente os dados históricos.
+- Qualquer saldo ausente (total, loja ou depósito) bloqueia entrada, saída,
+  transferência e ajuste com conflito recuperável, sem registrar movimentação.
+  O PDV também recusa baixar ou devolver estoque desconhecido, preservando a venda
+  e seu estado quando a operação falha. Um zero cadastrado continua sendo zero.
 - Lotes de transferências e edições com alteração de estoque são atômicos: se um item
   falhar, nenhum saldo ou metadado do lote é confirmado.
 - Novas importações CSV/NF-e colocam o estoque inicial na loja e mantêm depósito zero,
@@ -104,6 +108,26 @@ executa agregações SQL antes da paginação, sem carregar imagens do catálogo
 `test_inventory_diagnostics.py` cobre grupos normalizados, ausência de dados,
 paginação, isolamento de inativos, ausência de gravação e somas grandes no PostgreSQL.
 
+### Cadastros com saldo não informado
+
+A lista, o cadastro e as consultas por código/grade aceitam saldos legados nulos.
+O ERP exibe **— / Não informado**, mantém os valores originais e permite revisar
+metadados do produto. Esses itens têm alerta próprio (`unknown`) e filtro
+`status=unknown_stock`; não são classificados como estoque zerado, baixo ou alto.
+O resumo acrescenta `unknown_stock_count` sem ocultá-los da quantidade de itens ativos.
+Se alguma variante não tem total cadastrado, o total da grade também fica ausente,
+em vez de mostrar a soma parcial como saldo completo.
+
+No bot, a consulta preserva saldos ausentes por local, informa quantos cadastros
+estão incompletos e separa o subtotal dos valores conhecidos. `nao_informado`
+procura o saldo ausente no local solicitado. A agregação considera todos os
+produtos filtrados antes da paginação; nenhum resultado ou horário é inventado.
+
+Esta compatibilidade de leitura não é um reparo de dados: não há backfill nem
+migração. A restauração de saldos desconhecidos exige conferência física e um
+procedimento explícito que preserve o valor anterior ausente. O ajuste comum
+continua bloqueado nesses casos, pois seu histórico exige saldo anterior conhecido.
+
 
 ## Idiomas
 
@@ -131,6 +155,12 @@ do servidor/importação preservam o texto original para permitir diagnóstico.
 - `tests/test_inventory_postgres.py`: duas saídas simultâneas de oito unidades contra
   saldo dez, com instâncias ORM previamente carregadas: uma saída aceita, outra
   rejeitada por saldo insuficiente, saldo final dois e uma única movimentação.
+- `tests/test_inventory_unknown_stock.py`: leitura, filtros, edição de metadados,
+  zero conhecido e bloqueio/rollback de movimentações com qualquer saldo ausente.
+- `tests/test_assistant_unknown_stock.py`: totais incompletos antes da paginação,
+  subtotais conhecidos e distinção entre consulta vazia, zero e saldo ausente.
+- `tests/test_pdv_unknown_stock.py` e `test_pdv_unknown_stock_postgres.py`: criação
+  e cancelamento sem efeitos parciais; releitura após espera real por lock.
 
 As verificações locais usam imagens sintéticas e respostas simuladas do provedor.
 SQLite testa regras e estado. O teste de concorrência foi executado em PostgreSQL
@@ -169,9 +199,9 @@ O downgrade automático é recusado para não perder o escopo das novas contagen
   a aplicação, sem presumir zero ou redistribuir saldo.
 - Sessões antigas sem escopo continuam consultáveis e podem ser canceladas quando
   não forem terminais. Não aceitam leitura ou aplicação: o operador deve iniciar
-  outra contagem com local explícito. O editor geral de produtos ainda não suporta
-  todos os saldos nulos legados; esses casos exigem revisão técnica, não correção
-  automática por esta migração.
+  outra contagem com local explícito. O editor geral permite consultar saldos nulos
+  e editar metadados; restaurar quantidades ausentes exige revisão técnica, não
+  correção automática por esta migração.
 - Códigos de barras duplicados retornam todos os candidatos. O PDV e o bot não
   escolhem automaticamente o primeiro; movimentações usam o produto identificado.
   O bot também rejeita códigos repetidos entre produtos de uma mesma solicitação,

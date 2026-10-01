@@ -57,9 +57,9 @@ class ItemUpdate(ItemBase):
 class ItemResponse(ItemBase):
     id: uuid.UUID
     sku_internal: str
-    current_stock: int
-    stock_loja: int = 0
-    stock_deposito: int = 0
+    current_stock: int | None
+    stock_loja: int | None
+    stock_deposito: int | None
     created_at: datetime
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
@@ -122,7 +122,7 @@ class BatchEditRequest(BaseModel):
 class GroupResponse(BaseModel):
     group_key: str
     items: List[ItemResponse]
-    total_stock: int
+    total_stock: int | None
 
 
 class SuggestionResponse(BaseModel):
@@ -228,6 +228,7 @@ class AlertSummary(BaseModel):
     low_stock_count: int
     out_of_stock_count: int
     overstocked_count: int
+    unknown_stock_count: int = 0
     total_active_items: int
     inactive_count: int = 0
     group_count: int = 0        # distinct groups

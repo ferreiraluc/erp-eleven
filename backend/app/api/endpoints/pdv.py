@@ -23,12 +23,30 @@ router = APIRouter()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _apply_stock(db: Session, sale: PdvSale, created_by_id):
+def _lock_sale_stock(db: Session, sale_items) -> dict[uuid.UUID, Item]:
+    """Read every real item's known balances under ordered transaction locks."""
+    item_ids = {item.item_id for item in sale_items if not item.is_avulso and item.item_id}
+    if not item_ids:
+        return {}
+    with db.no_autoflush:
+        items = (
+            db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id)
+            .populate_existing().with_for_update().all()
+        )
+    for item in items:
+        if any(value is None for value in (item.current_stock, item.stock_loja, item.stock_deposito)):
+            detail = f'Estoque não informado para "{item.name}". Confira os três saldos antes de concluir esta operação.'
+            db.rollback()
+            raise HTTPException(status_code=409, detail=detail)
+    return {item.id: item for item in items}
+
+
+def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uuid.UUID, Item]):
     """Decrement stock for each non-avulso item in the sale."""
     for item in sale.items:
         if item.is_avulso or not item.item_id:
             continue
-        inv_item = db.query(Item).filter(Item.id == item.item_id).first()
+        inv_item = stock_items.get(item.item_id)
         if not inv_item:
             continue
 
@@ -40,9 +58,9 @@ def _apply_stock(db: Session, sale: PdvSale, created_by_id):
 
         # Update split stock
         if location == "deposito":
-            inv_item.stock_deposito = (inv_item.stock_deposito or 0) - qty
+            inv_item.stock_deposito -= qty
         else:
-            inv_item.stock_loja = (inv_item.stock_loja or 0) - qty
+            inv_item.stock_loja -= qty
 
         mv = StockMovement(
             item_id=inv_item.id,
@@ -98,6 +116,8 @@ def create_sale(
     require_sale_owner(current_user, body.vendedor_id or current_user.id, pdv=True)
     if not body.items:
         raise HTTPException(status_code=400, detail="A venda deve ter pelo menos 1 item")
+
+    stock_items = _lock_sale_stock(db, body.items)
 
     # Compute totals
     subtotal = sum(
@@ -156,7 +176,7 @@ def create_sale(
         ))
 
     db.flush()
-    _apply_stock(db, sale, current_user.id)
+    _apply_stock(db, sale, current_user.id, stock_items)
     _update_fiado(db, sale, current_user.id)
 
     db.commit()
@@ -220,12 +240,16 @@ def cancel_sale(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    sale = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True).filter(PdvSale.id == sale_id).first()
+    sale = (
+        sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True)
+        .filter(PdvSale.id == sale_id).populate_existing().with_for_update().first()
+    )
     if not sale:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
     if sale.status == "cancelled":
         raise HTTPException(status_code=400, detail="Venda já cancelada")
 
+    stock_items = _lock_sale_stock(db, sale.items) if sale.stock_applied else {}
     sale.status = "cancelled"
 
     # Reverse stock
@@ -233,16 +257,16 @@ def cancel_sale(
         for item in sale.items:
             if item.is_avulso or not item.item_id:
                 continue
-            inv_item = db.query(Item).filter(Item.id == item.item_id).first()
+            inv_item = stock_items.get(item.item_id)
             if not inv_item:
                 continue
             qty = int(item.quantity)
             qty_before = inv_item.current_stock
             inv_item.current_stock += qty
             if item.location == "deposito":
-                inv_item.stock_deposito = (inv_item.stock_deposito or 0) + qty
+                inv_item.stock_deposito += qty
             else:
-                inv_item.stock_loja = (inv_item.stock_loja or 0) + qty
+                inv_item.stock_loja += qty
 
             db.add(StockMovement(
                 item_id=inv_item.id,

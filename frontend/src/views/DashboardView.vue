@@ -201,7 +201,7 @@
                   class="inv-product-row"
                   @click.stop
                 >
-                  <div class="inv-product-alert-dot" :class="`adot-${item.alert_level || 'ok'}`"></div>
+                  <div class="inv-product-alert-dot" :class="`adot-${stockAlertLevel(item)}`"></div>
                   <div v-if="item.image_data" class="inv-product-thumb">
                     <img :src="item.image_data" :alt="item.name" />
                   </div>
@@ -214,9 +214,10 @@
                     <span class="inv-product-name">{{ item.name }}</span>
                     <span class="inv-product-meta">{{ [item.category, item.size, item.color].filter(Boolean).join(' · ') || item.unit }}</span>
                   </div>
-                  <div class="inv-product-stock" :class="`slevel-${item.alert_level || 'ok'}`">
-                    <span class="inv-stock-num">{{ item.current_stock }}</span>
+                  <div class="inv-product-stock" :class="`slevel-${stockAlertLevel(item)}`">
+                    <span class="inv-stock-num">{{ displayStock(item.current_stock) }}</span>
                     <span class="inv-stock-unit">{{ item.unit }}</span>
+                    <span v-if="!hasKnownStock(item)" class="inv-stock-unit">{{ inventoryText('Revisar estoque') }}</span>
                   </div>
                 </router-link>
               </div>
@@ -544,7 +545,10 @@ import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
 import AddressSummaryCard from '@/components/dashboard/AddressSummaryCard.vue'
 import SalesSummaryCard from '@/components/dashboard/SalesSummaryCard.vue'
-import { inventoryAPI, healthAPI, type AlertSummary } from '@/services/api'
+import { inventoryAPI, healthAPI, type AlertSummary, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock, stockAlertLevel } from '@/services/inventoryStock'
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr: inventoryText } = useInventoryI18n()
 
 const router = useRouter()
 const { locale } = useI18n()
@@ -563,7 +567,7 @@ const exchangeRateError = ref<string | null>(null)
 
 // Exchange rate state (local to avoid dependency issues)
 const stockAlerts = ref<AlertSummary | null>(null)
-const recentInventoryItems = ref<any[]>([])
+const recentInventoryItems = ref<InventoryItem[]>([])
 
 // System status
 type StatusState = 'online' | 'offline' | 'checking'
@@ -834,6 +838,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.adot-unknown { background: #d97706; }
+.slevel-unknown { color: #92400e; }
 /* ── Inventory Card (large dashboard card) ───────────────────────────── */
 .inv-card {
   background: white;

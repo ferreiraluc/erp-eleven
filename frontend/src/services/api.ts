@@ -548,9 +548,9 @@ export interface InventoryItem {
   sale_currency: string
   min_stock: number
   max_stock: number
-  current_stock: number
-  stock_loja: number
-  stock_deposito: number
+  current_stock: number | null
+  stock_loja: number | null
+  stock_deposito: number | null
   is_active: boolean
   alert_level?: string
   image_data?: string | null
@@ -570,6 +570,7 @@ export interface InventoryItemList {
 }
 
 export interface AlertSummary {
+  unknown_stock_count: number
   low_stock_count: number
   out_of_stock_count: number
   overstocked_count: number
@@ -610,7 +611,7 @@ export interface InventorySupplier {
 export interface GroupResponse {
   group_key: string
   items: InventoryItem[]
-  total_stock: number
+  total_stock: number | null
 }
 
 export interface SuggestionResponse {

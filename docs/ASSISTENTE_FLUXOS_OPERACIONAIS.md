@@ -1,6 +1,6 @@
 # Fluxos operacionais do assistente
 
-Atualização de 25/09/2026, baseada nas conversas registradas no ERP.
+Atualização de 01/10/2026, conforme os fluxos implementados e testes isolados.
 
 ## Rastreios de clientes
 
@@ -16,13 +16,20 @@ Cotações só são apresentadas após uma operação real persistida. Escolhas 
 
 ## Comprovantes dos Correios em foto
 
-Envie uma foto/JPG/PNG com “Cadastre os rastreios deste comprovante”. O bot lê os códigos e destinatários legíveis, valida o dígito verificador e mostra prévia com botão de confirmação. Não cadastra só por receber a imagem, não inventa caracteres e não duplica códigos existentes. Vínculos de pedido são sugestões explícitas na prévia, revalidadas ao confirmar. A foto não é arquivada no ERP; esta leitura usa a chave Anthropic do OCR. Veja os limites, privacidade e operação em [Rastreios por comprovante](RASTREIOS_COMPROVANTES.md).
+Envie uma foto/JPG/PNG com “Cadastre os rastreios deste comprovante”. O bot lê os códigos e destinatários legíveis, valida o dígito verificador e mostra prévia com botão de confirmação. Não cadastra só por receber a imagem, não inventa caracteres e não duplica códigos existentes. Vínculos de pedido são sugestões explícitas na prévia, revalidadas ao confirmar. A foto não é arquivada no ERP; esta leitura usa o provedor de visão configurado (DeepSeek ou Anthropic). Veja os limites, privacidade e operação em [Rastreios por comprovante](RASTREIOS_COMPROVANTES.md).
 
 ## Produtos e entradas de estoque
 
 Gestores habilitados podem pedir cadastro de produtos/variantes ou entrada de unidades em um produto existente. Há prévia, confirmação do autor, proteção contra repetição da confirmação e movimentação de estoque auditada no mesmo módulo do ERP. Cadastro duplicado pede reaproveitamento do produto. Moeda precisa ser informada quando houver preço; local é necessário para quantidade positiva. Campos opcionais do produto não são inventados; valores ausentes usam os mesmos zeros do formulário e aparecem na prévia.
 
 Não há lançamento de venda, saída, transferência nem ajuste absoluto por essas ferramentas. Mercadorias descritas para uma etiqueta não movimentam estoque automaticamente.
+
+Saldos ausentes de cadastros antigos permanecem **não informados**, distintos de
+zero. As consultas de estoque mostram totais incompletos como indisponíveis e
+separam a soma dos saldos conhecidos com a quantidade de cadastros sem saldo.
+O filtro `nao_informado` consulta o local escolhido (total, loja ou depósito).
+A confirmação de entrada é recusada se algum saldo do produto estiver ausente;
+consulte **Estoque → Conferir estoque** para identificar os campos a revisar.
 
 ## Ponte de PDF sem arquivo no ERP
 

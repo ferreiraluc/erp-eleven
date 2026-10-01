@@ -1166,5 +1166,37 @@
   "Tentar novamente": [
     "Intentar de nuevo",
     "Try again"
+  ],
+  "Revisar estoque": [
+    "Revisar stock",
+    "Review stock"
+  ],
+  "Não informado": [
+    "No informado",
+    "Not recorded"
+  ],
+  "Há saldo desconhecido neste produto. Nenhuma movimentação foi registrada; confira os dados do estoque.": [
+    "Hay un saldo desconocido en este producto. No se registró ningún movimiento; revise los datos del stock.",
+    "This product has an unknown balance. No stock movement was recorded; review the inventory data."
+  ],
+  "Um ou mais saldos não foram informados. Movimentações ficam bloqueadas até a revisão dos dados do estoque.": [
+    "Uno o más saldos no fueron informados. Los movimientos están bloqueados hasta revisar los datos del stock.",
+    "One or more balances are missing. Stock movements are blocked until the inventory data are reviewed."
+  ],
+  "Os dados do produto podem ser editados. Salvar não preenche nem altera os saldos não informados.": [
+    "Los datos del producto se pueden editar. Guardar no completa ni cambia los saldos no informados.",
+    "Product details can be edited. Saving does not fill or change missing balances."
+  ],
+  "Há itens com saldo não informado nesta seleção. Revise o estoque antes de transferir.": [
+    "Hay artículos con saldo no informado en esta selección. Revise el stock antes de transferir.",
+    "Some selected items have missing balances. Review inventory before transferring."
+  ],
+  "Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.": [
+    "Los ajustes de saldo están bloqueados para los artículos con datos faltantes; la edición de datos del producto sigue disponible.",
+    "Balance adjustments are blocked for items with missing balances; product details remain editable."
+  ],
+  "Total salvo": [
+    "Total guardado",
+    "Stored total"
   ]
 }

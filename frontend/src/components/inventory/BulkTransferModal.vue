@@ -11,6 +11,7 @@
       </div>
 
       <div class="modal-body">
+        <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Há itens com saldo não informado nesta seleção. Revise o estoque antes de transferir.') }}</p>
         <!-- Direction -->
         <div class="form-group">
           <label>{{ tr('Direção *') }}</label>
@@ -28,7 +29,7 @@
         <div class="items-section">
           <div class="items-header">
             <span class="items-title">{{ tr('Itens selecionados: {count}', { count: items.length }) }}</span>
-            <button type="button" class="max-all-btn" @click="setAllMax">{{ tr('Máximo disponível') }}</button>
+            <button type="button" class="max-all-btn" @click="setAllMax" :disabled="unknownStock">{{ tr('Máximo disponível') }}</button>
           </div>
           <div class="items-list">
             <div v-for="item in items" :key="item.id" class="transfer-row">
@@ -36,19 +37,21 @@
                 <span class="row-name">{{ item.name }}</span>
                 <span v-if="item.size" class="row-size">{{ item.size }}</span>
                 <span class="row-stock" :class="sourceStock(item) === 0 ? 'stock-zero' : ''">
-                  {{ direction === 'deposito_to_loja' ? tr('Dep.') : tr('Loja') }}: {{ sourceStock(item) }}
+                  {{ direction === 'deposito_to_loja' ? tr('Dep.') : tr('Loja') }}: {{ displayStock(sourceStock(item)) }}
+                  <span v-if="!hasKnownStock(item)"> · {{ tr('Revisar estoque') }}</span>
                 </span>
               </div>
               <div class="row-qty">
-                <button type="button" class="qty-btn" @click="dec(item.id)" :disabled="(quantities[item.id] ?? 1) <= 0">−</button>
+                <button type="button" class="qty-btn" @click="dec(item.id)" :disabled="!hasKnownStock(item) || (quantities[item.id] ?? 1) <= 0">−</button>
                 <input
                   v-model.number="quantities[item.id]"
                   type="number"
                   min="0"
-                  :max="sourceStock(item)"
+                  :max="sourceStock(item) ?? undefined"
+                  :disabled="!hasKnownStock(item)"
                   class="qty-input"
                 />
-                <button type="button" class="qty-btn" @click="inc(item.id, sourceStock(item))" :disabled="(quantities[item.id] ?? 0) >= sourceStock(item)">+</button>
+                <button type="button" class="qty-btn" @click="inc(item.id, sourceStock(item))" :disabled="!canIncrease(item)">+</button>
               </div>
             </div>
           </div>
@@ -67,7 +70,7 @@
           {{ tr('Unidades a transferir: {count}', { count: totalQty }) }}
         </div>
         <button @click="emit('close')" class="btn btn-secondary">{{ tr('Cancelar') }}</button>
-        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving || totalQty === 0">
+        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving || unknownStock || totalQty === 0">
           {{ saving ? tr('Transferindo...') : tr('Transferir') }}
         </button>
       </div>
@@ -80,6 +83,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, computed } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 
 const props = defineProps<{
   items: InventoryItem[]
@@ -94,18 +98,26 @@ const direction = ref<'deposito_to_loja' | 'loja_to_deposito'>('deposito_to_loja
 const reason = ref('')
 const saving = ref(false)
 const errorMsg = ref('')
+const unknownStock = computed(() => props.items.some(item => !hasKnownStock(item)))
 
 // Initialize quantities to 1 (or max if less) for each item
 const quantities = reactive<Record<string, number>>(
-  Object.fromEntries(props.items.map(i => [i.id, Math.min(1, sourceStockFor(i, direction.value))]))
+  Object.fromEntries(props.items.map(item => {
+    const source = sourceStockFor(item, direction.value)
+    return [item.id, hasKnownStock(item) && source !== null ? Math.min(1, Math.max(0, source)) : 0]
+  }))
 )
 
-function sourceStockFor(item: InventoryItem, dir: string): number {
-  return dir === 'deposito_to_loja' ? (item.stock_deposito ?? 0) : (item.stock_loja ?? item.current_stock ?? 0)
+function sourceStockFor(item: InventoryItem, dir: string): number | null {
+  return dir === 'deposito_to_loja' ? item.stock_deposito : item.stock_loja
 }
 
-function sourceStock(item: InventoryItem): number {
+function sourceStock(item: InventoryItem): number | null {
   return sourceStockFor(item, direction.value)
+}
+function canIncrease(item: InventoryItem) {
+  const source = sourceStock(item)
+  return hasKnownStock(item) && source !== null && (quantities[item.id] ?? 0) < source
 }
 
 function dec(id: string) {
@@ -113,20 +125,24 @@ function dec(id: string) {
   if (cur > 0) quantities[id] = cur - 1
 }
 
-function inc(id: string, max: number) {
+function inc(id: string, max: number | null) {
+  if (max === null) return
   const cur = quantities[id] ?? 0
   if (cur < max) quantities[id] = cur + 1
 }
 
 function setAllMax() {
+  if (unknownStock.value) return
   for (const item of props.items) {
-    quantities[item.id] = sourceStock(item)
+    const source = sourceStock(item)
+    if (source !== null) quantities[item.id] = source
   }
 }
 
 const totalQty = computed(() => Object.values(quantities).reduce((s, v) => s + (v || 0), 0))
 
 async function handleSubmit() {
+  if (saving.value || unknownStock.value) return
   errorMsg.value = ''
   const payload = props.items
     .map(i => ({ item_id: i.id, quantity: quantities[i.id] ?? 0 }))
@@ -154,6 +170,7 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
+.stock-warning { margin: 0; padding: .75rem; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .modal-container { background: white; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }

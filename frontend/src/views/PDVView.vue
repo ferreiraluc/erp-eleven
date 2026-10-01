@@ -49,7 +49,7 @@
         </div>
 
         <div v-if="searchResults.length" class="pdv-results">
-          <div v-for="item in searchResults" :key="item.id" class="pdv-result-row" @click="addToCart(item)">
+          <div v-for="item in searchResults" :key="item.id" class="pdv-result-row" :aria-disabled="!hasKnownStock(item)" @click="addToCart(item)">
             <div class="pdv-result-thumb">
               <img v-if="item.image_data" class="pdv-result-img" :src="imgSrc(item.image_data)" />
               <div v-else class="pdv-result-no-img">{{ item.name.charAt(0).toUpperCase() }}</div>
@@ -60,8 +60,9 @@
               <div class="pdv-result-sku">{{ item.sku_internal }}</div>
             </div>
             <div class="pdv-result-right">
-              <div class="pdv-result-stock" :class="item.current_stock <= 0 ? 'stock-out' : item.current_stock < 3 ? 'stock-low' : 'stock-ok'">
-                {{ item.current_stock }} {{ $tr("un") }}
+              <div class="pdv-result-stock" :class="!hasKnownStock(item) ? 'stock-unknown' : item.current_stock <= 0 ? 'stock-out' : item.current_stock < 3 ? 'stock-low' : 'stock-ok'">
+                {{ displayStock(item.current_stock) }} {{ $tr("un") }}
+                <span v-if="!hasKnownStock(item)"> · {{ inventoryText('Revisar estoque') }}</span>
               </div>
               <div class="pdv-result-price">
                 <template v-if="isNativeCurrency(item.sale_currency)">
@@ -72,7 +73,7 @@
                   <span class="pdv-price-orig">{{ fmtGs(item.sale_price || 0) }}</span>
                 </template>
               </div>
-              <button class="pdv-result-add">+</button>
+              <button class="pdv-result-add" :disabled="!hasKnownStock(item)">+</button>
             </div>
           </div>
           <div v-if="searchQuery && !loadingSearch" class="pdv-result-avulso" @click="openAvulso()">
@@ -320,6 +321,9 @@ import { usePdvStore } from '@/stores/pdv'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr: inventoryText } = useInventoryI18n()
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
@@ -559,6 +563,7 @@ function clearSearch() {
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
 function addToCart(item: InventoryItem) {
+  if (!hasKnownStock(item)) { showToast(inventoryText(UNKNOWN_STOCK_MESSAGE), 'error'); return }
   const saleCurrency = item.sale_currency || 'PYG'
   const rate = getRate(saleCurrency)
   const priceGs = Math.round((item.sale_price || 0) * rate)
@@ -577,7 +582,7 @@ function addToCart(item: InventoryItem) {
     image_data: item.image_data || null,
     discount_gs: 0,
     is_avulso: false,
-    location: (item.stock_loja ?? 0) > 0 ? 'loja' : 'deposito',
+    location: item.stock_loja > 0 ? 'loja' : 'deposito',
   })
   showToast(uiText(`{0} adicionado`,{0:item.name}))
   clearSearch()
@@ -692,6 +697,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .pdv-result-stock { font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.375rem; border-radius: 0.3rem; }
 .stock-ok  { background: #d1fae5; color: #065f46; }
 .stock-low { background: #fef3c7; color: #92400e; }
+.stock-unknown { background: #fffbeb; color: #92400e; }
+.pdv-result-row[aria-disabled="true"] { cursor: not-allowed; }
+.pdv-result-add:disabled { opacity: .4; cursor: not-allowed; }
 .stock-out { background: #fee2e2; color: #991b1b; }
 .pdv-result-price { text-align: right; }
 .pdv-price-orig { display: block; font-size: 0.82rem; font-weight: 700; color: #1d4ed8; white-space: nowrap; }

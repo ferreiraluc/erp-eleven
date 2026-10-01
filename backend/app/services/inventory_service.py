@@ -15,11 +15,13 @@ class StockMovementError(ValueError):
 def _compute_alert_level(item: Item) -> str:
     if not item.is_active:
         return "inactive"
+    if any(value is None for value in (item.current_stock, item.stock_loja, item.stock_deposito)):
+        return "unknown"
     if item.current_stock <= 0:
         return "out"
-    if item.current_stock < item.min_stock:
+    if item.min_stock is not None and item.current_stock < item.min_stock:
         return "low"
-    if item.max_stock > 0 and item.current_stock > item.max_stock:
+    if item.max_stock is not None and item.max_stock > 0 and item.current_stock > item.max_stock:
         return "high"
     return "ok"
 
@@ -48,6 +50,8 @@ def create_movement(
     if not inspect(item).attrs.cost_price.history.has_changes():
         refresh_fields.append('cost_price')
     db.refresh(item, attribute_names=refresh_fields, with_for_update=True)
+    if any(value is None for value in (item.current_stock, item.stock_loja, item.stock_deposito)):
+        raise StockMovementError('Há saldo desconhecido neste produto. Nenhuma movimentação foi registrada; confira os dados do estoque.', 409)
 
     try:
         mv_type = MovementType[movement_type]

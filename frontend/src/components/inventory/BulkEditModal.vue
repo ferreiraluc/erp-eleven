@@ -11,6 +11,7 @@
       </div>
 
       <div class="modal-body">
+        <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.') }}</p>
         <!-- ── Shared fields ── -->
         <section class="section">
           <h3 class="section-title">{{ tr('Campos compartilhados') }}</h3>
@@ -75,6 +76,7 @@
                 <label>{{ tr('Quantidade') }} <span class="label-hint">{{ tr('(+ entrada / − saída)') }}</span></label>
                 <input
                   v-model.number="sharedStockDelta"
+                  :disabled="unknownStock"
                   type="number"
                   class="form-input"
                   :class="{ 'input-entry': sharedStockDelta > 0, 'input-exit': sharedStockDelta < 0 }"
@@ -88,6 +90,7 @@
                 </label>
                 <input
                   v-model="sharedStockReason"
+                  :disabled="unknownStock"
                   type="text"
                   class="form-input"
                   :class="{ error: stockErrors.shared }"
@@ -114,7 +117,7 @@
                 <div v-else class="card-thumb-placeholder"></div>
                 <div class="card-header-info">
                   <span class="card-original-name">{{ item.name }}</span>
-                  <span class="card-stock-badge">{{ tr('Estoque:') }} {{ item.current_stock }}</span>
+                  <span class="card-stock-badge">{{ tr('Estoque:') }} {{ displayStock(item.current_stock) }}<span v-if="!hasKnownStock(item)"> · {{ tr('Revisar estoque') }}</span></span>
                 </div>
               </div>
 
@@ -186,6 +189,7 @@
                   <label>{{ tr('Δ Estoque') }} <span class="label-hint">(+ / −)</span></label>
                   <input
                     v-model.number="itemStockDeltas[item.id]"
+                    :disabled="!hasKnownStock(item)"
                     type="number"
                     class="field-input"
                     :class="{ 'input-entry': itemStockDeltas[item.id] > 0, 'input-exit': itemStockDeltas[item.id] < 0 }"
@@ -199,6 +203,7 @@
                   </label>
                   <input
                     v-model="itemStockReasons[item.id]"
+                    :disabled="!hasKnownStock(item)"
                     type="text"
                     class="field-input"
                     :class="{ error: stockErrors[item.id] }"
@@ -228,6 +233,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { displayStock, hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 
 const props = defineProps<{
   items: InventoryItem[]
@@ -248,6 +254,7 @@ const sharedSalePrice = ref<string>('')
 const sharedStockDelta = ref<number>(0)
 const sharedStockReason = ref('')
 const saving = ref(false)
+const unknownStock = computed(() => props.items.some(item => !hasKnownStock(item)))
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const stockErrors = reactive<Record<string, string>>({})
 
@@ -318,8 +325,17 @@ function validateStock(): boolean {
     stockErrors.shared = 'Informe o motivo do ajuste'
     valid = false
   }
+  if (sharedStockDelta.value && unknownStock.value) {
+    stockErrors.shared = UNKNOWN_STOCK_MESSAGE
+    valid = false
+  }
   for (const item of props.items) {
     const delta = itemStockDeltas[item.id]
+    if (delta && !hasKnownStock(item)) {
+      stockErrors[item.id] = UNKNOWN_STOCK_MESSAGE
+      valid = false
+      continue
+    }
     if (delta && delta !== 0 && !itemStockReasons[item.id]?.trim()) {
       stockErrors[item.id] = 'Informe o motivo'
       valid = false
@@ -392,6 +408,8 @@ async function save() {
 </script>
 
 <style scoped>
+.stock-warning { margin: 0; padding: .75rem; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
+input:disabled { background: #f3f4f6; cursor: not-allowed; }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center;

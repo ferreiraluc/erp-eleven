@@ -281,7 +281,8 @@
                 @click.stop="startEditGroupName(entry.group.group_key)"
                 :title="tr('Clique para renomear o grupo')"
               >{{ entry.group.group_key }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
-              <span class="group-total-stock">{{ tr('Total:') }} {{ entry.group.total_stock }}</span>
+              <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr('Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
+              <span v-if="groupAlertLevel(entry.group.items) === 'unknown'" class="alert-badge badge-unknown">{{ tr('Revisar estoque') }}</span>
               <span
                 v-if="groupLocationBadge(entry.group.items) === 'deposito'"
                 class="group-loc-badge badge-deposito"
@@ -311,13 +312,14 @@
               v-for="v in sortedByColorThenSize(entry.group.items)"
               :key="v.id"
               class="size-chip"
-              :class="'chip-alert-' + v.alert_level"
+              :class="'chip-alert-' + stockAlertLevel(v)"
               :title="v.name + ' · ' + v.sku_internal"
             >
               <span class="chip-label" @click.stop="openEdit(v)">
                 {{ v.size || v.name }}&nbsp;
-                <template v-if="v.stock_deposito > 0 && v.stock_loja > 0">{{ v.stock_loja }}|{{ v.stock_deposito }}</template>
-                <template v-else>{{ v.current_stock }}</template>
+                <template v-if="hasKnownStock(v) && v.stock_deposito > 0 && v.stock_loja > 0">{{ displayStock(v.stock_loja) }}|{{ displayStock(v.stock_deposito) }}</template>
+                <template v-else>{{ displayStock(v.current_stock) }}</template>
+                <span v-if="!hasKnownStock(v)" :title="tr('Revisar estoque')"> · {{ tr('Não informado') }}</span>
               </span>
               <div class="chip-remove-wrap">
                 <button
@@ -340,33 +342,29 @@
               v-for="item in sortedByColorThenSize(entry.group.items)"
               :key="item.id"
               class="group-exp-row"
-              :class="'exp-alert-' + item.alert_level"
+              :class="'exp-alert-' + stockAlertLevel(item)"
             >
               <div class="exp-left">
                 <span class="exp-size">{{ item.size || item.name }}</span>
                 <span v-if="item.color" class="exp-color">{{ item.color }}</span>
               </div>
               <div class="exp-stock-info">
-                <template v-if="item.stock_loja !== undefined">
-                  <span class="exp-stock-val">{{ tr('L:') }}{{ item.stock_loja }}</span>
-                  <span class="exp-stock-sep">·</span>
-                  <span class="exp-stock-val">{{ tr('D:') }}{{ item.stock_deposito ?? 0 }}</span>
-                </template>
-                <template v-else>
-                  <span class="exp-stock-val">{{ item.current_stock }}</span>
-                </template>
+                <span class="exp-stock-val">{{ tr('L:') }}{{ displayStock(item.stock_loja) }}</span>
+                <span class="exp-stock-sep">·</span>
+                <span class="exp-stock-val">{{ tr('D:') }}{{ displayStock(item.stock_deposito) }}</span>
+                <span v-if="!hasKnownStock(item)" class="stock-unknown">{{ tr('Revisar estoque') }}</span>
               </div>
               <span v-if="Number(item.sale_price) > 0" class="exp-price">
                 {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 0 }) }}
               </span>
               <div class="exp-actions">
                 <div class="exit-wrap">
-                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit" :title="tr('Consumir 1')" :disabled="item.current_stock <= 0">−1</button>
+                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit" :title="tr('Consumir 1')" :disabled="!canWithdrawStock(item)">−1</button>
                   <div v-if="confirmExitId === item.id" class="exit-confirm-popover">
                     <template v-if="exitLocations(item).loja && exitLocations(item).deposito">
                       <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ item.stock_loja }})</button>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ item.stock_deposito }})</button>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ displayStock(item.stock_loja) }})</button>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ displayStock(item.stock_deposito) }})</button>
                     </template>
                     <template v-else-if="exitLocations(item).deposito">
                       <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
@@ -379,7 +377,7 @@
                     <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                   </div>
                 </div>
-                <button @click.stop="openMovement(item)" class="exp-btn exp-move" :title="tr('Movimentar')">⇅</button>
+                <button @click.stop="openMovement(item)" :disabled="!hasKnownStock(item)" class="exp-btn exp-move" :title="tr('Movimentar')">⇅</button>
                 <button @click.stop="openEdit(item)" class="exp-btn exp-edit" :title="tr('Editar')">✏</button>
               </div>
             </div>
@@ -391,7 +389,7 @@
           v-else
           class="item-card"
           :data-item-id="entry.item.id"
-          :class="['alert-' + entry.item.alert_level, { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id), 'card-expanded': expandedCardIds.includes(entry.item.id) }]"
+          :class="['alert-' + stockAlertLevel(entry.item), { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id), 'card-expanded': expandedCardIds.includes(entry.item.id) }]"
           @click="onCardClick(entry.item.id, $event)"
           @pointerdown="onItemPointerDown(entry.item.id, $event)"
         >
@@ -413,7 +411,7 @@
           <!-- ── MODO LISTA: linha única ── -->
           <div v-if="viewMode === 'list'" class="item-list-row" :style="selectionMode ? 'padding-left:1.85rem' : ''">
             <div class="list-left">
-              <span class="list-name" :class="'stock-' + entry.item.alert_level">{{ entry.item.name }}</span>
+              <span class="list-name" :class="'stock-' + stockAlertLevel(entry.item)">{{ entry.item.name }}</span>
               <template v-if="entry.item.color">
                 <span class="list-sep">·</span><span class="list-attr">{{ entry.item.color }}</span>
               </template>
@@ -427,9 +425,9 @@
                 <span class="list-sep">·</span><span class="list-attr list-cat-tag">{{ formatCategory(entry.item.category) }}</span>
               </template>
               <span class="list-sep list-sep-spaced">·</span>
-              <span class="list-stock" :class="'stock-' + entry.item.alert_level">
-                <template v-if="entry.item.stock_loja !== undefined">{{ tr('L:') }}{{ entry.item.stock_loja }}{{ tr('D:') }}{{ entry.item.stock_deposito ?? 0 }}</template>
-                <template v-else>{{ entry.item.current_stock }}</template>
+              <span class="list-stock" :class="'stock-' + stockAlertLevel(entry.item)">
+                {{ tr('L:') }}{{ displayStock(entry.item.stock_loja) }} {{ tr('D:') }}{{ displayStock(entry.item.stock_deposito) }}
+                <span v-if="!hasKnownStock(entry.item)" class="stock-unknown"> · {{ tr('Revisar estoque') }}</span>
               </span>
               <template v-if="Number(entry.item.sale_price) > 0">
                 <span class="list-sep">·</span>
@@ -442,12 +440,12 @@
             </div>
             <div class="list-actions">
               <div class="exit-wrap">
-                <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="entry.item.current_stock <= 0">−1</button>
+                <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="!canWithdrawStock(entry.item)">−1</button>
                 <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
                   <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
                     <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ entry.item.stock_loja }})</button>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ entry.item.stock_deposito }})</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
                   </template>
                   <template v-else-if="exitLocations(entry.item).deposito">
                     <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
@@ -460,7 +458,7 @@
                   <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                 </div>
               </div>
-              <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">{{ tr('Movimentar') }}</button>
+              <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn list-btn">{{ tr('Movimentar') }}</button>
               <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">{{ tr('Editar') }}</button>
             </div>
           </div>
@@ -494,22 +492,21 @@
               </div>
               <div class="item-bottom-row">
                 <div class="item-left-info">
-                  <span class="stock-number" :class="'stock-' + entry.item.alert_level">
-                    <template v-if="entry.item.stock_loja !== undefined">{{ tr('Loja:') }}{{ entry.item.stock_loja }}{{ tr('· Dep.:') }}{{ entry.item.stock_deposito ?? 0 }}</template>
-                    <template v-else>{{ tr('Estoque:') }}{{ entry.item.current_stock }}</template>
+                  <span class="stock-number" :class="'stock-' + stockAlertLevel(entry.item)">
+                    {{ tr('Loja:') }}{{ displayStock(entry.item.stock_loja) }} {{ tr('· Dep.:') }}{{ displayStock(entry.item.stock_deposito) }}
                   </span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
-                  <span v-if="entry.item.alert_level && entry.item.alert_level !== 'ok'" class="alert-badge" :class="'badge-' + entry.item.alert_level">{{ alertLabel(entry.item.alert_level) }}</span>
+                  <span v-if="stockAlertLevel(entry.item) !== 'ok'" class="alert-badge" :class="'badge-' + stockAlertLevel(entry.item)">{{ alertLabel(stockAlertLevel(entry.item)) }}</span>
                 </div>
                 <div class="item-actions">
                   <div class="exit-wrap">
-                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">−1</button>
+                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="!canWithdrawStock(entry.item)">−1</button>
                     <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
                       <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
                         <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ entry.item.stock_loja }})</button>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ entry.item.stock_deposito }})</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
                       </template>
                       <template v-else-if="exitLocations(entry.item).deposito">
                         <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
@@ -522,7 +519,7 @@
                       <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                     </div>
                   </div>
-                  <button @click.stop="openMovement(entry.item)" class="action-btn move-btn">{{ tr('Movimentar') }}</button>
+                  <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn">{{ tr('Movimentar') }}</button>
                   <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn">{{ tr('Editar') }}</button>
                 </div>
               </div>
@@ -692,6 +689,7 @@
 </template>
 
 <script setup lang="ts">
+import { displayStock, hasKnownStock, canWithdrawStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -1043,7 +1041,7 @@ interface GroupEntry {
   _isGroup: true
   group_key: string
   items: InventoryItem[]
-  total_stock: number
+  total_stock: number | null
 }
 
 type FlatEntry = { type: 'group'; group: GroupEntry } | { type: 'item'; item: InventoryItem }
@@ -1081,6 +1079,7 @@ const flatList = computed<FlatEntry[]>(() => {
 })
 
 function groupAlertLevel(items: InventoryItem[]): string {
+  if (items.some(item => !hasKnownStock(item))) return 'unknown'
   if (items.some(i => i.alert_level === 'out')) return 'out'
   if (items.some(i => i.alert_level === 'low')) return 'low'
   if (items.some(i => i.alert_level === 'high')) return 'high'
@@ -1089,10 +1088,11 @@ function groupAlertLevel(items: InventoryItem[]): string {
 
 /** Returns 'deposito' if ALL stock is in depósito, 'loja' if all in loja, 'mixed' otherwise. */
 function groupLocationBadge(items: InventoryItem[]): 'deposito' | 'loja' | 'mixed' | null {
-  const hasStock = items.some(i => i.current_stock > 0)
+  if (items.some(item => !hasKnownStock(item))) return null
+  const hasStock = items.some(i => hasKnownStock(i) && i.current_stock > 0)
   if (!hasStock) return null
-  if (items.every(i => (i.stock_loja ?? 0) === 0)) return 'deposito'
-  if (items.every(i => (i.stock_deposito ?? 0) === 0)) return 'loja'
+  if (items.every(i => i.stock_loja === 0)) return 'deposito'
+  if (items.every(i => i.stock_deposito === 0)) return 'loja'
   return 'mixed'
 }
 
@@ -1190,6 +1190,7 @@ const statusChips = computed(() => [
   { value: 'out_of_stock', label: 'Sem estoque', count: inventoryStore.alerts?.out_of_stock_count },
   { value: 'overstocked', label: 'Excesso', count: inventoryStore.alerts?.overstocked_count },
   { value: 'inactive', label: 'Inativos', count: inventoryStore.alerts?.inactive_count },
+  { value: 'unknown_stock', label: 'Revisar estoque', count: inventoryStore.alerts?.unknown_stock_count },
 ])
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -1298,11 +1299,13 @@ async function openDiagnosticItem(id: string) {
 }
 
 function openMovement(item: InventoryItem) {
+  if (!hasKnownStock(item)) { showToast(UNKNOWN_STOCK_MESSAGE, 'warning'); return }
   movementItem.value = item
   showMovementModal.value = true
 }
 
 async function handleQuickExit(item: InventoryItem, location: string = 'loja') {
+  if (!hasKnownStock(item)) { showToast(UNKNOWN_STOCK_MESSAGE, 'warning'); return }
   confirmExitId.value = null
   try {
     const result = await inventoryStore.quickExit(item.id, location)
@@ -1316,10 +1319,8 @@ async function handleQuickExit(item: InventoryItem, location: string = 'loja') {
 
 /** Retorna quais locais têm estoque disponível para saída rápida */
 function exitLocations(item: InventoryItem): { loja: boolean; deposito: boolean } {
-  const hasLoja = (item.stock_loja ?? 0) > 0
-  const hasDeposito = (item.stock_deposito ?? 0) > 0
-  if (hasLoja || hasDeposito) return { loja: hasLoja, deposito: hasDeposito }
-  return { loja: true, deposito: false } // fallback sem info de split
+  if (!hasKnownStock(item)) return { loja: false, deposito: false }
+  return { loja: item.stock_loja > 0, deposito: item.stock_deposito > 0 }
 }
 
 function onBarcodeDetected(code: string) {
@@ -1369,7 +1370,7 @@ async function onBulkTransferSaved() {
 
 function alertLabel(level: string | undefined) {
   const labels: Record<string, string> = {
-    out: 'Sem estoque', low: 'Baixo', high: 'Excesso', ok: 'OK', inactive: 'Inativo'
+    out: 'Sem estoque', low: 'Baixo', high: 'Excesso', ok: 'OK', inactive: 'Inativo', unknown: 'Revisar estoque'
   }
   return tr(labels[level || 'ok'] || 'OK')
 }
@@ -1454,6 +1455,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.stock-unknown { color: #92400e; }
+.badge-unknown, .chip-alert-unknown { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
+.alert-unknown, .exp-alert-unknown { border-left-color: #f59e0b; }
+.action-btn:disabled, .exp-btn:disabled { opacity: .4; cursor: not-allowed; }
 .inventory-view { min-height: 100vh; background: #f9fafb; }
 .list-load-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem; padding: 1rem; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #991b1b; font-size: .85rem; }
 .list-load-error p { margin: .35rem 0 0; font-size: .8rem; }
