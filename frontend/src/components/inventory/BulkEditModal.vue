@@ -110,7 +110,7 @@
             <div v-for="item in items" :key="item.id" class="item-card">
               <!-- Item header -->
               <div class="item-card-header">
-                <img v-if="sharedImage || item.image_data" :src="sharedImage || item.image_data" class="card-thumb" alt="" />
+                <img v-if="sharedImage || item.image_data" :src="sharedImage || item.image_data || undefined" class="card-thumb" alt="" />
                 <div v-else class="card-thumb-placeholder"></div>
                 <div class="card-header-info">
                   <span class="card-original-name">{{ item.name }}</span>

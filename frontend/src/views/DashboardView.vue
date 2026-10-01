@@ -197,19 +197,7 @@
 
     <!-- Main Content -->
     <main class="dashboard-main">
-      <!-- Loading State -->
-      <div v-if="dashboardStore.isLoading" class="loading-container">
-        <div class="loading-content">
-          <svg class="loading-spinner" fill="none" viewBox="0 0 24 24">
-            <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p>{{ $t('dashboard.loadingDashboard') }}</p>
-        </div>
-      </div>
-
-      <!-- Dashboard Content -->
-      <div v-else class="dashboard-content">
+      <div class="dashboard-content">
 
         <!-- Row 1: Large Inventory Card + Rastreamento -->
         <div class="main-top-grid">
@@ -603,7 +591,6 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useDashboardStore } from '@/stores/dashboard'
 import { useCurrencyStore } from '@/stores/currency'
 import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
@@ -614,9 +601,8 @@ import SalesSummaryCard from '@/components/dashboard/SalesSummaryCard.vue'
 import { inventoryAPI, healthAPI, type AlertSummary } from '@/services/api'
 
 const router = useRouter()
-const { locale, t } = useI18n()
+const { locale } = useI18n()
 const authStore = useAuthStore()
-const dashboardStore = useDashboardStore()
 const currencyStore = useCurrencyStore()
 
 const currentTime = ref('')
@@ -635,7 +621,7 @@ const recentInventoryItems = ref<any[]>([])
 type StatusState = 'online' | 'offline' | 'checking'
 const apiStatus = ref<StatusState>('checking')
 const dbStatus = ref<StatusState>('checking')
-let healthInterval: NodeJS.Timeout | null = null
+let healthInterval: ReturnType<typeof setInterval> | null = null
 
 async function checkHealth() {
   try {
@@ -699,26 +685,8 @@ const updateTime = () => {
   }
 }
 
-const formatCurrency = (value: number, fromCurrency: CurrencyCode = 'R$') => {
-  // Convert from the original currency (usually R$) to the selected currency
-  const convertedValue = currencyStore.convertBetweenCurrencies(value, fromCurrency, currencyStore.selectedCurrency)
-  return currencyStore.formatCurrency(convertedValue)
-}
-
-const formatOriginalCurrency = (value: number) => {
-  // Format the original value without currency conversion for financial transparency
-  return value.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
-}
-
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('pt-BR')
-}
-
-const formatNumber = (value: number) => {
-  return value.toLocaleString('pt-BR')
 }
 
 const handleLogout = async () => {
@@ -739,8 +707,6 @@ const toggleLanguageDropdown = () => {
 const handleCurrencyChange = (currencyCode: CurrencyCode) => {
   currencyStore.setSelectedCurrency(currencyCode)
   showCurrencyDropdown.value = false
-  // Refresh dashboard data to reflect currency changes
-  dashboardStore.refreshData()
 }
 
 const handleLanguageChange = (langCode: string) => {
@@ -770,7 +736,7 @@ const closeExchangeRateModals = () => {
 
 const getLastUpdateTime = computed(() => {
   // Force reactivity with trigger
-  timeUpdateTrigger.value
+  void timeUpdateTrigger.value
   
   if (!lastUpdated.value) {
     return 'Nunca'
@@ -799,10 +765,6 @@ const navigateToExchangeRates = () => {
 
 const navigateToVendors = () => {
   router.push('/vendors')
-}
-
-const navigateToVendas = () => {
-  router.push('/vendas')
 }
 
 const navigateToInventory = () => {
@@ -906,7 +868,7 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-let timeInterval: NodeJS.Timeout
+let timeInterval: ReturnType<typeof setInterval>
 
 onMounted(async () => {
   updateTime()
@@ -914,10 +876,7 @@ onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
 
   // Load exchange rates, dashboard data, and stock alerts
-  await Promise.all([
-    loadExchangeRates(),
-    dashboardStore.refreshData()
-  ])
+  await loadExchangeRates()
   inventoryAPI.getAlertsSummary().then(data => { stockAlerts.value = data }).catch(() => {})
   inventoryAPI.getItems({ page_size: 10, sort_by: 'updated_at' }).then(data => { recentInventoryItems.value = data.items }).catch(() => {})
 

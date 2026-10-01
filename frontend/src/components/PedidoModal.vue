@@ -80,7 +80,7 @@
                     class="form-input"
                     @input="onRastreioSearchInput"
                     @focus="onRastreioFocus"
-                    @blur="setTimeout(() => showRastreioSuggestions = false, 180)"
+                    @blur="hideTrackingSuggestions"
                   />
                   <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn">✕</button>
                   <!-- Dropdown de sugestões -->
@@ -154,7 +154,7 @@
                   placeholder="Buscar por nome, telefone ou CPF..."
                   class="form-input"
                   @input="onClienteSearchInput"
-                  @blur="setTimeout(() => showSuggestions = false, 200)"
+                  @blur="hideCustomerSuggestions"
                   style="width:100%;box-sizing:border-box;"
                 />
                 <button v-if="selectedCliente" type="button" @click="clearCliente" style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;">✕ Desvincular</button>
@@ -715,6 +715,12 @@ onMounted(() => {
     loadTags()
   }
 })
+function hideTrackingSuggestions() {
+  setTimeout(() => { showRastreioSuggestions.value = false }, 180)
+}
+function hideCustomerSuggestions() {
+  setTimeout(() => { showSuggestions.value = false }, 200)
+}
 </script>
 
 <style scoped>

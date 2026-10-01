@@ -9,6 +9,7 @@ services:
     name: erp-eleven-backend
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -18,17 +19,16 @@ services:
         generateValue: true
       - key: ALGORITHM
         value: HS256
-      - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 720
       - key: TIMEZONE
         value: America/Sao_Paulo
       - key: LOG_LEVEL
         value: INFO
 
   # Frontend Static Site
-  - type: static
+  - type: web
+    runtime: static
     name: erp-eleven-frontend
-    buildCommand: cd frontend && npm ci && npm run build
+    buildCommand: cd frontend && npm ci --include=dev && npm run build
     staticPublishPath: ./frontend/dist
     routes:
       - type: rewrite
@@ -39,4 +39,3 @@ services:
         value: production
       - key: VITE_API_BASE_URL
         value: https://erp-eleven-backend.onrender.com
-    

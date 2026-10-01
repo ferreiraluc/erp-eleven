@@ -258,13 +258,18 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { salesAPI, vendorsAPI } from '@/services/api'
+import { salesAPI, vendorsAPI, type Sale, type VendorResponse } from '@/services/api'
 import VendasImportCard from '@/components/VendasImportCard.vue'
 
 // Estado reativo
-const vendas = ref([])
-const vendedores = ref([])
-const stats = ref({})
+const vendas = ref<Sale[]>([])
+const vendedores = ref<VendorResponse[]>([])
+const stats = ref({
+  total_vendas: 0,
+  valor_total: 0,
+  vendas_hoje: 0,
+  vendedores_ativos: 0,
+})
 const loading = ref(false)
 const showImportModal = ref(false)
 const showAddModal = ref(false)
@@ -278,7 +283,7 @@ const filters = ref({
 })
 
 // Ordenação
-const sortField = ref('data_venda')
+const sortField = ref<keyof Sale>('data_venda')
 const sortDirection = ref('desc')
 
 // Paginação
@@ -389,13 +394,13 @@ const updateStats = () => {
   
   stats.value = {
     total_vendas: vendas.value.length,
-    valor_total: vendas.value.reduce((sum, venda) => sum + parseFloat(venda.valor_bruto || 0), 0),
+    valor_total: vendas.value.reduce((sum, venda) => sum + Number(venda.valor_bruto || 0), 0),
     vendas_hoje: vendas.value.filter(venda => new Date(venda.data_venda) >= todayStart).length,
     vendedores_ativos: new Set(vendas.value.map(venda => venda.vendedor_id)).size
   }
 }
 
-const sortBy = (field: string) => {
+const sortBy = (field: keyof Sale) => {
   if (sortField.value === field) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
   } else {
@@ -453,7 +458,7 @@ const formatCurrency = (value: number) => {
 }
 
 const formatPaymentMethod = (method: string) => {
-  const methods = {
+  const methods: Record<string, string> = {
     'PIX_POWER': 'PIX Power',
     'PIX_THAIS': 'PIX Thais',
     'PIX_MERCADO_PAGO': 'PIX MP',
@@ -466,7 +471,7 @@ const formatPaymentMethod = (method: string) => {
 }
 
 const getMoedaClass = (moeda: string) => {
-  const classes = {
+  const classes: Record<string, string> = {
     'G$': 'moeda-guarani',
     'R$': 'moeda-real',
     'U$': 'moeda-dollar',

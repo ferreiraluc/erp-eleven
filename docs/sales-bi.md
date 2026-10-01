@@ -34,3 +34,10 @@ DATABASE_URL=sqlite:// PYTHONPATH=. venv/bin/python -m pytest tests/test_sales_b
 Os testes geram arquivos fictícios com resultados salvos e usam SQLite. Cobrem correções, ausência de cache, formatos antigos, duplicação, filtros, proteção por função, URLs, retenção do último resultado, repetição da sincronização e migração.
 
 Referência da Microsoft: https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-folders-and-files-with-rest
+
+## Card do dashboard
+
+O dashboard mostra o último mês disponível, o acumulado do respectivo ano e os três
+maiores resultados por vendedor naquele mês. Período, US$ e data de leitura ficam
+visíveis. Os atalhos abrem vendedor, comparação, semanas do ano ou fontes com filtros.
+Recarregar o card lê o snapshot do ERP e não aciona sincronização OneDrive.

@@ -236,7 +236,7 @@
             >
               <img
                 v-if="entry.group.items.find(i => i.image_data)"
-                :src="entry.group.items.find(i => i.image_data)!.image_data"
+                :src="entry.group.items.find(i => i.image_data)?.image_data || undefined"
                 alt=""
                 class="group-thumb"
               />
@@ -1018,7 +1018,6 @@ const flatList = computed<FlatEntry[]>(() => {
   }
 
   // Em modo grupo: backendGroups já vem filtrado pelo backend quando há busca
-  const term = searchQuery.value.toLowerCase().trim()
   const groupedItemIds = new Set<string>()
   const result: FlatEntry[] = []
 
@@ -1211,21 +1210,6 @@ function setFilter(key: 'brand' | 'category', value: string) {
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
   inventoryStore.loadItems(1, false, groupMode.value)
-  if (groupMode.value) loadGroupsFiltered()
-}
-
-function applyAdvancedFilter() {
-  inventoryStore.filters.brand = filterBrand.value
-  inventoryStore.filters.category = filterCategory.value
-  reloadItems()
-}
-
-function clearAdvancedFilters() {
-  filterBrand.value = ''
-  filterCategory.value = ''
-  inventoryStore.filters.brand = ''
-  inventoryStore.filters.category = ''
-  reloadItems()
   if (groupMode.value) loadGroupsFiltered()
 }
 

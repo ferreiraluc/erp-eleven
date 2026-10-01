@@ -481,7 +481,7 @@
                   class="form-input"
                   @input="onPedidoSearchInput"
                   @focus="onPedidoFocus"
-                  @blur="setTimeout(() => showPedidoSuggestions = false, 180)"
+                  @blur="hideOrderSuggestions"
                   style="width:100%;box-sizing:border-box;"
                 />
                 <button
@@ -937,10 +937,6 @@ async function removerRastreamento(rastreamento: Rastreamento) {
   }
 }
 
-function getStatusClass(status: string): string {
-  return rastreamentoStore.getStatusColor(status)
-}
-
 function getStatusBadgeClass(status: string): string {
   switch (status) {
     case 'PENDENTE': return 'badge-pendente'
@@ -965,22 +961,6 @@ function getStatusText(status: string): string {
 
 function formatarData(data: string): string {
   return rastreamentoStore.formatarData(data)
-}
-
-function getStatusCardClass(status: string): string {
-  switch (status) {
-    case 'ENTREGUE':
-      return 'card-status-entregue'
-    case 'EM_TRANSITO':
-      return 'card-status-transito'
-    case 'PENDENTE':
-      return 'card-status-pendente'
-    case 'ERRO':
-    case 'NAO_ENCONTRADO':
-      return 'card-status-erro'
-    default:
-      return 'card-status-default'
-  }
 }
 
 // Novas funções para a lista
@@ -1033,7 +1013,7 @@ async function atualizarOnline(rastreamento: Rastreamento) {
     await rastreamentoStore.atualizarOnline(rastreamento.id)
     // The store already updates the item in-place via splice — no full reload needed
     // Refresh resumo stats silently in background
-    rastreamentoStore.obterResumoDashboard().then(v => { resumo.value = rastreamentoStore.resumoDashboard }).catch(() => {})
+    rastreamentoStore.obterResumoDashboard().then(() => { resumo.value = rastreamentoStore.resumoDashboard }).catch(() => {})
     triggerFlash(rastreamento.id)
   } catch (err: any) {
     console.error('Erro ao atualizar rastreamento:', err)
@@ -1065,6 +1045,9 @@ onMounted(async () => {
     filtros.value.busca = String(route.query.search)
   }
 })
+function hideOrderSuggestions() {
+  setTimeout(() => { showPedidoSuggestions.value = false }, 180)
+}
 </script>
 
 <style scoped>

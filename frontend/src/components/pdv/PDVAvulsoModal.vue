@@ -69,7 +69,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   scannedCode?: string | null
 }>()
 

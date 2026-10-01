@@ -1,5 +1,7 @@
 # Verificação de integração — 20 e 21/09/2026
 
+> Arquivo histórico. Não usar como estado atual ou manual de implantação. Veja [a documentação mantida](../README.md).
+
 ## Estado atual — 21/09/2026, ativação do WhatsApp
 
 - Twilio: conta `Full`, status `active`; remetente `+595 992 036654` confirmado `ONLINE` pela API v2. O remetente antigo de teste não é mais usado pelo ERP.

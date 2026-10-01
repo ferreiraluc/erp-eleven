@@ -127,30 +127,7 @@
 </template>
 
 <script setup lang="ts">
-interface Tag {
-  id: string
-  nome: string
-  cor: string
-  ordem: string
-}
-
-interface Pedido {
-  id: string
-  numero_pedido: string
-  descricao: string
-  valor_total: number
-  moeda?: string
-  cliente_nome?: string
-  cliente_telefone?: string
-  cliente_email?: string
-  endereco_entrega?: string
-  status: string
-  codigo_rastreio?: string
-  created_at: string
-  updated_at: string
-  tags: Tag[]
-  anexos_count?: number
-}
+import type { Pedido } from '@/services/api'
 
 interface Props {
   pedido: Pedido

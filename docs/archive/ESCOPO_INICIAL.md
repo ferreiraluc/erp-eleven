@@ -1,5 +1,7 @@
 # ERP Loja de Roupas - Sistema de Gestão Empresarial
 
+> Arquivo histórico. Não usar como estado atual ou manual de implantação. Veja [a documentação mantida](../README.md).
+
 ## Visão Geral do Projeto
 
 Sistema ERP web completo para gestão de loja de roupas familiar, centralizando todas as operações em uma única plataforma moderna e eficiente.

@@ -1,91 +1,78 @@
 # Impressão da Eleven no Windows
 
-## Estado da implementação
+## Instalação e operação atuais
 
-Primeira etapa: agente Windows e API privada de fila implementados. API publicada
-em 22/09/2026 (commit 96b0f4b, deploy dep-dap7f33rjlhs73fc004g). Dispositivo
-c427707d-c8c0-416f-92a1-14f21ea3522e cadastrado; aguardando instalação da
-credencial no Windows e confirmação de conexão. Não há ferramenta de impressão no Telegram nesta etapa.
-A geração dos documentos a partir dos modelos do usuário é a próxima integração.
-Não comunicar que o bot já imprime antes de concluir essa integração e um teste
-real no Windows da loja.
+O bot Telegram e o gestor de endereços já enviam trabalhos para a HP LaserJet
+M14-M17 no computador Windows da loja. O responsável confirmou impressão física
+A4 em 22/09/2026. O laptop de desenvolvimento é outra máquina; não instalar nele
+um segundo agente conectado à fila da loja.
 
-O laptop de desenvolvimento não é o computador de impressão. O pacote em
-`tools/eleven-print-agent` deve ser instalado exclusivamente no Windows da loja,
-com SumatraPDF e o driver da **HP Laserjet M14-M17**. O usuário já imprimiu um PDF
-com sucesso pelo Sumatra nesse computador.
+Pacote: `tools/eleven-print-agent/`, com `Instalar.cmd`, `Instalar.ps1`, `Agente.ps1`
+e `LEIA-ME.txt`. Requisitos: driver da HP, SumatraPDF funcionando e credencial do
+dispositivo criada por ADMIN. O instalador não baixa programas de terceiros.
 
-## Regras confirmadas dos documentos
+1. Instale o driver e o SumatraPDF no Windows; teste um PDF diretamente pelo Sumatra.
+2. Obtenha uma credencial de dispositivo pelo fluxo administrativo `/api/printing/devices`.
+3. Execute `Instalar.cmd` e informe os dados pedidos, incluindo a credencial. DPAPI protege a cópia local; o servidor guarda o hash.
+4. Abra **Eleven Impressao**. Mantenha a janela, a sessão Windows e a conexão ativas.
+5. Confira o último contato/conexão no ERP e envie uma solicitação explícita de teste. Verifique o papel antes de considerar a instalação concluída.
 
-- Papel A4 comum, frente única.
-- Paraguai: imprimir somente destinatário; não incluir remetente.
-- Brasil: destinatário e um remetente escolhido entre os cadastrados.
-- Cada trabalho deve ser um novo documento apenas com a seleção solicitada.
-- O Word original contém destinatários históricos para copiar e colar, nunca
-  deve ser impresso inteiro automaticamente.
-- Modelos fornecidos: DESTINATARIOo.docx e declaração de conteúdo com remetente,
-  destinatário, identificação dos bens, quantidades, valores, peso e assinatura.
-- Dados de remetentes, CPFs e destinatários não devem ser inseridos no código,
-  nos testes públicos ou no pacote de instalação.
+O agente consulta a API por HTTPS; não precisa abrir porta de entrada no computador.
+Não é um serviço do Windows nem configura inicialização automática. Uma credencial
+permite buscar e concluir apenas trabalhos daquele dispositivo, não consultar o ERP inteiro.
 
-## API e ativação
+## Documentos
 
-Migração `p6q7r8s9t0u1` cria `print_devices` e `print_jobs`.
-Rotas sob `/api/printing`. Apenas ADMIN pode cadastrar/revogar dispositivos,
-listar a fila e enviar PDFs. A credencial de dispositivo não autoriza nenhuma
-consulta ao ERP além dos trabalhos da própria impressora.
+- Papel A4 comum; cada solicitação gera somente o documento solicitado, uma cópia.
+- PY: somente destinatário e dados fornecidos, sem remetente ou campos de endereço obrigatórios.
+- BR: destinatário e remetente cadastrado escolhido; UF/CEP e dados do fluxo são validados.
+- CPF é opcional na impressão simples. Quando fornecido aparece ao final; ausente, zeros ou pedido “sem CPF” omitem a linha.
+- Remetentes e padrões ficam no banco e são editados no gestor. Não há nomes, CPFs ou endereços reais no instalador.
+- Modelos Word fornecidos originalmente serviram de referência; o ERP gera um PDF novo. Não imprime o documento histórico inteiro nem edita o Word remoto.
+- ViaCEP completa campos vazios compatíveis e informa divergências, preservando os dados enviados.
+- SuperFrete gera outro PDF, com requisitos próprios, e pode imprimir automaticamente após a emissão confirmada e liberação do arquivo.
 
-1. Publicar e aplicar a migração.
-2. ADMIN: POST `/devices` com `{ "name": "HP Laserjet M14-M17" }`.
-3. Entregar o token retornado diretamente ao responsável pela instalação.
-   A API guarda apenas seu SHA-256; o token não deve constar em logs ou URLs.
-4. Executar Instalar.cmd no Windows e informar o token; DPAPI protege a cópia
-   local. Nenhuma porta de entrada é aberta no computador.
-5. Abrir o atalho Eleven Impressao e conferir `last_seen_at` em GET `/devices`.
-6. Enviar PDF de teste A4 por POST `/jobs` multipart com `device_id`,
-   `request_key` UUID novo e `file`. Repetições da mesma solicitação devem usar
-   o mesmo request_key para não gerar uma segunda impressão.
-7. Confirmar fisicamente o resultado com o usuário antes de integrar o bot.
+## Solicitar no bot ou no ERP
 
-## Entrega e recuperação
+Pelo Telegram, envie os dados e peça a impressão em linguagem natural. ADMIN/GERENTE
+habilitado recebe prévia e botões; confirmar cria um trabalho na mesma transação da
+ação. Várias prévias podem ser selecionadas por nome ou pela lista de botões.
 
-`pending` → `claimed` → `submitted` ou `uncertain`/`failed`.
-`submitted` significa aceitação pelo renderizador/fila do Windows, não prova
-que saiu papel. Trabalhos não coletados expiram em 24h. PDFs finalizados e
-expirados são apagados; PDFs coletados sem retorno ficam disponíveis para
-diagnóstico restrito a ADMIN/dispositivo até tratamento manual.
+No dashboard, **Gerar endereço** abre a preparação. No gestor é possível consultar
+PDF, editar como nova cópia, escolher remetente/impressora e enviar. O histórico de
+utilização reúne A4 e etiquetas, vinculados ao endereço único da agenda.
 
-Claim usa bloqueio de linha e SKIP LOCKED no PostgreSQL. Não há reatribuição
-automática de um claim, mesmo se a conexão cair antes de o agente receber a
-resposta. Isso prefere um trabalho perdido/pendente de análise a cópias extras.
-O agente mantém um diário em disco antes de chamar Sumatra. Na recuperação,
-`started` vira `uncertain`; reenvia somente o resultado, nunca o PDF à HP.
-Reimpressão exige conferir a fila local e criar um novo trabalho explicitamente.
+Para um documento avulso, envie **PDF** ao Telegram e peça para imprimir. Limites:
+5 MB, 1–30 páginas, sem senha. Há confirmação e referência técnica temporária, sem
+extrair texto, enviar conteúdo à IA ou armazenar o PDF no ERP. O Windows usa arquivo
+temporário e o remove após processamento/retorno; a recuperação conclui a limpeza
+quando necessário. Detalhes em [Fluxos do assistente](ASSISTENTE_FLUXOS_OPERACIONAIS.md).
 
-O agente desta etapa precisa da sessão Windows e da janela abertas; não é um
-serviço nem instala inicialização automática. O instalador é um script legível,
-sem download ou execução automática de programas de terceiros. Usa PowerShell
-somente no processo de instalação/execução, sem mudar a política permanente.
+## Estado e recuperação
+
+`pending` → `claimed` → `submitted`, `uncertain` ou `failed`; também existem
+`cancelled` e `expired`. **Enviado à impressora não significa papel fisicamente impresso.**
+
+A API usa locks e a chave da solicitação para impedir execução duplicada. Não há
+reatribuição automática de um claim perdido. O diário local é salvo antes de chamar
+Sumatra; se o agente reiniciar após iniciar impressão, informa resultado incerto e
+não reenvia o mesmo arquivo automaticamente.
+
+Trabalhos não coletados expiram em 24h. A retenção depende da origem: conteúdo avulso
+temporário é limpo, PDFs A4 podem ser regenerados pelos snapshots e etiquetas SuperFrete
+persistidas continuam disponíveis no gestor. Não apagar filas ou snapshots para tentar
+“destravar” uma impressão. Confira a fila do Windows antes de solicitar nova cópia.
+
+Se não imprimir, confira: agente aberto, credencial válida, último contato, impressora
+selecionada, Sumatra e estado do trabalho. Uma nova cópia deve ser uma ação explícita
+com nova chave; repetir a mesma requisição técnica não deve imprimir outra folha.
 
 ## Validação
 
-Testes isolados cobrem autenticação, isolamento por dispositivo, revogação,
-idempotência, expiração e confirmação de resultado. Teste físico e execução do
-PowerShell dependem do Windows da loja; não foram executados no laptop macOS.
+Os testes isolados cobrem credenciais, isolamento/revogação por dispositivo,
+idempotência, expiração, recuperação e geração de documentos. Execução PowerShell e
+saída física exigem o computador Windows da loja; testes em macOS/SQLite não os substituem.
+Nenhuma impressão é enviada automaticamente só por rodar a suíte de testes.
 
-## Endereços pelo assistente
-
-O assistente possui `preparar_impressao`, para endereço em texto, um destinatário por folha A4.
-ADMIN/GERENTE com `can_register` recebe prévia e confirma na mesma conversa. A confirmação
-cria o trabalho na mesma transação da ação; a chave é o UUID da ação, impedindo reenvio em retries.
-PY nunca inclui remetente. CPF do destinatário é opcional: quando informado, aparece formatado no final do destinatário. Ausente ou pedido sem CPF omite a linha, inclusive placeholders de zeros. BR exige UF, CEP e escolha de `debora` ou `mona`, cujos perfis
-ficam em `print_senders` no banco (dados pessoais não pertencem ao código/instalador).
-A prévia congela o perfil do remetente. PDF novo não inclui destinatários antigos do Word.
-Esta etapa usa layout simples A4 e não emite declaração de conteúdo, SuperFrete nem lê fotos.
-O bot informa envio à fila, sem afirmar impressão física. Agente Windows existente é compatível.
-
-Teste físico inicial confirmado pelo responsável em 22/09/2026: papel A4 saiu na HP da loja.
-
-A validação do CPF informado confere formato, não consulta a Receita Federal.
-
-PY aceita apenas os campos fornecidos (por exemplo nome, telefone e cidade), sem exigir rua ou demais detalhes; campos vazios não aparecem no PDF.
+Veja também [Gestor de endereços e SuperFrete](GESTOR_ENDERECOS_SUPERFRETE.md) e
+[Operação](OPERACAO.md).

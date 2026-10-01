@@ -98,7 +98,7 @@ import { ref, computed } from 'vue'
 import type { PdvSaleResponse } from '@/services/api'
 
 const props = defineProps<{ sale: PdvSaleResponse }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+defineEmits<{ (e: 'close'): void }>()
 
 const receiptRef = ref<HTMLElement>()
 

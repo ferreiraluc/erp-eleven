@@ -599,7 +599,7 @@ const confirmDelete = async () => {
     cancelDelete()
     selectedFolgas.value = []
     
-  } catch (error) {
+  } catch {
     showNotification('Erro ao excluir folga(s)', 'error')
   } finally {
     loading.value = false
@@ -631,7 +631,7 @@ const bulkUpdateApproval = async (approved: boolean) => {
     selectedFolgas.value = []
     await loadFolgas()
     
-  } catch (error) {
+  } catch {
     showNotification('Erro ao atualizar folgas', 'error')
   } finally {
     loading.value = false

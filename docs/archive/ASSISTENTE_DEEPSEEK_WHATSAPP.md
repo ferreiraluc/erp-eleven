@@ -1,5 +1,7 @@
 # Assistente operacional Eleven — DeepSeek + WhatsApp
 
+> Arquivo histórico. Não usar como estado atual ou manual de implantação. Veja [a documentação mantida](../README.md).
+
 Estudo inicial: 20/09/2026. Status: histórico do estudo; a primeira versão local foi implementada, sem ativação externa. Veja `ASSISTENTE_ATIVACAO.md`. Provedor corrigido pelo usuário: **DeepSeek**, não Grok.
 
 ## Decisão atual — substitui a seleção de canal abaixo

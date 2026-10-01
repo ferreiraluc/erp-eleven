@@ -126,7 +126,7 @@
                 style="display: none;"
               >
               
-              <div v-if="!selectedFile" class="upload-placeholder" @click="$refs.fileInput.click()">
+              <div v-if="!selectedFile" class="upload-placeholder" @click="fileInput?.click()">
                 <div class="upload-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -278,11 +278,11 @@ import { excelImportAPI, type ImportPreviewResponse, type ImportResultResponse }
 
 // Estado reativo
 const showImportModal = ref(false)
-const activeTab = ref<'upload'>('upload')
 const loading = ref(false)
 
 // Estado do arquivo selecionado
 
+const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 
 // Dados
@@ -323,8 +323,7 @@ const handleDrop = (event: DragEvent) => {
 
 const clearFile = () => {
   selectedFile.value = null
-  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-  if (fileInput) fileInput.value = ''
+  if (fileInput.value) fileInput.value.value = ''
 }
 
 const clearPreview = () => {

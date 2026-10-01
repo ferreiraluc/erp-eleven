@@ -1,6 +1,6 @@
 # Ativação do assistente Eleven
 
-## Implementação desta entrega
+## Capacidades e ativação atuais
 
 - WhatsApp **1:1** via Twilio e **grupo Telegram**, com DeepSeek no mesmo backend.
 - Consultas de pedidos/rastreios, inclusive envios sem pedido vinculado.
@@ -10,13 +10,20 @@
 - Painel de administrador em **Dashboard → Assistente IA** (`/assistente`): configuração, acessos, registros e fila.
 - Worker persistente, mensagens únicas, limites de processamento, tentativas controladas e tratamento de envio incerto.
 
-Imagens, áudio, impressão HP/Windows e operações financeiras permanecem etapas posteriores. A leitura OCR atual do ERP não foi alterada. Esta entrega não cria contas, compra números, registra bot no BotFather nem publica serviços automaticamente.
+Além das consultas e ocorrências, o bot oferece folgas, apelidos, cadastro/entrada de estoque,
+impressão A4/PDF e emissão SuperFrete com prévias e confirmações. Telegram tem botões e seleção
+por nome. A implantação contínua e a impressão Windows já foram validadas na operação.
+
+Imagens e áudio pelo bot, Meta Cloud API direta e lançamento de vendas/saídas/reembolsos pelo
+assistente não estão implementados. O OCR de estoque é separado. Para comportamento atual,
+consulte [o escopo](ESCOPO.md), [os fluxos](ASSISTENTE_FLUXOS_OPERACIONAIS.md) e
+[o gestor de endereços](GESTOR_ENDERECOS_SUPERFRETE.md).
 
 ## 1. Configuração do servidor
 
 Instale `backend/requirements.txt` no ambiente da API e do worker. Use `backend/assistant.env.example` como referência e configure as variáveis no ambiente seguro de ambos; não envie chaves em mensagens ou salve valores reais em arquivos versionados.
 
-Use o mesmo PostgreSQL e as mesmas variáveis nos dois processos. Antes de habilitar, aplique a migração em ambiente de teste e depois no ambiente de destino:
+Use o mesmo PostgreSQL e as mesmas variáveis nos dois processos. Antes de habilitar, valide as migrações em uma base de homologação preparada conforme [Desenvolvimento](DESENVOLVIMENTO.md), depois no destino autorizado:
 
 ```sh
 cd backend
@@ -90,24 +97,24 @@ Exemplos:
 
 ```text
 WhatsApp: Tem o rastreio do João?
-Telegram: /rastreio João
+Telegram: Me passa o rastreio do João?
 Telegram: @USERNAME_DO_BOT tem o rastreio do pedido 123?
-Qualquer canal: /registrar Chegou a devolução do pedido 123, camiseta M.
-Após revisar o rascunho: /confirmar ID_COMPLETO
-Para descartar: /cancelar ID_COMPLETO
-Para consultar depois em outro canal: /memoria pedido 123
-Ajuda: /ajuda
+Qualquer canal: Registre que chegou a devolução do pedido 123, camiseta M.
+Após revisar o rascunho: botão Confirmar no Telegram ou confirmação pelo nome.
+Para descartar: botão Cancelar.
+Para consultar depois em outro canal: O que registramos sobre o pedido 123?
+Ajuda: O que você consegue fazer no ERP?
 ```
 
 A confirmação é feita pelo autor, identificado pelo mesmo usuário ERP, e expira em 24 horas. A ferramenta de IA não consegue aprovar seu próprio rascunho. O texto confirmado fica disponível à equipe nos dois canais. Histórico bruto privado e rascunhos não são usados na busca compartilhada. Administradores podem inspecionar rascunhos no painel.
 
-Em grupo, o bot responde a seus comandos, menções, respostas a ele e consultas diretas de envio, como “Tem o rastreio do João?”. Mensagens comuns recebidas são analisadas em modo de observação; fatos operacionais claros podem gerar um rascunho para confirmação. Conversas sem ocorrência ficam sem resposta. O limite padrão é de 100 mensagens recebidas por usuário em 24 horas, somando canais; excesso é ignorado sem gerar nova chamada ao modelo.
+Comandos antigos continuam compatíveis, mas não são necessários. Em grupo, o bot responde a menções, respostas a ele e solicitações diretas em linguagem natural, como “Tem o rastreio do João?” ou “Cadastre uma folga amanhã para Junior”. Mensagens comuns recebidas são analisadas em modo de observação; fatos operacionais claros podem gerar um rascunho para confirmação. Conversas sem ocorrência ficam sem resposta. O limite padrão é de 100 mensagens recebidas por usuário em 24 horas, somando canais; excesso é ignorado sem gerar nova chamada ao modelo.
 
 ## 5. Teste de aceitação ao ativar
 
 1. Funcionário cadastrado pergunta pelo rastreio em cada canal. Confirme que os dados correspondem ao ERP.
-2. Teste dois clientes com o mesmo nome e múltiplos envios; o assistente deve pedir identificação.
-3. Registre ocorrência pelo WhatsApp, revise e confirme; consulte `/memoria` no Telegram.
+2. Teste nomes iguais de pessoas diferentes e múltiplos pacotes atuais; pedir identificação apenas quando a seleção for ambígua. Entregues ficam fora de uma consulta individual comum.
+3. Registre ocorrência pelo WhatsApp, revise e confirme; consulte a memória pelo Telegram.
 4. Verifique que mensagem privada não confirmada não aparece na memória do grupo.
 5. Cadastre um rastreio de teste pelo fluxo normal do ERP; confirme um aviso no Telegram após salvar.
 6. Reenvie o mesmo webhook em ambiente de teste; não deve gerar novo registro/resposta.
@@ -123,7 +130,7 @@ Em grupo, o bot responde a seus comandos, menções, respostas a ele e consultas
 - `uncertain`: houve timeout/interrupção e o provedor pode já ter enviado. Não há retentativa automática nem botão de reenvio indiscriminado. Conferir no canal antes de qualquer intervenção.
 - `expired`: resposta WhatsApp perdeu a janela; funcionário deve enviar outra mensagem.
 - O processamento usa locks PostgreSQL. Testes unitários usam SQLite apenas em ambiente isolado, sem validar comportamento real de concorrência PostgreSQL.
-- Retenção automática, métricas de cobrança/token, alertas externos e painel de reimpressão não estão implementados. O limite diário e o máximo de quatro chamadas ao modelo por mensagem limitam uso, mas não são um teto financeiro em moeda.
+- Retenção geral das conversas, métricas de cobrança/token e alertas externos ainda não estão implementados. Documentos temporários têm limpeza própria; a reimpressão de endereços existe no gestor. O limite diário e o máximo de quatro chamadas ao modelo por mensagem limitam uso, mas não são um teto financeiro em moeda.
 - Segredos ficam nas variáveis de ambiente. Conteúdo de mensagens não aparece na fila administrativa; os registros operacionais aparecem para ADMIN. O banco contém textos recebidos e requer política de acesso/retencão da empresa.
 
 ## Validação local
@@ -131,11 +138,11 @@ Em grupo, o bot responde a seus comandos, menções, respostas a ele e consultas
 ```sh
 cd backend
 pip install -r requirements-dev.txt
-python -m pytest tests/test_assistant.py -q
+PYTHONPATH=. DATABASE_URL=sqlite:// python -m pytest tests -q
 ```
 
 As chamadas externas são simuladas. Não chamar endpoints de produção ou aplicar migração no banco real apenas para executar estes testes.
 
-Os testes reais de conectividade e DeepSeek realizados em 20/09/2026 estão registrados em [ASSISTENTE_TESTES_INTEGRACAO.md](ASSISTENTE_TESTES_INTEGRACAO.md). A memória foi validada com dados fictícios em banco temporário; também houve consulta de um pedido real em transação somente leitura. Esses testes não representam ativação contínua em produção.
+Os testes reais de conectividade e DeepSeek realizados em 20/09/2026 estão registrados em [histórico dos testes iniciais](archive/ASSISTENTE_TESTES_INTEGRACAO.md). A memória foi validada com dados fictícios em banco temporário; também houve consulta de um pedido real em transação somente leitura. Esse registro é histórico; o estado operacional atual deve ser conferido no painel e no health check.
 
 Fontes: [Twilio: validação de requisições](https://www.twilio.com/docs/usage/security), [Twilio: WhatsApp](https://www.twilio.com/docs/whatsapp/api), [Telegram Bot API](https://core.telegram.org/bots/api), [Telegram: privacidade](https://core.telegram.org/bots/features#privacy-mode), [DeepSeek: API](https://api-docs.deepseek.com/).

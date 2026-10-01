@@ -77,7 +77,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   async function loadAlerts() {
     try {
       alerts.value = await inventoryAPI.getAlertsSummary()
-    } catch (e) {
+    } catch {
       // silently fail for dashboard widget
     }
   }

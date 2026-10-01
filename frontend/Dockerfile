@@ -1,72 +1,20 @@
-# Frontend Dockerfile for production deployment
 FROM node:22-alpine AS builder
-
-# Set working directory
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies (including dev dependencies for build)
-RUN npm install
-
-# Copy source code and configuration files
+RUN npm ci --include=dev
 COPY . .
+ARG VITE_API_BASE_URL=http://localhost:8000
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
 
-# Debug: Show what files we have before build
-RUN ls -la
-
-# Build the application
-RUN NODE_ENV=production npm run build
-
-# Debug: Show what was built
-RUN ls -la dist/
-
-# Production stage
 FROM node:22-alpine AS production
-
-# Install curl for health checks
-RUN apk add --no-cache curl
-
+ENV NODE_ENV=production
 WORKDIR /app
-
-# Copy package files for server dependencies
 COPY package*.json ./
-
-# Install only production dependencies
-RUN npm install --only=production
-
-# Copy built application from builder stage
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/server.js ./server.js
-
-# Debug: Verify files are copied and check permissions
-RUN ls -la && ls -la dist/ && ls -la dist/assets/
-
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
-
-# Change ownership and permissions of the app directory
-RUN chown -R nextjs:nodejs /app && \
-    chmod -R 755 /app && \
-    find /app/dist -type f -exec chmod 644 {} \; && \
-    find /app/dist -type d -exec chmod 755 {} \;
-
-# Debug: Verify permissions after changes
-RUN echo "Checking final permissions:" && \
-    ls -la /app && \
-    ls -la /app/dist && \
-    ls -la /app/dist/assets | head -5
-
-USER nextjs
-
-# Expose port
+COPY server.js ./server.js
+USER node
 EXPOSE 3000
-
-# Health check using curl instead of wget
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
-
-# Start the server
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD node -e "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["node", "server.js"]

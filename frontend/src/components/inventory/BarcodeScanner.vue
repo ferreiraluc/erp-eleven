@@ -85,7 +85,7 @@ onMounted(async () => {
       timeoutWarning.value = true
       manualInputRef.value?.focus()
     }, 30000)
-  } catch (err: any) {
+  } catch {
     cameraError.value = true
     manualInputRef.value?.focus()
   }

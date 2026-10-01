@@ -56,17 +56,9 @@ export interface LoginResponse {
   expires_in: number
 }
 
-export interface DashboardStats {
-  total_sales_today: number
-  total_sales_week: number
-  total_sales_month: number
-  pending_orders: number
-  active_vendors: number
-  exchange_rate_g_to_r: number
-}
-
 export interface Sale {
   id: string
+  vendedor_id: string
   data_venda: string
   vendedor_nome: string
   moeda: string
@@ -74,15 +66,6 @@ export interface Sale {
   valor_liquido: number
   metodo_pagamento: string
   descricao_produto: string
-}
-
-export interface Vendor {
-  id: string
-  nome: string
-  taxa_comissao: number
-  meta_semanal: number
-  telefone: string
-  ativo: boolean
 }
 
 export interface User {
@@ -108,15 +91,6 @@ export const authAPI = {
     api.post('/api/auth/logout').then(res => res.data),
 }
 
-// Dashboard API
-export const dashboardAPI = {
-  getStats: (): Promise<DashboardStats> => 
-    api.get('/api/dashboard/stats').then(res => res.data),
-  
-  getRecentSales: (limit = 10): Promise<Sale[]> => 
-    api.get(`/api/vendas/?limit=${limit}`).then(res => res.data),
-}
-
 // Sales API
 export const salesAPI = {
   getAll: (): Promise<Sale[]> => 
@@ -128,6 +102,7 @@ export const salesAPI = {
 
 // Vendor Types
 export interface VendorCreate {
+  cor_calendario?: string
   nome: string
   taxa_comissao?: number
   meta_semanal?: number
@@ -138,6 +113,7 @@ export interface VendorCreate {
 }
 
 export interface VendorResponse {
+  cor_calendario?: string
   id: string
   nome: string
   taxa_comissao: number
@@ -552,7 +528,7 @@ export interface InventoryItem {
   location?: string
   barcode?: string
   sku_internal: string
-  supplier_id?: string
+  supplier_id?: string | null
   cost_price: number
   sale_price: number
   currency: string
@@ -565,9 +541,9 @@ export interface InventoryItem {
   stock_deposito: number
   is_active: boolean
   alert_level?: string
-  image_data?: string
-  brand?: string
-  group_key?: string
+  image_data?: string | null
+  brand?: string | null
+  group_key?: string | null
   created_at: string
   updated_at: string
   created_by?: string

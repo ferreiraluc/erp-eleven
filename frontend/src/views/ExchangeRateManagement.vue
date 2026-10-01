@@ -328,7 +328,7 @@ import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
-import { formatDate, formatDateTime, formatRelativeTime } from '@/utils/datetime'
+import { formatDate } from '@/utils/datetime'
 
 const router = useRouter()
 const authStore = useAuthStore()

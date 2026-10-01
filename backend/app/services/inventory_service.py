@@ -1,9 +1,8 @@
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional
 import uuid
-from ..models.inventory import Item, StockMovement, MovementType, InventorySession, InventorySessionItem, SessionStatus
+from ..models.inventory import Item, StockMovement, MovementType, InventorySession, SessionStatus
 
 
 def _compute_alert_level(item: Item) -> str:
@@ -41,7 +40,6 @@ def create_movement(
     mv_type = MovementType[movement_type]
 
     if mv_type == MovementType.entry:
-        delta = quantity
         # Route to the correct location column
         loc = location or "loja"
         if loc == "deposito":
@@ -50,7 +48,6 @@ def create_movement(
             item.stock_loja = (item.stock_loja or 0) + quantity
 
     elif mv_type == MovementType.exit:
-        delta = -quantity
         loc = location or "loja"
         if loc == "deposito":
             item.stock_deposito = max(0, (item.stock_deposito or 0) - quantity)
@@ -59,7 +56,6 @@ def create_movement(
 
     elif mv_type == MovementType.adjustment:
         # quantity is the new absolute value; adjustment applies to loja by default
-        delta = quantity - item.current_stock
         loc = location or "loja"
         if loc == "deposito":
             item.stock_deposito = quantity
@@ -68,7 +64,6 @@ def create_movement(
 
     elif mv_type == MovementType.transfer:
         # Move stock between columns — no net change to current_stock
-        delta = 0
         loc_from = location_from or "loja"
         loc_to = location_to or "deposito"
         if loc_from == "deposito":
@@ -78,10 +73,6 @@ def create_movement(
             item.stock_loja = max(0, (item.stock_loja or 0) - quantity)
             item.stock_deposito = (item.stock_deposito or 0) + quantity
 
-    else:
-        delta = quantity
-
-    quantity_after = quantity_before + delta
     # Always keep current_stock in sync with sum of location stocks
     item.current_stock = (item.stock_loja or 0) + (item.stock_deposito or 0)
 
@@ -112,31 +103,6 @@ def create_movement(
     db.add(movement)
     db.flush()
     return movement
-
-
-def apply_sale_exit(
-    db: Session,
-    sale_id: str,
-    items: List[dict],
-    created_by: uuid.UUID,
-):
-    """Hook for sales integration — creates exit movements in batch (always from loja)"""
-    movements = []
-    for item_data in items:
-        movement = create_movement(
-            db=db,
-            item_id=item_data["item_id"],
-            movement_type="exit",
-            quantity=item_data["quantity"],
-            created_by=created_by,
-            reason="Venda",
-            reference_type="venda",
-            reference_id=sale_id,
-            location="loja",
-        )
-        movements.append(movement)
-    db.commit()
-    return movements
 
 
 def apply_session(

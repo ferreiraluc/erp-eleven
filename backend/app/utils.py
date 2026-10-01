@@ -52,53 +52,6 @@ def validate_brazilian_cep(cep: Optional[str]) -> bool:
     # CEP has exactly 8 digits
     return len(digits_only) == 8
 
-def validate_brazilian_cpf(cpf: Optional[str]) -> bool:
-    """
-    Validate Brazilian CPF format and check digit
-    """
-    if not cpf:
-        return True
-        
-    # Remove all non-digits
-    cpf = ''.join(filter(str.isdigit, cpf))
-    
-    # CPF must have 11 digits
-    if len(cpf) != 11:
-        return False
-    
-    # Check for known invalid patterns
-    if cpf in ['00000000000', '11111111111', '22222222222', '33333333333',
-               '44444444444', '55555555555', '66666666666', '77777777777',
-               '88888888888', '99999999999']:
-        return False
-    
-    # Calculate first check digit
-    sum1 = sum(int(cpf[i]) * (10 - i) for i in range(9))
-    digit1 = 11 - (sum1 % 11)
-    if digit1 >= 10:
-        digit1 = 0
-    
-    # Calculate second check digit
-    sum2 = sum(int(cpf[i]) * (11 - i) for i in range(10))
-    digit2 = 11 - (sum2 % 11)
-    if digit2 >= 10:
-        digit2 = 0
-    
-    # Verify check digits
-    return cpf[9] == str(digit1) and cpf[10] == str(digit2)
-
-def format_currency(value: float, currency: str = "R$") -> str:
-    """
-    Format currency value for display
-    """
-    return f"{currency} {value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-
-def calculate_commission(valor_venda: float, taxa_comissao: float) -> float:
-    """
-    Calculate commission amount
-    """
-    return (valor_venda * taxa_comissao) / 100
-
 def calculate_payment_fee(metodo_pagamento: str) -> float:
     """
     Calculate payment method fee percentage based on Excel formula:
@@ -132,28 +85,6 @@ def calculate_net_amount(valor_bruto: float, metodo_pagamento: str) -> tuple[flo
     
     return net_amount, fee_percentage
 
-def convert_currency(amount: float, from_currency: str, to_currency: str, exchange_rate: float) -> float:
-    """
-    Convert amount from one currency to another using exchange rate
-    
-    Args:
-        amount: Amount to convert
-        from_currency: Source currency (USD, EUR, etc.)
-        to_currency: Target currency (PYG, BRL, etc.)
-        exchange_rate: Rate for conversion
-    
-    Returns:
-        Converted amount
-    """
-    return amount * exchange_rate
-
-def get_currency_pair_key(from_currency: str, to_currency: str) -> str:
-    """
-    Generate currency pair key for lookups
-    """
-    return f"{from_currency}_TO_{to_currency}"
-
-
 # =============================================================================
 # DATETIME UTILITIES
 # =============================================================================
@@ -180,11 +111,3 @@ def now_in_timezone() -> datetime:
     """
     from .config import settings
     return settings.now()
-
-
-def normalize_datetime_for_comparison(dt: Optional[datetime]) -> Optional[datetime]:
-    """
-    Normalize a datetime for comparison operations.
-    Ensures timezone consistency.
-    """
-    return ensure_timezone_aware(dt)

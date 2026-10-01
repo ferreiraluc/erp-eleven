@@ -1,54 +1,45 @@
-version: '3.8'
-
+# Optional LOCAL stack. Restore a sanitized database before starting the API.
+# This does not provision or connect to the Render production services.
 services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - VITE_API_BASE_URL=http://localhost:8000
-      - PORT=3000
+      - "127.0.0.1:3000:3000"
     depends_on:
       - backend
-    networks:
-      - erp-network
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/eleven
-      - SECRET_KEY=your-secret-key-for-development
-      - ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=720
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/eleven
+      SECRET_KEY: local-development-only-change-before-sharing
+      TIMEZONE: America/Sao_Paulo
+      ASSISTANT_ENABLED: "false"
+      SUPERFRETE_SANDBOX: "true"
     depends_on:
-      - db
-    networks:
-      - erp-network
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=eleven
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: eleven
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - erp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d eleven"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:
-
-networks:
-  erp-network:
-    driver: bridge

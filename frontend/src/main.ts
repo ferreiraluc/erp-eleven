@@ -15,9 +15,7 @@ app.use(i18n)
 
 // Wait for router to be ready before mounting
 router.isReady().then(() => {
-  console.log('[ROUTER] Router is ready, mounting app...')
   app.mount('#app')
-  console.log('[APP] App mounted successfully')
 }).catch((error) => {
   console.error('[ROUTER_ERROR] Router initialization failed:', error)
   // Mount anyway to show error state

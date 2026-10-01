@@ -1,68 +1,47 @@
-# ================================
-# ERP ELEVEN - GITIGNORE
-# ================================
-
-# ================================
-# ENVIRONMENT & SECRETS
-# ================================
+# Secrets and local configuration (examples are intentionally versioned)
 .env
-.env.local
-.env.example
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+*.env
+*.env.local
+!.env.example
+!*.env.example
 *.key
 *.pem
 *.p12
 secrets/
 config/secrets/
+*.local
+config.local.*
+settings.local.*
+.claude/*.local.json
 
-# ================================
-# DEPENDENCIES
-# ================================
-
-# Node.js
+# Dependencies and virtual environments
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-
-# Python
-__pycache__/
-backend/app/api/__pycache__
-backend/app/models/__pycache__
-backend/app/schemas/__pycache__
-backend/app/services/__pycache__
-backend/app/utils/__pycache__
-backend/app/core/__pycache__
-backend/app/main/__pycache__
-backend/app/tests/__pycache__
-backend/app/__pycache__
-backend/app/__init__.py
-backend/app/*.pyc
-backend/app/*.pyo
-backend/app/*.pyd
-backend/app/*.py[cod]
-backend/app/*.pyo
-backend/app/*.pyd
-backend/app/*.pyo
-backend/app/models/__pycache__
-backend/app/schemas/__pycache__
-backend/app/__init__.py
-
-__pycache__
-*__pycache__
-*.py[cod]
-*$py.class
-*.so
+venv/
+.venv/
+env/
+ENV/
+.ENV/
+env.bak/
+venv.bak/
 .Python
+
+# Build/package output
 build/
+dist/
+dist-ssr/
+.next/
+.nuxt/
+.out/
+out/
+*.egg-info/
+.eggs/
+*.egg
+*.tgz
+*.tar.gz
 develop-eggs/
 downloads/
 eggs/
-.eggs/
 lib/
 lib64/
 parts/
@@ -70,323 +49,108 @@ sdist/
 var/
 wheels/
 share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 MANIFEST
 
-# Python Virtual Environments
-venv/
-env/
-ENV/
-.venv/
-.env/
-.ENV/
-env.bak/
-venv.bak/
+# Python and test caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+cover/
+*.cover
+*.py,cover
+*.lcov
+.nyc_output/
+*.tsbuildinfo
 
-# ================================
-# BUILD OUTPUTS
-# ================================
-
-# React Build
-frontend/build/
-frontend/.next/
-frontend/out/
-
-# Python Build
-backend/build/
-backend/dist/
-backend/*.egg-info/
-
-# General Build
-*.tgz
-*.tar.gz
-
-# ================================
-# DATABASES
-# ================================
+# Private data and generated artifacts
+outputs/
 *.db
 *.sqlite
 *.sqlite3
 *.db-journal
 *.db-wal
 *.db-shm
-
-# PostgreSQL
 *.sql.backup
 *.dump
 pg_data/
+uploads/
+user-uploads/
+media/
+static/uploads/
+instance/
+test-data/
+sample-data/
+fixtures/private/
+*.private
 
-# ================================
-# LOGS
-# ================================
+# Logs, temporary files and tool caches
 logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-
-# Python Logs
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.nox/
-.coverage
-.pytest_cache/
-cover/
-*.cover
-*.py,cover
-.hypothesis/
-
-# ================================
-# TEMPORARY FILES
-# ================================
-*.tmp
-*.temp
 .tmp/
 .temp/
+*.tmp
+*.temp
 *.swp
 *.swo
 *~
+*.backup
+*.bak
+*.old
+*.orig
+.cache/
+.parcel-cache/
+.sass-cache/
+.webpack/
+.webassets-cache/
+.eslintcache
+.stylelintcache
+.yarn/
+.pnp.*
+.pnpm-debug.log*
+celerybeat-schedule
+celerybeat.pid
 
-# OS Generated
+# OS/editor files
 .DS_Store
 .DS_Store?
 ._*
-.Spotlight-V100
-.Trashes
+.Spotlight-V100/
+.Trashes/
 ehthumbs.db
 Thumbs.db
 desktop.ini
-
-# ================================
-# IDE & EDITORS
-# ================================
-
-# VSCode
 .vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-*.code-workspace
-
-# IntelliJ / PyCharm
 .idea/
-*.iws
 *.iml
+*.iws
 *.ipr
-out/
-
-# Sublime Text
-*.tmlanguage.cache
-*.tmPreferences.cache
-*.stTheme.cache
 *.sublime-workspace
 *.sublime-project
+*.code-workspace
 
-# Vim
-*.swp
-*.swo
-*~
-
-# Emacs
-*~
-\#*\#
-/.emacs.desktop
-/.emacs.desktop.lock
-*.elc
-auto-save-list
-tramp
-.\#*
-
-# ================================
-# FRONTEND SPECIFIC
-# ================================
-
-# React
-frontend/.eslintcache
-frontend/build/
-frontend/*.tsbuildinfo
-
-# Next.js
-frontend/.next/
-frontend/out/
-
-# Nuxt.js
-frontend/.nuxt
-# Gatsby
-frontend/.cache/
-
-# Storybook
-frontend/.out
-frontend/.storybook-out
-
-# TypeScript
-*.tsbuildinfo
-
-# ================================
-# BACKEND SPECIFIC
-# ================================
-
-# FastAPI
-backend/.pytest_cache/
-backend/htmlcov/
-backend/.coverage
-
-# Django (if used)
-backend/*.log
-backend/local_settings.py
-backend/db.sqlite3
-backend/db.sqlite3-journal
-backend/media/
-
-# Flask (if used)
-backend/instance/
-backend/.webassets-cache
-
-# Celery (if used)
-backend/celerybeat-schedule
-backend/celerybeat.pid
-
-# ================================
-# TESTING
-# ================================
-.coverage
-.pytest_cache/
-.nyc_output
-coverage/
-*.lcov
-
-# Jest
-frontend/coverage/
-
-# ================================
-# PACKAGE MANAGERS
-# ================================
-
-# NPM
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# Yarn
-.yarn-integrity
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnp.*
-
-# PNPM
-.pnpm-debug.log*
-
-# ================================
-# DEPLOYMENT
-# ================================
-
-# Docker
-.dockerignore
-
-# Render
+# Local deployment state and private notes
 .render/
-
-# Vercel
 .vercel/
-
-# Netlify
 .netlify/
-
-# Heroku
 .heroku/
-
-# ================================
-# MONITORING & ANALYTICS
-# ================================
-
-# Sentry
 .sentryclirc
-
-# ================================
-# DOCUMENTATION
-# ================================
-docs/_build/
-docs/.doctrees/
-
-# ================================
-# CACHE DIRECTORIES
-# ================================
-.cache/
-.parcel-cache/
-.sass-cache/
-
-# ================================
-# BACKUP FILES
-# ================================
-*.backup
-*.bak
-*.old
-*.orig
-
-# ================================
-# UPLOADS & USER CONTENT
-# ================================
-uploads/
-user-uploads/
-media/
-static/uploads/
-
-# ================================
-# DEVELOPMENT TOOLS
-# ================================
-
-# Webpack
-.webpack/
-
-# ESLint
-.eslintcache
-
-# Prettier
-.prettierignore
-
-# Stylelint
-.stylelintcache
-
-# ================================
-# CUSTOM PROJECT FILES
-# ================================
-
-# Development notes (keep personal notes private)
 NOTES.md
 TODO.md
 dev-notes/
-
-# Local configuration overrides
-config.local.*
-settings.local.*
-
-# Test data files (if sensitive)
-test-data/
-sample-data/
-fixtures/private/
-
-# ================================
-# FINAL CATCH-ALL
-# ================================
-
-# Any file ending with .local
-*.local
-
-# Any file ending with .private
-*.private
-
-# Any directory named 'private'
-private/__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+docs/_build/
+docs/.doctrees/
+local_settings.py

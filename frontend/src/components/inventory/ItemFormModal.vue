@@ -236,7 +236,7 @@
                 placeholder="Nome do modelo (ex: Numeração EU)"
                 @keydown.enter.prevent="addNewPresetSize"
               />
-              <div class="grade-chips" @click="$refs.newPresetInputRef?.focus()">
+              <div class="grade-chips" @click="newPresetInputRef?.focus()">
                 <span v-for="(s, i) in newPresetSizes" :key="i" class="grade-chip">
                   {{ s }}
                   <button @click.stop="newPresetSizes.splice(i, 1)" class="chip-x" type="button">×</button>
@@ -245,7 +245,7 @@
                   ref="newPresetInputRef"
                   v-model="newPresetInput"
                   @keydown.enter.prevent="addNewPresetSize"
-                  @keydown.188.prevent="addNewPresetSize"
+                  @keydown="handleComma($event, addNewPresetSize)"
                   @keydown.space.prevent="addNewPresetSize"
                   type="text"
                   class="chip-input"
@@ -276,7 +276,7 @@
                 ref="chipInputRef"
                 v-model="customSizeInput"
                 @keydown.enter.prevent="addCustomSize"
-                @keydown.188.prevent="addCustomSize"
+                @keydown="handleComma($event, addCustomSize)"
                 @keydown.space.prevent="addCustomSize"
                 type="text"
                 class="chip-input"
@@ -320,7 +320,7 @@
                 ref="colorInputRef"
                 v-model="colorInput"
                 @keydown.enter.prevent="addGradeColor"
-                @keydown.188.prevent="addGradeColor"
+                @keydown="handleComma($event, addGradeColor)"
                 type="text"
                 class="chip-input"
                 placeholder="Outra cor ↵"
@@ -555,6 +555,7 @@ const customPresets = ref<GradePreset[]>(
 const allPresets = computed<GradePreset[]>(() => [...gradePresets, ...customPresets.value])
 
 // New-preset inline form state
+const newPresetInputRef = ref<HTMLInputElement | null>(null)
 const showNewPreset = ref(false)
 const newPresetName = ref('')
 const newPresetSizes = ref<string[]>([])
@@ -941,6 +942,12 @@ function capturePhoto() {
   out.getContext('2d')!.drawImage(canvas, 0, 0, w, h)
   form.image_data = out.toDataURL('image/jpeg', 0.82)
   activeTab.value = 'photo'
+}
+function handleComma(event: KeyboardEvent, add: () => void) {
+  if (event.key === ',') {
+    event.preventDefault()
+    add()
+  }
 }
 </script>
 

@@ -135,7 +135,7 @@
             <div class="cliente-info">
               <span class="cliente-nome">{{ pedido.cliente_nome }}</span>
               <span class="pedido-descricao-lista">{{ pedido.descricao }}</span>
-              <span class="cliente-cidade" v-if="pedido.endereco_cidade">{{ pedido.endereco_cidade }}, {{ pedido.endereco_uf }}</span>
+              <span class="cliente-cidade" v-if="pedido.endereco_entrega">{{ pedido.endereco_entrega }}</span>
             </div>
           </div>
           <div class="col col-status">
@@ -227,7 +227,7 @@
     />
 
     <PedidoDetailsModal
-      v-if="showDetailsModal"
+      v-if="showDetailsModal && selectedPedido"
       :pedido="selectedPedido"
       @close="closeDetailsModal"
       @edit="openEditModal"
@@ -271,8 +271,8 @@ const filteredPedidos = computed(() => {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(pedido =>
       pedido.numero_pedido.toLowerCase().includes(query) ||
-      pedido.cliente_nome.toLowerCase().includes(query) ||
-      pedido.endereco_cidade.toLowerCase().includes(query)
+      pedido.cliente_nome?.toLowerCase().includes(query) ||
+      pedido.endereco_entrega?.toLowerCase().includes(query)
     )
   }
 
@@ -390,7 +390,7 @@ const closeDetailsModal = () => {
   selectedPedido.value = null
 }
 
-const handlePedidoSaved = async (pedido: Pedido) => {
+const handlePedidoSaved = async () => {
   // Refresh the list
   await loadPedidos()
 }

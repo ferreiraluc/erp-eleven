@@ -100,11 +100,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { t } = useI18n()  // Internationalization hook
 const authStore = useAuthStore()
 
 const credentials = ref({
@@ -117,7 +115,7 @@ const handleLogin = async () => {
     await authStore.login(credentials.value)
     const lastRoute = localStorage.getItem('erp_last_route')
     router.push(lastRoute || '/dashboard')
-  } catch (error) {
+  } catch {
     // Error handled by store
   }
 }

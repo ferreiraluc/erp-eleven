@@ -1,466 +1,137 @@
-# ERP Eleven - Sistema de Gestão Empresarial
+# ERP Eleven
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen.svg)
+Sistema interno da Loja Eleven: estoque, clientes, pedidos, rastreamentos, folgas,
+endereços, impressão, etiquetas SuperFrete e análise das vendas lançadas no Excel.
+O assistente DeepSeek opera sobre as mesmas regras e dados do ERP pelo Telegram.
 
-## Sumário
+Documentação revisada em **30/09/2026**. O código e as permissões do backend são a
+referência do comportamento implementado; materiais em `docs/archive/` são históricos.
 
-- [Visão Geral](#-visão-geral)
-- [Arquitetura](#-arquitetura)
-- [Configuração e Instalação](#-configuração-e-instalação)
-- [API Endpoints](#-api-endpoints)
-- [Banco de Dados](#-banco-de-dados)
-- [Regras de Negócio](#-regras-de-negócio)
-- [Deploy](#-deploy)
-- [Desenvolvimento](#-desenvolvimento)
+## O que está em uso
 
-## Visão Geral
+| Área | O que oferece | Tela |
+| --- | --- | --- |
+| Dashboard | Estoque e rastreios; cards lado a lado de endereços e vendas, resumos e atalhos | `/dashboard` |
+| Estoque | Produtos, variantes, loja/depósito, entradas, saídas, inventário, etiquetas e OCR | `/inventory` |
+| Clientes e pedidos | Cadastros, tags, anexos, etapas do pedido e vínculos logísticos | `/clientes`, `/pedidos` |
+| Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
+| Equipe e folgas | Vendedores, calendário, consulta e cadastro de folgas | `/vendors`, card de folgas |
+| Endereços e envios | Agenda sem duplicatas, remetentes, modelos A4, histórico, CEP e SuperFrete | `/enderecos` |
+| Visão de vendas | Resultados salvos das planilhas OneDrive, comparações, moedas e rankings | `/bi-vendas` |
+| Assistente IA | Vínculos de funcionários, ações confirmadas, memória, consultas e filas | `/assistente` |
 
-### Assistente Eleven — WhatsApp e Telegram
+**As vendas da operação são lançadas no Excel.** O BI lê os resultados corrigidos
+salvos nas planilhas, não altera células e não cria vendas no ERP. A sincronização
+ocorre diariamente às **18h de Brasília** ou pelo botão **Atualizar dados**.
 
-O projeto inclui uma primeira versão do assistente DeepSeek para WhatsApp individual (Twilio) e grupo Telegram: consultas de rastreio, avisos automáticos no Telegram, registros operacionais confirmados e memória compartilhada entre os canais. O painel fica em **Dashboard → Assistente IA**, restrito a administradores.
+Os módulos `/vendas`, `/pdv`, `/fiado` e `/exchange-rates` continuam implementados e
+acessíveis. São fluxos próprios, separados do BI; não foram removidos só por não
+serem o caminho principal atual. O canal WhatsApp via Twilio está implementado,
+mas sua ativação depende da conta/remetente e das flags do ambiente. **Não existe
+conector Meta Cloud API direto neste repositório.**
 
-A integração vem desabilitada e exige credenciais, migração e worker separado. Consulte [o guia de ativação](docs/ASSISTENTE_ATIVACAO.md) e [o estudo técnico](docs/ASSISTENTE_DEEPSEEK_WHATSAPP.md). Registros desta versão não movimentam vendas, estoque ou pagamentos; endereços em texto podem ser impressos em A4 com prévia e confirmação por ADMIN/GERENTE habilitado. Leitura de mídia, declaração de conteúdo e SuperFrete ainda não estão integrados. Consulte [a impressão Windows](docs/IMPRESSAO_WINDOWS.md).
+## Fluxo principal
 
-O **ERP Eleven** é um sistema completo de gestão empresarial desenvolvido para lojas de roupas, com foco em:
-
-- **Gestão de Vendas**: Controle completo de vendas com suporte a múltiplas moedas
-- **Rastreamento de Entregas**: Sistema manual de gestão de envios com integração aos Correios
-- **Gestão de Usuários**: Sistema de autenticação com diferentes níveis de acesso
-- **Dashboard Analítico**: Painéis com métricas e indicadores de performance
-- **Câmbio e Transferências**: Gestão de taxas de câmbio e transferências de dinheiro
-
-### Tecnologias
-
-#### Backend
-- **FastAPI** - Framework web moderno e rápido
-- **PostgreSQL** - Banco de dados relacional
-- **SQLAlchemy** - ORM para Python
-- **Pydantic** - Validação de dados
-- **JWT** - Autenticação segura
-
-#### Frontend
-- **Vue.js 3** - Framework JavaScript reativo
-- **TypeScript** - Tipagem estática
-- **Pinia** - Gerenciamento de estado
-- **Tailwind CSS** - Framework de estilização
-- **Vite** - Build tool moderno
-
-## Arquitetura
-
-### Estrutura do Projeto
-
-```
-ERP-Eleven/
-├── backend/                 # API FastAPI
-│   ├── app/
-│   │   ├── api/            # Endpoints da API
-│   │   ├── models/         # Modelos SQLAlchemy
-│   │   ├── schemas/        # Schemas Pydantic
-│   │   ├── services/       # Lógica de negócio
-│   │   └── main.py         # Aplicação principal
-│   ├── migrations/         # Scripts de migração
-│   └── requirements.txt    # Dependências Python
-├── frontend/               # Aplicação Vue.js
-│   ├── src/
-│   │   ├── components/     # Componentes reutilizáveis
-│   │   ├── views/          # Páginas da aplicação
-│   │   ├── stores/         # Gerenciamento de estado
-│   │   └── services/       # Serviços HTTP
-│   └── package.json        # Dependências Node.js
-└── README.md              # Esta documentação
+```mermaid
+flowchart LR
+    UI[ERP Vue] --> API[API FastAPI]
+    TG[Telegram] --> API
+    WA[WhatsApp Twilio opcional] --> API
+    API <--> DB[(PostgreSQL)]
+    API <--> IA[DeepSeek e ferramentas autorizadas]
+    OD[Planilhas OneDrive] --> BI[Worker BI às 18h ou manual]
+    BI --> DB
+    API <--> SF[SuperFrete]
+    DB --> Fila[Fila de impressão]
+    Windows[Agente Windows da loja] --> Fila
+    Windows --> Sumatra[SumatraPDF + HP M14-M17]
 ```
 
-### Padrões Arquiteturais
+O bot conversa em linguagem natural. Consultas leem o estado do ERP; operações
+que escrevem ou imprimem passam pelas permissões e confirmações do fluxo. O
+computador da loja busca trabalhos por HTTPS; o laptop de desenvolvimento não é
+servidor de impressão.
 
-- **Clean Architecture**: Separação clara entre camadas
-- **Repository Pattern**: Abstração de acesso a dados
-- **Dependency Injection**: Injeção de dependências no FastAPI
-- **JWT Authentication**: Autenticação stateless
-- **RESTful API**: Endpoints seguindo padrões REST
+## Começar pela documentação certa
 
-## Configuração e Instalação
+- [Escopo e regras do produto](docs/ESCOPO.md): funcionalidades, limites e decisões da loja.
+- [Arquitetura e mapa do código](docs/ARQUITETURA.md): onde alterar cada módulo, dados e processos.
+- [Desenvolvimento e validação](docs/DESENVOLVIMENTO.md): ambiente local, banco, testes e build.
+- [Deploy e operação](docs/OPERACAO.md): Render, variáveis, workers, horários e diagnóstico.
+- [Índice completo dos guias](docs/README.md): bot, impressão, endereços e BI.
+- [Auditoria de manutenção](docs/AUDITORIA_MANUTENCAO.md): remoções verificadas e dívida técnica restante.
 
-### Pré-requisitos
+## Estrutura
 
-- **Python 3.8+**
-- **Node.js 16+**
-- **PostgreSQL 12+**
-- **Git**
-
-### 1. Clonagem do Repositório
-
-```bash
-git clone <repository-url>
-cd ERP-Eleven
+```text
+backend/
+  app/                 API, modelos, contratos e serviços; CLIs dos provedores
+  alembic/             Histórico executável de migrações — não apagar revisões
+  tests/               Testes isolados, sem credenciais de produção
+  .env.example         Configuração de referência, sem segredos
+frontend/
+  src/views/           Telas roteadas
+  src/components/      Componentes dos módulos e cards do dashboard
+  src/services/        Cliente HTTP e contratos TypeScript
+  src/stores/          Estado compartilhado com Pinia
+  src/router/          Rotas e controle de acesso da navegação
+  src/locales/         Traduções pt/es/en
+  package-lock.json    Versões Node reproduzíveis
+  .nvmrc               Node 22 para desenvolvimento
+  Dockerfile           Alternativa local; produção usa site estático Render
+tools/eleven-print-agent/  Instalador e agente PowerShell para Windows
+docs/                  Guias atuais e histórico separado em archive/
+.github/workflows/     Build, tipagem e testes em integração contínua
+render.yaml            Referência da infraestrutura Render
+docker-compose.yml     Ambiente local opcional, sem conexão com a produção
 ```
 
-### 2. Configuração do Backend
+## Executar e verificar
 
-```bash
-# Navegar para o diretório backend
+Requisitos: **Python 3.11**, **Node 22** e **PostgreSQL**. As instruções de banco
+existente/restauração em [Desenvolvimento](docs/DESENVOLVIMENTO.md) são necessárias:
+as primeiras revisões Alembic pressupõem um esquema anterior e não constituem um
+bootstrap completo de banco vazio.
+
+```sh
+# Backend — em um banco local preparado
 cd backend
-
-# Criar ambiente virtual
-python -m venv venv
-
-# Ativar ambiente virtual
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
+python3.11 -m venv venv
 source venv/bin/activate
-
-# Instalar dependências
-pip install -r requirements.txt
-
-# Configurar variáveis de ambiente
+pip install -r requirements.txt -r requirements-dev.txt
 cp .env.example .env
+# Configure DATABASE_URL e SECRET_KEY locais antes de continuar.
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-#### Configuração do .env
-
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/eleven
-SECRET_KEY=your-super-secret-key-here-change-this
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=720
-TIMEZONE=America/Sao_Paulo
-```
-
-### 3. Configuração do Banco de Dados
-
-```bash
-# Criar banco de dados PostgreSQL
-createdb eleven
-
-# Executar migrações
-psql -U postgres -d eleven -f migrations/001_init_database.sql
-```
-
-### 4. Configuração do Frontend
-
-```bash
-# Navegar para o diretório frontend
+```sh
+# Outro terminal, a partir da raiz
 cd frontend
-
-# Instalar dependências
-npm install
-
-# Configurar variáveis de ambiente
-cp .env.example .env
-```
-
-### 5. Execução do Sistema
-
-#### Backend (Terminal 1)
-```bash
-cd backend
-source venv/bin/activate  # ou venv\Scripts\activate no Windows
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Frontend (Terminal 2)
-```bash
-cd frontend
+nvm use                    # se usar nvm
+npm ci --include=dev
 npm run dev
 ```
 
-### 6. Acesso ao Sistema
+Frontend: `http://localhost:3000`. API e contrato OpenAPI: `http://localhost:8000/docs`.
+Em produção a navegação usa hash, por exemplo `/#/enderecos`.
 
-- **Frontend**: http://localhost:5173
-- **API Docs**: http://localhost:8000/docs
-- **API Redoc**: http://localhost:8000/redoc
-
-## 🔗 API Endpoints
-
-### Autenticação
-```http
-POST   /api/auth/login           # Login do usuário
-POST   /api/auth/logout          # Logout do usuário
-GET    /api/auth/me              # Dados do usuário logado
+```sh
+# Da raiz; DATABASE_URL explícita protege o banco real guardado no .env.
+PYTHONPATH=backend DATABASE_URL=sqlite:// backend/venv/bin/python -m pytest backend/tests -q
+npm --prefix frontend run type-check
+npm --prefix frontend run build
 ```
 
-### Usuários
-```http
-GET    /api/users/               # Listar usuários
-POST   /api/users/               # Criar usuário
-GET    /api/users/{id}           # Obter usuário
-PUT    /api/users/{id}           # Atualizar usuário
-DELETE /api/users/{id}           # Remover usuário
-```
+A suíte SQLite valida regras isoladas; não comprova migrações nem locks PostgreSQL,
+credenciais externas ou impressão física. O lint é uma verificação separada e ainda
+aponta usos antigos de `any`; veja a auditoria antes de interpretá-lo como regressão.
 
-### Vendas
-```http
-GET    /api/vendas/              # Listar vendas
-POST   /api/vendas/              # Criar venda
-GET    /api/vendas/{id}          # Obter venda
-PUT    /api/vendas/{id}          # Atualizar venda
-DELETE /api/vendas/{id}          # Remover venda
-GET    /api/vendas/relatorio     # Relatório de vendas
-```
+## Regras para manutenção
 
-### Vendedores
-```http
-GET    /api/vendedores/          # Listar vendedores
-POST   /api/vendedores/          # Criar vendedor
-GET    /api/vendedores/{id}      # Obter vendedor
-PUT    /api/vendedores/{id}      # Atualizar vendedor
-DELETE /api/vendedores/{id}      # Remover vendedor
-GET    /api/vendedores/{id}/comissoes  # Comissões do vendedor
-```
-
-### Rastreamento
-```http
-GET    /api/rastreamento/        # Listar rastreamentos
-POST   /api/rastreamento/        # Criar rastreamento
-GET    /api/rastreamento/{id}    # Obter rastreamento
-PUT    /api/rastreamento/{id}    # Atualizar rastreamento
-DELETE /api/rastreamento/{id}    # Remover rastreamento
-GET    /api/rastreamento/resumo/dashboard  # Resumo para dashboard
-```
-
-### Câmbio
-```http
-GET    /api/exchange-rates/      # Listar taxas de câmbio
-POST   /api/exchange-rates/      # Criar taxa de câmbio
-PUT    /api/exchange-rates/{id}  # Atualizar taxa
-DELETE /api/exchange-rates/{id}  # Remover taxa
-```
-
-### Transferências
-```http
-GET    /api/money-transfers/     # Listar transferências
-POST   /api/money-transfers/     # Criar transferência
-GET    /api/money-transfers/{id} # Obter transferência
-PUT    /api/money-transfers/{id} # Atualizar transferência
-```
-
-### Dashboard
-```http
-GET    /api/dashboard/resumo     # Resumo geral do dashboard
-GET    /api/dashboard/vendas     # Métricas de vendas
-GET    /api/dashboard/vendedores # Performance dos vendedores
-```
-
-### Sistema
-```http
-GET    /                        # Informações da API
-GET    /health                  # Health check
-```
-
-## Banco de Dados
-
-### Principais Tabelas
-
-#### usuarios
-```sql
-CREATE TABLE usuarios (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    hashed_password VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255),
-    role VARCHAR(50) DEFAULT 'USER',
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-#### rastreamentos
-```sql
-CREATE TABLE rastreamentos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo_rastreio VARCHAR(100) NOT NULL UNIQUE,
-    status rastreamento_status DEFAULT 'PENDENTE',
-    servico_provedor VARCHAR(100),
-    ultima_atualizacao TIMESTAMP,
-    descricao TEXT,
-    destinatario VARCHAR(200),
-    origem VARCHAR(200),
-    destino VARCHAR(200),
-    historico_eventos JSONB DEFAULT '[]'::jsonb,
-    pedido_id UUID,
-    data_criacao DATE DEFAULT CURRENT_DATE,
-    ativo BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID
-);
-```
-
-### Scripts SQL Úteis
-
-#### Criar Usuário Administrador
-```sql
-INSERT INTO usuarios (email, hashed_password, full_name, role, is_active)
-VALUES (
-    'admin@eleven.com',
-    '$2b$12$ejemplo_hash_aqui',  -- Use a API para gerar o hash
-    'Administrador',
-    'ADMIN',
-    true
-);
-```
-
-#### Verificar Status dos Rastreamentos
-```sql
-SELECT 
-    status,
-    COUNT(*) as total,
-    ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER()), 2) as percentual
-FROM rastreamentos 
-WHERE ativo = true 
-GROUP BY status;
-```
-
-#### Relatório de Rastreamentos por Período
-```sql
-SELECT 
-    DATE(created_at) as data,
-    status,
-    COUNT(*) as quantidade
-FROM rastreamentos 
-WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-    AND ativo = true
-GROUP BY DATE(created_at), status
-ORDER BY data DESC, status;
-```
-
-#### Limpar Rastreamentos Antigos (mais de 6 meses)
-```sql
-UPDATE rastreamentos 
-SET ativo = false 
-WHERE created_at < CURRENT_DATE - INTERVAL '6 months'
-    AND status IN ('ENTREGUE', 'ERRO');
-```
-
-### Backup e Restore
-
-#### Backup
-```bash
-pg_dump -U postgres -h localhost eleven > backup_eleven_$(date +%Y%m%d).sql
-```
-
-#### Restore
-```bash
-psql -U postgres -h localhost -d eleven < backup_eleven_20240101.sql
-```
-
-## Regras de Negócio
-
-### Sistema de Rastreamento
-
-1. **Códigos Únicos**: Cada código de rastreio deve ser único no sistema
-2. **Status Válidos**: PENDENTE, EM_TRANSITO, ENTREGUE, ERRO, NAO_ENCONTRADO
-3. **Integração Correios**: Links diretos para rastreamento nos Correios
-4. **Edição Manual**: Status pode ser alterado manualmente pelos usuários
-5. **Histórico**: Manter histórico de eventos em formato JSON
-
-### Sistema de Usuários
-
-1. **Roles Disponíveis**: ADMIN, GERENTE, VENDEDOR, OPERACIONAL, USER
-2. **Hierarquia**: ADMIN > GERENTE > OPERACIONAL > VENDEDOR > USER
-3. **Autenticação**: JWT com expiração configurável
-4. **Senhas**: Hash bcrypt com salt rounds mínimo de 12
-
-### Sistema de Vendas
-
-1. **Múltiplas Moedas**: Suporte a G$, R$, U$, EUR
-3. **Auditoria**: Log completo de todas as operações
-
-## Deploy
-
-### Variáveis de Ambiente (Produção)
-
-```env
-DATABASE_URL=postgresql://user:password@host:5432/eleven
-SECRET_KEY=super-secret-production-key-256-bits
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=720
-TIMEZONE=America/Sao_Paulo
-ENVIRONMENT=production
-```
-
-### Docker (Opcional)
-
-```bash
-# Build da aplicação
-docker build -t erp-eleven-backend ./backend
-docker build -t erp-eleven-frontend ./frontend
-
-# Executar com docker-compose
-docker-compose up -d
-```
-
-### Render.com Deploy
-
-1. Conectar repositório ao Render
-2. Configurar serviços:
-   - **Database**: PostgreSQL
-   - **Backend**: Web Service (FastAPI)
-   - **Frontend**: Static Site (Vue.js)
-3. Configurar variáveis de ambiente
-4. Deploy automático via Git
-
-##  Desenvolvimento
-
-### Comandos Úteis
-
-#### Backend
-```bash
-# Executar testes
-pytest
-
-# Lint do código
-flake8 app/
-
-# Formatação
-black app/
-
-# Verificar tipos
-mypy app/
-```
-
-#### Frontend
-```bash
-# Executar em modo desenvolvimento
-npm run dev
-
-# Build para produção
-npm run build
-
-# Preview da build
-npm run preview
-
-# Lint do código
-npm run lint
-
-# Testes
-npm run test
-```
-
-
-### Debug
-
-#### Backend
-```bash
-# Executar com debug
-uvicorn app.main:app --reload --log-level debug
-
-# Logs detalhados
-export LOG_LEVEL=DEBUG
-```
-
-#### Frontend
-```bash
-# Vue DevTools
-npm install -g @vue/devtools
-
-# Debug em produção
-NODE_ENV=development npm run build
-```
-
-
-**ERP Eleven v1.0** - Sistema de Gestão Empresarial
-*Documentação atualizada em: $(date +%Y-%m-%d)*
+- Nunca versionar `.env`, credenciais do agente, dados de clientes, PDFs ou planilhas da loja.
+- Não usar o banco do `.env` local em testes: ele pode apontar para a produção.
+- Não editar migrações aplicadas, apagar histórico operacional nem executar os SQLs arquivados como atualização.
+- Não misturar `Cliente` de pedidos com `PdvCliente`, nem vendas de planilha com vendas/fiado do PDV.
+- Ações externas incertas não devem ser repetidas automaticamente: conferir antes de pagar ou imprimir novamente.
+- Mudanças de comportamento devem atualizar o guia do módulo e ter validação proporcional ao risco.

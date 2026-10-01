@@ -31,9 +31,8 @@ export default defineConfig(async ({ mode }) => {
       output: {
         manualChunks: {
           vendor: ['vue', 'vue-router', 'pinia'],
-          ui: ['@headlessui/vue', '@heroicons/vue'],
           charts: ['chart.js', 'vue-chartjs'],
-          utils: ['axios', '@vueuse/core'],
+          utils: ['axios'],
         },
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
