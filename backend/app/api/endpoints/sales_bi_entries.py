@@ -25,9 +25,12 @@ def entries(year: int | None = Query(None, ge=2000, le=2100), month: int | None 
             raise HTTPException(403, 'Seu vendedor ainda não foi vinculado às planilhas.')
         seller = user.sales_seller
     rows = db.query(SalesBIWorkbook).filter_by(active=True)
-    if year:
+    # Explicit dates may live in a weekly tab of a different workbook period.
+    # The service keeps year/month for closing totals, not for excluding rows
+    # before their recorded date is inspected.
+    if year and not day:
         rows = rows.filter(SalesBIWorkbook.year == year)
-    if month:
+    if month and not day:
         rows = rows.filter(SalesBIWorkbook.month == month)
     result = build_entries(rows.all(), year=year, month=month, seller=seller, currency=currency,
                            day=day.isoformat() if day else None, search=search, offset=offset, limit=limit, private=private)

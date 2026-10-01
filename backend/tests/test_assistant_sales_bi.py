@@ -34,9 +34,15 @@ def snapshot(junior='100', lucas='50', total='777', entries=True):
 
 
 def book(key, year=2026, month=9, kind='archive', **kwargs):
+    data = snapshot(**kwargs)
+    # Ordinary historical fixtures belong to their recorded year/month. Tests
+    # for dates crossing workbook periods construct that case explicitly.
+    for entry in data.get('entries', {}).get('rows', []):
+        if entry.get('date'):
+            entry['date'] = datetime.fromisoformat(entry['date']).replace(year=year, month=month).date().isoformat()
     return SalesBIWorkbook(id=key,filename='PRIVATE_SOURCE_FILENAME.xlsx',kind=kind,year=year,month=month,
         parser_version=3,remote_version='1',active=True,synced_at=datetime(2026,9,30,tzinfo=timezone.utc),
-        snapshot=snapshot(**kwargs))
+        snapshot=data)
 
 
 @pytest.fixture
@@ -124,7 +130,9 @@ def test_day_and_hour_use_actual_cells_never_sync_timestamp(bi_env,monkeypatch):
     yesterday=run(bi_env,periodo='ontem',vendedor='Junior')
     assert yesterday['periodo']['dia']=='2026-09-23'
     assert yesterday['total_resultados']==2
-    assert yesterday['cobertura_datas_no_periodo']['undated_count']==1
+    # A date lookup examines every selected snapshot. Undated observations are
+    # disclosed as coverage gaps and are never assigned to the requested day.
+    assert yesterday['cobertura_datas_no_periodo']['undated_count']==4
     sync_day=run(bi_env,dia='2026-09-30')
     assert sync_day['total_resultados']==0
     assert sync_day['fechamento_corrigido']['total_usd']==777

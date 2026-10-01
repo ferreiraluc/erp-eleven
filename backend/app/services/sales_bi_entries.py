@@ -23,11 +23,16 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     All aggregates use the very same filtered observations as the table. Neither
     equal amounts nor equal customer names establish a duplicate sale.
     """
-    selected = [r for r in choose_workbooks(rows) if (not year or r.year == year) and (not month or r.month == month)]
+    available = choose_workbooks(rows)
+    # A weekly tab can cross a month/year boundary. An explicit sale date is
+    # searched in every selected snapshot; workbook periods still own closing
+    # totals and monthly reconciliation, never the day's observed amounts.
+    selected = [r for r in available if (not year or r.year == year) and (not month or r.month == month)]
+    observation_sources = available if day else selected
     entries = []
     missing_sources = 0
     skipped = 0
-    for source in selected:
+    for source in observation_sources:
         details = source.snapshot.get('entries')
         if not details:
             missing_sources += 1
@@ -93,6 +98,6 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
         'weekdays': [{'day': key, 'count': len(weekdays[key]), 'currencies': _currencies(weekdays[key])}
                      for key in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'weekend') if key in weekdays],
         'reconciliation': reconciliation,
-        'coverage': {'source_count': len(selected), 'needs_sync': missing_sources > 0,
+        'coverage': {'source_count': len(observation_sources), 'needs_sync': missing_sources > 0,
                      'sources_without_entries': missing_sources, 'skipped_rows': skipped if not private else None},
     }

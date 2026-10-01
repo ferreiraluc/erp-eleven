@@ -62,9 +62,16 @@ inicia uma leitura do OneDrive.
   sincronização não representa o horário da venda. Cópias locais examinadas dos
   modelos de 2021, 2023 e 2026 não tinham esse detalhamento; a tela mostra a ausência
   e oferece movimento por dia da semana quando esse agrupador existe na origem.
+- Ao filtrar um dia explícito, o site e o bot procuram essa data nos snapshots
+  escolhidos de todos os meses. Uma venda de 01/10 registrada na última semana
+  de `Setembro.xlsx` continua visível, inclusive em semanas que atravessam o ano.
+  A prioridade entre arquivos do mesmo período permanece; linhas sem data não
+  são atribuídas ao dia consultado. A cobertura informa os arquivos examinados.
 - O fechamento corrigido continua oficial. A conferência dos valores líquidos
   contra os resumos salvos identifica diferenças por moeda, sem redistribuir
-  correções nem expor as fórmulas. Filtros de dia/busca não redefinem o fechamento.
+  correções nem expor as fórmulas. Filtros de dia/busca não redefinem o fechamento:
+  ele e a reconciliação continuam restritos ao ano/mês selecionados, mesmo quando
+  a consulta diária encontra linhas em um arquivo de outro mês.
 - Escopo `own` impõe o vendedor da conta no servidor antes de tabelas, totais,
   datas, horas e reconciliação. Um `seller` enviado pela URL é ignorado nesse caso;
   conta sem vínculo recebe 403. A exportação contém somente a página já autorizada.
@@ -72,6 +79,8 @@ inicia uma leitura do OneDrive.
 Validação adicional: `tests/test_sales_bi_entries.py`, com planilhas sintéticas,
 datas/horários, cópias completas, pagamentos iguais, paginação, fontes antigas e
 tentativas de consultar outro vendedor. Nenhuma migração adicional é necessária.
+`test_sales_bi_day_boundary.py` verifica datas na fronteira de mês/ano no bot e
+na API, preservando o escopo pessoal e o fechamento mensal.
 
 O painel, seu card do dashboard e o detalhamento usam catálogos locais PT/ES/EN em
 `frontend/src/components/sales/`. Mês, número, moeda, gráfico, navegação e CSV

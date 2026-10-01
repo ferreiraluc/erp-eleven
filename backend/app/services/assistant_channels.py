@@ -64,10 +64,10 @@ def telegram_message(update):
     attachment=None
     document=message.get('document')
     photos=message.get('photo')
-    # A direct reply to one's own file explicitly identifies it, even when another
-    # employee has since sent a document in the group.
+    # Explicit current media takes precedence. Only an attachment-free reply to
+    # one's own file inherits it, even if others have since posted in the group.
     replied=message.get('reply_to_message') or {}
-    if not document and str((replied.get('from') or {}).get('id'))==str(sender['id']):
+    if not document and not photos and str((replied.get('from') or {}).get('id'))==str(sender['id']):
         document=replied.get('document')
     if not document and not photos and str((replied.get('from') or {}).get('id'))==str(sender['id']):
         photos=replied.get('photo')

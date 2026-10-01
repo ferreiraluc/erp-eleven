@@ -102,6 +102,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { navigateAfterLogin } from '@/services/loginNavigation'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -114,16 +115,16 @@ const credentials = ref({
 })
 
 const handleLogin = async () => {
+  if (authStore.isLoading) return
   try {
-    await authStore.login(credentials.value, remember.value)
+    const session = await authStore.login(credentials.value, remember.value)
+    // App intentionally unmounts this form while /me is checking. Ownership is
+    // determined by the completed operation and token, not component lifetime.
+    if (!authStore.isAuthenticated || authStore.token !== session.access_token) return
     // A fresh application instance prevents Pinia data or pending requests from
     // the previous account being reused when people share a computer.
     const destination = router.resolve(authStore.user?.must_change_password ? '/conta' : '/dashboard').href
-    if (destination.startsWith('#')) {
-      // A fragment-only navigation keeps the old Pinia state in production.
-      window.location.replace(destination)
-      window.location.reload()
-    } else window.location.assign(destination)
+    navigateAfterLogin(destination)
   } catch {
     // Error handled by store
   }

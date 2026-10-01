@@ -14,20 +14,29 @@
   </main>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import { isAuthOperationSuperseded } from '@/services/authOperation'
 const auth = useAuthStore(), router = useRouter(), { t } = useI18n()
 const current = ref(''), password = ref(''), confirm = ref(''), error = ref(''), saving = ref(false)
+let active = true
+onUnmounted(() => { active = false })
 async function submit() {
+  if (saving.value) return
   error.value = ''
   if (password.value !== confirm.value) { error.value = t('access.passwordMismatch'); return }
   saving.value = true
-  try { await auth.changePassword(current.value,password.value); await router.replace('/dashboard') }
-  catch(e) { error.value = axios.isAxiosError(e) && e.response?.status === 400 ? t('access.passwordRejected') : t('access.connectionError') }
-  finally { saving.value = false; current.value=''; password.value=''; confirm.value='' }
+  try {
+    const session = await auth.changePassword(current.value,password.value)
+    // Token rotation temporarily unmounts this view while /me is checking.
+    // Only a still-owned account route should navigate after confirmation.
+    if (router.currentRoute.value.path === '/conta' && auth.isAuthenticated && auth.token === session.access_token) await router.replace('/dashboard')
+  }
+  catch(e) { if (active && !isAuthOperationSuperseded(e)) error.value = axios.isAxiosError(e) && e.response?.status === 400 ? t('access.passwordRejected') : t('access.connectionError') }
+  finally { if (active) { saving.value = false; current.value=''; password.value=''; confirm.value='' } }
 }
 </script>
 <style scoped src="@/components/access/access.css"></style>

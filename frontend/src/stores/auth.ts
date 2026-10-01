@@ -4,6 +4,7 @@ import axios from 'axios'
 import { authAPI, type LoginRequest, type User } from '@/services/api'
 import { clearSession, saveToken, storedToken, tokenIsCurrent } from '@/services/sessionStorage'
 import i18n from '@/i18n'
+import { AuthOperationSuperseded, isAuthOperationSuperseded } from '@/services/authOperation'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -13,7 +14,9 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
   let checkedAt = 0
   let checking: Promise<boolean> | null = null
+  let checkingToken: string | null = null
   let generation = 0
+  let operationEpoch = 0
   const isAuthenticated = computed(() => status.value === 'authenticated' && !!user.value)
   const isOwner = computed(() => user.value?.role === 'ADMIN' && user.value?.email.toLowerCase() === 'lucas@eleven.com')
   const ownSales = computed(() => user.value?.sales_scope === 'own')
@@ -21,28 +24,33 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.nome || '')
 
   function expire() {
+    operationEpoch++
     generation++
     checking = null
+    checkingToken = null
     clearSession()
     user.value = null
     token.value = null
     checkedAt = 0
     status.value = 'guest'
+    isLoading.value = false
+    error.value = null
   }
 
   async function ensureSession(force = false): Promise<boolean> {
     const saved = storedToken()
     if (!saved || !tokenIsCurrent(saved)) { expire(); return false }
-    if (checking) return checking
+    if (checking && checkingToken === saved) return checking
     if (!force && isAuthenticated.value && saved === token.value && Date.now() - checkedAt < 60000) return true
     const current = ++generation
     // Keep an already verified view mounted during background validation so an
     // ordinary window focus does not discard an in-progress form.
     if (!isAuthenticated.value || token.value !== saved) status.value = 'checking'
     token.value = saved
+    checkingToken = saved
     checking = (async () => {
       try {
-        const verified = await authAPI.getCurrentUser()
+        const verified = await authAPI.getCurrentUser(saved)
         if (current !== generation || saved !== storedToken()) return false
         user.value = verified
         status.value = 'authenticated'
@@ -50,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = null
         return true
       } catch (e) {
-        if (current !== generation) return false
+        if (current !== generation || saved !== storedToken()) return false
         if (axios.isAxiosError(e) && e.response?.status === 401) expire()
         else {
           status.value = 'error'
@@ -58,37 +66,65 @@ export const useAuthStore = defineStore('auth', () => {
           error.value = i18n.global.t('access.connectionError')
         }
         return false
-      } finally { if (current === generation) checking = null }
+      } finally { if (current === generation) { checking = null; checkingToken = null } }
     })()
     return checking
   }
 
+  function assertOperation(epoch: number, expectedToken: string | null) {
+    if (epoch !== operationEpoch || storedToken() !== expectedToken) throw new AuthOperationSuperseded()
+  }
+
   async function login(credentials: LoginRequest, remember = true) {
+    expire()
+    const operation = operationEpoch
+    let expectedToken: string | null = null
     isLoading.value = true
     error.value = null
-    expire()
     try {
       const result = await authAPI.login({ ...credentials, email: credentials.email.trim().toLowerCase() })
+      assertOperation(operation, null)
       saveToken(result.access_token, remember)
+      expectedToken = result.access_token
       if (!await ensureSession(true)) throw new Error('session_not_verified')
+      assertOperation(operation, result.access_token)
       return result
     } catch (e) {
+      if (operation !== operationEpoch || storedToken() !== expectedToken || isAuthOperationSuperseded(e)) throw new AuthOperationSuperseded()
       if (!error.value) error.value = i18n.global.t(axios.isAxiosError(e) && e.response?.status === 401 ? 'access.invalidLogin' : 'access.connectionError')
       throw e
-    } finally { isLoading.value = false }
+    } finally { if (operation === operationEpoch) isLoading.value = false }
   }
 
   async function changePassword(currentPassword: string, newPassword: string) {
-    const remember = !!localStorage.getItem('auth_token')
-    const result = await authAPI.changePassword(currentPassword, newPassword)
-    saveToken(result.access_token, remember)
-    generation++
-    checking = null
-    if (!await ensureSession(true)) throw new Error('session_not_verified')
+    const originalToken = storedToken()
+    if (!originalToken || !tokenIsCurrent(originalToken)) { expire(); throw new AuthOperationSuperseded() }
+    const operation = ++operationEpoch
+    let expectedToken = originalToken
+    const remember = localStorage.getItem('auth_token') === originalToken
+    try {
+      const result = await authAPI.changePassword(currentPassword, newPassword, originalToken)
+      assertOperation(operation, originalToken)
+      saveToken(result.access_token, remember)
+      expectedToken = result.access_token
+      generation++
+      checking = null
+      checkingToken = null
+      if (!await ensureSession(true)) throw new Error('session_not_verified')
+      assertOperation(operation, result.access_token)
+      return result
+    } catch (e) {
+      if (operation !== operationEpoch || storedToken() !== expectedToken || isAuthOperationSuperseded(e)) throw new AuthOperationSuperseded()
+      throw e
+    }
   }
 
   async function logout() {
-    try { await authAPI.logout() } finally { expire() }
+    const originalToken = storedToken()
+    // Remove private UI immediately. Only this captured token may be revoked;
+    // a delayed response never clears the next user's identity.
+    expire()
+    if (originalToken) await authAPI.logout(originalToken)
   }
 
   window.addEventListener('erp:session-expired', expire)

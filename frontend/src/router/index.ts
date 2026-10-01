@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { createAuthGuard } from './authGuard'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ExchangeRateManagement from '@/views/ExchangeRateManagement.vue'
@@ -116,18 +117,6 @@ router.afterEach((to) => {
 })
 
 // A stored token is a hint, not proof of a live session or current permissions.
-router.beforeEach(async (to) => {
-  const auth = useAuthStore()
-  const verified = await auth.ensureSession()
-  if (to.meta.requiresAuth && !verified) return '/login'
-  if (!verified) return true
-  if (auth.user?.must_change_password && to.path !== '/conta') return '/conta'
-  if (to.meta.requiresGuest) return '/dashboard'
-  if (to.meta.requiresOwner && !auth.isOwner) return '/dashboard'
-  if (to.meta.requiresAdmin && !auth.isOwner) return '/dashboard'
-  if (to.meta.requiresManager && !['ADMIN', 'GERENTE'].includes(auth.user?.role || '')) return '/dashboard'
-  if (to.meta.requiresAllSales && auth.ownSales) return '/dashboard'
-  return true
-})
+router.beforeEach(createAuthGuard(useAuthStore))
 
 export default router

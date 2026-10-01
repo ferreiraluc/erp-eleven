@@ -124,12 +124,14 @@ def query_spreadsheet_sales(db, args, user_id):
     year, month, day, basis = _period(args, selected)
     scoped = [r for r in selected if (not year or r.year == year) and (not month or r.month == month)]
     view = build_overview(rows, year, month, seller)
-    sync_dates = sorted(r.synced_at.isoformat() for r in scoped if r.synced_at)
+    examined = selected if day else scoped
+    sync_dates = sorted(r.synced_at.isoformat() for r in examined if r.synced_at)
     output = {
         'origem': {'tipo':'BI das planilhas Excel / OneDrive', 'pagina':'/bi-vendas', 'leitura':'snapshot salvo, sem iniciar sincronização',
-                   'sincronizacao':'diária às 18h de Brasília ou botão manual no ERP', 'fontes_no_periodo':len(scoped),
+                   'sincronizacao':'diária às 18h de Brasília ou botão manual no ERP', 'fontes_no_periodo':len(examined),
+                   'criterio_fontes':'todos os snapshots selecionados, pesquisados pela data explícita' if day else 'snapshots do período mensal selecionado',
                    'snapshot_mais_antigo_em':sync_dates[0] if sync_dates else None, 'snapshot_mais_recente_em':sync_dates[-1] if sync_dates else None,
-                   'fontes_com_pendencia':sum(bool(r.error) for r in scoped)},
+                   'fontes_com_pendencia':sum(bool(r.error) for r in examined)},
         'acesso': {'escopo':'pessoal' if private else 'loja', 'vendedor':seller},
         'periodo': {'ano':year, 'mes':month, 'dia':day, 'anos':sorted(args.anos) if args.anos else None,
                     'criterio':basis, 'fuso':settings.TIMEZONE},
@@ -145,7 +147,8 @@ def query_spreadsheet_sales(db, args, user_id):
         if missing:
             output['avisos'].append('Não há snapshot deste mês nos anos: ' + ', '.join(map(str, missing)) + '. Não foram preenchidos com zero.')
     if not scoped:
-        output['avisos'].append('Não há snapshot para o período selecionado. Nenhum valor foi estimado.')
+        output['avisos'].append('Não há fechamento mensal salvo para o mês do dia consultado. A busca por data continua nos demais snapshots.'
+                                if day else 'Não há snapshot para o período selecionado. Nenhum valor foi estimado.')
     if private:
         output['avisos'].append('Esta conta consulta somente seu vendedor; filtros não ampliam o acesso e o ranking é pessoal.')
     if args.visao in ('lancamentos', 'por_dia', 'por_hora') or day:
@@ -153,9 +156,11 @@ def query_spreadsheet_sales(db, args, user_id):
             day=day, search=args.busca, offset=(args.pagina - 1) * args.limite, limit=args.limite, private=private)
         output.update(visao=args.visao if not day or args.visao != 'resumo' else 'lancamentos',
             filtros_lancamentos={'moeda':args.moeda,'busca':args.busca}, totais_observados={k:v for k,v in details['summary'].items() if k != 'official_total_usd'}, cobertura=details['coverage'])
-        date_coverage = build_entries(rows, year=year, month=month, seller=seller, currency=args.moeda,
+        date_coverage = build_entries(rows, seller=seller, currency=args.moeda,
             search=args.busca, offset=0, limit=1, private=private)['summary'] if day else details['summary']
         output['cobertura_datas_no_periodo'] = {k:date_coverage[k] for k in ('count', 'dated_count', 'timed_count', 'undated_count')}
+        if day:
+            output['avisos'].append('A consulta pelo dia usa a data explícita em todos os snapshots selecionados, inclusive de outros meses/anos. A origem e a cobertura de datas descrevem esses snapshots; o fechamento e a conferência mensal continuam referentes ao mês consultado.')
         if date_coverage['undated_count']:
             output['avisos'].append('Há lançamentos sem data explícita no período: consultas por dia/hora não representam todas as vendas.')
         output['avisos'].append('Datas e horas vêm de células explícitas. Horário da sincronização, nome da aba e dia da semana não provam a data de venda. Linhas iguais podem ser vendas distintas.')

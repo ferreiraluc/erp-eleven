@@ -16,9 +16,8 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = storedToken()
-  if (token && config.url !== '/api/auth/login') {
-    config.headers.Authorization = `Bearer ${token}`
-  }
+  if (config.url === '/api/auth/login') config.headers.delete('Authorization')
+  else if (token && !config.headers.has('Authorization')) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
@@ -31,7 +30,8 @@ api.interceptors.response.use(
       clearSession()
       window.dispatchEvent(new Event('erp:session-expired'))
     }
-    if (error.response?.status === 403 && error.response?.data?.detail === 'PASSWORD_CHANGE_REQUIRED') {
+    if (error.response?.status === 403 && error.response?.data?.detail === 'PASSWORD_CHANGE_REQUIRED' &&
+        sentToken && sentToken === `Bearer ${storedToken()}`) {
       window.dispatchEvent(new Event('erp:password-required'))
     }
     return Promise.reject(error)
@@ -87,19 +87,23 @@ export interface User {
   updated_at: string
 }
 
+// Capture authentication ownership before Axios schedules request interceptors.
+// Explicit null prevents a guest request from adopting a later user's token.
+function sessionHeaders(token: string | null) { return { Authorization: token ? `Bearer ${token}` : null } }
+
 // Auth API
 export const authAPI = {
   login: (credentials: LoginRequest): Promise<LoginResponse> => 
     api.post('/api/auth/login', credentials).then(res => res.data),
   
-  changePassword: (current_password: string, new_password: string): Promise<LoginResponse> =>
-    api.post('/api/auth/password', { current_password, new_password }).then(res => res.data),
+  changePassword: (current_password: string, new_password: string, token = storedToken()): Promise<LoginResponse> =>
+    api.post('/api/auth/password', { current_password, new_password }, { headers: sessionHeaders(token) }).then(res => res.data),
 
-  getCurrentUser: (): Promise<User> => 
-    api.get('/api/auth/me').then(res => res.data),
+  getCurrentUser: (token = storedToken()): Promise<User> =>
+    api.get('/api/auth/me', { headers: sessionHeaders(token) }).then(res => res.data),
   
-  logout: (): Promise<void> => 
-    api.post('/api/auth/logout').then(res => res.data),
+  logout: (token = storedToken()): Promise<void> =>
+    api.post('/api/auth/logout', undefined, { headers: sessionHeaders(token) }).then(res => res.data),
 }
 
 // Sales API

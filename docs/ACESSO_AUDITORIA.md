@@ -34,6 +34,15 @@ O PDV também limpa carrinho, cliente e resultados ao mudar usuário, sessão ou
 escopo; respostas pendentes da identidade anterior são descartadas. Retomar a
 mesma sessão verificada preserva o carrinho em uso.
 
+Requisições de autenticação pertencem à sessão que as iniciou. Respostas atrasadas
+de login, troca de senha, logout ou verificação não podem restaurar uma conta
+encerrada, substituir uma conta nova nem alterar seu erro ou navegação. O logout
+encerra a sessão local imediatamente e solicita a revogação do token original.
+Erros de autenticação de uma sessão antiga também não redirecionam a nova conta.
+Se a validação falhar por conexão em uma tela privada, o estado recuperável permite
+validar novamente ou sair. Após uma troca de senha já confirmada pelo servidor,
+essa nova tentativa consulta a sessão; não repete a alteração de senha.
+
 Senhas temporárias exigem troca na tela **Minha conta** antes de usar os módulos.
 A troca pede a senha atual, confirmação da nova e aplica limite de 6–72 bytes.
 O sistema não armazena senhas em texto; usa bcrypt. Não há envio de recuperação
@@ -91,3 +100,5 @@ que aplicam a mesma autorização do site.
 sessões, permissões, dados financeiros, provisionamento, auditoria transacional,
 migrações e concorrência entre abas. Testes frontend verificam sessão expirada,
 respostas atrasadas de outra conta e troca de senha durante validação em segundo plano.
+`authConcurrency.test.ts` e `authRequests.test.ts` exercitam respostas fora de ordem
+e a associação da requisição ao token original, sem consultar contas reais.

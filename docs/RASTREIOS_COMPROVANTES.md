@@ -5,6 +5,11 @@ O Telegram aceita uma foto, JPG ou PNG de comprovante postal acompanhada de
 o cadastro na mensagem seguinte, ou responder à própria foto. A foto isolada apenas
 recebe uma orientação; nada é cadastrado automaticamente.
 
+Se a mensagem trouxer uma foto ou documento novo, esse anexo tem prioridade sobre
+o da mensagem respondida. O bot só reutiliza o anexo da resposta quando não há
+anexo atual, mantendo as restrições de autor, conversa e tópico. Isso evita gerar
+a prévia de um comprovante antigo ao enviar uma foto nova como resposta.
+
 ## Conferência e gravação
 
 1. O servidor baixa a foto em memória, valida o formato e remove metadados.
@@ -76,6 +81,8 @@ PYTHONPATH=backend DATABASE_URL=sqlite:// backend/venv/bin/python -m pytest back
 Os testes substituem Telegram e os provedores de visão, verificam permissões, isolamento, prévias,
 duplicação, mudanças de vínculos e validação dos bytes/códigos. Não enviam imagens
 reais a provedores. SQLite não demonstra os advisory locks/concorrência PostgreSQL.
+`test_receipt_attachment_precedence.py` cobre a seleção do anexo desde a mensagem
+Telegram até a prévia, incluindo respostas a documentos anteriores.
 
 Uma verificação adicional com a API real DeepSeek leu um comprovante sintético,
 reconhecendo o objeto e destinatário, sem escrever no banco ou enviar mensagens.

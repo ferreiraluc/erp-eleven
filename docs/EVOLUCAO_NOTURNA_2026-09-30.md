@@ -50,7 +50,7 @@ JSON como alternativa; somente Lucas pode aprovar o cadastro.
 
 ## Continuidade
 
-Os três agentes concluíram suas frentes; integração e publicação verificadas.
+As rodadas publicadas abaixo estão concluídas; integração e publicação verificadas.
 Não repetir o trabalho concluído nem provisionar senhas novamente. Na continuidade,
 priorizar melhorias pequenas fundamentadas em evidências: diagnóstico de saldos e
 códigos duplicados no estoque, clareza de erros recuperáveis e revisão de fluxos de
@@ -193,3 +193,37 @@ senha ou consulta de saldos de produção foi usada nesta validação.
 Não refazer esta rodada na próxima continuação. A rotina noturna segue limitada
 até 08h de Brasília; escolher novas correções apenas a partir de falhas
 reproduzíveis e manter as regras financeiras, BI e estoque como fluxos distintos.
+
+## Rodada iniciada às 04h06 — sessão, anexos e consultas diárias
+
+Três falhas reproduzidas com dados isolados fundamentam esta rodada:
+
+- Respostas atrasadas de autenticação podiam restaurar a conta anterior ou
+  redirecionar uma navegação nova. As operações passam a guardar sua sessão de
+  origem; logout local é imediato, e resultados substituídos são descartados.
+  A validação por foco da mesma sessão continua preservando formulários.
+- Uma foto nova enviada como resposta a um documento anterior podia gerar a
+  prévia do anexo antigo. A mídia atual agora prevalece; somente respostas sem
+  anexo herdam a mídia do próprio autor.
+- Vendas com data explícita na virada de mês/ano podiam desaparecer da consulta
+  diária por causa do período do arquivo. Site e bot procuram a data nos snapshots
+  selecionados, mantendo fechamento e reconciliação mensais separados. A origem
+  informa as fontes realmente examinadas, sem nova sincronização.
+
+Divisão: customer_links implementa autenticação e navegação; receipt_tracking
+corrige anexos e faz revisão independente de sessão; sales_intraday corrige BI;
+root revisa contratos, documentação, testes completos, interface e publicação.
+Sem migração, redefinição de credenciais ou operação real de impressão/compra.
+
+**529 testes backend e 147 testes frontend passaram**, incluindo PostgreSQL
+isolado, componentes montados e navegação concorrente; type-check e build passaram.
+O App preserva o formulário durante a validação normal de foco, trata falha de
+conexão com recuperação visível e não repete a mudança de senha ao validar de novo.
+Login, logout, troca entre contas e acesso à tela de conta foram conferidos no
+navegador local. Troca de senha foi testada com respostas simuladas, sem alterar
+credenciais pela interface. Revisão do diff e busca por segredos sem ocorrências.
+
+Limite: descartar uma resposta antiga no navegador não desfaz uma operação que o
+servidor já concluiu. A captura explícita do token foi aplicada aos métodos de
+autenticação; os demais métodos mantêm o contrato atual. Sem alteração de esquema,
+planilhas, cadastros reais, pagamentos ou provisionamento de usuários.
