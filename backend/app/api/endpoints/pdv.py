@@ -9,23 +9,42 @@ from ...database import get_db
 from ...dependencies import get_current_active_user
 from ...models.usuario import Usuario
 from ...models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
-from ...models.inventory import Item, StockMovement
+from ...models.inventory import Item
 from ...schemas.pdv import (
     PdvClienteCreate, PdvClienteUpdate, PdvClienteResponse,
     PdvSaleCreate, PdvSaleResponse, PdvSaleListItem,
     PdvFiadoPaymentCreate, PdvFiadoMovementResponse,
+    validate_pdv_quantity,
 )
 
 from ...services.access_policy import sales_query, require_sale_owner, own_sales, require_all_sales
+from ...services.inventory_service import create_movement, StockMovementError
 
 router = APIRouter()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _lock_sale_stock(db: Session, sale_items) -> dict[uuid.UUID, Item]:
-    """Read every real item's known balances under ordered transaction locks."""
-    item_ids = {item.item_id for item in sale_items if not item.is_avulso and item.item_id}
+def _stock_conflict(db: Session, detail: str):
+    db.rollback()
+    raise HTTPException(status_code=409, detail=detail)
+
+
+def _lock_sale_stock(db: Session, sale_items, *, allow_inactive=False) -> dict[uuid.UUID, Item]:
+    """Validate every real line, then re-read products under ordered locks."""
+    item_ids = set()
+    for item in sale_items:
+        if item.is_avulso:
+            continue
+        try:
+            validate_pdv_quantity(item.quantity, avulso=False)
+        except ValueError as error:
+            _stock_conflict(db, f"Quantidade inválida no item da venda. {error}")
+        if item.location not in ("loja", "deposito"):
+            _stock_conflict(db, "Local inválido no item da venda. Confira o local original; use loja ou deposito.")
+        if not item.item_id:
+            _stock_conflict(db, "Produto de catálogo sem vínculo no item da venda. Confira o cadastro antes de continuar.")
+        item_ids.add(item.item_id)
     if not item_ids:
         return {}
     with db.no_autoflush:
@@ -33,50 +52,39 @@ def _lock_sale_stock(db: Session, sale_items) -> dict[uuid.UUID, Item]:
             db.query(Item).filter(Item.id.in_(item_ids)).order_by(Item.id)
             .populate_existing().with_for_update().all()
         )
+    if len(items) != len(item_ids):
+        _stock_conflict(db, "Um produto de catálogo da venda não existe. Confira o cadastro antes de continuar.")
     for item in items:
+        if not allow_inactive and not item.is_active:
+            _stock_conflict(db, f'Produto inativo: "{item.name}". Selecione um produto ativo para vender.')
         if any(value is None for value in (item.current_stock, item.stock_loja, item.stock_deposito)):
             detail = f'Estoque não informado para "{item.name}". Confira os três saldos antes de concluir esta operação.'
-            db.rollback()
-            raise HTTPException(status_code=409, detail=detail)
+            _stock_conflict(db, detail)
     return {item.id: item for item in items}
 
 
-def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uuid.UUID, Item]):
-    """Decrement stock for each non-avulso item in the sale."""
-    for item in sale.items:
-        if item.is_avulso or not item.item_id:
-            continue
-        inv_item = stock_items.get(item.item_id)
-        if not inv_item:
-            continue
-
-        qty = int(item.quantity)
-        location = item.location or "loja"
-
-        qty_before = inv_item.current_stock
-        inv_item.current_stock = inv_item.current_stock - qty
-
-        # Update split stock
-        if location == "deposito":
-            inv_item.stock_deposito -= qty
-        else:
-            inv_item.stock_loja -= qty
-
-        mv = StockMovement(
-            item_id=inv_item.id,
-            movement_type="exit",
-            quantity=qty,
-            quantity_before=qty_before,
-            quantity_after=inv_item.current_stock,
-            reason="pdv_sale",
-            reference_type="pdv_sale",
-            reference_id=str(sale.id),
-            location_from=location,
-            created_by=created_by_id,
-        )
-        db.add(mv)
-
-    sale.stock_applied = True
+def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uuid.UUID, Item], *, reverse=False):
+    """Use the shared conservation rules; a conflict rolls back the entire sale."""
+    try:
+        for item in sale.items:
+            if item.is_avulso:
+                continue
+            movement = create_movement(
+                db=db, item_id=stock_items[item.item_id].id,
+                movement_type="entry" if reverse else "exit",
+                quantity=int(validate_pdv_quantity(item.quantity, avulso=False)),
+                created_by=created_by_id,
+                reason="pdv_cancel" if reverse else "pdv_sale",
+                reference_type="pdv_sale", reference_id=str(sale.id),
+                location=item.location,
+                location_to=item.location if reverse else None,
+            )
+            if reverse:
+                # Keep PDV cancellation history as an entry into the original location.
+                movement.location_from = None
+    except (StockMovementError, ValueError) as error:
+        _stock_conflict(db, str(error))
+    sale.stock_applied = not reverse
 
 
 def _update_fiado(db: Session, sale: PdvSale, created_by_id):
@@ -249,38 +257,12 @@ def cancel_sale(
     if sale.status == "cancelled":
         raise HTTPException(status_code=400, detail="Venda já cancelada")
 
-    stock_items = _lock_sale_stock(db, sale.items) if sale.stock_applied else {}
-    sale.status = "cancelled"
+    stock_items = _lock_sale_stock(db, sale.items, allow_inactive=True) if sale.stock_applied else {}
 
     # Reverse stock
     if sale.stock_applied:
-        for item in sale.items:
-            if item.is_avulso or not item.item_id:
-                continue
-            inv_item = stock_items.get(item.item_id)
-            if not inv_item:
-                continue
-            qty = int(item.quantity)
-            qty_before = inv_item.current_stock
-            inv_item.current_stock += qty
-            if item.location == "deposito":
-                inv_item.stock_deposito += qty
-            else:
-                inv_item.stock_loja += qty
-
-            db.add(StockMovement(
-                item_id=inv_item.id,
-                movement_type="entry",
-                quantity=qty,
-                quantity_before=qty_before,
-                quantity_after=inv_item.current_stock,
-                reason="pdv_cancel",
-                reference_type="pdv_sale",
-                reference_id=str(sale.id),
-                location_to=item.location,
-                created_by=current_user.id,
-            ))
-        sale.stock_applied = False
+        _apply_stock(db, sale, current_user.id, stock_items, reverse=True)
+    sale.status = "cancelled"
 
     db.commit()
     return {"ok": True}

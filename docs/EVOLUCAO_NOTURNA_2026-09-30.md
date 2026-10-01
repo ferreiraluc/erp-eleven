@@ -140,3 +140,43 @@ Esta rodada resolveu a compatibilidade de leitura de NULL registrada às 00h24;
 não repetir esse trabalho na próxima execução. Permanece pendente somente um fluxo
 específico para restaurar quantidades ausentes, caso necessário. Não provisionar
 senhas novamente; continuar preservando as confirmações e o histórico.
+
+## Rodada iniciada às 03h06 — baixas do PDV
+
+Implementação e validação local concluídas; publicação em preparação.
+Reprodução isolada confirmou que uma venda com dois produtos,
+sendo o segundo sem saldo, era concluída com estoque negativo. A baixa direta
+também convertia quantidade fracionária em inteiro, e o carrinho fundia linhas de
+locais diferentes. O escopo desta rodada é conservação do estoque do PDV, separado
+do BI Excel e sem reforma dos fluxos financeiros.
+
+Divisão: sales_intraday cuida do contrato/API e regressões SQLite; customer_links
+do carrinho e seleção explícita de local; receipt_tracking dos testes de
+concorrência PostgreSQL; root revisa integração, auditoria transacional, documentação,
+interface e publicação. Sem migração, movimentação real, mensagem, impressão,
+pagamento ou sincronização das planilhas para validar.
+
+Baixas e devoluções agora compartilham as regras de conservação do estoque.
+Quantidade de catálogo é inteira, positiva e limitada à capacidade da coluna;
+avulsos aceitam até três casas decimais sem movimentar o catálogo. Local, vínculo,
+atividade e saldos são conferidos; qualquer conflito desfaz a transação inteira.
+Cancelamentos concorrentes restituem os locais originais apenas uma vez.
+
+O carrinho mostra o local e a disponibilidade, não une loja com depósito e soma
+linhas do mesmo produto/local mesmo com preços distintos. Erros preservam o
+rascunho; resultado incerto bloqueia reenvio até conferência do histórico e limpeza
+explícita. A busca trata falha de conexão e preço ausente sem assumir produto
+inexistente nem travar a tela. Mensagens PT/ES/EN e seleção acessível de depósito
+foram conferidas visualmente em desktop, sem concluir venda ou pagamento.
+CSS de telas pequenas foi ajustado, mas o controle de viewport do navegador
+continuou em 1280 × 720; não registrar essa tentativa como validação visual móvel.
+
+**496 testes backend e 110 testes frontend passaram**, com PostgreSQL isolado,
+type-check e build de produção. Os novos casos comprovam concorrência real,
+releitura de saldos, rollback inclusive da auditoria e conservação por local.
+Diff revisado e verificação de segredos sem ocorrências. Sem mudança de esquema.
+
+Limites preservados e documentados: criação de venda ainda não tem chave de
+idempotência no backend; a proteção contra reenvio incerto é da tela. Cancelar
+devolve estoque, mas não automatiza reembolso ou estorno de fiado. A revisão de
+regras financeiras permanece separada; o BI Excel não foi alterado.

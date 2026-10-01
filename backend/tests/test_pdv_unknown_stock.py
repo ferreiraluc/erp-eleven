@@ -130,20 +130,17 @@ def test_unknown_balance_prevents_partial_cancellation_and_preserves_sale(pdv_ap
         assert db.query(PdvPayment).count() == db.query(PdvFiadoMovement).count() == 1
 
 
-def test_known_zero_is_not_unknown_and_existing_pdv_arithmetic_is_preserved(pdv_app):
+def test_known_zero_is_not_unknown_but_cannot_cover_a_sale(pdv_app):
     factory, client, customer_id = pdv_app
     with factory() as db:
         item_id = make_item(db, **dict.fromkeys(BALANCES, 0)).id
         db.commit()
     response = client.post("/api/pdv/sales", json=sale_payload([item_id], customer_id))
-    assert response.status_code == 201, response.text
-    with factory() as db:
-        # This fix deliberately does not change PDV's pre-existing insufficient-stock policy.
-        assert balances(db, item_id) == (-1, -1, 0)
-    assert client.post(f"/api/pdv/sales/{response.json()['id']}/cancel").status_code == 200
+    assert response.status_code == 409, response.text
+    assert "Saldo insuficiente" in response.json()["detail"]
     with factory() as db:
         assert balances(db, item_id) == (0, 0, 0)
-        assert db.query(StockMovement).count() == 2
+        assert db.query(StockMovement).count() == db.query(PdvSale).count() == 0
 
 
 @pytest.mark.parametrize("referenced_unknown_item", (False, True))

@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, field_validator, model_validator
+from typing import Optional, List, Literal
 from datetime import datetime
 from decimal import Decimal
 import uuid
@@ -47,6 +47,24 @@ class PdvClienteResponse(BaseModel):
 
 # ── PDV Sale Items ────────────────────────────────────────────────────────────
 
+def validate_pdv_quantity(value, *, avulso: bool) -> Decimal:
+    """Validate exact quantities for new payloads and persisted legacy lines."""
+    if isinstance(value, bool):
+        raise ValueError("Informe uma quantidade numérica positiva.")
+    try:
+        quantity = Decimal(str(value))
+    except (ValueError, ArithmeticError):
+        raise ValueError("Informe uma quantidade numérica positiva.") from None
+    if not quantity.is_finite() or quantity <= 0:
+        raise ValueError("Informe uma quantidade finita e positiva.")
+    if avulso:
+        if quantity > Decimal("9999999.999") or quantity != quantity.quantize(Decimal("0.001")):
+            raise ValueError("Quantidade avulsa deve ter até três casas decimais e ser no máximo 9999999.999.")
+    elif quantity > 9_999_999 or quantity != quantity.to_integral_value():
+        raise ValueError("Quantidade de catálogo deve ser inteira e no máximo 9999999.")
+    return quantity
+
+
 class PdvSaleItemCreate(BaseModel):
     item_id: Optional[uuid.UUID] = None
     item_name: str
@@ -54,12 +72,24 @@ class PdvSaleItemCreate(BaseModel):
     item_category: Optional[str] = None
     item_size: Optional[str] = None
     item_color: Optional[str] = None
-    quantity: float = 1.0
+    quantity: Decimal = Decimal("1")
     unit_price_gs: float
     original_price_gs: Optional[float] = None
     discount_gs: float = 0.0
     is_avulso: bool = False
-    location: str = "loja"
+    location: Literal["loja", "deposito"] = "loja"
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def validate_numeric_quantity(cls, value):
+        return validate_pdv_quantity(value, avulso=True)
+
+    @model_validator(mode="after")
+    def validate_stock_item(self):
+        validate_pdv_quantity(self.quantity, avulso=self.is_avulso)
+        if not self.is_avulso and self.item_id is None:
+            raise ValueError("Selecione o produto de catálogo ou marque a linha como avulsa.")
+        return self
 
 
 class PdvSaleItemResponse(BaseModel):

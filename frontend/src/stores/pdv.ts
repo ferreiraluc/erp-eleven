@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { PdvCartError, stockAt, validateLocation, validateQuantity, type CatalogStockSnapshot } from '@/services/pdvCart'
 import { pdvAPI, type PdvSaleCreate, type PdvSaleResponse, type PdvClienteResponse } from '@/services/api'
 
 export interface CartItem {
@@ -40,6 +41,7 @@ export const usePdvStore = defineStore('pdv', () => {
   let clientsRequest = 0
   // Cart state
   const cart = ref<CartItem[]>([])
+  const stockSnapshots = ref<Record<string, CatalogStockSnapshot>>({})
   const payments = ref<CartPayment[]>([])
   const discountGs = ref(0)
   const clienteId = ref<string | null>(null)
@@ -48,6 +50,7 @@ export const usePdvStore = defineStore('pdv', () => {
 
   // UI state
   const loading = ref(false)
+  const checkoutUncertain = ref(false)
   const lastSale = ref<PdvSaleResponse | null>(null)
   const clients = ref<PdvClienteResponse[]>([])
 
@@ -61,42 +64,77 @@ export const usePdvStore = defineStore('pdv', () => {
   const remaining = computed(() => Math.max(0, total.value - totalPaid.value))
   const cartCount = computed(() => cart.value.reduce((s, i) => s + i.quantity, 0))
 
-  function addItem(item: Omit<CartItem, 'id'>) {
-    // Se mesmo produto (item_id) e mesmo preço → incrementa quantidade
-    if (item.item_id) {
-      const existing = cart.value.find(
-        c => c.item_id === item.item_id && c.unit_price_gs === item.unit_price_gs
-      )
-      if (existing) {
-        existing.quantity++
-        return
-      }
-    }
-    cart.value.push({ ...item, id: crypto.randomUUID() })
+  function ensureEditable() {
+    if (loading.value) throw new PdvCartError('busy')
+  }
+
+  function rememberStock(items: CatalogStockSnapshot[]) {
+    for (const item of items) stockSnapshots.value[item.id] = { id: item.id, current_stock: item.current_stock,
+      stock_loja: item.stock_loja, stock_deposito: item.stock_deposito, is_active: item.is_active }
+  }
+
+  function reservedStock(itemId: string, location: string, excludeId?: string) {
+    return cart.value.filter(line => !line.is_avulso && line.item_id === itemId && line.location === location && line.id !== excludeId)
+      .reduce((sum, line) => sum + line.quantity, 0)
+  }
+
+  function availableStock(itemId: string, location: string, excludeId?: string): number | null {
+    try { return Math.max(0, stockAt(stockSnapshots.value[itemId], location) - reservedStock(itemId, location, excludeId)) }
+    catch { return null }
+  }
+
+  function validateLine(item: Omit<CartItem, 'id'>, excludeId?: string) {
+    validateQuantity(item.quantity, !item.is_avulso)
+    validateLocation(item.location)
+    if (item.is_avulso) return
+    if (!item.item_id) throw new PdvCartError('missingProduct')
+    const available = stockAt(stockSnapshots.value[item.item_id], item.location)
+    const requested = reservedStock(item.item_id, item.location, excludeId) + item.quantity
+    if (!Number.isFinite(requested) || requested > available) throw new PdvCartError('insufficientStock', { available, requested })
+  }
+
+  function addItem(item: Omit<CartItem, 'id'>, snapshot?: CatalogStockSnapshot) {
+    ensureEditable()
+    if (snapshot) rememberStock([snapshot])
+    validateLine(item)
+    // Price variants share availability; only identical local/price lines merge.
+    const existing = !item.is_avulso && item.item_id ? cart.value.find(c => !c.is_avulso &&
+      c.item_id === item.item_id && c.unit_price_gs === item.unit_price_gs && c.location === item.location) : undefined
+    if (existing) {
+      validateQuantity(existing.quantity + item.quantity, true)
+      existing.quantity += item.quantity
+    } else cart.value.push({ ...item, id: crypto.randomUUID() })
   }
 
   function removeItem(id: string) {
+    ensureEditable()
     const idx = cart.value.findIndex(i => i.id === id)
     if (idx !== -1) cart.value.splice(idx, 1)
   }
 
   function updateItemQty(id: string, qty: number) {
+    ensureEditable()
     const item = cart.value.find(i => i.id === id)
-    if (item) item.quantity = Math.max(1, qty)
+    if (!item) return
+    validateLine({ ...item, quantity: qty }, id)
+    item.quantity = qty
   }
 
   function updateItemPrice(id: string, price: number) {
+    ensureEditable()
     const item = cart.value.find(i => i.id === id)
     if (item) item.unit_price_gs = Math.max(0, price)
   }
 
   function updateItemDiscount(id: string, discount: number) {
+    ensureEditable()
     const item = cart.value.find(i => i.id === id)
     if (item) item.discount_gs = Math.max(0, discount)
   }
 
   // Update price in native currency and recalculate G$ equivalent
   function updateItemOriginalPrice(id: string, originalPrice: number, rateToGs: number) {
+    ensureEditable()
     const item = cart.value.find(i => i.id === id)
     if (!item) return
     item.original_price = Math.max(0, originalPrice)
@@ -104,15 +142,24 @@ export const usePdvStore = defineStore('pdv', () => {
   }
 
   function addPayment(payment: Omit<CartPayment, 'id'>) {
+    ensureEditable()
     payments.value.push({ ...payment, id: crypto.randomUUID() })
   }
 
   function removePayment(id: string) {
+    ensureEditable()
     const idx = payments.value.findIndex(p => p.id === id)
     if (idx !== -1) payments.value.splice(idx, 1)
   }
 
   function clearCart() {
+    ensureEditable()
+    resetCart()
+  }
+
+  function resetCart() {
+    checkoutUncertain.value = false
+    stockSnapshots.value = {}
     cart.value = []
     payments.value = []
     discountGs.value = 0
@@ -124,7 +171,7 @@ export const usePdvStore = defineStore('pdv', () => {
   function resetSessionState() {
     sessionGeneration++
     clientsRequest++
-    clearCart()
+    resetCart()
     lastSale.value = null
     clients.value = []
     loading.value = false
@@ -136,6 +183,10 @@ export const usePdvStore = defineStore('pdv', () => {
          () => auth.user?.vendedor_id, () => auth.user?.sales_seller], resetSessionState, { flush: 'sync' })
 
   async function completeSale(vendedorId?: string): Promise<PdvSaleResponse> {
+    ensureEditable()
+    if (checkoutUncertain.value) throw new PdvCartError('uncertain')
+    if (!cart.value.length) throw new PdvCartError('emptyCart')
+    for (const item of cart.value) validateLine(item, item.id)
     const generation = sessionGeneration
     loading.value = true
     try {
@@ -172,11 +223,15 @@ export const usePdvStore = defineStore('pdv', () => {
       const sale = await pdvAPI.createSale(body)
       if (generation === sessionGeneration) {
         lastSale.value = sale
-        clearCart()
+        resetCart()
       }
       // A committed sale remains successful, even if its original view closed.
       // Only the stale UI mutation is suppressed.
       return sale
+    } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status
+      if (generation === sessionGeneration && (!status || status >= 500)) checkoutUncertain.value = true
+      throw error
     } finally {
       if (generation === sessionGeneration) loading.value = false
     }
@@ -190,9 +245,9 @@ export const usePdvStore = defineStore('pdv', () => {
 
   return {
     cart, payments, discountGs, clienteId, clienteNome, notas,
-    loading, lastSale, clients,
+    loading, checkoutUncertain, lastSale, clients,
     subtotal, total, totalPaid, troco, remaining, cartCount,
-    addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount, updateItemOriginalPrice,
+    rememberStock, availableStock, addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount, updateItemOriginalPrice,
     addPayment, removePayment, clearCart, completeSale, loadClients,
   }
 })

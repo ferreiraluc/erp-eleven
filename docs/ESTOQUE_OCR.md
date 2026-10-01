@@ -161,12 +161,57 @@ do servidor/importação preservam o texto original para permitir diagnóstico.
   subtotais conhecidos e distinção entre consulta vazia, zero e saldo ausente.
 - `tests/test_pdv_unknown_stock.py` e `test_pdv_unknown_stock_postgres.py`: criação
   e cancelamento sem efeitos parciais; releitura após espera real por lock.
+- `tests/test_pdv_stock.py`, `test_pdv_stock_postgres.py` e `test_pdv_stock_audit.py`:
+  quantidades exatas, conservação por local, concorrência e auditoria transacional do PDV.
 
 As verificações locais usam imagens sintéticas e respostas simuladas do provedor.
 SQLite testa regras e estado. O teste de concorrência foi executado em PostgreSQL
 local com schema descartável e remoção ao terminar, usando `ACCESS_TEST_DATABASE_URL`.
 Esses testes não comprovam qualidade visual real da IA; ela exige conferência de
 resultados reais com revisão humana.
+
+## Estoque no PDV
+
+As baixas de vendas e as entradas de cancelamento usam o mesmo serviço de estoque
+das movimentações. Uma venda de catálogo exige produto existente e ativo,
+quantidade inteira positiva e saldo suficiente no local informado. O limite por
+linha é 9.999.999 unidades, compatível com a coluna de quantidade do PDV.
+Itens avulsos não movimentam o catálogo; admitem quantidades positivas com até três
+casas decimais, no máximo 9.999.999,999. Nenhuma quantidade é truncada para concluir
+a operação. Avulsos não alteram estoque mesmo quando um registro antigo contém um
+vínculo de produto.
+
+O servidor bloqueia os produtos por UUID em ordem estável e relê os saldos após
+adquirir os locks. Linhas repetidas do mesmo produto consomem o saldo acumulado;
+o saldo do depósito não completa uma saída da loja. Um saldo negativo, ausente,
+divergente, insuficiente ou acima do limite numérico recusa toda a operação.
+Se o segundo item falha, o primeiro não fica baixado: venda, itens, pagamentos,
+movimentos, débito de fiado e eventos de auditoria das mutações são revertidos juntos.
+
+O cancelamento bloqueia a venda antes dos produtos e devolve a quantidade ao local
+original uma única vez. É possível devolver estoque de um produto que ficou
+inativo após a venda. Dados legados sem produto/local ou com quantidade de catálogo
+fracionária exigem revisão; o sistema não inventa o local nem arredonda a devolução.
+O histórico original é preservado. A permissão de vendas pessoais continua sendo
+verificada antes de permitir leitura ou cancelamento de outra venda.
+
+Na tela, a busca indica o saldo por loja/depósito e permite escolher o local.
+Linhas de locais diferentes permanecem separadas. O carrinho considera todas as
+linhas do produto/local, mesmo com preços diferentes, ao limitar a quantidade.
+Esses valores são uma referência da consulta, não uma reserva: o servidor
+confere o estoque novamente ao concluir. Erros de consulta não são tratados como
+produto inexistente nem abrem automaticamente o cadastro avulso.
+
+Conflitos conhecidos preservam o carrinho e os pagamentos para correção. Uma
+resposta de rede ausente ou erro de servidor deixa o resultado da conclusão
+incerto e bloqueia novo envio daquele rascunho. Confira o histórico antes de limpar
+o carrinho e tentar de novo. O POST de criação ainda não tem chave de idempotência;
+a trava na tela não garante execução única entre dispositivos ou chamadas diretas.
+
+Esta revisão trata de estoque. O cancelamento atual muda o estado e devolve os
+produtos, mas **não automatiza reembolso nem estorno do débito de fiado**. Validação
+financeira, arredondamento monetário e concorrência de saldos de fiado permanecem
+fluxos separados a revisar. O BI Excel não cria vendas ou baixas no PDV.
 
 
 ## Contagem física por local

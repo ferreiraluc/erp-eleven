@@ -45,7 +45,9 @@
               ref="qtyInput"
               v-model.number="form.quantity"
               type="number"
-              min="1"
+              min="0.001"
+              step="0.001"
+              max="9999999.999"
               class="avulso-input"
               @keydown.enter="submit"
             />
@@ -53,6 +55,7 @@
         </div>
 
         <div v-if="error" class="avulso-error">{{ error }}</div>
+        <div v-if="quantityError" class="avulso-error" role="alert">{{ cartErrorText(quantityError) }}</div>
       </div>
 
       <div class="avulso-footer">
@@ -65,6 +68,9 @@
 
 <script setup lang="ts">
 import { uiText } from '@/i18n/uiText'
+import { validateQuantity } from '@/services/pdvCart'
+import { usePdvCartText } from './cartMessages'
+const { cartErrorText } = usePdvCartText()
 import { ref, computed, nextTick, onMounted } from 'vue'
 
 defineProps<{
@@ -102,6 +108,7 @@ const form = ref({
   quantity: 1,
 })
 const error = ref('')
+const quantityError = ref<unknown>(null)
 
 const canSubmit = computed(() =>
   form.value.item_name.trim().length >= 2 && form.value.unit_price_gs > 0
@@ -115,6 +122,8 @@ function focusQty() { qtyInput.value?.focus() }
 function submit() {
   if (!form.value.item_name.trim()) { error.value = uiText(`Informe a descrição`); return }
   if (form.value.unit_price_gs <= 0) { error.value = uiText(`Informe o preço`); return }
+  quantityError.value = null
+  try { validateQuantity(form.value.quantity, false) } catch (error) { quantityError.value = error; return }
   error.value = ''
   emit('add', {
     item_id: null,

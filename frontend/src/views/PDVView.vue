@@ -32,6 +32,7 @@
 
     <!-- Main layout -->
     <div class="pdv-layout">
+      <fieldset class="pdv-checkout-lock" :disabled="pdv.loading">
 
       <!-- LEFT: Product search panel -->
       <div class="pdv-panel-products" :class="{ 'mobile-hidden': mobileTab !== 'products' }">
@@ -49,7 +50,7 @@
         </div>
 
         <div v-if="searchResults.length" class="pdv-results">
-          <div v-for="item in searchResults" :key="item.id" class="pdv-result-row" :aria-disabled="!hasKnownStock(item)" @click="addToCart(item)">
+          <div v-for="item in searchResults" :key="item.id" class="pdv-result-row" :class="{ 'is-unavailable': !canAddProduct(item) }" @click="addToCart(item)">
             <div class="pdv-result-thumb">
               <img v-if="item.image_data" class="pdv-result-img" :src="imgSrc(item.image_data)" />
               <div v-else class="pdv-result-no-img">{{ item.name.charAt(0).toUpperCase() }}</div>
@@ -60,23 +61,30 @@
               <div class="pdv-result-sku">{{ item.sku_internal }}</div>
             </div>
             <div class="pdv-result-right">
-              <div class="pdv-result-stock" :class="!hasKnownStock(item) ? 'stock-unknown' : item.current_stock <= 0 ? 'stock-out' : item.current_stock < 3 ? 'stock-low' : 'stock-ok'">
-                {{ displayStock(item.current_stock) }} {{ $tr("un") }}
-                <span v-if="!hasKnownStock(item)"> · {{ inventoryText('Revisar estoque') }}</span>
+              <div class="pdv-result-stock" :class="productAvailable(item) === null ? 'stock-unknown' : productAvailable(item) === 0 ? 'stock-out' : 'stock-ok'">
+                {{ cartText('available', { quantity: displayStock(productAvailable(item)) }) }} {{ $tr("un") }}
+                <span v-if="productAvailable(item) === null"> · {{ inventoryText('Revisar estoque') }}</span>
               </div>
+              <label class="pdv-stock-location" @click.stop>
+                {{ cartText('location') }}
+                <select :value="productLocation(item)" @change="selectedLocations[item.id] = ($event.target as HTMLSelectElement).value as StockLocation">
+                  <option value="loja">{{ cartText('loja') }}: {{ displayStock(item.stock_loja) }}</option>
+                  <option value="deposito">{{ cartText('deposito') }}: {{ displayStock(item.stock_deposito) }}</option>
+                </select>
+              </label>
               <div class="pdv-result-price">
                 <template v-if="isNativeCurrency(item.sale_currency)">
                   <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(item.sale_price) }}</span>
-                  <span class="pdv-price-gs">≈ G$ {{ fmtNum(Math.round(item.sale_price * getRate(item.sale_currency))) }}</span>
+                  <span class="pdv-price-gs">≈ G$ {{ fmtNum(convertKnownPrice(item.sale_price, getRate(item.sale_currency))) }}</span>
                 </template>
                 <template v-else>
-                  <span class="pdv-price-orig">{{ fmtGs(item.sale_price || 0) }}</span>
+                  <span class="pdv-price-orig">{{ fmtGs(item.sale_price) }}</span>
                 </template>
               </div>
-              <button class="pdv-result-add" :disabled="!hasKnownStock(item)">+</button>
+              <button class="pdv-result-add" :disabled="!canAddProduct(item)">+</button>
             </div>
           </div>
-          <div v-if="searchQuery && !loadingSearch" class="pdv-result-avulso" @click="openAvulso()">
+          <div v-if="searchQuery && !loadingSearch && !searchError" class="pdv-result-avulso" @click="openAvulso()">
             <span>⚠</span> {{ $tr("Produto não encontrado? Adicionar manualmente") }}
           </div>
         </div>
@@ -87,6 +95,7 @@
           <p class="pdv-shortcut-hint">{{ $tr("Atalho:") }} <kbd>F2</kbd> {{ $tr("busca ·") }} <kbd>F5</kbd> {{ $tr("pagar ·") }} <kbd>Esc</kbd> {{ $tr("voltar") }}</p>
         </div>
         <div v-else-if="loadingSearch" class="pdv-search-loading">{{ $tr("Buscando…") }}</div>
+        <div v-else-if="searchError" class="pdv-search-error" role="alert">{{ cartText('searchFailed') }}</div>
         <div v-else class="pdv-no-results">
           <p>{{ $tr("Nenhum produto encontrado para \"") }}{{ searchQuery }}"</p>
           <button class="pdv-btn-avulso" @click="openAvulso(searchQuery)">{{ $tr("+ Adicionar como item avulso") }}</button>
@@ -112,6 +121,9 @@
               class="pdv-client-input" @input="pdv.clienteNome = clienteNomeInput" />
           </div>
 
+          <p v-if="pdv.cart.some(item => !item.is_avulso)" class="pdv-stock-note">{{ cartText('snapshot') }}</p>
+          <p v-if="pdv.checkoutUncertain" role="alert" class="pdv-checkout-error">{{ cartText('uncertain') }}</p>
+          <p v-else-if="checkoutError" role="alert" class="pdv-checkout-error">{{ cartErrorText(checkoutError) }}</p>
           <!-- Cart items -->
           <div v-if="pdv.cart.length" class="pdv-cart-items">
             <div v-for="item in pdv.cart" :key="item.id" class="pdv-cart-item" :class="{ 'item-avulso': item.is_avulso }">
@@ -125,6 +137,9 @@
                     <span v-if="item.is_avulso" class="ci-avulso-badge">{{ $tr("avulso") }}</span>
                     {{ item.item_name }}
                   </div>
+                  <div v-if="!item.is_avulso" class="pdv-ci-stock">
+                    {{ cartText(item.location) }} · {{ cartText('available', { quantity: displayStock(pdv.availableStock(item.item_id!, item.location)) }) }}
+                  </div>
                   <div class="pdv-ci-meta">
                     <span v-if="item.item_size || item.item_color">{{ [item.item_size, item.item_color].filter(Boolean).join(' · ') }}</span>
                     <span v-if="isNativeCurrency(item.sale_currency)" class="ci-gs-equiv">≈ {{ fmtGs(item.unit_price_gs) }}</span>
@@ -132,18 +147,21 @@
                 </div>
                 <div class="pdv-ci-controls">
                   <div class="pdv-qty-stepper">
-                    <button class="qty-btn" @click="pdv.updateItemQty(item.id, item.quantity - 1)" :disabled="item.quantity <= 1">−</button>
-                    <input type="number" :value="item.quantity" min="1" class="qty-input"
-                      @change="pdv.updateItemQty(item.id, Number(($event.target as HTMLInputElement).value))" />
-                    <button class="qty-btn" @click="pdv.updateItemQty(item.id, item.quantity + 1)">+</button>
+                    <button class="qty-btn" @click="changeQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1">−</button>
+                    <input type="number" :value="quantityDrafts[item.id] ?? item.quantity" :min="item.is_avulso ? 0.001 : 1" :step="item.is_avulso ? 0.001 : 1" class="qty-input"
+                      :aria-invalid="!!quantityErrors[item.id]"
+                      @input="quantityDrafts[item.id] = ($event.target as HTMLInputElement).value"
+                      @change="changeQuantity(item, Number(($event.target as HTMLInputElement).value))" />
+                    <button class="qty-btn" @click="changeQuantity(item, item.quantity + 1)" :disabled="!canIncrease(item)">+</button>
                   </div>
+                  <span v-if="quantityErrors[item.id]" class="pdv-quantity-error" role="alert">{{ cartErrorText(quantityErrors[item.id]) }}</span>
                   <div class="pdv-ci-price-wrap">
                     <span class="pdv-ci-currency">{{ currencyLabel(item.sale_currency) }}</span>
                     <input type="number" :value="item.original_price" min="0" class="pdv-ci-price"
                       @change="pdv.updateItemOriginalPrice(item.id, Number(($event.target as HTMLInputElement).value), getRate(item.sale_currency))" />
                   </div>
                   <span class="pdv-ci-total">{{ fmtGs(item.quantity * item.unit_price_gs - item.discount_gs) }}</span>
-                  <button class="pdv-ci-remove" @click="pdv.removeItem(item.id)">×</button>
+                  <button class="pdv-ci-remove" @click="removeCartItem(item.id)">×</button>
                 </div>
               </div>
             </div>
@@ -249,7 +267,7 @@
         <!-- Sticky confirm button -->
         <div class="pdv-pay-area">
           <button class="pay-confirm-btn"
-            :disabled="!canConfirmPayment || pdv.loading || !pdv.cart.length"
+            :disabled="!canConfirmPayment || pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft || !pdv.cart.length"
             @click="confirmPayment">
             <span v-if="pdv.loading">{{ $tr("Processando…") }}</span>
             <span v-else-if="!pdv.cart.length">{{ $tr("Carrinho vazio") }}</span>
@@ -259,6 +277,7 @@
         </div>
 
       </div>
+      </fieldset>
     </div>
 
     <!-- Modals -->
@@ -315,19 +334,22 @@
 
 <script setup lang="ts">
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePdvStore } from '@/stores/pdv'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
-import { displayStock, hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
+import { displayStock } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr: inventoryText } = useInventoryI18n()
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
-import type { CartPayment } from '@/stores/pdv'
+import type { CartItem, CartPayment } from '@/stores/pdv'
+import { type StockLocation } from '@/services/pdvCart'
+import { usePdvCartText } from '@/components/pdv/cartMessages'
+const { cartText, cartErrorText } = usePdvCartText()
 
 const router = useRouter()
 const pdv = usePdvStore()
@@ -341,6 +363,13 @@ const mobileTab = ref<'products' | 'cart'>('products')
 const searchQuery = ref('')
 const searchResults = ref<InventoryItem[]>([])
 const loadingSearch = ref(false)
+const searchError = ref(false)
+const selectedLocations = reactive<Record<string, StockLocation>>({})
+const quantityDrafts = reactive<Record<string, string>>({})
+const quantityErrors = reactive<Record<string, unknown>>({})
+const checkoutError = ref<unknown>(null)
+const invalidQuantityDraft = computed(() => pdv.cart.some(item => quantityErrors[item.id] ||
+  (quantityDrafts[item.id] !== undefined && Number(quantityDrafts[item.id]) !== item.quantity)))
 const showScanner = ref(false)
 const showAvulso = ref(false)
 const showReceipt = ref(false)
@@ -410,7 +439,7 @@ async function saveRates() {
 }
 
 // ── Payment state ────────────────────────────────────────────────────────────
-const localPayments = ref<CartPayment[]>([])
+const localPayments = ref<CartPayment[]>(pdv.payments.map(payment => ({ ...payment })))
 const newMethod = ref('cash_usd')
 const newCurrency = ref('USD')
 const newAmount = ref<number>(0)
@@ -456,7 +485,7 @@ watch(newMethod, (m) => {
   newReference.value = ''
 })
 watch(newCurrency, (c) => { newRate.value = defaultRate(c) })
-watch(() => pdv.cart.length, (len) => { if (len === 0) resetPayment() })
+watch(() => pdv.cart.length, (len) => { if (len === 0) { resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
 
 const currencySymbol = computed(() => ({ GS: 'G$', BRL: 'R$', USD: 'U$', EUR: '€' }[newCurrency.value] ?? newCurrency.value))
 const showReference = computed(() => ['card', 'pix', 'transfer_br', 'transfer_py', 'pix_cambista', 'mercadopago'].includes(newMethod.value))
@@ -532,8 +561,11 @@ function currencyLabel(currency: string): string {
   const map: Record<string, string> = { USD: 'U$', BRL: 'R$', EUR: '€', PYG: 'G$', GS: 'G$' }
   return map[c] || c
 }
-function fmtGs(v: number) { return 'G$ ' + Math.round(v).toLocaleString(uiLocale()) }
-function fmtNum(v: number) { return v.toLocaleString(uiLocale(), { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }
+function fmtGs(v: number | null | undefined) { return typeof v === 'number' && Number.isFinite(v) ? 'G$ ' + Math.round(v).toLocaleString(uiLocale()) : '—' }
+function fmtNum(v: number | null | undefined) { return typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString(uiLocale(), { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '—' }
+function convertKnownPrice(value: number | null | undefined, rate: number): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && Number.isFinite(rate) ? Math.round(value * rate) : null
+}
 function imgSrc(data: string): string {
   return data.startsWith('data:') ? data : `data:image/jpeg;base64,${data}`
 }
@@ -542,14 +574,17 @@ function imgSrc(data: string): string {
 function onSearchInput() {
   clearTimeout(searchTimer)
   if (!searchQuery.value.trim()) { searchResults.value = []; return }
+  searchError.value = false
   loadingSearch.value = true
   searchTimer = setTimeout(doSearch, 280)
 }
 async function doSearch() {
   try {
     const res = await inventoryAPI.getItems({ search: searchQuery.value, page_size: 20 })
+    pdv.rememberStock(res.items)
     searchResults.value = res.items
-  } catch { searchResults.value = [] }
+    searchError.value = false
+  } catch { searchResults.value = []; searchError.value = true }
   finally { loadingSearch.value = false }
 }
 function onSearchEnter() {
@@ -558,39 +593,60 @@ function onSearchEnter() {
 function clearSearch() {
   searchQuery.value = ''
   searchResults.value = []
+  searchError.value = false
   searchInput.value?.focus()
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
+function productLocation(item: InventoryItem): StockLocation {
+  return selectedLocations[item.id] || (item.stock_loja !== null && item.stock_loja > 0 ? 'loja' : 'deposito')
+}
+function productAvailable(item: InventoryItem) { return pdv.availableStock(item.id, productLocation(item)) }
+function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return !pdv.loading && available !== null && available >= 1 }
+function canIncrease(item: CartItem) {
+  if (item.is_avulso) return item.quantity + 1 <= 9_999_999.999
+  const available = item.item_id ? pdv.availableStock(item.item_id, item.location, item.id) : null
+  return available !== null && item.quantity + 1 <= Math.min(available, 9_999_999)
+}
+function changeQuantity(item: CartItem, quantity: number) {
+  try {
+    pdv.updateItemQty(item.id, quantity)
+    delete quantityDrafts[item.id]; delete quantityErrors[item.id]
+  } catch (error) { quantityErrors[item.id] = error }
+}
+function removeCartItem(id: string) {
+  pdv.removeItem(id); delete quantityDrafts[id]; delete quantityErrors[id]
+}
 function addToCart(item: InventoryItem) {
-  if (!hasKnownStock(item)) { showToast(inventoryText(UNKNOWN_STOCK_MESSAGE), 'error'); return }
-  const saleCurrency = item.sale_currency || 'PYG'
-  const rate = getRate(saleCurrency)
-  const priceGs = Math.round((item.sale_price || 0) * rate)
-  pdv.addItem({
-    item_id: item.id,
-    item_name: item.name,
-    item_sku: item.sku_internal || null,
-    item_category: item.category || null,
-    item_size: item.size || null,
-    item_color: item.color || null,
-    quantity: 1,
-    unit_price_gs: priceGs,
-    original_price_gs: priceGs,
-    original_price: item.sale_price || 0,
-    sale_currency: saleCurrency,
-    image_data: item.image_data || null,
-    discount_gs: 0,
-    is_avulso: false,
-    location: item.stock_loja > 0 ? 'loja' : 'deposito',
-  })
-  showToast(uiText(`{0} adicionado`,{0:item.name}))
-  clearSearch()
-  mobileTab.value = 'cart'
+  try {
+    const saleCurrency = item.sale_currency || 'PYG'
+    const rate = getRate(saleCurrency)
+    const priceGs = Math.round((item.sale_price || 0) * rate)
+    pdv.addItem({
+      item_id: item.id,
+      item_name: item.name,
+      item_sku: item.sku_internal || null,
+      item_category: item.category || null,
+      item_size: item.size || null,
+      item_color: item.color || null,
+      quantity: 1,
+      unit_price_gs: priceGs,
+      original_price_gs: priceGs,
+      original_price: item.sale_price || 0,
+      sale_currency: saleCurrency,
+      image_data: item.image_data || null,
+      discount_gs: 0,
+      is_avulso: false,
+      location: productLocation(item),
+    }, item)
+    showToast(uiText(`{0} adicionado`,{0:item.name}))
+    clearSearch()
+    mobileTab.value = 'cart'
+  } catch (error) { checkoutError.value = error; showToast(cartErrorText(error), 'error') }
 }
 function openAvulso(prefill?: string) { avulsoCode.value = prefill || null; showAvulso.value = true }
 function onAvulsoAdd(item: any) {
-  pdv.addItem(item)
+  try { pdv.addItem(item) } catch (error) { checkoutError.value = error; showToast(cartErrorText(error), 'error'); return }
   showAvulso.value = false
   showToast(uiText(`{0} adicionado`,{0:item.item_name}))
   mobileTab.value = 'cart'
@@ -602,10 +658,12 @@ async function onBarcodeDetected(code: string) {
   showScanner.value = false
   try {
     const results = await inventoryAPI.getByBarcode(code)
+    pdv.rememberStock(results)
+    searchError.value = false
     if (results.length === 1) addToCart(results[0])
     else if (results.length > 1) { searchQuery.value = code; searchResults.value = results }
     else openAvulso(code)
-  } catch { openAvulso(code) }
+  } catch { searchQuery.value = code; searchResults.value = []; searchError.value = true; showToast(cartText('searchFailed'), 'error') }
 }
 
 // ── Payment ───────────────────────────────────────────────────────────────────
@@ -616,6 +674,8 @@ function resetPayment() {
 }
 
 async function confirmPayment() {
+  if (pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft.value || !canConfirmPayment.value) return
+  checkoutError.value = null
   pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
   try {
     await pdv.completeSale()
@@ -623,7 +683,7 @@ async function confirmPayment() {
     showReceipt.value = true
     showToast(uiText(`Venda concluída!`), 'success')
   } catch (e: any) {
-    showToast(e?.response?.data?.detail || uiText(`Erro ao finalizar venda`), 'error')
+    checkoutError.value = e
   }
 }
 
@@ -647,6 +707,14 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>
+.pdv-checkout-lock { display: contents; }
+.pdv-stock-location { display: flex; flex-direction: column; gap: .15rem; font-size: .65rem; color: #6b7280; }
+.pdv-stock-location select { max-width: 140px; padding: .2rem; border: 1px solid #d1d5db; border-radius: 4px; background: white; color: #374151; cursor: pointer; }
+.pdv-stock-note, .pdv-ci-stock { font-size: .72rem; color: #6b7280; padding: .3rem 0; }
+.pdv-checkout-error, .pdv-search-error { margin: .5rem; padding: .75rem; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: .8rem; }
+.pdv-quantity-error { color: #b91c1c; font-size: .7rem; }
+.qty-input[aria-invalid="true"] { border-color: #b91c1c; }
+
 /* ── Root ─────────────────────────────────────────────────────────────────── */
 .pdv-root { display: flex; flex-direction: column; height: 100dvh; height: 100vh; background: #f3f4f6; overflow: hidden; }
 
@@ -698,7 +766,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .stock-ok  { background: #d1fae5; color: #065f46; }
 .stock-low { background: #fef3c7; color: #92400e; }
 .stock-unknown { background: #fffbeb; color: #92400e; }
-.pdv-result-row[aria-disabled="true"] { cursor: not-allowed; }
+.pdv-result-row.is-unavailable { cursor: not-allowed; }
 .pdv-result-add:disabled { opacity: .4; cursor: not-allowed; }
 .stock-out { background: #fee2e2; color: #991b1b; }
 .pdv-result-price { text-align: right; }
@@ -857,6 +925,10 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
   .pdv-panel-products, .pdv-panel-cart { height: calc(100dvh - 100px); height: calc(100vh - 100px); }
   .mobile-hidden { display: none !important; }
   .pdv-panel-products, .pdv-panel-cart { border-right: none; }
+  .pdv-result-row { flex-wrap: wrap; }
+  .pdv-result-right { flex: 0 0 100%; flex-wrap: wrap; justify-content: space-between; gap: .375rem; }
+  .pdv-result-stock { white-space: normal; }
+  .pdv-stock-location { cursor: pointer; }
   .pdv-header-title { font-size: 0.85rem; }
   .pdv-rate-btn { padding: 0.25rem 0.4rem; }
   .pdv-rate-pill { font-size: 0.65rem; }

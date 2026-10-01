@@ -69,6 +69,11 @@ específica: códigos válidos, prévia e confirmação. A foto não é arquivad
 `pdv_*`; `/bi-vendas` usa snapshots de planilhas. São três fontes diferentes e não
 podem ser somadas como se fossem o mesmo faturamento.
 
+O PDV confere o estoque por local ao concluir, recusa saídas acima do saldo e
+devolve ao local original ao cancelar. Quantidades de catálogo são inteiras;
+avulsos não movimentam estoque. Limites, concorrência e pendências do cancelamento
+financeiro estão no [guia de estoque](ESTOQUE_OCR.md#estoque-no-pdv).
+
 Ajustes manuais incorporados nas células entram no resultado do BI sem expor fórmulas.
 Arquivos mensais têm prioridade sobre a planilha corrente do mesmo período, evitando
 contagem dupla. Um valor ausente permanece ausente; zero é um resultado válido.

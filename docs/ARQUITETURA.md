@@ -27,7 +27,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Equipe/folgas | `VendorManagement`, `FolgasCard`, `FolgasCalendarAdvanced` | `vendedores` | `models/vendedor`, `funcionario`, `folga`, `assistant_schedule` |
 | Vendas operacionais | `VendasView`, `VendasImportCard` | `vendas`, `excel-import`, `dashboard` | `excel_import_service`, `models/venda` |
 | Câmbio/transferências | `ExchangeRateManagement`, `stores/currency` | `exchange-rates`, `money-transfers`, `cambistas` | `thais_transfer_service`, modelos financeiros |
-| PDV/fiado | `PDVView`, `FiadoView`, `components/pdv/`, `stores/pdv` | `pdv` | `models/pdv` |
+| PDV/fiado | `PDVView`, `FiadoView`, `components/pdv/`, `stores/pdv` | `pdv` | `models/pdv`, `inventory_service` para baixas/devoluções |
 | Endereços/impressão | `AddressesView`, `components/addresses/` | `address-manager`, `printing` | `address_book`, `address_identity`, `address_usage`, `address_manager`, `assistant_printing`, `postal_codes`, modelos `address_book`/`printing` |
 | Etiquetas | Aba SuperFrete em `AddressesView` | `freight` | `superfrete`, `assistant_freight`, `freight_labels`, `freight_webhook` |
 | Assistente | `AssistantView` | `assistant` | `assistant_*`, `models/assistant` |

@@ -68,3 +68,101 @@ describe('PDV session isolation',()=>{
     expect(pdv.clients).toEqual([client(null)])
   })
 })
+
+const snapshot = { id: 'catalog-1', current_stock: 8, stock_loja: 3, stock_deposito: 5, is_active: true }
+const catalog = { ...item, item_id: snapshot.id, is_avulso: false }
+const payment = { method:'cash_gs',currency:'GS',amount_original:100,exchange_rate:1,amount_gs:100,cambista_id:null,reference:null,label:'Cash' }
+describe('PDV stock conservation', () => {
+  it.each([0, -1, 1.5, NaN, Infinity, 10_000_000])('rejects invalid catalog quantity %s without changing a valid cart', quantity => {
+    login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot)
+    expect(() => pdv.addItem({ ...catalog, quantity }, snapshot)).toThrow('catalogQuantity')
+    expect(() => pdv.updateItemQty(pdv.cart[0].id, quantity)).toThrow('catalogQuantity')
+    expect(pdv.cart[0].quantity).toBe(1)
+  })
+  it('merges same item/price/location using requested quantity but never merges distinct locations', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addItem({ ...catalog, quantity: 2 })
+    pdv.addItem({ ...catalog, location: 'deposito', quantity: 4 })
+    expect(pdv.cart.map(line => [line.location, line.quantity])).toEqual([['loja', 3], ['deposito', 4]])
+    expect(() => pdv.addItem(catalog)).toThrow('insufficientStock')
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBe(0)
+    expect(pdv.availableStock(snapshot.id, 'deposito')).toBe(1)
+  })
+  it('sums all price variants before accepting additions or updates and releases removed quantities', () => {
+    login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot)
+    pdv.addItem({ ...catalog, unit_price_gs: 120, quantity: 2 })
+    expect(pdv.cart).toHaveLength(2)
+    expect(() => pdv.addItem({ ...catalog, unit_price_gs: 130 })).toThrow('insufficientStock')
+    expect(() => pdv.updateItemQty(pdv.cart[0].id, 2)).toThrow('insufficientStock')
+    expect(pdv.cart[0].quantity).toBe(1)
+    pdv.removeItem(pdv.cart[1].id); pdv.updateItemQty(pdv.cart[0].id, 3)
+    expect(pdv.cart[0].quantity).toBe(3)
+  })
+  it.each([
+    { current_stock: 0, stock_loja: 0, stock_deposito: 0 },
+    { current_stock: 8, stock_loja: 0, stock_deposito: 8 },
+    { current_stock: 8, stock_loja: 3, stock_deposito: null },
+    { current_stock: 9, stock_loja: 3, stock_deposito: 5 },
+    { current_stock: 8, stock_loja: -1, stock_deposito: 9 },
+  ])('blocks zero/unavailable/invalid local stock %j', balances => {
+    login('Lucas'); const pdv = usePdvStore()
+    expect(() => pdv.addItem(catalog, { ...snapshot, ...balances })).toThrow()
+    expect(pdv.cart).toEqual([])
+  })
+  it('rejects absent product, unknown snapshot, invalid local and inactive product', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    expect(() => pdv.addItem({ ...catalog, item_id: null })).toThrow('missingProduct')
+    expect(() => pdv.addItem(catalog)).toThrow('unknownStock')
+    expect(() => pdv.addItem({ ...catalog, location: 'other' }, snapshot)).toThrow('invalidLocation')
+    expect(() => pdv.addItem(catalog, { ...snapshot, is_active: false })).toThrow('inactiveProduct')
+  })
+  it('accepts positive avulso fractions exactly up to three decimals without stock movement hints', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem({ ...item, quantity: .125 }); pdv.updateItemQty(pdv.cart[0].id, .001)
+    expect(pdv.cart[0].quantity).toBe(.001)
+    for (const quantity of [0, -1, .0001, 1.1234, NaN, Infinity, 10_000_000]) {
+      expect(() => pdv.addItem({ ...item, quantity })).toThrow('manualQuantity')
+    }
+    expect(pdv.cart).toHaveLength(1)
+  })
+  it('keeps cart and payments on 409, accepts only a manual retry and blocks concurrent checkout', async () => {
+    const api = vi.spyOn(pdvAPI, 'createSale').mockRejectedValueOnce({ response: { status: 409, data: { detail: 'Saldo insuficiente' } } })
+    login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot); pdv.addPayment(payment)
+    await expect(pdv.completeSale()).rejects.toMatchObject({ response: { status: 409 } })
+    expect(pdv.cart).toHaveLength(1); expect(pdv.payments).toHaveLength(1); expect(pdv.checkoutUncertain).toBe(false)
+    expect(api).toHaveBeenCalledTimes(1)
+    const pending = deferred<PdvSaleResponse>(); api.mockReturnValueOnce(pending.promise)
+    const first = pdv.completeSale()
+    await expect(pdv.completeSale()).rejects.toThrow('busy')
+    expect(() => pdv.updateItemQty(pdv.cart[0].id, 2)).toThrow('busy')
+    expect(api).toHaveBeenCalledTimes(2)
+    pending.resolve(sale('success')); await first
+    expect(pdv.cart).toEqual([]); expect(pdv.payments).toEqual([])
+  })
+  it.each([new Error('timeout'), { response: { status: 500 } }])('blocks retry after an uncertain result until explicit draft clearing', async error => {
+    const api = vi.spyOn(pdvAPI, 'createSale').mockRejectedValueOnce(error)
+    login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot); pdv.addPayment(payment)
+    await expect(pdv.completeSale()).rejects.toBe(error)
+    expect(pdv.checkoutUncertain).toBe(true); expect(pdv.cart).toHaveLength(1); expect(pdv.payments).toHaveLength(1)
+    await expect(pdv.completeSale()).rejects.toThrow('uncertain')
+    expect(api).toHaveBeenCalledTimes(1)
+    pdv.clearCart(); expect(pdv.checkoutUncertain).toBe(false)
+  })
+  it('revalidates all lines against the latest read snapshot before checkout without posting invalid stock', async () => {
+    const api = vi.spyOn(pdvAPI, 'createSale')
+    login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot)
+    pdv.rememberStock([{ ...snapshot, current_stock: 5, stock_loja: 0 }])
+    await expect(pdv.completeSale()).rejects.toThrow('insufficientStock')
+    expect(api).not.toHaveBeenCalled(); expect(pdv.cart).toHaveLength(1); expect(pdv.checkoutUncertain).toBe(false)
+  })
+  it('does not poison a new session with an old uncertain request or leak stock snapshots', async () => {
+    let reject!: (error: unknown) => void
+    vi.spyOn(pdvAPI, 'createSale').mockReturnValueOnce(new Promise((_resolve, no) => { reject = no }))
+    const auth = login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot)
+    const request = pdv.completeSale(); const failed = expect(request).rejects.toThrow('timeout')
+    auth.expire(); login('Sol'); pdv.addItem(item)
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBeNull()
+    reject(new Error('timeout')); await failed
+    expect(pdv.checkoutUncertain).toBe(false); expect(pdv.cart[0].is_avulso).toBe(true)
+  })
+})
