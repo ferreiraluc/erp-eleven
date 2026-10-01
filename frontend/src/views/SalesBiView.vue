@@ -55,8 +55,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue'
-import {RouterLink} from 'vue-router'
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
+import {RouterLink, useRoute} from 'vue-router'
 import {ArrowLeft, BarChart3, CalendarDays, ChartNoAxesCombined, Coins, Database, Download, GitCompareArrows, Info, RefreshCw, Settings2, TrendingUp, Trophy, Users} from 'lucide-vue-next'
 import {Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler, type ChartOptions} from 'chart.js'
 import {Line, Bar} from 'vue-chartjs'
@@ -64,6 +64,7 @@ import {salesBi, type Overview, type SourceStatus, type SourceConfig} from '@/se
 import {useAuthStore} from '@/stores/auth'
 ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,Tooltip,Legend,Filler)
 const auth=useAuthStore()
+const route=useRoute()
 const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const currencyNames:Record<string,string>={USD:'Dólar · US$',BRL:'Real · R$',PYG:'Guarani · G$',EUR:'Euro · €'}
 const palette=['#2563eb','#10b981','#8b5cf6','#f59e0b','#f43f5e','#64748b']
@@ -73,6 +74,15 @@ const data=ref<Overview|null>(null),status=ref<SourceStatus|null>(null),loading=
 const error=ref(''),notice=ref(''),configOpen=ref(false),onlyIssues=ref(false)
 const config=ref<SourceConfig>({current_url:'',archive_url:'',archive_root:'',current_year:null,current_month:null,enabled:true})
 let sequence=0, timer:ReturnType<typeof setInterval>|undefined, polling=false, disposed=false
+function applyDashboardLink(initial:Overview){
+  const value=(key:string)=>typeof route.query[key]==='string'?route.query[key] as string:''
+  const requestedTab=value('tab'),requestedYear=value('year'),requestedMonth=value('month')
+  tab.value=tabs.some(t=>t.id===requestedTab)?requestedTab:'overview'
+  year.value=requestedYear==='0'?0:initial.years.includes(Number(requestedYear))?Number(requestedYear):initial.latest.year||0
+  month.value=/^(?:[0-9]|1[0-2])$/.test(requestedMonth)?Number(requestedMonth):initial.latest.month||0
+  seller.value=initial.sellers.includes(value('seller'))?value('seller'):''
+}
+watch(()=>route.query,()=>{if(data.value){applyDashboardLink(data.value);load()}})
 function explain(e:unknown){const detail=(e as {response?:{data?:{detail?:unknown}}})?.response?.data?.detail;return typeof detail==='string'?detail:'Não foi possível concluir a consulta. Tente novamente.'}
 function usd(v:number|null|undefined){return v===null||v===undefined?'—':v.toLocaleString('pt-BR',{style:'currency',currency:'USD',minimumFractionDigits:2})}
 function amount(v:number|null,c:string){return v===null?'—':v.toLocaleString('pt-BR',{style:'currency',currency:c,maximumFractionDigits:c==='PYG'?0:2})}
@@ -96,7 +106,7 @@ async function refresh(){refreshing.value=true;try{await salesBi.sync();notice.v
 async function openConfig(){try{config.value=(await salesBi.config())||config.value;configOpen.value=true}catch(e){error.value=explain(e)}}
 async function saveConfig(){saving.value=true;try{await salesBi.save({...config.value,current_year:config.value.current_year||null,current_month:config.value.current_month||null});configOpen.value=false;notice.value='Fontes salvas. A leitura automática ocorre às 18h (Brasília). Para ler agora, clique em Atualizar dados.';status.value=await salesBi.status()}catch(e){error.value=explain(e)}finally{saving.value=false}}
 function exportCsv(){const cell=(v:unknown)=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';const rows=[['Ano','Mês','Vendedor','Total USD','Situação','Fonte'],...visibleMonths.value.map(m=>[m.year,monthNames[m.month-1],seller.value||'Toda a equipe',m.total_usd?.toFixed(2).replace('.',','),m.partial?'Em andamento':'Mensal',m.filename])];const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='eleven-resumo-vendas.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-onMounted(async()=>{try{const [initial,state]=await Promise.all([salesBi.overview({}),salesBi.status()]);data.value=initial;status.value=state;year.value=initial.latest.year||0;month.value=initial.latest.month||0;compareYears.value=initial.years.slice(0,3);await load()}catch(e){error.value=explain(e)}if(disposed)return;timer=setInterval(async()=>{if(polling)return;polling=true;try{const state=await salesBi.status();const changed=state.finished_at!==status.value?.finished_at;status.value=state;if(changed){if(!data.value?.years.length){const initial=await salesBi.overview({});year.value=initial.latest.year||0;month.value=initial.latest.month||0;compareYears.value=initial.years.slice(0,3)}await load()}}catch{ /* Retain the visible data during a temporary outage. */ }finally{polling=false}},10000)})
+onMounted(async()=>{try{const [initial,state]=await Promise.all([salesBi.overview({}),salesBi.status()]);data.value=initial;status.value=state;applyDashboardLink(initial);compareYears.value=initial.years.slice(0,3);await load()}catch(e){error.value=explain(e)}if(disposed)return;timer=setInterval(async()=>{if(polling)return;polling=true;try{const state=await salesBi.status();const changed=state.finished_at!==status.value?.finished_at;status.value=state;if(changed){if(!data.value?.years.length){const initial=await salesBi.overview({});applyDashboardLink(initial);compareYears.value=initial.years.slice(0,3)}await load()}}catch{ /* Retain the visible data during a temporary outage. */ }finally{polling=false}},10000)})
 onUnmounted(()=>{disposed=true;clearInterval(timer);sequence++})
 </script>
 

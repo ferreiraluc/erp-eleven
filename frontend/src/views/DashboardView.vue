@@ -367,12 +367,10 @@
           </div>
         </div>
 
-        <button v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="address-dashboard-card" @click="router.push('/enderecos')">
-          <span class="address-dash-icon">↗</span><div><h3>Endereços e envios</h3><p>Clientes, remetentes, impressões e etiquetas SuperFrete</p></div><span>Gerenciar →</span>
-        </button>
-        <button v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="address-dashboard-card" @click="router.push('/bi-vendas')">
-          <span class="address-dash-icon">▥</span><div><h3>Visão de vendas</h3><p>Planilhas OneDrive, comparações, vendedores e melhores semanas</p></div><span>Analisar →</span>
-        </button>
+        <div v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="operation-summary-grid">
+          <AddressSummaryCard />
+          <SalesSummaryCard />
+        </div>
         <!-- Row 3: Folgas + Status + Exchange (no gap) -->
         <div class="bottom-grid">
 
@@ -611,6 +609,8 @@ import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
+import AddressSummaryCard from '@/components/dashboard/AddressSummaryCard.vue'
+import SalesSummaryCard from '@/components/dashboard/SalesSummaryCard.vue'
 import { inventoryAPI, healthAPI, type AlertSummary } from '@/services/api'
 
 const router = useRouter()
@@ -3152,5 +3152,6 @@ onUnmounted(() => {
 </style>
 
 <style scoped>
-.address-dashboard-card{width:100%;display:flex;align-items:center;gap:18px;background:white;border:1px solid #e2e8f0;border-radius:16px;padding:22px 25px;margin:20px 0;text-align:left;cursor:pointer;color:#1e293b}.address-dashboard-card:hover{border-color:#93c5fd;background:#f8fbff}.address-dash-icon{background:#eff6ff;color:#2563eb;font-size:25px;border-radius:12px;padding:10px 16px}.address-dashboard-card h3{font-size:18px;font-weight:700;margin:0 0 5px}.address-dashboard-card p{font-size:13px;color:#64748b;margin:0}.address-dashboard-card>span:last-child{margin-left:auto;color:#2563eb;font-size:13px;font-weight:600}@media(max-width:600px){.address-dashboard-card{padding:17px;gap:12px}.address-dashboard-card>span:last-child{display:none}}
+.operation-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:stretch}
+@media(max-width:900px){.operation-summary-grid{grid-template-columns:1fr}}
 </style>

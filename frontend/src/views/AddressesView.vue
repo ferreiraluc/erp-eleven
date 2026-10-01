@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed,onMounted,onUnmounted,ref } from 'vue'
+import { computed,onMounted,onUnmounted,ref,watch } from 'vue'
 import { RouterLink,useRoute } from 'vue-router'
 import { ArrowLeft,Plus,MapPin,Printer,CheckCircle2,Activity,Search,Pencil,Users,Truck,RefreshCw,History,SlidersHorizontal } from 'lucide-vue-next'
 import api from '@/services/api'
@@ -63,6 +63,16 @@ async function loadFreights(){try{freights.value=(await api.get('/api/freight/or
 async function loadOverview(){overview.value=(await api.get(base+'/overview')).data;if(!deviceId.value)deviceId.value=activeDevice.value?.id||''}
 async function init(){try{await Promise.all([loadOverview(),loadAddresses(),api.get(base+'/senders').then(r=>senders.value=r.data),api.get(base+'/layouts').then(r=>layouts.value=r.data),api.get('/api/freight/status').then(r=>freightStatus.value=r.data)])}catch(e){error.value=explain(e)}}
 function changeTab(t:string){tab.value=t;if(t==='history')loadHistory();if(t==='freight')loadFreights()}
+function applyDashboardLink(){
+  const value=(key:string)=>typeof route.query[key]==='string'?route.query[key] as string:''
+  const requestedTab=value('tab')
+  historyQuery.value=value('q').slice(0,100)
+  historyStatus.value=Object.hasOwn(states,value('status'))?value('status'):''
+  historyOffset.value=0
+  changeTab(tabs.some(t=>t.id===requestedTab)?requestedTab:'addresses')
+  if(value('action')==='print')openPrint(emptyForm())
+}
+watch(()=>route.query,applyDashboardLink)
 function closeModal(){if(saving.value)return;modal.value='';modalError.value='';if(previewUrl.value)URL.revokeObjectURL(previewUrl.value);previewUrl.value=''}
 function newAddress(){form.value=emptyForm();customerResults.value=[];customerQuery.value='';linkedName.value='';modal.value='address';modalError.value=''}
 function editAddress(a:SavedAddress){form.value=clone(a);linkedName.value='';customerResults.value=[];modal.value='address';modalError.value=''}
@@ -93,7 +103,7 @@ async function refreshFreight(f:Freight){await act(async()=>{selectedFreight.val
 async function openLabelPdf(){await act(async()=>{const data=(await api.get('/api/freight/orders/'+selectedFreight.value!.id+'/pdf',{responseType:'blob'})).data;const url=URL.createObjectURL(data);const a=document.createElement('a');a.href=url;a.download='etiqueta.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000)})}
 async function printLabel(){await act(async()=>{const id=selectedFreight.value!.id;const key=labelRequestKeys.get(id)||crypto.randomUUID();labelRequestKeys.set(id,key);await api.post('/api/freight/orders/'+id+'/print',{device_id:deviceId.value,request_key:key});labelRequestKeys.delete(id);notice.value='Etiqueta enviada à impressora.';modal.value='';await loadOverview()})}
 let timer:ReturnType<typeof setInterval>|undefined
-onMounted(()=>{init();timer=setInterval(()=>{loadOverview().catch(()=>{});if(tab.value==='history')loadHistory();if(tab.value==='freight'||modal.value==='freight-result')loadFreights()},10000)})
+onMounted(()=>{init();applyDashboardLink();timer=setInterval(()=>{loadOverview().catch(()=>{});if(tab.value==='history')loadHistory();if(tab.value==='freight'||modal.value==='freight-result')loadFreights()},10000)})
 onUnmounted(()=>{clearInterval(timer);clearTimeout(searchTimer);if(previewUrl.value)URL.revokeObjectURL(previewUrl.value)})
 </script>
 
