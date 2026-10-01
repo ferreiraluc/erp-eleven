@@ -1,8 +1,8 @@
 # Evolução noturna — 30/09/2026
 
 Registro de continuidade do trabalho autorizado pelo responsável. Atualizado às
-03h23 de Brasília de 01/10/2026. **Última publicação concluída** no commit
-`fdf0f92fa8ecab3a6e32d27a56ab8654292d4ae3` (rodada de baixas do PDV abaixo).
+05h14 de Brasília de 01/10/2026. **Última publicação concluída** no commit
+`c0b43c0ec79b4b0ac125077ea67285d6b0192fe8` (sessão, anexos e consultas diárias).
 A primeira rodada foi publicada em `78a9ea98918ddbe3220d53354c90498f9a96be79`.
 Frontend e backend confirmados Live no Render; CI GitHub concluída com sucesso.
 
@@ -196,6 +196,8 @@ reproduzíveis e manter as regras financeiras, BI e estoque como fluxos distinto
 
 ## Rodada iniciada às 04h06 — sessão, anexos e consultas diárias
 
+Implementação, validação e publicação concluídas.
+
 Três falhas reproduzidas com dados isolados fundamentam esta rodada:
 
 - Respostas atrasadas de autenticação podiam restaurar a conta anterior ou
@@ -227,3 +229,15 @@ Limite: descartar uma resposta antiga no navegador não desfaz uma operação qu
 servidor já concluiu. A captura explícita do token foi aplicada aos métodos de
 autenticação; os demais métodos mantêm o contrato atual. Sem alteração de esquema,
 planilhas, cadastros reais, pagamentos ou provisionamento de usuários.
+
+Publicação confirmada às 05h14 no commit
+`c0b43c0ec79b4b0ac125077ea67285d6b0192fe8`, com
+[CI concluída com sucesso](https://github.com/ferreiraluc/erp-eleven/actions/runs/36834828772).
+Render confirmou backend `dep-dav1bje0tbcc73e9jl70` e frontend
+`dep-dav1bje0tbcc73e9jlkg` Live. API, banco, assistente e worker de etiquetas
+reportam online. Servidores locais de QA encerrados e abas temporárias removidas.
+
+Na continuação, não repetir estas correções nem o provisionamento de senhas.
+As prioridades originais já foram publicadas e a rotina termina às 08h de Brasília.
+Somente iniciar outra mudança delimitada se houver falha reproduzível e tempo
+para validar/publicar; não ampliar o escopo financeiro do PDV incidentalmente.
