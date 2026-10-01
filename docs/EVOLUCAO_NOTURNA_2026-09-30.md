@@ -1,8 +1,9 @@
 # Evolução noturna — 30/09/2026
 
 Registro de continuidade do trabalho autorizado pelo responsável. Atualizado às
-23h57 de Brasília. **Implementação validada, publicação em preparação.** As contas
-de produção ainda precisam ser provisionadas após as migrações.
+00h02 de Brasília de 01/10/2026. **Publicação concluída** no commit
+`78a9ea98918ddbe3220d53354c90498f9a96be79`. Frontend e backend confirmados Live
+no Render; CI GitHub concluída com sucesso.
 
 ## Implementação desta rodada
 
@@ -30,11 +31,31 @@ de produção ainda precisam ser provisionadas após as migrações.
 - Backup privado local anterior ao deploy concluído; catálogo conferido com pg_restore.
 
 Nenhuma compra, impressão física ou mensagem real foi usada para testar a interface.
-Faltam publicação, confirmação dos serviços e provisionamento das contas de produção.
+As migrações `z6a7b8c9d0e1` e `a7b8c9d0e1f2` foram aplicadas pelo Render.
+API, banco, assistente e recuperação de etiquetas reportam online em `/health`.
+
+As contas Lucas/Wissam/Denis/Sol/Junior foram provisionadas preservando os IDs.
+Login, escopo, exigência de troca de senha, logout e revogação foram conferidos nas
+cinco contas. A segunda simulação de provisionamento não propôs alterações ou
+redefinições. **Não executar novamente para redefinir senhas pessoais.** Usuários
+inativos anteriores permaneceram inativos. Auditoria passa a registrar a partir
+desta versão, sem atribuir retroativamente operações antigas.
+
+O novo detalhamento das planilhas será preenchido na próxima sincronização manual
+ou diária às 18h. Não foi iniciada sincronização extra; correções nas células seguem
+sendo consumidas pelos resultados salvos. Ausência de hora real não vira intraday
+artificial. A geração de pessoa usa o formulário público 4Devs e mantém importação
+JSON como alternativa; somente Lucas pode aprovar o cadastro.
 
 ## Continuidade
 
-Os três agentes concluíram suas frentes. O agente principal integra e publica.
+Os três agentes concluíram suas frentes; integração e publicação verificadas.
+Não repetir o trabalho concluído nem provisionar senhas novamente. Na continuidade,
+priorizar melhorias pequenas fundamentadas em evidências: diagnóstico de saldos e
+códigos duplicados no estoque, clareza de erros recuperáveis e revisão de fluxos de
+bot com testes isolados. Não corrigir automaticamente saldos reais nem inventar
+registros, horários ou vínculos. Cada nova mudança deve ter escopo delimitado,
+testes pertinentes e sua própria verificação de publicação.
 A continuação agendada desta tarefa está ativa até 8h de Brasília de 01/10/2026;
 depende do laptop ligado e do aplicativo disponível. Preservar dados e segredos,
 notificar somente entregas, falhas ou questões que precisem do responsável.
