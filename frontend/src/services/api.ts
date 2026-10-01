@@ -729,7 +729,7 @@ export const inventoryAPI = {
   getSessions: (): Promise<any[]> =>
     api.get('/api/inventory/sessions').then(res => res.data),
 
-  createSession: (data: any): Promise<any> =>
+  createSession: (data: { name: string; count_location: 'loja' | 'deposito'; location_filter?: string; category_filter?: string; notes?: string }): Promise<any> =>
     api.post('/api/inventory/sessions', data).then(res => res.data),
 
   getSession: (id: string): Promise<any> =>
@@ -738,7 +738,7 @@ export const inventoryAPI = {
   updateSessionStatus: (id: string, status: string): Promise<any> =>
     api.put(`/api/inventory/sessions/${id}/status`, { status }).then(res => res.data),
 
-  scanItem: (sessionId: string, data: any): Promise<any> =>
+  scanItem: (sessionId: string, data: { item_id: string; counted_quantity: number }): Promise<any> =>
     api.post(`/api/inventory/sessions/${sessionId}/scan`, data).then(res => res.data),
 
   applySession: (sessionId: string): Promise<any> =>

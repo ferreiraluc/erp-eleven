@@ -62,14 +62,17 @@ def identity(data):
 
 def duplicate_items(db,items):
     existing=db.query(Item.id,Item.name,Item.brand,Item.size,Item.color,Item.barcode,Item.sku_internal,Item.is_active).all()
-    seen=set();duplicates=[]
+    seen=set();seen_barcodes=set();duplicates=[]
     for data in items:
         key=identity(data)
-        if key in seen:duplicates.append({'nome':data['nome'],'motivo':'Repetido na mesma solicitação.'})
+        barcode=(data.get('codigo_barras') or '').strip()
+        if key in seen or barcode and barcode in seen_barcodes:
+            duplicates.append({'nome':data['nome'],'motivo':'Produto ou código de barras repetido na mesma solicitação.'})
         seen.add(key)
+        if barcode:seen_barcodes.add(barcode)
         for row in existing:
             other={'nome':row.name,'marca':row.brand,'tamanho':row.size,'cor':row.color}
-            if identity(other)==key or data.get('codigo_barras') and data['codigo_barras']==row.barcode:
+            if identity(other)==key or barcode and barcode==(row.barcode or '').strip():
                 duplicates.append({'id':str(row.id),'nome':row.name,'sku':row.sku_internal,'ativo':row.is_active})
     return duplicates
 

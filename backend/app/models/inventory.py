@@ -99,6 +99,8 @@ class InventorySession(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(200), nullable=False)
     status = Column(SAEnum(SessionStatus), default=SessionStatus.open)
+    # Null identifies legacy counts whose quantities captured the combined total.
+    count_location = Column(String(20), nullable=True)
     location_filter = Column(String(100))
     category_filter = Column(String(100))
     started_at = Column(DateTime, default=lambda: settings.now())

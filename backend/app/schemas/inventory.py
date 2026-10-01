@@ -183,16 +183,16 @@ class SessionBase(BaseModel):
 
 
 class SessionCreate(SessionBase):
-    pass
+    count_location: Literal['loja', 'deposito']
 
 
 class SessionStatusUpdate(BaseModel):
-    status: str
+    status: Literal['open', 'counting', 'reviewing', 'applied', 'cancelled']
 
 
 class ScanItemCreate(BaseModel):
     item_id: uuid.UUID
-    counted_quantity: int
+    counted_quantity: int = Field(ge=0, le=2_147_483_647, strict=True)
 
 
 class SessionItemResponse(BaseModel):
@@ -211,6 +211,7 @@ class SessionItemResponse(BaseModel):
 
 class SessionResponse(SessionBase):
     id: uuid.UUID
+    count_location: Optional[Literal['loja', 'deposito']] = None
     status: str
     started_at: datetime
     finished_at: Optional[datetime] = None

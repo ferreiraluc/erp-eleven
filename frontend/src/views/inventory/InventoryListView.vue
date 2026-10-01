@@ -15,6 +15,10 @@
           <p class="page-subtitle">{{ tr('Gerencie os itens do inventário') }}</p>
         </div>
         <div class="header-right">
+          <button @click="showDiagnostics = !showDiagnostics" class="btn btn-secondary diagnostics-toggle" :aria-expanded="showDiagnostics" aria-controls="inventory-diagnostics">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M9 4H5v16h14V4h-4M9 3h6v4H9z" /></svg>
+            {{ diagnosticsText('open') }}
+          </button>
           <button @click="showLabelTemplates = true" class="btn btn-secondary btn-modelos-ia-desktop">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -206,6 +210,23 @@
     </div>
     </div><!-- /sticky-toolbar -->
 
+    <InventoryDiagnosticsPanel
+      v-if="showDiagnostics"
+      :revision="diagnosticsRevision"
+      :opening-id="diagnosticsOpeningId"
+      :open-error="diagnosticsOpenError"
+      @close="showDiagnostics = false"
+      @open-item="openDiagnosticItem"
+    />
+
+    <div v-if="inventoryStore.error" class="list-load-error" role="alert">
+      <div>
+        <strong>{{ tr('Não foi possível carregar a lista de produtos.') }}</strong>
+        <p>{{ tr('Os dados do estoque não foram confirmados. Tente novamente ou abra a conferência de estoque.') }}</p>
+      </div>
+      <button @click="reloadItems()" class="btn btn-secondary" :disabled="inventoryStore.loading">{{ tr('Tentar novamente') }}</button>
+    </div>
+
     <!-- Loading -->
     <div v-if="inventoryStore.loading && flatList.length === 0" class="loading-state">
       <div class="spinner"></div>
@@ -213,7 +234,7 @@
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="!inventoryStore.loading && flatList.length === 0" class="empty-state">
+    <div v-else-if="!inventoryStore.loading && !inventoryStore.error && flatList.length === 0" class="empty-state">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
@@ -222,7 +243,7 @@
     </div>
 
     <!-- Items list -->
-    <div v-else class="items-container" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
+    <div v-else-if="flatList.length > 0" class="items-container" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
@@ -571,7 +592,7 @@
 
     <ImportModal
       v-if="showImport"
-      @imported="() => { reloadItems(); inventoryStore.loadAlerts() }"
+      @imported="() => { diagnosticsRevision++; reloadItems(); inventoryStore.loadAlerts() }"
       @close="showImport = false"
     />
 
@@ -674,6 +695,7 @@
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
@@ -685,6 +707,19 @@ import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
+import InventoryDiagnosticsPanel from '@/components/inventory/InventoryDiagnosticsPanel.vue'
+import { diagnosticsMessages } from '@/components/inventory/diagnosticsMessages'
+
+const { t: diagnosticsText } = useI18n({ useScope: 'local', messages: diagnosticsMessages })
+const showDiagnostics = ref(false), diagnosticsRevision = ref(0)
+const diagnosticsOpeningId = ref<string | null>(null)
+const diagnosticsOpenError = ref<'openError' | 'inactive' | null>(null)
+let diagnosticOpenGeneration = 0
+watch(showDiagnostics, () => {
+  diagnosticOpenGeneration++
+  diagnosticsOpeningId.value = null
+  diagnosticsOpenError.value = null
+})
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
@@ -1246,6 +1281,22 @@ function openEdit(item: InventoryItem) {
   showItemForm.value = true
 }
 
+async function openDiagnosticItem(id: string) {
+  const request = ++diagnosticOpenGeneration
+  diagnosticsOpeningId.value = id
+  diagnosticsOpenError.value = null
+  try {
+    const item = await inventoryAPI.getItem(id)
+    if (request !== diagnosticOpenGeneration || !showDiagnostics.value || showItemForm.value) return
+    if (!item.is_active) { diagnosticsOpenError.value = 'inactive'; return }
+    openEdit(item)
+  } catch {
+    if (request === diagnosticOpenGeneration) diagnosticsOpenError.value = 'openError'
+  } finally {
+    if (request === diagnosticOpenGeneration) diagnosticsOpeningId.value = null
+  }
+}
+
 function openMovement(item: InventoryItem) {
   movementItem.value = item
   showMovementModal.value = true
@@ -1255,6 +1306,7 @@ async function handleQuickExit(item: InventoryItem, location: string = 'loja') {
   confirmExitId.value = null
   try {
     const result = await inventoryStore.quickExit(item.id, location)
+    diagnosticsRevision.value++
     const loc = location === 'deposito' ? 'Depósito' : 'Loja'
     showToast('Saída ({local}) registrada. Estoque: {stock}', 'success', { local: tr(loc), stock: result.new_stock })
   } catch (e: any) {
@@ -1276,12 +1328,14 @@ function onBarcodeDetected(code: string) {
 }
 
 function onItemSaved(item: InventoryItem) {
+  diagnosticsRevision.value++
   showItemForm.value = false
   showToast('Item "{name}" salvo com sucesso', 'success', { name: item.name })
   reloadItems()
 }
 
 function onItemPartiallySaved() {
+  diagnosticsRevision.value++
   // The form remains open with the exact completed steps and prevents a duplicate retry.
   reloadItems()
   inventoryStore.loadAlerts()
@@ -1289,12 +1343,14 @@ function onItemPartiallySaved() {
 }
 
 function onMovementSaved() {
+  diagnosticsRevision.value++
   showMovementModal.value = false
   showToast('Movimentação registrada', 'success')
   reloadItems()
 }
 
 async function onBulkEditSaved() {
+  diagnosticsRevision.value++
   showBulkEdit.value = false
   selectionMode.value = false
   selectedIds.value = []
@@ -1303,6 +1359,7 @@ async function onBulkEditSaved() {
 }
 
 async function onBulkTransferSaved() {
+  diagnosticsRevision.value++
   showBulkTransfer.value = false
   selectionMode.value = false
   selectedIds.value = []
@@ -1338,6 +1395,7 @@ function onDocClick(e: MouseEvent) {
 }
 
 onUnmounted(() => {
+  diagnosticOpenGeneration++
   scrollObserver?.disconnect()
   document.removeEventListener('click', onDocClick)
 })
@@ -1397,10 +1455,13 @@ onMounted(async () => {
 
 <style scoped>
 .inventory-view { min-height: 100vh; background: #f9fafb; }
+.list-load-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem; padding: 1rem; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #991b1b; font-size: .85rem; }
+.list-load-error p { margin: .35rem 0 0; font-size: .8rem; }
+.list-load-error .btn:disabled { opacity: .5; cursor: not-allowed; }
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
 .header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; }
-.header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.header-right { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }
 .back-button { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
 .page-title { font-size: 1.25rem; font-weight: 700; color: #111827; margin: 0; }
@@ -1411,6 +1472,8 @@ onMounted(async () => {
 @media (max-width: 600px) {
   .page-header { padding: 0.4rem 0.75rem; }
   .header-content { padding: 0; }
+  .header-content { flex-wrap: wrap; gap: .5rem; }
+  .header-right { flex: 1; }
   .page-subtitle { display: none; }
   .page-title { font-size: 1rem; }
   .header-top { gap: 0.5rem; }

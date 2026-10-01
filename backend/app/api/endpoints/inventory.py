@@ -28,12 +28,24 @@ from ...schemas.inventory import (
     BatchEditRequest, BatchSizeEntry, GradeCreateRequest, GradeCreateResponse,
     BulkTransferRequest,
 )
+from ...schemas.inventory_diagnostics import InventoryDiagnostics, IssueFilter
 from ...dependencies import get_current_active_user, require_role
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level, StockMovementError
 from ..validators import validate_uuid
 from datetime import datetime as dt
 
 router = APIRouter()
+
+
+@router.get('/diagnostics', response_model=InventoryDiagnostics)
+def inventory_diagnostics(
+    issue: IssueFilter = 'all', q: str = Query('', max_length=150),
+    page: int = Query(1, ge=1, le=20000), page_size: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user),
+):
+    from ...services.inventory_diagnostics import diagnose_inventory
+    return diagnose_inventory(db, issue=issue, q=q, page=page, page_size=page_size)
+
 
 # ── Text normalization ────────────────────────────────────────────────────────
 def _title_case(value: Optional[str]) -> Optional[str]:
@@ -917,7 +929,7 @@ def create_session(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
-    db_session = InventorySession(**session.dict(), created_by=current_user.id)
+    db_session = InventorySession(**session.model_dump(), created_by=current_user.id)
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
@@ -954,13 +966,25 @@ def update_session_status(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
     session_uuid = validate_uuid(session_id)
-    session = db.query(InventorySession).filter(InventorySession.id == session_uuid).first()
+    session = db.query(InventorySession).filter(InventorySession.id == session_uuid).with_for_update().populate_existing().first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    try:
-        session.status = SessionStatus[status_update.status]
-    except KeyError:
-        raise HTTPException(status_code=400, detail=f"Invalid status: {status_update.status}")
+    target = SessionStatus[status_update.status]
+    if session.status in (SessionStatus.applied, SessionStatus.cancelled):
+        raise HTTPException(409, 'Sessões aplicadas ou canceladas não podem ser reabertas ou alteradas.')
+    if target == SessionStatus.applied:
+        raise HTTPException(409, 'Use a aplicação da contagem revisada para ajustar os saldos; o status não aplica estoque.')
+    if session.count_location not in ('loja', 'deposito') and target != SessionStatus.cancelled:
+        raise HTTPException(409, 'Contagem antiga sem local definido. Crie uma nova contagem indicando loja ou deposito; o histórico foi preservado.')
+    transitions = {
+        SessionStatus.open: {SessionStatus.counting, SessionStatus.cancelled},
+        SessionStatus.counting: {SessionStatus.reviewing, SessionStatus.cancelled},
+        SessionStatus.reviewing: {SessionStatus.counting, SessionStatus.cancelled},
+    }
+    if target != session.status and target not in transitions.get(session.status, set()):
+        raise HTTPException(409, 'Transição de contagem inválida. Conte os produtos antes de enviar para revisão.')
+    session.status = target
+    session.finished_at = settings.now() if target in (SessionStatus.reviewing, SessionStatus.cancelled) else None
     db.commit()
     return {"message": "Status updated"}
 
@@ -973,13 +997,20 @@ def scan_item(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     session_uuid = validate_uuid(session_id)
-    session = db.query(InventorySession).filter(InventorySession.id == session_uuid).first()
+    session = db.query(InventorySession).filter(InventorySession.id == session_uuid).with_for_update().populate_existing().first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.count_location not in ('loja', 'deposito'):
+        raise HTTPException(409, 'Contagem antiga sem local definido. Crie uma nova contagem indicando loja ou deposito; o histórico foi preservado.')
+    if session.status not in (SessionStatus.open, SessionStatus.counting):
+        raise HTTPException(409, 'A sessão não está aberta para contagem. Sessões em revisão, aplicadas ou canceladas não recebem novas leituras.')
 
-    item = db.query(Item).filter(Item.id == scan.item_id).first()
-    if not item:
+    item = db.query(Item).filter(Item.id == scan.item_id).with_for_update().populate_existing().first()
+    if not item or not item.is_active:
         raise HTTPException(status_code=404, detail="Item not found")
+    system_quantity = item.stock_loja if session.count_location == 'loja' else item.stock_deposito
+    if system_quantity is None:
+        raise HTTPException(409, 'O saldo deste local é desconhecido. Confira o cadastro antes de contar; nenhum valor foi presumido.')
 
     existing = (
         db.query(InventorySessionItem)
@@ -987,10 +1018,13 @@ def scan_item(
             InventorySessionItem.session_id == session_uuid,
             InventorySessionItem.item_id == scan.item_id,
         )
-        .first()
+        .populate_existing().all()
     )
-
+    if len(existing) > 1:
+        raise HTTPException(409, 'Há contagens duplicadas deste produto na sessão. Crie uma nova contagem; o histórico foi preservado.')
+    existing = existing[0] if existing else None
     if existing:
+        existing.system_quantity = system_quantity
         existing.counted_quantity = scan.counted_quantity
         existing.scanned_at = settings.now()
         existing.counted_by = current_user.id
@@ -998,13 +1032,14 @@ def scan_item(
         session_item = InventorySessionItem(
             session_id=session_uuid,
             item_id=scan.item_id,
-            system_quantity=item.current_stock,
+            system_quantity=system_quantity,
             counted_quantity=scan.counted_quantity,
             scanned_at=settings.now(),
             counted_by=current_user.id,
         )
         db.add(session_item)
 
+    session.status = SessionStatus.counting
     db.commit()
     return {"message": "Item scanned successfully"}
 
@@ -1047,6 +1082,7 @@ def _session_to_response(session: InventorySession) -> SessionResponse:
     return SessionResponse(
         id=session.id,
         name=session.name,
+        count_location=session.count_location,
         status=session.status.value,
         location_filter=session.location_filter,
         category_filter=session.category_filter,

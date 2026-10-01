@@ -59,3 +59,29 @@ testes pertinentes e sua própria verificação de publicação.
 A continuação agendada desta tarefa está ativa até 8h de Brasília de 01/10/2026;
 depende do laptop ligado e do aplicativo disponível. Preservar dados e segredos,
 notificar somente entregas, falhas ou questões que precisem do responsável.
+
+## Rodada iniciada às 00h04 — estoque
+
+Implementação e validação concluídas; publicação em preparação:
+
+- **Estoque → Conferir estoque** mostra divergências entre total/locais, saldos
+  ausentes/negativos e códigos compartilhados, com busca, filtros e paginação.
+  A consulta só ocorre ao abrir o painel; não altera saldos nem funde cadastros.
+- Contagens exigem local explícito e revisão. Aplicação única, locks ordenados,
+  referência atualizada na recontagem e bloqueio quando houve movimentação no
+  local após a leitura impedem duplicação e sobrescrita de estoque.
+- Códigos repetidos no mesmo lote de novos produtos do bot são rejeitados.
+- Falhas da listagem exibem aviso com nova tentativa, sem indicar estoque vazio.
+- Migração aditiva `b8c9d0e1f2a3`: preserva sessões antigas sem inferir o local.
+
+**383 testes Python e 66 testes frontend passaram**, com TypeScript e build de
+produção concluídos. PostgreSQL isolado comprovou migração, concorrência de
+leitura/aplicação, cancelamento durante espera e preservação de saídas concorrentes.
+Revisão visual local confirmou painel, idiomas, filtros, valores ausentes e falha
+recuperável. Nenhum saldo de produção foi consultado ou corrigido para esses testes.
+
+Limitação conhecida: a listagem/editor geral ainda não suporta todos os saldos
+nulos legados. O diagnóstico mostra os valores ausentes e o erro de abertura é
+recuperável; reparar esse contrato exige uma mudança específica, sem converter
+silenciosamente ausência em zero. Não existe tela de sessões de contagem; esta
+rodada corrige os endpoints existentes e seu wrapper.

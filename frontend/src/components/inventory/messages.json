@@ -1154,5 +1154,17 @@
   "Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.": [
     "El stock inicial debe ser entero, no negativo y estar dentro del límite permitido.",
     "Initial stock must be a non-negative whole number within the allowed limit."
+  ],
+  "Não foi possível carregar a lista de produtos.": [
+    "No se pudo cargar la lista de productos.",
+    "Could not load the product list."
+  ],
+  "Os dados do estoque não foram confirmados. Tente novamente ou abra a conferência de estoque.": [
+    "No se confirmaron los datos del stock. Intente de nuevo o abra la revisión de stock.",
+    "Inventory data could not be confirmed. Try again or open inventory review."
+  ],
+  "Tentar novamente": [
+    "Intentar de nuevo",
+    "Try again"
   ]
 }

@@ -158,29 +158,51 @@ def apply_session(
     session_id: uuid.UUID,
     created_by: uuid.UUID,
 ):
-    """Apply physical inventory — generate adjustment movements"""
-    session = db.query(InventorySession).filter(InventorySession.id == session_id).first()
+    """Apply one reviewed, explicitly scoped physical count exactly once."""
+    from ..models.inventory import InventorySessionItem
+    from ..config import settings
+
+    # All session writers lock the parent first, then product UUIDs in order.
+    # Refresh a session already loaded before this lock waited for another caller.
+    session = db.query(InventorySession).filter(InventorySession.id == session_id).with_for_update().populate_existing().first()
     if not session:
         raise ValueError("Session not found")
+    if session.count_location not in ('loja', 'deposito'):
+        raise StockMovementError('Contagem antiga sem local definido. Crie uma nova contagem indicando loja ou deposito; o histórico foi preservado.', 409)
+    if session.status != SessionStatus.reviewing:
+        raise StockMovementError('A contagem precisa estar em revisão para aplicar. Sessões aplicadas ou canceladas não podem ser reaplicadas.', 409)
+    rows = db.query(InventorySessionItem).filter_by(session_id=session_id).order_by(InventorySessionItem.item_id, InventorySessionItem.id).populate_existing().all()
+    if len({row.item_id for row in rows}) != len(rows):
+        raise StockMovementError('Há contagens duplicadas do mesmo produto nesta sessão. Crie uma nova contagem; nenhum registro antigo foi removido.', 409)
+    counted = [row for row in rows if row.counted_quantity is not None]
+    if not counted:
+        raise StockMovementError('Não há produtos contados para aplicar nesta sessão.', 409)
+    if any(isinstance(row.counted_quantity, bool) or not isinstance(row.counted_quantity, int)
+           or not 0 <= row.counted_quantity <= 2_147_483_647 for row in counted):
+        raise StockMovementError('A contagem contém uma quantidade inválida. Retorne à contagem e confira os valores.', 409)
+    items = db.query(Item).filter(Item.id.in_([row.item_id for row in counted])).order_by(Item.id).with_for_update().populate_existing().all()
+    if len(items) != len(counted) or any(not item.is_active for item in items):
+        raise StockMovementError('Um produto da contagem está inativo ou não existe. Confira a sessão antes de aplicar.', 409)
+    by_id = {item.id: item for item in items}
+    for row in counted:
+        item = by_id[row.item_id]
+        current = item.stock_loja if session.count_location == 'loja' else item.stock_deposito
+        other = item.stock_deposito if session.count_location == 'loja' else item.stock_loja
+        if item.current_stock is None or current is None or other is None or other < 0:
+            raise StockMovementError('Há saldo desconhecido ou negativo no outro local. Confira os saldos antes de aplicar a contagem; nenhum valor foi presumido.', 409)
+        if current != row.system_quantity:
+            raise StockMovementError('O saldo deste local mudou após a contagem. Retorne à contagem e reconte os produtos antes de aplicar.', 409)
 
-    movements = []
-    for session_item in session.session_items:
-        if session_item.counted_quantity is not None:
-            movement = create_movement(
-                db=db,
-                item_id=session_item.item_id,
-                movement_type="adjustment",
-                quantity=session_item.counted_quantity,
-                created_by=created_by,
-                reason=f"Ajuste de inventário - Sessão {session.name}",
-                reference_type="inventory_session",
-                reference_id=str(session_id),
-                location="loja",
-            )
-            movements.append(movement)
+    movements = [create_movement(
+        db=db, item_id=row.item_id, movement_type='adjustment',
+        quantity=row.counted_quantity, created_by=created_by,
+        reason=f'Ajuste de inventário - Sessão {session.name}',
+        reference_type='inventory_session', reference_id=str(session_id),
+        location=session.count_location,
+    ) for row in counted]
 
     session.status = SessionStatus.applied
-    from ..config import settings
     session.applied_at = settings.now()
+    session.approved_by = created_by
     db.commit()
     return movements
