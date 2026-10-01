@@ -1,8 +1,8 @@
 # Evolução noturna — 30/09/2026
 
 Registro de continuidade do trabalho autorizado pelo responsável. Atualizado às
-01h22 de Brasília de 01/10/2026. **Última publicação concluída** no commit
-`eab8b677a0e9970e756573c3726982e89915ce4f` (rodada de saldos ausentes abaixo).
+03h23 de Brasília de 01/10/2026. **Última publicação concluída** no commit
+`fdf0f92fa8ecab3a6e32d27a56ab8654292d4ae3` (rodada de baixas do PDV abaixo).
 A primeira rodada foi publicada em `78a9ea98918ddbe3220d53354c90498f9a96be79`.
 Frontend e backend confirmados Live no Render; CI GitHub concluída com sucesso.
 
@@ -143,7 +143,7 @@ senhas novamente; continuar preservando as confirmações e o histórico.
 
 ## Rodada iniciada às 03h06 — baixas do PDV
 
-Implementação e validação local concluídas; publicação em preparação.
+Implementação, validação e publicação concluídas.
 Reprodução isolada confirmou que uma venda com dois produtos,
 sendo o segundo sem saldo, era concluída com estoque negativo. A baixa direta
 também convertia quantidade fracionária em inteiro, e o carrinho fundia linhas de
@@ -180,3 +180,16 @@ Limites preservados e documentados: criação de venda ainda não tem chave de
 idempotência no backend; a proteção contra reenvio incerto é da tela. Cancelar
 devolve estoque, mas não automatiza reembolso ou estorno de fiado. A revisão de
 regras financeiras permanece separada; o BI Excel não foi alterado.
+
+Publicação confirmada às 03h23: frontend e backend no commit
+`fdf0f92fa8ecab3a6e32d27a56ab8654292d4ae3`, com
+[CI concluída com sucesso](https://github.com/ferreiraluc/erp-eleven/actions/runs/36824299139).
+Render confirmou frontend `dep-dauvnie417fc73fqd8dg` e backend
+`dep-dauvnie417fc73fqd80g` concluídos; API, banco, assistente e worker de etiquetas
+reportam online. Servidores locais de QA encerrados e abas temporárias removidas.
+A revisão Alembic não mudou. Nenhuma impressão, mensagem, compra, redefinição de
+senha ou consulta de saldos de produção foi usada nesta validação.
+
+Não refazer esta rodada na próxima continuação. A rotina noturna segue limitada
+até 08h de Brasília; escolher novas correções apenas a partir de falhas
+reproduzíveis e manter as regras financeiras, BI e estoque como fluxos distintos.
