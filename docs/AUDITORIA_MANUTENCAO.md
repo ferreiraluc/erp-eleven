@@ -28,7 +28,7 @@ As remoções de código permanecem recuperáveis pelo histórico Git.
 | Backend | Retirados sete helpers sem chamadas: antigo hook de saída por venda e utilitários de CPF, comissão, moeda e data. Preservadas as implementações efetivamente usadas. Importação SQLAlchemy atualizada. |
 | Scripts e SQL | SQLs manuais anteriores ao fluxo atual foram para `archive/sql`; removidos deploy que referenciava arquivo inexistente e seed isolado de funcionários fictícios. Alembic intacto. |
 | Dependências | Removidos Headless UI, Heroicons, VueUse, Tesseract.js e plugin Tailwind Forms sem uso, além de MSAL não utilizado pelo conector OneDrive. Removido pacote npm duplicado da raiz. |
-| Atualizações de segurança | Aplicadas correções compatíveis no lockfile npm, sem `--force` nem migração de framework. Auditoria npm: 18 alertas antes, zero depois. |
+| Atualizações de segurança | Aplicadas correções compatíveis no lockfile npm, sem `--force` nem migração de framework. Auditoria npm: 18 alertas antes, zero depois. `python-multipart` atualizado de 0.0.26 para 0.0.32 para corrigir cinco alertas identificados pelo Dependabot (dois altos e três baixos). |
 | Diagnóstico antigo | Removidos logs de login com credenciais/resposta, script de depuração no HTML e endpoints de diagnóstico do servidor Express opcional. |
 | Build e execução | Docker simplificado, exclusões para segredos/artefatos, argumento Vite no build; referência Render corrigida; comandos usam `npm ci`. Docker não foi executado nesta máquina. |
 | Repositório | Arquivos locais de máquina deixaram de ser rastreados e continuam no disco. `.gitignore` atualizado. |
