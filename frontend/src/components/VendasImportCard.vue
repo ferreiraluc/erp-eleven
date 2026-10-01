@@ -2,16 +2,14 @@
   <div class="vendas-import-card">
     <div class="card-header">
       <div class="header-left">
-        <h3 class="card-title">Importar Vendas</h3>
-        <p class="card-subtitle">Planilha VENDASgeral.xlsx</p>
+        <h3 class="card-title">{{ uiText(`Importar Vendas`) }}</h3>
+        <p class="card-subtitle">{{ uiText(`Planilha VENDASgeral.xlsx`) }}</p>
       </div>
       <div class="header-right">
         <button @click="openImportModal" class="import-button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-          Importar
-        </button>
+          </svg> {{ uiText(`Importar`) }} </button>
       </div>
     </div>
 
@@ -26,7 +24,7 @@
           </div>
           <div class="stat-details">
             <div class="stat-number">{{ lastImportStats.imported || 0 }}</div>
-            <div class="stat-label">Importadas</div>
+            <div class="stat-label">{{ uiText(`Importadas`) }}</div>
           </div>
         </div>
         
@@ -38,7 +36,7 @@
           </div>
           <div class="stat-details">
             <div class="stat-number">{{ lastImportStats.skipped || 0 }}</div>
-            <div class="stat-label">Duplicadas</div>
+            <div class="stat-label">{{ uiText(`Duplicadas`) }}</div>
           </div>
         </div>
 
@@ -50,7 +48,7 @@
           </div>
           <div class="stat-details">
             <div class="stat-number">{{ lastImportStats.errors || 0 }}</div>
-            <div class="stat-label">Erros</div>
+            <div class="stat-label">{{ uiText(`Erros`) }}</div>
           </div>
         </div>
       </div>
@@ -64,8 +62,7 @@
             <line x1="8" y1="2" x2="8" y2="6"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          <span class="last-import-text">
-            Última importação: {{ formatDate(lastImportDate) }}
+          <span class="last-import-text"> {{ uiText(`Última importação:`) }} {{ formatDate(lastImportDate) }}
           </span>
         </div>
       </div>
@@ -75,7 +72,7 @@
     <div v-if="showImportModal" class="import-modal-overlay" @click="closeImportModal">
       <div class="import-modal" @click.stop>
         <div class="modal-header">
-          <h2>Importar Vendas - VENDASgeral.xlsx</h2>
+          <h2>{{ uiText(`Importar Vendas - VENDASgeral.xlsx`) }}</h2>
           <button @click="closeImportModal" class="close-button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -87,31 +84,31 @@
           <!-- Info sobre o formato -->
           <div class="custom-format-info">
             <div class="info-box">
-              <h4>📊 Dados Semanais - VENDASgeral.xlsx</h4>
-              <p>Sistema otimizado para extrair totais semanais por vendedor e moeda:</p>
+              <h4>{{ uiText(`📊 Dados Semanais - VENDASgeral.xlsx`) }}</h4>
+              <p>{{ uiText(`Sistema otimizado para extrair totais semanais por vendedor e moeda:`) }}</p>
               
               <div class="mapping-section">
-                <h5>👥 Vendedores (Linha 2):</h5>
+                <h5>{{ uiText(`👥 Vendedores (Linha 2):`) }}</h5>
                 <ul class="mapping-list">
-                  <li><strong>Coluna D:</strong> Junior</li>
-                  <li><strong>Coluna E:</strong> Denis</li>
-                  <li><strong>Coluna F:</strong> Sol</li>
-                  <li><strong>Coluna G:</strong> Wiss</li>
-                  <li><strong>Coluna H:</strong> Lucas</li>
+                  <li><strong>{{ uiText(`Coluna D:`) }}</strong> Junior</li>
+                  <li><strong>{{ uiText(`Coluna E:`) }}</strong> Denis</li>
+                  <li><strong>{{ uiText(`Coluna F:`) }}</strong> Sol</li>
+                  <li><strong>{{ uiText(`Coluna G:`) }}</strong> Wiss</li>
+                  <li><strong>{{ uiText(`Coluna H:`) }}</strong> Lucas</li>
                 </ul>
               </div>
               
               <div class="mapping-section">
-                <h5>💰 Moedas (Coluna C):</h5>
+                <h5>{{ uiText(`💰 Moedas (Coluna C):`) }}</h5>
                 <ul class="mapping-list">
-                  <li><strong>Linha 3:</strong> G$ (Guaranis)</li>
-                  <li><strong>Linha 4:</strong> EUR (Euros)</li>
-                  <li><strong>Linha 5:</strong> R$ (Reais)</li>
-                  <li><strong>Linha 6:</strong> U$ (Dólares)</li>
+                  <li><strong>{{ uiText(`Linha 3:`) }}</strong> {{ uiText(`G$ (Guaranis)`) }}</li>
+                  <li><strong>{{ uiText(`Linha 4:`) }}</strong> {{ uiText(`EUR (Euros)`) }}</li>
+                  <li><strong>{{ uiText(`Linha 5:`) }}</strong> {{ uiText(`R$ (Reais)`) }}</li>
+                  <li><strong>{{ uiText(`Linha 6:`) }}</strong> {{ uiText(`U$ (Dólares)`) }}</li>
                 </ul>
               </div>
               
-              <p class="note">📈 O sistema extrairá os valores das interseções (ex: D3 = vendas do Junior em G$)</p>
+              <p class="note">{{ uiText(`📈 O sistema extrairá os valores das interseções (ex: D3 = vendas do Junior em G$)`) }}</p>
             </div>
           </div>
 
@@ -133,8 +130,8 @@
                   </svg>
                 </div>
                 <div class="upload-text">
-                  <p><strong>Clique para selecionar</strong> sua planilha VENDASgeral.xlsx</p>
-                  <p class="upload-hint">Formato personalizado com mapeamento de células</p>
+                  <p><strong>{{ uiText(`Clique para selecionar`) }}</strong> {{ uiText(`sua planilha VENDASgeral.xlsx`) }}</p>
+                  <p class="upload-hint">{{ uiText(`Formato personalizado com mapeamento de células`) }}</p>
                 </div>
               </div>
 
@@ -161,7 +158,7 @@
 
             <div v-if="selectedFile" class="form-actions">
               <button @click="previewUpload" :disabled="loading" class="btn btn-secondary">
-                {{ loading ? 'Carregando...' : 'Preview' }}
+                {{ loading ? uiText(`Carregando...`) : uiText(`Preview`) }}
               </button>
             </div>
           </div>
@@ -169,47 +166,44 @@
           <!-- Preview dos Dados -->
           <div v-if="previewData" class="preview-section">
             <div class="preview-header">
-              <h3>Preview da Importação</h3>
+              <h3>{{ uiText(`Preview da Importação`) }}</h3>
               <div class="preview-stats">
-                <span class="stat success">{{ previewData.valid_rows }} válidas</span>
+                <span class="stat success">{{ previewData.valid_rows }} {{ uiText(`válidas`) }}</span>
                 <span class="stat error" v-if="previewData.errors.length > 0">
-                  {{ previewData.errors.length }} erros
-                </span>
+                  {{ previewData.errors.length }} {{ uiText(`erros`) }} </span>
               </div>
             </div>
 
             <!-- Erros -->
             <div v-if="previewData.errors.length > 0" class="preview-errors">
-              <h4>Erros Encontrados:</h4>
+              <h4>{{ uiText(`Erros Encontrados:`) }}</h4>
               <ul class="error-list">
                 <li v-for="error in previewData.errors.slice(0, 5)" :key="error" class="error-item">
                   {{ error }}
                 </li>
-                <li v-if="previewData.errors.length > 5" class="error-more">
-                  ... e mais {{ previewData.errors.length - 5 }} erros
-                </li>
+                <li v-if="previewData.errors.length > 5" class="error-more"> {{ uiText(`... e mais`) }} {{ previewData.errors.length - 5 }} {{ uiText(`erros`) }} </li>
               </ul>
             </div>
 
             <!-- Dados válidos -->
             <div v-if="previewData.preview_data.length > 0" class="preview-table">
-              <h4>Primeiras {{ previewData.preview_data.length }} vendas válidas:</h4>
+              <h4>{{ uiText(`Primeiras`) }} {{ previewData.preview_data.length }} {{ uiText(`vendas válidas:`) }}</h4>
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Vendedor</th>
-                    <th>Data</th>
-                    <th>Valor</th>
-                    <th>Moeda</th>
-                    <th>Pagamento</th>
-                    <th>Produto</th>
+                    <th>{{ uiText(`Vendedor`) }}</th>
+                    <th>{{ uiText(`Data`) }}</th>
+                    <th>{{ uiText(`Valor`) }}</th>
+                    <th>{{ uiText(`Moeda`) }}</th>
+                    <th>{{ uiText(`Pagamento`) }}</th>
+                    <th>{{ uiText(`Produto`) }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="sale in previewData.preview_data" :key="sale.row_number">
                     <td>{{ sale.vendedor_nome }}</td>
                     <td>{{ sale.data_venda }}</td>
-                    <td>{{ sale.valor_bruto.toFixed(2) }}</td>
+                    <td>{{ uiNumber(sale.valor_bruto) }}</td>
                     <td>{{ sale.moeda }}</td>
                     <td>{{ sale.metodo_pagamento }}</td>
                     <td>{{ sale.descricao_produto || '-' }}</td>
@@ -219,15 +213,13 @@
             </div>
 
             <div class="preview-actions">
-              <button @click="clearPreview" class="btn btn-secondary">
-                Cancelar
-              </button>
+              <button @click="clearPreview" class="btn btn-secondary"> {{ uiText(`Cancelar`) }} </button>
               <button 
                 @click="confirmImport" 
                 :disabled="loading || previewData.valid_rows === 0"
                 class="btn btn-primary"
               >
-                {{ loading ? 'Importando...' : `Importar ${previewData.valid_rows} vendas` }}
+                {{ loading ? uiText(`Importando...`) : uiText(`Importar {0} vendas`,{0:previewData.valid_rows}) }}
               </button>
             </div>
           </div>
@@ -245,25 +237,20 @@
                   <line x1="9" y1="9" x2="15" y2="15"/>
                 </svg>
               </div>
-              <h3>{{ importResult.success ? 'Importação Concluída!' : 'Erro na Importação' }}</h3>
+              <h3>{{ importResult.success ? uiText(`Importação Concluída!`) : uiText(`Erro na Importação`) }}</h3>
             </div>
 
             <div class="result-stats">
               <div class="result-stat success">
-                <strong>{{ importResult.imported_count }}</strong> vendas importadas
-              </div>
+                <strong>{{ importResult.imported_count }}</strong> {{ uiText(`vendas importadas`) }} </div>
               <div v-if="importResult.skipped_count > 0" class="result-stat warning">
-                <strong>{{ importResult.skipped_count }}</strong> vendas duplicadas (ignoradas)
-              </div>
+                <strong>{{ importResult.skipped_count }}</strong> {{ uiText(`vendas duplicadas (ignoradas)`) }} </div>
               <div v-if="importResult.total_errors > 0" class="result-stat error">
-                <strong>{{ importResult.total_errors }}</strong> erros encontrados
-              </div>
+                <strong>{{ importResult.total_errors }}</strong> {{ uiText(`erros encontrados`) }} </div>
             </div>
 
             <div class="result-actions">
-              <button @click="closeImportModal" class="btn btn-primary">
-                Fechar
-              </button>
+              <button @click="closeImportModal" class="btn btn-primary"> {{ uiText(`Fechar`) }} </button>
             </div>
           </div>
         </div>
@@ -273,6 +260,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted } from 'vue'
 import { excelImportAPI, type ImportPreviewResponse, type ImportResultResponse } from '@/services/api'
 
@@ -334,7 +322,7 @@ const clearPreview = () => {
 
 const previewUpload = async () => {
   if (!selectedFile.value) {
-    alert('Selecione um arquivo Excel')
+    alert(uiText(`Selecione um arquivo Excel`))
     return
   }
 
@@ -344,7 +332,7 @@ const previewUpload = async () => {
     previewData.value = result
   } catch (error: any) {
     console.error('Erro no preview upload:', error)
-    alert('Erro ao fazer preview: ' + (error.response?.data?.detail || error.message))
+    alert(uiText(`Erro ao fazer preview: {0}`,{0:error.response?.data?.detail || error.message}))
   } finally {
     loading.value = false
   }
@@ -373,14 +361,14 @@ const confirmImport = async () => {
     
   } catch (error: any) {
     console.error('Erro na importação:', error)
-    alert('Erro na importação: ' + (error.response?.data?.detail || error.message))
+    alert(uiText(`Erro na importação: {0}`,{0:error.response?.data?.detail || error.message}))
   } finally {
     loading.value = false
   }
 }
 
 const formatDate = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleString('pt-BR', {
+  return new Date(dateStr).toLocaleString(uiLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -394,7 +382,7 @@ const formatFileSize = (bytes: number): string => {
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return (bytes / Math.pow(k,i)).toLocaleString(uiLocale(),{maximumFractionDigits:2}) + ' ' + sizes[i]
 }
 
 // Lifecycle

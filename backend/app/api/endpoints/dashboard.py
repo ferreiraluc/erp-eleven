@@ -9,6 +9,7 @@ from ...models.vendedor import Vendedor
 from ...models.pedido import Pedido
 from ...dependencies import get_current_active_user
 from ..validators import validate_date
+from ...services.access_policy import sales_query
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ def get_dashboard_stats(
     today = date.today()
     
     # Total vendas (sum of valor_liquido)
-    total_vendas = db.query(func.sum(Venda.valor_liquido)).scalar() or 0
+    total_vendas = sales_query(db.query(func.sum(Venda.valor_liquido)), Venda, current_user).scalar() or 0
     
     # Total vendedores ativos
     total_vendedores = db.query(func.count(Vendedor.id)).filter(Vendedor.ativo == True).scalar() or 0
@@ -30,7 +31,7 @@ def get_dashboard_stats(
     total_pedidos = db.query(func.count(Pedido.id)).scalar() or 0
     
     # Vendas hoje
-    vendas_hoje = db.query(func.count(Venda.id)).filter(Venda.data_venda == today).scalar() or 0
+    vendas_hoje = sales_query(db.query(func.count(Venda.id)), Venda, current_user).filter(Venda.data_venda == today).scalar() or 0
     
     # Meta mensal (mock data for now)
     meta_mensal = 15000
@@ -40,7 +41,8 @@ def get_dashboard_stats(
         Venda.moeda,
         func.sum(Venda.valor_bruto).label('valor'),
         func.count(Venda.id).label('quantidade')
-    ).group_by(Venda.moeda).all()
+    )
+    vendas_por_moeda = sales_query(vendas_por_moeda, Venda, current_user).group_by(Venda.moeda).all()
     
     vendas_por_moeda_formatted = [
         {
@@ -80,6 +82,7 @@ def get_vendas_por_periodo(
         validated_end = validate_date(end_date, "end_date")
         query = query.filter(Venda.data_venda <= validated_end)
     
+    query = sales_query(query, Venda, current_user)
     resultados = query.order_by(func.date(Venda.data_venda)).all()
     
     return [
@@ -96,13 +99,14 @@ def get_vendedores_performance(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ) -> List[Dict[str, Any]]:
-    resultados = db.query(
+    query = db.query(
         Vendedor.nome,
         func.count(Venda.id).label('total_vendas'),
         func.sum(Venda.valor_liquido).label('valor_total')
     ).join(Venda, Vendedor.id == Venda.vendedor_id)\
      .group_by(Vendedor.id, Vendedor.nome)\
-     .order_by(func.sum(Venda.valor_liquido).desc()).all()
+     .order_by(func.sum(Venda.valor_liquido).desc())
+    resultados = sales_query(query, Venda, current_user).all()
     
     return [
         {

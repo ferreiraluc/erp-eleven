@@ -1,26 +1,28 @@
 <template>
   <div class="fields">
-    <label>País<select :value="modelValue.pais" @change="update('pais',($event.target as HTMLSelectElement).value)"><option value="PY">Paraguai</option><option value="BR">Brasil</option></select></label>
-    <label>{{nameLabel || 'Nome do destinatário'}}<input :value="modelValue.nome" @input="update('nome',($event.target as HTMLInputElement).value)" maxlength="120"/></label>
-    <label v-for="f in fields" :key="f.key" :class="{wide:f.key==='endereco'}">{{f.label}}
+    <label>{{ tr('País') }}<select :value="modelValue.pais" @change="update('pais',($event.target as HTMLSelectElement).value)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></select></label>
+    <label>{{tr(nameLabel || 'Nome do destinatário')}}<input :value="modelValue.nome" @input="update('nome',($event.target as HTMLInputElement).value)" maxlength="120"/></label>
+    <label v-for="f in fields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.label)}}
       <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
     </label>
     <div v-if="modelValue.pais==='BR'" class="postal wide" aria-live="polite">
-      <button type="button" @click="lookup" :disabled="busy || !validCep">{{busy ? 'Consultando CEP…' : 'Conferir e completar pelo CEP'}}</button>
-      <p v-if="message">{{message}}</p>
+      <button type="button" @click="lookup" :disabled="busy || !validCep">{{busy ? tr('Consultando CEP…') : tr('Conferir e completar pelo CEP')}}</button>
+      <p v-if="message">{{tr(message)}}</p>
       <template v-if="conflicts.length">
-        <p class="warning">O endereço informado difere da consulta. Seus dados foram mantidos:</p>
-        <ul><li v-for="c in conflicts" :key="c.field">{{labels[c.field] || c.field}}: informado “{{c.provided}}”; ViaCEP: “{{c.suggested}}”.</li></ul>
-        <p>Confira o CEP com o cliente e corrija o campo correspondente antes de imprimir ou emitir a etiqueta.</p>
+        <p class="warning">{{ tr('O endereço informado difere da consulta. Seus dados foram mantidos:') }}</p>
+        <ul><li v-for="c in conflicts" :key="c.field">{{tr(labels[c.field] || c.field)}}{{ tr(': informado “') }}{{c.provided}}{{ tr('”; ViaCEP: “') }}{{c.suggested}}”.</li></ul>
+        <p>{{ tr('Confira o CEP com o cliente e corrija o campo correspondente antes de imprimir ou emitir a etiqueta.') }}</p>
       </template>
-      <small>A consulta preenche campos vazios. Número, complemento e CPF permanecem como você informou.</small>
+      <small>{{ tr('A consulta preenche campos vazios. Número, complemento e CPF permanecem como você informou.') }}</small>
     </div>
   </div>
 </template>
 <script setup lang="ts">
 import {computed,ref,watch,nextTick} from 'vue'
 import api from '@/services/api'
+import { useAddressI18n } from './i18n'
 import type {AddressData} from './types'
+const {tr}=useAddressI18n()
 const props=defineProps<{modelValue:AddressData;nameLabel?:string}>(),emit=defineEmits<{(e:'update:modelValue',v:AddressData):void}>()
 const busy=ref(false),message=ref(''),conflicts=ref<{field:string;provided:string;suggested:string}[]>([])
 const validCep=computed(()=>/^[0-9]{8}$/.test(props.modelValue.cep.replace(/[\s-]/g,'')))
@@ -45,7 +47,7 @@ async function lookup(){
       }
       conflicts.value=data.conflicts
       message.value=data.conflicts.length ? '' : data.filled.length ? 'Dados disponíveis preenchidos pelo ViaCEP. Confira o endereço.' : 'Conferência concluída. CEPs gerais podem não informar rua ou bairro.'
-    }else message.value=data.warnings.join(' ')
+    }else message.value=({invalid:'Informe um CEP brasileiro com oito dígitos.',not_found:'CEP não encontrado. Confira os oito dígitos com o cliente.',skipped:'Consulta CEP não se aplica a este país.'} as Record<string,string>)[data.status] || 'Não foi possível consultar o CEP. Você pode preencher os dados e tentar novamente.'
   }catch{if(current===sequence)message.value='Não foi possível consultar o CEP. Você pode preencher os dados e tentar novamente.'}
   finally{if(current===sequence || !busy.value)busy.value=false}
 }

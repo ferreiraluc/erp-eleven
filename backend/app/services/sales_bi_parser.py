@@ -12,7 +12,7 @@ from zipfile import ZipFile, BadZipFile
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
-PARSER_VERSION = 2
+PARSER_VERSION = 3
 MONTHS = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho',
           'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 CURRENCIES = {'g$': 'PYG', 'gs': 'PYG', 'r$': 'BRL', 'u$': 'USD', 'us$': 'USD', 'eur': 'EUR', '€': 'EUR'}
@@ -57,7 +57,7 @@ def filename_month(filename):
 
 
 def parse_workbook(content, *, year=None, month=None, current=False):
-    """Only persist sales summaries, coordinates and fingerprints, never customer rows."""
+    """Persist saved summaries and recognized sales rows, never formulas or XLSX bytes."""
     if len(content) > 20_000_000:
         raise WorkbookError('Planilha maior que o limite de 20 MB.')
     try:
@@ -95,8 +95,9 @@ def parse_workbook(content, *, year=None, month=None, current=False):
             totals = {name: number(get(total_row, col)) for col, name in sellers.items()}
             currency_rows = {CURRENCIES[normal(get(r, 3))]: r for r in range(header_row + 1, total_row) if normal(get(r, 3)) in CURRENCIES}
             amounts = {name: {currency: packed(number(get(r, col))) for currency, r in currency_rows.items()} for col, name in sellers.items()}
-            raw = [list(r[1:6]) for r in rows[total_row + 1:] if normal(r[1]) in CURRENCIES and number(r[2]) is not None]
-            populated = bool(raw) or any(v is not None and v != 0 for v in totals.values())
+            raw = [list(r[:12]) for r in rows[total_row + 1:]
+                   if (normal(r[1]) in CURRENCIES and number(r[2]) is not None) or normal(r[0])]
+            populated = any(normal(r[1]) in CURRENCIES and number(r[2]) is not None for r in rows[total_row + 1:]) or any(v is not None and v != 0 for v in totals.values())
             fingerprint = sha256(json.dumps(raw, ensure_ascii=False, default=str).encode()).hexdigest() if raw else None
             sheets[sheet.title] = {'rows': rows, 'total': number(get(total_row, 11)), 'sellers': totals, 'currencies': amounts,
                                    'populated': populated, 'fingerprint': fingerprint, 'total_row': total_row}
@@ -220,9 +221,11 @@ def parse_workbook(content, *, year=None, month=None, current=False):
                 direction = 'acima' if difference > 0 else 'abaixo'
                 warnings.append(f'A soma por vendedor está US$ {formatted} {direction} do fechamento mensal. '
                                 'Pode haver ajustes gerais ou referências diferentes entre os resumos. Os resultados salvos foram preservados.')
+        from .sales_bi_entry_parser import extract_entries
+        entries = extract_entries(candidates, weeks, year=year, month=month)
         return {'version': PARSER_VERSION, 'year': year, 'month': month, 'current': current, 'total_usd': packed(total),
                 'source_cell': total_cell, 'sellers': monthly_sellers, 'weeks': weeks, 'warnings': warnings,
-                'currencies_complete': detailed, 'main_sheet': main_name}
+                'currencies_complete': detailed, 'main_sheet': main_name, 'entries': entries}
     finally:
         workbook.close()
 

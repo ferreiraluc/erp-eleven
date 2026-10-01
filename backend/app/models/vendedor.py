@@ -21,4 +21,4 @@ class Vendedor(Base):
     created_at = Column(DateTime, default=lambda: settings.now())
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
 
-    usuario = relationship("Usuario", backref="vendedor")
+    usuario = relationship("Usuario", backref="vendedor", foreign_keys=[usuario_id])

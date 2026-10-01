@@ -3,7 +3,7 @@
     <div class="modal-container" @click.stop>
       <div class="modal-header">
         <div class="header-info">
-          <h2 class="modal-title">Detalhes do Pedido</h2>
+          <h2 class="modal-title">{{ $tr("Detalhes do Pedido") }}</h2>
           <span class="pedido-number">{{ pedido.numero_pedido }}</span>
         </div>
         <div class="header-actions">
@@ -11,7 +11,7 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            Editar
+            {{ $tr("Editar") }}
           </button>
           <button @click="$emit('close')" class="modal-close">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,11 +45,11 @@
           </div>
           <div class="dates-info">
             <div class="date-item">
-              <span class="date-label">Criado:</span>
+              <span class="date-label">{{ $tr("Criado:") }}</span>
               <span class="date-value">{{ formatDate(pedido.created_at) }}</span>
             </div>
             <div class="date-item">
-              <span class="date-label">Atualizado:</span>
+              <span class="date-label">{{ $tr("Atualizado:") }}</span>
               <span class="date-value">{{ formatDate(pedido.updated_at) }}</span>
             </div>
           </div>
@@ -57,11 +57,11 @@
 
         <!-- Descrição do Pedido -->
         <div class="info-section">
-          <h3 class="section-title">Descrição do Pedido</h3>
+          <h3 class="section-title">{{ $tr("Descrição do Pedido") }}</h3>
           <div class="description-display">
             <p class="description-text">{{ pedido.descricao }}</p>
             <div class="valor-info">
-              <span class="valor-label">Valor Total:</span>
+              <span class="valor-label">{{ $tr("Valor Total:") }}</span>
               <span class="valor-value">{{ pedido.moeda || 'G$' }} {{ formatCurrency(pedido.valor_total) }}</span>
             </div>
           </div>
@@ -69,24 +69,24 @@
 
         <!-- Anexos -->
         <div v-if="anexos.length" class="info-section">
-          <h3 class="section-title">Fotos e Anexos</h3>
+          <h3 class="section-title">{{ $tr("Fotos e Anexos") }}</h3>
           <AnexosCarousel :anexos="anexos" :editable="false" />
         </div>
 
         <!-- Cliente Info (Opcional) -->
         <div v-if="pedido.cliente_nome || pedido.cliente_telefone || pedido.cliente_email" class="info-section">
-          <h3 class="section-title">Dados do Cliente</h3>
+          <h3 class="section-title">{{ $tr("Dados do Cliente") }}</h3>
           <div class="info-grid">
             <div v-if="pedido.cliente_nome" class="info-item">
-              <span class="info-label">Nome:</span>
+              <span class="info-label">{{ $tr("Nome:") }}</span>
               <span class="info-value">{{ pedido.cliente_nome }}</span>
             </div>
             <div v-if="pedido.cliente_telefone" class="info-item">
-              <span class="info-label">Telefone:</span>
+              <span class="info-label">{{ $tr("Telefone:") }}</span>
               <span class="info-value">{{ formatPhone(pedido.cliente_telefone) }}</span>
             </div>
             <div v-if="pedido.cliente_email" class="info-item">
-              <span class="info-label">E-mail:</span>
+              <span class="info-label">{{ $tr("E-mail:") }}</span>
               <span class="info-value">{{ pedido.cliente_email }}</span>
             </div>
           </div>
@@ -94,22 +94,13 @@
 
         <!-- Endereço (Opcional) -->
         <div v-if="pedido.endereco_entrega" class="info-section">
-          <h3 class="section-title">Endereço de Entrega</h3>
+          <h3 class="section-title">{{ $tr("Endereço de Entrega") }}</h3>
           <div class="address-display">
             <div class="address-line">{{ pedido.endereco_entrega }}</div>
           </div>
         </div>
 
-        <!-- Rastreamento -->
-        <div v-if="pedido.codigo_rastreio" class="info-section">
-          <h3 class="section-title">Rastreamento</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="info-label">Código de Rastreio:</span>
-              <span class="info-value tracking-code">{{ pedido.codigo_rastreio }}</span>
-            </div>
-          </div>
-        </div>
+        <OrderParcelsPanel :order="pedido" @linked="refreshOrder" />
       </div>
 
       <div class="modal-footer">
@@ -118,13 +109,13 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          {{ pedido.codigo_rastreio ? 'Ver Rastreamento' : 'Criar Rastreamento' }}
+          {{ pedido.codigo_rastreio ? uiText(`Ver Rastreamento`) : uiText(`Criar Rastreamento`) }}
         </button>
         <button @click="$emit('edit', pedido)" class="btn-primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
-          Editar Pedido
+          {{ $tr("Editar Pedido") }}
         </button>
       </div>
     </div>
@@ -132,10 +123,12 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { useRouter } from 'vue-router'
 import { ref, watch, onMounted } from 'vue'
 import { pedidosAPI, pedidoAnexosAPI, type Pedido, type PedidoAnexo } from '@/services/api'
 import AnexosCarousel from './AnexosCarousel.vue'
+import OrderParcelsPanel from './logistics/OrderParcelsPanel.vue'
 
 interface Props {
   pedido: Pedido
@@ -143,14 +136,20 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   edit: [pedido: Pedido]
+  updated: [pedido: Pedido]
 }>()
 
 const router = useRouter()
 
 const anexos = ref<PedidoAnexo[]>([])
+
+async function refreshOrder() {
+  const updated = await pedidosAPI.getById(props.pedido.id)
+  emit('updated', updated)
+}
 
 async function loadAnexos() {
   try {
@@ -164,7 +163,7 @@ onMounted(loadAnexos)
 watch(() => props.pedido.id, loadAnexos)
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('pt-BR', {
+  return new Date(dateString).toLocaleDateString(uiLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -184,7 +183,7 @@ const formatPhone = (phone: string) => {
 }
 
 const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', {
+  return value.toLocaleString(uiLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
@@ -192,11 +191,11 @@ const formatCurrency = (value: number) => {
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'PENDENTE': 'Pendente',
-    'PROCESSANDO': 'Processando',
-    'ENVIADO': 'Enviado',
-    'ENTREGUE': 'Entregue',
-    'CANCELADO': 'Cancelado'
+    'PENDENTE': uiText(`Pendente`),
+    'PROCESSANDO': uiText(`Processando`),
+    'ENVIADO': uiText(`Enviado`),
+    'ENTREGUE': uiText(`Entregue`),
+    'CANCELADO': uiText(`Cancelado`)
   }
   return labels[status] || status
 }

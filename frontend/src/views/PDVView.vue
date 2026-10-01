@@ -5,14 +5,14 @@
     <div class="pdv-header">
       <button class="pdv-back-btn" @click="router.push('/dashboard')">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Dashboard
+        {{ $tr("Dashboard") }}
       </button>
       <span class="pdv-header-title">PDV</span>
 
       <!-- Exchange rate button (same as dashboard) -->
-      <button class="pdv-rate-btn" @click="openRateModal" :title="canEditRates ? 'Editar taxas de câmbio' : 'Taxas de câmbio'">
-        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ rateUsd.toLocaleString('es-PY') }}</span>
-        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ currencyStore.exchangeRates['R$'].toFixed(2) }}</span>
+      <button class="pdv-rate-btn" @click="openRateModal" :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)">
+        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ rateUsd.toLocaleString(uiLocale()) }}</span>
+        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ uiNumber(currencyStore.exchangeRates['R$'],2) }}</span>
         <svg v-if="canEditRates" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="13" height="13" class="pdv-rate-edit-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
       </button>
     </div>
@@ -21,11 +21,11 @@
     <div class="pdv-tab-bar mobile-only">
       <button :class="['pdv-tab', { active: mobileTab === 'products' }]" @click="mobileTab = 'products'">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        Produtos
+        {{ $tr("Produtos") }}
       </button>
       <button :class="['pdv-tab', { active: mobileTab === 'cart' }]" @click="mobileTab = 'cart'">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        Carrinho
+        {{ $tr("Carrinho") }}
         <span v-if="pdv.cartCount > 0" class="pdv-tab-badge">{{ pdv.cartCount }}</span>
       </button>
     </div>
@@ -39,11 +39,11 @@
           <div class="pdv-search-input-wrap">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="pdv-search-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input ref="searchInput" v-model="searchQuery" type="text"
-              placeholder="Buscar produto, SKU ou código de barras… (F2)"
+              :placeholder='$tr("Buscar produto, SKU ou código de barras… (F2)")'
               class="pdv-search-input" @keydown.enter="onSearchEnter" @input="onSearchInput" />
             <button v-if="searchQuery" class="pdv-search-clear" @click="clearSearch">×</button>
           </div>
-          <button class="pdv-scan-btn" @click="showScanner = true" title="Escanear código">
+          <button class="pdv-scan-btn" @click="showScanner = true" :title='$tr("Escanear código")'>
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12v.01M12 8h.01M4 8h.01M20 8h.01M4 4h4M20 4h-4M4 20h4M20 20h-4"/></svg>
           </button>
         </div>
@@ -61,7 +61,7 @@
             </div>
             <div class="pdv-result-right">
               <div class="pdv-result-stock" :class="item.current_stock <= 0 ? 'stock-out' : item.current_stock < 3 ? 'stock-low' : 'stock-ok'">
-                {{ item.current_stock }} un
+                {{ item.current_stock }} {{ $tr("un") }}
               </div>
               <div class="pdv-result-price">
                 <template v-if="isNativeCurrency(item.sale_currency)">
@@ -76,19 +76,19 @@
             </div>
           </div>
           <div v-if="searchQuery && !loadingSearch" class="pdv-result-avulso" @click="openAvulso()">
-            <span>⚠</span> Produto não encontrado? Adicionar manualmente
+            <span>⚠</span> {{ $tr("Produto não encontrado? Adicionar manualmente") }}
           </div>
         </div>
 
         <div v-else-if="!searchQuery" class="pdv-search-hint">
           <div class="pdv-search-hint-icon">🔍</div>
-          <p>Digite o nome, SKU ou escaneie o código de barras para adicionar produtos</p>
-          <p class="pdv-shortcut-hint">Atalho: <kbd>F2</kbd> busca · <kbd>F5</kbd> pagar · <kbd>Esc</kbd> voltar</p>
+          <p>{{ $tr("Digite o nome, SKU ou escaneie o código de barras para adicionar produtos") }}</p>
+          <p class="pdv-shortcut-hint">{{ $tr("Atalho:") }} <kbd>F2</kbd> {{ $tr("busca ·") }} <kbd>F5</kbd> {{ $tr("pagar ·") }} <kbd>Esc</kbd> {{ $tr("voltar") }}</p>
         </div>
-        <div v-else-if="loadingSearch" class="pdv-search-loading">Buscando…</div>
+        <div v-else-if="loadingSearch" class="pdv-search-loading">{{ $tr("Buscando…") }}</div>
         <div v-else class="pdv-no-results">
-          <p>Nenhum produto encontrado para "{{ searchQuery }}"</p>
-          <button class="pdv-btn-avulso" @click="openAvulso(searchQuery)">+ Adicionar como item avulso</button>
+          <p>{{ $tr("Nenhum produto encontrado para \"") }}{{ searchQuery }}"</p>
+          <button class="pdv-btn-avulso" @click="openAvulso(searchQuery)">{{ $tr("+ Adicionar como item avulso") }}</button>
         </div>
       </div>
 
@@ -97,8 +97,8 @@
 
         <!-- Fixed header -->
         <div class="pdv-cart-header">
-          <span class="pdv-cart-title">Carrinho</span>
-          <span class="pdv-cart-count">{{ pdv.cartCount }} item{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
+          <span class="pdv-cart-title">{{ $tr("Carrinho") }}</span>
+          <span class="pdv-cart-count">{{ pdv.cartCount }} {{ $tr("item") }}{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
           <button v-if="pdv.cart.length" class="pdv-cart-clear" @click="confirmClear">🗑</button>
         </div>
 
@@ -107,7 +107,7 @@
 
           <!-- Client -->
           <div class="pdv-client-row">
-            <input v-model="clienteNomeInput" type="text" placeholder="Cliente (opcional)"
+            <input v-model="clienteNomeInput" type="text" :placeholder='$tr("Cliente (opcional)")'
               class="pdv-client-input" @input="pdv.clienteNome = clienteNomeInput" />
           </div>
 
@@ -121,7 +121,7 @@
               <div class="pdv-ci-body">
                 <div class="pdv-ci-info">
                   <div class="pdv-ci-name">
-                    <span v-if="item.is_avulso" class="ci-avulso-badge">avulso</span>
+                    <span v-if="item.is_avulso" class="ci-avulso-badge">{{ $tr("avulso") }}</span>
                     {{ item.item_name }}
                   </div>
                   <div class="pdv-ci-meta">
@@ -149,17 +149,17 @@
           </div>
           <div v-else class="pdv-cart-empty">
             <div class="pdv-cart-empty-icon">🛒</div>
-            <p>Carrinho vazio</p>
+            <p>{{ $tr("Carrinho vazio") }}</p>
           </div>
 
           <!-- Totals -->
           <div class="pdv-totals" v-if="pdv.cart.length">
-            <div class="pdv-total-row"><span>Subtotal</span><span>{{ fmtGs(pdv.subtotal) }}</span></div>
+            <div class="pdv-total-row"><span>{{ $tr("Subtotal") }}</span><span>{{ fmtGs(pdv.subtotal) }}</span></div>
             <div v-if="pdv.discountGs > 0" class="pdv-total-row pdv-discount-row">
-              <span>Desconto</span><span>-{{ fmtGs(pdv.discountGs) }}</span>
+              <span>{{ $tr("Desconto") }}</span><span>-{{ fmtGs(pdv.discountGs) }}</span>
             </div>
             <div class="pdv-total-row pdv-grand-total">
-              <span>TOTAL</span><span>{{ fmtGs(pdv.total) }}</span>
+              <span>{{ $tr("TOTAL") }}</span><span>{{ fmtGs(pdv.total) }}</span>
             </div>
             <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / rateUsd) }}</div>
           </div>
@@ -167,11 +167,11 @@
           <!-- ── Payment section ── -->
           <div class="pdv-payment-section" v-if="pdv.cart.length">
 
-            <div class="pdv-payment-divider">💳 Pagamento</div>
+            <div class="pdv-payment-divider">{{ $tr("💳 Pagamento") }}</div>
 
             <!-- Discount -->
             <div class="pay-discount-row">
-              <span class="pay-discount-label">Desconto (G$)</span>
+              <span class="pay-discount-label">{{ $tr("Desconto (G$)") }}</span>
               <div class="pay-discount-input-wrap">
                 <span class="pay-currency-prefix">G$</span>
                 <input v-model.number="pdv.discountGs" type="number" min="0" class="pay-discount-input" placeholder="0" />
@@ -191,7 +191,7 @@
                 </div>
                 <button class="pay-entry-remove" @click="removePayment(p.id)">×</button>
               </div>
-              <div v-if="!localPayments.length" class="pay-empty">Nenhum pagamento adicionado</div>
+              <div v-if="!localPayments.length" class="pay-empty">{{ $tr("Nenhum pagamento adicionado") }}</div>
             </div>
 
             <!-- Add payment form -->
@@ -215,12 +215,12 @@
                     :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
                     @keydown.enter="addPayment" />
                 </div>
-                <button class="pay-btn-total" @click="fillTotal" title="Preencher valor restante">Total</button>
+                <button class="pay-btn-total" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
-                <button class="pay-btn-add" @click="addPayment" :disabled="!newAmount">+ Add</button>
+                <button class="pay-btn-add" @click="addPayment" :disabled="!newAmount">{{ $tr("+ Add") }}</button>
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
-                <span>Taxa:</span>
+                <span>{{ $tr("Taxa:") }}</span>
                 <input v-model.number="newRate" type="number" min="0" step="0.01" class="pay-rate-input" />
                 <span>{{ newCurrency }}/G$</span>
                 <span class="pay-converted">= {{ fmtGs(newAmount * newRate) }}</span>
@@ -230,14 +230,14 @@
             <!-- Payment summary -->
             <div class="pay-summary-inline">
               <div class="pay-sum-row">
-                <span>Pago</span>
+                <span>{{ $tr("Pago") }}</span>
                 <span :class="payTotalPaid >= pdv.total ? 'pay-ok' : 'pay-short'">{{ fmtGs(payTotalPaid) }}</span>
               </div>
               <div v-if="payTroco > 0" class="pay-sum-row pay-troco-row">
-                <span>Troco</span><span class="pay-troco">{{ fmtGs(payTroco) }}</span>
+                <span>{{ $tr("Troco") }}</span><span class="pay-troco">{{ fmtGs(payTroco) }}</span>
               </div>
               <div v-if="payRemaining > 0" class="pay-sum-row pay-remaining-row">
-                <span>Faltando</span><span class="pay-remaining">{{ fmtGs(payRemaining) }}</span>
+                <span>{{ $tr("Faltando") }}</span><span class="pay-remaining">{{ fmtGs(payRemaining) }}</span>
               </div>
             </div>
 
@@ -250,10 +250,10 @@
           <button class="pay-confirm-btn"
             :disabled="!canConfirmPayment || pdv.loading || !pdv.cart.length"
             @click="confirmPayment">
-            <span v-if="pdv.loading">Processando…</span>
-            <span v-else-if="!pdv.cart.length">Carrinho vazio</span>
-            <span v-else-if="payRemaining > 0">Faltando {{ fmtGs(payRemaining) }}</span>
-            <span v-else>✓ Confirmar e imprimir</span>
+            <span v-if="pdv.loading">{{ $tr("Processando…") }}</span>
+            <span v-else-if="!pdv.cart.length">{{ $tr("Carrinho vazio") }}</span>
+            <span v-else-if="payRemaining > 0">{{ $tr("Faltando") }} {{ fmtGs(payRemaining) }}</span>
+            <span v-else>{{ $tr("✓ Confirmar e imprimir") }}</span>
           </button>
         </div>
 
@@ -269,7 +269,7 @@
     <div v-if="showRateModal" class="er-overlay" @click.self="showRateModal = false">
       <div class="er-modal">
         <div class="er-header">
-          <h2>Taxas de Câmbio</h2>
+          <h2>{{ $tr("Taxas de Câmbio") }}</h2>
           <button class="er-close" @click="showRateModal = false">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
@@ -278,11 +278,11 @@
           <div v-if="rateError" class="er-error">{{ rateError }}</div>
           <div class="er-form">
             <div class="er-group">
-              <label>USD → Guarani (G$)</label>
+              <label>{{ $tr("USD → Guarani (G$)") }}</label>
               <input type="number" step="1" v-model.number="editingRates.usd_to_pyg" placeholder="6400" class="er-input" :disabled="!canEditRates" />
             </div>
             <div class="er-group">
-              <label>USD → Real (R$)</label>
+              <label>{{ $tr("USD → Real (R$)") }}</label>
               <input type="number" step="0.01" v-model.number="editingRates.usd_to_brl" placeholder="5.85" class="er-input" :disabled="!canEditRates" />
             </div>
             <div class="er-group">
@@ -290,16 +290,16 @@
               <input type="number" step="0.001" v-model.number="editingRates.eur_to_usd" placeholder="1.085" class="er-input" :disabled="!canEditRates" />
             </div>
             <div class="er-group">
-              <label>EUR → Real (R$)</label>
+              <label>{{ $tr("EUR → Real (R$)") }}</label>
               <input type="number" step="0.01" v-model.number="editingRates.eur_to_brl" placeholder="6.20" class="er-input" :disabled="!canEditRates" />
             </div>
           </div>
         </div>
         <div class="er-footer">
-          <button class="er-btn-cancel" @click="showRateModal = false">Cancelar</button>
+          <button class="er-btn-cancel" @click="showRateModal = false">{{ $tr("Cancelar") }}</button>
           <button v-if="canEditRates" class="er-btn-save" @click="saveRates" :disabled="savingRates">
-            <span v-if="savingRates">Salvando…</span>
-            <span v-else>Salvar Taxas</span>
+            <span v-if="savingRates">{{ $tr("Salvando…") }}</span>
+            <span v-else>{{ $tr("Salvar Taxas") }}</span>
           </button>
         </div>
       </div>
@@ -313,6 +313,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePdvStore } from '@/stores/pdv'
@@ -396,9 +397,9 @@ async function saveRates() {
       eur_to_brl: editingRates.value.eur_to_brl || undefined,
     })
     showRateModal.value = false
-    showToast('Taxas atualizadas', 'success')
+    showToast(uiText(`Taxas atualizadas`), 'success')
   } catch (e: any) {
-    rateError.value = e?.response?.data?.detail || e?.message || 'Erro ao salvar taxas'
+    rateError.value = e?.response?.data?.detail || e?.message || uiText(`Erro ao salvar taxas`)
   } finally {
     savingRates.value = false
   }
@@ -413,21 +414,21 @@ const newRate = ref(0)
 const newReference = ref('')
 const amountInput = ref<HTMLInputElement>()
 
-const PAYMENT_METHODS = [
-  { value: 'cash_usd',     label: '💵 Dinheiro U$' },
-  { value: 'cash_gs',      label: '💵 Dinheiro G$' },
-  { value: 'cash_brl',     label: '💵 Dinheiro R$' },
-  { value: 'cash_eur',     label: '💵 Dinheiro €' },
-  { value: 'card',         label: '💳 Cartão' },
+const PAYMENT_METHODS = computed(() => [
+  { value: 'cash_usd',     label: uiText(`💵 Dinheiro U$`) },
+  { value: 'cash_gs',      label: uiText(`💵 Dinheiro G$`) },
+  { value: 'cash_brl',     label: uiText(`💵 Dinheiro R$`) },
+  { value: 'cash_eur',     label: uiText(`💵 Dinheiro €`) },
+  { value: 'card',         label: uiText(`💳 Cartão`) },
   { value: 'pix',          label: '📱 PIX' },
   { value: 'mercadopago',  label: '🛒 MercadoPago' },
-  { value: 'transfer_br',  label: '🏦 Transf. Brasil' },
-  { value: 'transfer_py',  label: '🏦 Transf. Paraguai' },
-  { value: 'pix_cambista', label: '🔄 PIX Cambista' },
-  { value: 'qr_py',        label: '📲 QR Paraguai' },
+  { value: 'transfer_br',  label: uiText(`🏦 Transf. Brasil`) },
+  { value: 'transfer_py',  label: uiText(`🏦 Transf. Paraguai`) },
+  { value: 'pix_cambista', label: uiText(`🔄 PIX Cambista`) },
+  { value: 'qr_py',        label: uiText(`📲 QR Paraguai`) },
   { value: 'tigo_money',   label: '📲 Tigo Money' },
-  { value: 'fiado',        label: '📒 Fiado' },
-]
+  { value: 'fiado',        label: uiText(`📒 Fiado`) },
+])
 
 function methodCurrency(m: string) {
   if (['cash_brl', 'pix', 'transfer_br', 'pix_cambista', 'mercadopago'].includes(m)) return 'BRL'
@@ -442,7 +443,7 @@ function defaultRate(c: string) {
   return 1
 }
 function methodLabel(m: string) {
-  return PAYMENT_METHODS.find(x => x.value === m)?.label.replace(/^\S+\s/, '') || m
+  return PAYMENT_METHODS.value.find(x => x.value === m)?.label.replace(/^\S+\s/, '') || m
 }
 
 watch(newMethod, (m) => {
@@ -456,9 +457,9 @@ watch(() => pdv.cart.length, (len) => { if (len === 0) resetPayment() })
 const currencySymbol = computed(() => ({ GS: 'G$', BRL: 'R$', USD: 'U$', EUR: '€' }[newCurrency.value] ?? newCurrency.value))
 const showReference = computed(() => ['card', 'pix', 'transfer_br', 'transfer_py', 'pix_cambista', 'mercadopago'].includes(newMethod.value))
 const referencePlaceholder = computed(() => {
-  if (newMethod.value === 'card') return 'Últimos 4 dígitos'
-  if (['pix', 'pix_cambista', 'mercadopago'].includes(newMethod.value)) return 'Chave / ref.'
-  return 'Referência'
+  if (newMethod.value === 'card') return uiText(`Últimos 4 dígitos`)
+  if (['pix', 'pix_cambista', 'mercadopago'].includes(newMethod.value)) return uiText(`Chave / ref.`)
+  return uiText(`Referência`)
 })
 
 const payTotalPaid = computed(() => localPayments.value.reduce((s, p) => s + p.amount_gs, 0))
@@ -527,8 +528,8 @@ function currencyLabel(currency: string): string {
   const map: Record<string, string> = { USD: 'U$', BRL: 'R$', EUR: '€', PYG: 'G$', GS: 'G$' }
   return map[c] || c
 }
-function fmtGs(v: number) { return 'G$ ' + Math.round(v).toLocaleString('es-PY') }
-function fmtNum(v: number) { return v.toLocaleString('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }
+function fmtGs(v: number) { return 'G$ ' + Math.round(v).toLocaleString(uiLocale()) }
+function fmtNum(v: number) { return v.toLocaleString(uiLocale(), { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }
 function imgSrc(data: string): string {
   return data.startsWith('data:') ? data : `data:image/jpeg;base64,${data}`
 }
@@ -578,7 +579,7 @@ function addToCart(item: InventoryItem) {
     is_avulso: false,
     location: (item.stock_loja ?? 0) > 0 ? 'loja' : 'deposito',
   })
-  showToast(`${item.name} adicionado`)
+  showToast(uiText(`{0} adicionado`,{0:item.name}))
   clearSearch()
   mobileTab.value = 'cart'
 }
@@ -586,10 +587,10 @@ function openAvulso(prefill?: string) { avulsoCode.value = prefill || null; show
 function onAvulsoAdd(item: any) {
   pdv.addItem(item)
   showAvulso.value = false
-  showToast(`${item.item_name} adicionado`)
+  showToast(uiText(`{0} adicionado`,{0:item.item_name}))
   mobileTab.value = 'cart'
 }
-function confirmClear() { if (confirm('Limpar o carrinho?')) pdv.clearCart() }
+function confirmClear() { if (confirm(uiText(`Limpar o carrinho?`))) pdv.clearCart() }
 
 // ── Barcode ───────────────────────────────────────────────────────────────────
 async function onBarcodeDetected(code: string) {
@@ -615,9 +616,9 @@ async function confirmPayment() {
     await pdv.completeSale()
     resetPayment()
     showReceipt.value = true
-    showToast('Venda concluída!', 'success')
+    showToast(uiText(`Venda concluída!`), 'success')
   } catch (e: any) {
-    showToast(e?.response?.data?.detail || 'Erro ao finalizar venda', 'error')
+    showToast(e?.response?.data?.detail || uiText(`Erro ao finalizar venda`), 'error')
   }
 }
 

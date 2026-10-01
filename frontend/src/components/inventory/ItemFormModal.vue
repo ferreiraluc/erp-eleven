@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>{{ isEdit ? 'Editar Item' : 'Novo Item' }}</h2>
+        <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -12,19 +12,25 @@
 
       <!-- Tabs -->
       <div class="tabs">
-        <button @click="activeTab = 'basic'" :class="['tab', { active: activeTab === 'basic' }]">Básico</button>
-        <button @click="activeTab = 'stock'" :class="['tab', { active: activeTab === 'stock' }]">Estoque</button>
+        <button @click="activeTab = 'basic'" :class="['tab', { active: activeTab === 'basic' }]">{{ tr('Básico') }}</button>
+        <button @click="activeTab = 'stock'" :class="['tab', { active: activeTab === 'stock' }]">{{ tr('Estoque') }}</button>
         <button v-if="!isEdit" @click="activeTab = 'grade'" :class="['tab', { active: activeTab === 'grade' }]">
-          Grade
+          {{ tr('Grade') }}
           <span v-if="gradeSizes.length > 0" class="tab-badge">{{ gradeSizes.length }}</span>
         </button>
         <button @click="activeTab = 'photo'" :class="['tab', { active: activeTab === 'photo' }]">
-          Foto
+          {{ tr('Foto') }}
           <span v-if="form.image_data" class="tab-dot"></span>
         </button>
       </div>
 
       <div class="modal-body">
+        <div v-if="partialItems.length || uncertainSave" class="partial-save-warning" role="alert">
+          <strong>{{ tr(partialItems.length ? 'Cadastro parcialmente concluído' : 'Não foi possível confirmar o cadastro') }}</strong>
+          <p>{{ tr(partialItems.length ? 'Itens já criados: {count}. Uma etapa seguinte falhou; o estoque inicial pode estar incompleto.' : 'A conexão foi interrompida. Confira o inventário antes de tentar criar novamente.', { count: partialItems.length }) }}</p>
+          <ul v-if="partialItems.length"><li v-for="created in partialItems" :key="created.id">{{ created.name }} · {{ created.sku_internal }}</li></ul>
+          <p>{{ tr('Feche esta janela, confira os itens e use Movimentar para concluir apenas o estoque que faltar. O cadastro não será repetido aqui.') }}</p>
+        </div>
         <!-- ── Basic Tab ── -->
         <div v-if="activeTab === 'basic'" class="tab-content">
           <!-- OCR button -->
@@ -33,54 +39,54 @@
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              Ler etiqueta com câmera (OCR)
+              {{ ocrText('title') }}
             </button>
             <button @click="showLabelTemplates = true" class="ocr-btn ocr-btn-templates" type="button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              Modelos IA salvos
+              {{ ocrText('savedExamples') }}
             </button>
           </div>
 
           <div class="form-group">
-            <label>Nome *</label>
-            <input v-model="form.name" type="text" class="form-input" :class="{ error: errors.name }" placeholder="Nome do produto" />
-            <span v-if="errors.name" class="error-msg">{{ errors.name }}</span>
+            <label>{{ tr('Nome *') }}</label>
+            <input v-model="form.name" type="text" class="form-input" :class="{ error: errors.name }" :placeholder="tr('Nome do produto')" />
+            <span v-if="errors.name" class="error-msg">{{ tr(errors.name) }}</span>
           </div>
 
           <div class="form-group">
-            <label>Descrição</label>
-            <textarea v-model="form.description" class="form-input" rows="2" placeholder="Descrição opcional"></textarea>
+            <label>{{ tr('Descrição') }}</label>
+            <textarea v-model="form.description" class="form-input" rows="2" :placeholder="tr('Descrição opcional')"></textarea>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Marca</label>
-              <input v-model="form.brand" type="text" class="form-input" placeholder="Ex: Armani, Boss..." list="brand-list" />
+              <label>{{ tr('Marca') }}</label>
+              <input v-model="form.brand" type="text" class="form-input" :placeholder="tr('Ex: Armani, Boss...')" list="brand-list" />
               <datalist id="brand-list">
                 <option v-for="b in existingBrands" :key="b" :value="b" />
               </datalist>
             </div>
             <div class="form-group">
-              <label>Tamanho</label>
+              <label>{{ tr('Tamanho') }}</label>
               <input v-model="form.size" type="text" class="form-input" placeholder="P, M, G, GG..." />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Categoria</label>
+              <label>{{ tr('Categoria') }}</label>
               <select v-model="categoryParent" class="form-input">
-                <option value="">Selecione...</option>
-                <option v-for="cat in parentCategories" :key="cat" :value="cat">{{ cat }}</option>
-                <option value="_custom">Outra...</option>
+                <option value="">{{ tr('Selecione...') }}</option>
+                <option v-for="cat in parentCategories" :key="cat" :value="cat">{{ tr(cat) }}</option>
+                <option value="_custom">{{ tr('Outra...') }}</option>
               </select>
-              <input v-if="categoryParent === '_custom'" v-model="categoryCustom" type="text" class="form-input" style="margin-top:0.3rem" placeholder="Nome da categoria" />
+              <input v-if="categoryParent === '_custom'" v-model="categoryCustom" type="text" class="form-input" style="margin-top:0.3rem" :placeholder="tr('Nome da categoria')" />
             </div>
             <div class="form-group">
-              <label>Subcategoria</label>
-              <input v-model="categorySub" type="text" class="form-input" placeholder="Ex: Sociais, Tênis..." :disabled="!categoryParent || categoryParent === '_custom'" list="sub-list" />
+              <label>{{ tr('Subcategoria') }}</label>
+              <input v-model="categorySub" type="text" class="form-input" :placeholder="tr('Ex: Sociais, Tênis...')" :disabled="!categoryParent || categoryParent === '_custom'" list="sub-list" />
               <datalist id="sub-list">
                 <option v-for="s in subcategorySuggestions" :key="s" :value="s" />
               </datalist>
@@ -89,17 +95,17 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Cor</label>
-              <input v-model="form.color" type="text" class="form-input" placeholder="Vermelho, Azul..." />
+              <label>{{ tr('Cor') }}</label>
+              <input v-model="form.color" type="text" class="form-input" :placeholder="tr('Vermelho, Azul...')" />
             </div>
             <div class="form-group">
               <label>
-                Unidade
-                <span v-if="unitAutoSet" class="auto-tag">auto</span>
+                {{ tr('Unidade') }}
+                <span v-if="unitAutoSet" class="auto-tag">{{ tr('auto') }}</span>
               </label>
               <select v-model="form.unit" class="form-input">
-                <option value="un">un</option>
-                <option value="par">par</option>
+                <option value="un">{{ tr('un') }}</option>
+                <option value="par">{{ tr('par') }}</option>
                 <option value="kg">kg</option>
                 <option value="m">m</option>
               </select>
@@ -110,26 +116,26 @@
         <!-- ── Stock Tab ── -->
         <div v-if="activeTab === 'stock'" class="tab-content">
           <div class="form-group">
-            <label>Localização</label>
-            <input v-model="form.location" type="text" class="form-input" placeholder="Ex: A-12, Prateleira 3..." />
+            <label>{{ tr('Localização') }}</label>
+            <input v-model="form.location" type="text" class="form-input" :placeholder="tr('Ex: A-12, Prateleira 3...')" />
           </div>
 
           <div class="form-group">
-            <label>Código de Barras</label>
+            <label>{{ tr('Código de Barras') }}</label>
             <div class="barcode-row">
-              <input v-model="form.barcode" type="text" class="form-input" placeholder="EAN, QR, etc." />
-              <button @click="showScanner = true" class="scan-btn" type="button" title="Escanear">
+              <input v-model="form.barcode" type="text" class="form-input" :placeholder="tr('EAN, QR, etc.')" />
+              <button @click="showScanner = true" class="scan-btn" type="button" :title="tr('Escanear')">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3a2 2 0 00-2 2v3a2 2 0 002 2h2" />
                 </svg>
               </button>
             </div>
-            <span v-if="barcodeDuplicateWarning" class="warn-msg">Este código já existe em outro item.</span>
+            <span v-if="barcodeDuplicateWarning" class="warn-msg">{{ tr('Este código já existe em outro item.') }}</span>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Custo</label>
+              <label>{{ tr('Custo') }}</label>
               <div class="price-with-currency">
                 <select v-model="form.cost_currency" class="currency-select">
                   <option value="PYG">G$</option>
@@ -139,10 +145,10 @@
                 </select>
                 <input v-model.number="form.cost_price" type="number" step="0.01" min="0" class="form-input price-input" :class="{ error: errors.cost_price }" placeholder="0.00" />
               </div>
-              <span v-if="errors.cost_price" class="error-msg">{{ errors.cost_price }}</span>
+              <span v-if="errors.cost_price" class="error-msg">{{ tr(errors.cost_price) }}</span>
             </div>
             <div class="form-group">
-              <label>Preço de Venda</label>
+              <label>{{ tr('Preço de Venda') }}</label>
               <div class="price-with-currency">
                 <select v-model="form.sale_currency" class="currency-select">
                   <option value="PYG">G$</option>
@@ -156,21 +162,21 @@
           </div>
 
           <div class="form-group">
-            <label>Fornecedor</label>
+            <label>{{ tr('Fornecedor') }}</label>
             <select v-model="form.supplier_id" class="form-input">
-              <option value="">Nenhum</option>
+              <option value="">{{ tr('Nenhum') }}</option>
               <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Estoque Mínimo</label>
+              <label>{{ tr('Estoque Mínimo') }}</label>
               <input v-model.number="form.min_stock" type="number" min="0" class="form-input" :class="{ error: errors.min_stock }" />
-              <span v-if="errors.min_stock" class="error-msg">{{ errors.min_stock }}</span>
+              <span v-if="errors.min_stock" class="error-msg">{{ tr(errors.min_stock) }}</span>
             </div>
             <div class="form-group">
-              <label>Estoque Máximo</label>
+              <label>{{ tr('Estoque Máximo') }}</label>
               <input v-model.number="form.max_stock" type="number" min="0" class="form-input" />
             </div>
           </div>
@@ -178,16 +184,16 @@
           <!-- Initial stock + location — only when creating -->
           <template v-if="!isEdit">
             <div class="form-group">
-              <label>Cadastrar em</label>
+              <label>{{ tr('Cadastrar em') }}</label>
               <div class="loc-toggle">
-                <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">Loja</button>
-                <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">Depósito</button>
+                <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
+                <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
               </div>
             </div>
             <div class="form-group">
-              <label>Estoque inicial</label>
+              <label>{{ tr('Estoque inicial') }}</label>
               <input v-model.number="initialStock" type="number" min="0" class="form-input" placeholder="0" />
-              <span class="form-hint">Quantidade adicionada ao {{ stockLocation === 'loja' ? 'estoque da loja' : 'depósito' }} ao criar o item.</span>
+              <span class="form-hint">{{ tr('Quantidade adicionada ao {local} ao criar o item.', { local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</span>
             </div>
           </template>
         </div>
@@ -198,12 +204,12 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="flex-shrink:0">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            <p>Cria todos os tamanhos de uma vez — cada tamanho vira um item separado agrupado automaticamente.</p>
+            <p>{{ tr('Cria todos os tamanhos de uma vez — cada tamanho vira um item separado agrupado automaticamente.') }}</p>
           </div>
 
           <!-- Preset buttons -->
           <div class="form-group">
-            <label>Modelo de grade</label>
+            <label>{{ tr('Modelo de grade') }}</label>
             <div class="grade-presets">
               <button
                 v-for="preset in allPresets"
@@ -212,19 +218,19 @@
                 :class="['preset-btn', { active: activePreset === preset.label }]"
                 type="button"
               >
-                {{ preset.label }}
+                {{ preset.custom ? preset.label : tr(preset.label) }}
                 <span
                   v-if="preset.custom"
                   class="preset-remove"
                   @click.stop="removeCustomPreset(preset.label)"
-                  title="Remover modelo"
+                  :title="tr('Remover modelo')"
                 >×</span>
               </button>
               <button
                 @click="showNewPreset = !showNewPreset"
                 :class="['preset-btn', 'preset-add-btn', { active: showNewPreset }]"
                 type="button"
-                title="Novo modelo de grade"
+                :title="tr('Novo modelo de grade')"
               >+</button>
             </div>
 
@@ -233,7 +239,7 @@
               <input
                 v-model="newPresetName"
                 class="form-input"
-                placeholder="Nome do modelo (ex: Numeração EU)"
+                :placeholder="tr('Nome do modelo (ex: Numeração EU)')"
                 @keydown.enter.prevent="addNewPresetSize"
               />
               <div class="grade-chips" @click="newPresetInputRef?.focus()">
@@ -249,7 +255,7 @@
                   @keydown.space.prevent="addNewPresetSize"
                   type="text"
                   class="chip-input"
-                  placeholder="Ex: XS ↵"
+                  :placeholder="tr('Ex: XS ↵')"
                 />
               </div>
               <div class="new-preset-actions">
@@ -258,15 +264,15 @@
                   type="button"
                   class="preset-btn preset-save-btn"
                   :disabled="!newPresetName.trim() || newPresetSizes.length === 0"
-                >Salvar modelo</button>
-                <button @click="showNewPreset = false" type="button" class="preset-btn">Cancelar</button>
+                >{{ tr('Salvar modelo') }}</button>
+                <button @click="showNewPreset = false" type="button" class="preset-btn">{{ tr('Cancelar') }}</button>
               </div>
             </div>
           </div>
 
           <!-- Size chips -->
           <div class="form-group">
-            <label>Tamanhos <span class="size-count">({{ gradeSizes.length }})</span></label>
+            <label>{{ tr('Tamanhos') }} <span class="size-count">({{ gradeSizes.length }})</span></label>
             <div class="grade-chips" @click="focusChipInput">
               <span v-for="(size, i) in gradeSizes" :key="i" class="grade-chip">
                 {{ size }}
@@ -280,7 +286,7 @@
                 @keydown.space.prevent="addCustomSize"
                 type="text"
                 class="chip-input"
-                placeholder="Ex: 36 ↵"
+                :placeholder="tr('Ex: 36 ↵')"
               />
             </div>
             <div class="add-size-row">
@@ -289,26 +295,26 @@
                 @keydown.enter.prevent="addCustomSize"
                 type="text"
                 class="form-input add-size-input"
-                placeholder="Adicionar tamanho (ex: 3XL, 46...)"
+                :placeholder="tr('Adicionar tamanho (ex: 3XL, 46...)')"
               />
-              <button @click="addCustomSize" type="button" class="btn-add-chip">+ Add</button>
+              <button @click="addCustomSize" type="button" class="btn-add-chip">{{ tr('+ Add') }}</button>
             </div>
           </div>
 
           <!-- Color chips -->
           <div class="form-group">
-            <label>Cores <span class="size-count">({{ gradeColors.length }}{{ gradeColors.length > 0 && gradeSizes.length > 0 ? ' × ' + gradeSizes.length + ' tam.' : '' }})</span></label>
+            <label>{{ tr('Cores') }} <span class="size-count">({{ gradeColors.length }}{{ gradeColors.length > 0 && gradeSizes.length > 0 ? tr(' × {count} tam.', { count: gradeSizes.length }) : '' }})</span></label>
             <div class="quick-colors">
               <button
                 v-for="c in QUICK_COLORS"
                 :key="c"
                 @click="toggleQuickColor(c)"
                 :class="['quick-color-btn', { active: gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) }]"
-                :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? 'Já adicionada (remova pelo ×)' : 'Adicionar'"
+                :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? tr('Já adicionada (remova pelo ×)') : tr('Adicionar')"
                 type="button"
               >
                 <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
-                {{ c }}
+                {{ tr(c) }}
               </button>
             </div>
             <div class="grade-chips" @click="focusColorInput">
@@ -323,33 +329,33 @@
                 @keydown="handleComma($event, addGradeColor)"
                 type="text"
                 class="chip-input"
-                placeholder="Outra cor ↵"
+                :placeholder="tr('Outra cor ↵')"
               />
             </div>
             <span class="form-hint">
-              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">Criará {{ gradeColors.length }} × {{ gradeSizes.length }} = {{ gradeColors.length * gradeSizes.length }} itens (cor × tamanho).</template>
-              <template v-else-if="gradeColors.length > 0">Criará {{ gradeColors.length }} {{ gradeColors.length === 1 ? 'item' : 'itens' }}, um por cor.</template>
-              <template v-else>Cores opcionais — deixe vazio para criar apenas os tamanhos.</template>
+              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">{{ tr('Criará {colors} × {sizes} = {count} itens (cor × tamanho).', { colors: gradeColors.length, sizes: gradeSizes.length, count: gradeItemCount }) }}</template>
+              <template v-else-if="gradeColors.length > 0">{{ tr('Itens a criar: {count} (um por cor).', { count: gradeColors.length }) }}</template>
+              <template v-else>{{ tr('Cores opcionais — deixe vazio para criar apenas os tamanhos.') }}</template>
             </span>
           </div>
 
           <!-- Initial stock + location -->
           <div class="form-group">
-            <label>Estoque inicial por tamanho</label>
+            <label>{{ tr('Estoque inicial por tamanho') }}</label>
             <input v-model.number="gradeInitialStock" type="number" min="0" class="form-input" placeholder="0" />
-            <span class="form-hint">Quantidade adicionada a cada item da grade ao criar.</span>
+            <span class="form-hint">{{ tr('Quantidade adicionada a cada item da grade ao criar.') }}</span>
           </div>
           <div class="form-group" v-if="gradeInitialStock > 0">
-            <label>Cadastrar em</label>
+            <label>{{ tr('Cadastrar em') }}</label>
             <div class="loc-toggle">
-              <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">Loja</button>
-              <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">Depósito</button>
+              <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
+              <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
             </div>
           </div>
 
           <!-- Barcode suffix info -->
           <div v-if="form.barcode" class="grade-barcode-hint">
-            <span class="hint-label">Cod. de barras base:</span>
+            <span class="hint-label">{{ tr('Cod. de barras base:') }}</span>
             <code class="hint-code">{{ form.barcode }}</code>
             <span class="hint-arrow">→</span>
             <code class="hint-code">{{ form.barcode }}<strong>{{ gradeSizes[0] || 'P' }}</strong></code>
@@ -358,27 +364,27 @@
 
           <!-- Preview -->
           <div v-if="gradeSizes.length > 0 || gradeColors.length > 0" class="form-group">
-            <label>Prévia — {{ gradeItemCount }} {{ gradeItemCount === 1 ? 'item' : 'itens' }} serão criados</label>
+            <label>{{ tr('Prévia — itens a criar: {count}', { count: gradeItemCount }) }}</label>
             <div class="grade-preview">
               <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">
                 <template v-for="color in gradeColors" :key="color">
                   <div v-for="size in gradeSizes" :key="color + size" class="gp-row">
                     <span class="gp-size">{{ size }}</span>
                     <span class="gp-color-badge">{{ color }}</span>
-                    <span class="gp-name">{{ (form.name || '(nome)') + ' ' + size + ' ' + color }}</span>
+                    <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + size + ' ' + color }}</span>
                   </div>
                 </template>
               </template>
               <template v-else-if="gradeColors.length > 0">
                 <div v-for="color in gradeColors" :key="color" class="gp-row">
                   <span class="gp-color-badge">{{ color }}</span>
-                  <span class="gp-name">{{ (form.name || '(nome)') + ' ' + color }}</span>
+                  <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + color }}</span>
                 </div>
               </template>
               <template v-else>
                 <div v-for="size in gradeSizes" :key="size" class="gp-row">
                   <span class="gp-size">{{ size }}</span>
-                  <span class="gp-name">{{ (form.name || '(nome)') + ' ' + size }}</span>
+                  <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + size }}</span>
                   <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
                 </div>
               </template>
@@ -386,7 +392,7 @@
           </div>
 
           <div v-else class="grade-empty">
-            Selecione um modelo acima ou adicione tamanhos e/ou cores.
+            {{ tr('Selecione um modelo acima ou adicione tamanhos e/ou cores.') }}
           </div>
         </div>
 
@@ -394,15 +400,15 @@
         <div v-if="activeTab === 'photo'" class="tab-content">
           <!-- Current image preview -->
           <div v-if="form.image_data" class="photo-preview">
-            <img :src="form.image_data" alt="Foto do item" class="item-photo" />
-            <button @click="form.image_data = ''" class="remove-photo">× Remover foto</button>
+            <img :src="form.image_data" :alt="tr('Foto do item')" class="item-photo" />
+            <button @click="form.image_data = ''" class="remove-photo">{{ tr('× Remover foto') }}</button>
           </div>
 
           <div v-else class="photo-placeholder">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="40" height="40" class="photo-icon">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p>Nenhuma foto adicionada</p>
+            <p>{{ tr('Nenhuma foto adicionada') }}</p>
           </div>
 
           <div class="photo-actions">
@@ -410,14 +416,14 @@
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              Galeria
+              {{ tr('Galeria') }}
             </button>
             <button @click="showCameraPhoto = true" class="btn btn-secondary" type="button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="2" fill="none" />
               </svg>
-              Câmera
+              {{ tr('Câmera') }}
             </button>
           </div>
 
@@ -433,22 +439,22 @@
           <div v-if="showCameraPhoto" class="inline-camera">
             <video ref="photoVideoRef" autoplay playsinline class="inline-video"></video>
             <div class="inline-camera-btns">
-              <button @click="capturePhoto" class="btn btn-primary" type="button">Capturar</button>
-              <button @click="stopCameraPhoto" class="btn btn-secondary" type="button">Cancelar</button>
+              <button @click="capturePhoto" class="btn btn-primary" type="button">{{ tr('Capturar') }}</button>
+              <button @click="stopCameraPhoto" class="btn btn-secondary" type="button">{{ tr('Cancelar') }}</button>
             </div>
           </div>
 
-          <p class="photo-hint">A imagem é redimensionada para 400×400px e armazenada no banco de dados.</p>
+          <p class="photo-hint">{{ tr('A imagem é redimensionada para 400×400px e armazenada no banco de dados.') }}</p>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary">Cancelar</button>
-        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving">
-          <template v-if="saving">Salvando...</template>
-          <template v-else-if="isEdit">Atualizar</template>
-          <template v-else-if="gradeItemCount > 0">Criar Grade ({{ gradeItemCount }} {{ gradeItemCount === 1 ? 'item' : 'itens' }})</template>
-          <template v-else>Criar</template>
+        <button @click="emit('close')" class="btn btn-secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
+        <button v-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary" :disabled="saving">
+          <template v-if="saving">{{ tr('Salvando...') }}</template>
+          <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
+          <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>
+          <template v-else>{{ tr('Criar') }}</template>
         </button>
       </div>
     </div>
@@ -460,10 +466,16 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import BarcodeScanner from './BarcodeScanner.vue'
 import OcrScanner from './OcrScanner.vue'
+import type { OcrAppliedFields } from '@/services/ocr'
+import { useI18n } from 'vue-i18n'
+import { ocrMessages } from './ocrMessages'
+const { t: ocrText } = useI18n({ useScope: 'local', messages: ocrMessages })
 import LabelTemplatesModal from './LabelTemplatesModal.vue'
 
 // ── Text normalization ────────────────────────────────────────────────────────
@@ -481,6 +493,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'saved', item: InventoryItem): void
+  (e: 'partial', items: InventoryItem[]): void
   (e: 'close'): void
 }>()
 
@@ -491,6 +504,8 @@ const showOcr = ref(false)
 const showLabelTemplates = ref(false)
 const showCameraPhoto = ref(false)
 const saving = ref(false)
+const partialItems = ref<InventoryItem[]>([])
+const uncertainSave = ref(false)
 const barcodeDuplicateWarning = ref(false)
 const unitAutoSet = ref(false)
 const photoInputRef = ref<HTMLInputElement>()
@@ -735,17 +750,24 @@ watch(() => form.barcode, (val) => {
 function validate() {
   Object.keys(errors).forEach(k => delete errors[k])
   if (!form.name || form.name.length < 2) errors.name = 'Nome deve ter ao menos 2 caracteres'
+  const startingStock = (gradeSizes.value.length || gradeColors.value.length ? gradeInitialStock.value : initialStock.value) || 0
+  if (!isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > 2_147_483_647)) {
+    errors.name = 'Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.'
+  }
   if (form.cost_price < 0) errors.cost_price = 'Custo não pode ser negativo'
   if (form.min_stock > form.max_stock && form.max_stock > 0) errors.min_stock = 'Mínimo não pode ser maior que máximo'
   return Object.keys(errors).length === 0
 }
 
 async function handleSubmit() {
+  if (saving.value || partialItems.value.length || uncertainSave.value) return
   if (!validate()) {
     activeTab.value = errors.name ? 'basic' : 'stock'
     return
   }
   saving.value = true
+  const createdItems: InventoryItem[] = []
+  let creating = false
   try {
     // ── Grade / color creation ────────────────────────────────────────────────
     if (!isEdit.value && (gradeSizes.value.length > 0 || gradeColors.value.length > 0)) {
@@ -778,12 +800,18 @@ async function handleSubmit() {
       if (gradeSizes.value.length > 0 && gradeColors.value.length > 0) {
         // Size × color matrix
         for (const color of gradeColors.value) {
+          creating = true
           const result = await inventoryAPI.createGrade({ ...baseGradePayload, color })
+          creating = false
+          createdItems.push(...result.items)
           if (!firstItem) firstItem = result.items[0]
         }
       } else if (gradeSizes.value.length > 0) {
         // Only sizes (original behavior)
+        creating = true
         const result = await inventoryAPI.createGrade({ ...baseGradePayload, color: form.color || null })
+        creating = false
+        createdItems.push(...result.items)
         firstItem = result.items[0]
       } else {
         // Only colors — create one item per color
@@ -795,17 +823,18 @@ async function handleSubmit() {
           group_key: sharedGroupKey,
         }
         for (const color of gradeColors.value) {
+          creating = true
           const result = await inventoryAPI.createItem({ ...baseSinglePayload, color })
+          creating = false
+          createdItems.push(result)
           if (gradeInitialStock.value > 0) {
-            try {
-              await inventoryAPI.createMovement({
-                item_id: result.id,
-                movement_type: 'entry',
-                quantity: gradeInitialStock.value,
-                reason: 'Estoque inicial',
-                location: stockLocation.value,
-              })
-            } catch {}
+            await inventoryAPI.createMovement({
+              item_id: result.id,
+              movement_type: 'entry',
+              quantity: gradeInitialStock.value,
+              reason: 'Estoque inicial',
+              location: stockLocation.value,
+            })
           }
           if (!firstItem) firstItem = result
         }
@@ -827,23 +856,28 @@ async function handleSubmit() {
     if (isEdit.value && props.item) {
       result = await inventoryAPI.updateItem(props.item.id, payload)
     } else {
+      creating = true
       result = await inventoryAPI.createItem(payload)
+      creating = false
+      createdItems.push(result)
       // Create initial stock movement if quantity > 0
       if (initialStock.value > 0) {
-        try {
-          await inventoryAPI.createMovement({
-            item_id: result.id,
-            movement_type: 'entry',
-            quantity: initialStock.value,
-            reason: 'Estoque inicial',
-            location: stockLocation.value,
-          })
-        } catch {}
+        await inventoryAPI.createMovement({
+          item_id: result.id,
+          movement_type: 'entry',
+          quantity: initialStock.value,
+          reason: 'Estoque inicial',
+          location: stockLocation.value,
+        })
       }
     }
     emit('saved', result)
   } catch (e: any) {
-    errors.name = e.response?.data?.detail || 'Erro ao salvar'
+    const detail = e.response?.data?.detail
+    errors.name = typeof detail === 'string' ? detail : 'Erro ao salvar'
+    partialItems.value = createdItems
+    uncertainSave.value = creating && !e.response
+    if (createdItems.length || uncertainSave.value) emit('partial', createdItems)
     activeTab.value = 'basic'
   } finally {
     saving.value = false
@@ -855,15 +889,15 @@ function onBarcodeDetected(code: string) {
   showScanner.value = false
 }
 
-function onOcrResult(data: any) {
+function onOcrResult(data: OcrAppliedFields) {
   showOcr.value = false
   if (data.name)       form.name  = toTitleCase(data.name)
   if (data.brand)      form.brand = toTitleCase(data.brand)
   if (data.size)       form.size  = data.size.trim().toUpperCase()
   if (data.color)      form.color = toTitleCase(data.color)
   if (data.barcode)    form.barcode   = data.barcode
-  if (data.sale_price) form.sale_price = data.sale_price
-  if (data.currency)   form.currency  = data.currency
+  if (data.sale_price != null) form.sale_price = data.sale_price
+  if (data.currency) { form.currency = data.currency; form.sale_currency = data.currency }
 
   // Pre-populate grade color with detected color (normalized)
   if (!isEdit.value && data.color) {
@@ -952,6 +986,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.partial-save-warning { padding: 1rem; margin-bottom: 1rem; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
+.partial-save-warning p { margin: .5rem 0; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .modal-container { background: white; border-radius: 12px; width: 100%; max-width: 520px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }

@@ -4,24 +4,23 @@
       <div class="avulso-header">
         <div class="avulso-icon">⚠</div>
         <div>
-          <h3>Produto não encontrado</h3>
-          <p>Adicione manualmente ao carrinho</p>
+          <h3>{{ uiText(`Produto não encontrado`) }}</h3>
+          <p>{{ uiText(`Adicione manualmente ao carrinho`) }}</p>
         </div>
         <button class="avulso-close" @click="$emit('close')">×</button>
       </div>
 
       <div class="avulso-body">
-        <div v-if="scannedCode" class="avulso-code-hint">
-          Código escaneado: <strong>{{ scannedCode }}</strong>
+        <div v-if="scannedCode" class="avulso-code-hint"> {{ uiText(`Código escaneado:`) }} <strong>{{ scannedCode }}</strong>
         </div>
 
         <div class="avulso-field">
-          <label>Descrição do produto *</label>
+          <label>{{ uiText(`Descrição do produto *`) }}</label>
           <input
             ref="nameInput"
             v-model="form.item_name"
             type="text"
-            placeholder="Ex: Camiseta azul M"
+            :placeholder="uiText(`Ex: Camiseta azul M`)"
             class="avulso-input"
             @keydown.enter="focusPrice"
           />
@@ -29,7 +28,7 @@
 
         <div class="avulso-row">
           <div class="avulso-field">
-            <label>Preço unitário (G$) *</label>
+            <label>{{ uiText(`Preço unitário (G$) *`) }}</label>
             <input
               ref="priceInput"
               v-model.number="form.unit_price_gs"
@@ -41,7 +40,7 @@
             />
           </div>
           <div class="avulso-field avulso-field-sm">
-            <label>Qtd</label>
+            <label>{{ uiText(`Qtd`) }}</label>
             <input
               ref="qtyInput"
               v-model.number="form.quantity"
@@ -57,16 +56,15 @@
       </div>
 
       <div class="avulso-footer">
-        <button class="avulso-btn-cancel" @click="$emit('close')">Cancelar</button>
-        <button class="avulso-btn-add" @click="submit" :disabled="!canSubmit">
-          + Adicionar ao carrinho
-        </button>
+        <button class="avulso-btn-cancel" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
+        <button class="avulso-btn-add" @click="submit" :disabled="!canSubmit"> {{ uiText(`+ Adicionar ao carrinho`) }} </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { uiText } from '@/i18n/uiText'
 import { ref, computed, nextTick, onMounted } from 'vue'
 
 defineProps<{
@@ -115,8 +113,8 @@ function focusPrice() { priceInput.value?.focus() }
 function focusQty() { qtyInput.value?.focus() }
 
 function submit() {
-  if (!form.value.item_name.trim()) { error.value = 'Informe a descrição'; return }
-  if (form.value.unit_price_gs <= 0) { error.value = 'Informe o preço'; return }
+  if (!form.value.item_name.trim()) { error.value = uiText(`Informe a descrição`); return }
+  if (form.value.unit_price_gs <= 0) { error.value = uiText(`Informe o preço`); return }
   error.value = ''
   emit('add', {
     item_id: null,

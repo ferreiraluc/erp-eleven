@@ -55,6 +55,7 @@
             <div class="form-options">
               <div class="remember-me">
                 <input
+                  v-model="remember"
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
@@ -64,7 +65,7 @@
               </div>
 
               <div class="forgot-password">
-                <a href="#" class="forgot-link">{{ $t('auth.forgotPassword') }}</a>
+                <span class="forgot-link">{{ $t('access.resetHelp') }}</span>
               </div>
             </div>
 
@@ -98,12 +99,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+const remember = ref(true)
 
 const credentials = ref({
   email: '',
@@ -112,23 +115,20 @@ const credentials = ref({
 
 const handleLogin = async () => {
   try {
-    await authStore.login(credentials.value)
-    const lastRoute = localStorage.getItem('erp_last_route')
-    router.push(lastRoute || '/dashboard')
+    await authStore.login(credentials.value, remember.value)
+    // A fresh application instance prevents Pinia data or pending requests from
+    // the previous account being reused when people share a computer.
+    const destination = router.resolve(authStore.user?.must_change_password ? '/conta' : '/dashboard').href
+    if (destination.startsWith('#')) {
+      // A fragment-only navigation keeps the old Pinia state in production.
+      window.location.replace(destination)
+      window.location.reload()
+    } else window.location.assign(destination)
   } catch {
     // Error handled by store
   }
 }
 
-onMounted(() => {
-  authStore.clearError()
-
-  // If already authenticated, restore last visited page
-  if (authStore.isAuthenticated) {
-    const lastRoute = localStorage.getItem('erp_last_route')
-    router.push(lastRoute || '/dashboard')
-  }
-})
 </script>
 
 <style scoped>

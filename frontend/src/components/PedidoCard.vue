@@ -12,7 +12,7 @@
         <button
           @click.stop="$emit('edit', pedido)"
           class="action-btn edit-btn"
-          title="Editar pedido"
+          :title="uiText(`Editar pedido`)"
         >
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -75,7 +75,7 @@
     <!-- Progress Info -->
     <div class="progress-section">
       <div class="date-info">
-        <span class="date-label">Criado em:</span>
+        <span class="date-label">{{ uiText(`Criado em:`) }}</span>
         <span class="date-value">{{ formatDate(pedido.created_at) }}</span>
       </div>
 
@@ -84,40 +84,33 @@
         v-if="pedido.codigo_rastreio"
         @click.stop="$emit('track', pedido)"
         class="track-btn has-tracking"
-        title="Ver rastreamento"
+        :title="uiText(`Ver rastreamento`)"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Rastreado
-      </button>
+        </svg> {{ uiText(`Rastreado`) }} </button>
       <button
         v-else
         @click.stop="$emit('track', pedido)"
         class="track-btn no-tracking"
-        title="Criar rastreamento"
+        :title="uiText(`Criar rastreamento`)"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        Rastrear
-      </button>
+        </svg> {{ uiText(`Rastrear`) }} </button>
     </div>
 
     <!-- Footer -->
     <div class="card-footer">
       <div class="footer-left">
-        <span class="last-update">
-          Atualizado: {{ formatDate(pedido.updated_at) }}
+        <span class="last-update"> {{ uiText(`Atualizado:`) }} {{ formatDate(pedido.updated_at) }}
         </span>
       </div>
       <div class="footer-right">
         <button
           @click.stop="$emit('view', pedido)"
           class="view-btn"
-        >
-          Ver detalhes
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        > {{ uiText(`Ver detalhes`) }} <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -127,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import type { Pedido } from '@/services/api'
 
 interface Props {
@@ -142,7 +136,7 @@ defineEmits<{
 }>()
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('pt-BR', {
+  return new Date(dateString).toLocaleDateString(uiLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -160,7 +154,7 @@ const formatPhone = (phone: string) => {
 }
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
+  return new Intl.NumberFormat(uiLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value)
@@ -168,11 +162,11 @@ const formatCurrency = (value: number) => {
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'PENDENTE': 'Pendente',
-    'PROCESSANDO': 'Processando',
-    'ENVIADO': 'Enviado',
-    'ENTREGUE': 'Entregue',
-    'CANCELADO': 'Cancelado'
+    'PENDENTE': uiText(`Pendente`),
+    'PROCESSANDO': uiText(`Processando`),
+    'ENVIADO': uiText(`Enviado`),
+    'ENTREGUE': uiText(`Entregue`),
+    'CANCELADO': uiText(`Cancelado`)
   }
   return labels[status] || status
 }

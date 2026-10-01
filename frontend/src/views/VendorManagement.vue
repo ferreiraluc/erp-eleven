@@ -10,15 +10,15 @@
             </svg>
           </button>
           <div>
-            <h1>Gerenciar Vendedores</h1>
-            <p class="subtitle">Cadastre, edite e gerencie seus vendedores</p>
+            <h1>{{ $tr("Gerenciar Vendedores") }}</h1>
+            <p class="subtitle">{{ $tr("Cadastre, edite e gerencie seus vendedores") }}</p>
           </div>
         </div>
         <button @click="openCreateModal" class="create-button">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          Novo Vendedor
+          {{ $tr("Novo Vendedor") }}
         </button>
       </div>
     </div>
@@ -35,7 +35,7 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ activeVendors }}</span>
-            <span class="stat-label">Vendedores Ativos</span>
+            <span class="stat-label">{{ $tr("Vendedores Ativos") }}</span>
           </div>
         </div>
         
@@ -47,7 +47,7 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ inactiveVendors }}</span>
-            <span class="stat-label">Vendedores Inativos</span>
+            <span class="stat-label">{{ $tr("Vendedores Inativos") }}</span>
           </div>
         </div>
         
@@ -59,7 +59,7 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ totalVendors }}</span>
-            <span class="stat-label">Total de Vendedores</span>
+            <span class="stat-label">{{ $tr("Total de Vendedores") }}</span>
           </div>
         </div>
       </div>
@@ -71,19 +71,19 @@
             @click="setFilter('all')" 
             :class="['filter-button', { active: currentFilter === 'all' }]"
           >
-            Todos ({{ totalVendors }})
+            {{ $tr("Todos (") }}{{ totalVendors }})
           </button>
           <button 
             @click="setFilter('active')" 
             :class="['filter-button', { active: currentFilter === 'active' }]"
           >
-            Ativos ({{ activeVendors }})
+            {{ $tr("Ativos (") }}{{ activeVendors }})
           </button>
           <button 
             @click="setFilter('inactive')" 
             :class="['filter-button', { active: currentFilter === 'inactive' }]"
           >
-            Inativos ({{ inactiveVendors }})
+            {{ $tr("Inativos (") }}{{ inactiveVendors }})
           </button>
         </div>
         
@@ -95,7 +95,7 @@
             <input 
               v-model="searchQuery"
               type="text"
-              placeholder="Pesquisar vendedor..."
+              :placeholder='$tr("Pesquisar vendedor...")'
             />
           </div>
         </div>
@@ -105,17 +105,17 @@
       <div class="table-section">
         <div v-if="isLoading" class="loading-state">
           <div class="loading-spinner"></div>
-          <p>Carregando vendedores...</p>
+          <p>{{ $tr("Carregando vendedores...") }}</p>
         </div>
         
         <div v-else-if="filteredVendors.length === 0" class="empty-state">
           <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <h3>Nenhum vendedor encontrado</h3>
-          <p>{{ currentFilter === 'all' ? 'Cadastre seu primeiro vendedor' : 'Nenhum vendedor corresponde aos filtros aplicados' }}</p>
+          <h3>{{ $tr("Nenhum vendedor encontrado") }}</h3>
+          <p>{{ currentFilter === 'all' ? uiText(`Cadastre seu primeiro vendedor`) : uiText(`Nenhum vendedor corresponde aos filtros aplicados`) }}</p>
           <button v-if="currentFilter === 'all'" @click="openCreateModal" class="create-button">
-            Cadastrar Vendedor
+            {{ $tr("Cadastrar Vendedor") }}
           </button>
         </div>
         
@@ -123,13 +123,13 @@
           <table class="vendors-table">
             <thead>
               <tr>
-                <th>Nome</th>
-                <th>Taxa de Comissão</th>
-                <th>Meta Semanal</th>
-                <th>Telefone</th>
-                <th>Status</th>
-                <th>Criado em</th>
-                <th class="actions-column">Ações</th>
+                <th>{{ $tr("Nome") }}</th>
+                <th>{{ $tr("Taxa de Comissão") }}</th>
+                <th>{{ $tr("Meta Semanal") }}</th>
+                <th>{{ $tr("Telefone") }}</th>
+                <th>{{ $tr("Status") }}</th>
+                <th>{{ $tr("Criado em") }}</th>
+                <th class="actions-column">{{ $tr("Ações") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -153,7 +153,7 @@
                 </td>
                 <td>
                   <span :class="['status-badge', vendor.ativo ? 'active' : 'inactive']">
-                    {{ vendor.ativo ? 'Ativo' : 'Inativo' }}
+                    {{ vendor.ativo ? uiText(`Ativo`) : uiText(`Inativo`) }}
                   </span>
                 </td>
                 <td>
@@ -190,7 +190,7 @@
     <div v-if="showModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h2>{{ isEditing ? 'Editar Vendedor' : 'Novo Vendedor' }}</h2>
+          <h2>{{ isEditing ? uiText(`Editar Vendedor`) : uiText(`Novo Vendedor`) }}</h2>
           <button @click="closeModal" class="modal-close">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -204,19 +204,19 @@
           </div>
 
           <div class="form-group">
-            <label for="nome">Nome *</label>
+            <label for="nome">{{ $tr("Nome *") }}</label>
             <input 
               id="nome"
               v-model="form.nome"
               type="text"
               required
-              placeholder="Digite o nome do vendedor"
+              :placeholder='$tr("Digite o nome do vendedor")'
             />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="taxa_comissao">Taxa de Comissão (%)</label>
+              <label for="taxa_comissao">{{ $tr("Taxa de Comissão (%)") }}</label>
               <input 
                 id="taxa_comissao"
                 v-model="form.taxa_comissao"
@@ -229,7 +229,7 @@
             </div>
 
             <div class="form-group">
-              <label for="meta_semanal">Meta Semanal (G$)</label>
+              <label for="meta_semanal">{{ $tr("Meta Semanal (G$)") }}</label>
               <input 
                 id="meta_semanal"
                 v-model="form.meta_semanal"
@@ -243,7 +243,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="telefone">Telefone</label>
+              <label for="telefone">{{ $tr("Telefone") }}</label>
               <input 
                 id="telefone"
                 v-model="form.telefone"
@@ -253,12 +253,12 @@
             </div>
 
             <div class="form-group">
-              <label for="conta_bancaria">Conta Bancária</label>
+              <label for="conta_bancaria">{{ $tr("Conta Bancária") }}</label>
               <input 
                 id="conta_bancaria"
                 v-model="form.conta_bancaria"
                 type="text"
-                placeholder="Número da conta"
+                :placeholder='$tr("Número da conta")'
               />
             </div>
           </div>
@@ -266,7 +266,7 @@
           <div class="form-group">
             <ColorPicker 
               v-model="form.cor_calendario"
-              label="Cor do Calendário"
+              :label="uiText(`Cor do Calendário`)"
             />
           </div>
 
@@ -277,17 +277,17 @@
                 type="checkbox"
               />
               <span class="checkmark"></span>
-              Vendedor ativo
+              {{ $tr("Vendedor ativo") }}
             </label>
           </div>
 
           <div class="modal-footer">
             <button type="button" @click="closeModal" class="button secondary">
-              Cancelar
+              {{ $tr("Cancelar") }}
             </button>
             <button type="submit" :disabled="isSubmitting" class="button primary">
-              <span v-if="isSubmitting">{{ isEditing ? 'Salvando...' : 'Criando...' }}</span>
-              <span v-else>{{ isEditing ? 'Salvar' : 'Criar Vendedor' }}</span>
+              <span v-if="isSubmitting">{{ isEditing ? uiText(`Salvando...`) : uiText(`Criando...`) }}</span>
+              <span v-else>{{ isEditing ? uiText(`Salvar`) : uiText(`Criar Vendedor`) }}</span>
             </button>
           </div>
         </form>
@@ -297,6 +297,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ColorPicker from '@/components/ColorPicker.vue'
@@ -428,7 +429,7 @@ const submitForm = async () => {
     await loadVendors()
     closeModal()
   } catch (error: any) {
-    formError.value = error.response?.data?.detail || 'Erro ao salvar vendedor'
+    formError.value = error.response?.data?.detail || uiText(`Erro ao salvar vendedor`)
   } finally {
     isSubmitting.value = false
   }
@@ -444,14 +445,14 @@ const toggleVendorStatus = async (vendor: VendorResponse) => {
 }
 
 const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', {
+  return value.toLocaleString(uiLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('pt-BR')
+  return new Date(dateString).toLocaleDateString(uiLocale())
 }
 
 const goBack = () => {

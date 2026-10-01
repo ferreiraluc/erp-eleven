@@ -96,3 +96,13 @@ O bot (`consultar_cep` e prévias de impressão), o cadastro e a cotação usam 
 A consulta preenche rua, bairro, cidade e UF vazios quando os campos informados concordam. Divergências preservam o endereço informado e aparecem na prévia e na cotação. Número, complemento, telefone e CPF nunca são inferidos. CEP geral pode não informar rua/bairro; indisponibilidade não apaga dados nem bloqueia um endereço completo. PY permanece livre de exigências de CEP.
 
 O cache em memória dura 24h para resultados encontrados, 1h para inexistentes e 30s para falhas (limite 512 CEPs). Não há varredura automática da agenda. Cadastros BR com mesmo destinatário/localização/CEP e bairro ausente reutilizam o endereço único compatível; conflitos de CPF, cliente ou múltiplos bairros continuam exigindo conferência. A migração `y5z6a7b8c9d0` consolida pares existentes com bairro ausente, mantendo IDs antigos como redirecionamentos e os históricos intactos.
+
+### Geração revisada de remetentes
+
+Para Lucas (`lucas@eleven.com`, ADMIN), a aba **Remetentes** inclui **Gerar pessoa · 4Devs**. Geração, importação e aprovação são exclusivas do proprietário no backend; o cadastro normal de remetentes continua disponível à equipe autorizada. O formulário permite gerar uma pessoa completa, revisar/editar a prévia e aprovar manualmente a gravação dos campos úteis de remetente. A origem sintética fica identificada e permanece após edições. Gerar/importar não salva, imprime ou emite frete. Há alternativa de importar o JSON do site quando o formulário externo estiver indisponível; a API oficial 4Devs ainda não está disponível. Veja o contrato, os limites e os dados persistidos em [Geração e revisão de remetentes](REMETENTES_GERADOS.md).
+
+### Idiomas do gestor
+
+O gestor, os formulários de endereço, o histórico de utilizações, o gerador e o card do dashboard acompanham a preferência PT/ES/EN. Datas são exibidas no fuso de Brasília, com formatação do idioma; valores de frete continuam em BRL, sem conversão monetária. Nomes, ruas, conteúdo, modelos salvos e demais dados inseridos pelo usuário não são traduzidos nem regravados por mudar o idioma.
+
+Erros conhecidos de validação, CEP, pagamento e recuperação de PDF apresentam orientações traduzidas. Divergências de CEP mantêm os valores originais e os retornados pelo ViaCEP. Respostas desconhecidas/indisponíveis da API recebem uma mensagem segura no idioma escolhido, sem exibir detalhes internos. O gestor não contém exportação CSV; os PDFs mantêm o conteúdo operacional escolhido pelo usuário.

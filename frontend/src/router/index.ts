@@ -15,6 +15,9 @@ import FiadoView from '@/views/FiadoView.vue'
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/conta', name: 'conta', component: () => import('@/views/AccountView.vue'), meta: { requiresAuth: true } },
+    { path: '/usuarios', name: 'usuarios', component: () => import('@/views/UserManagementView.vue'), meta: { requiresAuth: true, requiresOwner: true } },
+    { path: '/auditoria', name: 'auditoria', component: () => import('@/views/AuditView.vue'), meta: { requiresAuth: true, requiresOwner: true } },
     {path:'/bi-vendas',name:'bi-vendas',component:()=>import('@/views/SalesBiView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {path:'/enderecos',name:'enderecos',component:()=>import('@/views/AddressesView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {
@@ -91,14 +94,13 @@ const router = createRouter({
       path: '/fiado',
       name: 'fiado',
       component: FiadoView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, requiresAllSales: true }
     },
     // Catch all route — redirect to dashboard if authenticated, otherwise login
     {
       path: '/:pathMatch(.*)*',
       redirect: () => {
-        const token = localStorage.getItem('auth_token')
-        return token ? '/dashboard' : '/login'
+        return '/dashboard'
       }
     }
   ],
@@ -113,47 +115,19 @@ router.afterEach((to) => {
   }
 })
 
-// Navigation guards
-router.beforeEach(async (to, _from, next) => {
-  try {
-    const authStore = useAuthStore()
-
-    // Load stored auth if not already loaded
-    if (!authStore.token) {
-      authStore.loadStoredAuth()
-    }
-
-    // Check if route requires authentication
-    if (to.meta.requiresAuth) {
-      if (authStore.isAuthenticated) {
-        if (to.meta.requiresManager && !['ADMIN','GERENTE'].includes(authStore.user?.role || '')) { next('/dashboard'); return }
-        if (to.meta.requiresAdmin && authStore.user?.role !== 'ADMIN') {
-          next('/dashboard')
-          return
-        }
-        next()
-      } else {
-        next('/login')
-      }
-    }
-    // Check if route requires guest (user not logged in)
-    else if (to.meta.requiresGuest) {
-      if (authStore.isAuthenticated) {
-        // Restore the last visited page instead of always going to /dashboard
-        const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
-        next(lastRoute || '/dashboard')
-      } else {
-        next()
-      }
-    }
-    // Public routes
-    else {
-      next()
-    }
-  } catch (error) {
-    console.error('Router navigation error:', error)
-    next('/login')
-  }
+// A stored token is a hint, not proof of a live session or current permissions.
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  const verified = await auth.ensureSession()
+  if (to.meta.requiresAuth && !verified) return '/login'
+  if (!verified) return true
+  if (auth.user?.must_change_password && to.path !== '/conta') return '/conta'
+  if (to.meta.requiresGuest) return '/dashboard'
+  if (to.meta.requiresOwner && !auth.isOwner) return '/dashboard'
+  if (to.meta.requiresAdmin && !auth.isOwner) return '/dashboard'
+  if (to.meta.requiresManager && !['ADMIN', 'GERENTE'].includes(auth.user?.role || '')) return '/dashboard'
+  if (to.meta.requiresAllSales && auth.ownSales) return '/dashboard'
+  return true
 })
 
 export default router

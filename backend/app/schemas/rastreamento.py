@@ -23,6 +23,7 @@ class RastreamentoBase(BaseModel):
     origem: Optional[str] = Field(None, max_length=200)
     destino: Optional[str] = Field(None, max_length=200)
     pedido_id: Optional[uuid.UUID] = None
+    cliente_id: Optional[uuid.UUID] = None
 
 
 class RastreamentoCreate(RastreamentoBase):
@@ -42,6 +43,7 @@ class RastreamentoUpdate(BaseModel):
     historico_eventos: Optional[List[Dict[str, Any]]] = None
     custo_emissao: Optional[float] = None
     pedido_id: Optional[uuid.UUID] = None
+    cliente_id: Optional[uuid.UUID] = None
     ativo: Optional[bool] = None
 
 

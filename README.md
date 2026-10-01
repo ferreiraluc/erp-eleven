@@ -19,10 +19,20 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | Endereços e envios | Agenda sem duplicatas, remetentes, modelos A4, histórico, CEP e SuperFrete | `/enderecos` |
 | Visão de vendas | Resultados salvos das planilhas OneDrive, comparações, moedas e rankings | `/bi-vendas` |
 | Assistente IA | Vínculos de funcionários, ações confirmadas, memória, consultas e filas | `/assistente` |
+| Acesso e auditoria | Conta individual, troca de senha, vendas pessoais e atividade por usuário | `/conta`, `/usuarios`, `/auditoria` |
 
 **As vendas da operação são lançadas no Excel.** O BI lê os resultados corrigidos
 salvos nas planilhas, não altera células e não cria vendas no ERP. A sincronização
 ocorre diariamente às **18h de Brasília** ou pelo botão **Atualizar dados**.
+O detalhamento inclui lançamentos individuais, moedas e dias; o gráfico por hora
+só aparece quando existem horários reais nas células. O fechamento mensal corrigido
+continua separado da soma das linhas. Denis, Sol e Junior veem apenas suas vendas;
+Lucas e Wissam veem o geral. Usuários e auditoria são exclusivos de Lucas.
+
+Fotos de comprovantes dos Correios podem virar uma prévia de rastreios no Telegram,
+com conferência e confirmação antes de cadastrar. No gestor de endereços, o gerador
+4Devs permite revisar uma pessoa gerada e cadastrar somente os campos de remetente
+após aprovação manual. O cadastro conserva a identificação de dados sintéticos.
 
 Os módulos `/vendas`, `/pdv`, `/fiado` e `/exchange-rates` continuam implementados e
 acessíveis. São fluxos próprios, separados do BI; não foram removidos só por não
@@ -59,6 +69,9 @@ servidor de impressão.
 - [Desenvolvimento e validação](docs/DESENVOLVIMENTO.md): ambiente local, banco, testes e build.
 - [Deploy e operação](docs/OPERACAO.md): Render, variáveis, workers, horários e diagnóstico.
 - [Índice completo dos guias](docs/README.md): bot, impressão, endereços e BI.
+- [Acesso individual e auditoria](docs/ACESSO_AUDITORIA.md): sessões, permissões, senhas e uso das telas.
+- [Clientes, pedidos e pacotes](docs/CLIENTES_PEDIDOS_RASTREIOS.md): vínculos explícitos e entregas parciais.
+- [Comprovantes por foto](docs/RASTREIOS_COMPROVANTES.md) e [remetentes gerados](docs/REMETENTES_GERADOS.md).
 - [Auditoria de manutenção](docs/AUDITORIA_MANUTENCAO.md): remoções verificadas e dívida técnica restante.
 
 ## Estrutura
@@ -119,6 +132,7 @@ Em produção a navegação usa hash, por exemplo `/#/enderecos`.
 ```sh
 # Da raiz; DATABASE_URL explícita protege o banco real guardado no .env.
 PYTHONPATH=backend DATABASE_URL=sqlite:// backend/venv/bin/python -m pytest backend/tests -q
+npm --prefix frontend test
 npm --prefix frontend run type-check
 npm --prefix frontend run build
 ```

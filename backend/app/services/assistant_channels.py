@@ -63,18 +63,36 @@ def telegram_message(update):
         return None
     attachment=None
     document=message.get('document')
+    photos=message.get('photo')
     # A direct reply to one's own file explicitly identifies it, even when another
     # employee has since sent a document in the group.
     replied=message.get('reply_to_message') or {}
     if not document and str((replied.get('from') or {}).get('id'))==str(sender['id']):
         document=replied.get('document')
+    if not document and not photos and str((replied.get('from') or {}).get('id'))==str(sender['id']):
+        photos=replied.get('photo')
     if not callback and isinstance(document,dict) and isinstance(document.get('file_id'),str) and len(document['file_id'])<=500:
         size=document.get('file_size')
         is_pdf=document.get('mime_type')=='application/pdf' or str(document.get('file_name') or '').lower().endswith('.pdf')
+        image_type = document.get('mime_type') if document.get('mime_type') in ('image/jpeg','image/png') else None
         attachment={'file_id':document['file_id'],'name':'PDF recebido' if is_pdf else 'Arquivo recebido',
                     'mime_type':'application/pdf' if is_pdf else 'application/octet-stream',
                     'size':size if isinstance(size,int) and size>=0 else None}
-    content = message.get("text") or message.get("caption") or ('[Arquivo recebido: anexo para impressão]' if attachment else "")
+        if image_type and not is_pdf:
+            attachment.update(kind='image',name='Imagem recebida',mime_type=image_type)
+    elif not callback and isinstance(photos,list):
+        candidates=[photo for photo in photos[:20] if isinstance(photo,dict)
+            and isinstance(photo.get('file_id'),str) and 1<=len(photo['file_id'])<=500
+            and isinstance(photo.get('width'),int) and isinstance(photo.get('height'),int)
+            and photo['width']>0 and photo['height']>0]
+        if candidates:
+            photo=max(candidates,key=lambda item:item['width']*item['height'])
+            size=photo.get('file_size')
+            attachment={'kind':'image','file_id':photo['file_id'],'name':'Imagem recebida','mime_type':'image/jpeg',
+                'size':size if isinstance(size,int) and size>=0 else None}
+    fallback = ('[Imagem recebida: foto para conferência]' if attachment and attachment.get('kind')=='image'
+                else '[Arquivo recebido: anexo para impressão]' if attachment else '')
+    content = message.get("text") or message.get("caption") or fallback
     if not isinstance(content, str) or len(content) > 6000:
         return None
     if not content:

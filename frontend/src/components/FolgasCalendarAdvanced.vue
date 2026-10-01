@@ -22,9 +22,9 @@
         <!-- Filtros avançados -->
         <div class="filters">
           <div class="filter-group">
-            <label>Vendedor:</label>
+            <label>{{ $tr("Vendedor:") }}</label>
             <select v-model="filters.vendedorId" @change="loadFolgas">
-              <option value="">Todos</option>
+              <option value="">{{ $tr("Todos") }}</option>
               <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
                 {{ vendedor.nome }}
               </option>
@@ -32,47 +32,47 @@
           </div>
 
           <div class="filter-group">
-            <label>Tipo:</label>
+            <label>{{ $tr("Tipo:") }}</label>
             <select v-model="filters.tipo" @change="loadFolgas">
-              <option value="">Todos</option>
-              <option value="FOLGA">Folga</option>
-              <option value="FERIAS">Férias</option>
-              <option value="LICENCA">Licença</option>
-              <option value="FALTA">Falta</option>
-              <option value="MEIO_PERIODO">Meio Período</option>
+              <option value="">{{ $tr("Todos") }}</option>
+              <option value="FOLGA">{{ $tr("Folga") }}</option>
+              <option value="FERIAS">{{ $tr("Férias") }}</option>
+              <option value="LICENCA">{{ $tr("Licença") }}</option>
+              <option value="FALTA">{{ $tr("Falta") }}</option>
+              <option value="MEIO_PERIODO">{{ $tr("Meio Período") }}</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>Status:</label>
+            <label>{{ $tr("Status:") }}</label>
             <select v-model="filters.aprovado" @change="loadFolgas">
-              <option value="">Todos</option>
-              <option value="true">Aprovadas</option>
-              <option value="false">Pendentes</option>
+              <option value="">{{ $tr("Todos") }}</option>
+              <option value="true">{{ $tr("Aprovadas") }}</option>
+              <option value="false">{{ $tr("Pendentes") }}</option>
             </select>
           </div>
         </div>
 
         <!-- Ações em lote -->
         <div class="bulk-actions" v-if="selectedFolgas.length > 0">
-          <span class="selected-count">{{ selectedFolgas.length }} selecionadas</span>
+          <span class="selected-count">{{ selectedFolgas.length }} {{ $tr("selecionadas") }}</span>
           <button @click="approveSelected" class="bulk-btn approve">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
-            Aprovar
+            {{ $tr("Aprovar") }}
           </button>
           <button @click="rejectSelected" class="bulk-btn reject">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
-            Rejeitar
+            {{ $tr("Rejeitar") }}
           </button>
           <button @click="deleteSelected" class="bulk-btn delete">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
             </svg>
-            Excluir
+            {{ $tr("Excluir") }}
           </button>
         </div>
       </div>
@@ -82,19 +82,19 @@
     <div class="calendar-legend">
       <div class="legend-item">
         <div class="legend-color pending"></div>
-        <span>Pendente</span>
+        <span>{{ $tr("Pendente") }}</span>
       </div>
       <div class="legend-item">
         <div class="legend-color approved"></div>
-        <span>Aprovada</span>
+        <span>{{ $tr("Aprovada") }}</span>
       </div>
       <div class="legend-item">
         <div class="legend-color rejected"></div>
-        <span>Rejeitada</span>
+        <span>{{ $tr("Rejeitada") }}</span>
       </div>
       <div class="legend-item">
         <div class="legend-color today"></div>
-        <span>Hoje</span>
+        <span>{{ $tr("Hoje") }}</span>
       </div>
     </div>
 
@@ -119,7 +119,7 @@
         @click="selectDay(day)"
       >
         <div class="day-number">{{ day.day }}</div>
-        
+
         <div v-if="day.folgas && day.folgas.length > 0" class="folgas-container">
           <div
             v-for="folga in day.folgas"
@@ -127,19 +127,19 @@
             :class="[
               'folga-item',
               `tipo-${folga.tipo.toLowerCase()}`,
-              { 
+              {
                 'approved': folga.aprovado === true,
                 'rejected': folga.aprovado === false && folga.aprovado !== null,
                 'pending': folga.aprovado === null,
                 'selected': selectedFolgas.includes(folga.id)
               }
             ]"
-            :style="{ 
+            :style="{
               backgroundColor: folga.vendedor_cor,
               opacity: folga.aprovado === false ? 0.5 : 1
             }"
             @click.stop="toggleFolgaSelection(folga)"
-            :title="`${folga.vendedor_nome} - ${folga.tipo} (${folga.aprovado === null ? 'Pendente' : folga.aprovado ? 'Aprovada' : 'Rejeitada'})`"
+            :title="`${folga.vendedor_nome} - ${absenceLabel(folga.tipo)} (${folga.aprovado === null ? uiText(`Pendente`) : folga.aprovado ? uiText(`Aprovada`) : uiText(`Rejeitada`)})`"
           >
             <div class="folga-content">
               <span class="vendedor-initial">{{ folga.vendedor_nome.charAt(0) }}</span>
@@ -186,7 +186,7 @@
 
         <div class="day-modal-content">
           <div v-if="selectedDay.folgas && selectedDay.folgas.length > 0" class="folgas-list">
-            <h5>Folgas do dia ({{ selectedDay.folgas.length }}):</h5>
+            <h5>{{ $tr("Folgas do dia (") }}{{ selectedDay.folgas.length }}):</h5>
             <div
               v-for="folga in selectedDay.folgas"
               :key="folga.id"
@@ -200,25 +200,25 @@
                   ></div>
                   <div class="folga-details">
                     <span class="vendedor-name">{{ folga.vendedor_nome }}</span>
-                    <span class="folga-type">{{ folga.tipo }} - {{ folga.periodo }}</span>
+                    <span class="folga-type">{{ absenceLabel(folga.tipo) }} - {{ absenceLabel(folga.periodo) }}</span>
                   </div>
                 </div>
-                
+
                 <div class="folga-actions">
                   <span :class="['status-badge', getStatusClass(folga)]">
                     {{ getStatusText(folga) }}
                   </span>
                   <button @click="editFolga(folga)" class="btn btn-sm btn-secondary">
-                    Editar
+                    {{ $tr("Editar") }}
                   </button>
                   <button @click="deleteFolga(folga)" class="btn btn-sm btn-danger">
-                    Excluir
+                    {{ $tr("Excluir") }}
                   </button>
                 </div>
               </div>
-              
+
               <div v-if="folga.motivo" class="folga-motivo">
-                <strong>Motivo:</strong> {{ folga.motivo }}
+                <strong>{{ $tr("Motivo:") }}</strong> {{ folga.motivo }}
               </div>
             </div>
           </div>
@@ -227,7 +227,7 @@
             <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            <p>Nenhuma folga registrada para este dia.</p>
+            <p>{{ $tr("Nenhuma folga registrada para este dia.") }}</p>
           </div>
 
           <div class="day-modal-actions">
@@ -235,7 +235,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
               </svg>
-              Adicionar Folga
+              {{ $tr("Adicionar Folga") }}
             </button>
           </div>
         </div>
@@ -246,7 +246,7 @@
     <div v-if="showFolgaModal" class="day-modal-overlay" @click="closeFolgaModal">
       <div class="day-modal" @click.stop>
         <div class="day-modal-header">
-          <h4>{{ editingFolga ? 'Editar Folga' : 'Adicionar Folga' }}</h4>
+          <h4>{{ editingFolga ? uiText(`Editar Folga`) : uiText(`Adicionar Folga`) }}</h4>
           <button @click="closeFolgaModal" class="close-button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -258,9 +258,9 @@
           <form @submit.prevent="submitFolga" class="folga-form">
             <div class="form-row">
               <div class="form-group">
-                <label for="vendedor">Vendedor:</label>
+                <label for="vendedor">{{ $tr("Vendedor:") }}</label>
                 <select v-model="folgaForm.vendedor_id" id="vendedor" required>
-                  <option value="">Selecione um vendedor</option>
+                  <option value="">{{ $tr("Selecione um vendedor") }}</option>
                   <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
                     {{ vendedor.nome }}
                   </option>
@@ -268,36 +268,36 @@
               </div>
 
               <div class="form-group">
-                <label for="data">Data:</label>
+                <label for="data">{{ $tr("Data:") }}</label>
                 <input v-model="folgaForm.data" type="date" id="data" required>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label for="tipo">Tipo de Folga:</label>
+                <label for="tipo">{{ $tr("Tipo de Folga:") }}</label>
                 <select v-model="folgaForm.tipo" id="tipo" required>
-                  <option value="FOLGA">Folga</option>
-                  <option value="FERIAS">Férias</option>
-                  <option value="LICENCA">Licença</option>
-                  <option value="FALTA">Falta</option>
-                  <option value="MEIO_PERIODO">Meio Período</option>
+                  <option value="FOLGA">{{ $tr("Folga") }}</option>
+                  <option value="FERIAS">{{ $tr("Férias") }}</option>
+                  <option value="LICENCA">{{ $tr("Licença") }}</option>
+                  <option value="FALTA">{{ $tr("Falta") }}</option>
+                  <option value="MEIO_PERIODO">{{ $tr("Meio Período") }}</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label for="periodo">Período:</label>
+                <label for="periodo">{{ $tr("Período:") }}</label>
                 <select v-model="folgaForm.periodo" id="periodo">
-                  <option value="COMPLETO">Dia Completo</option>
-                  <option value="MANHA">Manhã</option>
-                  <option value="TARDE">Tarde</option>
+                  <option value="COMPLETO">{{ $tr("Dia Completo") }}</option>
+                  <option value="MANHA">{{ $tr("Manhã") }}</option>
+                  <option value="TARDE">{{ $tr("Tarde") }}</option>
                 </select>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="motivo">Motivo:</label>
-              <textarea v-model="folgaForm.motivo" id="motivo" rows="3" placeholder="Descreva o motivo..."></textarea>
+              <label for="motivo">{{ $tr("Motivo:") }}</label>
+              <textarea v-model="folgaForm.motivo" id="motivo" rows="3" :placeholder='$tr("Descreva o motivo...")'></textarea>
             </div>
 
             <div class="form-row" v-if="authStore.userRole === 'ADMIN' || authStore.userRole === 'GERENTE'">
@@ -305,17 +305,17 @@
                 <label class="checkbox-label">
                   <input v-model="folgaForm.aprovado" type="checkbox">
                   <span class="checkmark"></span>
-                  Aprovar automaticamente
+                  {{ $tr("Aprovar automaticamente") }}
                 </label>
               </div>
             </div>
 
             <div class="form-actions">
               <button type="button" @click="closeFolgaModal" class="btn btn-secondary">
-                Cancelar
+                {{ $tr("Cancelar") }}
               </button>
               <button type="submit" class="btn btn-primary" :disabled="loading">
-                {{ loading ? 'Salvando...' : editingFolga ? 'Atualizar' : 'Salvar' }}
+                {{ loading ? uiText(`Salvando...`) : editingFolga ? uiText(`Atualizar`) : uiText(`Salvar`) }}
               </button>
             </div>
           </form>
@@ -332,26 +332,26 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
             </svg>
           </div>
-          <h4>Confirmar Exclusão</h4>
+          <h4>{{ $tr("Confirmar Exclusão") }}</h4>
         </div>
-        
+
         <div class="delete-modal-content">
           <p v-if="folgaToDelete">
-            Tem certeza que deseja excluir a folga de 
-            <strong>{{ folgaToDelete.vendedor_nome }}</strong> 
-            do dia <strong>{{ formatDate(folgaToDelete.data) }}</strong>?
+            {{ $tr("Tem certeza que deseja excluir a folga de") }}
+            <strong>{{ folgaToDelete.vendedor_nome }}</strong>
+            {{ $tr("do dia") }} <strong>{{ formatDate(folgaToDelete.data) }}</strong>?
           </p>
           <p v-else-if="selectedFolgas.length > 1">
-            Tem certeza que deseja excluir <strong>{{ selectedFolgas.length }} folgas</strong> selecionadas?
+            {{ $tr("Tem certeza que deseja excluir") }} <strong>{{ selectedFolgas.length }} {{ $tr("folgas") }}</strong> {{ $tr("selecionadas?") }}
           </p>
         </div>
 
         <div class="delete-modal-actions">
           <button @click="cancelDelete" class="btn btn-secondary">
-            Cancelar
+            {{ $tr("Cancelar") }}
           </button>
           <button @click="confirmDelete" class="btn btn-danger" :disabled="loading">
-            {{ loading ? 'Excluindo...' : 'Sim, Excluir' }}
+            {{ loading ? uiText(`Excluindo...`) : uiText(`Sim, Excluir`) }}
           </button>
         </div>
       </div>
@@ -360,6 +360,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { vendorsAPI } from '@/services/api'
@@ -399,28 +400,24 @@ const folgaForm = reactive({
 })
 
 // Constantes
-const monthNames = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-]
-
-const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const monthNames = computed(() => Array.from({length:12},(_,month)=>new Date(2026,month,1).toLocaleDateString(uiLocale(),{month:'long'})))
+const weekDays = computed(() => Array.from({length:7},(_,day)=>new Date(2026,0,4+day).toLocaleDateString(uiLocale(),{weekday:'short'})))
 
 // Computed
 const calendarDays = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1)
   const startDate = new Date(firstDay)
   const today = new Date()
-  
+
   startDate.setDate(startDate.getDate() - startDate.getDay())
-  
+
   const days = []
   const currentDate = new Date(startDate)
-  
+
   for (let i = 0; i < 42; i++) {
     const dateStr = currentDate.toISOString().split('T')[0]
     const dayFolgas = filteredFolgas.value.filter(f => f.data === dateStr)
-    
+
     days.push({
       day: currentDate.getDate(),
       date: dateStr,
@@ -430,10 +427,10 @@ const calendarDays = computed(() => {
       isWeekend: currentDate.getDay() === 0 || currentDate.getDay() === 6,
       folgas: dayFolgas
     })
-    
+
     currentDate.setDate(currentDate.getDate() + 1)
   }
-  
+
   return days
 })
 
@@ -525,7 +522,7 @@ const closeFolgaModal = () => {
 const submitFolga = async () => {
   try {
     loading.value = true
-    
+
     const payload = editingFolga.value ? {
       data: folgaForm.data,
       tipo: folgaForm.tipo,
@@ -539,7 +536,7 @@ const submitFolga = async () => {
       periodo: folgaForm.periodo,
       motivo: folgaForm.motivo || null
     }
-    
+
     if (editingFolga.value) {
       await vendorsAPI.updateFolga(editingFolga.value.id, payload)
     } else {
@@ -548,12 +545,12 @@ const submitFolga = async () => {
 
     await loadFolgas()
     closeFolgaModal()
-    
+
     // Mostrar mensagem de sucesso
-    showNotification(editingFolga.value ? 'Folga atualizada com sucesso!' : 'Folga criada com sucesso!', 'success')
-    
+    showNotification(editingFolga.value ? uiText(`Folga atualizada com sucesso!`) : uiText(`Folga criada com sucesso!`), 'success')
+
   } catch (error: any) {
-    showNotification(error.message || 'Erro ao salvar folga', 'error')
+    showNotification(error.message || uiText(`Erro ao salvar folga`), 'error')
   } finally {
     loading.value = false
   }
@@ -580,27 +577,27 @@ const cancelDelete = () => {
 const confirmDelete = async () => {
   try {
     loading.value = true
-    
+
     if (folgaToDelete.value) {
       // Excluir uma folga específica
       await vendorsAPI.deleteFolga(folgaToDelete.value.id)
-      showNotification('Folga excluída com sucesso!', 'success')
+      showNotification(uiText(`Folga excluída com sucesso!`), 'success')
     } else if (selectedFolgas.value.length > 0) {
       // Excluir folgas selecionadas
       const deletePromises = selectedFolgas.value.map(folgaId =>
         vendorsAPI.deleteFolga(folgaId)
       )
-      
+
       await Promise.all(deletePromises)
-      showNotification(`${selectedFolgas.value.length} folgas excluídas com sucesso!`, 'success')
+      showNotification(uiText(`{0} folgas excluídas com sucesso!`,{0:selectedFolgas.value.length}), 'success')
     }
-    
+
     await loadFolgas()
     cancelDelete()
     selectedFolgas.value = []
-    
+
   } catch {
-    showNotification('Erro ao excluir folga(s)', 'error')
+    showNotification(uiText(`Erro ao excluir folga(s)`), 'error')
   } finally {
     loading.value = false
   }
@@ -618,34 +615,39 @@ const rejectSelected = async () => {
 const bulkUpdateApproval = async (approved: boolean) => {
   try {
     loading.value = true
-    
+
     const updatePromises = selectedFolgas.value.map(folgaId =>
       vendorsAPI.updateFolga(folgaId, { aprovado: approved })
     )
-    
+
     await Promise.all(updatePromises)
-    
-    const action = approved ? 'aprovadas' : 'rejeitadas'
-    showNotification(`${selectedFolgas.value.length} folgas ${action} com sucesso!`, 'success')
-    
+
+    const action = approved ? uiText(`aprovadas`) : uiText(`rejeitadas`)
+    showNotification(uiText(`{0} folgas {1} com sucesso!`,{0:selectedFolgas.value.length,1:action}), 'success')
+
     selectedFolgas.value = []
     await loadFolgas()
-    
+
   } catch {
-    showNotification('Erro ao atualizar folgas', 'error')
+    showNotification(uiText(`Erro ao atualizar folgas`), 'error')
   } finally {
     loading.value = false
   }
 }
 
+// Labels are separate from the API enum values used in forms and filters.
+const absenceLabel = (value: string) => {
+  const labels: Record<string,string> = {FOLGA:'Folga',FERIAS:'Férias',LICENCA:'Licença',FALTA:'Falta',MEIO_PERIODO:'Meio Período',COMPLETO:'Dia Completo',MANHA:'Manhã',TARDE:'Tarde'}
+  return labels[value] ? uiText(labels[value]) : value
+}
 // Métodos utilitários
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('pt-BR', { 
+  return date.toLocaleDateString(uiLocale(), {
     weekday: 'long',
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   })
 }
 
@@ -656,9 +658,9 @@ const getStatusClass = (folga: any) => {
 }
 
 const getStatusText = (folga: any) => {
-  if (folga.aprovado === true) return 'Aprovada'
-  if (folga.aprovado === false) return 'Rejeitada'
-  return 'Pendente'
+  if (folga.aprovado === true) return uiText(`Aprovada`)
+  if (folga.aprovado === false) return uiText(`Rejeitada`)
+  return uiText(`Pendente`)
 }
 
 const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -678,7 +680,7 @@ const loadFolgas = async () => {
     console.log('Folgas loaded:', data?.length || 0)
   } catch (error) {
     console.error('Erro ao carregar folgas:', error)
-    showNotification('Erro ao carregar folgas', 'error')
+    showNotification(uiText(`Erro ao carregar folgas`), 'error')
     folgas.value = []
   }
 }
@@ -691,7 +693,7 @@ const loadVendedores = async () => {
     console.log('Vendedores loaded:', data?.length || 0)
   } catch (error) {
     console.error('Erro ao carregar vendedores:', error)
-    showNotification('Erro ao carregar vendedores', 'error')
+    showNotification(uiText(`Erro ao carregar vendedores`), 'error')
     vendedores.value = []
   }
 }
@@ -1455,31 +1457,31 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .calendar-cell {
     min-height: 80px;
   }
-  
+
   .folga-item {
     font-size: 0.625rem;
     min-height: 20px;
   }
-  
+
   .vendedor-initial {
     width: 14px;
     height: 14px;
     font-size: 0.5rem;
   }
-  
+
   .bulk-actions {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .bulk-actions .bulk-btn {
     justify-content: center;
   }

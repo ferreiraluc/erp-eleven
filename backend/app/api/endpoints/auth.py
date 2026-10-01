@@ -1,124 +1,112 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from threading import Lock
+import time
+from fastapi import APIRouter, HTTPException, Depends, Request
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
-from jose import jwt
-import bcrypt
 from ...database import get_db
-from ...models.usuario import Usuario
+from ...models.usuario import Usuario, UsuarioRole
+from ...models.access import AuthSession, now
 from ...schemas.usuario import UsuarioLogin, Token, UsuarioResponse, UsuarioCreate
-from ...dependencies import get_current_active_user
-from ...config import settings
+from ...dependencies import get_current_active_user, require_owner
+from ...services.access_policy import OWNER_EMAIL
+from ...services.user_sessions import verify_password, get_password_hash, issue_session, revoke_all
+from ...services.user_audit import bind_actor, record
 
 router = APIRouter()
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
-
-def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-def _token_expiry() -> datetime:
-    """
-    Returns the JWT expiration as naive UTC datetime.
-    Always expires at midnight (local timezone) 7 days from today,
-    so sessions never cut off mid-shift and reset predictably every week.
-    """
-    now_local = datetime.now(settings.tz)
-    midnight_today = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
-    expire_local = midnight_today + timedelta(days=7)
-    return expire_local.astimezone(timezone.utc).replace(tzinfo=None)
+_attempts = {}
+_attempts_lock = Lock()
 
 
-def create_access_token(data: dict) -> str:
-    """Create JWT access token — expires at midnight 7 days from now (local timezone)"""
-    to_encode = data.copy()
-    expire = _token_expiry()
-    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+def authenticate_user(db, email, password):
+    user = db.query(Usuario).filter(func.lower(Usuario.email) == email.strip().lower()).first()
+    return user if user and verify_password(password, user.senha_hash) else None
 
-def authenticate_user(db: Session, email: str, password: str) -> Usuario:
-    """Authenticate user credentials"""
-    user = db.query(Usuario).filter(Usuario.email == email).first()
-    if not user:
-        return None
-    if not verify_password(password, user.senha_hash):
-        return None
+
+def login_limit(email, address):
+    key = (email.lower(), address)
+    current = time.monotonic()
+    with _attempts_lock:
+        expired = [k for k, (_, since) in _attempts.items() if current - since > 600]
+        for k in expired: _attempts.pop(k, None)
+        count, since = _attempts.get(key, (0, current))
+        if count >= 12:
+            raise HTTPException(429, 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.')
+        if len(_attempts) >= 10000: _attempts.pop(next(iter(_attempts)))
+        _attempts[key] = (count + 1, since)
+    return key
+
+
+@router.post('/login', response_model=Token)
+def login(body: UsuarioLogin, request: Request, db: Session = Depends(get_db)):
+    key = login_limit(str(body.email), request.client.host if request.client else '')
+    user = authenticate_user(db, str(body.email), body.senha)
+    if not user or not user.ativo:
+        record(db, 'login_failed', 'auth', status_code=401)
+        db.commit()
+        raise HTTPException(401, 'E-mail ou senha incorretos.')
+    with _attempts_lock: _attempts.pop(key, None)
+    bind_actor(db, user)
+    user.ultimo_login = now()
+    result = issue_session(db, user)
+    record(db, 'login', 'auth', status_code=200)
+    db.commit()
+    return result
+
+
+@router.get('/me', response_model=UsuarioResponse)
+def me(user: Usuario = Depends(get_current_active_user)):
     return user
 
-@router.post("/login", response_model=Token)
-async def login(user_credentials: UsuarioLogin, db: Session = Depends(get_db)):
-    """Authenticate user and return access token"""
-    user = authenticate_user(db, user_credentials.email, user_credentials.senha)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    if not user.ativo:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is deactivated"
-        )
-    
-    # Update last login
-    user.ultimo_login = settings.now()
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=100)
+    new_password: str = Field(min_length=6, max_length=72)
+
+    @field_validator('new_password')
+    @classmethod
+    def valid_bytes(cls, value):
+        if len(value.encode('utf-8')) > 72 or not value.strip():
+            raise ValueError('Senha inválida: use até 72 bytes.')
+        return value
+
+
+@router.post('/password', response_model=Token)
+def change_password(body: PasswordChange, user=Depends(get_current_active_user), db: Session = Depends(get_db)):
+    user = db.query(Usuario).filter_by(id=user.id).populate_existing().with_for_update().one()
+    if not verify_password(body.current_password, user.senha_hash):
+        raise HTTPException(400, 'A senha atual está incorreta.')
+    if body.current_password == body.new_password:
+        raise HTTPException(400, 'Escolha uma senha diferente da senha atual.')
+    user.senha_hash = get_password_hash(body.new_password)
+    user.must_change_password = False
+    revoke_all(db, user)
+    result = issue_session(db, user)
+    record(db, 'password_changed', 'auth')
     db.commit()
-    
-    access_token = create_access_token(data={"sub": user.email})
-    expires_in = int((_token_expiry() - datetime.utcnow()).total_seconds())
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=expires_in
-    )
+    return result
 
-@router.get("/me", response_model=UsuarioResponse)
-async def get_current_user_info(current_user: Usuario = Depends(get_current_active_user)):
-    """Get current user information"""
-    return current_user
 
-@router.post("/register", response_model=UsuarioResponse)
-async def register_user(
-    user_data: UsuarioCreate, 
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_active_user)
-):
-    """Register new user (admin only)"""
-    # Check if current user is admin
-    if current_user.role.value != "ADMIN":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can create new users"
-        )
-    
-    # Check if email already exists
-    if db.query(Usuario).filter(Usuario.email == user_data.email).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
-    # Create new user
-    hashed_password = get_password_hash(user_data.senha)
-    db_user = Usuario(
-        nome=user_data.nome,
-        email=user_data.email,
-        senha_hash=hashed_password,
-        role=user_data.role,
-        ativo=user_data.ativo
-    )
-    
-    db.add(db_user)
+@router.post('/register', response_model=UsuarioResponse)
+def register_user(body: UsuarioCreate, user=Depends(require_owner), db: Session = Depends(get_db)):
+    email = str(body.email).strip().lower()
+    if body.role == UsuarioRole.ADMIN and email != OWNER_EMAIL:
+        raise HTTPException(400, 'Somente Lucas pode ter perfil administrador.')
+    if db.query(Usuario).filter(func.lower(Usuario.email) == email).first():
+        raise HTTPException(409, 'E-mail já cadastrado.')
+    created = Usuario(nome=body.nome, email=email, senha_hash=get_password_hash(body.senha),
+                      role=body.role, ativo=body.ativo, must_change_password=True,
+                      sales_scope='own' if body.role != UsuarioRole.ADMIN else 'all')
+    db.add(created)
     db.commit()
-    db.refresh(db_user)
-    
-    return db_user
+    db.refresh(created)
+    return created
 
-@router.post("/logout")
-async def logout(current_user: Usuario = Depends(get_current_active_user)):
-    """Logout user (invalidate token on client side)"""
-    return {"message": "Successfully logged out"}
+
+@router.post('/logout')
+def logout(request: Request, user=Depends(get_current_active_user), db: Session = Depends(get_db)):
+    session = db.get(AuthSession, request.state.auth_session_id)
+    session.revoked_at = now()
+    record(db, 'logout', 'auth')
+    db.commit()
+    return {'ok': True}

@@ -10,28 +10,28 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 class="page-title">Estoque</h1>
+            <h1 class="page-title">{{ tr('Estoque') }}</h1>
           </div>
-          <p class="page-subtitle">Gerencie os itens do inventário</p>
+          <p class="page-subtitle">{{ tr('Gerencie os itens do inventário') }}</p>
         </div>
         <div class="header-right">
           <button @click="showLabelTemplates = true" class="btn btn-secondary btn-modelos-ia-desktop">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
-            Modelos IA
+            {{ tr('Exemplos de etiquetas') }}
           </button>
           <button @click="showImport = true" class="btn btn-secondary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Importar
+            {{ tr('Importar') }}
           </button>
           <button @click="openCreate" class="btn btn-primary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Novo item
+            {{ tr('Novo item') }}
           </button>
         </div>
       </div>
@@ -44,12 +44,12 @@
           <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input v-model="searchQuery" type="text" placeholder="Buscar por nome, SKU, código..." class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
-          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn" title="Limpar busca" type="button">
+          <input v-model="searchQuery" type="text" :placeholder="tr('Buscar por nome, SKU, código...')" class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
+          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn" :title="tr('Limpar busca')" type="button">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <button @click="showScanner = true" class="camera-btn" title="Escanear código">
+        <button @click="showScanner = true" class="camera-btn" :title="tr('Escanear código')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -66,20 +66,20 @@
           @click="setStatusFilter(chip.value)"
           :class="['chip', { active: activeStatus === chip.value, 'chip-inactive': chip.value === 'inactive' }]"
         >
-          {{ chip.label }}
+          {{ tr(chip.label) }}
           <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
         </button>
 
         <!-- Marca dropdown chip -->
         <div class="chip-dd-wrap" v-if="distinctBrands.length > 0">
           <button @click="toggleFilter('brand')" :class="['chip', { active: !!filterBrand }]">
-            {{ filterBrand || 'Marca' }} <span class="chip-caret">▾</span>
+            {{ filterBrand || tr('Marca') }} <span class="chip-caret">▾</span>
           </button>
           <div v-if="openFilter === 'brand'" class="chip-dropdown">
             <div class="chip-dd-search-wrap">
-              <input v-model="brandSearch" class="chip-dd-search" placeholder="Buscar marca..." @click.stop type="text" autocomplete="off" />
+              <input v-model="brandSearch" class="chip-dd-search" :placeholder="tr('Buscar marca...')" @click.stop type="text" autocomplete="off" />
             </div>
-            <button @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">Todas as marcas</button>
+            <button @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">{{ tr('Todas as marcas') }}</button>
             <button v-for="b in filteredBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
           </div>
         </div>
@@ -87,30 +87,30 @@
         <!-- Categoria dropdown chip -->
         <div class="chip-dd-wrap" v-if="distinctCategories.length > 0">
           <button @click="toggleFilter('category')" :class="['chip', { active: !!filterCategory }]">
-            {{ filterCategory ? formatCategory(filterCategory) : 'Categoria' }} <span class="chip-caret">▾</span>
+            {{ filterCategory ? formatCategory(filterCategory) : tr('Categoria') }} <span class="chip-caret">▾</span>
           </button>
           <div v-if="openFilter === 'category'" class="chip-dropdown">
             <div class="chip-dd-search-wrap">
-              <input v-model="categorySearch" class="chip-dd-search" placeholder="Buscar categoria..." @click.stop type="text" autocomplete="off" />
+              <input v-model="categorySearch" class="chip-dd-search" :placeholder="tr('Buscar categoria...')" @click.stop type="text" autocomplete="off" />
             </div>
-            <button @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">Todas as categorias</button>
+            <button @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">{{ tr('Todas as categorias') }}</button>
             <button v-for="c in filteredCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
           </div>
         </div>
 
         <!-- Location chips -->
         <button @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">
-          Loja
+          {{ tr('Loja') }}
           <span v-if="inventoryStore.alerts?.loja_count !== undefined" class="chip-count">{{ inventoryStore.alerts.loja_count }}</span>
         </button>
         <button @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">
-          Depósito
+          {{ tr('Depósito') }}
           <span v-if="inventoryStore.alerts?.deposito_count !== undefined" class="chip-count">{{ inventoryStore.alerts.deposito_count }}</span>
         </button>
 
         <!-- Ver grades (só aparece se existem grupos) -->
         <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
-          Ver grades
+          {{ tr('Ver grades') }}
           <span v-if="inventoryStore.alerts?.group_count" class="chip-count">{{ inventoryStore.alerts.group_count }}</span>
           <span v-if="groupMode" class="chip-check">✓</span>
         </button>
@@ -118,13 +118,13 @@
 
       <!-- Sugestões de agrupamento (visível no modo seleção) -->
       <div v-if="selectionMode && suggestedGroups.length > 0" class="suggestions-bar">
-        <span class="sug-label">Similares detectados:</span>
+        <span class="sug-label">{{ tr('Similares detectados:') }}</span>
         <button
           v-for="sg in suggestedGroups.slice(0, 4)"
           :key="sg.name"
           @click="selectSuggestedGroup(sg)"
           class="sug-chip"
-          :title="`${sg.items.length} itens com nome similar`"
+          :title="tr('{count} itens com nome similar', { count: sg.items.length })"
         >
           {{ sg.name }} ({{ sg.items.length }})
         </button>
@@ -134,22 +134,22 @@
       <div v-if="inventoryStore.alerts" class="inv-stats">
         <span class="inv-stat">
           <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items }}</span>
-          <span class="inv-stat-label">itens</span>
+          <span class="inv-stat-label">{{ tr('itens') }}</span>
         </span>
         <span class="inv-stat-sep">·</span>
         <span class="inv-stat">
           <span class="inv-stat-num">{{ inventoryStore.alerts.group_count }}</span>
-          <span class="inv-stat-label">grades</span>
+          <span class="inv-stat-label">{{ tr('grades') }}</span>
         </span>
         <span class="inv-stat-sep">·</span>
         <button
           class="inv-stat inv-stat-btn"
           :class="{ 'inv-stat-btn-active': filterUngroupedOnly }"
           @click="toggleUngroupedFilter"
-          title="Filtrar itens sem grade"
+          :title="tr('Filtrar itens sem grade')"
         >
           <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items - inventoryStore.alerts.grouped_items_count }}</span>
-          <span class="inv-stat-label">sem grade</span>
+          <span class="inv-stat-label">{{ tr('sem grade') }}</span>
         </button>
         <template v-if="inventoryStore.alerts.low_stock_count > 0">
           <span class="inv-stat-sep">·</span>
@@ -157,10 +157,10 @@
             class="inv-stat inv-stat-btn inv-stat-warn"
             :class="{ 'inv-stat-btn-active inv-stat-warn-active': activeStatus === 'low_stock' }"
             @click="setStatusFilter(activeStatus === 'low_stock' ? '' : 'low_stock')"
-            title="Filtrar estoque baixo"
+            :title="tr('Filtrar estoque baixo')"
           >
             <span class="inv-stat-num">{{ inventoryStore.alerts.low_stock_count }}</span>
-            <span class="inv-stat-label">baixo</span>
+            <span class="inv-stat-label">{{ tr('baixo') }}</span>
           </button>
         </template>
         <template v-if="inventoryStore.alerts.out_of_stock_count > 0">
@@ -169,38 +169,38 @@
             class="inv-stat inv-stat-btn inv-stat-danger"
             :class="{ 'inv-stat-btn-active inv-stat-danger-active': activeStatus === 'out_of_stock' }"
             @click="setStatusFilter(activeStatus === 'out_of_stock' ? '' : 'out_of_stock')"
-            title="Filtrar sem estoque"
+            :title="tr('Filtrar sem estoque')"
           >
             <span class="inv-stat-num">{{ inventoryStore.alerts.out_of_stock_count }}</span>
-            <span class="inv-stat-label">sem estoque</span>
+            <span class="inv-stat-label">{{ tr('sem estoque') }}</span>
           </button>
         </template>
       </div>
 
       <!-- View mode switcher -->
       <div class="view-switcher">
-        <span class="view-label">Visualização:</span>
-        <button :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" title="Lista">
+        <span class="view-label">{{ tr('Visualização:') }}</span>
+        <button :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" :title="tr('Lista')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
-          Lista
+          {{ tr('Lista') }}
         </button>
-        <button :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" title="Compacto">
+        <button :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" :title="tr('Compacto')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h7M4 12h7M4 19h7M14 5h6M14 12h6M14 19h6" />
           </svg>
-          Compacto
+          {{ tr('Compacto') }}
         </button>
-        <button :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" title="Grade">
+        <button :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" :title="tr('Grade')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
           </svg>
-          Grade
+          {{ tr('Grade') }}
         </button>
         <span class="view-sep">|</span>
-        <button :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" title="Selecionar para agrupar">
-          Agrupar
+        <button :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar para agrupar')">
+          {{ tr('Agrupar') }}
         </button>
       </div>
     </div>
@@ -209,7 +209,7 @@
     <!-- Loading -->
     <div v-if="inventoryStore.loading && flatList.length === 0" class="loading-state">
       <div class="spinner"></div>
-      <p>Carregando itens...</p>
+      <p>{{ tr('Carregando itens...') }}</p>
     </div>
 
     <!-- Empty state -->
@@ -217,8 +217,8 @@
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
-      <p>Nenhum item encontrado</p>
-      <button @click="openCreate" class="btn btn-primary" style="margin-top:1rem;">Criar primeiro item</button>
+      <p>{{ tr('Nenhum item encontrado') }}</p>
+      <button @click="openCreate" class="btn btn-primary" style="margin-top:1rem;">{{ tr('Criar primeiro item') }}</button>
     </div>
 
     <!-- Items list -->
@@ -258,29 +258,29 @@
                 v-else
                 class="group-name group-name-editable"
                 @click.stop="startEditGroupName(entry.group.group_key)"
-                title="Clique para renomear o grupo"
+                :title="tr('Clique para renomear o grupo')"
               >{{ entry.group.group_key }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
-              <span class="group-total-stock">Total: {{ entry.group.total_stock }}</span>
+              <span class="group-total-stock">{{ tr('Total:') }} {{ entry.group.total_stock }}</span>
               <span
                 v-if="groupLocationBadge(entry.group.items) === 'deposito'"
                 class="group-loc-badge badge-deposito"
-              >Depósito</span>
+              >{{ tr('Depósito') }}</span>
               <span
                 v-else-if="groupLocationBadge(entry.group.items) === 'mixed'"
                 class="group-loc-badge badge-mixed"
-              >Loja + Dep.</span>
+              >{{ tr('Loja + Dep.') }}</span>
               <span v-if="entry.group.items.find(i => i.barcode)" class="group-barcode">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="9" height="9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
                 {{ entry.group.items.find(i => i.barcode)!.barcode }}
               </span>
             </div>
             <div class="group-btns">
-              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn" :title="expandedGroups.includes(entry.group.group_key) ? 'Recolher' : 'Expandir'">
+              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
-              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn" title="Desagrupar">
+              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn" :title="tr('Desagrupar')">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
               </button>
             </div>
@@ -301,13 +301,13 @@
               <div class="chip-remove-wrap">
                 <button
                   class="chip-remove"
-                  title="Remover do grupo"
+                  :title="tr('Remover do grupo')"
                   @click.stop="confirmRemoveChip = v.id"
                 >×</button>
                 <div v-if="confirmRemoveChip === v.id" class="chip-remove-confirm">
-                  <span>Remover?</span>
-                  <button @click.stop="doRemoveFromGroup(v.id, entry.group.group_key)">Sim</button>
-                  <button @click.stop="confirmRemoveChip = null">Não</button>
+                  <span>{{ tr('Remover?') }}</span>
+                  <button @click.stop="doRemoveFromGroup(v.id, entry.group.group_key)">{{ tr('Sim') }}</button>
+                  <button @click.stop="confirmRemoveChip = null">{{ tr('Não') }}</button>
                 </div>
               </div>
             </span>
@@ -327,39 +327,39 @@
               </div>
               <div class="exp-stock-info">
                 <template v-if="item.stock_loja !== undefined">
-                  <span class="exp-stock-val">L:{{ item.stock_loja }}</span>
+                  <span class="exp-stock-val">{{ tr('L:') }}{{ item.stock_loja }}</span>
                   <span class="exp-stock-sep">·</span>
-                  <span class="exp-stock-val">D:{{ item.stock_deposito ?? 0 }}</span>
+                  <span class="exp-stock-val">{{ tr('D:') }}{{ item.stock_deposito ?? 0 }}</span>
                 </template>
                 <template v-else>
                   <span class="exp-stock-val">{{ item.current_stock }}</span>
                 </template>
               </div>
               <span v-if="Number(item.sale_price) > 0" class="exp-price">
-                {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 0 }) }}
+                {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 0 }) }}
               </span>
               <div class="exp-actions">
                 <div class="exit-wrap">
-                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit" title="Consumir 1" :disabled="item.current_stock <= 0">−1</button>
+                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit" :title="tr('Consumir 1')" :disabled="item.current_stock <= 0">−1</button>
                   <div v-if="confirmExitId === item.id" class="exit-confirm-popover">
                     <template v-if="exitLocations(item).loja && exitLocations(item).deposito">
-                      <span class="confirm-question">Retirar de:</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja">Loja ({{ item.stock_loja }})</button>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep">Dep. ({{ item.stock_deposito }})</button>
+                      <span class="confirm-question">{{ tr('Retirar de:') }}</span>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ item.stock_loja }})</button>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ item.stock_deposito }})</button>
                     </template>
                     <template v-else-if="exitLocations(item).deposito">
-                      <span class="confirm-question">Retirar do Depósito?</span>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-yes">Sim</button>
+                      <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-yes">{{ tr('Sim') }}</button>
                     </template>
                     <template v-else>
-                      <span class="confirm-question">Retirar da Loja?</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-yes">Sim</button>
+                      <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-yes">{{ tr('Sim') }}</button>
                     </template>
                     <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                   </div>
                 </div>
-                <button @click.stop="openMovement(item)" class="exp-btn exp-move" title="Movimentar">⇅</button>
-                <button @click.stop="openEdit(item)" class="exp-btn exp-edit" title="Editar">✏</button>
+                <button @click.stop="openMovement(item)" class="exp-btn exp-move" :title="tr('Movimentar')">⇅</button>
+                <button @click.stop="openEdit(item)" class="exp-btn exp-edit" :title="tr('Editar')">✏</button>
               </div>
             </div>
           </div>
@@ -379,7 +379,7 @@
             <span :class="['check-box', { checked: selectedIds.includes(entry.item.id), 'check-grouped': !!entry.item.group_key }]">
               <svg v-if="selectedIds.includes(entry.item.id)" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </span>
-            <span v-if="entry.item.group_key" class="in-group-badge" :title="`Já pertence ao grupo: ${entry.item.group_key}`">grade</span>
+            <span v-if="entry.item.group_key" class="in-group-badge" :title="tr('Já pertence ao grupo: {group}', { group: entry.item.group_key })">{{ tr('grade') }}</span>
           </div>
           <!-- Imagem topo (grid view) -->
           <div class="item-grid-image" @click.stop="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
@@ -407,12 +407,12 @@
               </template>
               <span class="list-sep list-sep-spaced">·</span>
               <span class="list-stock" :class="'stock-' + entry.item.alert_level">
-                <template v-if="entry.item.stock_loja !== undefined">L:{{ entry.item.stock_loja }}&nbsp;D:{{ entry.item.stock_deposito ?? 0 }}</template>
+                <template v-if="entry.item.stock_loja !== undefined">{{ tr('L:') }}{{ entry.item.stock_loja }}{{ tr('D:') }}{{ entry.item.stock_deposito ?? 0 }}</template>
                 <template v-else>{{ entry.item.current_stock }}</template>
               </span>
               <template v-if="Number(entry.item.sale_price) > 0">
                 <span class="list-sep">·</span>
-                <span class="list-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }}&nbsp;{{ Number(entry.item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+                <span class="list-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }}&nbsp;{{ Number(entry.item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 2 }) }}</span>
               </template>
               <template v-if="entry.item.barcode">
                 <span class="list-sep list-sep-subtle">·</span>
@@ -424,23 +424,23 @@
                 <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="entry.item.current_stock <= 0">−1</button>
                 <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
                   <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
-                    <span class="confirm-question">Retirar de:</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">Loja ({{ entry.item.stock_loja }})</button>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">Dep. ({{ entry.item.stock_deposito }})</button>
+                    <span class="confirm-question">{{ tr('Retirar de:') }}</span>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ entry.item.stock_loja }})</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ entry.item.stock_deposito }})</button>
                   </template>
                   <template v-else-if="exitLocations(entry.item).deposito">
-                    <span class="confirm-question">Retirar do Depósito?</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">Sim</button>
+                    <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">{{ tr('Sim') }}</button>
                   </template>
                   <template v-else>
-                    <span class="confirm-question">Retirar da Loja?</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">Sim</button>
+                    <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">{{ tr('Sim') }}</button>
                   </template>
                   <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                 </div>
               </div>
-              <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">Movimentar</button>
-              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">Editar</button>
+              <button @click.stop="openMovement(entry.item)" class="action-btn move-btn list-btn">{{ tr('Movimentar') }}</button>
+              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">{{ tr('Editar') }}</button>
             </div>
           </div>
 
@@ -464,7 +464,7 @@
                 </template>
                 <template v-if="entry.item.sale_price">
                   <span class="item-sub-sep"> · </span>
-                  <span class="item-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }} {{ Number(entry.item.sale_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+                  <span class="item-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }} {{ Number(entry.item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 2 }) }}</span>
                 </template>
               </div>
               <div v-if="entry.item.barcode" class="item-barcode-row">
@@ -474,8 +474,8 @@
               <div class="item-bottom-row">
                 <div class="item-left-info">
                   <span class="stock-number" :class="'stock-' + entry.item.alert_level">
-                    <template v-if="entry.item.stock_loja !== undefined">Loja:&nbsp;{{ entry.item.stock_loja }}&nbsp;·&nbsp;Dep.:&nbsp;{{ entry.item.stock_deposito ?? 0 }}</template>
-                    <template v-else>Estoque:&nbsp;{{ entry.item.current_stock }}</template>
+                    <template v-if="entry.item.stock_loja !== undefined">{{ tr('Loja:') }}{{ entry.item.stock_loja }}{{ tr('· Dep.:') }}{{ entry.item.stock_deposito ?? 0 }}</template>
+                    <template v-else>{{ tr('Estoque:') }}{{ entry.item.current_stock }}</template>
                   </span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
@@ -486,23 +486,23 @@
                     <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="entry.item.current_stock <= 0">−1</button>
                     <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
                       <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
-                        <span class="confirm-question">Retirar de:</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">Loja ({{ entry.item.stock_loja }})</button>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">Dep. ({{ entry.item.stock_deposito }})</button>
+                        <span class="confirm-question">{{ tr('Retirar de:') }}</span>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ entry.item.stock_loja }})</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ entry.item.stock_deposito }})</button>
                       </template>
                       <template v-else-if="exitLocations(entry.item).deposito">
-                        <span class="confirm-question">Retirar do Depósito?</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">Sim</button>
+                        <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">{{ tr('Sim') }}</button>
                       </template>
                       <template v-else>
-                        <span class="confirm-question">Retirar da Loja?</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">Sim</button>
+                        <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">{{ tr('Sim') }}</button>
                       </template>
                       <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
                     </div>
                   </div>
-                  <button @click.stop="openMovement(entry.item)" class="action-btn move-btn">Movimentar</button>
-                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn">Editar</button>
+                  <button @click.stop="openMovement(entry.item)" class="action-btn move-btn">{{ tr('Movimentar') }}</button>
+                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn">{{ tr('Editar') }}</button>
                 </div>
               </div>
             </div>
@@ -515,15 +515,15 @@
               <span class="item-extra-val mono">{{ entry.item.sku_internal }}</span>
             </div>
             <div v-if="entry.item.min_stock || entry.item.max_stock" class="item-extra-row">
-              <span class="item-extra-label">Limites</span>
-              <span class="item-extra-val">mín {{ entry.item.min_stock }} · máx {{ entry.item.max_stock }}</span>
+              <span class="item-extra-label">{{ tr('Limites') }}</span>
+              <span class="item-extra-val">{{ tr('mín') }} {{ entry.item.min_stock }} {{ tr('· máx') }} {{ entry.item.max_stock }}</span>
             </div>
             <div v-if="Number(entry.item.cost_price) > 0" class="item-extra-row">
-              <span class="item-extra-label">Custo</span>
-              <span class="item-extra-val">{{ currencySymbol(entry.item.cost_currency || entry.item.currency) }} {{ Number(entry.item.cost_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
+              <span class="item-extra-label">{{ tr('Custo') }}</span>
+              <span class="item-extra-val">{{ currencySymbol(entry.item.cost_currency || entry.item.currency) }} {{ Number(entry.item.cost_price).toLocaleString(numberLocale(), { minimumFractionDigits: 2 }) }}</span>
             </div>
             <div v-if="entry.item.description" class="item-extra-row">
-              <span class="item-extra-label">Descrição</span>
+              <span class="item-extra-label">{{ tr('Descrição') }}</span>
               <span class="item-extra-val item-extra-desc">{{ entry.item.description }}</span>
             </div>
           </div>
@@ -546,7 +546,7 @@
     </div>
 
     <!-- Toast -->
-    <div v-if="toast" class="toast" :class="'toast-' + toast.type">{{ toast.message }}</div>
+    <div v-if="toast" class="toast" :class="'toast-' + toast.type">{{ tr(toast.message, toast.params) }}</div>
 
     <!-- Modals -->
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
@@ -558,6 +558,7 @@
       :existing-group-keys="existingGroupKeys"
       :existing-brands="existingBrands"
       @saved="onItemSaved"
+      @partial="onItemPartiallySaved"
       @close="showItemForm = false"
     />
 
@@ -607,22 +608,22 @@
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
       <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit" class="selection-bar">
-        <span class="sel-count">{{ selectedIds.length }} item{{ selectedIds.length !== 1 ? 's' : '' }} selecionado{{ selectedIds.length !== 1 ? 's' : '' }}</span>
+        <span class="sel-count">{{ tr('Itens selecionados: {count}', { count: selectedIds.length }) }}</span>
         <div class="sel-actions">
-          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">Agrupar</button>
+          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">{{ tr('Agrupar') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary">
-            <span class="sel-label-full">Editar massivo</span>
-            <span class="sel-label-short">Editar</span>
+            <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
+            <span class="sel-label-short">{{ tr('Editar') }}</span>
           </button>
           <button @click="openBulkTransfer" class="sel-btn sel-btn-transfer">
-            <span class="sel-label-full">Transferir</span>
-            <span class="sel-label-short">Transf.</span>
+            <span class="sel-label-full">{{ tr('Transferir') }}</span>
+            <span class="sel-label-short">{{ tr('Transf.') }}</span>
           </button>
           <button @click="selectAll" class="sel-btn">
-            <span class="sel-label-full">Sel. todos</span>
-            <span class="sel-label-short">Todos</span>
+            <span class="sel-label-full">{{ tr('Sel. todos') }}</span>
+            <span class="sel-label-short">{{ tr('Todos') }}</span>
           </button>
-          <button @click="selectedIds = []" class="sel-btn">Limpar</button>
+          <button @click="selectedIds = []" class="sel-btn">{{ tr('Limpar') }}</button>
         </div>
       </div>
     </transition>
@@ -630,26 +631,24 @@
     <!-- Modal de nome do grupo -->
     <div v-if="showGroupModal" class="gmodal-overlay" @click.self="showGroupModal = false">
       <div class="gmodal">
-        <h3 class="gmodal-title">Definir nome do grupo</h3>
+        <h3 class="gmodal-title">{{ tr('Definir nome do grupo') }}</h3>
         <p class="gmodal-sub">
-          {{ selectedUngrouped.length }} ite{{ selectedUngrouped.length !== 1 ? 'ns' : 'm' }} serão agrupados. Defina um código ou nome de modelo:
+          {{ tr('Itens a agrupar: {count}. Defina um código ou nome de modelo:', { count: selectedUngrouped.length }) }}
         </p>
         <!-- Warning: some selected items are already in a group -->
         <div v-if="selectedAlreadyGrouped.length > 0" class="gmodal-warn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-          {{ selectedAlreadyGrouped.length }} item{{ selectedAlreadyGrouped.length !== 1 ? 'ns' : '' }} já
-          {{ selectedAlreadyGrouped.length !== 1 ? 'pertencem' : 'pertence' }} a um grupo e
-          {{ selectedAlreadyGrouped.length !== 1 ? 'serão ignorados' : 'será ignorado' }}.
+          {{ tr('Itens já agrupados que serão ignorados: {count}.', { count: selectedAlreadyGrouped.length }) }}
         </div>
         <div v-if="selectedUngrouped.length < 2" class="gmodal-error">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          Selecione pelo menos 2 itens sem grupo para poder agrupar.
+          {{ tr('Selecione pelo menos 2 itens sem grupo para poder agrupar.') }}
         </div>
         <input
           v-model="groupNameInput"
           type="text"
           class="gmodal-input"
-          placeholder="Ex: DKR003, FLC009 LUTT/NAPA..."
+          :placeholder="tr('Ex: DKR003, FLC009 LUTT/NAPA...')"
           list="gname-list"
           ref="groupNameInputRef"
           @keydown.enter="confirmGroup"
@@ -658,12 +657,12 @@
         <datalist id="gname-list">
           <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
         </datalist>
-        <p class="gmodal-hint">Sugestão baseada nos nomes: <strong>{{ groupNameSuggestion }}</strong></p>
+        <p class="gmodal-hint">{{ tr('Sugestão baseada nos nomes:') }} <strong>{{ groupNameSuggestion }}</strong></p>
         <div class="gmodal-footer">
-          <button @click="showGroupModal = false" class="sel-btn">Cancelar</button>
+          <button @click="showGroupModal = false" class="sel-btn">{{ tr('Cancelar') }}</button>
           <button @click="confirmGroup" class="sel-btn sel-btn-primary"
             :disabled="!groupNameInput.trim() || grouping || selectedUngrouped.length < 2">
-            {{ grouping ? 'Agrupando...' : `Agrupar ${selectedUngrouped.length}` }}
+            {{ grouping ? tr('Agrupando...') : tr('Agrupar {count}', { count: selectedUngrouped.length }) }}
           </button>
         </div>
       </div>
@@ -672,6 +671,8 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
@@ -698,7 +699,7 @@ const showLabelTemplates = ref(false)
 const editingItem = ref<InventoryItem | null>(null)
 const movementItem = ref<InventoryItem | null>(null)
 const suppliers = ref<Array<{ id: string; name: string }>>([])
-const toast = ref<{ message: string; type: string } | null>(null)
+const toast = ref<{ message: string; type: string; params?: Record<string, string | number> } | null>(null)
 const distinctBrands = ref<string[]>([])
 const distinctCategories = ref<string[]>([])
 const filterBrand = ref('')
@@ -979,7 +980,7 @@ async function confirmGroup() {
   grouping.value = true
   try {
     await inventoryAPI.groupItems(idsToGroup, name)
-    showToast(`${idsToGroup.length} itens agrupados como "${name}"`, 'success')
+    showToast('{count} itens agrupados como "{name}"', 'success', { count: idsToGroup.length, name })
     showGroupModal.value = false
     selectionMode.value = false
     selectedIds.value = []
@@ -1121,7 +1122,7 @@ async function saveGroupName(oldKey: string) {
   if (!newKey || newKey === oldKey) return
   try {
     await inventoryAPI.renameGroup(oldKey, newKey)
-    showToast(`Grupo renomeado para "${newKey}"`, 'success')
+    showToast('Grupo renomeado para "{name}"', 'success', { name: newKey })
     await Promise.all([reloadItems(), loadGroupsFiltered()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao renomear grupo', 'error')
@@ -1131,7 +1132,7 @@ async function saveGroupName(oldKey: string) {
 async function handleUngroup(groupKey: string) {
   try {
     await inventoryAPI.ungroup(groupKey)
-    showToast(`Grupo "${groupKey}" desagrupado`, 'success')
+    showToast('Grupo "{name}" desagrupado', 'success', { name: groupKey })
     await Promise.all([reloadItems(), loadGroups()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao desagrupar', 'error')
@@ -1141,7 +1142,7 @@ async function handleUngroup(groupKey: string) {
 async function removeItemFromGroup(itemId: string, groupKey: string) {
   try {
     await inventoryAPI.removeFromGroup(itemId)
-    showToast(`Item removido do grupo "${groupKey}"`, 'success')
+    showToast('Item removido do grupo "{name}"', 'success', { name: groupKey })
     await Promise.all([reloadItems(), loadGroupsFiltered()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao remover do grupo', 'error')
@@ -1224,7 +1225,7 @@ function selectSuggestedGroup(sg: SuggestionResponse) {
 
 async function onSuggestionGrouped(groupKey: string, count: number) {
   showSuggestionModal.value = false
-  showToast(`${count} itens agrupados como "${groupKey}"`, 'success')
+  showToast('{count} itens agrupados como "{name}"', 'success', { count, name: groupKey })
   groupMode.value = true
   localStorage.setItem('inv_group_mode', 'true')
   await Promise.all([reloadItems(), loadGroups()])
@@ -1255,7 +1256,7 @@ async function handleQuickExit(item: InventoryItem, location: string = 'loja') {
   try {
     const result = await inventoryStore.quickExit(item.id, location)
     const loc = location === 'deposito' ? 'Depósito' : 'Loja'
-    showToast(`Saída (${loc}) registrada. Estoque: ${result.new_stock}`, 'success')
+    showToast('Saída ({local}) registrada. Estoque: {stock}', 'success', { local: tr(loc), stock: result.new_stock })
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao registrar saída', 'error')
   }
@@ -1276,8 +1277,15 @@ function onBarcodeDetected(code: string) {
 
 function onItemSaved(item: InventoryItem) {
   showItemForm.value = false
-  showToast(`Item "${item.name}" salvo com sucesso`, 'success')
+  showToast('Item "{name}" salvo com sucesso', 'success', { name: item.name })
   reloadItems()
+}
+
+function onItemPartiallySaved() {
+  // The form remains open with the exact completed steps and prevents a duplicate retry.
+  reloadItems()
+  inventoryStore.loadAlerts()
+  if (groupMode.value) loadGroupsFiltered()
 }
 
 function onMovementSaved() {
@@ -1306,11 +1314,11 @@ function alertLabel(level: string | undefined) {
   const labels: Record<string, string> = {
     out: 'Sem estoque', low: 'Baixo', high: 'Excesso', ok: 'OK', inactive: 'Inativo'
   }
-  return labels[level || 'ok'] || 'OK'
+  return tr(labels[level || 'ok'] || 'OK')
 }
 
-function showToast(message: string, type: string) {
-  toast.value = { message, type }
+function showToast(message: string, type: string, params?: Record<string, string | number>) {
+  toast.value = { message, type, params }
   setTimeout(() => { toast.value = null }, 3000)
 }
 

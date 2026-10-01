@@ -48,7 +48,7 @@ class Pedido(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
 
     # FK para Cliente (opcional, retrocompatível)
-    cliente_id = Column(UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=True)
+    cliente_id = Column(UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=True, index=True)
 
     # Relacionamentos
     usuario_criador = relationship("Usuario", foreign_keys=[created_by])

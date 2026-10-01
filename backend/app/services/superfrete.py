@@ -215,8 +215,14 @@ def refresh(db,key):
 def sync_tracking(db,row):
     if row.environment!='production' or not row.tracking:return
     from ..models.rastreamento import Rastreamento
-    if db.query(Rastreamento).filter_by(codigo_rastreio=row.tracking).first():return
-    db.add(Rastreamento(codigo_rastreio=row.tracking,destinatario=row.payload['to']['name'],
+    from ..models.address_book import SavedAddress
+    from .tracking_codes import normalize_tracking_code, tracking_code_expression, lock_tracking_codes
+    code = normalize_tracking_code(row.tracking)
+    lock_tracking_codes(db, [code])
+    if db.query(Rastreamento).filter(tracking_code_expression(Rastreamento.codigo_rastreio) == code).first():return
+    address = db.get(SavedAddress, row.address_id) if row.address_id else None
+    db.add(Rastreamento(codigo_rastreio=code,destinatario=row.payload['to']['name'],
+           cliente_id=address.cliente_id if address else None,
            origem=row.payload['from']['city'],destino=row.payload['to']['city'],servico_provedor='SuperFrete',
            custo_emissao=row.price,created_by=row.user_id,descricao='Etiqueta emitida pelo gestor de endereços'))
     db.flush()

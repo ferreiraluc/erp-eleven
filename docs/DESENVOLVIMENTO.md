@@ -15,7 +15,8 @@ Use `npm ci --include=dev` para reproduzir o lockfile e incluir verificadores.
 **O histórico Alembic começa em um banco que já existia.** A primeira revisão altera
 vendas/pedidos e remove tabelas do esquema anterior; `alembic upgrade head` isolado não
 cria corretamente um banco vazio. Os SQLs antigos, agora em `docs/archive/sql/`, não são
-um bootstrap atualizado. O fallback `create_all` da API também não substitui migrações.
+um bootstrap atualizado. A API interrompe o startup se uma migração falhar;
+não tenta continuar com um esquema parcialmente atualizado.
 
 Para um ambiente completo de desenvolvimento, restaure em PostgreSQL local uma cópia
 sanitizada e autorizada de uma base já migrada, incluindo `alembic_version`. Preserve a
@@ -68,6 +69,7 @@ Da raiz, em macOS/Linux:
 
 ```sh
 PYTHONPATH=backend DATABASE_URL=sqlite:// backend/venv/bin/python -m pytest backend/tests -q
+npm --prefix frontend test
 npm --prefix frontend run type-check
 npm --prefix frontend run build
 npm --prefix frontend run lint
@@ -85,9 +87,15 @@ backend\venv\Scripts\python -m pytest backend/tests -q
 - A suíte simula provedores e não requer chaves, Telegram, saldo SuperFrete ou impressão física.
 - Tipagem e build são verificações distintas: Vite pode gerar um bundle mesmo com erros TypeScript.
 - `lint` só verifica; `lint:fix` aplica correções. Há dívida antiga de `any` documentada; não desligue regras para fingir que foi resolvida.
-- A CI executa tipagem, build e testes do backend. Não aplica migrações, compra etiquetas, imprime ou publica serviços.
+- A CI executa Vitest, tipagem, build e testes do backend, incluindo migrações em PostgreSQL descartável. Não altera produção, compra etiquetas, imprime ou publica serviços.
 - SQLite não valida extensões/enums, migrações ou concorrência PostgreSQL. Mudanças nessas áreas precisam de homologação PostgreSQL adicional.
 - Alterações visuais devem ser conferidas em desktop/celular com dados de teste, incluindo estados vazio/erro/carregamento e permissões.
+
+Os testes PostgreSQL usam `ACCESS_TEST_DATABASE_URL` adicional, apontando exclusivamente
+para host local/serviço CI (`127.0.0.1`, `localhost` ou `postgres`). Criam um schema
+temporário por teste e o removem ao terminar. Não passe a conexão real nessa variável.
+Sem ela, esses testes ficam explicitamente ignorados; a suíte SQLite não os substitui.
+Vitest usa jsdom e armazenamento de navegador isolado, sem chamar a API real.
 
 ## Migrações e mudanças
 

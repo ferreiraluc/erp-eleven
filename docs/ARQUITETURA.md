@@ -11,7 +11,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 - `frontend/src/services/api.ts` centraliza Axios e os contratos dos módulos; `salesBi.ts` isola o BI.
 - `backend/app/main.py` registra routers, CORS, tratamento de erros, migrações e processos de fundo.
 - `backend/app/config.py` lê ambiente/`.env`; `database.py` configura engine, Base e sessões.
-- `backend/app/dependencies.py` verifica JWT/usuário ativo e fornece as permissões aos endpoints.
+- `backend/app/dependencies.py` verifica JWT, sessão persistida, versão de acesso e usuário ativo; fornece as permissões aos endpoints.
 - `backend/app/models/`, `schemas/`, `api/endpoints/`, `services/` representam persistência, contratos, transporte e regras.
 
 ## Onde alterar cada módulo
@@ -19,6 +19,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Módulo | Frontend | API (prefixo `/api`) | Serviços/modelos principais |
 | --- | --- | --- | --- |
 | Login | `LoginView`, `stores/auth` | `auth` | `models/usuario`, `dependencies` |
+| Acesso/auditoria | `AccountView`, `UserManagementView`, `AuditView`, `services/activity` | `auth`, `access` | `access_policy`, `user_sessions`, `user_audit`, `models/access`, CLI `user_access_setup` |
 | Dashboard | `DashboardView`, `components/dashboard/*` | Resumos dos módulos | API de cada card; BI usa snapshots |
 | Estoque | `views/inventory/`, `components/inventory/`, `stores/inventory` | `inventory`, `ocr` | `inventory_service`, `ocr_service`, `models/inventory`, `label_template` |
 | Pedidos/clientes | `PedidosView`, `ClientesView`, componentes de pedidos/clientes | `pedidos`, `clientes`, `tags` | `models/pedido`, `cliente`, `pedido_tag`, `pedido_anexo` |
@@ -80,6 +81,17 @@ enfileira impressão única e notificação; não repete pagamentos.
 `SalesBIWorkbook.snapshot` → agregação → frontend. Uma escolha por mês elimina sobreposição
 entre atual/arquivo. `SalesBIConfig` contém fontes, agendamento, pedido manual e concessão
 temporária de execução. Não passa pelo cadastro `Venda` ou pelo PDV.
+`sales_bi_entry_parser` extrai linhas e `sales_bi_entries` agrega lançamentos/horários.
+O filtro financeiro pessoal é aplicado antes de agregações ou paginação.
+
+**Comprovante:** imagem Telegram autorizada → validação em memória → visão DeepSeek/Anthropic →
+prévia com códigos/verificação → confirmação → rastreios e vínculos explícitos.
+`receipt_vision` e `receipt_tracking` isolam leitura e gravação. Cadastro web e bot
+compartilham locks por código normalizado; uma corrida não gera outro rastreio.
+
+**Auditoria:** identidade autenticada → contexto da sessão SQLAlchemy → eventos das
+mutações na mesma transação. Acessos HTTP são eventos separados. `AuthSession` controla
+revogação e crédito de atividade; `ActivitySpan` agrega intervalos por módulo.
 
 ## Entidades que não são intercambiáveis
 
@@ -93,6 +105,9 @@ temporária de execução. Não passa pelo cadastro `Venda` ou pelo PDV.
 ## Permissões e segredos
 
 O frontend restringe navegação, mas a autorização efetiva deve estar no backend.
+Somente Lucas tem ADMIN. Escopo financeiro pessoal é independente da permissão
+operacional GERENTE; não é suficiente esconder filtros no frontend. Veja
+[Acesso e auditoria](ACESSO_AUDITORIA.md).
 Endereços e BI exigem ADMIN/GERENTE; administração do assistente, dispositivos e fontes
 exige ADMIN. Cada identidade do bot se vincula a um usuário ERP e pode registrar apenas
 se habilitada. Nem todo usuário com acesso ao grupo pode executar uma ação.

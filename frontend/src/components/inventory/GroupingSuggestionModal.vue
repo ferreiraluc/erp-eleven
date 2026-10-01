@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Agrupar sugestão <span class="item-count">({{ localItems.length }} itens)</span></h2>
+        <h2>{{ tr('Agrupar sugestão') }} <span class="item-count">({{ localItems.length }} {{ tr('itens)') }}</span></h2>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -13,12 +13,12 @@
       <div class="modal-body">
         <!-- Nome do grupo -->
         <div class="form-group">
-          <label>Nome do grupo</label>
+          <label>{{ tr('Nome do grupo') }}</label>
           <input
             v-model="groupName"
             type="text"
             class="form-input"
-            placeholder="Ex: DKR003, FLC009 LUTT/NAPA..."
+            :placeholder="tr('Ex: DKR003, FLC009 LUTT/NAPA...')"
             :list="'sug-gname-list'"
             ref="nameInputRef"
             @keydown.enter.prevent="confirm"
@@ -31,8 +31,8 @@
         <!-- Lista de itens -->
         <div class="items-section">
           <div class="items-header">
-            <span class="items-title">Itens a agrupar</span>
-            <span class="items-hint">Clique em × para remover um item da seleção</span>
+            <span class="items-title">{{ tr('Itens a agrupar') }}</span>
+            <span class="items-hint">{{ tr('Clique em × para remover um item da seleção') }}</span>
           </div>
           <div class="items-list" v-if="localItems.length > 0">
             <div
@@ -57,24 +57,24 @@
                 </div>
               </div>
               <div class="item-stock">{{ item.current_stock }}</div>
-              <button class="remove-btn" @click="removeItem(item.id)" title="Remover da seleção">×</button>
+              <button class="remove-btn" @click="removeItem(item.id)" :title="tr('Remover da seleção')">×</button>
             </div>
           </div>
           <div v-else class="empty-items">
-            <p>Nenhum item na seleção. Cancele e selecione os itens manualmente.</p>
+            <p>{{ tr('Nenhum item na seleção. Cancele e selecione os itens manualmente.') }}</p>
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary" :disabled="grouping">Cancelar</button>
+        <button @click="emit('close')" class="btn btn-secondary" :disabled="grouping">{{ tr('Cancelar') }}</button>
         <button
           @click="confirm"
           class="btn btn-primary"
           :disabled="!groupName.trim() || localItems.length < 2 || grouping"
         >
-          <span v-if="grouping">Agrupando...</span>
-          <span v-else>Agrupar {{ localItems.length }} itens</span>
+          <span v-if="grouping">{{ tr('Agrupando...') }}</span>
+          <span v-else>{{ tr('Agrupar') }} {{ localItems.length }} {{ tr('itens') }}</span>
         </button>
       </div>
     </div>
@@ -82,6 +82,8 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, nextTick, onMounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 
@@ -118,7 +120,7 @@ async function confirm() {
     emit('grouped', name, localItems.value.length)
   } catch (e: any) {
     const msg = e.response?.data?.detail || 'Erro ao agrupar'
-    alert(msg)
+    alert(tr(msg))
   } finally {
     grouping.value = false
   }

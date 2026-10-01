@@ -2,23 +2,23 @@
   <div class="fiado-root">
     <div class="fiado-header">
       <div class="fiado-title-row">
-        <h1 class="fiado-title">📒 Caderno de Fiado</h1>
-        <button class="fiado-btn-new" @click="openNewClient">+ Novo cliente</button>
+        <h1 class="fiado-title">{{ $tr("📒 Caderno de Fiado") }}</h1>
+        <button class="fiado-btn-new" @click="openNewClient">{{ $tr("+ Novo cliente") }}</button>
       </div>
-      <p class="fiado-subtitle">Controle de contas a receber de clientes atacadistas</p>
+      <p class="fiado-subtitle">{{ $tr("Controle de contas a receber de clientes atacadistas") }}</p>
 
       <!-- Summary bar -->
       <div v-if="clients.length" class="fiado-summary">
         <div class="fiado-sum-card sum-total">
-          <span class="sum-label">Total em aberto</span>
+          <span class="sum-label">{{ $tr("Total em aberto") }}</span>
           <span class="sum-value">{{ fmtGs(totalSaldo) }}</span>
         </div>
         <div class="fiado-sum-card sum-clients">
-          <span class="sum-label">Clientes ativos</span>
+          <span class="sum-label">{{ $tr("Clientes ativos") }}</span>
           <span class="sum-value">{{ clients.length }}</span>
         </div>
         <div class="fiado-sum-card sum-overdue">
-          <span class="sum-label">Com saldo</span>
+          <span class="sum-label">{{ $tr("Com saldo") }}</span>
           <span class="sum-value">{{ clientsWithBalance }}</span>
         </div>
       </div>
@@ -26,7 +26,7 @@
 
     <!-- Search -->
     <div class="fiado-search-row">
-      <input v-model="search" type="text" placeholder="Buscar cliente…" class="fiado-search" />
+      <input v-model="search" type="text" :placeholder='$tr("Buscar cliente…")' class="fiado-search" />
     </div>
 
     <!-- Client cards -->
@@ -35,7 +35,7 @@
         v-for="client in filteredClients"
         :key="client.id"
         class="fiado-card"
-        :class="{ 'card-zero': client.saldo_fiado_gs <= 0 }"
+        :class="{ 'card-zero': (client.saldo_fiado_gs ?? 0) <= 0 }"
         @click="openClient(client)"
       >
         <div class="fiado-card-left">
@@ -45,22 +45,22 @@
             <div class="fiado-client-meta">
               <span v-if="client.doc">{{ client.doc }}</span>
               <span v-if="client.telefone">{{ client.telefone }}</span>
-              <span class="fiado-tipo-badge">{{ client.tipo }}</span>
+              <span class="fiado-tipo-badge">{{ client.tipo === 'atacadista' ? $tr('Atacadista') : client.tipo === 'varejo' ? $tr('Varejo') : client.tipo }}</span>
             </div>
           </div>
         </div>
         <div class="fiado-card-right">
-          <div class="fiado-saldo" :class="client.saldo_fiado_gs > 0 ? 'saldo-debt' : 'saldo-zero'">
-            {{ fmtGs(client.saldo_fiado_gs) }}
+          <div class="fiado-saldo" :class="(client.saldo_fiado_gs ?? 0) > 0 ? 'saldo-debt' : 'saldo-zero'">
+            {{ fmtGs((client.saldo_fiado_gs ?? 0)) }}
           </div>
-          <div class="fiado-saldo-label">{{ client.saldo_fiado_gs > 0 ? 'deve' : 'em dia' }}</div>
+          <div class="fiado-saldo-label">{{ (client.saldo_fiado_gs ?? 0) > 0 ? 'deve' : uiText(`em dia`) }}</div>
         </div>
       </div>
     </div>
 
     <div v-else-if="!loading" class="fiado-empty">
-      <p>{{ search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado' }}</p>
-      <button class="fiado-btn-new" @click="openNewClient">+ Adicionar primeiro cliente</button>
+      <p>{{ search ? uiText(`Nenhum cliente encontrado`) : uiText(`Nenhum cliente cadastrado`) }}</p>
+      <button class="fiado-btn-new" @click="openNewClient">{{ $tr("+ Adicionar primeiro cliente") }}</button>
     </div>
 
     <!-- Client detail modal -->
@@ -76,15 +76,15 @@
         </div>
 
         <div class="fiado-detail-balance">
-          <span class="fiado-balance-label">Saldo devedor</span>
-          <span class="fiado-balance-value" :class="selectedClient.saldo_fiado_gs > 0 ? 'saldo-debt' : 'saldo-zero'">
-            {{ fmtGs(selectedClient.saldo_fiado_gs) }}
+          <span class="fiado-balance-label">{{ $tr("Saldo devedor") }}</span>
+          <span class="fiado-balance-value" :class="(selectedClient.saldo_fiado_gs ?? 0) > 0 ? 'saldo-debt' : 'saldo-zero'">
+            {{ fmtGs((selectedClient.saldo_fiado_gs ?? 0)) }}
           </span>
         </div>
 
         <!-- Payment input -->
-        <div v-if="selectedClient.saldo_fiado_gs > 0" class="fiado-payment-form">
-          <p class="fiado-payment-title">Registrar pagamento</p>
+        <div v-if="(selectedClient.saldo_fiado_gs ?? 0) > 0" class="fiado-payment-form">
+          <p class="fiado-payment-title">{{ $tr("Registrar pagamento") }}</p>
           <div class="fiado-payment-row">
             <div class="fiado-payment-input-wrap">
               <span class="fiado-payment-prefix">G$</span>
@@ -94,9 +94,9 @@
                 class="fiado-payment-input"
               />
             </div>
-            <input v-model="paymentNotes" type="text" placeholder="Observações (opcional)" class="fiado-payment-notes" />
+            <input v-model="paymentNotes" type="text" :placeholder='$tr("Observações (opcional)")' class="fiado-payment-notes" />
             <button class="fiado-payment-btn" @click="recordPayment" :disabled="!paymentAmount || payingLoading">
-              {{ payingLoading ? '…' : 'Confirmar' }}
+              {{ payingLoading ? '…' : uiText(`Confirmar`) }}
             </button>
           </div>
           <div class="fiado-quick-amounts">
@@ -106,22 +106,22 @@
               class="fiado-quick-btn"
               @click="paymentAmount = amt"
             >{{ fmtGs(amt) }}</button>
-            <button class="fiado-quick-btn fiado-quick-all" @click="paymentAmount = Math.ceil(selectedClient.saldo_fiado_gs)">
-              Tudo ({{ fmtGs(selectedClient.saldo_fiado_gs) }})
+            <button class="fiado-quick-btn fiado-quick-all" @click="paymentAmount = Math.ceil((selectedClient.saldo_fiado_gs ?? 0))">
+              {{ $tr("Tudo (") }}{{ fmtGs((selectedClient.saldo_fiado_gs ?? 0)) }})
             </button>
           </div>
         </div>
 
         <!-- Movement history -->
         <div class="fiado-movements">
-          <p class="fiado-movements-title">Histórico</p>
-          <div v-if="loadingHistory" class="fiado-history-loading">Carregando…</div>
-          <div v-else-if="!movements.length" class="fiado-history-empty">Nenhum movimento</div>
+          <p class="fiado-movements-title">{{ $tr("Histórico") }}</p>
+          <div v-if="loadingHistory" class="fiado-history-loading">{{ $tr("Carregando…") }}</div>
+          <div v-else-if="!movements.length" class="fiado-history-empty">{{ $tr("Nenhum movimento") }}</div>
           <div v-else class="fiado-movement-list">
             <div v-for="mv in movements" :key="mv.id" class="fiado-movement-row" :class="`mv-${mv.tipo}`">
               <div class="mv-icon">{{ mv.tipo === 'debit' ? '−' : '+' }}</div>
               <div class="mv-info">
-                <span class="mv-tipo">{{ mv.tipo === 'debit' ? 'Compra' : 'Pagamento' }}</span>
+                <span class="mv-tipo">{{ mv.tipo === 'debit' ? uiText(`Compra`) : uiText(`Pagamento`) }}</span>
                 <span v-if="mv.notas" class="mv-notes">{{ mv.notas }}</span>
                 <span class="mv-date">{{ formatDate(mv.created_at) }}</span>
               </div>
@@ -129,7 +129,7 @@
                 <span class="mv-valor" :class="mv.tipo === 'debit' ? 'mv-debt' : 'mv-credit'">
                   {{ mv.tipo === 'debit' ? '-' : '+' }}{{ fmtGs(mv.valor_gs) }}
                 </span>
-                <span class="mv-saldo">Saldo: {{ fmtGs(mv.saldo_gs) }}</span>
+                <span class="mv-saldo">{{ $tr("Saldo:") }} {{ fmtGs(mv.saldo_gs) }}</span>
               </div>
             </div>
           </div>
@@ -141,47 +141,47 @@
     <div v-if="showNewClient" class="fiado-overlay" @click.self="showNewClient = false">
       <div class="fiado-new-modal">
         <div class="fiado-new-header">
-          <h3>Novo cliente</h3>
+          <h3>{{ $tr("Novo cliente") }}</h3>
           <button @click="showNewClient = false">×</button>
         </div>
         <div class="fiado-new-body">
           <div class="fiado-field">
-            <label>Nome *</label>
-            <input v-model="newClient.nome" type="text" class="fiado-input" placeholder="Nome do cliente" />
+            <label>{{ $tr("Nome *") }}</label>
+            <input v-model="newClient.nome" type="text" class="fiado-input" :placeholder='$tr("Nome do cliente")' />
           </div>
           <div class="fiado-row">
             <div class="fiado-field">
-              <label>Documento (CPF/RUC/CI)</label>
-              <input v-model="newClient.doc" type="text" class="fiado-input" placeholder="Opcional" />
+              <label>{{ $tr("Documento (CPF/RUC/CI)") }}</label>
+              <input v-model="newClient.doc" type="text" class="fiado-input" :placeholder='$tr("Opcional")' />
             </div>
             <div class="fiado-field">
-              <label>Telefone</label>
-              <input v-model="newClient.telefone" type="text" class="fiado-input" placeholder="Opcional" />
+              <label>{{ $tr("Telefone") }}</label>
+              <input v-model="newClient.telefone" type="text" class="fiado-input" :placeholder='$tr("Opcional")' />
             </div>
           </div>
           <div class="fiado-row">
             <div class="fiado-field">
-              <label>Tipo</label>
+              <label>{{ $tr("Tipo") }}</label>
               <select v-model="newClient.tipo" class="fiado-input">
-                <option value="atacadista">Atacadista</option>
-                <option value="varejo">Varejo</option>
+                <option value="atacadista">{{ $tr("Atacadista") }}</option>
+                <option value="varejo">{{ $tr("Varejo") }}</option>
               </select>
             </div>
             <div class="fiado-field">
-              <label>Limite de fiado (G$)</label>
-              <input v-model.number="newClient.limite_fiado_gs" type="number" class="fiado-input" placeholder="0 = sem limite" />
+              <label>{{ $tr("Limite de fiado (G$)") }}</label>
+              <input v-model.number="newClient.limite_fiado_gs" type="number" class="fiado-input" :placeholder='$tr("0 = sem limite")' />
             </div>
           </div>
           <div class="fiado-field">
-            <label>Observações</label>
-            <textarea v-model="newClient.notas" class="fiado-input fiado-textarea" placeholder="Opcional" rows="2"></textarea>
+            <label>{{ $tr("Observações") }}</label>
+            <textarea v-model="newClient.notas" class="fiado-input fiado-textarea" :placeholder='$tr("Opcional")' rows="2"></textarea>
           </div>
           <div v-if="newClientError" class="fiado-error">{{ newClientError }}</div>
         </div>
         <div class="fiado-new-footer">
-          <button class="fiado-btn-cancel" @click="showNewClient = false">Cancelar</button>
+          <button class="fiado-btn-cancel" @click="showNewClient = false">{{ $tr("Cancelar") }}</button>
           <button class="fiado-btn-save" @click="saveNewClient" :disabled="!newClient.nome || savingClient">
-            {{ savingClient ? 'Salvando…' : 'Cadastrar' }}
+            {{ savingClient ? uiText(`Salvando…`) : uiText(`Cadastrar`) }}
           </button>
         </div>
       </div>
@@ -194,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted } from 'vue'
 import { pdvAPI, type PdvClienteResponse, type PdvFiadoMovementResponse } from '@/services/api'
 
@@ -216,8 +217,8 @@ interface Toast { msg: string; type: 'success' | 'error' }
 const toast = ref<Toast | null>(null)
 let toastTimer: ReturnType<typeof setTimeout>
 
-const totalSaldo = computed(() => clients.value.reduce((s, c) => s + c.saldo_fiado_gs, 0))
-const clientsWithBalance = computed(() => clients.value.filter(c => c.saldo_fiado_gs > 0).length)
+const totalSaldo = computed(() => clients.value.reduce((s, c) => s + (c.saldo_fiado_gs ?? 0), 0))
+const clientsWithBalance = computed(() => clients.value.filter(c => (c.saldo_fiado_gs ?? 0) > 0).length)
 const filteredClients = computed(() => {
   if (!search.value) return clients.value
   const t = search.value.toLowerCase()
@@ -229,7 +230,7 @@ const filteredClients = computed(() => {
 })
 const quickAmounts = computed(() => {
   if (!selectedClient.value) return []
-  const saldo = selectedClient.value.saldo_fiado_gs
+  const saldo = (selectedClient.value.saldo_fiado_gs ?? 0)
   return [50000, 100000, 200000, 500000].filter(a => a < saldo)
 })
 
@@ -268,7 +269,7 @@ async function recordPayment() {
       valor_gs: paymentAmount.value,
       notas: paymentNotes.value || undefined,
     })
-    showToast('Pagamento registrado!')
+    showToast(uiText(`Pagamento registrado!`))
     await loadClients()
     // Refresh selected client
     const updated = clients.value.find(c => c.id === selectedClient.value!.id)
@@ -279,7 +280,7 @@ async function recordPayment() {
     paymentAmount.value = 0
     paymentNotes.value = ''
   } catch {
-    showToast('Erro ao registrar pagamento', 'error')
+    showToast(uiText(`Erro ao registrar pagamento`), 'error')
   } finally {
     payingLoading.value = false
   }
@@ -299,19 +300,19 @@ async function saveNewClient() {
     await pdvAPI.createClient(newClient.value as any)
     await loadClients()
     showNewClient.value = false
-    showToast('Cliente cadastrado!')
+    showToast(uiText(`Cliente cadastrado!`))
   } catch (e: any) {
-    newClientError.value = e?.response?.data?.detail || 'Erro ao cadastrar'
+    newClientError.value = e?.response?.data?.detail || uiText(`Erro ao cadastrar`)
   } finally {
     savingClient.value = false
   }
 }
 
 function fmtGs(v: number) {
-  return 'G$ ' + Math.round(v).toLocaleString('es-PY')
+  return 'G$ ' + Math.round(v).toLocaleString(uiLocale())
 }
 function formatDate(s: string) {
-  return new Date(s).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return new Date(s).toLocaleDateString(uiLocale(), { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 onMounted(loadClients)

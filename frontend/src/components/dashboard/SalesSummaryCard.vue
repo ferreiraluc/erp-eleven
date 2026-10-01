@@ -8,73 +8,72 @@
       <div class="summary-heading">
         <span class="summary-icon"><BarChart3 :size="21" aria-hidden="true" /></span>
         <div>
-          <h3 id="sales-summary-title"><RouterLink to="/bi-vendas">Visão de vendas</RouterLink></h3>
-          <p>Resultados das planilhas OneDrive</p>
+          <h3 id="sales-summary-title"><RouterLink to="/bi-vendas">{{auth.ownSales ? t('mySales') : t('title')}}</RouterLink></h3>
+          <p>{{t('oneDriveResults')}}</p>
         </div>
       </div>
       <RouterLink :to="link('overview')" class="summary-primary"
-        >Abrir análise <ArrowUpRight :size="15" aria-hidden="true"
+        >{{t('openAnalysis')}} <ArrowUpRight :size="15" aria-hidden="true"
       /></RouterLink>
     </header>
 
     <div class="summary-body">
       <div v-if="loading" class="summary-loading" role="status">
-        <RefreshCw :size="20" class="spin" aria-hidden="true" />Consultando os resultados…
+        <RefreshCw :size="20" class="spin" aria-hidden="true" />{{t('loadingResults')}}
       </div>
       <div v-else-if="error" class="summary-error" role="alert">
-        <span>Não foi possível carregar o resumo de vendas.</span
-        ><button @click="load">Tentar novamente</button>
+        <span>{{t('summaryError')}}</span
+        ><button @click="load">{{t('retry')}}</button>
       </div>
       <template v-else-if="data && latest">
         <div class="period-line">
           <span>{{ period }}</span
           ><span class="summary-badge" :class="latest.partial ? 'amber' : 'green'">{{
-            latest.partial ? 'Mês em andamento' : 'Arquivo mensal'
+            latest.partial ? t('currentMonth') : t('monthlyFile')
           }}</span>
         </div>
         <div class="sales-metrics">
           <RouterLink :to="link('overview')" class="summary-metric featured"
-            ><span>Vendas do mês · US$</span><strong>{{ amount(latest.total_usd) }}</strong
+            ><span>{{t('monthSales')}}</span><strong>{{ amount(latest.total_usd) }}</strong
             ><small
-              >Resultado salvo na planilha <ArrowUpRight :size="12" aria-hidden="true" /></small
+              >{{t('savedResult')}} <ArrowUpRight :size="12" aria-hidden="true" /></small
           ></RouterLink>
           <RouterLink :to="link('overview', { month: '0' })" class="summary-metric"
-            ><span>Acumulado de {{ latest.year }} · US$</span
+            ><span>{{ t('yearTotal',{year:latest.year}) }} · US$</span
             ><strong>{{ amount(annual?.total_usd) }}</strong
             ><small
-              >{{ annual?.available_months || 0 }} de {{ annual?.source_months || 0 }} meses
-              disponíveis <ArrowUpRight :size="12" aria-hidden="true" /></small
+              >{{ t('availableMonths',{count:annual?.available_months||0,total:annual?.source_months||0}) }} <ArrowUpRight :size="12" aria-hidden="true" /></small
           ></RouterLink>
         </div>
         <div class="sales-freshness">
           <Clock3 :size="13" aria-hidden="true" /><span
             >{{
               latest.synced_at
-                ? `Dados de ${date(latest.synced_at)}`
-                : 'Data de leitura indisponível'
+                ? t('dataAsOf',{date:date(latest.synced_at)})
+                : t('unknownReadDate')
             }}
-            · Sync diário às 18h</span
+            {{t('syncDaily')}}</span
           >
         </div>
         <RouterLink
           v-if="
-            latest.stale ||
+            !auth.ownSales && (latest.stale ||
             data.coverage.warnings ||
-            data.selected.available_months < data.selected.source_months
+            data.selected.available_months < data.selected.source_months)
           "
           :to="link('sources')"
           class="data-warning"
           ><Info :size="14" aria-hidden="true" />{{
             latest.stale
-              ? 'Última leitura válida. Verificar conexão com as fontes.'
-              : 'Há observações nos resumos. Conferir fontes.'
+              ? t('staleHelp')
+              : t('summaryWarnings')
           }}<ArrowRight :size="13" aria-hidden="true"
         /></RouterLink>
 
         <div class="summary-section-heading">
-          <h4>Destaques de {{ shortPeriod }}</h4>
+          <h4>{{ t('periodHighlights',{period:shortPeriod}) }}</h4>
           <RouterLink :to="link('overview')"
-            >Ver ranking <ArrowRight :size="13" aria-hidden="true"
+            >{{auth.ownSales ? t('personalResult') : t('viewRanking')}} <ArrowRight :size="13" aria-hidden="true"
           /></RouterLink>
         </div>
         <ol v-if="data.ranking.length" class="summary-list">
@@ -82,9 +81,9 @@
             <RouterLink
               :to="link('overview', { seller: seller.name })"
               class="seller-row"
-              :aria-label="`Ver vendas de ${seller.name} em ${period}`"
+              :aria-label="t('sellerAria',{seller:seller.name,period})"
             >
-              <span class="seller-position" :class="{ first: index === 0 }">{{ index + 1 }}</span>
+              <span v-if="!auth.ownSales" class="seller-position" :class="{ first: index === 0 }">{{ index + 1 }}</span>
               <span class="seller-detail"
                 ><span
                   ><strong>{{ seller.name }}</strong
@@ -97,38 +96,38 @@
           </li>
         </ol>
         <div v-else class="summary-empty">
-          <Users :size="25" aria-hidden="true" /><strong>Sem detalhamento por vendedor</strong
-          ><span>O total do mês continua disponível acima.</span>
+          <Users :size="25" aria-hidden="true" /><strong>{{t('noSellerDetail')}}</strong
+          ><span>{{t('totalStillAvailable')}}</span>
         </div>
       </template>
       <div v-else class="summary-empty">
         <BarChart3 :size="28" aria-hidden="true" /><strong
-          >As vendas começam nas suas planilhas</strong
-        ><span>Conecte as fontes ou acompanhe a primeira leitura no painel de vendas.</span
-        ><RouterLink :to="link('sources')"
-          >Abrir fontes <ArrowRight :size="14" aria-hidden="true"
+          >{{t('startInExcel')}}</strong
+        ><span>{{t('connectSources')}}</span
+        ><RouterLink v-if="!auth.ownSales" :to="link('sources')"
+          >{{t('openSources')}} <ArrowRight :size="14" aria-hidden="true"
         /></RouterLink>
       </div>
     </div>
 
     <footer class="summary-footer">
-      <nav aria-label="Acessos rápidos de vendas">
+      <nav :aria-label="t('shortcuts')">
         <RouterLink :to="link('compare')"
-          ><GitCompareArrows :size="15" aria-hidden="true" />Comparar anos</RouterLink
+          ><GitCompareArrows :size="15" aria-hidden="true" />{{t('compareYears')}}</RouterLink
         >
         <RouterLink :to="link('weeks', { month: '0' })"
-          ><Trophy :size="15" aria-hidden="true" />Melhores semanas</RouterLink
+          ><Trophy :size="15" aria-hidden="true" />{{t('topWeeks')}}</RouterLink
         >
-        <RouterLink :to="link('sources')"
-          ><Database :size="15" aria-hidden="true" />Fontes</RouterLink
+        <RouterLink v-if="!auth.ownSales" :to="link('sources')"
+          ><Database :size="15" aria-hidden="true" />{{t('sources')}}</RouterLink
         >
       </nav>
       <button
         class="summary-refresh"
         :disabled="loading"
         @click="load"
-        aria-label="Recarregar resumo de vendas já sincronizado"
-        title="Recarregar resumo salvo no ERP"
+        :aria-label="t('reloadSummaryAria')"
+        :title="t('reloadSummary')"
       >
         <RefreshCw :size="15" :class="{ spin: loading }" aria-hidden="true" />
       </button>
@@ -139,6 +138,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import messages from '@/components/sales/salesBi.messages.json'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -152,8 +153,11 @@ import {
   Trophy,
   Users,
 } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
 import { salesBi, type Overview } from '@/services/salesBi'
 
+const { t, locale } = useI18n({useScope:'local',messages})
+const auth = useAuthStore()
 const data = ref<Overview | null>(null),
   loading = ref(true),
   error = ref(false)
@@ -166,13 +170,13 @@ const annual = computed(() => data.value?.annual.find((a) => a.year === latest.v
 const period = computed(() =>
   latest.value
     ? new Date(latest.value.year, latest.value.month - 1, 1)
-        .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+        .toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
         .replace(/^./, (letter) => letter.toUpperCase())
     : '',
 )
 const shortPeriod = computed(() =>
   latest.value
-    ? new Date(latest.value.year, latest.value.month - 1, 1).toLocaleDateString('pt-BR', {
+    ? new Date(latest.value.year, latest.value.month - 1, 1).toLocaleDateString(locale.value, {
         month: 'short',
       })
     : '',
@@ -180,9 +184,9 @@ const shortPeriod = computed(() =>
 const amount = (value: number | null | undefined) =>
   value == null
     ? '—'
-    : value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const date = (value: string) =>
-  new Date(value).toLocaleString('pt-BR', {
+  new Date(value).toLocaleString(locale.value, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

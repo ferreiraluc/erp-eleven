@@ -32,7 +32,7 @@
     <!-- Seletor de cores -->
     <div v-if="showPicker" class="color-picker-dropdown">
       <div class="color-picker-header">
-        <span>Escolha uma cor</span>
+        <span>{{ uiText(`Escolha uma cor`) }}</span>
         <button @click="togglePicker" class="close-picker">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -43,7 +43,7 @@
       <!-- Cores predefinidas -->
       <div class="preset-colors">
         <div class="preset-section">
-          <span class="preset-title">Cores Recomendadas</span>
+          <span class="preset-title">{{ uiText(`Cores Recomendadas`) }}</span>
           <div class="preset-grid">
             <div
               v-for="color in presetColors"
@@ -64,7 +64,7 @@
         </div>
 
         <div class="preset-section">
-          <span class="preset-title">Outras Cores</span>
+          <span class="preset-title">{{ uiText(`Outras Cores`) }}</span>
           <div class="preset-grid">
             <div
               v-for="color in additionalColors"
@@ -87,7 +87,7 @@
 
       <!-- Input customizado -->
       <div class="custom-color-section">
-        <label>Cor Personalizada</label>
+        <label>{{ uiText(`Cor Personalizada`) }}</label>
         <div class="custom-color-input">
           <input 
             v-model="customColorInput"
@@ -112,6 +112,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText } from '@/i18n/uiText'
 import { ref, computed, watch } from 'vue'
 
 interface Props {
@@ -144,31 +145,31 @@ const selectedColor = computed({
 })
 
 // Cores predefinidas para vendedores
-const presetColors = [
-  { hex: '#3B82F6', name: 'Azul' },
-  { hex: '#EF4444', name: 'Vermelho' },
-  { hex: '#10B981', name: 'Verde' },
-  { hex: '#F59E0B', name: 'Laranja' },
-  { hex: '#8B5CF6', name: 'Roxo' },
-  { hex: '#06B6D4', name: 'Ciano' },
-  { hex: '#F97316', name: 'Laranja Escuro' },
-  { hex: '#84CC16', name: 'Lima' }
-]
+const presetColors = computed(() => [
+  { hex: '#3B82F6', name: uiText(`Azul`) },
+  { hex: '#EF4444', name: uiText(`Vermelho`) },
+  { hex: '#10B981', name: uiText(`Verde`) },
+  { hex: '#F59E0B', name: uiText(`Laranja`) },
+  { hex: '#8B5CF6', name: uiText(`Roxo`) },
+  { hex: '#06B6D4', name: uiText(`Ciano`) },
+  { hex: '#F97316', name: uiText(`Laranja Escuro`) },
+  { hex: '#84CC16', name: uiText(`Lima`) }
+])
 
-const additionalColors = [
-  { hex: '#1F2937', name: 'Cinza Escuro' },
-  { hex: '#6B7280', name: 'Cinza' },
-  { hex: '#DC2626', name: 'Vermelho Escuro' },
-  { hex: '#059669', name: 'Verde Escuro' },
-  { hex: '#7C3AED', name: 'Roxo Escuro' },
-  { hex: '#DB2777', name: 'Rosa' },
-  { hex: '#0891B2', name: 'Azul Teal' },
-  { hex: '#65A30D', name: 'Verde Limão' },
-  { hex: '#DC2626', name: 'Vermelho Intenso' },
-  { hex: '#7C2D12', name: 'Marrom' },
-  { hex: '#451A03', name: 'Marrom Escuro' },
-  { hex: '#000000', name: 'Preto' }
-]
+const additionalColors = computed(() => [
+  { hex: '#1F2937', name: uiText(`Cinza Escuro`) },
+  { hex: '#6B7280', name: uiText(`Cinza`) },
+  { hex: '#DC2626', name: uiText(`Vermelho Escuro`) },
+  { hex: '#059669', name: uiText(`Verde Escuro`) },
+  { hex: '#7C3AED', name: uiText(`Roxo Escuro`) },
+  { hex: '#DB2777', name: uiText(`Rosa`) },
+  { hex: '#0891B2', name: uiText(`Azul Teal`) },
+  { hex: '#65A30D', name: uiText(`Verde Limão`) },
+  { hex: '#DC2626', name: uiText(`Vermelho Intenso`) },
+  { hex: '#7C2D12', name: uiText(`Marrom`) },
+  { hex: '#451A03', name: uiText(`Marrom Escuro`) },
+  { hex: '#000000', name: uiText(`Preto`) }
+])
 
 // Métodos
 const togglePicker = () => {
@@ -206,9 +207,9 @@ const isValidHexColor = (color: string): boolean => {
 }
 
 const getColorName = (hex: string): string => {
-  const allColors = [...presetColors, ...additionalColors]
+  const allColors = [...presetColors.value, ...additionalColors.value]
   const found = allColors.find(c => c.hex.toLowerCase() === hex.toLowerCase())
-  return found ? found.name : 'Personalizada'
+  return found ? found.name : uiText(`Personalizada`)
 }
 
 // Watchers

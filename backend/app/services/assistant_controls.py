@@ -34,7 +34,7 @@ def action_label(action):
     kind = getattr(action, 'kind', '')
     if kind == 'frete_emitir':
         return 'Pagar R$ ' + action.payload['price'].replace('.', ',')
-    return {'arquivo_imprimir':'Imprimir PDF','item_cadastrar':'Cadastrar item','estoque_entrada':'Registrar entrada','impressao': 'Imprimir', 'frete_imprimir': 'Imprimir', 'folga': 'Cadastrar folga', 'apelido': 'Salvar apelido'}.get(kind, 'Confirmar registro')
+    return {'rastreio_comprovante':'Cadastrar rastreios','arquivo_imprimir':'Imprimir PDF','item_cadastrar':'Cadastrar item','estoque_entrada':'Registrar entrada','impressao': 'Imprimir', 'frete_imprimir': 'Imprimir', 'folga': 'Cadastrar folga', 'apelido': 'Salvar apelido'}.get(kind, 'Confirmar registro')
 
 
 def preview_reply(action, text, url=None):

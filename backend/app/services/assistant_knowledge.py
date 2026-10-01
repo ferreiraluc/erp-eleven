@@ -46,7 +46,7 @@ def system_catalog(db, args):
         from sqlalchemy import text
         db.execute(text("SELECT pg_advisory_xact_lock(711004)"))
     locations = {'rastreios':'/rastreamento', 'pedidos':'/pedidos', 'estoque':'/inventory', 'clientes':'/clientes',
-                 'vendas':'/vendas', 'folga':'/vendors', 'endereco':'/enderecos', 'etiqueta':'/enderecos',
+                 'vendas_planilhas':'/bi-vendas', 'vendas':'/vendas', 'folga':'/vendors', 'endereco':'/enderecos', 'etiqueta':'/enderecos',
                  'cep':'/enderecos', 'superfrete':'/enderecos', 'impressao':'/enderecos', 'impressoes':'/enderecos', 'itens':'/inventory', 'equipe':'/vendors'}
     existing = {r.key:r for r in db.query(AssistantKnowledge).filter_by(kind='capability')}
     items = []

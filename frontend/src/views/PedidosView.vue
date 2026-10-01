@@ -10,16 +10,16 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 class="page-title">Pedidos</h1>
+            <h1 class="page-title">{{ $tr("Pedidos") }}</h1>
           </div>
-          <p class="page-subtitle">Gerencie todos os pedidos da loja</p>
+          <p class="page-subtitle">{{ $tr("Gerencie todos os pedidos da loja") }}</p>
         </div>
         <div class="header-right">
           <button @click="openCreateModal" class="btn btn-primary">
             <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Novo Pedido
+            {{ $tr("Novo Pedido") }}
           </button>
         </div>
       </div>
@@ -36,29 +36,29 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Buscar por número, cliente ou cidade..."
+            :placeholder='$tr("Buscar por número, cliente ou cidade...")'
             class="search-input"
           />
         </div>
 
         <!-- Status Filter -->
         <div class="filter-group">
-          <label class="filter-label">Status</label>
+          <label class="filter-label">{{ $tr("Status") }}</label>
           <select v-model="statusFilter" class="filter-select">
-            <option value="">Todos</option>
-            <option value="PENDENTE">Pendente</option>
-            <option value="PROCESSANDO">Processando</option>
-            <option value="ENVIADO">Enviado</option>
-            <option value="ENTREGUE">Entregue</option>
-            <option value="CANCELADO">Cancelado</option>
+            <option value="">{{ $tr("Todos") }}</option>
+            <option value="PENDENTE">{{ $tr("Pendente") }}</option>
+            <option value="PROCESSANDO">{{ $tr("Processando") }}</option>
+            <option value="ENVIADO">{{ $tr("Enviado") }}</option>
+            <option value="ENTREGUE">{{ $tr("Entregue") }}</option>
+            <option value="CANCELADO">{{ $tr("Cancelado") }}</option>
           </select>
         </div>
 
         <!-- Tag Filter -->
         <div class="filter-group">
-          <label class="filter-label">Tag</label>
+          <label class="filter-label">{{ $tr("Tag") }}</label>
           <select v-model="tagFilter" class="filter-select">
-            <option value="">Todas</option>
+            <option value="">{{ $tr("Todas") }}</option>
             <option v-for="tag in tags" :key="tag.id" :value="tag.id">
               {{ tag.nome }}
             </option>
@@ -74,7 +74,7 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            Lista
+            {{ $tr("Lista") }}
           </button>
           <button
             @click="viewMode = 'cards'"
@@ -83,7 +83,7 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
-            Cards
+            {{ $tr("Cards") }}
           </button>
         </div>
       </div>
@@ -92,7 +92,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>Carregando pedidos...</p>
+      <p>{{ $tr("Carregando pedidos...") }}</p>
     </div>
 
     <!-- No Results -->
@@ -102,10 +102,10 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m16 0l-2-2m0 0l-2 2m2-2v4" />
         </svg>
       </div>
-      <h3>Nenhum pedido encontrado</h3>
-      <p>Não há pedidos que correspondam aos filtros selecionados</p>
+      <h3>{{ $tr("Nenhum pedido encontrado") }}</h3>
+      <p>{{ $tr("Não há pedidos que correspondam aos filtros selecionados") }}</p>
       <button @click="clearFilters" class="btn btn-secondary">
-        Limpar Filtros
+        {{ $tr("Limpar Filtros") }}
       </button>
     </div>
 
@@ -114,12 +114,12 @@
       <!-- List View -->
       <div v-if="viewMode === 'list'" class="pedidos-list">
         <div class="list-header">
-          <div class="col col-number">Número</div>
-          <div class="col col-cliente">Cliente</div>
-          <div class="col col-status">Status</div>
-          <div class="col col-tags">Tags</div>
-          <div class="col col-data">Data</div>
-          <div class="col col-actions">Ações</div>
+          <div class="col col-number">{{ $tr("Número") }}</div>
+          <div class="col col-cliente">{{ $tr("Cliente") }}</div>
+          <div class="col col-status">{{ $tr("Status") }}</div>
+          <div class="col col-tags">{{ $tr("Tags") }}</div>
+          <div class="col col-data">{{ $tr("Data") }}</div>
+          <div class="col col-actions">{{ $tr("Ações") }}</div>
         </div>
 
         <div
@@ -162,7 +162,7 @@
             <button
               @click.stop="openEditModal(pedido)"
               class="action-btn edit-btn"
-              title="Editar"
+              :title='$tr("Editar")'
             >
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -171,7 +171,7 @@
             <button
               @click.stop="createRastreamento(pedido)"
               class="action-btn track-btn"
-              title="Rastreamento"
+              :title='$tr("Rastreamento")'
             >
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -201,11 +201,11 @@
           :disabled="currentPage === 1"
           class="pagination-btn"
         >
-          Anterior
+          {{ $tr("Anterior") }}
         </button>
 
         <span class="pagination-info">
-          Página {{ currentPage }} de {{ totalPages }}
+          {{ $tr("Página") }} {{ currentPage }} {{ $tr("de") }} {{ totalPages }}
         </span>
 
         <button
@@ -213,7 +213,7 @@
           :disabled="currentPage === totalPages"
           class="pagination-btn"
         >
-          Próxima
+          {{ $tr("Próxima") }}
         </button>
       </div>
     </div>
@@ -231,11 +231,13 @@
       :pedido="selectedPedido"
       @close="closeDetailsModal"
       @edit="openEditModal"
+      @updated="selectedPedido = $event; handlePedidoSaved()"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PedidoCard from '@/components/PedidoCard.vue'
@@ -322,16 +324,16 @@ const loadTags = async () => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('pt-BR')
+  return new Date(dateString).toLocaleDateString(uiLocale())
 }
 
 const getStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    'PENDENTE': 'Pendente',
-    'PROCESSANDO': 'Processando',
-    'ENVIADO': 'Enviado',
-    'ENTREGUE': 'Entregue',
-    'CANCELADO': 'Cancelado'
+    'PENDENTE': uiText(`Pendente`),
+    'PROCESSANDO': uiText(`Processando`),
+    'ENVIADO': uiText(`Enviado`),
+    'ENTREGUE': uiText(`Entregue`),
+    'CANCELADO': uiText(`Cancelado`)
   }
   return labels[status] || status
 }

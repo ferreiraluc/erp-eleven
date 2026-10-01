@@ -2,9 +2,9 @@
   <div class="receipt-overlay" @click.self="$emit('close')">
     <div class="receipt-modal">
       <div class="receipt-actions no-print">
-        <button class="receipt-btn-print" @click="printReceipt">🖨 Imprimir</button>
-        <button class="receipt-btn-pdf" @click="savePDF">📄 Salvar PDF</button>
-        <button class="receipt-btn-close" @click="$emit('close')">Fechar</button>
+        <button class="receipt-btn-print" @click="printReceipt">{{ uiText(`🖨 Imprimir`) }}</button>
+        <button class="receipt-btn-pdf" @click="savePDF">{{ uiText(`📄 Salvar PDF`) }}</button>
+        <button class="receipt-btn-close" @click="$emit('close')">{{ uiText(`Fechar`) }}</button>
       </div>
 
       <!-- Receipt body (printable) -->
@@ -12,10 +12,10 @@
         <!-- Header -->
         <div class="receipt-store">
           <div class="receipt-logo">ELEVEN</div>
-          <p class="receipt-store-sub">Moda &amp; Vestuário</p>
+          <p class="receipt-store-sub">{{ uiText(`Moda & Vestuário`) }}</p>
           <p class="receipt-store-info">Ciudad del Este, Paraguay</p>
           <p class="receipt-date">{{ formatDate(sale.created_at) }}</p>
-          <p class="receipt-id">Venda #{{ sale.id.slice(-8).toUpperCase() }}</p>
+          <p class="receipt-id">{{ uiText(`Venda #`) }}{{ sale.id.slice(-8).toUpperCase() }}</p>
         </div>
 
         <div class="receipt-divider">- - - - - - - - - - - - - - - - - -</div>
@@ -25,7 +25,7 @@
           <div v-for="item in sale.items" :key="item.id" class="receipt-item">
             <div class="receipt-item-name">
               {{ item.item_name }}
-              <span v-if="item.is_avulso" class="receipt-avulso-tag">avulso</span>
+              <span v-if="item.is_avulso" class="receipt-avulso-tag">{{ uiText(`avulso`) }}</span>
             </div>
             <div class="receipt-item-meta">
               <span v-if="item.item_size || item.item_color">
@@ -45,15 +45,15 @@
         <!-- Totals -->
         <div class="receipt-totals">
           <div class="receipt-total-row">
-            <span>Subtotal</span>
+            <span>{{ uiText(`Subtotal`) }}</span>
             <span>{{ fmtGs(sale.subtotal_gs) }}</span>
           </div>
           <div v-if="sale.desconto_gs > 0" class="receipt-total-row receipt-discount-row">
-            <span>Desconto</span>
+            <span>{{ uiText(`Desconto`) }}</span>
             <span>-{{ fmtGs(sale.desconto_gs) }}</span>
           </div>
           <div class="receipt-total-row receipt-grand-total">
-            <span>TOTAL</span>
+            <span>{{ uiText(`TOTAL`) }}</span>
             <span>{{ fmtGs(sale.total_gs) }}</span>
           </div>
         </div>
@@ -62,7 +62,7 @@
 
         <!-- Payments -->
         <div class="receipt-payments">
-          <p class="receipt-section-label">Pagamento</p>
+          <p class="receipt-section-label">{{ uiText(`Pagamento`) }}</p>
           <div v-for="p in sale.payments" :key="p.id" class="receipt-payment-row">
             <span>{{ methodLabel(p.method) }}</span>
             <span>
@@ -73,20 +73,19 @@
             </span>
           </div>
           <div v-if="troco > 0" class="receipt-payment-row receipt-troco-row">
-            <span>Troco</span>
+            <span>{{ uiText(`Troco`) }}</span>
             <span>{{ fmtGs(troco) }}</span>
           </div>
         </div>
 
-        <div v-if="sale.cliente_nome" class="receipt-client">
-          Cliente: {{ sale.cliente_nome }}
+        <div v-if="sale.cliente_nome" class="receipt-client"> {{ uiText(`Cliente:`) }} {{ sale.cliente_nome }}
         </div>
 
         <div class="receipt-divider">- - - - - - - - - - - - - - - - - -</div>
 
         <div class="receipt-footer">
-          <p>Obrigado pela sua compra!</p>
-          <p>Volte sempre ✨</p>
+          <p>{{ uiText(`Obrigado pela sua compra!`) }}</p>
+          <p>{{ uiText(`Volte sempre ✨`) }}</p>
         </div>
       </div>
     </div>
@@ -94,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed } from 'vue'
 import type { PdvSaleResponse } from '@/services/api'
 
@@ -102,14 +102,14 @@ defineEmits<{ (e: 'close'): void }>()
 
 const receiptRef = ref<HTMLElement>()
 
-const PAYMENT_LABELS: Record<string, string> = {
-  cash_gs: 'Dinheiro G$', cash_brl: 'Dinheiro R$', cash_usd: 'Dinheiro U$',
-  cash_eur: 'Dinheiro €', card: 'Cartão', pix: 'PIX',
-  mercadopago: 'MercadoPago', transfer_br: 'Transf. Brasil',
-  transfer_py: 'Transf. Paraguai', pix_cambista: 'PIX Cambista',
-  qr_py: 'QR Paraguai', tigo_money: 'Tigo Money', fiado: 'Fiado',
-}
-function methodLabel(m: string) { return PAYMENT_LABELS[m] || m }
+const PAYMENT_LABELS = computed<Record<string, string>>(() => ({
+  cash_gs: uiText(`Dinheiro G$`), cash_brl: uiText(`Dinheiro R$`), cash_usd: uiText(`Dinheiro U$`),
+  cash_eur: uiText(`Dinheiro €`), card: uiText(`Cartão`), pix: 'PIX',
+  mercadopago: 'MercadoPago', transfer_br: uiText(`Transf. Brasil`),
+  transfer_py: uiText(`Transf. Paraguai`), pix_cambista: uiText(`PIX Cambista`),
+  qr_py: uiText(`QR Paraguai`), tigo_money: 'Tigo Money', fiado: uiText(`Fiado`),
+}))
+function methodLabel(m: string) { return PAYMENT_LABELS.value[m] || m }
 
 const troco = computed(() => {
   const paid = props.sale.payments.reduce((s, p) => s + p.amount_gs, 0)
@@ -117,13 +117,13 @@ const troco = computed(() => {
 })
 
 function fmtGs(v: number) {
-  return 'G$ ' + Math.round(v).toLocaleString('es-PY')
+  return 'G$ ' + Math.round(v).toLocaleString(uiLocale())
 }
 function fmtNum(v: number) {
-  return v.toLocaleString('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  return v.toLocaleString(uiLocale(), { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 function formatDate(s: string) {
-  return new Date(s).toLocaleString('pt-BR', {
+  return new Date(s).toLocaleString(uiLocale(), {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
@@ -145,7 +145,7 @@ async function savePDF() {
     pdf.save(`nota-eleven-${props.sale.id.slice(-8).toUpperCase()}.pdf`)
   } catch (e) {
     console.error('PDF error:', e)
-    alert('Erro ao gerar PDF. Tente usar o botão Imprimir.')
+    alert(uiText(`Erro ao gerar PDF. Tente usar o botão Imprimir.`))
   }
 }
 </script>

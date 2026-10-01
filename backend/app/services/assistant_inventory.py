@@ -117,7 +117,11 @@ def confirm_inventory(db,message,action):
     if action.kind=='estoque_entrada':
         item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True).with_for_update().first()
         if not item:return 'Produto inativo ou removido. Nenhuma entrada registrada.'
-        move=create_movement(db,item.id,'entry',p['quantidade'],message.user_id,location=p['local'],reason='Entrada pelo assistente',reference_type='assistant_action',reference_id=str(action.id))
+        from .inventory_service import StockMovementError
+        try:
+            move=create_movement(db,item.id,'entry',p['quantidade'],message.user_id,location=p['local'],reason='Entrada pelo assistente',reference_type='assistant_action',reference_id=str(action.id))
+        except StockMovementError as error:
+            return f'Nenhuma entrada registrada. {error}'
         action.result_id=move.id
         answer=f"Entrada registrada: +{p['quantidade']} de {item.name} no local {p['local']}. Saldo atual: loja {item.stock_loja}, depósito {item.stock_deposito}."
     else:

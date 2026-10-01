@@ -60,6 +60,9 @@ def may_schedule(db, message, identity):
 
 
 def action_preview(action):
+    if action.kind == 'rastreio_comprovante':
+        from .receipt_tracking import receipt_preview
+        return receipt_preview(action)
     if action.kind in ('item_cadastrar','estoque_entrada'):
         from .assistant_inventory import inventory_preview
         return inventory_preview(action)
@@ -130,6 +133,9 @@ def confirm_action(db, message, identity, action, cancel=False):
     if action.kind == "apelido":
         from .assistant_knowledge import confirm_alias
         return confirm_alias(db, message, action)
+    if action.kind == 'rastreio_comprovante':
+        from .receipt_tracking import confirm_receipt
+        return confirm_receipt(db, message, action)
     if action.kind=='arquivo_imprimir':
         from .assistant_documents import confirm_file
         return confirm_file(db,message,action)

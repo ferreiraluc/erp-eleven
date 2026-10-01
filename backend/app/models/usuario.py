@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, String, Boolean, DateTime, Enum, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -22,6 +22,11 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     role = Column(Enum(UsuarioRole), nullable=False, default=UsuarioRole.VENDEDOR)
     ativo = Column(Boolean, default=True)
+    auth_version = Column(Integer, nullable=False, default=0, server_default="0")
+    must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
+    sales_scope = Column(String(10), nullable=False, default="all", server_default="all")
+    sales_seller = Column(String(100))
+    vendedor_id = Column(UUID(as_uuid=True), ForeignKey("vendedores.id"))
     ultimo_login = Column(DateTime)
     created_at = Column(DateTime, default=lambda: settings.now())
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())

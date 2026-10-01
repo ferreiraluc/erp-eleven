@@ -4,21 +4,21 @@
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
-          <h1>💰 Vendas</h1>
-          <p class="subtitle">Gerencie e visualize todas as vendas do sistema</p>
+          <h1>{{ $tr("💰 Vendas") }}</h1>
+          <p class="subtitle">{{ $tr("Gerencie e visualize todas as vendas do sistema") }}</p>
         </div>
         <div class="action-buttons">
-          <button @click="showImportModal = true" class="btn-primary">
+          <button v-if="!auth.ownSales" @click="showImportModal = true" class="btn-primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
-            Importar Vendas
+            {{ $tr("Importar Vendas") }}
           </button>
           <button @click="showAddModal = true" class="btn-secondary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
             </svg>
-            Nova Venda
+            {{ $tr("Nova Venda") }}
           </button>
         </div>
       </div>
@@ -34,7 +34,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.total_vendas || 0 }}</div>
-          <div class="stat-label">Total de Vendas</div>
+          <div class="stat-label">{{ $tr("Total de Vendas") }}</div>
         </div>
       </div>
 
@@ -46,7 +46,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ formatCurrency(stats.valor_total || 0) }}</div>
-          <div class="stat-label">Valor Total</div>
+          <div class="stat-label">{{ $tr("Valor Total") }}</div>
         </div>
       </div>
 
@@ -58,7 +58,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.vendas_hoje || 0 }}</div>
-          <div class="stat-label">Vendas Hoje</div>
+          <div class="stat-label">{{ $tr("Vendas Hoje") }}</div>
         </div>
       </div>
 
@@ -70,7 +70,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.vendedores_ativos || 0 }}</div>
-          <div class="stat-label">Vendedores Ativos</div>
+          <div class="stat-label">{{ $tr("Vendedores Ativos") }}</div>
         </div>
       </div>
     </div>
@@ -79,19 +79,19 @@
     <div class="filters-section">
       <div class="filters-grid">
         <div class="filter-group">
-          <label>🔍 Buscar</label>
-          <input 
-            v-model="filters.search" 
-            type="text" 
-            placeholder="Vendedor, produto, etc..."
+          <label>{{ $tr("🔍 Buscar") }}</label>
+          <input
+            v-model="filters.search"
+            type="text"
+            :placeholder='$tr("Vendedor, produto, etc...")'
             class="filter-input"
           >
         </div>
-        
+
         <div class="filter-group">
-          <label>👤 Vendedor</label>
+          <label>{{ $tr("👤 Vendedor") }}</label>
           <select v-model="filters.vendedor" class="filter-select">
-            <option value="">Todos os vendedores</option>
+            <option value="">{{ $tr("Todos os vendedores") }}</option>
             <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
               {{ vendedor.nome }}
             </option>
@@ -99,30 +99,30 @@
         </div>
 
         <div class="filter-group">
-          <label>💰 Moeda</label>
+          <label>{{ $tr("💰 Moeda") }}</label>
           <select v-model="filters.moeda" class="filter-select">
-            <option value="">Todas as moedas</option>
-            <option value="G$">G$ (Guaranis)</option>
-            <option value="R$">R$ (Reais)</option>
-            <option value="U$">U$ (Dólares)</option>
-            <option value="EUR">EUR (Euros)</option>
+            <option value="">{{ $tr("Todas as moedas") }}</option>
+            <option value="G$">{{ $tr("G$ (Guaranis)") }}</option>
+            <option value="R$">{{ $tr("R$ (Reais)") }}</option>
+            <option value="U$">{{ $tr("U$ (Dólares)") }}</option>
+            <option value="EUR">{{ $tr("EUR (Euros)") }}</option>
           </select>
         </div>
 
         <div class="filter-group">
-          <label>📅 Período</label>
+          <label>{{ $tr("📅 Período") }}</label>
           <select v-model="filters.periodo" class="filter-select">
-            <option value="">Todos os períodos</option>
-            <option value="hoje">Hoje</option>
-            <option value="semana">Esta semana</option>
-            <option value="mes">Este mês</option>
-            <option value="ano">Este ano</option>
+            <option value="">{{ $tr("Todos os períodos") }}</option>
+            <option value="hoje">{{ $tr("Hoje") }}</option>
+            <option value="semana">{{ $tr("Esta semana") }}</option>
+            <option value="mes">{{ $tr("Este mês") }}</option>
+            <option value="ano">{{ $tr("Este ano") }}</option>
           </select>
         </div>
 
         <div class="filter-actions">
-          <button @click="applyFilters" class="btn-primary">Filtrar</button>
-          <button @click="clearFilters" class="btn-ghost">Limpar</button>
+          <button @click="applyFilters" class="btn-primary">{{ $tr("Filtrar") }}</button>
+          <button @click="clearFilters" class="btn-ghost">{{ $tr("Limpar") }}</button>
         </div>
       </div>
     </div>
@@ -130,13 +130,13 @@
     <!-- Sales Table -->
     <div class="table-section">
       <div class="table-header">
-        <h2>📊 Lista de Vendas</h2>
+        <h2>{{ $tr("📊 Lista de Vendas") }}</h2>
         <div class="table-actions">
           <button @click="exportVendas" class="btn-ghost">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
             </svg>
-            Exportar
+            {{ $tr("Exportar") }}
           </button>
         </div>
       </div>
@@ -146,27 +146,27 @@
           <thead>
             <tr>
               <th @click="sortBy('data_venda')" class="sortable">
-                📅 Data
+                {{ $tr("📅 Data") }}
                 <span v-if="sortField === 'data_venda'" class="sort-indicator">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </th>
               <th @click="sortBy('vendedor_nome')" class="sortable">
-                👤 Vendedor
+                {{ $tr("👤 Vendedor") }}
                 <span v-if="sortField === 'vendedor_nome'" class="sort-indicator">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </th>
               <th @click="sortBy('valor_bruto')" class="sortable">
-                💰 Valor
+                {{ $tr("💰 Valor") }}
                 <span v-if="sortField === 'valor_bruto'" class="sort-indicator">
                   {{ sortDirection === 'asc' ? '↑' : '↓' }}
                 </span>
               </th>
-              <th>🏦 Moeda</th>
-              <th>💳 Pagamento</th>
-              <th>📦 Produto</th>
-              <th class="actions-column">Ações</th>
+              <th>{{ $tr("🏦 Moeda") }}</th>
+              <th>{{ $tr("💳 Pagamento") }}</th>
+              <th>{{ $tr("📦 Produto") }}</th>
+              <th class="actions-column">{{ $tr("Ações") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -209,10 +209,10 @@
         <!-- Empty State -->
         <div v-else class="empty-state">
           <div class="empty-icon">📊</div>
-          <h3>Nenhuma venda encontrada</h3>
-          <p>{{ hasFilters ? 'Tente ajustar os filtros' : 'Comece importando ou criando uma nova venda' }}</p>
-          <button @click="hasFilters ? clearFilters() : showImportModal = true" class="btn-primary">
-            {{ hasFilters ? 'Limpar Filtros' : 'Importar Vendas' }}
+          <h3>{{ $tr("Nenhuma venda encontrada") }}</h3>
+          <p>{{ hasFilters ? uiText(`Tente ajustar os filtros`) : uiText(`Comece importando ou criando uma nova venda`) }}</p>
+          <button v-if="hasFilters || !auth.ownSales" @click="hasFilters ? clearFilters() : showImportModal = true" class="btn-primary">
+            {{ hasFilters ? uiText(`Limpar Filtros`) : uiText(`Importar Vendas`) }}
           </button>
         </div>
       </div>
@@ -220,36 +220,36 @@
       <!-- Pagination -->
       <div v-if="filteredVendas.length > 0" class="pagination">
         <div class="pagination-info">
-          Mostrando {{ startIndex + 1 }}-{{ endIndex }} de {{ filteredVendas.length }} vendas
+          {{ $tr("Mostrando") }} {{ startIndex + 1 }}-{{ endIndex }} {{ $tr("de") }} {{ filteredVendas.length }} {{ $tr("vendas") }}
         </div>
         <div class="pagination-controls">
-          <button 
-            @click="currentPage--" 
-            :disabled="currentPage === 1" 
+          <button
+            @click="currentPage--"
+            :disabled="currentPage === 1"
             class="btn-pagination"
           >
-            ← Anterior
+            {{ $tr("← Anterior") }}
           </button>
-          
-          <span class="page-info">{{ currentPage }} de {{ totalPages }}</span>
-          
-          <button 
-            @click="currentPage++" 
-            :disabled="currentPage === totalPages" 
+
+          <span class="page-info">{{ currentPage }} {{ $tr("de") }} {{ totalPages }}</span>
+
+          <button
+            @click="currentPage++"
+            :disabled="currentPage === totalPages"
             class="btn-pagination"
           >
-            Próxima →
+            {{ $tr("Próxima →") }}
           </button>
         </div>
       </div>
     </div>
 
     <!-- Import Modal -->
-    <div v-if="showImportModal" class="modal-overlay" @click="showImportModal = false">
+    <div v-if="showImportModal && !auth.ownSales" class="modal-overlay" @click="showImportModal = false">
       <div class="modal" @click.stop>
         <VendasImportCard />
         <div class="modal-actions">
-          <button @click="showImportModal = false" class="btn-secondary">Fechar</button>
+          <button @click="showImportModal = false" class="btn-secondary">{{ $tr("Fechar") }}</button>
         </div>
       </div>
     </div>
@@ -257,10 +257,13 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
 import { salesAPI, vendorsAPI, type Sale, type VendorResponse } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import VendasImportCard from '@/components/VendasImportCard.vue'
 
+const auth = useAuthStore()
 // Estado reativo
 const vendas = ref<Sale[]>([])
 const vendedores = ref<VendorResponse[]>([])
@@ -321,10 +324,10 @@ const filteredVendas = computed(() => {
   if (filters.value.periodo) {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    
+
     result = result.filter(venda => {
       const vendaDate = new Date(venda.data_venda)
-      
+
       switch (filters.value.periodo) {
         case 'hoje':
           return vendaDate >= today
@@ -346,7 +349,7 @@ const filteredVendas = computed(() => {
   result.sort((a, b) => {
     const aVal = a[sortField.value]
     const bVal = b[sortField.value]
-    
+
     if (sortDirection.value === 'asc') {
       return aVal < bVal ? -1 : aVal > bVal ? 1 : 0
     } else {
@@ -361,7 +364,7 @@ const totalPages = computed(() => Math.ceil(filteredVendas.value.length / itemsP
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage)
 const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage, filteredVendas.value.length))
 
-const paginatedVendas = computed(() => 
+const paginatedVendas = computed(() =>
   filteredVendas.value.slice(startIndex.value, endIndex.value)
 )
 
@@ -382,7 +385,7 @@ const loadVendas = async () => {
 const loadVendedores = async () => {
   try {
     const response = await vendorsAPI.getAll()
-    vendedores.value = response || []
+    vendedores.value = auth.ownSales ? response.filter(v=>v.id===auth.user?.vendedor_id) : response || []
   } catch (error) {
     console.error('Erro ao carregar vendedores:', error)
   }
@@ -391,7 +394,7 @@ const loadVendedores = async () => {
 const updateStats = () => {
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  
+
   stats.value = {
     total_vendas: vendas.value.length,
     valor_total: vendas.value.reduce((sum, venda) => sum + Number(venda.valor_bruto || 0), 0),
@@ -429,7 +432,7 @@ const editVenda = (venda: any) => {
 }
 
 const deleteVenda = async (venda: any) => {
-  if (confirm('Tem certeza que deseja excluir esta venda?')) {
+  if (confirm(uiText(`Tem certeza que deseja excluir esta venda?`))) {
     try {
       // TODO: Implementar exclusão de venda
       console.log('Excluir venda:', venda)
@@ -447,13 +450,13 @@ const exportVendas = () => {
 
 // Formatação
 const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('pt-BR')
+  return new Date(dateStr).toLocaleDateString(uiLocale())
 }
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { 
+  return new Intl.NumberFormat(uiLocale(), {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2 
+    maximumFractionDigits: 2
   }).format(value)
 }
 
@@ -462,8 +465,8 @@ const formatPaymentMethod = (method: string) => {
     'PIX_POWER': 'PIX Power',
     'PIX_THAIS': 'PIX Thais',
     'PIX_MERCADO_PAGO': 'PIX MP',
-    'CREDITO': 'Crédito',
-    'DEBITO': 'Débito',
+    'CREDITO': uiText(`Crédito`),
+    'DEBITO': uiText(`Débito`),
     'PY_TRANSFER_SUDAMERIS': 'Transfer Sudameris',
     'PY_TRANSFER_INTERFISA': 'Transfer Interfisa'
   }

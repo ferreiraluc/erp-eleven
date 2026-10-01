@@ -1,45 +1,45 @@
 <template>
   <div class="usage-history">
-    <p class="intro"><strong>{{ address.label }}</strong><br/>Endereços A4 e etiquetas aparecem juntos, com a data e o responsável por cada utilização.</p>
+    <p class="intro"><strong>{{ address.label }}</strong><br/>{{ tr('Endereços A4 e etiquetas aparecem juntos, com a data e o responsável por cada utilização.') }}</p>
     <div class="usage-metrics">
-      <div><strong>{{ result.summary.address_prints }}</strong><span>Endereços A4 impressos</span></div>
-      <div><strong>{{ result.summary.labels }}</strong><span>Etiquetas emitidas</span></div>
-      <div><strong>{{ result.summary.completed_prints }}</strong><span>Total enviado à impressora</span></div>
+      <div><strong>{{ result.summary.address_prints }}</strong><span>{{ tr('Endereços A4 impressos') }}</span></div>
+      <div><strong>{{ result.summary.labels }}</strong><span>{{ tr('Etiquetas emitidas') }}</span></div>
+      <div><strong>{{ result.summary.completed_prints }}</strong><span>{{ tr('Total enviado à impressora') }}</span></div>
     </div>
-    <p class="usage-note">O total inclui {{ result.summary.address_prints }} endereço(s) A4 e {{ result.summary.label_prints }} etiqueta(s). Conta somente envios confirmados pelo agente; cancelamentos, falhas e trabalhos na fila não entram no total. A saída física do papel depende da impressora.<br/><strong v-if="result.summary.last_printed_at">Última impressão: {{ date(result.summary.last_printed_at) }}</strong></p>
+    <p class="usage-note">{{ tr('O total inclui') }} {{ result.summary.address_prints }} {{ tr('endereço(s) A4 e') }} {{ result.summary.label_prints }} {{ tr('etiqueta(s). Conta somente envios confirmados pelo agente; cancelamentos, falhas e trabalhos na fila não entram no total. A saída física do papel depende da impressora.') }}<br/><strong v-if="result.summary.last_printed_at">{{ tr('Última impressão:') }} {{ date(result.summary.last_printed_at) }}</strong></p>
     <div class="usage-toolbar">
-      <label>Mostrar <select v-model="kind" @change="offset=0;load()"><option value="all">Todas as utilizações</option><option value="frete">Cotações e etiquetas</option><option value="impressao">Impressões</option></select></label>
-      <button :disabled="loading" @click="load">Atualizar</button>
+      <label>{{ tr('Mostrar') }} <select v-model="kind" @change="offset=0;load()"><option value="all">{{ tr('Todas as utilizações') }}</option><option value="frete">{{ tr('Cotações e etiquetas') }}</option><option value="impressao">{{ tr('Impressões') }}</option></select></label>
+      <button :disabled="loading" @click="load">{{ tr('Atualizar') }}</button>
     </div>
-    <p v-if="error" role="alert" class="usage-error">{{ error }}</p>
-    <p v-if="loading" role="status" class="usage-empty">Carregando histórico…</p>
+    <p v-if="error" role="alert" class="usage-error">{{ tr(error) }}</p>
+    <p v-if="loading" role="status" class="usage-empty">{{ tr('Carregando histórico…') }}</p>
     <div v-else class="usage-table">
-      <table><thead><tr><th>Data / responsável</th><th>Utilização</th><th>Situação</th><th>Detalhes</th></tr></thead><tbody>
+      <table><thead><tr><th>{{ tr('Data / responsável') }}</th><th>{{ tr('Utilização') }}</th><th>{{ tr('Situação') }}</th><th>{{ tr('Detalhes') }}</th></tr></thead><tbody>
         <tr v-for="entry in result.items" :key="entry.kind+entry.id">
-          <td>{{ date(entry.finished_at || entry.created_at) }}<small>{{ entry.user }}</small><small v-if="entry.finished_at">Solicitada em {{ date(entry.created_at) }}</small></td>
-          <td><strong>{{ entry.kind==='frete'?'Frete SuperFrete':entry.source==='superfrete'?'Impressão de etiqueta':'Endereço A4 · modelo simples' }}</strong><small>{{ entry.environment==='sandbox'?'Ambiente de testes':entry.source==='bot'?'Solicitada pelo bot':entry.source==='erp'?'Solicitada pelo ERP':'' }}</small></td>
-          <td><span class="usage-badge">{{ entry.kind==='impressao' && entry.status==='pending'?'Na fila de impressão':states[entry.status] || entry.status }}</span><small v-if="entry.price">{{ money(entry.price) }}</small><code v-if="entry.tracking">{{ entry.tracking }}</code></td>
-          <td><details><summary>{{ entry.recipient || 'Ver endereço utilizado' }}</summary><p>{{ entry.address_text || 'Sem detalhes de rua informados.' }}</p></details><button @click="entry.kind==='frete'?$emit('freight',entry.id):$emit('print',entry.id)">{{ entry.kind==='frete'?'Abrir frete':'Ver PDF' }}</button></td>
+          <td>{{ date(entry.finished_at || entry.created_at) }}<small>{{ entry.user }}</small><small v-if="entry.finished_at">{{ tr('Solicitada em') }} {{ date(entry.created_at) }}</small></td>
+          <td><strong>{{ entry.kind==='frete'?tr('Frete SuperFrete'):entry.source==='superfrete'?tr('Impressão de etiqueta'):tr('Endereço A4 · modelo simples') }}</strong><small>{{ entry.environment==='sandbox'?tr('Ambiente de testes'):entry.source==='bot'?tr('Solicitada pelo bot'):entry.source==='erp'?tr('Solicitada pelo ERP'):'' }}</small></td>
+          <td><span class="usage-badge">{{ entry.kind==='impressao' && entry.status==='pending'?tr('Na fila de impressão'):tr(states[entry.status] || entry.status) }}</span><small v-if="entry.price">{{ money(entry.price) }}</small><code v-if="entry.tracking">{{ entry.tracking }}</code></td>
+          <td><details><summary>{{ entry.recipient || tr('Ver endereço utilizado') }}</summary><p>{{ entry.address_text || tr('Sem detalhes de rua informados.') }}</p></details><button @click="entry.kind==='frete'?$emit('freight',entry.id):$emit('print',entry.id)">{{ entry.kind==='frete'?tr('Abrir frete'):tr('Ver PDF') }}</button></td>
         </tr>
-        <tr v-if="!result.items.length"><td colspan="4" class="usage-empty">{{ kind==='all'?'Nenhuma utilização registrada. O histórico aparecerá ao cotar um frete ou enviar uma impressão.':'Nenhuma utilização deste tipo.' }}</td></tr>
+        <tr v-if="!result.items.length"><td colspan="4" class="usage-empty">{{ kind==='all'?tr('Nenhuma utilização registrada. O histórico aparecerá ao cotar um frete ou enviar uma impressão.'):tr('Nenhuma utilização deste tipo.') }}</td></tr>
       </tbody></table>
     </div>
-    <footer><span>{{ result.total }} {{ result.total===1?'registro':'registros' }}<small>{{ result.summary.prints }} solicitações de impressão · {{ result.summary.quotes }} cotações</small><small v-if="result.summary.last_used_at">Última utilização: {{ date(result.summary.last_used_at) }}</small></span><div><button :disabled="offset===0 || loading" @click="offset-=30;load()">Anterior</button><button :disabled="offset+30>=result.total || loading" @click="offset+=30;load()">Próxima</button></div></footer>
+    <footer><span>{{ result.total }} {{ result.total===1?tr('registro'):tr('registros') }}<small>{{ result.summary.prints }} {{ tr('solicitações de impressão ·') }} {{ result.summary.quotes }} {{ tr('cotações') }}</small><small v-if="result.summary.last_used_at">{{ tr('Última utilização:') }} {{ date(result.summary.last_used_at) }}</small></span><div><button :disabled="offset===0 || loading" @click="offset-=30;load()">{{ tr('Anterior') }}</button><button :disabled="offset+30>=result.total || loading" @click="offset+=30;load()">{{ tr('Próxima') }}</button></div></footer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted,ref,onUnmounted } from 'vue'
 import api from '@/services/api'
+import { useAddressI18n } from './i18n'
 import type { SavedAddress, AddressUsage } from './types'
+const {tr,date,money,errorKey}=useAddressI18n()
 const props=defineProps<{address:SavedAddress}>()
 defineEmits<{freight:[id:string];print:[id:string]}>()
 const result=ref<AddressUsage>({total:0,summary:{total:0,quotes:0,labels:0,prints:0,completed_prints:0,address_prints:0,label_prints:0,last_used_at:null,last_printed_at:null},items:[]})
 const kind=ref('all'),offset=ref(0),loading=ref(false),error=ref('')
 let sequence=0
-async function load(){const current=++sequence;loading.value=true;error.value='';try{const {data}=await api.get('/api/address-manager/addresses/'+props.address.id+'/usage',{params:{offset:offset.value,kind:kind.value}});if(current===sequence)result.value=data}catch{if(current===sequence)error.value='Não foi possível carregar o histórico. Tente atualizar.'}finally{if(current===sequence)loading.value=false}}
-const date=(v:string)=>new Date(v).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})
-const money=(v:string)=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+async function load(){const current=++sequence;loading.value=true;error.value='';try{const {data}=await api.get('/api/address-manager/addresses/'+props.address.id+'/usage',{params:{offset:offset.value,kind:kind.value}});if(current===sequence)result.value=data}catch(e){if(current===sequence)error.value=errorKey(e)}finally{if(current===sequence)loading.value=false}}
 const states:Record<string,string>={quoted:'Cotação realizada',creating:'Criando frete',pending:'Aguardando pagamento',paying:'Pagamento em andamento',released:'Etiqueta emitida',posted:'Postado',delivered:'Entregue',cancelled:'Cancelado',uncertain:'Conferência necessária',claimed:'Retirada pelo agente',submitted:'Enviada à impressora',failed:'Falha',expired:'Expirada'}
 onMounted(load)
 onUnmounted(()=>{sequence++})

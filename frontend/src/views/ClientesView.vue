@@ -9,15 +9,13 @@
             </svg>
           </button>
           <div>
-            <h1 class="page-title">Clientes</h1>
+            <h1 class="page-title">{{ uiText(`Clientes`) }}</h1>
           </div>
         </div>
         <button @click="openCreate" class="btn btn-primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Novo cliente
-        </button>
+          </svg> {{ uiText(`Novo cliente`) }} </button>
       </div>
     </header>
 
@@ -27,20 +25,20 @@
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="search-icon">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <input v-model="searchQuery" type="text" placeholder="Buscar por nome, telefone, CPF, e-mail..." class="search-input" />
+        <input v-model="searchQuery" type="text" :placeholder="uiText(`Buscar por nome, telefone, CPF, e-mail...`)" class="search-input" />
       </div>
       <div class="filter-row">
         <button :class="['chip', { active: showInactive }]" @click="showInactive = !showInactive">
-          {{ showInactive ? 'Todos' : 'Ativos' }}
+          {{ showInactive ? uiText(`Todos`) : uiText(`Ativos`) }}
         </button>
-        <span class="total-count">{{ store.clientes.length }} cliente{{ store.clientes.length !== 1 ? 's' : '' }}</span>
+        <span class="total-count">{{ store.clientes.length === 1 ? uiText('{0} cliente',{0:store.clientes.length}) : uiText('{0} clientes',{0:store.clientes.length}) }}</span>
       </div>
     </div>
 
     <!-- Loading -->
     <div v-if="store.loading" class="loading-state">
       <div class="spinner"></div>
-      <p>Carregando...</p>
+      <p>{{ uiText(`Carregando...`) }}</p>
     </div>
 
     <!-- Empty -->
@@ -48,8 +46,8 @@
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
-      <p>Nenhum cliente encontrado</p>
-      <button @click="openCreate" class="btn btn-primary" style="margin-top:1rem">Cadastrar primeiro cliente</button>
+      <p>{{ uiText(`Nenhum cliente encontrado`) }}</p>
+      <button @click="openCreate" class="btn btn-primary" style="margin-top:1rem">{{ uiText(`Cadastrar primeiro cliente`) }}</button>
     </div>
 
     <!-- List -->
@@ -67,7 +65,7 @@
           <div class="cliente-info">
             <div class="cliente-name-row">
               <span class="cliente-name">{{ c.nome }}</span>
-              <span v-if="!c.ativo" class="badge-inactive">Inativo</span>
+              <span v-if="!c.ativo" class="badge-inactive">{{ uiText(`Inativo`) }}</span>
             </div>
             <div class="cliente-details">
               <span v-if="c.telefone" class="detail-item">
@@ -89,84 +87,35 @@
             </div>
           </div>
           <div class="cliente-actions">
-            <RouterLink :to="{path:'/enderecos',query:{customer_id:c.id}}" class="action-btn edit-btn" title="Endereços deste cliente">Endereços</RouterLink>
+            <RouterLink :to="{path:'/enderecos',query:{customer_id:c.id}}" class="action-btn edit-btn" :title="uiText(`Endereços deste cliente`)">{{ uiText(`Endereços`) }}</RouterLink>
             <!-- Histórico toggle -->
             <button
               @click="toggleHistory(c.id)"
               :class="['action-btn', 'hist-btn', { active: expandedId === c.id }]"
-              title="Histórico de pedidos"
+              :title="uiText(`Histórico de pedidos`)"
             >
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </button>
-            <button @click="openEdit(c)" class="action-btn edit-btn" title="Editar">
+            <button @click="openEdit(c)" class="action-btn edit-btn" :title="uiText(`Editar`)">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
             </button>
-            <button v-if="c.ativo" @click="confirmDelete(c)" class="action-btn delete-btn" title="Inativar">
+            <button v-if="c.ativo" @click="confirmDelete(c)" class="action-btn delete-btn" :title="uiText(`Inativar`)">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
             </button>
           </div>
         </div>
 
-        <!-- Histórico de pedidos -->
         <div v-if="expandedId === c.id" class="historico-section">
-          <!-- Carregando -->
-          <div v-if="loadingHist[c.id]" class="hist-loading">
-            <div class="spinner-sm"></div>
-            <span>Carregando pedidos...</span>
-          </div>
-          <!-- Sem pedidos -->
-          <div v-else-if="pedidosCache[c.id] && pedidosCache[c.id].length === 0" class="hist-empty">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4" /></svg>
-            <span>Nenhum pedido vinculado.</span>
-          </div>
-          <!-- Lista de pedidos -->
-          <div v-else-if="pedidosCache[c.id]" class="hist-list">
-            <div
-              v-for="p in pedidosCache[c.id]"
-              :key="p.id"
-              class="hist-pedido"
-            >
-              <div class="hist-pedido-top">
-                <span class="hist-num">{{ p.numero_pedido }}</span>
-                <span :class="['hist-status', statusClass(p.status)]">{{ statusLabel(p.status) }}</span>
-                <span class="hist-valor">{{ p.moeda || 'G$' }} {{ Number(p.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</span>
-                <span class="hist-date">{{ fmtDate(p.created_at) }}</span>
-              </div>
-              <div class="hist-descricao">{{ p.descricao }}</div>
-              <!-- Tags -->
-              <div v-if="p.tags && p.tags.length" class="hist-tags">
-                <span
-                  v-for="t in p.tags" :key="t.id"
-                  class="hist-tag"
-                  :style="{ background: t.cor + '22', border: '1px solid ' + t.cor, color: t.cor }"
-                >{{ t.nome }}</span>
-              </div>
-              <!-- Stepper de etapas -->
-              <div v-if="p.status !== 'CANCELADO'" class="hist-stepper">
-                <template v-for="(step, i) in STEPS" :key="step.key">
-                  <div
-                    :class="['step-dot', { done: stepIndex(p.status) >= i, current: stepIndex(p.status) === i }]"
-                    :title="step.label"
-                  ></div>
-                  <div v-if="i < STEPS.length - 1" :class="['step-line', { done: stepIndex(p.status) > i }]"></div>
-                </template>
-                <span class="step-label-cur">{{ STEPS[stepIndex(p.status)]?.label }}</span>
-              </div>
-              <div v-else class="hist-cancelado">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                Cancelado
-              </div>
-            </div>
-          </div>
+          <CustomerLogisticsPanel :customer="c" />
         </div>
       </div>
     </div>
 
     <!-- Pagination sentinel -->
     <div v-if="hasMore" class="load-more-wrap">
-      <button @click="loadMore" class="btn btn-secondary" :disabled="store.loading">Carregar mais</button>
+      <button @click="loadMore" class="btn btn-secondary" :disabled="store.loading">{{ uiText(`Carregar mais`) }}</button>
     </div>
 
     <!-- Form Modal -->
@@ -185,10 +134,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, reactive } from 'vue'
+import { uiText } from '@/i18n/uiText'
+import { ref, watch, onMounted } from 'vue'
 import { useClientesStore } from '@/stores/clientes'
-import { clientesAPI, type Cliente, type Pedido } from '@/services/api'
+import { type Cliente } from '@/services/api'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
+import CustomerLogisticsPanel from '@/components/logistics/CustomerLogisticsPanel.vue'
 
 const store = useClientesStore()
 const searchQuery = ref('')
@@ -201,56 +152,8 @@ const hasMore = ref(false)
 
 // Histórico por cliente
 const expandedId = ref<string | null>(null)
-const pedidosCache = reactive<Record<string, Pedido[]>>({})
-const loadingHist = reactive<Record<string, boolean>>({})
-
-const STEPS = [
-  { key: 'PENDENTE', label: 'Pendente' },
-  { key: 'PROCESSANDO', label: 'Processando' },
-  { key: 'ENVIADO', label: 'Enviado' },
-  { key: 'ENTREGUE', label: 'Entregue' },
-]
-
-function stepIndex(status: string) {
-  const i = STEPS.findIndex(s => s.key === status)
-  return i === -1 ? 0 : i
-}
-
-function statusLabel(status: string) {
-  const m: Record<string, string> = {
-    PENDENTE: 'Pendente', PROCESSANDO: 'Processando',
-    ENVIADO: 'Enviado', ENTREGUE: 'Entregue', CANCELADO: 'Cancelado',
-  }
-  return m[status] ?? status
-}
-
-function statusClass(status: string) {
-  const m: Record<string, string> = {
-    PENDENTE: 'st-pend', PROCESSANDO: 'st-proc',
-    ENVIADO: 'st-env', ENTREGUE: 'st-ent', CANCELADO: 'st-canc',
-  }
-  return m[status] ?? ''
-}
-
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-async function toggleHistory(id: string) {
-  if (expandedId.value === id) {
-    expandedId.value = null
-    return
-  }
-  expandedId.value = id
-  if (id in pedidosCache) return
-  loadingHist[id] = true
-  try {
-    pedidosCache[id] = await clientesAPI.getPedidos(id)
-  } catch {
-    pedidosCache[id] = []
-  } finally {
-    loadingHist[id] = false
-  }
+function toggleHistory(id: string) {
+  expandedId.value = expandedId.value === id ? null : id
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -285,16 +188,16 @@ function onSaved(c: Cliente) {
   const idx = store.clientes.findIndex(x => x.id === c.id)
   if (idx !== -1) store.clientes[idx] = c
   else store.clientes.unshift(c)
-  showToast(editingCliente.value ? 'Cliente atualizado.' : 'Cliente criado.', 'success')
+  showToast(editingCliente.value ? uiText(`Cliente atualizado.`) : uiText(`Cliente criado.`), 'success')
 }
 
 async function confirmDelete(c: Cliente) {
-  if (!confirm(`Inativar cliente "${c.nome}"?`)) return
+  if (!confirm(uiText(`Inativar cliente "{0}"?`,{0:c.nome}))) return
   try {
     await store.deleteCliente(c.id)
-    showToast('Cliente inativado.', 'success')
+    showToast(uiText(`Cliente inativado.`), 'success')
   } catch {
-    showToast('Erro ao inativar cliente.', 'error')
+    showToast(uiText(`Erro ao inativar cliente.`), 'error')
   }
 }
 
@@ -364,101 +267,6 @@ onMounted(() => reload())
   padding: .75rem 1rem;
 }
 
-.hist-loading {
-  display: flex; align-items: center; gap: .5rem;
-  font-size: .8rem; color: #6b7280; padding: .5rem 0;
-}
-.spinner-sm {
-  width: 16px; height: 16px;
-  border: 2px solid #e5e7eb; border-top-color: #3b82f6;
-  border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0;
-}
-
-.hist-empty {
-  display: flex; align-items: center; gap: .4rem;
-  font-size: .8rem; color: #9ca3af; padding: .25rem 0;
-}
-
-.hist-list { display: flex; flex-direction: column; gap: .6rem; }
-
-.hist-pedido {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: .65rem .85rem;
-}
-
-.hist-pedido-top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: .4rem .6rem;
-  margin-bottom: .3rem;
-}
-
-.hist-num {
-  font-size: .75rem; font-weight: 700; color: #2563eb;
-  background: #eff6ff; padding: .1rem .4rem; border-radius: 4px;
-}
-
-.hist-status {
-  font-size: .7rem; font-weight: 600; padding: .1rem .4rem; border-radius: 20px;
-}
-.st-pend  { background: #fef3c7; color: #92400e; }
-.st-proc  { background: #dbeafe; color: #1e40af; }
-.st-env   { background: #fed7aa; color: #c2410c; }
-.st-ent   { background: #dcfce7; color: #166534; }
-.st-canc  { background: #fee2e2; color: #dc2626; }
-
-.hist-valor {
-  font-size: .78rem; font-weight: 600; color: #059669;
-  margin-left: auto;
-}
-
-.hist-date {
-  font-size: .72rem; color: #9ca3af;
-}
-
-.hist-descricao {
-  font-size: .8rem; color: #374151;
-  margin-bottom: .4rem;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-.hist-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .4rem; }
-.hist-tag { font-size: .68rem; font-weight: 600; padding: .1rem .35rem; border-radius: 4px; }
-
-/* Stepper */
-.hist-stepper {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  margin-top: .1rem;
-}
-
-.step-dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: #d1d5db; flex-shrink: 0;
-  transition: background .2s;
-}
-.step-dot.done { background: #3b82f6; }
-.step-dot.current { background: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
-
-.step-line {
-  flex: 1; height: 2px; background: #e5e7eb; min-width: 12px; max-width: 28px;
-  transition: background .2s;
-}
-.step-line.done { background: #3b82f6; }
-
-.step-label-cur {
-  font-size: .68rem; color: #6b7280; margin-left: .45rem; white-space: nowrap;
-}
-
-.hist-cancelado {
-  display: flex; align-items: center; gap: .25rem;
-  font-size: .72rem; color: #dc2626; font-weight: 600;
-}
-
 /* ─── Misc ─────────────────────────────────────────── */
 .load-more-wrap { display: flex; justify-content: center; padding: 1rem; }
 
@@ -473,6 +281,5 @@ onMounted(() => reload())
   .page-title { font-size: 1rem; }
   .btn { padding: .35rem .65rem; font-size: .75rem; }
   .cliente-details { gap: .35rem .6rem; }
-  .hist-valor { margin-left: 0; }
 }
 </style>

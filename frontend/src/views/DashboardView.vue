@@ -14,13 +14,13 @@
             <p class="welcome-text">{{ $t('dashboard.welcomeBack', { name: authStore.userName }) }}</p>
           </div>
         </div>
-        
+
         <div class="header-right">
           <div class="header-left-controls">
-            <!-- Currency, Language, and Exchange Rates (Mobile only) -->
+            <!-- Currency and Exchange Rates (Mobile only) -->
             <div class="mobile-controls">
-              <!-- Currency and Language Selectors -->
-              <div class="currency-language-group">
+              <!-- Currency Selector -->
+              <div class="currency-selector-group">
                 <!-- Currency Selector -->
                 <div class="header-control">
                   <div class="dropdown">
@@ -49,43 +49,19 @@
                   </div>
                 </div>
 
-                <!-- Language Selector -->
-                <div class="header-control">
-                  <div class="dropdown">
-                    <button @click="toggleLanguageDropdown" class="header-dropdown-button">
-                      <span class="control-flag">{{ getCurrentLanguage?.flag }}</span>
-                      <span class="control-text">{{ getCurrentLanguage?.code?.toUpperCase() }}</span>
-                      <svg class="dropdown-icon" :class="{ 'rotate': showLanguageDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    <div v-if="showLanguageDropdown" class="header-dropdown-menu">
-                      <button
-                        v-for="lang in availableLocales"
-                        :key="lang.code"
-                        @click="handleLanguageChange(lang.code)"
-                        class="header-dropdown-item"
-                        :class="{ 'active': lang.code === currentLocale }"
-                      >
-                        <span class="control-flag">{{ lang.flag }}</span>
-                        <span class="language-name">{{ lang.name }}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
-              
+
               <!-- Exchange Rates Display -->
               <div class="header-control">
                 <div class="exchange-rates-header" @click="handleHeaderClick" :class="{ 'editable': canEditRates }" style="cursor: pointer;">
                   <div class="rates-display">
                     <div class="rate-item-header">
                       <span class="rate-flag">🇺🇸→🇵🇾</span>
-                      <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? uiNumber(exchangeRates['G$'],0) : '7500' }}</span>
                     </div>
                     <div class="rate-item-header">
                       <span class="rate-flag">🇺🇸→🇧🇷</span>
-                      <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? uiNumber(exchangeRates['R$'],2) : '5.85' }}</span>
                     </div>
                   </div>
                   <svg v-if="canEditRates" class="edit-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,10 +73,10 @@
           </div>
 
           <div class="header-right-controls">
-            <!-- Currency, Language, and Exchange Rates (Desktop only) -->
+            <!-- Currency and Exchange Rates (Desktop only) -->
             <div class="desktop-controls">
-              <!-- Currency and Language Selectors -->
-              <div class="currency-language-group">
+              <!-- Currency Selector -->
+              <div class="currency-selector-group">
                 <!-- Currency Selector -->
                 <div class="header-control">
                   <div class="dropdown">
@@ -129,43 +105,19 @@
                   </div>
                 </div>
 
-                <!-- Language Selector -->
-                <div class="header-control">
-                  <div class="dropdown">
-                    <button @click="toggleLanguageDropdown" class="header-dropdown-button">
-                      <span class="control-flag">{{ getCurrentLanguage?.flag }}</span>
-                      <span class="control-text">{{ getCurrentLanguage?.code?.toUpperCase() }}</span>
-                      <svg class="dropdown-icon" :class="{ 'rotate': showLanguageDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    <div v-if="showLanguageDropdown" class="header-dropdown-menu">
-                      <button
-                        v-for="lang in availableLocales"
-                        :key="lang.code"
-                        @click="handleLanguageChange(lang.code)"
-                        class="header-dropdown-item"
-                        :class="{ 'active': lang.code === currentLocale }"
-                      >
-                        <span class="control-flag">{{ lang.flag }}</span>
-                        <span class="language-name">{{ lang.name }}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
-              
+
               <!-- Exchange Rates Display -->
               <div class="header-control">
                 <div class="exchange-rates-header" @click="handleHeaderClick" :class="{ 'editable': canEditRates }" style="cursor: pointer;">
                   <div class="rates-display">
                     <div class="rate-item-header">
                       <span class="rate-flag">🇺🇸→🇵🇾</span>
-                      <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '7500' }}</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['G$'] === 'number' ? uiNumber(exchangeRates['G$'],0) : '7500' }}</span>
                     </div>
                     <div class="rate-item-header">
                       <span class="rate-flag">🇺🇸→🇧🇷</span>
-                      <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.85' }}</span>
+                      <span class="rate-value-header">{{ typeof exchangeRates['R$'] === 'number' ? uiNumber(exchangeRates['R$'],2) : '5.85' }}</span>
                     </div>
                   </div>
                   <svg v-if="canEditRates" class="edit-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -181,15 +133,9 @@
               </svg>
               {{ currentTime }}
             </div>
-            
-            <div class="divider"></div>
-            
-            <button @click="handleLogout" class="logout-button">
-              <svg class="logout-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span>{{ $t('common.logout') }}</span>
-            </button>
+
+
+
           </div>
         </div>
       </div>
@@ -211,16 +157,16 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
-                <h3 class="inv-title">Estoque</h3>
+                <h3 class="inv-title">{{ $tr("Estoque") }}</h3>
               </div>
               <div class="inv-header-actions" @click.stop>
-                <button class="inv-add-btn" @click="navigateToNewProduct" title="Novo produto">
+                <button class="inv-add-btn" @click="navigateToNewProduct" :title='$tr("Novo produto")'>
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                   </svg>
-                  Novo produto
+                  {{ $tr("Novo produto") }}
                 </button>
-                <router-link to="/inventory" class="inv-link-all" @click.stop>Ver tudo →</router-link>
+                <router-link to="/inventory" class="inv-link-all" @click.stop>{{ $tr("Ver tudo →") }}</router-link>
               </div>
             </div>
 
@@ -228,25 +174,25 @@
             <div class="inv-stats-row">
               <router-link to="/inventory?status=out_of_stock" class="inv-stat inv-stat-red" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.out_of_stock_count || 0 }}</span>
-                <span class="inv-stat-label">Sem estoque</span>
+                <span class="inv-stat-label">{{ $tr("Sem estoque") }}</span>
               </router-link>
               <router-link to="/inventory?status=low_stock" class="inv-stat inv-stat-yellow" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.low_stock_count || 0 }}</span>
-                <span class="inv-stat-label">Estoque baixo</span>
+                <span class="inv-stat-label">{{ $tr("Estoque baixo") }}</span>
               </router-link>
               <router-link to="/inventory?status=overstocked" class="inv-stat inv-stat-purple" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.overstocked_count || 0 }}</span>
-                <span class="inv-stat-label">Em excesso</span>
+                <span class="inv-stat-label">{{ $tr("Em excesso") }}</span>
               </router-link>
               <router-link to="/inventory" class="inv-stat inv-stat-blue" @click.stop>
                 <span class="inv-stat-count">{{ stockAlerts?.grouped_items_count || 0 }}</span>
-                <span class="inv-stat-label">Em grades</span>
+                <span class="inv-stat-label">{{ $tr("Em grades") }}</span>
               </router-link>
             </div>
 
             <!-- Recent products list -->
             <div class="inv-products-section">
-              <p class="inv-section-label">Últimos atualizados</p>
+              <p class="inv-section-label">{{ $tr("Últimos atualizados") }}</p>
               <div v-if="recentInventoryItems.length" class="inv-products-list">
                 <router-link
                   v-for="item in recentInventoryItems.slice(0, 8)"
@@ -275,8 +221,8 @@
                 </router-link>
               </div>
               <div v-else class="inv-no-items">
-                <p>Nenhum produto ainda</p>
-                <router-link to="/inventory" class="inv-no-items-link" @click.stop>Ir para estoque →</router-link>
+                <p>{{ $tr("Nenhum produto ainda") }}</p>
+                <router-link to="/inventory" class="inv-no-items-link" @click.stop>{{ $tr("Ir para estoque →") }}</router-link>
               </div>
             </div>
           </div>
@@ -287,7 +233,7 @@
 
         <!-- Row 2: Quick Actions compact strip -->
         <div class="quick-strip-card">
-          <p class="quick-strip-title">Ações Rápidas</p>
+          <p class="quick-strip-title">{{ $tr("Ações Rápidas") }}</p>
           <div class="quick-strip">
             <button class="quick-btn q-primary" @click="navigateToNewSale">
               <div class="quick-btn-icon">
@@ -295,7 +241,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
-              <span>Nova Venda</span>
+              <span>{{ $tr("Nova Venda") }}</span>
             </button>
             <button class="quick-btn q-orange" @click="navigateToInventory">
               <div class="quick-btn-icon">
@@ -303,7 +249,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <span>Estoque</span>
+              <span>{{ $tr("Estoque") }}</span>
             </button>
             <button class="quick-btn q-green" @click="navigateToVendors">
               <div class="quick-btn-icon">
@@ -311,7 +257,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <span>Vendedores</span>
+              <span>{{ $tr("Vendedores") }}</span>
             </button>
             <button class="quick-btn q-purple" @click="navigateToPedidos">
               <div class="quick-btn-icon">
@@ -319,7 +265,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
-              <span>Pedidos</span>
+              <span>{{ $tr("Pedidos") }}</span>
             </button>
             <button class="quick-btn q-teal" @click="navigateToRastreamento">
               <div class="quick-btn-icon">
@@ -328,7 +274,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <span>Rastreamento</span>
+              <span>{{ $tr("Rastreamento") }}</span>
             </button>
             <button class="quick-btn q-indigo" @click="navigateToClientes">
               <div class="quick-btn-icon">
@@ -336,21 +282,21 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <span>Clientes</span>
+              <span>{{ $tr("Clientes") }}</span>
             </button>
-            <button class="quick-btn q-amber" @click="router.push('/fiado')">
+            <button v-if="!authStore.ownSales" class="quick-btn q-amber" @click="router.push('/fiado')">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <span>Fiado</span>
+              <span>{{ $tr("Fiado") }}</span>
             </button>
             <button v-if="authStore.user?.role === 'ADMIN'" class="quick-btn q-indigo" @click="router.push('/assistente')">
               <div class="quick-btn-icon" aria-hidden="true">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H9l-5 2V6a2 2 0 012-2z" /></svg>
               </div>
-              <span>Assistente IA</span>
+              <span>{{ $tr("Assistente IA") }}</span>
             </button>
           </div>
         </div>
@@ -384,7 +330,7 @@
                 <div class="status-info">
                   <span class="status-label">API</span>
                   <span :class="['status-value', apiStatus]">
-                    {{ apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : '...' }}
+                    {{ apiStatus === 'online' ? uiText(`Online`) : apiStatus === 'offline' ? uiText(`Offline`) : '...' }}
                   </span>
                 </div>
               </div>
@@ -402,9 +348,9 @@
                   </svg>
                 </div>
                 <div class="status-info">
-                  <span class="status-label">Database</span>
+                  <span class="status-label">{{ $tr("Database") }}</span>
                   <span :class="['status-value', dbStatus]">
-                    {{ dbStatus === 'online' ? 'Connected' : dbStatus === 'offline' ? 'Offline' : '...' }}
+                    {{ dbStatus === 'online' ? uiText(`Connected`) : dbStatus === 'offline' ? uiText(`Offline`) : '...' }}
                   </span>
                 </div>
               </div>
@@ -416,7 +362,7 @@
                   </svg>
                 </div>
                 <div class="status-info">
-                  <span class="status-label">Exchange</span>
+                  <span class="status-label">{{ $tr("Exchange") }}</span>
                   <span class="status-value warning">{{ getLastUpdateTime }}</span>
                 </div>
               </div>
@@ -426,7 +372,7 @@
           <!-- Exchange Rate Card -->
           <div class="action-card exchange-rate-compact" @click="navigateToExchangeRates" style="cursor: pointer;">
             <div class="card-header-compact">
-              <h3 class="card-title">Taxa de Câmbio</h3>
+              <h3 class="card-title">{{ $tr("Taxa de Câmbio") }}</h3>
               <div class="card-actions-compact">
                 <button
                   v-if="canEditRates"
@@ -443,14 +389,14 @@
             <div class="rate-grid-compact">
               <div class="rate-item-compact">
                 <span class="rate-label-compact">USD → G$</span>
-                <span class="rate-value-compact">{{ typeof exchangeRates['G$'] === 'number' ? exchangeRates['G$'].toFixed(0) : '6400' }}</span>
+                <span class="rate-value-compact">{{ typeof exchangeRates['G$'] === 'number' ? uiNumber(exchangeRates['G$'],0) : '6400' }}</span>
               </div>
               <div class="rate-item-compact">
                 <span class="rate-label-compact">USD → R$</span>
-                <span class="rate-value-compact">{{ typeof exchangeRates['R$'] === 'number' ? exchangeRates['R$'].toFixed(2) : '5.45' }}</span>
+                <span class="rate-value-compact">{{ typeof exchangeRates['R$'] === 'number' ? uiNumber(exchangeRates['R$'],2) : '5.45' }}</span>
               </div>
             </div>
-            <p class="rate-updated-compact">Atualizado: {{ formatDate(new Date().toISOString()) }}</p>
+            <p class="rate-updated-compact">{{ $tr("Atualizado:") }} {{ formatDate(new Date().toISOString()) }}</p>
           </div>
 
         </div>
@@ -464,19 +410,19 @@
           <div class="footer-info">
             <span class="footer-brand">ERP Eleven</span>
             <span class="footer-version">v1.0.0</span>
-            <span class="footer-version">Developed by lucasadrianof</span>
+            <span class="footer-version">{{ $tr("Developed by lucasadrianof") }}</span>
           </div>
         </div>
-        
+
         <div class="footer-center">
           <div class="footer-status">
             <span :class="['system-status-indicator', { 'status-ind-offline': apiStatus === 'offline' || dbStatus === 'offline', 'status-ind-checking': apiStatus === 'checking' || dbStatus === 'checking' }]"></span>
             <span class="system-status-text">
-              {{ (apiStatus === 'offline' || dbStatus === 'offline') ? 'System Offline' : apiStatus === 'checking' ? 'Checking...' : 'System Online' }}
+              {{ (apiStatus === 'offline' || dbStatus === 'offline') ? uiText(`System Offline`) : apiStatus === 'checking' ? uiText(`Checking...`) : uiText(`System Online`) }}
             </span>
           </div>
         </div>
-        
+
         <div class="footer-right">
           <div class="footer-links">
             <button class="footer-link">
@@ -508,7 +454,7 @@
     <div v-if="showExchangeRateModal || showExchangeRateHeaderModal" class="modal-overlay" @click="closeExchangeRateModals">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h2>Editar Taxas de Câmbio</h2>
+          <h2>{{ $tr("Editar Taxas de Câmbio") }}</h2>
           <button @click="closeExchangeRateModals" class="modal-close">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -523,10 +469,10 @@
 
           <div class="rate-form">
             <div class="form-group">
-              <label for="usd_to_pyg">USD → Guarani (G$)</label>
-              <input 
+              <label for="usd_to_pyg">{{ $tr("USD → Guarani (G$)") }}</label>
+              <input
                 id="usd_to_pyg"
-                type="number" 
+                type="number"
                 step="0.01"
                 v-model.number="editingRates.usd_to_pyg"
                 placeholder="7500.0000"
@@ -535,10 +481,10 @@
             </div>
 
             <div class="form-group">
-              <label for="usd_to_brl">USD → Real (R$)</label>
-              <input 
+              <label for="usd_to_brl">{{ $tr("USD → Real (R$)") }}</label>
+              <input
                 id="usd_to_brl"
-                type="number" 
+                type="number"
                 step="0.01"
                 v-model.number="editingRates.usd_to_brl"
                 placeholder="5.85"
@@ -548,9 +494,9 @@
 
             <div class="form-group">
               <label for="eur_to_usd">EUR → USD ($)</label>
-              <input 
+              <input
                 id="eur_to_usd"
-                type="number" 
+                type="number"
                 step="0.0001"
                 v-model.number="editingRates.eur_to_usd"
                 placeholder="1.0850"
@@ -559,10 +505,10 @@
             </div>
 
             <div class="form-group">
-              <label for="eur_to_brl">EUR → Real (R$)</label>
-              <input 
+              <label for="eur_to_brl">{{ $tr("EUR → Real (R$)") }}</label>
+              <input
                 id="eur_to_brl"
-                type="number" 
+                type="number"
                 step="0.01"
                 v-model.number="editingRates.eur_to_brl"
                 placeholder="6.20"
@@ -574,11 +520,11 @@
 
         <div class="modal-footer">
           <button @click="closeExchangeRateModals" class="btn btn-secondary">
-            Cancelar
+            {{ $tr("Cancelar") }}
           </button>
           <button @click="saveExchangeRates" :disabled="isLoadingRates" class="btn btn-primary">
-            <span v-if="isLoadingRates">Salvando...</span>
-            <span v-else>Salvar Taxas</span>
+            <span v-if="isLoadingRates">{{ $tr("Salvando...") }}</span>
+            <span v-else>{{ $tr("Salvar Taxas") }}</span>
           </button>
         </div>
       </div>
@@ -587,12 +533,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
-import { availableLocales, setLocale } from '@/i18n'
 import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
@@ -604,11 +550,13 @@ const router = useRouter()
 const { locale } = useI18n()
 const authStore = useAuthStore()
 const currencyStore = useCurrencyStore()
+const sessionUserId = authStore.user?.id
+let disposed = false
+const isActive = () => !disposed && !!sessionUserId && authStore.user?.id === sessionUserId
 
 const currentTime = ref('')
 const timeUpdateTrigger = ref(0) // Para forçar atualizações do getLastUpdateTime
 const showCurrencyDropdown = ref(false)
-const showLanguageDropdown = ref(false)
 const showExchangeRateModal = ref(false)
 const showExchangeRateHeaderModal = ref(false)
 const exchangeRateError = ref<string | null>(null)
@@ -624,11 +572,14 @@ const dbStatus = ref<StatusState>('checking')
 let healthInterval: ReturnType<typeof setInterval> | null = null
 
 async function checkHealth() {
+  if (!isActive()) return
   try {
     const h = await healthAPI.check()
+    if (!isActive()) return
     apiStatus.value = h.api === 'online' ? 'online' : 'offline'
     dbStatus.value = h.database === 'online' ? 'online' : 'offline'
   } catch {
+    if (!isActive()) return
     apiStatus.value = 'offline'
     dbStatus.value = 'offline'
   }
@@ -662,13 +613,8 @@ const canEditRates = computed(() => {
   return authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
 })
 
-const currentLocale = computed(() => locale.value)
-const getCurrentLanguage = computed(() => {
-  return availableLocales.find(lang => lang.code === currentLocale.value)
-})
-
 const updateTime = () => {
-  currentTime.value = new Date().toLocaleString('pt-BR', {
+  currentTime.value = new Date().toLocaleString(uiLocale(), {
     weekday: 'short',
     year: 'numeric',
     month: 'short',
@@ -677,7 +623,7 @@ const updateTime = () => {
     minute: '2-digit',
     timeZone: 'America/Sao_Paulo'
   })
-  
+
   // Update trigger to force reactivity of getLastUpdateTime every minute
   const seconds = new Date().getSeconds()
   if (seconds === 0) {
@@ -685,33 +631,19 @@ const updateTime = () => {
   }
 }
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('pt-BR')
-}
+watch(locale, updateTime)
 
-const handleLogout = async () => {
-  await authStore.logout()
-  router.push('/login')
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString(uiLocale())
 }
 
 const toggleCurrencyDropdown = () => {
   showCurrencyDropdown.value = !showCurrencyDropdown.value
-  showLanguageDropdown.value = false
-}
-
-const toggleLanguageDropdown = () => {
-  showLanguageDropdown.value = !showLanguageDropdown.value
-  showCurrencyDropdown.value = false
 }
 
 const handleCurrencyChange = (currencyCode: CurrencyCode) => {
   currencyStore.setSelectedCurrency(currencyCode)
   showCurrencyDropdown.value = false
-}
-
-const handleLanguageChange = (langCode: string) => {
-  setLocale(langCode)
-  showLanguageDropdown.value = false
 }
 
 // Exchange Rate Modal Functions
@@ -737,25 +669,25 @@ const closeExchangeRateModals = () => {
 const getLastUpdateTime = computed(() => {
   // Force reactivity with trigger
   void timeUpdateTrigger.value
-  
+
   if (!lastUpdated.value) {
-    return 'Nunca'
+    return uiText(`Nunca`)
   }
-  
+
   const lastUpdate = new Date(lastUpdated.value)
   const now = new Date()
   const diffInMinutes = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60))
-  
+
   if (diffInMinutes < 1) {
-    return 'agora mesmo'
+    return uiText(`agora mesmo`)
   } else if (diffInMinutes < 60) {
-    return `há ${diffInMinutes}min`
+    return uiText(`há {0}min`,{0:diffInMinutes})
   } else if (diffInMinutes < 1440) {
     const hours = Math.floor(diffInMinutes / 60)
-    return `há ${hours}h`
+    return uiText(`há {0}h`,{0:hours})
   } else {
     const days = Math.floor(diffInMinutes / 1440)
-    return `há ${days}d`
+    return uiText(`há {0}d`,{0:days})
   }
 })
 
@@ -793,13 +725,16 @@ const navigateToRastreamento = () => {
 
 // Load exchange rates from API
 const loadExchangeRates = async () => {
+  if (!isActive()) return
   try {
     isLoadingRates.value = true
     ratesError.value = null
 
     // Import exchangeRateAPI dynamically to avoid circular dependency
     const { exchangeRateAPI } = await import('@/services/api')
+    if (!isActive()) return
     const response = await exchangeRateAPI.getCurrentRates()
+    if (!isActive()) return
 
     // Update local state with API data
     if (response.usd_to_pyg) exchangeRates.value['G$'] = Number(response.usd_to_pyg)
@@ -810,9 +745,10 @@ const loadExchangeRates = async () => {
     try { localStorage.setItem('erp_exchange_rates', JSON.stringify(exchangeRates.value)) } catch { /* ignore */ }
 
   } catch (error: any) {
-    ratesError.value = error.message || 'Erro ao carregar taxas de câmbio'
+    if (!isActive()) return
+    ratesError.value = error.message || uiText(`Erro ao carregar taxas de câmbio`)
   } finally {
-    isLoadingRates.value = false
+    if (isActive()) isLoadingRates.value = false
   }
 }
 
@@ -827,15 +763,17 @@ const loadCurrentRatesToEdit = () => {
 }
 
 const saveExchangeRates = async () => {
+  if (!isActive()) return
   try {
     exchangeRateError.value = null
     isLoadingRates.value = true
-    
+
     // Import exchangeRateAPI directly
     const { exchangeRateAPI } = await import('@/services/api')
-    
+    if (!isActive()) return
+
     if (!authStore.user) {
-      throw new Error('User not authenticated')
+      throw new Error(uiText(`User not authenticated`))
     }
 
     await exchangeRateAPI.quickUpdate({
@@ -847,15 +785,17 @@ const saveExchangeRates = async () => {
       updated_by: authStore.user.nome,
       notes: 'Updated from dashboard'
     })
-    
-    // Reload rates after successful update
+
+    // Do not resume a request chain after logout or navigation.
+    if (!isActive()) return
     await loadExchangeRates()
-    closeExchangeRateModals()
-    
+    if (isActive()) closeExchangeRateModals()
+
   } catch (error: any) {
-    exchangeRateError.value = error.message || 'Erro ao salvar as taxas de câmbio'
+    if (!isActive()) return
+    exchangeRateError.value = error.message || uiText(`Erro ao salvar as taxas de câmbio`)
   } finally {
-    isLoadingRates.value = false
+    if (isActive()) isLoadingRates.value = false
   }
 }
 
@@ -864,11 +804,10 @@ const handleClickOutside = (event: Event) => {
   const target = event.target as HTMLElement
   if (!target.closest('.dropdown')) {
     showCurrencyDropdown.value = false
-    showLanguageDropdown.value = false
   }
 }
 
-let timeInterval: ReturnType<typeof setInterval>
+let timeInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   updateTime()
@@ -877,8 +816,9 @@ onMounted(async () => {
 
   // Load exchange rates, dashboard data, and stock alerts
   await loadExchangeRates()
-  inventoryAPI.getAlertsSummary().then(data => { stockAlerts.value = data }).catch(() => {})
-  inventoryAPI.getItems({ page_size: 10, sort_by: 'updated_at' }).then(data => { recentInventoryItems.value = data.items }).catch(() => {})
+  if (!isActive()) return
+  inventoryAPI.getAlertsSummary().then(data => { if (isActive()) stockAlerts.value = data }).catch(() => {})
+  inventoryAPI.getItems({ page_size: 10, sort_by: 'updated_at' }).then(data => { if (isActive()) recentInventoryItems.value = data.items }).catch(() => {})
 
   // Health check — run once immediately, then every 30s
   checkHealth()
@@ -886,6 +826,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  disposed = true
   if (timeInterval) clearInterval(timeInterval)
   if (healthInterval) clearInterval(healthInterval)
   document.removeEventListener('click', handleClickOutside)
@@ -1273,7 +1214,7 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.currency-language-group {
+.currency-selector-group {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1372,33 +1313,9 @@ onUnmounted(() => {
   height: 1rem;
 }
 
-.divider {
-  width: 1px;
-  height: 1.5rem;
-  background-color: #d1d5db;
-}
 
-.logout-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: color 0.2s;
-}
 
-.logout-button:hover {
-  color: #111827;
-}
 
-.logout-icon {
-  width: 1rem;
-  height: 1rem;
-}
 
 .dashboard-main {
   padding: 1.5rem 1.5rem 2rem;
@@ -1636,7 +1553,7 @@ onUnmounted(() => {
   .header-right { flex: 1; flex-direction: row !important; align-items: center; justify-content: flex-end; gap: 0.3rem; width: auto !important; flex-wrap: nowrap !important; }
   .header-left-controls { flex-direction: row !important; align-items: center; gap: 0.2rem; }
   .mobile-controls { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.2rem; }
-  .mobile-controls .currency-language-group { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.15rem; margin-bottom: 0 !important; }
+  .mobile-controls .currency-selector-group { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.15rem; margin-bottom: 0 !important; }
   .desktop-controls { display: none !important; }
   .header-dropdown-button { padding: 0.18rem 0.28rem; font-size: 0.6rem; gap: 0.1rem; min-width: auto !important; border-radius: 4px; }
   .control-flag { font-size: 0.7rem; width: auto; }
@@ -1651,9 +1568,9 @@ onUnmounted(() => {
   .edit-icon { display: none !important; }
   .header-right-controls { gap: 0.2rem; align-items: center; }
   .current-time { display: none !important; }
-  .divider { display: none !important; }
-  .logout-button { padding: 0.2rem 0.35rem; font-size: 0.65rem; gap: 0.2rem; }
-  .logout-icon { width: 0.85rem; height: 0.85rem; }
+
+
+
 }
 
 .action-card {
@@ -1694,7 +1611,7 @@ onUnmounted(() => {
   flex: 1;
   justify-content: space-evenly;
   -moz-background-inline-policy: inherit;
-  
+
 }
 
 .activity-card-status .status-box {
@@ -2080,7 +1997,7 @@ onUnmounted(() => {
   border-radius: 0.5rem;
   border: 1px solid #e5e7eb;
   transition: all 0.2s;
-  
+
 }
 
 .status-box:hover {
@@ -2771,7 +2688,7 @@ onUnmounted(() => {
   .desktop-controls {
     display: none !important;
   }
-  
+
   /* Mobile: single-row header, even more compact */
   .header-content { flex-direction: row !important; padding: 0.3rem 0.5rem !important; gap: 0.2rem; }
   .app-logo { width: 1.35rem; height: 1.35rem; }
@@ -2785,8 +2702,6 @@ onUnmounted(() => {
   .rate-item-header { flex-direction: row !important; flex-wrap: nowrap !important; gap: 0.08rem !important; }
   .rate-flag { font-size: 0.5rem !important; white-space: nowrap !important; }
   .rate-value-header { font-size: 0.55rem !important; white-space: nowrap !important; }
-  .logout-button { padding: 0.15rem 0.2rem; }
-  .logout-button span { display: none !important; }
 
   /* Ocultar data/hora no mobile */
   .current-time {
@@ -2799,7 +2714,7 @@ onUnmounted(() => {
     height: 1.25rem !important;
     border-radius: 0.25rem !important;
   }
-  
+
   .edit-rate-btn svg {
     width: 0.75rem !important;
     height: 0.75rem !important;
@@ -2896,7 +2811,7 @@ onUnmounted(() => {
   .action-subtitle {
     font-size: 0.6875rem;
   }
-  
+
   .header-dropdown-menu {
     min-width: 150px;
   }

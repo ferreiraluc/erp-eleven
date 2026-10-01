@@ -10,6 +10,7 @@ from .assistant_queries import (
     ShipmentArgs, OrderArgs, StockArgs, CustomerArgs, SalesArgs, QueryArgs, literal_pattern,
     query_shipments, query_orders, query_stock, query_customers, query_sales,
 )
+from .assistant_sales_bi import SpreadsheetSalesArgs, query_spreadsheet_sales
 from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule, prepare_schedule
 
 
@@ -18,6 +19,7 @@ from .assistant_freight import BotQuote, SelectFreight, FreightId
 from .assistant_knowledge import KnowledgeArgs, AliasArgs, query_team, system_catalog, prepare_alias
 from .assistant_tracking import CustomerTrackingArgs, customer_tracking
 from .assistant_documents import FilePrintArgs,prepare_file,query_prints
+from .receipt_tracking import ReceiptArgs,prepare_receipt
 from .assistant_inventory import ItemsArgs,EntryArgs,prepare_inventory
 from .postal_codes import CepArgs, lookup_cep, complete_address
 
@@ -38,11 +40,17 @@ def search_orders(db, termo):
     return query_shipments(db, ShipmentArgs.model_construct(termo=termo, ordem="priorizar_abertos"))
 
 
-def search_memory(db, termo):
+def search_memory(db, termo, user=None):
     # Only explicitly confirmed team knowledge crosses channels; drafts/transcripts never do.
     notes = db.query(AssistantNote).filter(
         AssistantNote.status == "shared", AssistantNote.content.ilike(literal_pattern(termo), escape="\\"),
-    ).order_by(AssistantNote.confirmed_at.desc()).limit(8).all()
+    )
+    from .access_policy import own_sales, sales_context_since
+    if user and own_sales(user):
+        notes = notes.filter(AssistantNote.user_id == user.id)
+        since = sales_context_since(db, user)
+        if since: notes = notes.filter(AssistantNote.confirmed_at >= since)
+    notes = notes.order_by(AssistantNote.confirmed_at.desc()).limit(8).all()
     return [{"id": str(n.id), "tipo": n.kind, "conteudo": n.content,
              "registrado_em": n.confirmed_at.isoformat(), "natureza": "Relato de funcionário; não comprova lançamento financeiro ou estoque."} for n in notes]
 
@@ -96,6 +104,7 @@ def tool(name, description, schema):
 
 
 TOOLS = [
+    tool('preparar_rastreios_comprovante','Lê foto/JPG/PNG de comprovante postal enviado pelo próprio autor no Telegram nas últimas 24h. Precisa de pedido explícito para ler/cadastrar rastreios. Extrai até 20 códigos S10, confere dígitos verificadores e prepara prévia com destinatários legíveis e vínculos sugeridos. Botão humano cadastra sem duplicar. Não arquiva a foto, não inventa caracteres e não imprime/paga. mensagem_id opcional seleciona foto do autor.',ReceiptArgs),
     tool('consultar_cep', 'Consulta CEP brasileiro para obter rua, bairro, cidade e UF. Use antes de pedir esses dados se o autor já enviou CEP. Não retorna número, apartamento, CPF ou telefone. Compare com o endereço recebido e peça esclarecimento se houver divergência; nunca substitua silenciosamente. CEP geral pode não ter rua/bairro.', CepArgs),
     tool('preparar_impressao_arquivo','Encaminha PDF recebido no Telegram à impressora, inclusive documento do contador ou etiqueta externa. Não lê conteúdo nem arquiva PDF ou cadastra dados. mensagem_id opcional usa anexo atual ou último anexo do autor nesta conversa nas últimas 24h. Confirmação por botão para uma cópia; até 5 MB e 30 páginas.',FilePrintArgs),
     tool('consultar_impressoes','Consulta a fila e o histórico de impressões por nome do destinatário ou arquivo, com estado real do agente Windows. Nunca confunda consulta com nova impressão.',QueryArgs),
@@ -116,7 +125,8 @@ TOOLS = [
     tool("consultar_pedidos", "Consulta cadastro/status administrativo dos pedidos, inclusive sem código, por nome, período e situação. Entrega física é em buscar_rastreios.", OrderArgs),
     tool("consultar_estoque", "Consulta produtos ativos: nome/SKU/marca/categoria, tamanho, cor, saldos na loja/depósito, zerados e abaixo do mínimo; preço de venda com moeda. Não altera estoque.", StockArgs),
     tool("consultar_clientes", "Procura clientes ativos nos cadastros separados de pedidos e PDV. Envios avulsos podem não ter cliente cadastrado.", CustomerArgs),
-    tool("consultar_vendas", "Lista vendas e totais por período/vendedor, separados por módulo (vendas/PDV) e moeda. ADMIN/GERENTE. Nunca somar módulos como faturamento consolidado.", SalesArgs),
+    tool("consultar_vendas_planilhas", "Fonte padrão das vendas da Loja Eleven: BI Excel/OneDrive, somente snapshots salvos, sem sincronizar. Resumo por ano/mês/vendedor; comparar_anos compara o mesmo mês (ex.: mes=9, anos=[2024,2025,2026]); rankings de vendedores/semanas usam fechamento corrigido USD. Lançamentos, por_dia e por_hora mostram moedas originais, só datas explícitas e paginação até 20. Padrão sem período = último mês disponível; acumulado do ano = este_ano. ADMIN/GERENTE; escopo pessoal aplicado antes das somas e prevalece sobre vendedor pedido. Não somar com vendas operacionais/PDV nem confundir soma de linhas com fechamento corrigido.", SpreadsheetSalesArgs),
+    tool("consultar_vendas", "Consulta somente vendas operacionais e PDV cadastrados dentro do ERP, separados por módulo e moeda. Use quando o autor pedir explicitamente PDV, fiado ou vendas operacionais. Para desempenho e vendas da loja use consultar_vendas_planilhas, a fonte Excel usada pela Eleven. ADMIN/GERENTE. Nunca somar módulos.", SalesArgs),
     tool("consultar_folgas", "Consulta calendário de folgas/férias/faltas/licenças dos vendedores, por nome, período, tipo e aprovação. Sem período pode listar histórico; para agenda futura use datas ou proximos_7_dias.", ScheduleArgs),
     tool("preparar_folga", "Prepara cadastro REAL no calendário do ERP. Apenas solicitação explícita de ADMIN/GERENTE habilitado. Exige vendedor e data; não invente dados. Aplicação mostra prévia e exige confirmação do autor antes de gravar. Não aprova folgas.", ScheduleWriteArgs),
     tool("buscar_memoria", "Consulta registros operacionais compartilhados e confirmados pela equipe nos dois canais.", SearchArgs),
@@ -125,6 +135,7 @@ TOOLS = [
 
 
 def execute_tool(db, message, identity, name, arguments):
+    if name=='preparar_rastreios_comprovante':return prepare_receipt(db,message,identity,ReceiptArgs.model_validate(arguments))
     if name in ('preparar_itens','preparar_entrada_estoque'):
         schema=ItemsArgs if name=='preparar_itens' else EntryArgs
         return prepare_inventory(db,message,identity,name,schema.model_validate(arguments))
@@ -178,12 +189,17 @@ def execute_tool(db, message, identity, name, arguments):
     if name in queries:
         schema, function = queries[name]
         return function(db, schema.model_validate(arguments))
+    if name == "consultar_vendas_planilhas":
+        if not message.should_reply or not identity or not identity.active or identity.user_id != message.user_id or identity.channel != message.channel or identity.external_id != message.sender_id:
+            return {"erro": "A consulta financeira precisa de uma solicitação do usuário autorizado."}
+        return query_spreadsheet_sales(db, SpreadsheetSalesArgs.model_validate(arguments), message.user_id)
     if name == "consultar_vendas":
         return query_sales(db, SalesArgs.model_validate(arguments), message.user_id)
     if name == "preparar_folga":
         return prepare_schedule(db, message, identity, ScheduleWriteArgs.model_validate(arguments))
     if name == "buscar_memoria":
-        return search_memory(db, **SearchArgs.model_validate(arguments).model_dump())
+        from ..models.usuario import Usuario
+        return search_memory(db, **SearchArgs.model_validate(arguments).model_dump(), user=db.get(Usuario, message.user_id))
     if name == "preparar_registro":
         return draft_note(db, message, identity, **NoteArgs.model_validate(arguments).model_dump())
     return {"erro": "Ferramenta não permitida."}

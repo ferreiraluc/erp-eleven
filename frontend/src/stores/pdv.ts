@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import { pdvAPI, type PdvSaleCreate, type PdvSaleResponse, type PdvClienteResponse } from '@/services/api'
 
 export interface CartItem {
@@ -34,6 +35,9 @@ export interface CartPayment {
 }
 
 export const usePdvStore = defineStore('pdv', () => {
+  const auth = useAuthStore()
+  let sessionGeneration = 0
+  let clientsRequest = 0
   // Cart state
   const cart = ref<CartItem[]>([])
   const payments = ref<CartPayment[]>([])
@@ -117,7 +121,22 @@ export const usePdvStore = defineStore('pdv', () => {
     notas.value = ''
   }
 
+  function resetSessionState() {
+    sessionGeneration++
+    clientsRequest++
+    clearCart()
+    lastSale.value = null
+    clients.value = []
+    loading.value = false
+  }
+
+  // Pinia survives hash navigation. Clear financial drafts and cached balances
+  // synchronously when identity, token or the user's financial scope changes.
+  watch([() => auth.user?.id, () => auth.token, () => auth.user?.sales_scope,
+         () => auth.user?.vendedor_id, () => auth.user?.sales_seller], resetSessionState, { flush: 'sync' })
+
   async function completeSale(vendedorId?: string): Promise<PdvSaleResponse> {
+    const generation = sessionGeneration
     loading.value = true
     try {
       const body: PdvSaleCreate = {
@@ -151,16 +170,22 @@ export const usePdvStore = defineStore('pdv', () => {
         notas: notas.value || undefined,
       }
       const sale = await pdvAPI.createSale(body)
-      lastSale.value = sale
-      clearCart()
+      if (generation === sessionGeneration) {
+        lastSale.value = sale
+        clearCart()
+      }
+      // A committed sale remains successful, even if its original view closed.
+      // Only the stale UI mutation is suppressed.
       return sale
     } finally {
-      loading.value = false
+      if (generation === sessionGeneration) loading.value = false
     }
   }
 
   async function loadClients(search?: string) {
-    clients.value = await pdvAPI.getClients({ search, tipo: 'atacadista' })
+    const generation = sessionGeneration, request = ++clientsRequest
+    const result = await pdvAPI.getClients({ search, tipo: 'atacadista' })
+    if (generation === sessionGeneration && request === clientsRequest) clients.value = result
   }
 
   return {

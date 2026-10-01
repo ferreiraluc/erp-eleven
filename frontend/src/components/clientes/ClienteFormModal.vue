@@ -2,7 +2,7 @@
   <div v-if="isVisible" class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-box">
       <div class="modal-header">
-        <h2 class="modal-title">{{ isEditing ? 'Editar Cliente' : 'Novo Cliente' }}</h2>
+        <h2 class="modal-title">{{ isEditing ? uiText(`Editar Cliente`) : uiText(`Novo Cliente`) }}</h2>
         <button class="close-btn" @click="$emit('close')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -14,18 +14,18 @@
 
         <!-- Dados básicos -->
         <div class="form-section">
-          <h3 class="section-title">Dados do Cliente</h3>
+          <h3 class="section-title">{{ uiText(`Dados do Cliente`) }}</h3>
           <div class="form-grid">
             <div class="form-group span-2">
-              <label>Nome *</label>
-              <input v-model="form.nome" type="text" placeholder="Nome completo" class="form-input" required />
+              <label>{{ uiText(`Nome *`) }}</label>
+              <input v-model="form.nome" type="text" :placeholder="uiText(`Nome completo`)" class="form-input" required />
             </div>
             <div class="form-group">
-              <label>Telefone</label>
+              <label>{{ uiText(`Telefone`) }}</label>
               <input v-model="form.telefone" type="tel" placeholder="(11) 99999-9999" class="form-input" />
             </div>
             <div class="form-group">
-              <label>E-mail</label>
+              <label>{{ uiText(`E-mail`) }}</label>
               <input v-model="form.email" type="email" placeholder="cliente@email.com" class="form-input" />
             </div>
             <div class="form-group">
@@ -37,25 +37,25 @@
 
         <!-- Endereço livre -->
         <div class="form-section">
-          <h3 class="section-title">Endereço</h3>
+          <h3 class="section-title">{{ uiText(`Endereço`) }}</h3>
           <div class="form-group">
-            <label>Endereço completo</label>
+            <label>{{ uiText(`Endereço completo`) }}</label>
             <textarea
               v-model="form.endereco"
               class="form-textarea"
               rows="4"
-              placeholder="Cole ou digite o endereço completo aqui&#10;Ex: Rua das Flores, 123, Bairro Centro, São Paulo - SP, CEP 01310-100"
+              :placeholder="uiText(`Cole ou digite o endereço completo aqui`) + '\n' + uiText(`Ex: Rua das Flores, 123, Bairro Centro, São Paulo - SP, CEP 01310-100`)"
             ></textarea>
-            <span class="field-hint">Campo livre — cole o endereço como preferir.</span>
+            <span class="field-hint">{{ uiText(`Campo livre — cole o endereço como preferir.`) }}</span>
           </div>
         </div>
 
         <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="$emit('close')">Cancelar</button>
+          <button type="button" class="btn btn-secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
           <button type="submit" class="btn btn-primary" :disabled="submitting || !form.nome.trim()">
-            {{ submitting ? 'Salvando...' : (isEditing ? 'Salvar alterações' : 'Criar cliente') }}
+            {{ submitting ? uiText(`Salvando...`) : (isEditing ? uiText(`Salvar alterações`) : uiText(`Criar cliente`)) }}
           </button>
         </div>
       </form>
@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText } from '@/i18n/uiText'
 import { ref, watch, computed } from 'vue'
 import { clientesAPI, type Cliente, type ClienteCreate } from '@/services/api'
 
@@ -122,7 +123,7 @@ async function handleSubmit() {
     const detail = e.response?.data?.detail
     errorMsg.value = Array.isArray(detail)
       ? detail.map((d: any) => d.msg || String(d)).join('; ')
-      : (typeof detail === 'string' ? detail : e.message || 'Erro ao salvar cliente.')
+      : (typeof detail === 'string' ? detail : e.message || uiText(`Erro ao salvar cliente.`))
   } finally {
     submitting.value = false
   }

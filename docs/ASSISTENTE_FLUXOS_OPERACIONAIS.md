@@ -14,6 +14,10 @@ Continuações usam somente o histórico do próprio autor no canal/conversa. Ca
 
 Cotações só são apresentadas após uma operação real persistida. Escolhas curtas como “2” se vinculam à última cotação mostrada ao autor; botões identificam a cotação exata. Consultas de PDF/etiquetas não são substituídas por uma resposta de rastreio apenas porque apareceu um código.
 
+## Comprovantes dos Correios em foto
+
+Envie uma foto/JPG/PNG com “Cadastre os rastreios deste comprovante”. O bot lê os códigos e destinatários legíveis, valida o dígito verificador e mostra prévia com botão de confirmação. Não cadastra só por receber a imagem, não inventa caracteres e não duplica códigos existentes. Vínculos de pedido são sugestões explícitas na prévia, revalidadas ao confirmar. A foto não é arquivada no ERP; esta leitura usa a chave Anthropic do OCR. Veja os limites, privacidade e operação em [Rastreios por comprovante](RASTREIOS_COMPROVANTES.md).
+
 ## Produtos e entradas de estoque
 
 Gestores habilitados podem pedir cadastro de produtos/variantes ou entrada de unidades em um produto existente. Há prévia, confirmação do autor, proteção contra repetição da confirmação e movimentação de estoque auditada no mesmo módulo do ERP. Cadastro duplicado pede reaproveitamento do produto. Moeda precisa ser informada quando houver preço; local é necessário para quantidade positiva. Campos opcionais do produto não são inventados; valores ausentes usam os mesmos zeros do formulário e aparecem na prévia.

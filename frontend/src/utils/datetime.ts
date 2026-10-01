@@ -1,3 +1,5 @@
+import { uiLocale, uiText } from '@/i18n/uiText'
+
 /**
  * Utilities for handling datetime with correct timezone (GMT-3 / America/Sao_Paulo)
  */
@@ -6,7 +8,7 @@
 export const TIMEZONE = 'America/Sao_Paulo' // GMT-3
 
 /**
- * Format a date string to local timezone with Brazilian format
+ * Format a date string to local timezone with the selected display locale
  */
 export function formatDate(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
@@ -19,11 +21,11 @@ export function formatDate(dateString: string | Date, options?: Intl.DateTimeFor
     ...options
   }
   
-  return date.toLocaleDateString('pt-BR', defaultOptions)
+  return date.toLocaleDateString(uiLocale(), defaultOptions)
 }
 
 /**
- * Format a datetime string to local timezone with Brazilian format
+ * Format a datetime string to local timezone with the selected display locale
  */
 export function formatDateTime(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
@@ -39,7 +41,7 @@ export function formatDateTime(dateString: string | Date, options?: Intl.DateTim
     ...options
   }
   
-  return date.toLocaleString('pt-BR', defaultOptions)
+  return date.toLocaleString(uiLocale(), defaultOptions)
 }
 
 /**
@@ -48,7 +50,7 @@ export function formatDateTime(dateString: string | Date, options?: Intl.DateTim
 export function formatTime(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   
-  return date.toLocaleTimeString('pt-BR', {
+  return date.toLocaleTimeString(uiLocale(), {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: TIMEZONE
@@ -67,24 +69,16 @@ export function nowInBrazil(): Date {
  */
 export function formatRelativeTime(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  const now = nowInBrazil()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffSeconds < 60) {
-    return 'agora mesmo'
-  } else if (diffMinutes < 60) {
-    return `há ${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''}`
-  } else if (diffHours < 24) {
-    return `há ${diffHours} hora${diffHours !== 1 ? 's' : ''}`
-  } else if (diffDays < 7) {
-    return `há ${diffDays} dia${diffDays !== 1 ? 's' : ''}`
-  } else {
-    return formatDate(date)
-  }
+  const seconds = Math.trunc((date.getTime() - Date.now()) / 1000)
+  const relative = new Intl.RelativeTimeFormat(uiLocale(), { numeric: 'auto' })
+  if (Math.abs(seconds) < 60) return uiText('agora mesmo')
+  const minutes = Math.trunc(seconds / 60)
+  if (Math.abs(minutes) < 60) return relative.format(minutes, 'minute')
+  const hours = Math.trunc(minutes / 60)
+  if (Math.abs(hours) < 24) return relative.format(hours, 'hour')
+  const days = Math.trunc(hours / 24)
+  if (Math.abs(days) < 7) return relative.format(days, 'day')
+  return formatDate(date)
 }
 
 /**
@@ -92,7 +86,6 @@ export function formatRelativeTime(dateString: string | Date): string {
  */
 export function isToday(dateString: string | Date): boolean {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  const today = nowInBrazil()
-  
-  return date.toDateString() === today.toDateString()
+  const calendarDate = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE })
+  return calendarDate.format(date) === calendarDate.format(new Date())
 }

@@ -55,6 +55,9 @@ def process_inbox():
             message.status = "rejected"
             db.commit()
             return True
+        from .services.user_audit import bind_actor
+        from .models.usuario import Usuario
+        bind_actor(db, db.get(Usuario, message.user_id), source=message.channel, request_id=str(message.id))
         try:
             with db.begin_nested():
                 answer = respond(db, message, identity)

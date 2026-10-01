@@ -5,7 +5,8 @@ from ...database import get_db
 from ...dependencies import require_role
 from ...models.assistant import utcnow
 from ...models.sales_bi import SalesBIConfig, SalesBIWorkbook
-from ...services.sales_bi import build_overview, sources_status
+from ...services.sales_bi import build_overview, sources_status, private_workbooks
+from ...services.access_policy import own_sales
 from ...services.sales_bi_onedrive import validate_url, validate_root, SourceError
 from ...services.sales_bi_schedule import next_daily_sync
 
@@ -38,12 +39,24 @@ class SourceConfig(BaseModel):
 @router.get('/overview')
 def overview(year: int | None = Query(None, ge=2000, le=2100), month: int | None = Query(None, ge=1, le=12),
              seller: str | None = Query(None, max_length=100), user=Depends(manager), db: Session = Depends(get_db)):
-    return build_overview(db.query(SalesBIWorkbook).filter_by(active=True).all(), year, month, seller)
+    rows = db.query(SalesBIWorkbook).filter_by(active=True).all()
+    if own_sales(user):
+        if not user.sales_seller:
+            raise HTTPException(403, 'Seu vendedor ainda não foi vinculado às planilhas.')
+        seller = user.sales_seller
+        rows = private_workbooks(rows, seller)
+    result = build_overview(rows, year, month, seller)
+    result['access'] = {'scope': 'own' if own_sales(user) else 'all', 'seller': user.sales_seller if own_sales(user) else None}
+    return result
 
 
 @router.get('/sources')
 def sources(user=Depends(manager), db: Session = Depends(get_db)):
-    return sources_status(db)
+    result = sources_status(db)
+    if own_sales(user):
+        result['sources'] = []
+        result['error'] = 'A leitura encontrou uma pendência. Consulte o administrador.' if result['error'] else None
+    return result
 
 
 @router.get('/config')

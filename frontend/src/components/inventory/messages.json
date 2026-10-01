@@ -1,0 +1,1158 @@
+{
+  "Escanear Código": [
+    "Escanear código",
+    "Scan code"
+  ],
+  "Aponte a câmera para o código de barras": [
+    "Apunte la cámara al código de barras",
+    "Point the camera at the barcode"
+  ],
+  "Câmera não disponível": [
+    "Cámara no disponible",
+    "Camera unavailable"
+  ],
+  "Ou insira o código manualmente:": [
+    "O ingrese el código manualmente:",
+    "Or enter the code manually:"
+  ],
+  "Código de barras...": [
+    "Código de barras...",
+    "Barcode..."
+  ],
+  "Sem detecção. Use o campo manual acima.": [
+    "Sin detección. Use el campo manual de arriba.",
+    "Nothing detected. Use the manual field above."
+  ],
+  "Editar Massivo": [
+    "Editar en lote",
+    "Bulk edit"
+  ],
+  "itens)": [
+    "artículos)",
+    "items)"
+  ],
+  "Campos compartilhados": [
+    "Campos compartidos",
+    "Shared fields"
+  ],
+  "Deixe em branco para não alterar. Aplica a todos os itens selecionados.": [
+    "Deje en blanco para no modificar. Se aplica a todos los artículos seleccionados.",
+    "Leave blank to keep existing values. Applies to all selected items."
+  ],
+  "Imagem (aplicar a todos)": [
+    "Imagen (aplicar a todos)",
+    "Image (apply to all)"
+  ],
+  "Marca": [
+    "Marca",
+    "Brand"
+  ],
+  "Vazio = não alterar": [
+    "Vacío = no modificar",
+    "Blank = keep unchanged"
+  ],
+  "Categoria": [
+    "Categoría",
+    "Category"
+  ],
+  "Preço de custo": [
+    "Precio de costo",
+    "Cost price"
+  ],
+  "Preço de venda": [
+    "Precio de venta",
+    "Sale price"
+  ],
+  "Ajuste de estoque compartilhado": [
+    "Ajuste de stock compartido",
+    "Shared stock adjustment"
+  ],
+  "Quantidade": [
+    "Cantidad",
+    "Quantity"
+  ],
+  "(+ entrada / − saída)": [
+    "(+ entrada / − salida)",
+    "(+ entry / − exit)"
+  ],
+  "Ex: +5 ou -3": [
+    "Ej.: +5 o -3",
+    "E.g. +5 or -3"
+  ],
+  "Motivo obrigatório": [
+    "Motivo obligatorio",
+    "Reason required"
+  ],
+  "Itens com ajuste individual abaixo têm prioridade sobre este valor.": [
+    "Los artículos con un ajuste individual abajo tienen prioridad sobre este valor.",
+    "Individual item adjustments below take priority over this value."
+  ],
+  "Campos por item": [
+    "Campos por artículo",
+    "Item fields"
+  ],
+  "Os campos de texto mostram o valor atual — edite apenas o que precisa alterar.": [
+    "Los campos de texto muestran el valor actual; edite solo lo que necesita cambiar.",
+    "Text fields show current values; edit only what you need to change."
+  ],
+  "Estoque:": [
+    "Stock:",
+    "Stock:"
+  ],
+  "Tamanho": [
+    "Talla",
+    "Size"
+  ],
+  "Código de barras": [
+    "Código de barras",
+    "Barcode"
+  ],
+  "Custo": [
+    "Costo",
+    "Cost"
+  ],
+  "atual:": [
+    "actual:",
+    "current:"
+  ],
+  "Δ Estoque": [
+    "Δ Stock",
+    "Δ Stock"
+  ],
+  "Ex: +2 ou -1": [
+    "Ej.: +2 o -1",
+    "E.g. +2 or -1"
+  ],
+  "Motivo do ajuste": [
+    "Motivo del ajuste",
+    "Adjustment reason"
+  ],
+  "itens": [
+    "artículos",
+    "items"
+  ],
+  "Transferência em Lote": [
+    "Transferencia en lote",
+    "Bulk transfer"
+  ],
+  "Direção *": [
+    "Dirección *",
+    "Direction *"
+  ],
+  "Depósito → Loja": [
+    "Depósito → Tienda",
+    "Warehouse → Store"
+  ],
+  "Loja → Depósito": [
+    "Tienda → Depósito",
+    "Store → Warehouse"
+  ],
+  "Máximo disponível": [
+    "Máximo disponible",
+    "Maximum available"
+  ],
+  "Motivo da transferência...": [
+    "Motivo de la transferencia...",
+    "Transfer reason..."
+  ],
+  "Agrupar sugestão": [
+    "Agrupar sugerencia",
+    "Group suggestion"
+  ],
+  "Nome do grupo": [
+    "Nombre del grupo",
+    "Group name"
+  ],
+  "Ex: DKR003, FLC009 LUTT/NAPA...": [
+    "Ej.: DKR003, FLC009 LUTT/NAPA...",
+    "E.g. DKR003, FLC009 LUTT/NAPA..."
+  ],
+  "Itens a agrupar": [
+    "Artículos a agrupar",
+    "Items to group"
+  ],
+  "Clique em × para remover um item da seleção": [
+    "Haga clic en × para quitar un artículo de la selección",
+    "Click × to remove an item from the selection"
+  ],
+  "Remover da seleção": [
+    "Quitar de la selección",
+    "Remove from selection"
+  ],
+  "Nenhum item na seleção. Cancele e selecione os itens manualmente.": [
+    "No hay artículos seleccionados. Cancele y seleccione los artículos manualmente.",
+    "No items selected. Cancel and select items manually."
+  ],
+  "Agrupando...": [
+    "Agrupando...",
+    "Grouping..."
+  ],
+  "Agrupar": [
+    "Agrupar",
+    "Group"
+  ],
+  "Importar Estoque": [
+    "Importar stock",
+    "Import inventory"
+  ],
+  "CSV / Planilha": [
+    "CSV / Hoja de cálculo",
+    "CSV / Spreadsheet"
+  ],
+  "Baixar template CSV": [
+    "Descargar plantilla CSV",
+    "Download CSV template"
+  ],
+  "O arquivo CSV deve ter cabeçalhos em português ou inglês. Colunas aceitas:": [
+    "El archivo CSV debe tener encabezados en portugués o inglés. Columnas aceptadas:",
+    "CSV headers must be in Portuguese or English. Accepted columns:"
+  ],
+  "Campos extraídos: nome (xProd), código EAN, unidade, quantidade, valor unitário.": [
+    "Campos extraídos: nombre (xProd), código EAN, unidad, cantidad, valor unitario.",
+    "Extracted fields: name (xProd), EAN code, unit, quantity, unit value."
+  ],
+  "Configurações da importação": [
+    "Configuración de importación",
+    "Import settings"
+  ],
+  "Categoria dos produtos": [
+    "Categoría de los productos",
+    "Product category"
+  ],
+  "Ex: Calçados, Camisetas, Acessórios...": [
+    "Ej.: Calzado, Camisetas, Accesorios...",
+    "E.g. Footwear, Shirts, Accessories..."
+  ],
+  "Moeda do XML": [
+    "Moneda del XML",
+    "XML currency"
+  ],
+  "R$ — Real Brasileiro": [
+    "R$ — Real brasileño",
+    "R$ — Brazilian real"
+  ],
+  "U$ — Dólar Americano": [
+    "U$ — Dólar estadounidense",
+    "U$ — US dollar"
+  ],
+  "G$ — Guarani Paraguaio": [
+    "G$ — Guaraní paraguayo",
+    "G$ — Paraguayan guarani"
+  ],
+  "€ — Euro": [
+    "€ — Euro",
+    "€ — Euro"
+  ],
+  "Separação automática:": [
+    "Separación automática:",
+    "Automatic split:"
+  ],
+  "Cor:": [
+    "Color:",
+    "Color:"
+  ],
+  "Arraste o arquivo aqui ou": [
+    "Arrastre el archivo aquí o",
+    "Drag the file here or"
+  ],
+  "clique para selecionar": [
+    "haga clic para seleccionar",
+    "click to select"
+  ],
+  "× remover": [
+    "× quitar",
+    "× remove"
+  ],
+  "Ver itens importados": [
+    "Ver artículos importados",
+    "View imported items"
+  ],
+  "Básico": [
+    "Básico",
+    "Basic"
+  ],
+  "Grade": [
+    "Variantes",
+    "Variants"
+  ],
+  "Foto": [
+    "Foto",
+    "Photo"
+  ],
+  "Nome do produto": [
+    "Nombre del producto",
+    "Product name"
+  ],
+  "Descrição opcional": [
+    "Descripción opcional",
+    "Optional description"
+  ],
+  "Ex: Armani, Boss...": [
+    "Ej.: Armani, Boss...",
+    "E.g. Armani, Boss..."
+  ],
+  "Selecione...": [
+    "Seleccione...",
+    "Select..."
+  ],
+  "Outra...": [
+    "Otra...",
+    "Other..."
+  ],
+  "Nome da categoria": [
+    "Nombre de la categoría",
+    "Category name"
+  ],
+  "Subcategoria": [
+    "Subcategoría",
+    "Subcategory"
+  ],
+  "Ex: Sociais, Tênis...": [
+    "Ej.: Formales, Zapatillas...",
+    "E.g. Dress shoes, Sneakers..."
+  ],
+  "Vermelho, Azul...": [
+    "Rojo, Azul...",
+    "Red, Blue..."
+  ],
+  "Unidade": [
+    "Unidad",
+    "Unit"
+  ],
+  "auto": [
+    "auto",
+    "auto"
+  ],
+  "par": [
+    "par",
+    "pair"
+  ],
+  "Localização": [
+    "Ubicación",
+    "Location"
+  ],
+  "Ex: A-12, Prateleira 3...": [
+    "Ej.: A-12, Estante 3...",
+    "E.g. A-12, Shelf 3..."
+  ],
+  "Código de Barras": [
+    "Código de barras",
+    "Barcode"
+  ],
+  "EAN, QR, etc.": [
+    "EAN, QR, etc.",
+    "EAN, QR, etc."
+  ],
+  "Escanear": [
+    "Escanear",
+    "Scan"
+  ],
+  "Este código já existe em outro item.": [
+    "Este código ya existe en otro artículo.",
+    "This code already exists on another item."
+  ],
+  "Preço de Venda": [
+    "Precio de venta",
+    "Sale price"
+  ],
+  "Fornecedor": [
+    "Proveedor",
+    "Supplier"
+  ],
+  "Nenhum": [
+    "Ninguno",
+    "None"
+  ],
+  "Estoque Mínimo": [
+    "Stock mínimo",
+    "Minimum stock"
+  ],
+  "Estoque Máximo": [
+    "Stock máximo",
+    "Maximum stock"
+  ],
+  "Cadastrar em": [
+    "Registrar en",
+    "Register in"
+  ],
+  "Loja": [
+    "Tienda",
+    "Store"
+  ],
+  "Depósito": [
+    "Depósito",
+    "Warehouse"
+  ],
+  "Estoque inicial": [
+    "Stock inicial",
+    "Initial stock"
+  ],
+  "Cria todos os tamanhos de uma vez — cada tamanho vira um item separado agrupado automaticamente.": [
+    "Crea todas las tallas a la vez; cada talla se convierte en un artículo separado agrupado automáticamente.",
+    "Creates all sizes at once; each size becomes a separate item grouped automatically."
+  ],
+  "Modelo de grade": [
+    "Plantilla de variantes",
+    "Variant template"
+  ],
+  "Remover modelo": [
+    "Quitar plantilla",
+    "Remove template"
+  ],
+  "Novo modelo de grade": [
+    "Nueva plantilla de variantes",
+    "New variant template"
+  ],
+  "Nome do modelo (ex: Numeração EU)": [
+    "Nombre de la plantilla (ej.: Tallas EU)",
+    "Template name (e.g. EU sizes)"
+  ],
+  "Ex: XS ↵": [
+    "Ej.: XS ↵",
+    "E.g. XS ↵"
+  ],
+  "Salvar modelo": [
+    "Guardar plantilla",
+    "Save template"
+  ],
+  "Tamanhos": [
+    "Tallas",
+    "Sizes"
+  ],
+  "Ex: 36 ↵": [
+    "Ej.: 36 ↵",
+    "E.g. 36 ↵"
+  ],
+  "Adicionar tamanho (ex: 3XL, 46...)": [
+    "Agregar talla (ej.: 3XL, 46...)",
+    "Add size (e.g. 3XL, 46...)"
+  ],
+  "Cores": [
+    "Colores",
+    "Colors"
+  ],
+  "Outra cor ↵": [
+    "Otro color ↵",
+    "Another color ↵"
+  ],
+  "Cores opcionais — deixe vazio para criar apenas os tamanhos.": [
+    "Colores opcionales; deje vacío para crear solo las tallas.",
+    "Colors are optional; leave blank to create only sizes."
+  ],
+  "Estoque inicial por tamanho": [
+    "Stock inicial por talla",
+    "Initial stock per size"
+  ],
+  "Quantidade adicionada a cada item da grade ao criar.": [
+    "Cantidad agregada a cada variante al crearla.",
+    "Quantity added to each variant when created."
+  ],
+  "Cod. de barras base:": [
+    "Código de barras base:",
+    "Base barcode:"
+  ],
+  "Selecione um modelo acima ou adicione tamanhos e/ou cores.": [
+    "Seleccione una plantilla arriba o agregue tallas y/o colores.",
+    "Select a template above or add sizes and/or colors."
+  ],
+  "Foto do item": [
+    "Foto del artículo",
+    "Item photo"
+  ],
+  "× Remover foto": [
+    "× Quitar foto",
+    "× Remove photo"
+  ],
+  "Nenhuma foto adicionada": [
+    "No se agregó ninguna foto",
+    "No photo added"
+  ],
+  "A imagem é redimensionada para 400×400px e armazenada no banco de dados.": [
+    "La imagen se reduce a un máximo de 400×400 px y se guarda en la base de datos.",
+    "The image is resized to fit 400×400 px and stored in the database."
+  ],
+  "Criar": [
+    "Crear",
+    "Create"
+  ],
+  "Carregando exemplos...": [
+    "Cargando ejemplos...",
+    "Loading examples..."
+  ],
+  "etiqueta": [
+    "etiqueta",
+    "label"
+  ],
+  "Tam.": [
+    "Talla",
+    "Size"
+  ],
+  "Barcode": [
+    "Código de barras",
+    "Barcode"
+  ],
+  "Preço": [
+    "Precio",
+    "Price"
+  ],
+  "Excluir exemplo": [
+    "Eliminar ejemplo",
+    "Delete example"
+  ],
+  "Os exemplos auxiliam a leitura; sempre revise os dados extraídos.": [
+    "Los ejemplos ayudan a la lectura; revise siempre los datos extraídos.",
+    "Examples assist extraction; always review the extracted fields."
+  ],
+  "Esta ação não pode ser desfeita. O exemplo deixará de ser usado como referência.": [
+    "Esta acción no se puede deshacer. El ejemplo dejará de usarse como referencia.",
+    "This cannot be undone. The example will no longer be used as a reference."
+  ],
+  "Movimentação de Estoque": [
+    "Movimiento de stock",
+    "Stock movement"
+  ],
+  "Loja:": [
+    "Tienda:",
+    "Store:"
+  ],
+  "Depósito:": [
+    "Depósito:",
+    "Warehouse:"
+  ],
+  "Tipo de Movimentação *": [
+    "Tipo de movimiento *",
+    "Movement type *"
+  ],
+  "Local *": [
+    "Ubicación *",
+    "Location *"
+  ],
+  "Entrada em lote": [
+    "Entrada en lote",
+    "Bulk stock entry"
+  ],
+  "Quantidade *": [
+    "Cantidad *",
+    "Quantity *"
+  ],
+  "Custo Unitário": [
+    "Costo unitario",
+    "Unit cost"
+  ],
+  "Motivo da movimentação...": [
+    "Motivo del movimiento...",
+    "Movement reason..."
+  ],
+  "Notas adicionais...": [
+    "Notas adicionales...",
+    "Additional notes..."
+  ],
+  "ID do item": [
+    "ID del artículo",
+    "Item ID"
+  ],
+  "+ Adicionar linha": [
+    "+ Agregar línea",
+    "+ Add line"
+  ],
+  "Motivo da entrada...": [
+    "Motivo de la entrada...",
+    "Entry reason..."
+  ],
+  "Gerencie os itens do inventário": [
+    "Gestione los artículos del inventario",
+    "Manage inventory items"
+  ],
+  "Exemplos de etiquetas": [
+    "Ejemplos de etiquetas",
+    "Label examples"
+  ],
+  "Novo item": [
+    "Nuevo artículo",
+    "New item"
+  ],
+  "Buscar por nome, SKU, código...": [
+    "Buscar por nombre, SKU, código...",
+    "Search by name, SKU, code..."
+  ],
+  "Limpar busca": [
+    "Limpiar búsqueda",
+    "Clear search"
+  ],
+  "Buscar marca...": [
+    "Buscar marca...",
+    "Search brands..."
+  ],
+  "Todas as marcas": [
+    "Todas las marcas",
+    "All brands"
+  ],
+  "Buscar categoria...": [
+    "Buscar categoría...",
+    "Search categories..."
+  ],
+  "Todas as categorias": [
+    "Todas las categorías",
+    "All categories"
+  ],
+  "Ver grades": [
+    "Ver variantes",
+    "View variants"
+  ],
+  "Similares detectados:": [
+    "Similares detectados:",
+    "Similar items found:"
+  ],
+  "grades": [
+    "grupos",
+    "variant groups"
+  ],
+  "Filtrar itens sem grade": [
+    "Filtrar artículos sin grupo",
+    "Filter ungrouped items"
+  ],
+  "sem grade": [
+    "sin grupo",
+    "ungrouped"
+  ],
+  "Filtrar estoque baixo": [
+    "Filtrar stock bajo",
+    "Filter low stock"
+  ],
+  "baixo": [
+    "bajo",
+    "low"
+  ],
+  "Filtrar sem estoque": [
+    "Filtrar sin stock",
+    "Filter out of stock"
+  ],
+  "sem estoque": [
+    "sin stock",
+    "out of stock"
+  ],
+  "Visualização:": [
+    "Vista:",
+    "View:"
+  ],
+  "Compacto": [
+    "Compacto",
+    "Compact"
+  ],
+  "Selecionar para agrupar": [
+    "Seleccionar para agrupar",
+    "Select to group"
+  ],
+  "Carregando itens...": [
+    "Cargando artículos...",
+    "Loading items..."
+  ],
+  "Nenhum item encontrado": [
+    "No se encontraron artículos",
+    "No items found"
+  ],
+  "Criar primeiro item": [
+    "Crear primer artículo",
+    "Create first item"
+  ],
+  "Clique para renomear o grupo": [
+    "Haga clic para renombrar el grupo",
+    "Click to rename the group"
+  ],
+  "Total:": [
+    "Total:",
+    "Total:"
+  ],
+  "Loja + Dep.": [
+    "Tienda + Dep.",
+    "Store + Whse."
+  ],
+  "Desagrupar": [
+    "Desagrupar",
+    "Ungroup"
+  ],
+  "Remover do grupo": [
+    "Quitar del grupo",
+    "Remove from group"
+  ],
+  "Remover?": [
+    "¿Quitar?",
+    "Remove?"
+  ],
+  "Sim": [
+    "Sí",
+    "Yes"
+  ],
+  "Não": [
+    "No",
+    "No"
+  ],
+  "L:": [
+    "T:",
+    "S:"
+  ],
+  "D:": [
+    "D:",
+    "W:"
+  ],
+  "Consumir 1": [
+    "Retirar 1",
+    "Withdraw 1"
+  ],
+  "Retirar de:": [
+    "Retirar de:",
+    "Withdraw from:"
+  ],
+  "Loja (": [
+    "Tienda (",
+    "Store ("
+  ],
+  "Dep. (": [
+    "Dep. (",
+    "Whse. ("
+  ],
+  "Retirar do Depósito?": [
+    "¿Retirar del depósito?",
+    "Withdraw from warehouse?"
+  ],
+  "Retirar da Loja?": [
+    "¿Retirar de la tienda?",
+    "Withdraw from store?"
+  ],
+  "Movimentar": [
+    "Mover stock",
+    "Move stock"
+  ],
+  "grade": [
+    "grupo",
+    "variant group"
+  ],
+  "· Dep.:": [
+    "· Dep.:",
+    "· Whse.:"
+  ],
+  "Limites": [
+    "Límites",
+    "Limits"
+  ],
+  "mín": [
+    "mín",
+    "minimum"
+  ],
+  "· máx": [
+    "· máx",
+    "· maximum"
+  ],
+  "Editar massivo": [
+    "Editar en lote",
+    "Bulk edit"
+  ],
+  "Transferir": [
+    "Transferir",
+    "Transfer"
+  ],
+  "Transf.": [
+    "Transf.",
+    "Transfer"
+  ],
+  "Sel. todos": [
+    "Sel. todos",
+    "Select all"
+  ],
+  "Definir nome do grupo": [
+    "Definir nombre del grupo",
+    "Set group name"
+  ],
+  "Selecione pelo menos 2 itens sem grupo para poder agrupar.": [
+    "Seleccione al menos 2 artículos sin grupo para agruparlos.",
+    "Select at least 2 ungrouped items to group them."
+  ],
+  "Sugestão baseada nos nomes:": [
+    "Sugerencia basada en los nombres:",
+    "Suggestion based on names:"
+  ],
+  "Quantidade adicionada ao {local} ao criar o item.": [
+    "Cantidad agregada al {local} al crear el artículo.",
+    "Quantity added to {local} when creating the item."
+  ],
+  "estoque da loja": [
+    "stock de la tienda",
+    "store stock"
+  ],
+  "depósito": [
+    "depósito",
+    "warehouse"
+  ],
+  " × {count} tam.": [
+    " × {count} tallas",
+    " × {count} sizes"
+  ],
+  "Criará {colors} × {sizes} = {count} itens (cor × tamanho).": [
+    "Creará {colors} × {sizes} = {count} artículos (color × talla).",
+    "Will create {colors} × {sizes} = {count} items (color × size)."
+  ],
+  "Criar grade ({count} itens)": [
+    "Crear variantes ({count} artículos)",
+    "Create variants ({count} items)"
+  ],
+  "Excluir exemplo de {brand}?": [
+    "¿Eliminar ejemplo de {brand}?",
+    "Delete example for {brand}?"
+  ],
+  "Agrupar {count}": [
+    "Agrupar {count}",
+    "Group {count}"
+  ],
+  "{count} itens com nome similar": [
+    "{count} artículos con nombre similar",
+    "{count} items with similar names"
+  ],
+  "Já pertence ao grupo: {group}": [
+    "Ya pertenece al grupo: {group}",
+    "Already belongs to group: {group}"
+  ],
+  "Dep.": [
+    "Dep.",
+    "Whse."
+  ],
+  "Transferindo...": [
+    "Transfiriendo...",
+    "Transferring..."
+  ],
+  "Arquivo .csv ou .txt": [
+    "Archivo .csv o .txt",
+    "File .csv or .txt"
+  ],
+  "Arquivo .xml da NF-e": [
+    "Archivo .xml de NF-e",
+    "NF-e .xml file"
+  ],
+  "Editar Item": [
+    "Editar artículo",
+    "Edit item"
+  ],
+  "Novo Item": [
+    "Nuevo artículo",
+    "New item"
+  ],
+  "Já adicionada (remova pelo ×)": [
+    "Ya agregado (quite con ×)",
+    "Already added (remove with ×)"
+  ],
+  "(nome)": [
+    "(nombre)",
+    "(name)"
+  ],
+  "Recolher": [
+    "Contraer",
+    "Collapse"
+  ],
+  "Expandir": [
+    "Expandir",
+    "Expand"
+  ],
+  "Quantidade deve ser ao menos 1": [
+    "La cantidad debe ser al menos 1",
+    "Quantity must be at least 1"
+  ],
+  "Quantidade deve ser um inteiro positivo; ajuste pode ser zero.": [
+    "La cantidad debe ser un entero positivo; el ajuste puede ser cero.",
+    "Quantity must be a positive integer; adjustments may be zero."
+  ],
+  "Motivo obrigatório para ajuste": [
+    "Se requiere motivo para el ajuste",
+    "A reason is required for adjustments"
+  ],
+  "Erro ao registrar": [
+    "Error al registrar",
+    "Could not register"
+  ],
+  "Informe o motivo do ajuste": [
+    "Indique el motivo del ajuste",
+    "Enter an adjustment reason"
+  ],
+  "Informe o motivo": [
+    "Indique el motivo",
+    "Enter a reason"
+  ],
+  "Erro ao salvar": [
+    "Error al guardar",
+    "Could not save"
+  ],
+  "Nenhuma quantidade definida.": [
+    "No se definió ninguna cantidad.",
+    "No quantity set."
+  ],
+  "Erro ao transferir": [
+    "Error al transferir",
+    "Could not transfer"
+  ],
+  "Erro ao agrupar": [
+    "Error al agrupar",
+    "Could not group"
+  ],
+  "Erro na importação": [
+    "Error en la importación",
+    "Import failed"
+  ],
+  "Nome deve ter ao menos 2 caracteres": [
+    "El nombre debe tener al menos 2 caracteres",
+    "Name must have at least 2 characters"
+  ],
+  "Custo não pode ser negativo": [
+    "El costo no puede ser negativo",
+    "Cost cannot be negative"
+  ],
+  "Mínimo não pode ser maior que máximo": [
+    "El mínimo no puede ser mayor que el máximo",
+    "Minimum cannot exceed maximum"
+  ],
+  "Entrada": [
+    "Entrada",
+    "Entry"
+  ],
+  "Saída": [
+    "Salida",
+    "Exit"
+  ],
+  "Ajuste": [
+    "Ajuste",
+    "Adjustment"
+  ],
+  "Transferência": [
+    "Transferencia",
+    "Transfer"
+  ],
+  "Baixo": [
+    "Bajo",
+    "Low"
+  ],
+  "Sem estoque": [
+    "Sin stock",
+    "Out of stock"
+  ],
+  "Excesso": [
+    "Exceso",
+    "Overstock"
+  ],
+  "Inativos": [
+    "Inactivos",
+    "Inactive"
+  ],
+  "Inativo": [
+    "Inactivo",
+    "Inactive"
+  ],
+  "{count} itens agrupados como \"{name}\"": [
+    "{count} artículos agrupados como \"{name}\"",
+    "{count} items grouped as \"{name}\""
+  ],
+  "Grupo renomeado para \"{name}\"": [
+    "Grupo renombrado a \"{name}\"",
+    "Group renamed to \"{name}\""
+  ],
+  "Grupo \"{name}\" desagrupado": [
+    "Grupo \"{name}\" desagrupado",
+    "Group \"{name}\" ungrouped"
+  ],
+  "Item removido do grupo \"{name}\"": [
+    "Artículo quitado del grupo \"{name}\"",
+    "Item removed from group \"{name}\""
+  ],
+  "Saída ({local}) registrada. Estoque: {stock}": [
+    "Salida ({local}) registrada. Stock: {stock}",
+    "Exit ({local}) recorded. Stock: {stock}"
+  ],
+  "Item \"{name}\" salvo com sucesso": [
+    "Artículo \"{name}\" guardado correctamente",
+    "Item \"{name}\" saved successfully"
+  ],
+  "Erro ao renomear grupo": [
+    "Error al renombrar el grupo",
+    "Could not rename group"
+  ],
+  "Erro ao desagrupar": [
+    "Error al desagrupar",
+    "Could not ungroup"
+  ],
+  "Erro ao remover do grupo": [
+    "Error al quitar del grupo",
+    "Could not remove from group"
+  ],
+  "Erro ao registrar saída": [
+    "Error al registrar salida",
+    "Could not register exit"
+  ],
+  "Movimentação registrada": [
+    "Movimiento registrado",
+    "Movement recorded"
+  ],
+  "Itens atualizados com sucesso": [
+    "Artículos actualizados correctamente",
+    "Items updated successfully"
+  ],
+  "Transferência realizada com sucesso": [
+    "Transferencia realizada correctamente",
+    "Transfer completed successfully"
+  ],
+  "Calçados 38–42": [
+    "Calzado 38–42",
+    "Footwear 38–42"
+  ],
+  "Calçados 38–44": [
+    "Calzado 38–44",
+    "Footwear 38–44"
+  ],
+  "Calças 30–40": [
+    "Pantalones 30–40",
+    "Trousers 30–40"
+  ],
+  "Camisetas": [
+    "Camisetas",
+    "Shirts"
+  ],
+  "Calças": [
+    "Pantalones",
+    "Trousers"
+  ],
+  "Vestidos": [
+    "Vestidos",
+    "Dresses"
+  ],
+  "Acessórios": [
+    "Accesorios",
+    "Accessories"
+  ],
+  "Calçados": [
+    "Calzado",
+    "Footwear"
+  ],
+  "Outros": [
+    "Otros",
+    "Other"
+  ],
+  "Branco": [
+    "Blanco",
+    "White"
+  ],
+  "Preto": [
+    "Negro",
+    "Black"
+  ],
+  "Navy": [
+    "Azul marino",
+    "Navy"
+  ],
+  "Red": [
+    "Rojo",
+    "Red"
+  ],
+  "Green": [
+    "Verde",
+    "Green"
+  ],
+  "Cadastro parcialmente concluído": [
+    "Registro parcialmente completado",
+    "Registration partially completed"
+  ],
+  "Não foi possível confirmar o cadastro": [
+    "No se pudo confirmar el registro",
+    "Could not confirm registration"
+  ],
+  "A conexão foi interrompida. Confira o inventário antes de tentar criar novamente.": [
+    "Se interrumpió la conexión. Revise el inventario antes de intentar crear de nuevo.",
+    "The connection was interrupted. Check inventory before trying to create again."
+  ],
+  "Feche esta janela, confira os itens e use Movimentar para concluir apenas o estoque que faltar. O cadastro não será repetido aqui.": [
+    "Cierre esta ventana, revise los artículos y use Mover stock para completar solo el stock pendiente. El registro no se repetirá aquí.",
+    "Close this window, check the items and use Move stock to complete only missing stock. Registration will not be repeated here."
+  ],
+  "Tipo de movimentação inválido.": [
+    "Tipo de movimiento inválido.",
+    "Invalid movement type."
+  ],
+  "Informe uma quantidade inteira positiva; ajuste pode ser zero.": [
+    "Ingrese una cantidad entera positiva; el ajuste puede ser cero.",
+    "Enter a positive whole quantity; adjustments may be zero."
+  ],
+  "Quantidade acima do limite permitido.": [
+    "Cantidad superior al límite permitido.",
+    "Quantity exceeds the allowed limit."
+  ],
+  "Local inválido. Use loja ou deposito.": [
+    "Ubicación inválida. Use tienda o depósito.",
+    "Invalid location. Use store or warehouse."
+  ],
+  "Origem e destino da transferência devem ser diferentes.": [
+    "El origen y destino deben ser diferentes.",
+    "Transfer source and destination must differ."
+  ],
+  "Custo unitário deve ser um valor não negativo.": [
+    "El costo unitario no puede ser negativo.",
+    "Unit cost cannot be negative."
+  ],
+  "O saldo por local diverge do total ou está negativo. Confira o inventário e registre um ajuste antes de movimentar.": [
+    "El saldo por ubicación difiere del total o es negativo. Revise el inventario y registre un ajuste antes de mover stock.",
+    "Stock by location differs from the total or is negative. Review inventory and record an adjustment before moving stock."
+  ],
+  "Saldo insuficiente no local de origem: disponível {available}, solicitado {requested}.": [
+    "Stock insuficiente en origen: disponible {available}, solicitado {requested}.",
+    "Insufficient source stock: available {available}, requested {requested}."
+  ],
+  "O saldo resultante excede o limite permitido.": [
+    "El saldo resultante supera el límite permitido.",
+    "Resulting stock exceeds the allowed limit."
+  ],
+  "O total resultante excede o limite permitido.": [
+    "El total resultante supera el límite permitido.",
+    "Resulting total exceeds the allowed limit."
+  ],
+  "Itens selecionados: {count}": [
+    "Artículos seleccionados: {count}",
+    "Selected items: {count}"
+  ],
+  "Unidades a transferir: {count}": [
+    "Unidades a transferir: {count}",
+    "Units to transfer: {count}"
+  ],
+  "Itens criados: {count}": [
+    "Artículos creados: {count}",
+    "Items created: {count}"
+  ],
+  "Itens ignorados: {count}": [
+    "Artículos omitidos: {count}",
+    "Items skipped: {count}"
+  ],
+  "Itens a criar: {count} (um por cor).": [
+    "Creará {count} artículo(s), uno por color.",
+    "Will create {count} item(s), one per color."
+  ],
+  "Prévia — itens a criar: {count}": [
+    "Vista previa — se crearán {count} artículo(s)",
+    "Preview — {count} item(s) will be created"
+  ],
+  "Itens a agrupar: {count}. Defina um código ou nome de modelo:": [
+    "Se agruparán {count} artículo(s). Defina un código o nombre de modelo:",
+    "{count} item(s) will be grouped. Set a code or model name:"
+  ],
+  "Itens já agrupados que serão ignorados: {count}.": [
+    "{count} artículo(s) ya pertenecen a un grupo y se omitirán.",
+    "{count} item(s) already belong to a group and will be skipped."
+  ],
+  "Itens já criados: {count}. Uma etapa seguinte falhou; o estoque inicial pode estar incompleto.": [
+    "Artículos ya creados: {count}. Un paso posterior falló; el stock inicial puede estar incompleto.",
+    "Items already created: {count}. A later step failed; initial stock may be incomplete."
+  ],
+  "Registrar": [
+    "Registrar",
+    "Register"
+  ],
+  "Adicionar": [
+    "Agregar",
+    "Add"
+  ],
+  "Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.": [
+    "El stock inicial debe ser entero, no negativo y estar dentro del límite permitido.",
+    "Initial stock must be a non-negative whole number within the allowed limit."
+  ]
+}

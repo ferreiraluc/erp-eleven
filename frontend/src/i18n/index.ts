@@ -25,7 +25,7 @@ const getStoredLocale = (): string => {
 export const i18n = createI18n({
   legacy: false,
   locale: getStoredLocale(),
-  fallbackLocale: 'en',
+  fallbackLocale: 'pt',
   messages,
   globalInjection: true,
   silentTranslationWarn: false,
@@ -33,9 +33,7 @@ export const i18n = createI18n({
   silentFallbackWarn: false
 })
 
-// Debug: Log i18n configuration
-console.log('[I18N] i18n initialized with locale:', i18n.global.locale.value)
-console.log('[I18N] Available messages:', Object.keys(messages))
+if (typeof document !== 'undefined') document.documentElement.lang = i18n.global.locale.value
 
 export const availableLocales = [
   { code: 'en', name: 'English', flag: 'US' },

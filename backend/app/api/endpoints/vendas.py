@@ -10,6 +10,7 @@ from ...utils import calculate_net_amount
 from ...services.thais_transfer_service import ThaisTransferService
 from ...dependencies import get_current_active_user
 from ..validators import validate_uuid
+from ...services.access_policy import sales_query, require_sale_owner
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ def listar_vendas(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    vendas = db.query(Venda).offset(skip).limit(limit).all()
+    vendas = sales_query(db.query(Venda), Venda, current_user).offset(skip).limit(limit).all()
     return vendas
 
 @router.post("/", response_model=VendaResponse)
@@ -29,6 +30,7 @@ def criar_venda(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
+    require_sale_owner(current_user, venda.vendedor_id)
     # Calculate net amount and fee based on payment method
     valor_liquido, taxa_desconto = calculate_net_amount(
         float(venda.valor_bruto), 
@@ -47,7 +49,7 @@ def criar_venda(
         "cambista_id": venda.cambista_id,
         "descricao_produto": venda.descricao_produto,
         "observacoes": venda.observacoes,
-        "created_by": venda.created_by
+        "created_by": current_user.id
     }
     
     db_venda = Venda(**venda_data)
@@ -72,7 +74,7 @@ def obter_venda(
     current_user = Depends(get_current_active_user)
 ):
     validated_id = validate_uuid(venda_id, "venda_id")
-    venda = db.query(Venda).filter(Venda.id == validated_id).first()
+    venda = sales_query(db.query(Venda), Venda, current_user).filter(Venda.id == validated_id).first()
     if not venda:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
     return venda

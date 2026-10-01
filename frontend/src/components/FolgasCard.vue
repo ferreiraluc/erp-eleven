@@ -2,7 +2,7 @@
   <div class="folgas-card">
     <div class="card-header">
       <div class="header-left">
-        <h3 class="card-title">Controle de Folgas</h3>
+        <h3 class="card-title">{{ $tr("Controle de Folgas") }}</h3>
         <p class="card-subtitle">{{ getCurrentMonth() }}</p>
       </div>
       <div class="header-right">
@@ -32,7 +32,7 @@
         </div>
 
         <div class="mini-grid">
-          <div v-for="day in ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']" :key="day" class="mini-weekday">
+          <div v-for="(day,index) in weekdayLabels" :key="index" class="mini-weekday">
             {{ day }}
           </div>
           
@@ -66,17 +66,17 @@
       <div class="quick-stats">
         <div class="stat-item">
           <div class="stat-number">{{ totalFolgasHoje }}</div>
-          <div class="stat-label">Folgas Hoje</div>
+          <div class="stat-label">{{ $tr("Folgas Hoje") }}</div>
         </div>
         <div class="stat-item">
           <div class="stat-number">{{ totalFolgasMes }}</div>
-          <div class="stat-label">Total do Mês</div>
+          <div class="stat-label">{{ $tr("Total do Mês") }}</div>
         </div>
       </div>
 
       <!-- Lista de folgas por funcionário -->
       <div class="funcionarios-folgas">
-        <h4 class="folgas-title">Folgas por Funcionário</h4>
+        <h4 class="folgas-title">{{ $tr("Folgas por Funcionário") }}</h4>
         <div v-if="funcionariosComFolgas.length > 0" class="folgas-list">
           <div
             v-for="funcionario in funcionariosComFolgas"
@@ -93,29 +93,29 @@
                 <div class="funcionario-stats">
                   <span class="stat-group">
                     <span class="stat-number">{{ funcionario.folgas_tipo || 0 }}</span>
-                    <span class="stat-label">folgas</span>
+                    <span class="stat-label">{{ $tr("folgas") }}</span>
                   </span>
                   <span class="stat-separator">•</span>
                   <span class="stat-group">
                     <span class="stat-number">{{ funcionario.faltas || 0 }}</span>
-                    <span class="stat-label">faltas</span>
+                    <span class="stat-label">{{ $tr("faltas") }}</span>
                   </span>
                   <span class="stat-separator">•</span>
                   <span class="stat-group">
                     <span class="stat-number">{{ funcionario.licencas || 0 }}</span>
-                    <span class="stat-label">licenças</span>
+                    <span class="stat-label">{{ $tr("licenças") }}</span>
                   </span>
                 </div>
               </div>
             </div>
             <div class="total-ausencias">
               <span class="total-number">{{ funcionario.total_ausencias }}</span>
-              <span class="total-label">total</span>
+              <span class="total-label">{{ $tr("total") }}</span>
             </div>
           </div>
         </div>
         <div v-else class="no-data">
-          <span>Nenhum dado disponível</span>
+          <span>{{ $tr("Nenhum dado disponível") }}</span>
         </div>
       </div>
     </div>
@@ -124,7 +124,7 @@
     <div v-if="showFullCalendar" class="calendar-modal-overlay" @click="closeFullCalendar">
       <div class="calendar-modal" @click.stop>
         <div class="modal-header">
-          <h2>Calendário de Folgas</h2>
+          <h2>{{ $tr("Calendário de Folgas") }}</h2>
           <button @click="closeFullCalendar" class="modal-close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -140,6 +140,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted, watch } from 'vue'
 import { vendorsAPI } from '@/services/api'
 import FolgasCalendarAdvanced from './FolgasCalendarAdvanced.vue'
@@ -207,21 +208,10 @@ const funcionariosComFolgas = computed(() => {
 })
 
 // Métodos
-const getCurrentMonth = () => {
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ]
-  return `${monthNames[currentMonth.value]} ${currentYear.value}`
-}
+const getCurrentMonth = () => new Date(currentYear.value,currentMonth.value,1).toLocaleDateString(uiLocale(),{month:'long',year:'numeric'})
 
-const getShortMonth = () => {
-  const shortMonths = [
-    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-  ]
-  return shortMonths[currentMonth.value]
-}
+const getShortMonth = () => new Date(currentYear.value,currentMonth.value,1).toLocaleDateString(uiLocale(),{month:'short'})
+const weekdayLabels = computed(() => Array.from({length:7},(_,day)=>new Date(2026,0,4+day).toLocaleDateString(uiLocale(),{weekday:'narrow'})))
 
 const previousMonth = () => {
   if (currentMonth.value === 0) {

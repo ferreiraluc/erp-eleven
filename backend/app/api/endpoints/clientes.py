@@ -6,9 +6,13 @@ from typing import List, Optional
 from ...database import get_db
 from ...models.cliente import Cliente
 from ...models.pedido import Pedido
+from ...models.rastreamento import Rastreamento, RastreamentoStatus
 from ...models.usuario import Usuario
 from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate
 from ...schemas.pedido import PedidoResponse
+from ...schemas.customer_links import CustomerLinkRequest, CustomerLogisticsResponse
+from ...schemas.rastreamento import RastreamentoComPedido
+from ...services.customer_links import customer_shipments, inherit_order_customer, validate_tracking_links, lock_tracking_row
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 
@@ -167,3 +171,63 @@ def listar_pedidos_do_cliente(
         .limit(limit)
         .all()
     )
+
+
+@router.get("/{cliente_id}/logistica", response_model=CustomerLogisticsResponse)
+def logistica_do_cliente(
+    cliente_id: str,
+    orders_skip: int = Query(0, ge=0),
+    shipments_skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    customer_id = validate_uuid(cliente_id)
+    if not db.get(Cliente, customer_id):
+        raise HTTPException(404, "Cliente não encontrado.")
+    orders = db.query(Pedido).filter(Pedido.cliente_id == customer_id)
+    shipments = customer_shipments(db, customer_id)
+    result = []
+    for row in shipments.order_by(Rastreamento.created_at.desc(), Rastreamento.id).offset(shipments_skip).limit(limit).all():
+        parcel = RastreamentoComPedido.model_validate(row)
+        if row.pedido:
+            parcel.numero_pedido = row.pedido.numero_pedido
+            parcel.cliente_nome_pedido = row.pedido.cliente_nome
+        result.append(parcel)
+    return CustomerLogisticsResponse(
+        order_total=orders.count(), shipment_total=shipments.count(),
+        in_transit=shipments.filter(Rastreamento.ativo == True, Rastreamento.status == RastreamentoStatus.EM_TRANSITO).count(),
+        delivered=shipments.filter(Rastreamento.ativo == True, Rastreamento.status == RastreamentoStatus.ENTREGUE).count(),
+        orders=orders.order_by(Pedido.created_at.desc(), Pedido.id).offset(orders_skip).limit(limit).all(),
+        shipments=result,
+    )
+
+
+@router.post("/{cliente_id}/vinculos")
+def vincular_ao_cliente(
+    cliente_id: str, link: CustomerLinkRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    customer_id = validate_uuid(cliente_id)
+    cliente = db.get(Cliente, customer_id)
+    if not cliente or not cliente.ativo:
+        raise HTTPException(404, "Cliente não encontrado ou inativo.")
+    if link.kind == "pedido":
+        order = db.query(Pedido).filter(Pedido.id == link.target_id).with_for_update().first()
+        if not order:
+            raise HTTPException(404, "Pedido não encontrado.")
+        if order.cliente_id and order.cliente_id != customer_id:
+            raise HTTPException(409, "O pedido já está vinculado a outro cliente. Revise o cadastro do pedido.")
+        order.cliente_id = customer_id
+        inherit_order_customer(db, order)
+    else:
+        row = lock_tracking_row(db, link.target_id)
+        if not row or not row.ativo:
+            raise HTTPException(404, "Rastreio não encontrado ou arquivado.")
+        if row.cliente_id and row.cliente_id != customer_id:
+            raise HTTPException(409, "O rastreio já está vinculado a outro cliente. Revise o cadastro do rastreio.")
+        validate_tracking_links(db, pedido_id=row.pedido_id, cliente_id=customer_id)
+        row.cliente_id = customer_id
+    db.commit()
+    return {"linked": True, "kind": link.kind, "target_id": link.target_id, "cliente_id": customer_id}

@@ -27,6 +27,13 @@ class UsuarioUpdate(BaseModel):
     senha: Optional[str] = None
 
 class UsuarioResponse(UsuarioBase):
+    # Historical bot identities use reserved internal domains. Validate real e-mail
+    # on input, but do not make listing those existing accounts fail serialization.
+    email: str
+    must_change_password: bool = False
+    sales_scope: str = "all"
+    sales_seller: Optional[str] = None
+    vendedor_id: Optional[uuid.UUID] = None
     id: uuid.UUID
     ultimo_login: Optional[datetime] = None
     created_at: datetime

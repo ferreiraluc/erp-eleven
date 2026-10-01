@@ -33,7 +33,7 @@ que já tenha a configuração principal. O backend também lê o Secret File
 | --- | --- | --- |
 | Banco/autenticação | `DATABASE_URL`, `SECRET_KEY`, `ALGORITHM`, `TIMEZONE`, `LOG_LEVEL` | API, sessões, logs e fuso |
 | Rastreio | `WONCA_API_KEY` | Atualização dos envios |
-| OCR de estoque | `ANTHROPIC_API_KEY` | Extração do fluxo de estoque; não é o modelo do bot |
+| Visão de imagens | `VISION_PROVIDER`, `DEEPSEEK_VISION_MODEL`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY` | OCR de estoque e comprovantes; `auto` prefere DeepSeek, com Anthropic opcional |
 | Assistente | `ASSISTANT_ENABLED`, `ASSISTANT_EMBEDDED_WORKER`, `ASSISTANT_DAILY_MESSAGES`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` | Worker, limite e modelo |
 | Telegram | `ASSISTANT_TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_GROUP_ID` | Grupo e webhook autenticado |
 | WhatsApp | `ASSISTANT_WHATSAPP_ENABLED`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `TWILIO_WEBHOOK_URL` | Adaptador individual Twilio, opcional |
@@ -41,7 +41,7 @@ que já tenha a configuração principal. O backend também lê o Secret File
 | Frontend | `VITE_API_BASE_URL` | URL pública da API, incorporada no build |
 
 `ACCESS_TOKEN_EXPIRE_MINUTES` era uma configuração antiga sem uso na criação do token.
-O login aplica a regra implementada em `_token_expiry`: meia-noite local sete dias à
+O login aplica a regra implementada em `user_sessions`: meia-noite local sete dias à
 frente, convertida para UTC. Alterar um valor antigo do ambiente não muda essa regra.
 
 A configuração OneDrive fica em `sales_bi_config`, pelo painel **Fontes**, somente ADMIN.
@@ -69,9 +69,14 @@ cópia local conectada à produção para testes. Veja [Arquitetura](ARQUITETURA
 4. Publique a revisão na branch configurada e acompanhe **Live** no Render para o commit correto.
 5. Confira `/health`, logs de migração, carregamento do frontend e os fluxos afetados.
 
-O fallback de criação de tabelas no startup é legado: sucesso HTTP não prova que todas
-as migrações foram aplicadas. Em falha de migração, investigar e corrigir por nova revisão;
+Falha de migração agora interrompe o startup; não há fallback silencioso de criação
+de tabelas. Em falha de migração, investigar e corrigir por nova revisão;
 não carimbar `head` em um esquema desconhecido para ocultar o problema.
+
+A migração de acesso invalida tokens legados sem identificação de sessão. Planeje um
+novo login e execute o provisionamento das cinco contas conforme
+[Acesso e auditoria](ACESSO_AUDITORIA.md), preservando os IDs das identidades do bot.
+Não redefina as senhas pessoais em uma atualização posterior.
 
 Retornar o código a uma revisão anterior não reverte banco, pagamentos ou impressões.
 Não executar downgrade destrutivo como reação automática a uma falha.

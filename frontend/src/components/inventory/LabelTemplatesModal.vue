@@ -6,7 +6,7 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" class="lt-header-icon">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <h3>Modelos de Etiqueta Treinados</h3>
+          <h3>{{ ocrText('savedExamples') }}</h3>
         </div>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
@@ -21,7 +21,7 @@
           @click="activeBrand = null"
           :class="['brand-tab', { active: activeBrand === null }]"
         >
-          Todas
+          {{ tr('Todas') }}
           <span class="brand-count">{{ templates.length }}</span>
         </button>
         <button
@@ -39,7 +39,7 @@
         <!-- Loading -->
         <div v-if="loading" class="lt-loading">
           <div class="lt-spinner"></div>
-          <p>Carregando modelos...</p>
+          <p>{{ tr('Carregando exemplos...') }}</p>
         </div>
 
         <!-- Empty -->
@@ -47,9 +47,9 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="#9ca3af" width="40" height="40">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <p v-if="activeBrand">Nenhum modelo treinado para <strong>{{ activeBrand }}</strong>.</p>
-          <p v-else>Nenhum modelo treinado ainda.</p>
-          <p class="lt-empty-hint">Use "Treinar IA" no leitor de etiquetas para salvar exemplos.</p>
+          <p v-if="activeBrand">{{ ocrText('noExamplesFor') }} <strong>{{ activeBrand }}</strong>.</p>
+          <p v-else>{{ ocrText('noExamples') }}</p>
+          <p class="lt-empty-hint">{{ ocrText('useSaveExample') }}</p>
         </div>
 
         <!-- Templates grid -->
@@ -66,7 +66,7 @@
                 v-if="tpl.sample_image"
                 :src="ensureDataUrl(tpl.sample_image)"
                 class="lt-thumb"
-                alt="etiqueta"
+                :alt="tr('etiqueta')"
                 @click="openPreview(tpl)"
               />
               <div v-else class="lt-thumb-placeholder">
@@ -85,23 +85,23 @@
 
               <div class="lt-fields">
                 <span v-if="tpl.parsed_name" class="lt-field">
-                  <span class="lt-field-label">Nome</span>
+                  <span class="lt-field-label">{{ tr('Nome') }}</span>
                   <span class="lt-field-val">{{ tpl.parsed_name }}</span>
                 </span>
                 <span v-if="tpl.parsed_size" class="lt-field">
-                  <span class="lt-field-label">Tam.</span>
+                  <span class="lt-field-label">{{ tr('Tam.') }}</span>
                   <span class="lt-field-val">{{ tpl.parsed_size }}</span>
                 </span>
                 <span v-if="tpl.parsed_color" class="lt-field">
-                  <span class="lt-field-label">Cor</span>
+                  <span class="lt-field-label">{{ tr('Cor') }}</span>
                   <span class="lt-field-val">{{ tpl.parsed_color }}</span>
                 </span>
                 <span v-if="tpl.parsed_barcode" class="lt-field">
-                  <span class="lt-field-label">Barcode</span>
+                  <span class="lt-field-label">{{ tr('Barcode') }}</span>
                   <span class="lt-field-val lt-mono">{{ tpl.parsed_barcode }}</span>
                 </span>
                 <span v-if="tpl.parsed_price" class="lt-field">
-                  <span class="lt-field-label">Preço</span>
+                  <span class="lt-field-label">{{ tr('Preço') }}</span>
                   <span class="lt-field-val">{{ tpl.parsed_price }}{{ tpl.parsed_currency ? ' ' + tpl.parsed_currency : '' }}</span>
                 </span>
               </div>
@@ -119,7 +119,7 @@
               class="lt-delete-btn"
               @click="confirmDelete(tpl)"
               :disabled="deletingId === tpl.id"
-              title="Excluir modelo"
+              :title="tr('Excluir exemplo')"
             >
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -135,16 +135,16 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Mais modelos por marca = maior precisão na leitura
+          {{ tr('Os exemplos auxiliam a leitura; sempre revise os dados extraídos.') }}
         </span>
-        <button @click="emit('close')" class="btn-close-footer">Fechar</button>
+        <button @click="emit('close')" class="btn-close-footer">{{ tr('Fechar') }}</button>
       </div>
     </div>
   </div>
 
   <!-- Image preview lightbox -->
   <div v-if="previewImage" class="lt-lightbox" @click="previewImage = null">
-    <img :src="previewImage" class="lt-lightbox-img" alt="etiqueta" />
+    <img :src="previewImage" class="lt-lightbox-img" :alt="tr('etiqueta')" />
     <button class="lt-lightbox-close" @click="previewImage = null">
       <svg fill="none" viewBox="0 0 24 24" stroke="white" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -155,12 +155,12 @@
   <!-- Delete confirmation dialog -->
   <div v-if="deleteTarget" class="lt-confirm-overlay" @click.self="deleteTarget = null">
     <div class="lt-confirm-box">
-      <p>Excluir modelo de <strong>{{ deleteTarget.brand }}</strong>?</p>
-      <p class="lt-confirm-sub">Esta ação não pode ser desfeita. A IA perderá este exemplo de treinamento.</p>
+      <p>{{ tr('Excluir exemplo de {brand}?', { brand: deleteTarget.brand }) }}</p>
+      <p class="lt-confirm-sub">{{ tr('Esta ação não pode ser desfeita. O exemplo deixará de ser usado como referência.') }}</p>
       <div class="lt-confirm-actions">
-        <button @click="deleteTarget = null" class="btn-ghost-sm">Cancelar</button>
+        <button @click="deleteTarget = null" class="btn-ghost-sm">{{ tr('Cancelar') }}</button>
         <button @click="doDelete" class="btn-danger-sm" :disabled="deletingId !== null">
-          {{ deletingId ? 'Excluindo...' : 'Excluir' }}
+          {{ deletingId ? tr('Excluindo...') : tr('Excluir') }}
         </button>
       </div>
     </div>
@@ -168,8 +168,13 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, computed, onMounted } from 'vue'
 import { ocrAPI } from '@/services/api'
+import { useI18n } from 'vue-i18n'
+import { ocrMessages } from './ocrMessages'
+const { t: ocrText, locale } = useI18n({ useScope: 'local', messages: ocrMessages })
 
 interface LabelTemplate {
   id: string
@@ -212,7 +217,7 @@ function ensureDataUrl(img: string): string {
 function formatDate(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  return d.toLocaleDateString(locale.value, { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 function openPreview(tpl: LabelTemplate) {

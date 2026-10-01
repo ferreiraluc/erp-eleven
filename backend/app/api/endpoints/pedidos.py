@@ -13,6 +13,9 @@ from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 from ...utils import generate_order_number, validate_brazilian_cep, validate_brazilian_phone
 from ...services.rastreamento_sync import RastreamentoSyncService
+from ...services.customer_links import validate_order_customer, inherit_order_customer
+from ...models.rastreamento import Rastreamento
+from ...schemas.rastreamento import RastreamentoResponse
 
 MAX_ANEXOS_POR_PEDIDO = 10
 MAX_TAMANHO_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -20,11 +23,14 @@ TIPOS_PERMITIDOS = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
 
 def _sync_cliente_fields(db_pedido: Pedido, cliente: Cliente) -> None:
-    """Copia dados do Cliente para os campos inline do Pedido."""
-    db_pedido.cliente_nome = cliente.nome
-    db_pedido.cliente_telefone = cliente.telefone
-    db_pedido.cliente_email = cliente.email
-    if cliente.endereco:
+    """Fill missing snapshots; linking alone does not rewrite the shipping address."""
+    if not db_pedido.cliente_nome:
+        db_pedido.cliente_nome = cliente.nome
+    if not db_pedido.cliente_telefone:
+        db_pedido.cliente_telefone = cliente.telefone
+    if not db_pedido.cliente_email:
+        db_pedido.cliente_email = cliente.email
+    if not db_pedido.endereco_entrega and cliente.endereco:
         db_pedido.endereco_entrega = cliente.endereco
 
 router = APIRouter()
@@ -160,19 +166,20 @@ def atualizar_pedido(
 ):
     """Update order"""
     pedido_uuid = validate_uuid(pedido_id)
-    db_pedido = db.query(Pedido).options(joinedload(Pedido.tags)).filter(Pedido.id == pedido_uuid).first()
+    db_pedido = db.query(Pedido).filter(Pedido.id == pedido_uuid).with_for_update().first()
     if not db_pedido:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found"
         )
 
-    # Se cliente_id fornecido, valida e sincroniza campos
+    cliente_obj = None
+    # An explicit link is validated independently of name/address snapshots.
     if pedido_update.cliente_id is not None:
         cliente_obj = db.query(Cliente).filter(Cliente.id == pedido_update.cliente_id, Cliente.ativo == True).first()
         if not cliente_obj:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
-        _sync_cliente_fields(db_pedido, cliente_obj)
+        validate_order_customer(db, db_pedido, pedido_update.cliente_id)
 
     # Basic validation
     update_data = pedido_update.dict(exclude_unset=True, exclude={"tag_ids"})
@@ -192,6 +199,10 @@ def atualizar_pedido(
     # Update fields
     for field, value in update_data.items():
         setattr(db_pedido, field, value)
+    if cliente_obj:
+        _sync_cliente_fields(db_pedido, cliente_obj)
+    if "cliente_id" in update_data:
+        inherit_order_customer(db, db_pedido)
 
     # Update tags if provided
     if pedido_update.tag_ids is not None:
@@ -215,6 +226,22 @@ def atualizar_pedido(
     db.commit()
     db.refresh(db_pedido)
     return db_pedido
+
+
+@router.get("/{pedido_id}/rastreamentos", response_model=List[RastreamentoResponse])
+def listar_pacotes_do_pedido(
+    pedido_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    pedido_uuid = validate_uuid(pedido_id)
+    if not db.get(Pedido, pedido_uuid):
+        raise HTTPException(404, "Pedido não encontrado.")
+    return db.query(Rastreamento).filter(Rastreamento.pedido_id == pedido_uuid).order_by(
+        Rastreamento.created_at.desc(), Rastreamento.id,
+    ).offset(skip).limit(limit).all()
 
 @router.delete("/{pedido_id}")
 def excluir_pedido(

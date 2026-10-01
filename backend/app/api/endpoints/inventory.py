@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime, date
 import uuid
 import re
@@ -29,7 +29,7 @@ from ...schemas.inventory import (
     BulkTransferRequest,
 )
 from ...dependencies import get_current_active_user, require_role
-from ...services.inventory_service import create_movement, apply_session, _compute_alert_level
+from ...services.inventory_service import create_movement, apply_session, _compute_alert_level, StockMovementError
 from ..validators import validate_uuid
 from datetime import datetime as dt
 
@@ -644,7 +644,7 @@ def batch_edit_items(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
-    items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
+    items = db.query(Item).filter(Item.id.in_(request.item_ids)).order_by(Item.id).with_for_update().all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found")
 
@@ -687,10 +687,7 @@ def batch_edit_items(
             if entry.sale_price is not None:
                 item.sale_price = entry.sale_price
 
-    db.commit()
-
-    # Stock adjustments — run after main commit so item state is persisted
-    has_stock_changes = False
+    # Metadata and stock changes share one transaction. A failed exit rolls back both.
     for item in items:
         entry = per_item_map.get(str(item.id))
         # Per-item delta takes precedence over shared delta
@@ -703,20 +700,21 @@ def batch_edit_items(
         else:
             continue
 
-        movement_type = "entry" if delta > 0 else "exit"
-        create_movement(
-            db=db,
-            item_id=item.id,
-            movement_type=movement_type,
-            quantity=abs(delta),
-            reason=reason,
-            created_by=current_user.id,
-            location="loja",
-        )
-        has_stock_changes = True
-
-    if has_stock_changes:
-        db.commit()
+        try:
+            movement_type = "entry" if delta > 0 else "exit"
+            create_movement(
+                db=db,
+                item_id=item.id,
+                movement_type=movement_type,
+                quantity=abs(delta),
+                reason=reason,
+                created_by=current_user.id,
+                location="loja",
+            )
+        except StockMovementError as error:
+            db.rollback()
+            raise HTTPException(error.status_code, str(error)) from None
+    db.commit()
 
     return {"message": f"Updated {len(items)} items", "count": len(items)}
 
@@ -736,25 +734,21 @@ def bulk_transfer_items(
         raise HTTPException(status_code=400, detail="Invalid direction. Use 'deposito_to_loja' or 'loja_to_deposito'")
 
     count = 0
-    for entry in request.items:
-        if entry.quantity <= 0:
-            continue
-        try:
-            create_movement(
-                db=db,
-                item_id=entry.item_id,
-                movement_type="transfer",
-                quantity=entry.quantity,
-                created_by=current_user.id,
-                reason=request.reason or f"Transferência {loc_from} → {loc_to}",
-                location_from=loc_from,
-                location_to=loc_to,
-            )
+    try:
+        # Stable row-lock order and one transaction prevent partial transfers.
+        for entry in sorted(request.items, key=lambda item: str(item.item_id)):
+            create_movement(db=db, item_id=entry.item_id, movement_type="transfer",
+                            quantity=entry.quantity, created_by=current_user.id,
+                            reason=request.reason or f"Transferência {loc_from} → {loc_to}",
+                            location_from=loc_from, location_to=loc_to)
             count += 1
-        except ValueError:
-            continue
-
-    db.commit()
+        db.commit()
+    except StockMovementError as error:
+        db.rollback()
+        raise HTTPException(error.status_code, str(error)) from None
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(404, str(error)) from None
     return {"message": f"Transferred {count} items", "count": count}
 
 
@@ -774,7 +768,7 @@ def delete_item(
 
 
 class QuickExitRequest(BaseModel):
-    location: Optional[str] = "loja"
+    location: Optional[Literal["loja", "deposito"]] = "loja"
 
 @router.post("/items/{item_id}/quick-exit")
 def quick_exit(
@@ -796,6 +790,9 @@ def quick_exit(
             location=location,
         )
         db.commit()
+    except StockMovementError as error:
+        db.rollback()
+        raise HTTPException(error.status_code, str(error)) from None
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"message": "Quick exit registered", "new_stock": movement.quantity_after, "location": location}
@@ -828,6 +825,9 @@ def create_movement_endpoint(
         db.commit()
         db.refresh(mv)
         return mv
+    except StockMovementError as error:
+        db.rollback()
+        raise HTTPException(error.status_code, str(error)) from None
     except ValueError as e:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(e))
@@ -844,7 +844,7 @@ def create_batch_movements(
 ):
     movements = []
     try:
-        for item_data in batch.items:
+        for item_data in sorted(batch.items, key=lambda item: str(item.item_id)):
             mv = create_movement(
                 db=db,
                 item_id=item_data.item_id,
@@ -857,6 +857,9 @@ def create_batch_movements(
             )
             movements.append(mv)
         db.commit()
+    except StockMovementError as error:
+        db.rollback()
+        raise HTTPException(error.status_code, str(error)) from None
     except ValueError as e:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(e))
@@ -1015,6 +1018,9 @@ def apply_session_endpoint(
     session_uuid = validate_uuid(session_id)
     try:
         movements = apply_session(db=db, session_id=session_uuid, created_by=current_user.id)
+    except StockMovementError as error:
+        db.rollback()
+        raise HTTPException(error.status_code, str(error)) from None
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"message": f"Session applied with {len(movements)} adjustments"}
@@ -1088,6 +1094,8 @@ async def import_csv(
                 sku = _generate_sku()
 
             initial_stock = int(float(row.get("initial_stock") or row.get("estoque_inicial") or 0))
+            if initial_stock < 0:
+                raise ValueError("Estoque inicial não pode ser negativo.")
             unit_raw = (row.get("unit") or row.get("unidade") or "un").strip().lower()
 
             db_item = Item(
@@ -1106,6 +1114,8 @@ async def import_csv(
                 min_stock=int(float(row.get("min_stock") or row.get("estoque_minimo") or 0)),
                 max_stock=int(float(row.get("max_stock") or row.get("estoque_maximo") or 0)),
                 current_stock=initial_stock,
+                stock_loja=initial_stock,
+                stock_deposito=0,
                 is_active=True,
                 created_by=current_user.id,
             )
@@ -1219,6 +1229,8 @@ async def import_nfe(
                 unit = category_unit
 
             initial_stock = int(float(_txt(prod, "qCom", "0").replace(",", ".")))
+            if initial_stock < 0:
+                raise ValueError("Estoque inicial não pode ser negativo.")
             cost_price = float(_txt(prod, "vUnCom", "0").replace(",", "."))
 
             sku = _generate_sku()
@@ -1236,6 +1248,8 @@ async def import_nfe(
                 sale_price=cost_price,
                 currency=currency,
                 current_stock=initial_stock,
+                stock_loja=initial_stock,
+                stock_deposito=0,
                 is_active=True,
                 created_by=current_user.id,
             )

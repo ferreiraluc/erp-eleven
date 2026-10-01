@@ -6,7 +6,7 @@ from sqlalchemy import or_, cast, String, func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from ...database import get_db
-from ...dependencies import require_role
+from ...dependencies import require_role, require_owner
 from ...models.address_book import SavedAddress, PrintLayout
 from ...models.printing import PrintJob, PrintDevice, PrintSender
 from ...models.cliente import Cliente
@@ -19,6 +19,7 @@ from ...services.address_book import save_or_reuse, edit_address, resolve_addres
 from ...services.assistant_printing import render_address
 from ...services.sender_addresses import sender_address
 from ...services.postal_codes import complete_address
+from ...services.sender_generator import GeneratePersonArgs, ImportPersonArgs, SaveGeneratedSenderArgs
 
 router=APIRouter()
 manager=require_role(['ADMIN','GERENTE'])
@@ -90,7 +91,31 @@ def address_usage(key:uuid.UUID,offset:int=Query(0,ge=0),limit:int=Query(30,ge=1
 
 @router.get('/senders')
 def senders(user=Depends(manager),db:Session=Depends(get_db)):
-    return [{'id':r.id,'name':r.name,'lines':r.lines,'data':sender_address(r),'active':r.active,'version':r.version} for r in db.query(PrintSender).order_by(PrintSender.name)]
+    return [{'id':r.id,'name':r.name,'lines':r.lines,'data':sender_address(r),'active':r.active,'version':r.version,
+             'synthetic':bool((r.data or {}).get('_generator',{}).get('synthetic')),
+             'source':(r.data or {}).get('_generator',{}).get('source')} for r in db.query(PrintSender).order_by(PrintSender.name)]
+
+
+@router.post('/sender-generator/generate')
+def generate_sender_preview(body:GeneratePersonArgs,response:Response,user=Depends(require_owner)):
+    from ...services.sender_generator import generate_person
+    response.headers['Cache-Control']='no-store'
+    return generate_person(body,user.id)
+
+
+@router.post('/sender-generator/import')
+def import_sender_preview(body:ImportPersonArgs,response:Response,user=Depends(require_owner)):
+    from ...services.sender_generator import import_person
+    response.headers['Cache-Control']='no-store'
+    return import_person(body)
+
+
+@router.post('/sender-generator/save')
+def save_sender_preview(body:SaveGeneratedSenderArgs,user=Depends(require_owner),db:Session=Depends(get_db)):
+    from ...services.sender_generator import save_generated_sender
+    result=save_generated_sender(db,user,body)
+    db.commit()
+    return result
 
 
 @router.post('/senders')
@@ -104,7 +129,10 @@ def update_sender(key:str,body:SenderInput,user=Depends(manager),db:Session=Depe
     row=db.query(PrintSender).filter_by(id=key).with_for_update().first()
     if not row:raise HTTPException(404,'Remetente não encontrado.')
     if row.version!=body.version:raise HTTPException(409,'Remetente alterado por outra pessoa. Atualize.')
-    row.name=body.name;row.lines=body.lines;row.data=body.data.model_dump() if body.data else None;row.active=body.active;row.version+=1
+    provenance=(row.data or {}).get('_generator')
+    data=body.data.model_dump() if body.data else None
+    if provenance:data={**(data or {}),'_generator':provenance}
+    row.name=body.name;row.lines=body.lines;row.data=data;row.active=body.active;row.version+=1
     db.commit();return {'id':row.id,'version':row.version}
 
 

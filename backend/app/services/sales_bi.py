@@ -94,3 +94,30 @@ def sources_status(db):
             'sources': [{'id': r.id, 'filename': r.filename, 'kind': r.kind, 'year': r.year, 'month': r.month,
                          'synced_at': r.synced_at, 'checked_at': r.checked_at, 'error': r.error, 'selected': r.id in used,
                          'has_data': bool(r.snapshot), 'warnings': r.snapshot.get('warnings', []) if r.snapshot else []} for r in rows]}
+
+
+def private_workbooks(rows, seller):
+    """Project before aggregation: never expose colleagues through rankings/warnings/totals."""
+    from types import SimpleNamespace
+    from copy import deepcopy
+    projected = []
+    for row in rows:
+        if not row.snapshot:
+            projected.append(row)
+            continue
+        snapshot = deepcopy(row.snapshot)
+        mine = snapshot.get('sellers', {}).get(seller, {})
+        snapshot['sellers'] = {seller: mine}
+        snapshot['total_usd'] = mine.get('total_usd')
+        snapshot['source_cell'] = mine.get('source_cell')
+        snapshot['warnings'] = []
+        if snapshot.get('entries'):
+            snapshot['entries']['rows'] = [entry for entry in snapshot['entries'].get('rows', []) if entry.get('seller') == seller]
+            snapshot['entries']['diagnostics'] = []
+        for week in snapshot.get('weeks', []):
+            amount = week.get('sellers', {}).get(seller)
+            week['sellers'] = {seller: amount}
+            week['total_usd'] = amount
+        projected.append(SimpleNamespace(**{name: getattr(row, name) for name in
+            ('id', 'active', 'year', 'month', 'kind', 'remote_version', 'filename', 'synced_at', 'error')}, snapshot=snapshot))
+    return projected

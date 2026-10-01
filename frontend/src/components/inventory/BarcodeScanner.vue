@@ -2,7 +2,7 @@
   <div class="barcode-scanner-overlay" @click.self="emit('close')">
     <div class="barcode-scanner-modal">
       <div class="scanner-header">
-        <h3>Escanear Código</h3>
+        <h3>{{ tr('Escanear Código') }}</h3>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -14,42 +14,44 @@
         <div v-if="!cameraError" class="camera-container">
           <div id="qr-reader" class="qr-reader"></div>
           <div class="scan-line"></div>
-          <p class="scanner-hint">Aponte a câmera para o código de barras</p>
+          <p class="scanner-hint">{{ tr('Aponte a câmera para o código de barras') }}</p>
         </div>
 
         <div v-if="cameraError" class="camera-error">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48" class="error-icon">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <p>Câmera não disponível</p>
+          <p>{{ tr('Câmera não disponível') }}</p>
         </div>
 
         <div class="manual-entry">
-          <label class="manual-label">Ou insira o código manualmente:</label>
+          <label class="manual-label">{{ tr('Ou insira o código manualmente:') }}</label>
           <div class="manual-input-row">
             <input
               v-model="manualCode"
               type="text"
-              placeholder="Código de barras..."
+              :placeholder="tr('Código de barras...')"
               class="manual-input"
               @keyup.enter="submitManual"
               ref="manualInputRef"
             />
             <button @click="submitManual" class="manual-btn" :disabled="!manualCode.trim()">
-              Buscar
+              {{ tr('Buscar') }}
             </button>
           </div>
         </div>
       </div>
 
       <div v-if="timeoutWarning" class="timeout-warning">
-        Sem detecção. Use o campo manual acima.
+        {{ tr('Sem detecção. Use o campo manual acima.') }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const emit = defineEmits<{

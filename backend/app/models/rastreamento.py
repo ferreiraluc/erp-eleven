@@ -43,7 +43,8 @@ class Rastreamento(Base):
     custo_emissao = Column(DECIMAL(10, 2), nullable=True)
     
     # Relacionamento com pedidos
-    pedido_id = Column(UUID(as_uuid=True), ForeignKey('pedidos.id'), nullable=True)
+    pedido_id = Column(UUID(as_uuid=True), ForeignKey('pedidos.id'), nullable=True, index=True)
+    cliente_id = Column(UUID(as_uuid=True), ForeignKey('clientes.id'), nullable=True, index=True)
     
     # Metadados
     data_criacao = Column(Date, default=func.current_date())
@@ -56,4 +57,5 @@ class Rastreamento(Base):
     
     # Relacionamentos
     pedido = relationship("Pedido", back_populates="rastreamentos")
+    cliente = relationship("Cliente", foreign_keys=[cliente_id])
     criado_por = relationship("Usuario", back_populates="rastreamentos_criados")

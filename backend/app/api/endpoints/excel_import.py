@@ -16,7 +16,13 @@ from ...services.excel_import_service import ExcelImportService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+from ...services.access_policy import require_all_sales
+
+def all_sales(user=Depends(get_current_active_user)):
+    require_all_sales(user)
+    return user
+
+router = APIRouter(dependencies=[Depends(all_sales)])
 
 class OneDriveImportRequest(BaseModel):
     file_path: str

@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Importar Estoque</h2>
+        <h2>{{ tr('Importar Estoque') }}</h2>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -13,7 +13,7 @@
       <!-- Type selector -->
       <div class="type-tabs">
         <button @click="importType = 'csv'" :class="['type-tab', { active: importType === 'csv' }]">
-          CSV / Planilha
+          {{ tr('CSV / Planilha') }}
         </button>
         <button @click="importType = 'nfe'" :class="['type-tab', { active: importType === 'nfe' }]">
           NF-e XML
@@ -24,10 +24,10 @@
         <!-- CSV info -->
         <template v-if="importType === 'csv'">
           <div class="info-box">
-            <p>O arquivo CSV deve ter cabeçalhos em português ou inglês. Colunas aceitas:</p>
+            <p>{{ tr('O arquivo CSV deve ter cabeçalhos em português ou inglês. Colunas aceitas:') }}</p>
             <code>nome, categoria, tamanho, cor, unidade, codigo_barras, custo, preco_venda, moeda, estoque_minimo, estoque_maximo, localizacao, estoque_inicial</code>
             <button @click="downloadTemplate" class="download-link">
-              Baixar template CSV
+              {{ tr('Baixar template CSV') }}
             </button>
           </div>
         </template>
@@ -35,20 +35,20 @@
         <!-- NF-e config panel -->
         <template v-if="importType === 'nfe'">
           <div class="info-box">
-            <p>Campos extraídos: nome (xProd), código EAN, unidade, quantidade, valor unitário.</p>
+            <p>{{ tr('Campos extraídos: nome (xProd), código EAN, unidade, quantidade, valor unitário.') }}</p>
           </div>
 
           <div class="config-panel">
-            <h4 class="config-title">Configurações da importação</h4>
+            <h4 class="config-title">{{ tr('Configurações da importação') }}</h4>
 
             <!-- Category -->
             <div class="config-row">
-              <label class="config-label">Categoria dos produtos</label>
+              <label class="config-label">{{ tr('Categoria dos produtos') }}</label>
               <input
                 v-model="nfeConfig.category"
                 type="text"
                 class="config-input"
-                placeholder="Ex: Calçados, Camisetas, Acessórios..."
+                :placeholder="tr('Ex: Calçados, Camisetas, Acessórios...')"
                 list="category-suggestions"
               />
               <datalist id="category-suggestions">
@@ -65,23 +65,23 @@
 
             <!-- Currency -->
             <div class="config-row">
-              <label class="config-label">Moeda do XML</label>
+              <label class="config-label">{{ tr('Moeda do XML') }}</label>
               <select v-model="nfeConfig.currency" class="config-select">
-                <option value="BRL">R$ — Real Brasileiro</option>
-                <option value="USD">U$ — Dólar Americano</option>
-                <option value="PYG">G$ — Guarani Paraguaio</option>
-                <option value="EUR">€ — Euro</option>
+                <option value="BRL">{{ tr('R$ — Real Brasileiro') }}</option>
+                <option value="USD">{{ tr('U$ — Dólar Americano') }}</option>
+                <option value="PYG">{{ tr('G$ — Guarani Paraguaio') }}</option>
+                <option value="EUR">{{ tr('€ — Euro') }}</option>
               </select>
             </div>
 
             <!-- Split info (always active) -->
             <div class="split-preview">
-              <span class="preview-label">Separação automática:</span>
+              <span class="preview-label">{{ tr('Separação automática:') }}</span>
               <span class="preview-text">
                 <strong>xProd:</strong> "TENIS ADIDAS PRETO VERNIZ"
                 &rarr;
-                <strong>Nome:</strong> "Tenis Adidas" &nbsp;·&nbsp;
-                <strong>Cor:</strong> "Preto Verniz"
+                <strong>{{ tr('Nome:') }}</strong> "Tenis Adidas" &nbsp;·&nbsp;
+                <strong>{{ tr('Cor:') }}</strong> "Preto Verniz"
               </span>
             </div>
           </div>
@@ -107,45 +107,45 @@
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32" class="drop-icon">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <p>Arraste o arquivo aqui ou <span class="click-link">clique para selecionar</span></p>
-            <p class="file-hint">{{ importType === 'csv' ? 'Arquivo .csv ou .txt' : 'Arquivo .xml da NF-e' }}</p>
+            <p>{{ tr('Arraste o arquivo aqui ou') }} <span class="click-link">{{ tr('clique para selecionar') }}</span></p>
+            <p class="file-hint">{{ importType === 'csv' ? tr('Arquivo .csv ou .txt') : tr('Arquivo .xml da NF-e') }}</p>
           </template>
           <template v-else>
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28" class="file-icon">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p class="file-name">{{ selectedFile.name }}</p>
-            <button @click.stop="selectedFile = null; result = null" class="remove-file">× remover</button>
+            <button @click.stop="selectedFile = null; result = null" class="remove-file">{{ tr('× remover') }}</button>
           </template>
         </div>
 
         <!-- Result -->
         <div v-if="result" class="result-box" :class="{ success: result.created > 0, warning: result.skipped > 0 }">
-          <p><strong>{{ result.created }}</strong> iten{{ result.created !== 1 ? 's' : '' }} criado{{ result.created !== 1 ? 's' : '' }}</p>
-          <p v-if="result.skipped > 0" class="skipped">{{ result.skipped }} ignorado{{ result.skipped !== 1 ? 's' : '' }}</p>
+          <p>{{ tr('Itens criados: {count}', { count: result.created }) }}</p>
+          <p v-if="result.skipped > 0" class="skipped">{{ tr('Itens ignorados: {count}', { count: result.skipped }) }}</p>
           <ul v-if="result.errors.length > 0" class="error-list">
-            <li v-for="e in result.errors" :key="e">{{ e }}</li>
+            <li v-for="e in result.errors" :key="e">{{ tr(e) }}</li>
           </ul>
         </div>
 
         <div v-if="uploading" class="uploading">
           <div class="spinner"></div>
-          <p>Importando...</p>
+          <p>{{ tr('Importando...') }}</p>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary">{{ result ? 'Fechar' : 'Cancelar' }}</button>
+        <button @click="emit('close')" class="btn btn-secondary">{{ result ? tr('Fechar') : tr('Cancelar') }}</button>
         <button
           v-if="!result"
           @click="handleImport"
           class="btn btn-primary"
           :disabled="!selectedFile || uploading"
         >
-          {{ uploading ? 'Importando...' : 'Importar' }}
+          {{ uploading ? tr('Importando...') : tr('Importar') }}
         </button>
         <button v-if="result && result.created > 0" @click="emit('imported'); emit('close')" class="btn btn-primary">
-          Ver itens importados
+          {{ tr('Ver itens importados') }}
         </button>
       </div>
     </div>
@@ -153,6 +153,8 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, reactive } from 'vue'
 import { inventoryAPI } from '@/services/api'
 

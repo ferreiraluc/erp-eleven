@@ -17,8 +17,8 @@
       <div class="header-actions">
         <!-- Language Selector -->
         <div class="language-selector">
-          <button 
-            @click="showLanguageDropdown = !showLanguageDropdown" 
+          <button
+            @click="showLanguageDropdown = !showLanguageDropdown"
             class="language-button"
           >
             <span class="language-flag">{{ currentLocale.flag }}</span>
@@ -27,10 +27,10 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
           </button>
-          
+
           <div v-if="showLanguageDropdown" class="language-dropdown">
-            <button 
-              v-for="lang in availableLocales" 
+            <button
+              v-for="lang in availableLocales"
               :key="lang.code"
               @click="handleLanguageChange(lang.code)"
               class="language-option"
@@ -41,7 +41,7 @@
             </button>
           </div>
         </div>
-        
+
         <button @click="showQuickUpdateModal = true" class="btn btn-primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -85,16 +85,16 @@
           <option value="30">{{ $t('exchangeManagement.last30Days') }}</option>
         </select>
       </div>
-      
+
       <div v-if="salesAverage" class="average-card">
         <div class="average-info">
           <div class="average-rate">
             <span class="average-label">{{ $t('exchangeManagement.recommendedRate') }}</span>
-            <span class="average-value">{{ salesAverage.average_rate?.toFixed(4) }}</span>
+            <span class="average-value">{{ uiNumber(salesAverage.average_rate,4) }}</span>
           </div>
           <div class="average-details">
-            <span class="detail-item">{{ $t('exchangeManagement.min') }}: {{ salesAverage.min_rate?.toFixed(4) }}</span>
-            <span class="detail-item">{{ $t('exchangeManagement.max') }}: {{ salesAverage.max_rate?.toFixed(4) }}</span>
+            <span class="detail-item">{{ $t('exchangeManagement.min') }}: {{ uiNumber(salesAverage.min_rate,4) }}</span>
+            <span class="detail-item">{{ $t('exchangeManagement.max') }}: {{ uiNumber(salesAverage.max_rate,4) }}</span>
             <span class="detail-item">{{ salesAverage.sample_count }} {{ $t('exchangeManagement.changes') }}</span>
           </div>
         </div>
@@ -129,13 +129,13 @@
       </div>
 
       <div v-else-if="historyError" class="error-state">
-        <div class="error-icon">[ERROR]</div>
+        <div class="error-icon" aria-hidden="true">⚠</div>
         <p>{{ historyError }}</p>
         <button @click="loadHistory" class="btn btn-primary">{{ $t('exchangeManagement.tryAgain') }}</button>
       </div>
 
       <div v-else-if="historicalRates.length === 0" class="empty-state">
-        <div class="empty-icon">[CHART]</div>
+        <div class="empty-icon" aria-hidden="true">▥</div>
         <p>{{ $t('exchangeManagement.noHistory') }}</p>
       </div>
 
@@ -162,13 +162,13 @@
               </td>
               <td class="rate-cell">
                 <span v-if="editingRate?.id !== rate.id" class="rate-display">
-                  {{ Number(rate.rate).toFixed(4) }}
+                  {{ uiNumber(rate.rate,4) }}
                 </span>
-                <input 
-                  v-else 
-                  v-model="editingRate.rate" 
-                  type="number" 
-                  step="0.0001" 
+                <input
+                  v-else
+                  v-model="editingRate.rate"
+                  type="number"
+                  step="0.0001"
                   class="rate-input"
                   @keyup.enter="saveEditedRate"
                   @keyup.escape="cancelEdit"
@@ -176,10 +176,10 @@
               </td>
               <td>
                 <span v-if="editingRate?.id !== rate.id" class="source-display">{{ rate.source || $t('exchangeManagement.na') }}</span>
-                <input 
-                  v-else 
-                  v-model="editingRate.source" 
-                  type="text" 
+                <input
+                  v-else
+                  v-model="editingRate.source"
+                  type="text"
                   class="source-input"
                   :placeholder="$t('exchangeManagement.source')"
                 >
@@ -198,9 +198,9 @@
               </td>
               <td class="actions-cell">
                 <div class="action-buttons">
-                  <button 
-                    v-if="editingRate?.id !== rate.id && !rate.is_active" 
-                    @click="startEdit(rate)" 
+                  <button
+                    v-if="editingRate?.id !== rate.id && !rate.is_active"
+                    @click="startEdit(rate)"
                     class="btn-icon edit"
                     :title="$t('exchangeManagement.editRate')"
                   >
@@ -208,7 +208,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
                   </button>
-                  
+
                   <template v-if="editingRate?.id === rate.id">
                     <button @click="saveEditedRate" class="btn-icon save" :title="$t('exchangeManagement.saveChanges')">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -221,10 +221,10 @@
                       </svg>
                     </button>
                   </template>
-                  
-                  <button 
-                    v-if="editingRate?.id !== rate.id && !rate.is_active" 
-                    @click="confirmDelete(rate)" 
+
+                  <button
+                    v-if="editingRate?.id !== rate.id && !rate.is_active"
+                    @click="confirmDelete(rate)"
                     class="btn-icon delete"
                     :title="$t('exchangeManagement.deleteRate')"
                   >
@@ -304,7 +304,7 @@
           <p>{{ $t('exchangeManagement.deleteConfirmation') }}</p>
           <div class="delete-details">
             <p><strong>{{ $t('exchangeManagement.currency') }}:</strong> {{ formatCurrencyPair(rateToDelete?.currency_pair) }}</p>
-            <p><strong>{{ $t('exchangeManagement.rate') }}:</strong> {{ Number(rateToDelete?.rate).toFixed(4) }}</p>
+            <p><strong>{{ $t('exchangeManagement.rate') }}:</strong> {{ uiNumber(rateToDelete?.rate,4) }}</p>
             <p><strong>{{ $t('exchangeManagement.date') }}:</strong> {{ formatDateLocal(rateToDelete?.created_at) }}</p>
           </div>
           <p class="warning-text">{{ $t('exchangeManagement.warning') }}</p>
@@ -322,13 +322,13 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
-import { formatDate } from '@/utils/datetime'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -379,12 +379,12 @@ const placeholders = computed(() => {
   if (!currentRates.value) {
     return {
       usd_to_pyg: '7500.00',
-      usd_to_brl: '5.85', 
+      usd_to_brl: '5.85',
       eur_to_usd: '1.0850',
       eur_to_brl: '6.20'
     }
   }
-  
+
   return {
     usd_to_pyg: currentRates.value.usd_to_pyg ? Number(currentRates.value.usd_to_pyg).toFixed(2) : '7500.00',
     usd_to_brl: currentRates.value.usd_to_brl ? Number(currentRates.value.usd_to_brl).toFixed(2) : '5.85',
@@ -395,74 +395,74 @@ const placeholders = computed(() => {
 
 // Computed
 const currentRatesDisplay = computed(() => {
-  
+
   // Return default values if no data
   const defaultRates = {
     usd_pyg: {
       flag: '🇺🇸→🇵🇾',
       pair: 'USD → G$',
-      value: '7500',
-      source: 'Manual',
+      value: uiNumber(7500,0),
+      source: uiText(`Manual`),
       updated: null
     },
     usd_brl: {
       flag: '🇺🇸→🇧🇷',
       pair: 'USD → R$',
-      value: '5.85',
-      source: 'Manual',
+      value: uiNumber(5.85,2),
+      source: uiText(`Manual`),
       updated: null
     },
     eur_usd: {
       flag: '🇪🇺→🇺🇸',
       pair: 'EUR → USD',
-      value: '1.0850',
-      source: 'Manual',
+      value: uiNumber(1.0850,4),
+      source: uiText(`Manual`),
       updated: null
     },
     eur_brl: {
       flag: '🇪🇺→🇧🇷',
       pair: 'EUR → R$',
-      value: '6.20',
-      source: 'Manual',
+      value: uiNumber(6.20,2),
+      source: uiText(`Manual`),
       updated: null
     }
   }
-  
+
   if (!currentRates.value) {
     return defaultRates
   }
-  
+
   const result = {
     usd_pyg: {
       flag: '🇺🇸→🇵🇾',
       pair: 'USD → G$',
-      value: (currentRates.value.usd_to_pyg ? Number(currentRates.value.usd_to_pyg).toFixed(0) : '7500'),
-      source: currentRates.value.source || 'Manual',
+      value: (currentRates.value.usd_to_pyg ? uiNumber(currentRates.value.usd_to_pyg,0) : uiNumber(7500,0)),
+      source: currentRates.value.source || uiText(`Manual`),
       updated: currentRates.value.last_updated
     },
     usd_brl: {
       flag: '🇺🇸→🇧🇷',
       pair: 'USD → R$',
-      value: (currentRates.value.usd_to_brl ? Number(currentRates.value.usd_to_brl).toFixed(2) : '5.85'),
-      source: currentRates.value.source || 'Manual',
+      value: (currentRates.value.usd_to_brl ? uiNumber(currentRates.value.usd_to_brl,2) : uiNumber(5.85,2)),
+      source: currentRates.value.source || uiText(`Manual`),
       updated: currentRates.value.last_updated
     },
     eur_usd: {
       flag: '🇪🇺→🇺🇸',
       pair: 'EUR → USD',
-      value: (currentRates.value.eur_to_usd ? Number(currentRates.value.eur_to_usd).toFixed(4) : '1.0850'),
-      source: currentRates.value.source || 'Manual',
+      value: (currentRates.value.eur_to_usd ? uiNumber(currentRates.value.eur_to_usd,4) : uiNumber(1.0850,4)),
+      source: currentRates.value.source || uiText(`Manual`),
       updated: currentRates.value.last_updated
     },
     eur_brl: {
       flag: '🇪🇺→🇧🇷',
       pair: 'EUR → R$',
-      value: (currentRates.value.eur_to_brl ? Number(currentRates.value.eur_to_brl).toFixed(2) : '6.20'),
-      source: currentRates.value.source || 'Manual',
+      value: (currentRates.value.eur_to_brl ? uiNumber(currentRates.value.eur_to_brl,2) : uiNumber(6.20,2)),
+      source: currentRates.value.source || uiText(`Manual`),
       updated: currentRates.value.last_updated
     }
   }
-  
+
   return result
 })
 
@@ -486,7 +486,7 @@ const loadHistory = async () => {
     const response = await exchangeRateAPI.getHistory(historyDays.value)
     historicalRates.value = response.historical_rates || []
   } catch (error: any) {
-    historyError.value = error.message || 'Failed to load exchange rate history'
+    historyError.value = error.message || uiText(`Failed to load exchange rate history`)
   } finally {
     isLoadingHistory.value = false
   }
@@ -504,22 +504,22 @@ const performQuickUpdate = async () => {
   try {
     isUpdating.value = true
     updateError.value = null
-    
+
     await exchangeRateAPI.quickUpdate(quickUpdateRates.value)
     showQuickUpdateModal.value = false
-    
+
     // Small delay to ensure backend update is complete
     await new Promise(resolve => setTimeout(resolve, 500))
-    
+
     await loadCurrentRates()
     await loadHistory()
     await loadSalesAverage()
-    
+
     // Reset form
     resetQuickUpdateForm()
   } catch (error: any) {
     console.error('Quick update error:', error)
-    updateError.value = error.message || 'Failed to update rates'
+    updateError.value = error.message || uiText(`Failed to update rates`)
   } finally {
     isUpdating.value = false
   }
@@ -540,7 +540,7 @@ const cancelEdit = () => {
 
 const saveEditedRate = async () => {
   if (!editingRate.value) return
-  
+
   try {
     const updateData: HistoricalRateUpdate = {
       rate: editingRate.value.rate,
@@ -548,9 +548,9 @@ const saveEditedRate = async () => {
       notes: editingRate.value.notes,
       updated_by: authStore.user?.nome || 'Admin'
     }
-    
+
     await exchangeRateAPI.editHistoricalRate(editingRate.value.id, updateData)
-    
+
     editingRate.value = null
     await loadHistory()
   } catch (error: any) {
@@ -565,11 +565,11 @@ const confirmDelete = (rate: any) => {
 
 const deleteRate = async () => {
   if (!rateToDelete.value) return
-  
+
   try {
     isDeleting.value = true
     await exchangeRateAPI.deleteHistoricalRate(rateToDelete.value.id)
-    
+
     showDeleteModal.value = false
     rateToDelete.value = null
     await loadHistory()
@@ -605,15 +605,15 @@ const resetQuickUpdateForm = () => {
 // Helper functions
 const formatDateLocal = (dateString: string) => {
   if (!dateString) return t('exchangeManagement.na')
-  return formatDate(dateString)
+  return new Date(dateString).toLocaleDateString(uiLocale(),{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'America/Sao_Paulo'})
 }
 
 const formatTime = (dateString: string) => {
   if (!dateString) return ''
-  return new Date(dateString).toLocaleTimeString('pt-BR', { 
+  return new Date(dateString).toLocaleTimeString(uiLocale(), {
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit',
-    minute: '2-digit' 
+    minute: '2-digit'
   })
 }
 
@@ -643,7 +643,7 @@ const getCurrencyFlag = (pair: string) => {
 const handleClickOutside = (event: Event) => {
   const target = event.target as Element
   const languageSelector = document.querySelector('.language-selector')
-  
+
   if (languageSelector && !languageSelector.contains(target)) {
     showLanguageDropdown.value = false
   }
@@ -654,13 +654,13 @@ const handleClickOutside = (event: Event) => {
 onMounted(async () => {
   // Initialize form with translated values
   resetQuickUpdateForm()
-  
+
   await Promise.all([
     loadCurrentRates(),
     loadHistory(),
     loadSalesAverage()
   ])
-  
+
   // Add click outside listener
   document.addEventListener('click', handleClickOutside)
 })
@@ -1409,49 +1409,49 @@ onUnmounted(() => {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.75rem;
   }
-  
+
   .rate-card {
     padding: 0.75rem !important;
     min-height: auto;
   }
-  
+
   .rate-header {
     margin-bottom: 0.5rem !important;
     gap: 0.375rem;
   }
-  
+
   .rate-flag {
     font-size: 0.875rem !important;
   }
-  
+
   .rate-pair {
     font-size: 0.8125rem !important;
   }
-  
+
   .rate-value {
     font-size: 1.25rem !important;
     margin-bottom: 0.375rem !important;
   }
-  
+
   .rate-meta {
     flex-direction: column;
     gap: 0.25rem;
     font-size: 0.6875rem !important;
   }
-  
+
   /* Reduzir texto de alterações no mobile */
   .detail-item {
     padding: 0.1875rem 0.375rem !important;
     font-size: 0.6875rem !important;
     white-space: nowrap;
   }
-  
+
   .average-details {
     gap: 0.5rem !important;
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .calculation-method {
     font-size: 0.625rem !important;
     line-height: 1.2;

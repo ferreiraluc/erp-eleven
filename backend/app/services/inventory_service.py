@@ -1,8 +1,15 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 from decimal import Decimal
 from typing import Optional
 import uuid
 from ..models.inventory import Item, StockMovement, MovementType, InventorySession, SessionStatus
+
+
+class StockMovementError(ValueError):
+    def __init__(self, message, status_code=422):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _compute_alert_level(item: Item) -> str:
@@ -35,9 +42,50 @@ def create_movement(
     item = db.query(Item).filter(Item.id == item_id).with_for_update().first()
     if not item:
         raise ValueError(f"Item {item_id} not found")
+    # A prior lookup may have populated this session before the row lock waited.
+    # Refresh stock columns explicitly so the identity map cannot supply stale balances.
+    refresh_fields = ['current_stock', 'stock_loja', 'stock_deposito']
+    if not inspect(item).attrs.cost_price.history.has_changes():
+        refresh_fields.append('cost_price')
+    db.refresh(item, attribute_names=refresh_fields, with_for_update=True)
+
+    try:
+        mv_type = MovementType[movement_type]
+    except KeyError:
+        raise StockMovementError("Tipo de movimentação inválido.") from None
+    if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity < 0 or (quantity == 0 and mv_type != MovementType.adjustment):
+        raise StockMovementError("Informe uma quantidade inteira positiva; ajuste pode ser zero.")
+    if quantity > 2_147_483_647:
+        raise StockMovementError("Quantidade acima do limite permitido.")
+    loc = location or 'loja'
+    loc_from = location_from or 'loja'
+    loc_to = location_to or 'deposito'
+    if loc not in ('loja', 'deposito') or loc_from not in ('loja', 'deposito') or loc_to not in ('loja', 'deposito'):
+        raise StockMovementError("Local inválido. Use loja ou deposito.")
+    if mv_type == MovementType.transfer and loc_from == loc_to:
+        raise StockMovementError("Origem e destino da transferência devem ser diferentes.")
+    if unit_cost is not None:
+        try:
+            unit_cost = Decimal(str(unit_cost))
+            if not unit_cost.is_finite() or unit_cost < 0:
+                raise ValueError()
+        except (ValueError, ArithmeticError):
+            raise StockMovementError("Custo unitário deve ser um valor não negativo.") from None
+    loja, deposito = item.stock_loja or 0, item.stock_deposito or 0
+    if mv_type != MovementType.adjustment and (loja < 0 or deposito < 0 or item.current_stock != loja + deposito):
+        raise StockMovementError("O saldo por local diverge do total ou está negativo. Confira o inventário e registre um ajuste antes de movimentar.", 409)
+    source = deposito if (loc_from if mv_type == MovementType.transfer else loc) == 'deposito' else loja
+    if mv_type in (MovementType.exit, MovementType.transfer) and quantity > source:
+        raise StockMovementError(f"Saldo insuficiente no local de origem: disponível {source}, solicitado {quantity}.", 409)
+    destination = deposito if (loc_to if mv_type == MovementType.transfer else loc) == 'deposito' else loja
+    if mv_type in (MovementType.entry, MovementType.transfer) and destination + quantity > 2_147_483_647:
+        raise StockMovementError("O saldo resultante excede o limite permitido.")
+    if mv_type == MovementType.entry and loja + deposito + quantity > 2_147_483_647:
+        raise StockMovementError("O total resultante excede o limite permitido.")
+    if mv_type == MovementType.adjustment and quantity + (deposito if loc == 'loja' else loja) > 2_147_483_647:
+        raise StockMovementError("O total resultante excede o limite permitido.")
 
     quantity_before = item.current_stock
-    mv_type = MovementType[movement_type]
 
     if mv_type == MovementType.entry:
         # Route to the correct location column
@@ -50,9 +98,9 @@ def create_movement(
     elif mv_type == MovementType.exit:
         loc = location or "loja"
         if loc == "deposito":
-            item.stock_deposito = max(0, (item.stock_deposito or 0) - quantity)
+            item.stock_deposito = (item.stock_deposito or 0) - quantity
         else:
-            item.stock_loja = max(0, (item.stock_loja or 0) - quantity)
+            item.stock_loja = (item.stock_loja or 0) - quantity
 
     elif mv_type == MovementType.adjustment:
         # quantity is the new absolute value; adjustment applies to loja by default
@@ -67,10 +115,10 @@ def create_movement(
         loc_from = location_from or "loja"
         loc_to = location_to or "deposito"
         if loc_from == "deposito":
-            item.stock_deposito = max(0, (item.stock_deposito or 0) - quantity)
+            item.stock_deposito = (item.stock_deposito or 0) - quantity
             item.stock_loja = (item.stock_loja or 0) + quantity
         else:
-            item.stock_loja = max(0, (item.stock_loja or 0) - quantity)
+            item.stock_loja = (item.stock_loja or 0) - quantity
             item.stock_deposito = (item.stock_deposito or 0) + quantity
 
     # Always keep current_stock in sync with sum of location stocks

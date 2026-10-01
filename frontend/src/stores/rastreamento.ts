@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed } from 'vue'
 import api from '../services/api'
 
@@ -32,7 +33,8 @@ export interface Rastreamento {
   historico_eventos: any[]
   rastreio_info?: RastreioInfo
   custo_emissao?: number
-  pedido_id?: string
+  pedido_id?: string | null
+  cliente_id?: string | null
   data_criacao: string
   ativo: boolean
   created_at: string
@@ -53,7 +55,8 @@ export interface RastreamentoCreate {
   origem?: string
   destino?: string
   custo_emissao?: number
-  pedido_id?: string
+  pedido_id?: string | null
+  cliente_id?: string | null
 }
 
 export interface RastreamentoConsulta {
@@ -133,7 +136,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       rastreamentos.value = response.data
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao listar rastreamentos'
+      error.value = err.response?.data?.detail || uiText("Erro ao listar rastreamentos")
       throw err
     } finally {
       loading.value = false
@@ -150,7 +153,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       rastreamentos.value.unshift(response.data)
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao criar rastreamento'
+      error.value = err.response?.data?.detail || uiText("Erro ao criar rastreamento")
       throw err
     } finally {
       loading.value = false
@@ -167,7 +170,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       rastreamentoAtual.value = response.data
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao obter rastreamento'
+      error.value = err.response?.data?.detail || uiText("Erro ao obter rastreamento")
       throw err
     } finally {
       loading.value = false
@@ -184,7 +187,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       rastreamentoAtual.value = response.data
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao obter rastreamento'
+      error.value = err.response?.data?.detail || uiText("Erro ao obter rastreamento")
       throw err
     } finally {
       loading.value = false
@@ -209,7 +212,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao atualizar rastreamento'
+      error.value = err.response?.data?.detail || uiText("Erro ao atualizar rastreamento")
       throw err
     } finally {
       loading.value = false
@@ -231,7 +234,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       
       return true
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao remover rastreamento'
+      error.value = err.response?.data?.detail || uiText("Erro ao remover rastreamento")
       throw err
     } finally {
       loading.value = false
@@ -247,7 +250,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao consultar rastreamento online'
+      error.value = err.response?.data?.detail || uiText("Erro ao consultar rastreamento online")
       throw err
     } finally {
       loading.value = false
@@ -271,7 +274,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao consultar e salvar rastreamento'
+      error.value = err.response?.data?.detail || uiText("Erro ao consultar e salvar rastreamento")
       throw err
     } finally {
       loading.value = false
@@ -288,7 +291,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       resumoDashboard.value = response.data
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao obter resumo da dashboard'
+      error.value = err.response?.data?.detail || uiText("Erro ao obter resumo da dashboard")
       throw err
     } finally {
       loading.value = false
@@ -320,7 +323,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Erro ao atualizar rastreamentos'
+      error.value = err.response?.data?.detail || uiText("Erro ao atualizar rastreamentos")
       throw err
     } finally {
       loading.value = false
@@ -347,15 +350,15 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
   function getStatusText(status: string): string {
     switch (status) {
       case 'PENDENTE':
-        return 'Pendente'
+        return uiText("Pendente")
       case 'EM_TRANSITO':
-        return 'Em Trânsito'
+        return uiText("Em Trânsito")
       case 'ENTREGUE':
-        return 'Entregue'
+        return uiText("Entregue")
       case 'ERRO':
-        return 'Erro'
+        return uiText("Erro")
       case 'NAO_ENCONTRADO':
-        return 'Não Encontrado'
+        return uiText("Não Encontrado")
       default:
         return status
     }
@@ -365,7 +368,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
     if (!data) return ''
     
     try {
-      return new Date(data).toLocaleDateString('pt-BR', {
+      return new Date(data).toLocaleDateString(uiLocale(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

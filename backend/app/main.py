@@ -14,8 +14,10 @@ from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboa
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base, SessionLocal
 from .config import settings
-from .api.endpoints import assistant, printing, address_manager, freight, sales_bi
+from .api.endpoints import assistant, printing, address_manager, freight, sales_bi, sales_bi_entries
 from .services import assistant_events  # register atomic tracking outbox listener
+from .api.endpoints import user_admin
+from .services import user_audit
 
 # Main
 # Setup logging
@@ -26,47 +28,19 @@ logger = get_logger(__name__)
 
 def _job_atualizar_rastreamentos():
     """Scheduled job: update all active (non-delivered) trackings via Wonca API."""
+    from .services.tracking_refresh import refresh_active
     from .database import SessionLocal
-    from .models.rastreamento import Rastreamento, RastreamentoStatus
-    from .services.wonca_service import parse_tracking
-    from datetime import datetime
-
-    db = SessionLocal()
-    try:
-        ativos = db.query(Rastreamento).filter(
-            Rastreamento.ativo == True,
-            Rastreamento.status != RastreamentoStatus.ENTREGUE,
-        ).all()
-
-        updated, errors = 0, []
-        for r in ativos:
-            try:
-                events, meta, inferred = parse_tracking(r.codigo_rastreio)
-                r.historico_eventos = events
-                r.rastreio_info = meta
-                r.status = inferred
-                r.ultima_atualizacao = settings.now()
-                updated += 1
-            except Exception as e:
-                errors.append(f"{r.codigo_rastreio}: {str(e)}")
-
-        db.commit()
-        # Sync pedido statuses for all updated rastreamentos
+    with SessionLocal() as db:
         try:
-            from .services.rastreamento_sync import RastreamentoSyncService
-            for r in ativos:
-                if r.pedido_id:
-                    RastreamentoSyncService.sincronizar_rastreamento_com_pedido(db, r)
+            result = refresh_active(db)
             db.commit()
-        except Exception as e:
-            logger.warning(f"[SCHEDULER] Erro ao sincronizar pedidos: {e}")
-        logger.info(f"[SCHEDULER] Atualização diária: {updated} atualizados, {len(errors)} erros")
-        if errors:
-            logger.warning(f"[SCHEDULER] Erros: {errors}")
-    except Exception as e:
-        logger.error(f"[SCHEDULER] Falha na atualização diária: {e}\n{traceback.format_exc()}")
-    finally:
-        db.close()
+            logger.info('[SCHEDULER] Atualização diária: %s atualizados, %s erros, %s alterados durante consulta',
+                        result['updated'], len(result['errors']), len(result['skipped']))
+            if result['errors']:
+                logger.warning('[SCHEDULER] Erros: %s', result['errors'])
+        except Exception:
+            db.rollback()
+            logger.exception('[SCHEDULER] Falha na atualização diária')
 
 
 scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
@@ -104,11 +78,7 @@ async def lifespan(app: FastAPI):
         logger.info("[DB] Alembic migrations applied successfully")
     except Exception as e:
         logger.error(f"[DB_ERROR] Alembic migration failed: {e}")
-        # Fall back to create_all for tables that don't exist yet
-        try:
-            Base.metadata.create_all(bind=engine)
-        except Exception:
-            pass
+        raise RuntimeError('A migração do banco falhou; a API não iniciará com esquema incompleto.') from e
 
     # Start daily tracking update scheduler (19:00 BRT)
     scheduler.add_job(
@@ -181,6 +151,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "Access-Control-Allow-Origin"],
 )
 
+app.include_router(user_admin.router, prefix="/api/access", tags=["access"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(vendas.router, prefix="/api/vendas", tags=["vendas"])
 app.include_router(vendedores.router, prefix="/api/vendedores", tags=["vendedores"])
@@ -201,6 +172,7 @@ app.include_router(freight.router, prefix='/api/freight', tags=['freight'])
 app.include_router(address_manager.router, prefix='/api/address-manager', tags=['address-manager'])
 app.include_router(printing.router, prefix="/api/printing", tags=["printing"])
 app.include_router(sales_bi.router, prefix="/api/sales-bi", tags=["sales-bi"])
+app.include_router(sales_bi_entries.router, prefix='/api/sales-bi', tags=['sales-bi'])
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
@@ -208,6 +180,9 @@ async def security_headers_middleware(request: Request, call_next):
     response = await call_next(request)
     
     # Security headers
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, private"
+        response.headers["Pragma"] = "no-cache"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -241,8 +216,22 @@ async def log_requests(request: Request, call_next):
             f"[CRASH] {route} — unhandled exception after {elapsed:.3f}s: {exc}\n"
             f"{traceback.format_exc()}"
         )
-        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+        response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
+    actor = getattr(request.state, "audit_actor", None)
+    if actor and request.url.path not in ("/api/access/activity", "/api/auth/me"):
+        try:
+            with SessionLocal() as audit_db:
+                audit_db.info['audit_actor'] = actor
+                route = actor['route']
+                module = route.split('/')[2] if route.startswith('/api/') else 'system'
+                if route == '/api/access/audit':
+                    module = 'auditoria'
+                user_audit.record(audit_db, 'read' if request.method == 'GET' else 'request', module,
+                                  status_code=response.status_code)
+                audit_db.commit()
+        except Exception:
+            logger.exception('Failed to record request audit')
     elapsed = time.time() - start_time
     status = response.status_code
 
@@ -271,6 +260,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         )
     return JSONResponse(
         status_code=exc.status_code,
+        headers=exc.headers,
         content={"detail": exc.detail, "status_code": exc.status_code}
     )
 

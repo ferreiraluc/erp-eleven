@@ -19,7 +19,13 @@ from ...models.usuario import Usuario
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 
-router = APIRouter()
+from ...services.access_policy import require_all_sales
+
+def all_sales(user=Depends(get_current_active_user)):
+    require_all_sales(user)
+    return user
+
+router = APIRouter(dependencies=[Depends(all_sales)])
 
 @router.get("/", response_model=List[MoneyTransferResponse])
 def list_transfers(

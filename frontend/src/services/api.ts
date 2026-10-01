@@ -1,10 +1,13 @@
+import type { OcrParsedLabel } from './ocr'
 import axios from 'axios'
+import { storedToken, clearSession } from './sessionStorage'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,8 +15,8 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
-  if (token) {
+  const token = storedToken()
+  if (token && config.url !== '/api/auth/login') {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -23,12 +26,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('user_data')
-      localStorage.removeItem('erp_last_route')
-      // Use hash-based URL to work correctly with the hash router in production
-      window.location.replace('/#/login')
+    const sentToken = error.config?.headers?.Authorization
+    if (error.response?.status === 401 && sentToken && sentToken === `Bearer ${storedToken()}`) {
+      clearSession()
+      window.dispatchEvent(new Event('erp:session-expired'))
+    }
+    if (error.response?.status === 403 && error.response?.data?.detail === 'PASSWORD_CHANGE_REQUIRED') {
+      window.dispatchEvent(new Event('erp:password-required'))
     }
     return Promise.reject(error)
   }
@@ -69,6 +73,10 @@ export interface Sale {
 }
 
 export interface User {
+  must_change_password: boolean
+  sales_scope: 'all' | 'own'
+  sales_seller: string | null
+  vendedor_id: string | null
   id: string
   nome: string
   email: string
@@ -84,6 +92,9 @@ export const authAPI = {
   login: (credentials: LoginRequest): Promise<LoginResponse> => 
     api.post('/api/auth/login', credentials).then(res => res.data),
   
+  changePassword: (current_password: string, new_password: string): Promise<LoginResponse> =>
+    api.post('/api/auth/password', { current_password, new_password }).then(res => res.data),
+
   getCurrentUser: (): Promise<User> => 
     api.get('/api/auth/me').then(res => res.data),
   
@@ -379,7 +390,7 @@ export interface PedidoCreate {
   descricao: string
   valor_total: number
   moeda?: string
-  cliente_id?: string
+  cliente_id?: string | null
   cliente_nome?: string
   cliente_telefone?: string
   cliente_email?: string
@@ -446,6 +457,7 @@ export interface RastreamentoSimple {
   destinatario?: string
   descricao?: string
   pedido_id?: string
+  cliente_id?: string | null
   numero_pedido?: string
 }
 
@@ -758,8 +770,8 @@ export const inventoryAPI = {
 
 // ── OCR / Label Intelligence ──────────────────────────────────────────────────
 export const ocrAPI = {
-  parseLabel: (image: string, brand?: string): Promise<any> =>
-    api.post('/api/ocr/parse', { image, brand }).then(r => r.data),
+  parseLabel: (image: string, brand?: string, signal?: AbortSignal): Promise<OcrParsedLabel> =>
+    api.post('/api/ocr/parse', { image, brand }, { signal, timeout: 35000 }).then(r => r.data),
 
   getBrands: (): Promise<Array<{ brand: string; count: number }>> =>
     api.get('/api/ocr/brands').then(r => r.data),
@@ -896,7 +908,7 @@ export interface PdvClienteResponse {
   email: string | null
   tipo: string
   limite_fiado_gs: number
-  saldo_fiado_gs: number
+  saldo_fiado_gs: number | null
   notas: string | null
   ativo: boolean
   created_at: string

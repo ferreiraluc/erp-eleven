@@ -1,13 +1,13 @@
 <template>
   <div class="action-card rastreamento-card" @click="navigateToRastreamento" style="cursor: pointer;">
     <div class="card-header">
-      <h3 class="card-title">Rastreamento</h3>
+      <h3 class="card-title">{{ $tr("Rastreamento") }}</h3>
       <div class="card-actions">
         <button 
           v-if="canManageRastreamento"
           @click.stop="openRastreamentoModal"
           class="edit-rate-btn"
-          title="Adicionar Rastreamento"
+          :title='$tr("Adicionar Rastreamento")'
         >
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -28,7 +28,7 @@
           <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <p>Carregando rastreamentos...</p>
+        <p>{{ $tr("Carregando rastreamentos...") }}</p>
       </div>
     </div>
     
@@ -36,24 +36,24 @@
       <div class="rastreamento-stats">
         <div class="rstat rstat-total">
           <span class="rstat-num">{{ resumo?.total_rastreamentos || 0 }}</span>
-          <span class="rstat-lbl">Total</span>
+          <span class="rstat-lbl">{{ $tr("Total") }}</span>
         </div>
         <div class="rstat rstat-transito">
           <span class="rstat-num">{{ resumo?.em_transito || 0 }}</span>
-          <span class="rstat-lbl">Trânsito</span>
+          <span class="rstat-lbl">{{ $tr("Trânsito") }}</span>
         </div>
         <div class="rstat rstat-entregue">
           <span class="rstat-num">{{ resumo?.entregues || 0 }}</span>
-          <span class="rstat-lbl">Entregues</span>
+          <span class="rstat-lbl">{{ $tr("Entregues") }}</span>
         </div>
         <div class="rstat rstat-pendente">
           <span class="rstat-num">{{ resumo?.pendentes || 0 }}</span>
-          <span class="rstat-lbl">Pendentes</span>
+          <span class="rstat-lbl">{{ $tr("Pendentes") }}</span>
         </div>
       </div>
       
       <div v-if="resumo?.rastreamentos_recentes?.length" class="rastreamentos-recentes">
-        <h4 class="recentes-title">Últimos Rastreamentos</h4>
+        <h4 class="recentes-title">{{ $tr("Últimos Rastreamentos") }}</h4>
         <div class="rastreamentos-list">
           <div
             v-for="rastreamento in resumo.rastreamentos_recentes"
@@ -65,7 +65,7 @@
 
             <!-- Top row: destinatário + status badge -->
             <div class="track-top">
-              <span class="track-name">{{ rastreamento.destinatario || 'Sem destinatário' }}</span>
+              <span class="track-name">{{ rastreamento.destinatario || uiText(`Sem destinatário`) }}</span>
               <span class="track-badge" :class="getStatusClass(rastreamento.status)">
                 {{ getStatusText(rastreamento.status) }}
               </span>
@@ -80,7 +80,7 @@
               <button
                 @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
                 class="track-copy"
-                title="Copiar código"
+                :title='$tr("Copiar código")'
               >
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -102,7 +102,7 @@
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="track-estimate-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
-              <span>Prev. {{ rastreamento.rastreio_info.data_prevista }}</span>
+              <span>{{ $tr("Prev.") }} {{ rastreamento.rastreio_info.data_prevista }}</span>
             </div>
           </div>
         </div>
@@ -112,7 +112,7 @@
         <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v4m-6 0h6" />
         </svg>
-        <p class="empty-text">Nenhum rastreamento</p>
+        <p class="empty-text">{{ $tr("Nenhum rastreamento") }}</p>
       </div>
     </div>
   </div>
@@ -121,7 +121,7 @@
   <div v-if="showModal" class="modal-overlay" @click="closeModal">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
-        <h2>Novo Rastreamento</h2>
+        <h2>{{ $tr("Novo Rastreamento") }}</h2>
         <button @click="closeModal" class="modal-close">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -136,7 +136,7 @@
 
         <div class="form-grid">
           <div class="form-group full-width">
-            <label for="codigo_rastreio">Código de Rastreamento *</label>
+            <label for="codigo_rastreio">{{ $tr("Código de Rastreamento *") }}</label>
             <input 
               id="codigo_rastreio"
               type="text" 
@@ -150,45 +150,45 @@
           </div>
 
           <div class="form-group">
-            <label for="destinatario">Destinatário</label>
+            <label for="destinatario">{{ $tr("Destinatário") }}</label>
             <input 
               id="destinatario"
               type="text" 
               v-model="novoRastreamento.destinatario"
-              placeholder="Nome do destinatário"
+              :placeholder='$tr("Nome do destinatário")'
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="descricao">Descrição</label>
+            <label for="descricao">{{ $tr("Descrição") }}</label>
             <input 
               id="descricao"
               type="text" 
               v-model="novoRastreamento.descricao"
-              placeholder="Descrição do objeto"
+              :placeholder='$tr("Descrição do objeto")'
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="origem">Origem</label>
+            <label for="origem">{{ $tr("Origem") }}</label>
             <input 
               id="origem"
               type="text" 
               v-model="novoRastreamento.origem"
-              placeholder="Local de origem"
+              :placeholder='$tr("Local de origem")'
               class="form-input"
             />
           </div>
 
           <div class="form-group">
-            <label for="destino">Destino</label>
+            <label for="destino">{{ $tr("Destino") }}</label>
             <input 
               id="destino"
               type="text" 
               v-model="novoRastreamento.destino"
-              placeholder="Local de destino"
+              :placeholder='$tr("Local de destino")'
               class="form-input"
             />
           </div>
@@ -200,23 +200,23 @@
             :disabled="!novoRastreamento.codigo_rastreio || isCreating"
             class="btn btn-consultar"
           >
-            <span v-if="isCreating">Consultando...</span>
-            <span v-else>Consultar e Adicionar</span>
+            <span v-if="isCreating">{{ $tr("Consultando...") }}</span>
+            <span v-else>{{ $tr("Consultar e Adicionar") }}</span>
           </button>
         </div>
       </div>
 
       <div class="modal-footer">
         <button @click="closeModal" class="btn btn-secondary">
-          Cancelar
+          {{ $tr("Cancelar") }}
         </button>
         <button 
           @click="criarRastreamento" 
           :disabled="!novoRastreamento.codigo_rastreio || isCreating" 
           class="btn btn-primary"
         >
-          <span v-if="isCreating">Criando...</span>
-          <span v-else>Criar Rastreamento</span>
+          <span v-if="isCreating">{{ $tr("Criando...") }}</span>
+          <span v-else>{{ $tr("Criar Rastreamento") }}</span>
         </button>
       </div>
     </div>
@@ -224,6 +224,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRastreamentoStore } from '@/stores/rastreamento'
@@ -307,7 +308,7 @@ const criarRastreamento = async () => {
     
     closeModal()
   } catch (error: any) {
-    modalError.value = error.message || 'Erro ao criar rastreamento'
+    modalError.value = error.message || uiText(`Erro ao criar rastreamento`)
   } finally {
     isCreating.value = false
   }
@@ -330,7 +331,7 @@ const consultarECriar = async () => {
     
     closeModal()
   } catch (error: any) {
-    modalError.value = error.message || 'Erro ao consultar e criar rastreamento'
+    modalError.value = error.message || uiText(`Erro ao consultar e criar rastreamento`)
   } finally {
     isCreating.value = false
   }
@@ -355,15 +356,15 @@ const getStatusClass = (status: string): string => {
 const getStatusText = (status: string): string => {
   switch (status) {
     case 'PENDENTE':
-      return 'Pendente'
+      return uiText(`Pendente`)
     case 'EM_TRANSITO':
-      return 'Em Trânsito'
+      return uiText(`Em Trânsito`)
     case 'ENTREGUE':
-      return 'Entregue'
+      return uiText(`Entregue`)
     case 'ERRO':
-      return 'Erro'
+      return uiText(`Erro`)
     case 'NAO_ENCONTRADO':
-      return 'Não Encontrado'
+      return uiText(`Não Encontrado`)
     default:
       return status
   }

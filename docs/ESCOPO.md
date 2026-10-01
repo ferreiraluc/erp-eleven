@@ -26,6 +26,7 @@ O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.
 | SuperFrete | Cotação, serviço, pagamento confirmado, recuperação de PDF, rastreio e impressão | Cotação não compra; resultado incerto não autoriza pagar novamente |
 | BI | Total mensal/ano, comparação entre anos, ranking por vendedor/semana e moedas | Fechamento salvo prevalece; diferenças são destacadas para revisão |
 | Assistente | Linguagem natural, ferramentas autorizadas, memória confirmada e botões Telegram | Mensagem comum ou texto de terceiros não é autorização para executar |
+| Acesso/auditoria | Sessões revogáveis, contas individuais, troca de senha e atividade por usuário | Só Lucas administra usuários e consulta auditoria; vendas pessoais são filtradas no backend |
 
 ## Endereços e documentos
 
@@ -38,6 +39,7 @@ O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.
 - Um PDF avulso enviado ao Telegram pode ser impresso com confirmação, sem cadastro e sem arquivar seu conteúdo no ERP. Há referências técnicas temporárias para entrega, idempotência e limpeza; o original continua no Telegram.
 - PDFs avulsos: até 5 MB, 1–30 páginas, sem senha. DOCX, áudio e fotos não entram nesse fluxo de impressão.
 - Etiqueta SuperFrete é outro fluxo: exige os dados do provedor, peso, medidas e conteúdo reais; pagamento usa saldo da conta. O PDF emitido é persistido e pode ser enviado ao Telegram/impressora quando ficar pronto.
+- O gerador de pessoa 4Devs usa o formulário público ou importação JSON. A pessoa é editável e somente os campos de remetente são cadastrados após aprovação manual. A origem sintética é preservada; CPF com formato válido não comprova identidade.
 
 ## Assistente e memória
 
@@ -57,6 +59,9 @@ confirmados. Relatos de venda/devolução são ocorrências: não movimentam cai
 Memória compartilhada guarda ocorrências confirmadas, apelidos e catálogo de ferramentas.
 O contexto bruto é limitado ao autor/canal/conversa. Dados atuais são consultados novamente.
 Não há SQL livre nem permissão de administrador irrestrita para o modelo.
+Contas com vendas pessoais não recuperam dados de colegas pelas consultas nem pelo
+contexto anterior à restrição. Fotos de comprovantes postais JPG/PNG têm leitura
+específica: códigos válidos, prévia e confirmação. A foto não é arquivada no ERP.
 
 ## Vendas e integrações financeiras
 
@@ -67,16 +72,25 @@ podem ser somadas como se fossem o mesmo faturamento.
 Ajustes manuais incorporados nas células entram no resultado do BI sem expor fórmulas.
 Arquivos mensais têm prioridade sobre a planilha corrente do mesmo período, evitando
 contagem dupla. Um valor ausente permanece ausente; zero é um resultado válido.
+Os lançamentos individuais permanecem ligados à planilha, aba e linha de origem.
+Linhas iguais podem ser vendas diferentes: não são eliminadas por valor/nome iguais.
+Dias/horas ausentes não são inferidos do horário da sincronização. Ajustes no total
+mensal não são distribuídos artificialmente entre os lançamentos.
+
+Denis, Sol e Junior consultam suas vendas; Lucas e Wissam consultam o geral.
+O acesso operacional aos demais módulos continua disponível. Sessões antigas são
+revogadas ao mudar permissões ou senha. O registro de tempo é uma estimativa de
+atividade nas telas, não uma medida de jornada. Veja [Acesso](ACESSO_AUDITORIA.md).
 
 A revisão manual autorizada dos arquivos históricos de setembro/2026 foi uma manutenção
 pontual da origem, não uma capacidade de escrita do conector OneDrive.
 
 ## Limites e próximos trabalhos
 
-Não estão implementados: Meta Cloud API direta, leitura de áudio/fotos pelo assistente,
+Não estão implementados: Meta Cloud API direta, leitura de áudio ou fotos genéricas pelo assistente,
 serviço Windows sem sessão aberta, sensor de impressão física, OCR geral de documentos
 recebidos pelo bot, edição de Word e escrita automática em planilhas. O OCR do estoque
-é um fluxo separado com Anthropic. O bot não registra vendas PDV, reembolsos ou saídas
+é um fluxo separado com o provedor de visão configurado. O bot não registra vendas PDV, reembolsos ou saídas
 arbitrárias de estoque.
 
 A cobertura técnica e as pendências de manutenção estão em

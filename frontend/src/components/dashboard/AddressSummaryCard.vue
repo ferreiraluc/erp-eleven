@@ -9,77 +9,77 @@
         <span class="summary-icon"><MapPin :size="21" aria-hidden="true" /></span>
         <div>
           <h3 id="address-summary-title">
-            <RouterLink to="/enderecos">Endereços e envios</RouterLink>
+            <RouterLink to="/enderecos">{{ tr('Endereços e envios') }}</RouterLink>
           </h3>
-          <p>Agenda, impressão A4 e etiquetas</p>
+          <p>{{ tr('Agenda, impressão A4 e etiquetas') }}</p>
         </div>
       </div>
       <RouterLink :to="{ path: '/enderecos', query: { action: 'print' } }" class="summary-primary"
-        ><Plus :size="15" aria-hidden="true" />Gerar endereço</RouterLink
+        ><Plus :size="15" aria-hidden="true" />{{ tr('Gerar endereço') }}</RouterLink
       >
     </header>
 
     <div class="summary-body">
       <div v-if="loading" class="summary-loading" role="status">
-        <RefreshCw :size="20" class="spin" aria-hidden="true" />Consultando a operação…
+        <RefreshCw :size="20" class="spin" aria-hidden="true" />{{ tr('Consultando a operação…') }}
       </div>
       <template v-else>
         <div v-if="overviewError" class="summary-error" role="alert">
-          <span>Não foi possível carregar o resumo de endereços.</span
-          ><button @click="load">Tentar novamente</button>
+          <span>{{ tr('Não foi possível carregar o resumo de endereços.') }}</span
+          ><button @click="load">{{ tr('Tentar novamente') }}</button>
         </div>
         <template v-if="overview">
           <div class="address-metrics">
             <RouterLink to="/enderecos" class="summary-metric"
-              ><span>Endereços salvos</span><strong>{{ number(overview.addresses) }}</strong
-              ><small>Agenda de clientes <ArrowUpRight :size="12" aria-hidden="true" /></small
+              ><span>{{ tr('Endereços salvos') }}</span><strong>{{ number(overview.addresses) }}</strong
+              ><small>{{ tr('Agenda de clientes') }} <ArrowUpRight :size="12" aria-hidden="true" /></small
             ></RouterLink>
             <RouterLink
               :to="{ path: '/enderecos', query: { tab: 'history', status: 'pending' } }"
               class="summary-metric amber"
-              ><span>Na fila</span><strong>{{ number(overview.statuses.pending || 0) }}</strong
-              ><small>Aguardando impressão <ArrowUpRight :size="12" aria-hidden="true" /></small
+              ><span>{{ tr('Na fila') }}</span><strong>{{ number(overview.statuses.pending || 0) }}</strong
+              ><small>{{ tr('Aguardando impressão') }} <ArrowUpRight :size="12" aria-hidden="true" /></small
             ></RouterLink>
             <RouterLink
               :to="{ path: '/enderecos', query: { tab: 'history', status: 'submitted' } }"
               class="summary-metric green"
-              ><span>Enviados à impressora</span
+              ><span>{{ tr('Enviados à impressora') }}</span
               ><strong>{{ number(overview.statuses.submitted || 0) }}</strong
-              ><small>Total registrado <ArrowUpRight :size="12" aria-hidden="true" /></small
+              ><small>{{ tr('Total registrado') }} <ArrowUpRight :size="12" aria-hidden="true" /></small
             ></RouterLink>
           </div>
           <div class="printer-strip">
             <Printer :size="17" aria-hidden="true" />
             <div>
-              <strong>{{ device?.name || 'Nenhuma impressora ativa' }}</strong
+              <strong>{{ device?.name || tr('Nenhuma impressora ativa') }}</strong
               ><span>{{
                 device?.last_seen_at
-                  ? `Último contato ${date(device.last_seen_at)}`
-                  : 'Conecte o agente no computador da loja'
+                  ? `${tr('Último contato')} ${date(device.last_seen_at, true)}`
+                  : tr('Conecte o agente no computador da loja')
               }}</span>
             </div>
             <span class="summary-badge" :class="online ? 'green' : 'amber'"
-              ><span class="status-dot" />{{ online ? 'Conectada' : 'Sem conexão recente' }}</span
+              ><span class="status-dot" />{{ online ? tr('Conectada') : tr('Sem conexão recente') }}</span
             >
           </div>
         </template>
 
         <div class="summary-section-heading">
-          <h4>Últimas solicitações</h4>
+          <h4>{{ tr('Últimas solicitações') }}</h4>
           <RouterLink :to="{ path: '/enderecos', query: { tab: 'history' } }"
-            >Ver histórico <ArrowRight :size="13" aria-hidden="true"
+            >{{ tr('Ver histórico') }} <ArrowRight :size="13" aria-hidden="true"
           /></RouterLink>
         </div>
         <div v-if="historyError" class="summary-error" role="alert">
-          <span>Histórico indisponível no momento.</span
-          ><button @click="load">Tentar novamente</button>
+          <span>{{ tr('Histórico indisponível no momento.') }}</span
+          ><button @click="load">{{ tr('Tentar novamente') }}</button>
         </div>
         <ul v-else-if="jobs.length" class="summary-list">
           <li v-for="job in jobs" :key="job.id">
             <RouterLink
               :to="{ path: '/enderecos', query: { tab: 'history', q: job.recipient } }"
               class="print-row"
-              :aria-label="`Ver impressões de ${job.recipient || 'arquivo'}`"
+              :aria-label="`${tr('Ver impressões de')} ${job.recipient || tr('arquivo')}`"
             >
               <span class="row-icon"
                 ><component
@@ -88,43 +88,43 @@
                   aria-hidden="true"
               /></span>
               <span class="row-content"
-                ><strong>{{ job.recipient || 'Arquivo PDF' }}</strong
+                ><strong>{{ job.recipient || tr('Arquivo PDF') }}</strong
                 ><small
-                  >{{ job.source === 'superfrete' ? 'Etiqueta' : 'Impressão' }} ·
-                  {{ date(job.created_at) }}</small
+                  >{{ job.source === 'superfrete' ? tr('Etiqueta') : tr('Impressão') }} ·
+                  {{ date(job.created_at, true) }}</small
                 ></span
               >
               <span class="summary-badge" :class="statusClass(job.status)">{{
-                states[job.status] || job.status
+                tr(states[job.status] || job.status)
               }}</span>
             </RouterLink>
           </li>
         </ul>
         <div v-else class="summary-empty">
-          <FileText :size="25" aria-hidden="true" /><strong>Nenhuma impressão registrada</strong
-          ><span>Gere um endereço ou escolha um contato na agenda para começar.</span>
+          <FileText :size="25" aria-hidden="true" /><strong>{{ tr('Nenhuma impressão registrada') }}</strong
+          ><span>{{ tr('Gere um endereço ou escolha um contato na agenda para começar.') }}</span>
         </div>
       </template>
     </div>
 
     <footer class="summary-footer">
-      <nav aria-label="Acessos rápidos de endereços">
+      <nav :aria-label="tr('Acessos rápidos de endereços')">
         <RouterLink to="/enderecos"
-          ><ContactRound :size="15" aria-hidden="true" />Agenda</RouterLink
+          ><ContactRound :size="15" aria-hidden="true" />{{ tr('Agenda') }}</RouterLink
         >
         <RouterLink :to="{ path: '/enderecos', query: { tab: 'history' } }"
-          ><Printer :size="15" aria-hidden="true" />Impressões</RouterLink
+          ><Printer :size="15" aria-hidden="true" />{{ tr('Impressões') }}</RouterLink
         >
         <RouterLink :to="{ path: '/enderecos', query: { tab: 'freight' } }"
-          ><Truck :size="15" aria-hidden="true" />SuperFrete</RouterLink
+          ><Truck :size="15" aria-hidden="true" />{{ tr('SuperFrete') }}</RouterLink
         >
       </nav>
       <button
         class="summary-refresh"
         :disabled="refreshing"
         @click="load"
-        aria-label="Atualizar resumo de endereços"
-        title="Atualizar resumo de endereços"
+        :aria-label="tr('Atualizar resumo de endereços')"
+        :title="tr('Atualizar resumo de endereços')"
       >
         <RefreshCw :size="15" :class="{ spin: refreshing }" aria-hidden="true" />
       </button>
@@ -147,8 +147,10 @@ import {
   Truck,
 } from 'lucide-vue-next'
 import api from '@/services/api'
+import { useAddressI18n } from '@/components/addresses/i18n'
 import type { Job, Overview } from '@/components/addresses/types'
 
+const { tr, date, number } = useAddressI18n()
 const overview = ref<Overview | null>(null)
 const jobs = ref<Job[]>([])
 const loading = ref(true),
@@ -183,14 +185,6 @@ const statusClass = (status: string) =>
     : ['failed', 'uncertain', 'expired'].includes(status)
       ? 'amber'
       : ''
-const number = (value: number) => value.toLocaleString('pt-BR')
-const date = (value: string) =>
-  new Date(value).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 
 async function load() {
   if (refreshing.value) return

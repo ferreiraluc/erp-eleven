@@ -36,7 +36,7 @@ class PdvClienteResponse(BaseModel):
     email: Optional[str]
     tipo: str
     limite_fiado_gs: float
-    saldo_fiado_gs: float
+    saldo_fiado_gs: Optional[float]
     notas: Optional[str]
     ativo: bool
     created_at: datetime

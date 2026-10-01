@@ -16,6 +16,7 @@ from ..models.rastreamento import Rastreamento
 from ..models.usuario import Usuario
 from ..models.venda import Venda
 from ..models.vendedor import Vendedor
+from .tracking_codes import tracking_code_expression
 
 
 def literal_pattern(value):
@@ -171,23 +172,25 @@ def shipments_source(db):
     """One row per tracking code, including legacy order-only codes, never double-counting."""
     r, p = Rastreamento, Pedido
     tracks = select(
-        cast(r.id, String).label("id"), r.codigo_rastreio.label("codigo"),
-        func.coalesce(r.destinatario, p.cliente_nome).label("cliente"),
-        p.numero_pedido.label("pedido"), p.cliente_telefone.label("telefone_busca"),
-        cast(p.cliente_id, String).label("cliente_id"),
+        cast(r.id, String).label("id"), tracking_code_expression(r.codigo_rastreio).label("codigo"),
+        func.coalesce(Cliente.nome, r.destinatario, p.cliente_nome).label("cliente"),
+        p.numero_pedido.label("pedido"), func.coalesce(Cliente.telefone, p.cliente_telefone).label("telefone_busca"),
+        cast(func.coalesce(r.cliente_id, p.cliente_id), String).label("cliente_id"),
         cast(r.status, String).label("status"), cast(p.status, String).label("status_pedido"),
         func.coalesce(r.data_criacao, local_day(db, r.created_at)).label("data_envio"),
         r.created_at.label("cadastrado_em"), r.ultima_atualizacao.label("consultado_em"),
-        literal("rastreamentos").label("origem"),
-    ).outerjoin(p, p.id == r.pedido_id).where(r.ativo.is_(True))
+        literal("rastreamentos").label("origem"), r.destinatario.label("destinatario_busca"),
+    ).outerjoin(p, p.id == r.pedido_id).outerjoin(
+        Cliente, Cliente.id == func.coalesce(r.cliente_id, p.cliente_id),
+    ).where(r.ativo.is_(True))
     # A code explicitly deactivated in Rastreamento must not resurface via Pedido.
-    known_code = exists(select(r.id).where(r.codigo_rastreio == p.codigo_rastreio))
+    known_code = exists(select(r.id).where(tracking_code_expression(r.codigo_rastreio) == tracking_code_expression(p.codigo_rastreio)))
     legacy_status = case((p.status == "ENVIADO", "EM_TRANSITO"), (p.status == "ENTREGUE", "ENTREGUE"),
                          (p.status == "CANCELADO", "CANCELADO"), else_="PENDENTE")
     orders = select(
-        cast(p.id, String), p.codigo_rastreio, p.cliente_nome, p.numero_pedido, p.cliente_telefone,
+        cast(p.id, String), tracking_code_expression(p.codigo_rastreio), p.cliente_nome, p.numero_pedido, p.cliente_telefone,
         cast(p.cliente_id, String), legacy_status, cast(p.status, String),
-        local_day(db, p.created_at), p.created_at, literal(None), literal("pedido_sem_rastreamento"),
+        local_day(db, p.created_at), p.created_at, literal(None), literal("pedido_sem_rastreamento"), p.cliente_nome,
     ).where(p.codigo_rastreio.isnot(None), p.codigo_rastreio != "", ~known_code)
     return union_all(tracks, orders).subquery()
 
@@ -197,7 +200,7 @@ def query_shipments(db, args):
     c = source.c
     q = db.query(source)
     if args.termo:
-        q = q.filter(contains([c.cliente, c.codigo, c.pedido, c.telefone_busca], args.termo))
+        q = q.filter(contains([c.cliente, c.codigo, c.pedido, c.telefone_busca, c.destinatario_busca], args.termo))
     if args.situacao == "em_aberto":
         q = q.filter(c.status.in_(OPEN_SHIPMENTS))
     elif args.situacao != "todos":
@@ -217,6 +220,7 @@ def query_shipments(db, args):
             data[field] = local_timestamp(row._mapping[field])
         data.pop("telefone_busca")
         data.pop("cliente_id")
+        data.pop("destinatario_busca")
         results.append(data)
     # Identity check over the entire filtered set, not just the displayed page.
     # Same full name with different registered customer IDs remains ambiguous.
@@ -310,6 +314,7 @@ def query_customers(db, args):
 
 
 def query_sales(db, args, user_id):
+    from .access_policy import sales_query
     user = db.get(Usuario, user_id)
     if not user or not user.ativo or scalar(user.role) not in ("ADMIN", "GERENTE"):
         return {"erro": "Resumos financeiros do assistente disponíveis somente para ADMIN ou GERENTE."}
@@ -318,6 +323,7 @@ def query_sales(db, args, user_id):
                        "Totais por moeda, sem conversão. PDV exclui canceladas."}
     if args.origem in ("ambos", "vendas"):
         q = db.query(Venda).join(Vendedor, Vendedor.id == Venda.vendedor_id)
+        q = sales_query(q, Venda, user)
         q = date_filter(q, Venda.data_venda, args)
         if args.vendedor:
             q = q.filter(contains([Vendedor.nome], args.vendedor))
@@ -329,6 +335,7 @@ def query_sales(db, args, user_id):
                             "bruto": scalar(sale.valor_bruto), "liquido": scalar(sale.valor_liquido)} for sale, name in rows]}
     if args.origem in ("ambos", "pdv"):
         q = db.query(PdvSale).outerjoin(Usuario, Usuario.id == PdvSale.vendedor_id).filter(PdvSale.status == "completed")
+        q = sales_query(q, PdvSale, user, pdv=True)
         q = date_filter(q, PdvSale.created_at, args, timestamp=True)
         if args.vendedor:
             q = q.filter(contains([Usuario.nome], args.vendedor))

@@ -3,7 +3,7 @@
     <div class="modal-container" @click.stop>
       <div class="modal-header">
         <h2 class="modal-title">
-          {{ isEditing ? 'Editar Pedido' : 'Novo Pedido' }}
+          {{ isEditing ? uiText(`Editar Pedido`) : uiText(`Novo Pedido`) }}
         </h2>
         <button @click="closeModal" class="modal-close">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -16,15 +16,15 @@
         <form @submit.prevent="handleSubmit" class="pedido-form">
           <!-- Pedido Section -->
           <div class="form-section">
-            <h3 class="section-title">Informações do Pedido</h3>
+            <h3 class="section-title">{{ $tr("Informações do Pedido") }}</h3>
             <div class="form-row">
               <div class="form-group required full-width">
-                <label for="descricao">Descrição dos Itens</label>
+                <label for="descricao">{{ $tr("Descrição dos Itens") }}</label>
                 <textarea
                   id="descricao"
                   v-model="formData.descricao"
                   required
-                  placeholder="Ex: 1 tênis Nike Air Max + 3 camisetas básicas"
+                  :placeholder='$tr("Ex: 1 tênis Nike Air Max + 3 camisetas básicas")'
                   rows="3"
                   class="form-textarea"
                 ></textarea>
@@ -32,12 +32,12 @@
             </div>
             <div class="form-row">
               <div class="form-group required">
-                <label for="valor_total">Valor Total</label>
+                <label for="valor_total">{{ $tr("Valor Total") }}</label>
                 <div class="valor-with-moeda">
                   <select
                     v-model="formData.moeda"
                     class="moeda-select"
-                    title="Moeda"
+                    :title='$tr("Moeda")'
                   >
                     <option value="G$">G$</option>
                     <option value="R$">R$</option>
@@ -56,27 +56,27 @@
                 </div>
               </div>
               <div class="form-group">
-                <label for="status">Status</label>
+                <label for="status">{{ $tr("Status") }}</label>
                 <select
                   id="status"
                   v-model="formData.status"
                   class="form-select"
                 >
-                  <option value="PENDENTE">Pendente</option>
-                  <option value="PROCESSANDO">Processando</option>
-                  <option value="ENVIADO">Enviado</option>
-                  <option value="ENTREGUE">Entregue</option>
-                  <option value="CANCELADO">Cancelado</option>
+                  <option value="PENDENTE">{{ $tr("Pendente") }}</option>
+                  <option value="PROCESSANDO">{{ $tr("Processando") }}</option>
+                  <option value="ENVIADO">{{ $tr("Enviado") }}</option>
+                  <option value="ENTREGUE">{{ $tr("Entregue") }}</option>
+                  <option value="CANCELADO">{{ $tr("Cancelado") }}</option>
                 </select>
               </div>
               <div class="form-group rastreio-group">
-                <label>Rastreamento</label>
+                <label>{{ $tr("Rastreamento") }}</label>
                 <!-- Modo autocomplete (padrão) -->
                 <div v-if="!rastreioManual" style="position:relative;">
                   <input
                     v-model="rastreioSearch"
                     type="text"
-                    placeholder="Buscar rastreio cadastrado..."
+                    :placeholder='$tr("Buscar rastreio cadastrado...")'
                     class="form-input"
                     @input="onRastreioSearchInput"
                     @focus="onRastreioFocus"
@@ -92,7 +92,7 @@
                       class="rastreio-item"
                       @mousedown.prevent="selectRastreio(r)"
                     >
-                      <span class="rastreio-name">{{ r.destinatario || 'Sem destinatário' }}</span>
+                      <span class="rastreio-name">{{ r.destinatario || uiText(`Sem destinatário`) }}</span>
                       <div class="rastreio-meta">
                         <span class="rastreio-code">{{ r.codigo_rastreio }}</span>
                         <span v-if="r.numero_pedido" class="rastreio-pedido-badge">#{{ r.numero_pedido }}</span>
@@ -100,7 +100,7 @@
                         <span class="rastreio-status-text">{{ rastreioStatusLabel(r.status) }}</span>
                       </div>
                     </button>
-                    <div v-if="!rastreioFiltered.length" class="rastreio-empty">Nenhum resultado</div>
+                    <div v-if="!rastreioFiltered.length" class="rastreio-empty">{{ $tr("Nenhum resultado") }}</div>
                   </div>
                 </div>
                 <!-- Modo manual: campo texto livre -->
@@ -119,7 +119,7 @@
                 </p>
                 <!-- Toggle entre modos -->
                 <button type="button" @click="rastreioManual = !rastreioManual; clearRastreio()" class="rastreio-toggle">
-                  {{ rastreioManual ? '← Buscar rastreamentos cadastrados' : 'Digitar código manualmente' }}
+                  {{ rastreioManual ? uiText(`← Buscar rastreamentos cadastrados`) : uiText(`Digitar código manualmente`) }}
                 </button>
                 <!-- Ver Rastreamento (apenas no modo edição) -->
                 <div v-if="isEditing" class="ver-rastreio-row">
@@ -130,10 +130,10 @@
                     @click="verRastreamento"
                   >
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    Ver Rastreamento
+                    {{ $tr("Ver Rastreamento") }}
                   </button>
                   <p v-else class="rastreio-nao-vinculado">
-                    Nenhum rastreamento vinculado a este pedido.
+                    {{ $tr("Nenhum rastreamento vinculado a este pedido.") }}
                   </p>
                 </div>
               </div>
@@ -142,22 +142,22 @@
 
           <!-- Cliente Section (Opcional) -->
           <div class="form-section">
-            <h3 class="section-title">Dados do Cliente (Opcional)</h3>
+            <h3 class="section-title">{{ $tr("Dados do Cliente (Opcional)") }}</h3>
 
             <!-- Autocomplete para vincular cliente existente -->
             <div class="cliente-autocomplete" style="margin-bottom:.75rem;">
-              <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Vincular cliente cadastrado</label>
+              <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">{{ $tr("Vincular cliente cadastrado") }}</label>
               <div style="position:relative;">
                 <input
                   v-model="clienteSearch"
                   type="text"
-                  placeholder="Buscar por nome, telefone ou CPF..."
+                  :placeholder='$tr("Buscar por nome, telefone ou CPF...")'
                   class="form-input"
                   @input="onClienteSearchInput"
                   @blur="hideCustomerSuggestions"
                   style="width:100%;box-sizing:border-box;"
                 />
-                <button v-if="selectedCliente" type="button" @click="clearCliente" style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;">✕ Desvincular</button>
+                <button v-if="selectedCliente" type="button" @click="clearCliente" style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;">{{ $tr("✕ Desvincular") }}</button>
                 <div v-if="showSuggestions" class="suggestion-list">
                   <button
                     v-for="c in clienteSuggestions"
@@ -172,23 +172,23 @@
                 </div>
               </div>
               <p v-if="selectedCliente" style="font-size:.72rem;color:#10b981;margin:.3rem 0 0;">
-                ✓ Vinculado: {{ selectedCliente.nome }} — campos preenchidos automaticamente
+                {{ $tr("✓ Vinculado:") }} {{ selectedCliente.nome }} {{ $tr("— campos preenchidos automaticamente") }}
               </p>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label for="cliente_nome">Nome do Cliente</label>
+                <label for="cliente_nome">{{ $tr("Nome do Cliente") }}</label>
                 <input
                   id="cliente_nome"
                   v-model="formData.cliente_nome"
                   type="text"
-                  placeholder="Nome completo do cliente"
+                  :placeholder='$tr("Nome completo do cliente")'
                   class="form-input"
                 />
               </div>
               <div class="form-group">
-                <label for="cliente_telefone">Telefone</label>
+                <label for="cliente_telefone">{{ $tr("Telefone") }}</label>
                 <input
                   id="cliente_telefone"
                   v-model="formData.cliente_telefone"
@@ -198,7 +198,7 @@
                 />
               </div>
               <div class="form-group">
-                <label for="cliente_email">E-mail</label>
+                <label for="cliente_email">{{ $tr("E-mail") }}</label>
                 <input
                   id="cliente_email"
                   v-model="formData.cliente_email"
@@ -212,14 +212,14 @@
 
           <!-- Endereço Section (Opcional) -->
           <div class="form-section">
-            <h3 class="section-title">Endereço de Entrega (Opcional)</h3>
+            <h3 class="section-title">{{ $tr("Endereço de Entrega (Opcional)") }}</h3>
             <div class="form-row">
               <div class="form-group full-width">
-                <label for="endereco_entrega">Endereço Completo</label>
+                <label for="endereco_entrega">{{ $tr("Endereço Completo") }}</label>
                 <textarea
                   id="endereco_entrega"
                   v-model="formData.endereco_entrega"
-                  placeholder="Rua, número, bairro, cidade, estado, CEP"
+                  :placeholder='$tr("Rua, número, bairro, cidade, estado, CEP")'
                   rows="2"
                   class="form-textarea"
                 ></textarea>
@@ -229,7 +229,7 @@
 
           <!-- Anexos Section -->
           <div class="form-section">
-            <h3 class="section-title">Fotos e Anexos</h3>
+            <h3 class="section-title">{{ $tr("Fotos e Anexos") }}</h3>
             <AnexosCarousel
               :anexos="anexos"
               :editable="true"
@@ -243,7 +243,7 @@
           <!-- Tags Section -->
           <div class="form-section">
             <div class="section-header">
-              <h3 class="section-title">Tags de Status</h3>
+              <h3 class="section-title">{{ $tr("Tags de Status") }}</h3>
               <button
                 type="button"
                 @click="openTagManager"
@@ -252,7 +252,7 @@
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Nova Tag
+                {{ $tr("Nova Tag") }}
               </button>
             </div>
 
@@ -285,9 +285,9 @@
               </label>
             </div>
             <p v-else class="no-tags">
-              Nenhuma tag disponível.
+              {{ $tr("Nenhuma tag disponível.") }}
               <button type="button" @click="createDefaultTags" class="link-button">
-                Criar tags padrão
+                {{ $tr("Criar tags padrão") }}
               </button>
             </p>
           </div>
@@ -297,7 +297,7 @@
 
       <div class="modal-footer">
         <button type="button" @click="closeModal" class="btn-secondary">
-          Cancelar
+          {{ $tr("Cancelar") }}
         </button>
         <button
           type="button"
@@ -309,7 +309,7 @@
             <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          {{ isSubmitting ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Criar Pedido') }}
+          {{ isSubmitting ? uiText(`Salvando...`) : (isEditing ? uiText(`Atualizar`) : uiText(`Criar Pedido`)) }}
         </button>
       </div>
     </div>
@@ -324,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { pedidosAPI, pedidoAnexosAPI, tagsAPI, clientesAPI, rastreamentosAPI, type Pedido, type PedidoCreate, type PedidoAnexo, type Tag, type Cliente, type RastreamentoSimple } from '@/services/api'
@@ -386,7 +387,7 @@ function selectCliente(c: Cliente) {
 function clearCliente() {
   selectedCliente.value = null
   clienteSearch.value = ''
-  formData.value.cliente_id = undefined
+  formData.value.cliente_id = null
 }
 
 // Rastreamento autocomplete
@@ -398,7 +399,10 @@ const showRastreioSuggestions = ref(false)
 const rastreioManual = ref(false)  // fallback: let user type a code manually
 
 async function loadRastreios() {
-  try { rastreioList.value = await rastreamentosAPI.list({ limit: 200 }) } catch { rastreioList.value = [] }
+  try {
+    const rows = await rastreamentosAPI.list({ limit: 200 })
+    rastreioList.value = rows.filter(row => !row.pedido_id || row.pedido_id === props.pedido?.id)
+  } catch { rastreioList.value = [] }
 }
 
 function onRastreioFocus() {
@@ -439,7 +443,7 @@ function clearRastreio() {
 }
 
 function rastreioStatusLabel(s: string) {
-  const m: Record<string, string> = { PENDENTE: 'Pendente', EM_TRANSITO: 'Em trânsito', ENTREGUE: 'Entregue', ERRO: 'Erro', NAO_ENCONTRADO: 'Não encontrado' }
+  const m: Record<string, string> = { PENDENTE: uiText(`Pendente`), EM_TRANSITO: uiText(`Em trânsito`), ENTREGUE: uiText(`Entregue`), ERRO: uiText(`Erro`), NAO_ENCONTRADO: uiText(`Não encontrado`) }
   return m[s] || s
 }
 
@@ -613,8 +617,8 @@ async function loadAnexos() {
 async function handleUploadFiles(files: File[]) {
   uploadError.value = ''
   for (const file of files) {
-    if (anexos.value.length >= 10) { uploadError.value = 'Limite de 10 anexos atingido.'; break }
-    if (file.size > 5 * 1024 * 1024) { uploadError.value = `"${file.name}" excede 5 MB.`; continue }
+    if (anexos.value.length >= 10) { uploadError.value = uiText(`Limite de 10 anexos atingido.`); break }
+    if (file.size > 5 * 1024 * 1024) { uploadError.value = uiText(`"{0}" excede 5 MB.`,{0:file.name}); continue }
 
     uploadingAnexo.value = true
     try {
@@ -643,7 +647,7 @@ async function handleUploadFiles(files: File[]) {
         }]
       }
     } catch (e: any) {
-      uploadError.value = e?.response?.data?.detail || `Erro ao enviar "${file.name}".`
+      uploadError.value = e?.response?.data?.detail || uiText(`Erro ao enviar "{0}".`,{0:file.name})
     } finally {
       uploadingAnexo.value = false
     }
@@ -661,7 +665,7 @@ async function handleDeleteAnexo(anexo: PedidoAnexo) {
     await pedidoAnexosAPI.delete(props.pedido!.id, anexo.id)
     anexos.value = anexos.value.filter(a => a.id !== anexo.id)
   } catch {
-    uploadError.value = 'Erro ao remover anexo.'
+    uploadError.value = uiText(`Erro ao remover anexo.`)
   }
 }
 

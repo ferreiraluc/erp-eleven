@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Editar Massivo <span class="item-count">({{ items.length }} itens)</span></h2>
+        <h2>{{ tr('Editar Massivo') }} <span class="item-count">({{ items.length }} {{ tr('itens)') }}</span></h2>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -13,20 +13,20 @@
       <div class="modal-body">
         <!-- ── Shared fields ── -->
         <section class="section">
-          <h3 class="section-title">Campos compartilhados</h3>
-          <p class="section-hint">Deixe em branco para não alterar. Aplica a todos os itens selecionados.</p>
+          <h3 class="section-title">{{ tr('Campos compartilhados') }}</h3>
+          <p class="section-hint">{{ tr('Deixe em branco para não alterar. Aplica a todos os itens selecionados.') }}</p>
 
           <!-- Image -->
           <div class="form-group">
-            <label>Imagem (aplicar a todos)</label>
+            <label>{{ tr('Imagem (aplicar a todos)') }}</label>
             <div class="image-area">
               <div v-if="sharedImage" class="image-preview">
-                <img :src="sharedImage" alt="Preview" />
+                <img :src="sharedImage" :alt="tr('Preview')" />
                 <button @click="sharedImage = ''" class="remove-img-btn" type="button">×</button>
               </div>
               <div v-else class="image-placeholder" @click="triggerFileInput">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span>Clique para selecionar</span>
+                <span>{{ tr('Clique para selecionar') }}</span>
               </div>
               <input ref="fileInputRef" type="file" accept="image/*" class="hidden-input" @change="onImageFile" />
             </div>
@@ -35,15 +35,15 @@
           <!-- Brand + Category -->
           <div class="form-row">
             <div class="form-group">
-              <label>Marca</label>
-              <input v-model="sharedBrand" type="text" class="form-input" placeholder="Vazio = não alterar" :list="'bulk-brand-list'" />
+              <label>{{ tr('Marca') }}</label>
+              <input v-model="sharedBrand" type="text" class="form-input" :placeholder="tr('Vazio = não alterar')" :list="'bulk-brand-list'" />
               <datalist id="bulk-brand-list">
                 <option v-for="b in distinctBrands" :key="b" :value="b" />
               </datalist>
             </div>
             <div class="form-group">
-              <label>Categoria</label>
-              <input v-model="sharedCategory" type="text" class="form-input" placeholder="Vazio = não alterar" :list="'bulk-cat-list'" />
+              <label>{{ tr('Categoria') }}</label>
+              <input v-model="sharedCategory" type="text" class="form-input" :placeholder="tr('Vazio = não alterar')" :list="'bulk-cat-list'" />
               <datalist id="bulk-cat-list">
                 <option v-for="c in distinctCategories" :key="c" :value="c" />
               </datalist>
@@ -53,12 +53,12 @@
           <!-- Shared prices -->
           <div class="form-row">
             <div class="form-group">
-              <label>Preço de custo</label>
-              <input v-model="sharedCostPrice" type="number" min="0" step="any" class="form-input" placeholder="Vazio = não alterar" />
+              <label>{{ tr('Preço de custo') }}</label>
+              <input v-model="sharedCostPrice" type="number" min="0" step="any" class="form-input" :placeholder="tr('Vazio = não alterar')" />
             </div>
             <div class="form-group">
-              <label>Preço de venda</label>
-              <input v-model="sharedSalePrice" type="number" min="0" step="any" class="form-input" placeholder="Vazio = não alterar" />
+              <label>{{ tr('Preço de venda') }}</label>
+              <input v-model="sharedSalePrice" type="number" min="0" step="any" class="form-input" :placeholder="tr('Vazio = não alterar')" />
             </div>
           </div>
 
@@ -68,22 +68,22 @@
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
               </svg>
-              <span>Ajuste de estoque compartilhado</span>
+              <span>{{ tr('Ajuste de estoque compartilhado') }}</span>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label>Quantidade <span class="label-hint">(+ entrada / − saída)</span></label>
+                <label>{{ tr('Quantidade') }} <span class="label-hint">{{ tr('(+ entrada / − saída)') }}</span></label>
                 <input
                   v-model.number="sharedStockDelta"
                   type="number"
                   class="form-input"
                   :class="{ 'input-entry': sharedStockDelta > 0, 'input-exit': sharedStockDelta < 0 }"
-                  placeholder="Ex: +5 ou -3"
+                  :placeholder="tr('Ex: +5 ou -3')"
                 />
               </div>
               <div class="form-group">
                 <label>
-                  Motivo
+                  {{ tr('Motivo') }}
                   <span v-if="sharedStockDelta && sharedStockDelta !== 0" class="required-mark">*</span>
                 </label>
                 <input
@@ -91,21 +91,21 @@
                   type="text"
                   class="form-input"
                   :class="{ error: stockErrors.shared }"
-                  placeholder="Motivo obrigatório"
+                  :placeholder="tr('Motivo obrigatório')"
                 />
-                <span v-if="stockErrors.shared" class="error-msg">{{ stockErrors.shared }}</span>
+                <span v-if="stockErrors.shared" class="error-msg">{{ tr(stockErrors.shared) }}</span>
               </div>
             </div>
             <p class="stock-adjust-hint">
-              Itens com ajuste individual abaixo têm prioridade sobre este valor.
+              {{ tr('Itens com ajuste individual abaixo têm prioridade sobre este valor.') }}
             </p>
           </div>
         </section>
 
         <!-- ── Per-item fields ── -->
         <section class="section">
-          <h3 class="section-title">Campos por item</h3>
-          <p class="section-hint">Os campos de texto mostram o valor atual — edite apenas o que precisa alterar.</p>
+          <h3 class="section-title">{{ tr('Campos por item') }}</h3>
+          <p class="section-hint">{{ tr('Os campos de texto mostram o valor atual — edite apenas o que precisa alterar.') }}</p>
           <div class="items-list">
             <div v-for="item in items" :key="item.id" class="item-card">
               <!-- Item header -->
@@ -114,14 +114,14 @@
                 <div v-else class="card-thumb-placeholder"></div>
                 <div class="card-header-info">
                   <span class="card-original-name">{{ item.name }}</span>
-                  <span class="card-stock-badge">Estoque: {{ item.current_stock }}</span>
+                  <span class="card-stock-badge">{{ tr('Estoque:') }} {{ item.current_stock }}</span>
                 </div>
               </div>
 
               <!-- Text fields (pre-populated) -->
               <div class="item-fields">
                 <div class="field-group field-group-wide">
-                  <label>Nome</label>
+                  <label>{{ tr('Nome') }}</label>
                   <input
                     v-model="itemNames[item.id]"
                     type="text"
@@ -130,7 +130,7 @@
                   />
                 </div>
                 <div class="field-group">
-                  <label>Cor</label>
+                  <label>{{ tr('Cor') }}</label>
                   <input
                     v-model="itemColors[item.id]"
                     type="text"
@@ -139,7 +139,7 @@
                   />
                 </div>
                 <div class="field-group">
-                  <label>Tamanho</label>
+                  <label>{{ tr('Tamanho') }}</label>
                   <input
                     v-model="itemSizes[item.id]"
                     type="text"
@@ -148,7 +148,7 @@
                   />
                 </div>
                 <div class="field-group field-group-wide">
-                  <label>Código de barras</label>
+                  <label>{{ tr('Código de barras') }}</label>
                   <input
                     v-model="itemBarcodes[item.id]"
                     type="text"
@@ -159,42 +159,42 @@
 
                 <!-- Per-item prices -->
                 <div class="field-group">
-                  <label>Custo <span class="label-current">atual: {{ formatPrice(item.cost_price) }}</span></label>
+                  <label>{{ tr('Custo') }} <span class="label-current">{{ tr('atual:') }} {{ formatPrice(item.cost_price) }}</span></label>
                   <input
                     v-model="itemCostPrices[item.id]"
                     type="number"
                     min="0"
                     step="any"
                     class="field-input"
-                    placeholder="Vazio = não alterar"
+                    :placeholder="tr('Vazio = não alterar')"
                   />
                 </div>
                 <div class="field-group">
-                  <label>Venda <span class="label-current">atual: {{ formatPrice(item.sale_price) }}</span></label>
+                  <label>{{ tr('Venda') }} <span class="label-current">{{ tr('atual:') }} {{ formatPrice(item.sale_price) }}</span></label>
                   <input
                     v-model="itemSalePrices[item.id]"
                     type="number"
                     min="0"
                     step="any"
                     class="field-input"
-                    placeholder="Vazio = não alterar"
+                    :placeholder="tr('Vazio = não alterar')"
                   />
                 </div>
 
                 <!-- Per-item stock -->
                 <div class="field-group">
-                  <label>Δ Estoque <span class="label-hint">(+ / −)</span></label>
+                  <label>{{ tr('Δ Estoque') }} <span class="label-hint">(+ / −)</span></label>
                   <input
                     v-model.number="itemStockDeltas[item.id]"
                     type="number"
                     class="field-input"
                     :class="{ 'input-entry': itemStockDeltas[item.id] > 0, 'input-exit': itemStockDeltas[item.id] < 0 }"
-                    placeholder="Ex: +2 ou -1"
+                    :placeholder="tr('Ex: +2 ou -1')"
                   />
                 </div>
                 <div class="field-group">
                   <label>
-                    Motivo
+                    {{ tr('Motivo') }}
                     <span v-if="itemStockDeltas[item.id] && itemStockDeltas[item.id] !== 0" class="required-mark">*</span>
                   </label>
                   <input
@@ -202,9 +202,9 @@
                     type="text"
                     class="field-input"
                     :class="{ error: stockErrors[item.id] }"
-                    placeholder="Motivo do ajuste"
+                    :placeholder="tr('Motivo do ajuste')"
                   />
-                  <span v-if="stockErrors[item.id]" class="error-msg">{{ stockErrors[item.id] }}</span>
+                  <span v-if="stockErrors[item.id]" class="error-msg">{{ tr(stockErrors[item.id]) }}</span>
                 </div>
               </div>
             </div>
@@ -213,10 +213,10 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary" :disabled="saving">Cancelar</button>
+        <button @click="emit('close')" class="btn btn-secondary" :disabled="saving">{{ tr('Cancelar') }}</button>
         <button @click="save" class="btn btn-primary" :disabled="saving || !hasChanges">
-          <span v-if="saving">Salvando...</span>
-          <span v-else>Salvar {{ items.length }} itens</span>
+          <span v-if="saving">{{ tr('Salvando...') }}</span>
+          <span v-else>{{ tr('Salvar') }} {{ items.length }} {{ tr('itens') }}</span>
         </button>
       </div>
     </div>
@@ -224,6 +224,8 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 
@@ -261,7 +263,7 @@ const itemStockReasons = reactive<Record<string, string>>({})
 
 function formatPrice(val: any): string {
   if (val === null || val === undefined || val === '' || val === 0) return '—'
-  return Number(val).toLocaleString('pt-BR')
+  return Number(val).toLocaleString(numberLocale())
 }
 
 const hasChanges = computed(() => {
@@ -382,7 +384,7 @@ async function save() {
       : Array.isArray(detail)
         ? detail.map((d: any) => d.msg || d.loc?.join('.') || JSON.stringify(d)).join('\n')
         : e.message || 'Erro ao salvar'
-    alert(msg)
+    alert(tr(msg))
   } finally {
     saving.value = false
   }

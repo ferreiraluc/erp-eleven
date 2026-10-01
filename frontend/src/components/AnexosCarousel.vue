@@ -5,7 +5,7 @@
     <div v-if="anexos.length" class="carousel">
       <!-- Main image -->
       <div class="carousel-main">
-        <button v-if="anexos.length > 1" class="nav-btn nav-prev" @click.prevent="prev" aria-label="Anterior">
+        <button v-if="anexos.length > 1" class="nav-btn nav-prev" @click.prevent="prev" :aria-label="uiText(`Anterior`)">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
@@ -20,7 +20,7 @@
           </div>
         </div>
 
-        <button v-if="anexos.length > 1" class="nav-btn nav-next" @click.prevent="next" aria-label="Próximo">
+        <button v-if="anexos.length > 1" class="nav-btn nav-next" @click.prevent="next" :aria-label="uiText(`Próximo`)">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
       </div>
@@ -33,11 +33,9 @@
           v-if="editable"
           class="del-btn"
           @click.prevent="emit('delete', anexos[current])"
-          title="Remover anexo"
+          :title="uiText(`Remover anexo`)"
         >
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          Remover
-        </button>
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> {{ uiText(`Remover`) }} </button>
       </div>
 
       <!-- Thumbnails -->
@@ -59,7 +57,7 @@
           :key="i"
           :class="['dot', { active: i === current }]"
           @click.prevent="current = i"
-          :aria-label="`Imagem ${i + 1}`"
+          :aria-label="uiText(`Imagem {0}`,{0:i + 1})"
         />
       </div>
     </div>
@@ -83,7 +81,7 @@
         >
           <svg v-if="!uploading" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <svg v-else class="spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="spin-track"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="spin-path"/></svg>
-          <span>{{ uploading ? 'Enviando...' : anexos.length >= 10 ? 'Limite atingido' : 'Galeria' }}</span>
+          <span>{{ uploading ? uiText(`Enviando...`) : anexos.length >= 10 ? uiText(`Limite atingido`) : uiText(`Galeria`) }}</span>
         </button>
         <button
           type="button"
@@ -92,7 +90,7 @@
           :disabled="uploading || anexos.length >= 10"
         >
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          <span>Câmera</span>
+          <span>{{ uiText(`Câmera`) }}</span>
         </button>
       </div>
       <p v-if="errorMsg" class="upload-error">{{ errorMsg }}</p>
@@ -103,7 +101,7 @@
       <div v-if="showCamera" class="camera-overlay" @click.self="closeCamera">
         <div class="camera-modal">
           <div class="camera-header">
-            <span>Tirar foto</span>
+            <span>{{ uiText(`Tirar foto`) }}</span>
             <button type="button" @click="closeCamera" class="camera-close">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -111,7 +109,7 @@
 
           <div class="camera-body">
             <video v-if="!capturedDataUrl" ref="videoEl" autoplay playsinline class="camera-video"></video>
-            <img v-else :src="capturedDataUrl" class="camera-preview" alt="Foto capturada" />
+            <img v-else :src="capturedDataUrl" class="camera-preview" :alt="uiText(`Foto capturada`)" />
             <canvas ref="canvasEl" class="hidden-input"></canvas>
             <p v-if="cameraError" class="camera-error">{{ cameraError }}</p>
           </div>
@@ -119,13 +117,11 @@
           <div class="camera-footer">
             <template v-if="!capturedDataUrl">
               <button type="button" class="btn-capture" @click="capturePhoto" :disabled="!cameraReady">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Capturar
-              </button>
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg> {{ uiText(`Capturar`) }} </button>
             </template>
             <template v-else>
-              <button type="button" class="btn-retake" @click="retakePhoto">Tirar novamente</button>
-              <button type="button" class="btn-use-photo" @click="usePhoto">Usar esta foto</button>
+              <button type="button" class="btn-retake" @click="retakePhoto">{{ uiText(`Tirar novamente`) }}</button>
+              <button type="button" class="btn-use-photo" @click="usePhoto">{{ uiText(`Usar esta foto`) }}</button>
             </template>
           </div>
         </div>
@@ -157,6 +153,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText, uiNumber } from '@/i18n/uiText'
 import { ref, watch, nextTick } from 'vue'
 import type { PedidoAnexo } from '@/services/api'
 
@@ -206,8 +203,8 @@ async function openCamera() {
     }
   } catch (e: any) {
     cameraError.value = e?.name === 'NotAllowedError'
-      ? 'Permissão de câmera negada. Verifique as configurações do navegador.'
-      : 'Câmera não disponível neste dispositivo.'
+      ? uiText(`Permissão de câmera negada. Verifique as configurações do navegador.`)
+      : uiText(`Câmera não disponível neste dispositivo.`)
   }
 }
 
@@ -255,9 +252,9 @@ function dataUrl(a: PedidoAnexo) {
 }
 
 function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes < 1024) return `${uiNumber(bytes,0)} B`
+  if (bytes < 1024 * 1024) return `${uiNumber(bytes / 1024,0)} KB`
+  return `${uiNumber(bytes / (1024 * 1024),1)} MB`
 }
 
 function prev() {

@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Transferência em Lote</h2>
+        <h2>{{ tr('Transferência em Lote') }}</h2>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -13,13 +13,13 @@
       <div class="modal-body">
         <!-- Direction -->
         <div class="form-group">
-          <label>Direção *</label>
+          <label>{{ tr('Direção *') }}</label>
           <div class="dir-toggle">
             <button type="button" :class="['dir-btn', { active: direction === 'deposito_to_loja' }]" @click="direction = 'deposito_to_loja'">
-              Depósito → Loja
+              {{ tr('Depósito → Loja') }}
             </button>
             <button type="button" :class="['dir-btn', { active: direction === 'loja_to_deposito' }]" @click="direction = 'loja_to_deposito'">
-              Loja → Depósito
+              {{ tr('Loja → Depósito') }}
             </button>
           </div>
         </div>
@@ -27,8 +27,8 @@
         <!-- Items list -->
         <div class="items-section">
           <div class="items-header">
-            <span class="items-title">{{ items.length }} ite{{ items.length !== 1 ? 'ns' : 'm' }} selecionado{{ items.length !== 1 ? 's' : '' }}</span>
-            <button type="button" class="max-all-btn" @click="setAllMax">Máximo disponível</button>
+            <span class="items-title">{{ tr('Itens selecionados: {count}', { count: items.length }) }}</span>
+            <button type="button" class="max-all-btn" @click="setAllMax">{{ tr('Máximo disponível') }}</button>
           </div>
           <div class="items-list">
             <div v-for="item in items" :key="item.id" class="transfer-row">
@@ -36,7 +36,7 @@
                 <span class="row-name">{{ item.name }}</span>
                 <span v-if="item.size" class="row-size">{{ item.size }}</span>
                 <span class="row-stock" :class="sourceStock(item) === 0 ? 'stock-zero' : ''">
-                  {{ direction === 'deposito_to_loja' ? 'Dep.' : 'Loja' }}: {{ sourceStock(item) }}
+                  {{ direction === 'deposito_to_loja' ? tr('Dep.') : tr('Loja') }}: {{ sourceStock(item) }}
                 </span>
               </div>
               <div class="row-qty">
@@ -55,20 +55,20 @@
         </div>
 
         <div class="form-group">
-          <label>Motivo</label>
-          <input v-model="reason" type="text" class="form-input" placeholder="Motivo da transferência..." />
+          <label>{{ tr('Motivo') }}</label>
+          <input v-model="reason" type="text" class="form-input" :placeholder="tr('Motivo da transferência...')" />
         </div>
 
-        <div v-if="errorMsg" class="error-banner">{{ errorMsg }}</div>
+        <div v-if="errorMsg" class="error-banner">{{ tr(errorMsg) }}</div>
       </div>
 
       <div class="modal-footer">
         <div class="footer-summary">
-          {{ totalQty }} unidad{{ totalQty !== 1 ? 'es' : 'e' }} a transferir
+          {{ tr('Unidades a transferir: {count}', { count: totalQty }) }}
         </div>
-        <button @click="emit('close')" class="btn btn-secondary">Cancelar</button>
+        <button @click="emit('close')" class="btn btn-secondary">{{ tr('Cancelar') }}</button>
         <button @click="handleSubmit" class="btn btn-primary" :disabled="saving || totalQty === 0">
-          {{ saving ? 'Transferindo...' : 'Transferir' }}
+          {{ saving ? tr('Transferindo...') : tr('Transferir') }}
         </button>
       </div>
     </div>
@@ -76,6 +76,8 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, reactive, computed } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 

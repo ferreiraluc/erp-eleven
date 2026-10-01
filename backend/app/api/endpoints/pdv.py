@@ -16,6 +16,8 @@ from ...schemas.pdv import (
     PdvFiadoPaymentCreate, PdvFiadoMovementResponse,
 )
 
+from ...services.access_policy import sales_query, require_sale_owner, own_sales, require_all_sales
+
 router = APIRouter()
 
 
@@ -93,6 +95,7 @@ def create_sale(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
+    require_sale_owner(current_user, body.vendedor_id or current_user.id, pdv=True)
     if not body.items:
         raise HTTPException(status_code=400, detail="A venda deve ter pelo menos 1 item")
 
@@ -172,7 +175,7 @@ def list_sales(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    q = db.query(PdvSale)
+    q = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True)
     if status:
         q = q.filter(PdvSale.status == status)
     if cliente_id:
@@ -205,7 +208,7 @@ def get_sale(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    sale = db.query(PdvSale).filter(PdvSale.id == sale_id).first()
+    sale = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True).filter(PdvSale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
     return _sale_to_response(sale)
@@ -217,7 +220,7 @@ def cancel_sale(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    sale = db.query(PdvSale).filter(PdvSale.id == sale_id).first()
+    sale = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True).filter(PdvSale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
     if sale.status == "cancelled":
@@ -279,7 +282,7 @@ def list_clients(
             PdvCliente.doc.ilike(term) |
             PdvCliente.telefone.ilike(term)
         )
-    return q.order_by(PdvCliente.nome).all()
+    return [_client_response(c, current_user) for c in q.order_by(PdvCliente.nome).all()]
 
 
 @router.post("/clients", response_model=PdvClienteResponse, status_code=201)
@@ -296,7 +299,7 @@ def create_client(
     db.add(cliente)
     db.commit()
     db.refresh(cliente)
-    return cliente
+    return _client_response(cliente, current_user)
 
 
 @router.get("/clients/{cliente_id}", response_model=PdvClienteResponse)
@@ -308,7 +311,7 @@ def get_client(
     cliente = db.query(PdvCliente).filter(PdvCliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return cliente
+    return _client_response(cliente, current_user)
 
 
 @router.put("/clients/{cliente_id}", response_model=PdvClienteResponse)
@@ -325,7 +328,7 @@ def update_client(
         setattr(cliente, k, v)
     db.commit()
     db.refresh(cliente)
-    return cliente
+    return _client_response(cliente, current_user)
 
 
 @router.get("/clients/{cliente_id}/fiado", response_model=List[PdvFiadoMovementResponse])
@@ -336,6 +339,7 @@ def get_fiado_history(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
+    require_all_sales(current_user)
     movs = (
         db.query(PdvFiadoMovement)
         .filter(PdvFiadoMovement.cliente_id == cliente_id)
@@ -354,6 +358,7 @@ def record_fiado_payment(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
+    require_all_sales(current_user)
     cliente = db.query(PdvCliente).filter(PdvCliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
@@ -415,3 +420,9 @@ def _sale_to_response(sale: PdvSale) -> PdvSaleResponse:
             for p in sale.payments
         ],
     )
+
+
+def _client_response(cliente, user):
+    data = PdvClienteResponse.model_validate(cliente)
+    if own_sales(user): data.saldo_fiado_gs = None
+    return data

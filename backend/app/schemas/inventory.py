@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 from decimal import Decimal
 import uuid
@@ -145,12 +145,16 @@ class MovementBase(BaseModel):
 
 
 class MovementCreate(MovementBase):
-    pass
+    movement_type: Literal['entry', 'exit', 'adjustment', 'transfer']
+    quantity: int = Field(ge=0, le=2_147_483_647, strict=True)
+    location: Optional[Literal['loja', 'deposito']] = "loja"
+    location_from: Optional[Literal['loja', 'deposito']] = None
+    location_to: Optional[Literal['loja', 'deposito']] = None
 
 
 class BatchMovementItem(BaseModel):
     item_id: uuid.UUID
-    quantity: int
+    quantity: int = Field(gt=0, le=2_147_483_647, strict=True)
     unit_cost: Optional[Decimal] = None
 
 
@@ -252,8 +256,8 @@ class GradeCreateRequest(BaseModel):
     image_data: Optional[str] = None
     group_key: Optional[str] = None      # auto-generated from name+color if None
     sizes: List[str]                     # e.g. ["P","M","G","GG"] or ["38","39","40"]
-    initial_stock: Optional[int] = 0    # entry movement created for each item if > 0
-    stock_location: Optional[str] = "loja"  # "loja" or "deposito"
+    initial_stock: Optional[int] = Field(default=0, ge=0, le=2_147_483_647, strict=True)
+    stock_location: Optional[Literal['loja', 'deposito']] = "loja"
 
 
 class GradeCreateResponse(BaseModel):
@@ -264,7 +268,7 @@ class GradeCreateResponse(BaseModel):
 
 class BulkTransferItem(BaseModel):
     item_id: uuid.UUID
-    quantity: int
+    quantity: int = Field(gt=0, le=2_147_483_647, strict=True)
 
 
 class BulkTransferRequest(BaseModel):

@@ -1,0 +1,24 @@
+.logistics-panel { color: #334155; font-size: .82rem; }
+.logistics-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: .65rem; margin-bottom: 1rem; }
+.logistics-stats > div { display: flex; flex-direction: column; gap: .25rem; background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: .85rem; }
+.logistics-stats strong { font-size: 1.3rem; color: #0f172a; }
+.logistics-stats span, .muted, small { color: #64748b; }
+.logistics-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+h4 { margin: 0 0 .65rem; font-size: .9rem; }
+.logistics-row { padding: .8rem; border: 1px solid #e2e8f0; border-radius: 9px; background: white; margin-bottom: .6rem; }
+.logistics-row p { margin: .45rem 0; overflow-wrap: anywhere; }
+.row-top { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .4rem; align-items: center; }
+a { color: #2563eb; font-weight: 650; text-decoration: none; } a:hover { text-decoration: underline; }
+.state { background: #f1f5f9; color: #475569; border-radius: 6px; padding: .2rem .45rem; font-size: .72rem; }
+.tracking-code { font-family: monospace; letter-spacing: .03em; }
+button { cursor: pointer; border: 1px solid #cbd5e1; border-radius: 7px; padding: .55rem .75rem; color: #334155; background: white; }
+button:disabled { cursor: wait; opacity: .55; } button:hover:not(:disabled) { background: #f1f5f9; }
+button.primary { background: #2563eb; color: white; border-color: #2563eb; margin-right: .5rem; }
+.link-form { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: .85rem; }
+.link-form summary { color: #2563eb; font-weight: 600; cursor: pointer; }
+.link-form form { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; }
+label { display: flex; flex-direction: column; gap: .35rem; font-weight: 600; }
+label.identifier { flex: 1; min-width: 160px; } input, select { border: 1px solid #cbd5e1; border-radius: 7px; padding: .6rem; background: white; min-width: 0; font: inherit; }
+.link-preview { margin-top: .8rem; padding: .8rem; border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; }
+.link-error { color: #b91c1c; } .link-success { color: #15803d; }
+@media(max-width:640px) { .logistics-columns { grid-template-columns: 1fr; } .logistics-stats { grid-template-columns: repeat(2,1fr); } }

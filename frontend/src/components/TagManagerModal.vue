@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click="handleOverlayClick">
     <div class="modal-container" @click.stop>
       <div class="modal-header">
-        <h2 class="modal-title">Gerenciar Tags</h2>
+        <h2 class="modal-title">{{ uiText(`Gerenciar Tags`) }}</h2>
         <button @click="$emit('close')" class="modal-close">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -11,24 +11,25 @@
       </div>
 
       <div class="modal-body">
+        <p v-if="errorKey" role="alert" class="tag-error">{{ uiText(errorKey) }}</p>
         <!-- Create New Tag Form -->
         <div class="create-tag-section">
-          <h3 class="section-title">Criar Nova Tag</h3>
+          <h3 class="section-title">{{ uiText(`Criar Nova Tag`) }}</h3>
           <form @submit.prevent="createTag" class="tag-form">
             <div class="form-row">
               <div class="form-group">
-                <label for="nome">Nome da Tag</label>
+                <label for="nome">{{ uiText(`Nome da Tag`) }}</label>
                 <input
                   id="nome"
                   v-model="newTag.nome"
                   type="text"
                   required
-                  placeholder="Ex: Separado, Pago, Enviado..."
+                  :placeholder="uiText(`Ex: Separado, Pago, Enviado...`)"
                   class="form-input"
                 />
               </div>
               <div class="form-group">
-                <label for="cor">Cor</label>
+                <label for="cor">{{ uiText(`Cor`) }}</label>
                 <div class="color-input-container">
                   <input
                     id="cor"
@@ -48,17 +49,17 @@
 
             <div class="form-row">
               <div class="form-group flex-2">
-                <label for="descricao">Descrição (opcional)</label>
+                <label for="descricao">{{ uiText(`Descrição (opcional)`) }}</label>
                 <input
                   id="descricao"
                   v-model="newTag.descricao"
                   type="text"
-                  placeholder="Descrição da tag..."
+                  :placeholder="uiText(`Descrição da tag...`)"
                   class="form-input"
                 />
               </div>
               <div class="form-group">
-                <label for="ordem">Ordem</label>
+                <label for="ordem">{{ uiText(`Ordem`) }}</label>
                 <input
                   id="ordem"
                   v-model="newTag.ordem"
@@ -81,13 +82,13 @@
                   <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                {{ isCreating ? 'Criando...' : 'Criar Tag' }}
+                {{ isCreating ? uiText(`Criando...`) : uiText(`Criar Tag`) }}
               </button>
             </div>
 
             <!-- Preview -->
             <div v-if="newTag.nome" class="tag-preview">
-              <span class="preview-label">Preview:</span>
+              <span class="preview-label">{{ uiText(`Preview:`) }}</span>
               <span
                 class="tag-badge preview"
                 :style="{
@@ -104,15 +105,15 @@
 
         <!-- Existing Tags List -->
         <div class="tags-list-section">
-          <h3 class="section-title">Tags Existentes</h3>
+          <h3 class="section-title">{{ uiText(`Tags Existentes`) }}</h3>
 
           <div v-if="isLoading" class="loading-container">
             <div class="loading-spinner"></div>
-            <p>Carregando tags...</p>
+            <p>{{ uiText(`Carregando tags...`) }}</p>
           </div>
 
           <div v-else-if="tags.length === 0" class="empty-state">
-            <p>Nenhuma tag encontrada.</p>
+            <p>{{ uiText(`Nenhuma tag encontrada.`) }}</p>
           </div>
 
           <div v-else class="tags-grid">
@@ -134,8 +135,8 @@
                   {{ tag.nome }}
                 </span>
                 <div class="tag-details">
-                  <span class="tag-description">{{ tag.descricao || 'Sem descrição' }}</span>
-                  <span class="tag-order">Ordem: {{ tag.ordem }}</span>
+                  <span class="tag-description">{{ tag.descricao || uiText(`Sem descrição`) }}</span>
+                  <span class="tag-order">{{ uiText(`Ordem:`) }} {{ tag.ordem }}</span>
                 </div>
               </div>
 
@@ -143,7 +144,7 @@
                 <button
                   @click="editTag(tag)"
                   class="action-btn edit-btn"
-                  title="Editar tag"
+                  :title="uiText(`Editar tag`)"
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -152,7 +153,7 @@
                 <button
                   @click="toggleTagStatus(tag)"
                   :class="['action-btn', tag.ativo ? 'deactivate-btn' : 'activate-btn']"
-                  :title="tag.ativo ? 'Desativar tag' : 'Ativar tag'"
+                  :title="tag.ativo ? uiText(`Desativar tag`) : uiText(`Ativar tag`)"
                 >
                   <svg v-if="tag.ativo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L12 12m-3-3l6.364 6.364M21 21l-3-3m0 0a10.05 10.05 0 01-8.098-2.879m4.616-4.616a3 3 0 00-4.243-4.243m0 0a9.968 9.968 0 00-1.563 3.029M12 12l-3-3" />
@@ -165,7 +166,7 @@
                 <button
                   @click="deleteTag(tag)"
                   class="action-btn delete-btn"
-                  title="Excluir tag"
+                  :title="uiText(`Excluir tag`)"
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -178,12 +179,8 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="createDefaultTags" class="btn-secondary">
-          Criar Tags Padrão
-        </button>
-        <button @click="$emit('close')" class="btn-primary">
-          Fechar
-        </button>
+        <button @click="createDefaultTags" class="btn-secondary"> {{ uiText(`Criar Tags Padrão`) }} </button>
+        <button @click="$emit('close')" class="btn-primary"> {{ uiText(`Fechar`) }} </button>
       </div>
     </div>
 
@@ -191,7 +188,7 @@
     <div v-if="editingTag" class="modal-overlay edit-overlay" @click="cancelEdit">
       <div class="modal-container edit-modal" @click.stop>
         <div class="modal-header">
-          <h3 class="modal-title">Editar Tag</h3>
+          <h3 class="modal-title">{{ uiText(`Editar Tag`) }}</h3>
           <button @click="cancelEdit" class="modal-close">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -203,7 +200,7 @@
           <form @submit.prevent="updateTag" class="tag-form">
             <div class="form-row">
               <div class="form-group">
-                <label for="edit-nome">Nome da Tag</label>
+                <label for="edit-nome">{{ uiText(`Nome da Tag`) }}</label>
                 <input
                   id="edit-nome"
                   v-model="editForm.nome"
@@ -213,7 +210,7 @@
                 />
               </div>
               <div class="form-group">
-                <label for="edit-cor">Cor</label>
+                <label for="edit-cor">{{ uiText(`Cor`) }}</label>
                 <div class="color-input-container">
                   <input
                     id="edit-cor"
@@ -232,7 +229,7 @@
 
             <div class="form-row">
               <div class="form-group flex-2">
-                <label for="edit-descricao">Descrição</label>
+                <label for="edit-descricao">{{ uiText(`Descrição`) }}</label>
                 <input
                   id="edit-descricao"
                   v-model="editForm.descricao"
@@ -241,7 +238,7 @@
                 />
               </div>
               <div class="form-group">
-                <label for="edit-ordem">Ordem</label>
+                <label for="edit-ordem">{{ uiText(`Ordem`) }}</label>
                 <input
                   id="edit-ordem"
                   v-model="editForm.ordem"
@@ -255,7 +252,7 @@
 
             <!-- Preview -->
             <div class="tag-preview">
-              <span class="preview-label">Preview:</span>
+              <span class="preview-label">{{ uiText(`Preview:`) }}</span>
               <span
                 class="tag-badge preview"
                 :style="{
@@ -271,9 +268,7 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="cancelEdit" class="btn-secondary">
-            Cancelar
-          </button>
+          <button @click="cancelEdit" class="btn-secondary"> {{ uiText(`Cancelar`) }} </button>
           <button
             @click="updateTag"
             :disabled="!editForm.nome || isUpdating"
@@ -283,7 +278,7 @@
               <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            {{ isUpdating ? 'Salvando...' : 'Salvar' }}
+            {{ isUpdating ? uiText(`Salvando...`) : uiText(`Salvar`) }}
           </button>
         </div>
       </div>
@@ -292,6 +287,7 @@
 </template>
 
 <script setup lang="ts">
+import { uiText } from '@/i18n/uiText'
 import { ref, onMounted } from 'vue'
 import { tagsAPI, type Tag, type TagCreate } from '@/services/api'
 
@@ -302,6 +298,7 @@ defineEmits<{
 
 // State
 const tags = ref<Tag[]>([])
+const errorKey = ref('')
 const isLoading = ref(true)
 const isCreating = ref(false)
 const isUpdating = ref(false)
@@ -324,11 +321,13 @@ const editForm = ref<TagCreate>({
 
 // Methods
 const loadTags = async () => {
+  errorKey.value = ''
   try {
     isLoading.value = true
     tags.value = await tagsAPI.getAll(0, 100, false) // Include inactive tags
   } catch (error) {
     console.error('Erro ao carregar tags:', error)
+    errorKey.value = 'Erro ao carregar tags.'
   } finally {
     isLoading.value = false
   }
@@ -337,6 +336,7 @@ const loadTags = async () => {
 const createTag = async () => {
   if (!newTag.value.nome || isCreating.value) return
 
+  errorKey.value = ''
   try {
     isCreating.value = true
     await tagsAPI.create(newTag.value)
@@ -353,17 +353,20 @@ const createTag = async () => {
     await loadTags()
   } catch (error) {
     console.error('Erro ao criar tag:', error)
+    errorKey.value = 'Erro ao criar tag.'
   } finally {
     isCreating.value = false
   }
 }
 
 const createDefaultTags = async () => {
+  errorKey.value = ''
   try {
     await tagsAPI.createDefaultTags()
     await loadTags()
   } catch (error) {
     console.error('Erro ao criar tags padrão:', error)
+    errorKey.value = 'Erro ao criar tags padrão.'
   }
 }
 
@@ -390,6 +393,7 @@ const cancelEdit = () => {
 const updateTag = async () => {
   if (!editingTag.value || !editForm.value.nome || isUpdating.value) return
 
+  errorKey.value = ''
   try {
     isUpdating.value = true
     await tagsAPI.update(editingTag.value.id, editForm.value)
@@ -397,28 +401,33 @@ const updateTag = async () => {
     cancelEdit()
   } catch (error) {
     console.error('Erro ao atualizar tag:', error)
+    errorKey.value = 'Erro ao atualizar tag.'
   } finally {
     isUpdating.value = false
   }
 }
 
 const toggleTagStatus = async (tag: Tag) => {
+  errorKey.value = ''
   try {
     await tagsAPI.update(tag.id, { ativo: !tag.ativo })
     await loadTags()
   } catch (error) {
     console.error('Erro ao alterar status da tag:', error)
+    errorKey.value = 'Erro ao alterar status da tag.'
   }
 }
 
 const deleteTag = async (tag: Tag) => {
-  if (!confirm(`Tem certeza que deseja excluir a tag "${tag.nome}"?`)) return
+  if (!confirm(uiText(`Tem certeza que deseja excluir a tag "{0}"?`,{0:tag.nome}))) return
 
+  errorKey.value = ''
   try {
     await tagsAPI.delete(tag.id)
     await loadTags()
   } catch (error) {
     console.error('Erro ao excluir tag:', error)
+    errorKey.value = 'Erro ao excluir tag.'
   }
 }
 
@@ -434,6 +443,7 @@ onMounted(loadTags)
 </script>
 
 <style scoped>
+.tag-error { color: #b91c1c; padding: .75rem; background: #fef2f2; border-radius: .5rem; }
 .modal-overlay {
   position: fixed;
   top: 0;

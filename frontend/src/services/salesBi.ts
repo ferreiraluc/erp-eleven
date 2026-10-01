@@ -8,6 +8,7 @@ export interface MonthResult {
 }
 export interface WeekResult { year: number; month: number; index: number; label: string; total_usd: number; partial: boolean; source_id: string }
 export interface Overview {
+  access?: {scope: 'all' | 'own'; seller: string | null};
   years: number[]; sellers: string[]; latest: { year: number | null; month: number | null }; selected: Metric;
   months: MonthResult[]; annual: (Metric & { year: number })[];
   ranking: { name: string; total_usd: number; available_months: number; source_months: number }[];

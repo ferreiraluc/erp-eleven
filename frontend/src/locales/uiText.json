@@ -1,0 +1,3492 @@
+{
+  "\"{0}\" excede 5 MB.": {
+    "pt": "\"{0}\" excede 5 MB.",
+    "es": "\"{0}\" supera los 5 MB.",
+    "en": "\"{0}\" exceeds 5 MB."
+  },
+  "+ Add": {
+    "pt": "+ Adicionar",
+    "es": "+ Agregar",
+    "en": "+ Add"
+  },
+  "+ Adicionar como item avulso": {
+    "pt": "+ Adicionar como item avulso",
+    "es": "+ Agregar como artículo suelto",
+    "en": "+ Add as unlisted item"
+  },
+  "+ Adicionar primeiro cliente": {
+    "pt": "+ Adicionar primeiro cliente",
+    "es": "+ Agregar primer cliente",
+    "en": "+ Add first customer"
+  },
+  "+ Novo cliente": {
+    "pt": "+ Novo cliente",
+    "es": "+ Nuevo cliente",
+    "en": "+ New customer"
+  },
+  "0 = sem limite": {
+    "pt": "0 = sem limite",
+    "es": "0 = sin límite",
+    "en": "0 = no limit"
+  },
+  "Adicionar Folga": {
+    "pt": "Adicionar Folga",
+    "es": "Agregar día libre",
+    "en": "Add day off"
+  },
+  "Adicionar Rastreamento": {
+    "pt": "Adicionar Rastreamento",
+    "es": "Agregar seguimiento",
+    "en": "Add tracking"
+  },
+  "Adicione um novo rastreamento para começar": {
+    "pt": "Adicione um novo rastreamento para começar",
+    "es": "Agrega un seguimiento para comenzar",
+    "en": "Add a tracking number to get started"
+  },
+  "Anterior": {
+    "pt": "Anterior",
+    "es": "Anterior",
+    "en": "Previous"
+  },
+  "Aprovada": {
+    "pt": "Aprovada",
+    "es": "Aprobada",
+    "en": "Approved"
+  },
+  "Aprovadas": {
+    "pt": "Aprovadas",
+    "es": "Aprobadas",
+    "en": "Approved"
+  },
+  "Aprovar": {
+    "pt": "Aprovar",
+    "es": "Aprobar",
+    "en": "Approve"
+  },
+  "Aprovar automaticamente": {
+    "pt": "Aprovar automaticamente",
+    "es": "Aprobar automáticamente",
+    "en": "Approve automatically"
+  },
+  "Assistente IA": {
+    "pt": "Assistente IA",
+    "es": "Asistente IA",
+    "en": "AI assistant"
+  },
+  "Atacadista": {
+    "pt": "Atacadista",
+    "es": "Mayorista",
+    "en": "Wholesale"
+  },
+  "Atalho": {
+    "pt": "Atalho",
+    "es": "Atajo",
+    "en": "Shortcut"
+  },
+  "Atalho:": {
+    "pt": "Atalho:",
+    "es": "Atajo:",
+    "en": "Shortcut:"
+  },
+  "Ativo": {
+    "pt": "Ativo",
+    "es": "Activo",
+    "en": "Active"
+  },
+  "Ativos": {
+    "pt": "Ativos",
+    "es": "Activos",
+    "en": "Active"
+  },
+  "Ativos (": {
+    "pt": "Ativos (",
+    "es": "Activos (",
+    "en": "Active ("
+  },
+  "Atrasado": {
+    "pt": "Atrasado",
+    "es": "Retrasado",
+    "en": "Delayed"
+  },
+  "Atualizado": {
+    "pt": "Atualizado",
+    "es": "Actualizado",
+    "en": "Updated"
+  },
+  "Atualizado:": {
+    "pt": "Atualizado:",
+    "es": "Actualizado:",
+    "en": "Updated:"
+  },
+  "Atualizando...": {
+    "pt": "Atualizando...",
+    "es": "Actualizando...",
+    "en": "Updating..."
+  },
+  "Atualizar": {
+    "pt": "Atualizar",
+    "es": "Actualizar",
+    "en": "Refresh"
+  },
+  "Atualizar via API": {
+    "pt": "Atualizar via API",
+    "es": "Actualizar por API",
+    "en": "Refresh from API"
+  },
+  "Ações": {
+    "pt": "Ações",
+    "es": "Acciones",
+    "en": "Actions"
+  },
+  "Ações Rápidas": {
+    "pt": "Ações Rápidas",
+    "es": "Acciones rápidas",
+    "en": "Quick actions"
+  },
+  "Buscando…": {
+    "pt": "Buscando…",
+    "es": "Buscando…",
+    "en": "Searching…"
+  },
+  "Buscar": {
+    "pt": "Buscar",
+    "es": "Buscar",
+    "en": "Search"
+  },
+  "Buscar cliente…": {
+    "pt": "Buscar cliente…",
+    "es": "Buscar cliente…",
+    "en": "Search customer…"
+  },
+  "Buscar nº pedido, descrição ou cliente...": {
+    "pt": "Buscar nº pedido, descrição ou cliente...",
+    "es": "Buscar nº pedido, descripción o cliente...",
+    "en": "Search order number, description or customer..."
+  },
+  "Buscar por código ou destinatário...": {
+    "pt": "Buscar por código ou destinatário...",
+    "es": "Buscar por código o destinatario...",
+    "en": "Search by code or recipient..."
+  },
+  "Buscar por nome, telefone ou CPF...": {
+    "pt": "Buscar por nome, telefone ou CPF...",
+    "es": "Buscar por nombre, teléfono o CPF...",
+    "en": "Search by name, phone or CPF..."
+  },
+  "Buscar por número, cliente ou cidade...": {
+    "pt": "Buscar por número, cliente ou cidade...",
+    "es": "Buscar por número, cliente o ciudad...",
+    "en": "Search by number, customer or city..."
+  },
+  "Buscar produto, SKU ou código de barras… (F2)": {
+    "pt": "Buscar produto, SKU ou código de barras… (F2)",
+    "es": "Buscar producto, SKU o código de barras… (F2)",
+    "en": "Search product, SKU or barcode… (F2)"
+  },
+  "Buscar rastreio cadastrado...": {
+    "pt": "Buscar rastreio cadastrado...",
+    "es": "Buscar seguimiento registrado...",
+    "en": "Search saved tracking..."
+  },
+  "Cadastrar": {
+    "pt": "Cadastrar",
+    "es": "Registrar",
+    "en": "Create"
+  },
+  "Cadastrar Vendedor": {
+    "pt": "Cadastrar Vendedor",
+    "es": "Registrar vendedor",
+    "en": "Add salesperson"
+  },
+  "Cadastre seu primeiro vendedor": {
+    "pt": "Cadastre seu primeiro vendedor",
+    "es": "Registre a su primer vendedor",
+    "en": "Add your first salesperson"
+  },
+  "Cadastre, edite e gerencie seus vendedores": {
+    "pt": "Cadastre, edite e gerencie seus vendedores",
+    "es": "Registra, edita y administra tus vendedores",
+    "en": "Add, edit and manage your salespeople"
+  },
+  "Caderno de Fiado": {
+    "pt": "Caderno de Fiado",
+    "es": "Cuaderno de crédito",
+    "en": "Customer credit ledger"
+  },
+  "Calendário de Folgas": {
+    "pt": "Calendário de Folgas",
+    "es": "Calendario de días libres",
+    "en": "Days off calendar"
+  },
+  "Cancelado": {
+    "pt": "Cancelado",
+    "es": "Cancelado",
+    "en": "Cancelled"
+  },
+  "Cancelar": {
+    "pt": "Cancelar",
+    "es": "Cancelar",
+    "en": "Cancel"
+  },
+  "Cards": {
+    "pt": "Cards",
+    "es": "Tarjetas",
+    "en": "Cards"
+  },
+  "Carregando pedidos...": {
+    "pt": "Carregando pedidos...",
+    "es": "Cargando pedidos...",
+    "en": "Loading orders..."
+  },
+  "Carregando rastreamentos...": {
+    "pt": "Carregando rastreamentos...",
+    "es": "Cargando seguimientos...",
+    "en": "Loading tracking..."
+  },
+  "Carregando vendedores...": {
+    "pt": "Carregando vendedores...",
+    "es": "Cargando vendedores...",
+    "en": "Loading salespeople..."
+  },
+  "Carregando…": {
+    "pt": "Carregando…",
+    "es": "Cargando…",
+    "en": "Loading…"
+  },
+  "Carrinho": {
+    "pt": "Carrinho",
+    "es": "Carrito",
+    "en": "Cart"
+  },
+  "Carrinho vazio": {
+    "pt": "Carrinho vazio",
+    "es": "Carrito vacío",
+    "en": "Empty cart"
+  },
+  "Chave / ref.": {
+    "pt": "Chave / ref.",
+    "es": "Clave / ref.",
+    "en": "Key / ref."
+  },
+  "Checking...": {
+    "pt": "Verificando...",
+    "es": "Comprobando...",
+    "en": "Checking..."
+  },
+  "Cliente": {
+    "pt": "Cliente",
+    "es": "Cliente",
+    "en": "Customer"
+  },
+  "Cliente (opcional)": {
+    "pt": "Cliente (opcional)",
+    "es": "Cliente (opcional)",
+    "en": "Customer (optional)"
+  },
+  "Cliente cadastrado!": {
+    "pt": "Cliente cadastrado!",
+    "es": "¡Cliente registrado!",
+    "en": "Customer added!"
+  },
+  "Clientes": {
+    "pt": "Clientes",
+    "es": "Clientes",
+    "en": "Customers"
+  },
+  "Clientes ativos": {
+    "pt": "Clientes ativos",
+    "es": "Clientes activos",
+    "en": "Active customers"
+  },
+  "Com saldo": {
+    "pt": "Com saldo",
+    "es": "Con saldo",
+    "en": "With a balance"
+  },
+  "Comece importando ou criando uma nova venda": {
+    "pt": "Comece importando ou criando uma nova venda",
+    "es": "Comience importando o creando una venta",
+    "en": "Start by importing or creating a sale"
+  },
+  "Compra": {
+    "pt": "Compra",
+    "es": "Compra",
+    "en": "Purchase"
+  },
+  "Confirmar": {
+    "pt": "Confirmar",
+    "es": "Confirmar",
+    "en": "Confirm"
+  },
+  "Confirmar Exclusão": {
+    "pt": "Confirmar Exclusão",
+    "es": "Confirmar eliminación",
+    "en": "Confirm deletion"
+  },
+  "Connected": {
+    "pt": "Conectado",
+    "es": "Conectado",
+    "en": "Connected"
+  },
+  "Consultando...": {
+    "pt": "Consultando...",
+    "es": "Consultando...",
+    "en": "Checking..."
+  },
+  "Consultar e Adicionar": {
+    "pt": "Consultar e Adicionar",
+    "es": "Consultar y agregar",
+    "en": "Look up and add"
+  },
+  "Consultar e Salvar": {
+    "pt": "Consultar e Salvar",
+    "es": "Consultar y guardar",
+    "en": "Look up and save"
+  },
+  "Conta Bancária": {
+    "pt": "Conta Bancária",
+    "es": "Cuenta bancaria",
+    "en": "Bank account"
+  },
+  "Controle de Folgas": {
+    "pt": "Controle de Folgas",
+    "es": "Control de días libres",
+    "en": "Days off management"
+  },
+  "Controle de contas a receber de clientes atacadistas": {
+    "pt": "Controle de contas a receber de clientes atacadistas",
+    "es": "Control de cuentas por cobrar de clientes mayoristas",
+    "en": "Wholesale customer receivables"
+  },
+  "Copiar": {
+    "pt": "Copiar",
+    "es": "Copiar",
+    "en": "Copy"
+  },
+  "Copiar Código": {
+    "pt": "Copiar Código",
+    "es": "Copiar código",
+    "en": "Copy code"
+  },
+  "Copiar código": {
+    "pt": "Copiar código",
+    "es": "Copiar código",
+    "en": "Copy code"
+  },
+  "Cor do Calendário": {
+    "pt": "Cor do Calendário",
+    "es": "Color del calendario",
+    "en": "Calendar color"
+  },
+  "Criado": {
+    "pt": "Criado",
+    "es": "Creado",
+    "en": "Created"
+  },
+  "Criado em": {
+    "pt": "Criado em",
+    "es": "Creado el",
+    "en": "Created on"
+  },
+  "Criado em:": {
+    "pt": "Criado em:",
+    "es": "Creado el:",
+    "en": "Created on:"
+  },
+  "Criado:": {
+    "pt": "Criado:",
+    "es": "Creado:",
+    "en": "Created:"
+  },
+  "Criando...": {
+    "pt": "Criando...",
+    "es": "Creando...",
+    "en": "Creating..."
+  },
+  "Criar Pedido": {
+    "pt": "Criar Pedido",
+    "es": "Crear pedido",
+    "en": "Create order"
+  },
+  "Criar Rastreamento": {
+    "pt": "Criar Rastreamento",
+    "es": "Crear seguimiento",
+    "en": "Create tracking"
+  },
+  "Criar Vendedor": {
+    "pt": "Criar Vendedor",
+    "es": "Crear vendedor",
+    "en": "Create salesperson"
+  },
+  "Criar tags padrão": {
+    "pt": "Criar tags padrão",
+    "es": "Crear etiquetas predeterminadas",
+    "en": "Create default tags"
+  },
+  "Crédito": {
+    "pt": "Crédito",
+    "es": "Crédito",
+    "en": "Credit"
+  },
+  "Custo de emissão (R$)": {
+    "pt": "Custo de emissão (R$)",
+    "es": "Costo de emisión (R$)",
+    "en": "Issuance cost (R$)"
+  },
+  "Código": {
+    "pt": "Código",
+    "es": "Código",
+    "en": "Code"
+  },
+  "Código de Rastreamento *": {
+    "pt": "Código de Rastreamento *",
+    "es": "Código de seguimiento *",
+    "en": "Tracking code *"
+  },
+  "Dados do Cliente": {
+    "pt": "Dados do Cliente",
+    "es": "Datos del cliente",
+    "en": "Customer details"
+  },
+  "Dados do Cliente (Opcional)": {
+    "pt": "Dados do Cliente (Opcional)",
+    "es": "Datos del cliente (opcional)",
+    "en": "Customer details (optional)"
+  },
+  "Dashboard": {
+    "pt": "Painel",
+    "es": "Panel",
+    "en": "Dashboard"
+  },
+  "Data": {
+    "pt": "Data",
+    "es": "Fecha",
+    "en": "Date"
+  },
+  "Data:": {
+    "pt": "Data:",
+    "es": "Fecha:",
+    "en": "Date:"
+  },
+  "Database": {
+    "pt": "Banco de dados",
+    "es": "Base de datos",
+    "en": "Database"
+  },
+  "Desconto": {
+    "pt": "Desconto",
+    "es": "Descuento",
+    "en": "Discount"
+  },
+  "Desconto (G$)": {
+    "pt": "Desconto (G$)",
+    "es": "Descuento (G$)",
+    "en": "Discount (G$)"
+  },
+  "Descreva o motivo...": {
+    "pt": "Descreva o motivo...",
+    "es": "Describe el motivo...",
+    "en": "Describe the reason..."
+  },
+  "Descrição": {
+    "pt": "Descrição",
+    "es": "Descripción",
+    "en": "Description"
+  },
+  "Descrição do Pedido": {
+    "pt": "Descrição do Pedido",
+    "es": "Descripción del pedido",
+    "en": "Order description"
+  },
+  "Descrição do objeto": {
+    "pt": "Descrição do objeto",
+    "es": "Descripción del objeto",
+    "en": "Item description"
+  },
+  "Descrição dos Itens": {
+    "pt": "Descrição dos Itens",
+    "es": "Descripción de los artículos",
+    "en": "Item descriptions"
+  },
+  "Descrição:": {
+    "pt": "Descrição:",
+    "es": "Descripción:",
+    "en": "Description:"
+  },
+  "Destinatário": {
+    "pt": "Destinatário",
+    "es": "Destinatario",
+    "en": "Recipient"
+  },
+  "Destinatário:": {
+    "pt": "Destinatário:",
+    "es": "Destinatario:",
+    "en": "Recipient:"
+  },
+  "Destino": {
+    "pt": "Destino",
+    "es": "Destino",
+    "en": "Destination"
+  },
+  "Detalhes do Pedido": {
+    "pt": "Detalhes do Pedido",
+    "es": "Detalles del pedido",
+    "en": "Order details"
+  },
+  "Developed by lucasadrianof": {
+    "pt": "Desenvolvido por lucasadrianof",
+    "es": "Desarrollado por lucasadrianof",
+    "en": "Developed by lucasadrianof"
+  },
+  "Dia Completo": {
+    "pt": "Dia Completo",
+    "es": "Día completo",
+    "en": "Full day"
+  },
+  "Digitar código manualmente": {
+    "pt": "Digitar código manualmente",
+    "es": "Escribir código manualmente",
+    "en": "Enter code manually"
+  },
+  "Digite apenas letras e números": {
+    "pt": "Digite apenas letras e números",
+    "es": "Escribe solo letras y números",
+    "en": "Enter letters and numbers only"
+  },
+  "Digite o nome do vendedor": {
+    "pt": "Digite o nome do vendedor",
+    "es": "Escribe el nombre del vendedor",
+    "en": "Enter salesperson name"
+  },
+  "Digite o nome, SKU ou escaneie o código de barras para adicionar produtos": {
+    "pt": "Digite o nome, SKU ou escaneie o código de barras para adicionar produtos",
+    "es": "Escribe el nombre o SKU, o escanea el código de barras para agregar productos",
+    "en": "Enter a name or SKU, or scan a barcode to add products"
+  },
+  "Documento (CPF/RUC/CI)": {
+    "pt": "Documento (CPF/RUC/CI)",
+    "es": "Documento (CPF/RUC/CI)",
+    "en": "Document (CPF/RUC/CI)"
+  },
+  "Débito": {
+    "pt": "Débito",
+    "es": "Débito",
+    "en": "Debit"
+  },
+  "E-mail": {
+    "pt": "E-mail",
+    "es": "Correo electrónico",
+    "en": "Email"
+  },
+  "E-mail:": {
+    "pt": "E-mail:",
+    "es": "Correo electrónico:",
+    "en": "Email:"
+  },
+  "EUR (Euros)": {
+    "pt": "EUR (Euros)",
+    "es": "EUR (Euros)",
+    "en": "EUR (Euros)"
+  },
+  "EUR → Real (R$)": {
+    "pt": "EUR → Real (R$)",
+    "es": "EUR → Real (R$)",
+    "en": "EUR → Brazilian real (R$)"
+  },
+  "Editar": {
+    "pt": "Editar",
+    "es": "Editar",
+    "en": "Edit"
+  },
+  "Editar Folga": {
+    "pt": "Editar Folga",
+    "es": "Editar día libre",
+    "en": "Edit day off"
+  },
+  "Editar Pedido": {
+    "pt": "Editar Pedido",
+    "es": "Editar pedido",
+    "en": "Edit order"
+  },
+  "Editar Taxas de Câmbio": {
+    "pt": "Editar Taxas de Câmbio",
+    "es": "Editar tipos de cambio",
+    "en": "Edit exchange rates"
+  },
+  "Editar Vendedor": {
+    "pt": "Editar Vendedor",
+    "es": "Editar vendedor",
+    "en": "Edit salesperson"
+  },
+  "Editar taxas de câmbio": {
+    "pt": "Editar taxas de câmbio",
+    "es": "Editar tasas de cambio",
+    "en": "Edit exchange rates"
+  },
+  "Em Trânsito": {
+    "pt": "Em Trânsito",
+    "es": "En tránsito",
+    "en": "In transit"
+  },
+  "Em excesso": {
+    "pt": "Em excesso",
+    "es": "En exceso",
+    "en": "Excess"
+  },
+  "Em grades": {
+    "pt": "Em grades",
+    "es": "En cuadrícula",
+    "en": "Grid view"
+  },
+  "Em trânsito": {
+    "pt": "Em trânsito",
+    "es": "En tránsito",
+    "en": "In transit"
+  },
+  "Endereço Completo": {
+    "pt": "Endereço Completo",
+    "es": "Dirección completa",
+    "en": "Full address"
+  },
+  "Endereço de Entrega": {
+    "pt": "Endereço de Entrega",
+    "es": "Dirección de entrega",
+    "en": "Delivery address"
+  },
+  "Endereço de Entrega (Opcional)": {
+    "pt": "Endereço de Entrega (Opcional)",
+    "es": "Dirección de entrega (opcional)",
+    "en": "Delivery address (optional)"
+  },
+  "Entregue": {
+    "pt": "Entregue",
+    "es": "Entregado",
+    "en": "Delivered"
+  },
+  "Entregues": {
+    "pt": "Entregues",
+    "es": "Entregados",
+    "en": "Delivered"
+  },
+  "Enviado": {
+    "pt": "Enviado",
+    "es": "Enviado",
+    "en": "Shipped"
+  },
+  "Erro": {
+    "pt": "Erro",
+    "es": "Error",
+    "en": "Error"
+  },
+  "Erro ao atualizar folgas": {
+    "pt": "Erro ao atualizar folgas",
+    "es": "Error al actualizar días libres",
+    "en": "Could not update days off"
+  },
+  "Erro ao cadastrar": {
+    "pt": "Erro ao cadastrar",
+    "es": "Error al registrar",
+    "en": "Could not create the record"
+  },
+  "Erro ao carregar folgas": {
+    "pt": "Erro ao carregar folgas",
+    "es": "Error al cargar los días libres",
+    "en": "Could not load days off"
+  },
+  "Erro ao carregar taxas de câmbio": {
+    "pt": "Erro ao carregar taxas de câmbio",
+    "es": "Error al cargar las tasas de cambio",
+    "en": "Could not load exchange rates"
+  },
+  "Erro ao carregar vendedores": {
+    "pt": "Erro ao carregar vendedores",
+    "es": "Error al cargar vendedores",
+    "en": "Could not load salespeople"
+  },
+  "Erro ao consultar e criar rastreamento": {
+    "pt": "Erro ao consultar e criar rastreamento",
+    "es": "Error al consultar y crear el seguimiento",
+    "en": "Could not fetch and create tracking"
+  },
+  "Erro ao consultar e salvar rastreamento": {
+    "pt": "Erro ao consultar e salvar rastreamento",
+    "es": "Error al consultar y guardar el seguimiento",
+    "en": "Could not retrieve and save tracking"
+  },
+  "Erro ao criar rastreamento": {
+    "pt": "Erro ao criar rastreamento",
+    "es": "Error al crear el seguimiento",
+    "en": "Could not create tracking"
+  },
+  "Erro ao enviar \"{0}\".": {
+    "pt": "Erro ao enviar \"{0}\".",
+    "es": "Error al enviar \"{0}\".",
+    "en": "Could not upload \"{0}\"."
+  },
+  "Erro ao excluir folga(s)": {
+    "pt": "Erro ao excluir folga(s)",
+    "es": "Error al eliminar días libres",
+    "en": "Could not delete days off"
+  },
+  "Erro ao finalizar venda": {
+    "pt": "Erro ao finalizar venda",
+    "es": "Error al finalizar la venta",
+    "en": "Could not complete sale"
+  },
+  "Erro ao registrar pagamento": {
+    "pt": "Erro ao registrar pagamento",
+    "es": "Error al registrar el pago",
+    "en": "Could not record payment"
+  },
+  "Erro ao remover anexo.": {
+    "pt": "Erro ao remover anexo.",
+    "es": "Error al eliminar el adjunto.",
+    "en": "Could not remove attachment."
+  },
+  "Erro ao salvar as taxas de câmbio": {
+    "pt": "Erro ao salvar as taxas de câmbio",
+    "es": "Error al guardar las tasas de cambio",
+    "en": "Could not save exchange rates"
+  },
+  "Erro ao salvar folga": {
+    "pt": "Erro ao salvar folga",
+    "es": "Error al guardar el día libre",
+    "en": "Could not save day off"
+  },
+  "Erro ao salvar rastreamento": {
+    "pt": "Erro ao salvar rastreamento",
+    "es": "Error al guardar el seguimiento",
+    "en": "Could not save tracking"
+  },
+  "Erro ao salvar taxas": {
+    "pt": "Erro ao salvar taxas",
+    "es": "Error al guardar las tasas",
+    "en": "Could not save rates"
+  },
+  "Erro ao salvar vendedor": {
+    "pt": "Erro ao salvar vendedor",
+    "es": "Error al guardar el vendedor",
+    "en": "Could not save salesperson"
+  },
+  "Escanear código": {
+    "pt": "Escanear código",
+    "es": "Escanear código",
+    "en": "Scan code"
+  },
+  "Esta semana": {
+    "pt": "Esta semana",
+    "es": "Esta semana",
+    "en": "This week"
+  },
+  "Este ano": {
+    "pt": "Este ano",
+    "es": "Este año",
+    "en": "This year"
+  },
+  "Este mês": {
+    "pt": "Este mês",
+    "es": "Este mes",
+    "en": "This month"
+  },
+  "Estoque": {
+    "pt": "Estoque",
+    "es": "Inventario",
+    "en": "Inventory"
+  },
+  "Estoque baixo": {
+    "pt": "Estoque baixo",
+    "es": "Stock bajo",
+    "en": "Low stock"
+  },
+  "Ex: 1 tênis Nike Air Max + 3 camisetas básicas": {
+    "pt": "Ex: 1 tênis Nike Air Max + 3 camisetas básicas",
+    "es": "Ej.: 1 zapatilla Nike Air Max + 3 camisetas básicas",
+    "en": "E.g. 1 Nike Air Max shoe + 3 basic T-shirts"
+  },
+  "Exchange": {
+    "pt": "Câmbio",
+    "es": "Cambio",
+    "en": "Exchange"
+  },
+  "Excluindo...": {
+    "pt": "Excluindo...",
+    "es": "Eliminando...",
+    "en": "Deleting..."
+  },
+  "Excluir": {
+    "pt": "Excluir",
+    "es": "Eliminar",
+    "en": "Delete"
+  },
+  "Exportar": {
+    "pt": "Exportar",
+    "es": "Exportar",
+    "en": "Export"
+  },
+  "Failed to load exchange rate history": {
+    "pt": "Erro ao carregar o histórico de câmbio",
+    "es": "No se pudo cargar el historial de cambios",
+    "en": "Failed to load exchange rate history"
+  },
+  "Failed to update rates": {
+    "pt": "Erro ao atualizar as taxas",
+    "es": "No se pudieron actualizar las tasas",
+    "en": "Failed to update rates"
+  },
+  "Falta": {
+    "pt": "Falta",
+    "es": "Ausencia",
+    "en": "Absence"
+  },
+  "Faltando": {
+    "pt": "Faltando",
+    "es": "Faltante",
+    "en": "Missing"
+  },
+  "Fechar": {
+    "pt": "Fechar",
+    "es": "Cerrar",
+    "en": "Close"
+  },
+  "Fiado": {
+    "pt": "Fiado",
+    "es": "Crédito",
+    "en": "Customer credit"
+  },
+  "Filtrar": {
+    "pt": "Filtrar",
+    "es": "Filtrar",
+    "en": "Filter"
+  },
+  "Folga": {
+    "pt": "Folga",
+    "es": "Día libre",
+    "en": "Day off"
+  },
+  "Folga atualizada com sucesso!": {
+    "pt": "Folga atualizada com sucesso!",
+    "es": "¡Día libre actualizado!",
+    "en": "Day off updated!"
+  },
+  "Folga criada com sucesso!": {
+    "pt": "Folga criada com sucesso!",
+    "es": "¡Día libre creado!",
+    "en": "Day off created!"
+  },
+  "Folga excluída com sucesso!": {
+    "pt": "Folga excluída com sucesso!",
+    "es": "¡Día libre eliminado!",
+    "en": "Day off deleted!"
+  },
+  "Folgas Hoje": {
+    "pt": "Folgas Hoje",
+    "es": "Días libres hoy",
+    "en": "Days off today"
+  },
+  "Folgas do dia": {
+    "pt": "Folgas do dia",
+    "es": "Días libres del día",
+    "en": "Days off today"
+  },
+  "Folgas do dia (": {
+    "pt": "Folgas do dia (",
+    "es": "Días libres del día (",
+    "en": "Days off today ("
+  },
+  "Folgas por Funcionário": {
+    "pt": "Folgas por Funcionário",
+    "es": "Días libres por empleado",
+    "en": "Days off by employee"
+  },
+  "Fotos e Anexos": {
+    "pt": "Fotos e Anexos",
+    "es": "Fotos y archivos adjuntos",
+    "en": "Photos and attachments"
+  },
+  "Férias": {
+    "pt": "Férias",
+    "es": "Vacaciones",
+    "en": "Vacation"
+  },
+  "G$ (Guaranis)": {
+    "pt": "G$ (Guaranis)",
+    "es": "G$ (Guaraníes)",
+    "en": "G$ (Guaraníes)"
+  },
+  "Gerenciar Vendedores": {
+    "pt": "Gerenciar Vendedores",
+    "es": "Administrar vendedores",
+    "en": "Manage salespeople"
+  },
+  "Gerencie e acompanhe todas as suas entregas": {
+    "pt": "Gerencie e acompanhe todas as suas entregas",
+    "es": "Administra y sigue todas tus entregas",
+    "en": "Manage and track all your deliveries"
+  },
+  "Gerencie e visualize todas as vendas do sistema": {
+    "pt": "Gerencie e visualize todas as vendas do sistema",
+    "es": "Administra y consulta las ventas disponibles",
+    "en": "Manage and view your available sales"
+  },
+  "Gerencie todos os pedidos da loja": {
+    "pt": "Gerencie todos os pedidos da loja",
+    "es": "Administra todos los pedidos de la tienda",
+    "en": "Manage all store orders"
+  },
+  "Histórico": {
+    "pt": "Histórico",
+    "es": "Historial",
+    "en": "History"
+  },
+  "Histórico de eventos": {
+    "pt": "Histórico de eventos",
+    "es": "Historial de eventos",
+    "en": "Event history"
+  },
+  "Hoje": {
+    "pt": "Hoje",
+    "es": "Hoy",
+    "en": "Today"
+  },
+  "Importar Vendas": {
+    "pt": "Importar Vendas",
+    "es": "Importar ventas",
+    "en": "Import sales"
+  },
+  "Inativo": {
+    "pt": "Inativo",
+    "es": "Inactivo",
+    "en": "Inactive"
+  },
+  "Inativos": {
+    "pt": "Inativos",
+    "es": "Inactivos",
+    "en": "Inactive"
+  },
+  "Inativos (": {
+    "pt": "Inativos (",
+    "es": "Inactivos (",
+    "en": "Inactive ("
+  },
+  "Informações do Pedido": {
+    "pt": "Informações do Pedido",
+    "es": "Información del pedido",
+    "en": "Order information"
+  },
+  "Ir para estoque →": {
+    "pt": "Ir para estoque →",
+    "es": "Ir al inventario →",
+    "en": "Go to inventory →"
+  },
+  "Licença": {
+    "pt": "Licença",
+    "es": "Permiso",
+    "en": "Leave"
+  },
+  "Limite de 10 anexos atingido.": {
+    "pt": "Limite de 10 anexos atingido.",
+    "es": "Se alcanzó el límite de 10 adjuntos.",
+    "en": "The limit of 10 attachments has been reached."
+  },
+  "Limite de fiado (G$)": {
+    "pt": "Limite de fiado (G$)",
+    "es": "Límite de crédito (G$)",
+    "en": "Credit limit (G$)"
+  },
+  "Limpar": {
+    "pt": "Limpar",
+    "es": "Limpiar",
+    "en": "Clear"
+  },
+  "Limpar Filtros": {
+    "pt": "Limpar Filtros",
+    "es": "Limpiar filtros",
+    "en": "Clear filters"
+  },
+  "Limpar o carrinho?": {
+    "pt": "Limpar o carrinho?",
+    "es": "¿Vaciar el carrito?",
+    "en": "Clear the cart?"
+  },
+  "Linha do tempo completa": {
+    "pt": "Linha do tempo completa",
+    "es": "Cronología completa",
+    "en": "Full timeline"
+  },
+  "Lista": {
+    "pt": "Lista",
+    "es": "Lista",
+    "en": "List"
+  },
+  "Lista de Vendas": {
+    "pt": "Lista de Vendas",
+    "es": "Lista de ventas",
+    "en": "Sales list"
+  },
+  "Local de destino": {
+    "pt": "Local de destino",
+    "es": "Lugar de destino",
+    "en": "Destination location"
+  },
+  "Local de origem": {
+    "pt": "Local de origem",
+    "es": "Lugar de origen",
+    "en": "Origin location"
+  },
+  "Manhã": {
+    "pt": "Manhã",
+    "es": "Mañana",
+    "en": "Morning"
+  },
+  "Manual": {
+    "pt": "Manual",
+    "es": "Manual",
+    "en": "Manual"
+  },
+  "Meio Período": {
+    "pt": "Meio Período",
+    "es": "Medio día",
+    "en": "Half day"
+  },
+  "Meta Semanal": {
+    "pt": "Meta Semanal",
+    "es": "Meta semanal",
+    "en": "Weekly target"
+  },
+  "Meta Semanal (G$)": {
+    "pt": "Meta Semanal (G$)",
+    "es": "Meta semanal (G$)",
+    "en": "Weekly target (G$)"
+  },
+  "Moeda": {
+    "pt": "Moeda",
+    "es": "Moneda",
+    "en": "Currency"
+  },
+  "Mostrando": {
+    "pt": "Mostrando",
+    "es": "Mostrando",
+    "en": "Showing"
+  },
+  "Motivo": {
+    "pt": "Motivo",
+    "es": "Motivo",
+    "en": "Reason"
+  },
+  "Motivo:": {
+    "pt": "Motivo:",
+    "es": "Motivo:",
+    "en": "Reason:"
+  },
+  "Nenhum cliente cadastrado": {
+    "pt": "Nenhum cliente cadastrado",
+    "es": "No hay clientes registrados",
+    "en": "No customers registered"
+  },
+  "Nenhum cliente encontrado": {
+    "pt": "Nenhum cliente encontrado",
+    "es": "No se encontraron clientes",
+    "en": "No customers found"
+  },
+  "Nenhum dado disponível": {
+    "pt": "Nenhum dado disponível",
+    "es": "No hay datos disponibles",
+    "en": "No data available"
+  },
+  "Nenhum movimento": {
+    "pt": "Nenhum movimento",
+    "es": "Sin movimientos",
+    "en": "No transactions"
+  },
+  "Nenhum pagamento adicionado": {
+    "pt": "Nenhum pagamento adicionado",
+    "es": "No se agregaron pagos",
+    "en": "No payments added"
+  },
+  "Nenhum pedido encontrado": {
+    "pt": "Nenhum pedido encontrado",
+    "es": "No se encontraron pedidos",
+    "en": "No orders found"
+  },
+  "Nenhum produto ainda": {
+    "pt": "Nenhum produto ainda",
+    "es": "Todavía no hay productos",
+    "en": "No products yet"
+  },
+  "Nenhum produto encontrado para \"": {
+    "pt": "Nenhum produto encontrado para \"",
+    "es": "No se encontró un producto para \"",
+    "en": "No products found for \""
+  },
+  "Nenhum rastreamento": {
+    "pt": "Nenhum rastreamento",
+    "es": "Sin seguimientos",
+    "en": "No tracking"
+  },
+  "Nenhum rastreamento encontrado": {
+    "pt": "Nenhum rastreamento encontrado",
+    "es": "No se encontraron seguimientos",
+    "en": "No tracking found"
+  },
+  "Nenhum rastreamento vinculado a este pedido.": {
+    "pt": "Nenhum rastreamento vinculado a este pedido.",
+    "es": "No hay seguimientos vinculados a este pedido.",
+    "en": "No tracking linked to this order."
+  },
+  "Nenhum resultado": {
+    "pt": "Nenhum resultado",
+    "es": "Sin resultados",
+    "en": "No results"
+  },
+  "Nenhum vendedor corresponde aos filtros aplicados": {
+    "pt": "Nenhum vendedor corresponde aos filtros aplicados",
+    "es": "Ningún vendedor coincide con los filtros",
+    "en": "No salesperson matches the filters"
+  },
+  "Nenhum vendedor encontrado": {
+    "pt": "Nenhum vendedor encontrado",
+    "es": "No se encontraron vendedores",
+    "en": "No salespeople found"
+  },
+  "Nenhuma folga registrada para este dia.": {
+    "pt": "Nenhuma folga registrada para este dia.",
+    "es": "No hay días libres registrados para esta fecha.",
+    "en": "No days off recorded for this date."
+  },
+  "Nenhuma tag disponível.": {
+    "pt": "Nenhuma tag disponível.",
+    "es": "No hay etiquetas disponibles.",
+    "en": "No tags available."
+  },
+  "Nenhuma venda encontrada": {
+    "pt": "Nenhuma venda encontrada",
+    "es": "No se encontraron ventas",
+    "en": "No sales found"
+  },
+  "Nome": {
+    "pt": "Nome",
+    "es": "Nombre",
+    "en": "Name"
+  },
+  "Nome *": {
+    "pt": "Nome *",
+    "es": "Nombre *",
+    "en": "Name *"
+  },
+  "Nome completo do cliente": {
+    "pt": "Nome completo do cliente",
+    "es": "Nombre completo del cliente",
+    "en": "Customer full name"
+  },
+  "Nome do Cliente": {
+    "pt": "Nome do Cliente",
+    "es": "Nombre del cliente",
+    "en": "Customer name"
+  },
+  "Nome do cliente": {
+    "pt": "Nome do cliente",
+    "es": "Nombre del cliente",
+    "en": "Customer name"
+  },
+  "Nome do destinatário": {
+    "pt": "Nome do destinatário",
+    "es": "Nombre del destinatario",
+    "en": "Recipient name"
+  },
+  "Nome:": {
+    "pt": "Nome:",
+    "es": "Nombre:",
+    "en": "Name:"
+  },
+  "Nova Tag": {
+    "pt": "Nova Tag",
+    "es": "Nueva etiqueta",
+    "en": "New tag"
+  },
+  "Nova Venda": {
+    "pt": "Nova Venda",
+    "es": "Nueva venta",
+    "en": "New sale"
+  },
+  "Novo": {
+    "pt": "Novo",
+    "es": "Nuevo",
+    "en": "New"
+  },
+  "Novo Pedido": {
+    "pt": "Novo Pedido",
+    "es": "Nuevo pedido",
+    "en": "New order"
+  },
+  "Novo Rastreamento": {
+    "pt": "Novo Rastreamento",
+    "es": "Nuevo seguimiento",
+    "en": "New tracking"
+  },
+  "Novo Vendedor": {
+    "pt": "Novo Vendedor",
+    "es": "Nuevo vendedor",
+    "en": "New salesperson"
+  },
+  "Novo cliente": {
+    "pt": "Novo cliente",
+    "es": "Nuevo cliente",
+    "en": "New customer"
+  },
+  "Novo produto": {
+    "pt": "Novo produto",
+    "es": "Nuevo producto",
+    "en": "New product"
+  },
+  "Nunca": {
+    "pt": "Nunca",
+    "es": "Nunca",
+    "en": "Never"
+  },
+  "Não Encontrado": {
+    "pt": "Não Encontrado",
+    "es": "No encontrado",
+    "en": "Not found"
+  },
+  "Não definida": {
+    "pt": "Não definida",
+    "es": "No definida",
+    "en": "Not set"
+  },
+  "Não encontrado": {
+    "pt": "Não encontrado",
+    "es": "No encontrado",
+    "en": "Not found"
+  },
+  "Não há pedidos que correspondam aos filtros selecionados": {
+    "pt": "Não há pedidos que correspondam aos filtros selecionados",
+    "es": "No hay pedidos que coincidan con los filtros seleccionados",
+    "en": "No orders match the selected filters"
+  },
+  "Não informado": {
+    "pt": "Não informado",
+    "es": "No informado",
+    "en": "Not provided"
+  },
+  "Número": {
+    "pt": "Número",
+    "es": "Número",
+    "en": "Number"
+  },
+  "Número da conta": {
+    "pt": "Número da conta",
+    "es": "Número de cuenta",
+    "en": "Account number"
+  },
+  "Observações": {
+    "pt": "Observações",
+    "es": "Observaciones",
+    "en": "Notes"
+  },
+  "Observações (opcional)": {
+    "pt": "Observações (opcional)",
+    "es": "Observaciones (opcional)",
+    "en": "Notes (optional)"
+  },
+  "Offline": {
+    "pt": "Offline",
+    "es": "Sin conexión",
+    "en": "Offline"
+  },
+  "Online": {
+    "pt": "Online",
+    "es": "En línea",
+    "en": "Online"
+  },
+  "Opcional": {
+    "pt": "Opcional",
+    "es": "Opcional",
+    "en": "Optional"
+  },
+  "Origem": {
+    "pt": "Origem",
+    "es": "Origen",
+    "en": "Origin"
+  },
+  "Pagamento": {
+    "pt": "Pagamento",
+    "es": "Pago",
+    "en": "Payment"
+  },
+  "Pagamento registrado!": {
+    "pt": "Pagamento registrado!",
+    "es": "¡Pago registrado!",
+    "en": "Payment recorded!"
+  },
+  "Pago": {
+    "pt": "Pago",
+    "es": "Pagado",
+    "en": "Paid"
+  },
+  "Pedido": {
+    "pt": "Pedido",
+    "es": "Pedido",
+    "en": "Order"
+  },
+  "Pedido:": {
+    "pt": "Pedido:",
+    "es": "Pedido:",
+    "en": "Order:"
+  },
+  "Pedidos": {
+    "pt": "Pedidos",
+    "es": "Pedidos",
+    "en": "Orders"
+  },
+  "Pendente": {
+    "pt": "Pendente",
+    "es": "Pendiente",
+    "en": "Pending"
+  },
+  "Pendentes": {
+    "pt": "Pendentes",
+    "es": "Pendientes",
+    "en": "Pending"
+  },
+  "Período": {
+    "pt": "Período",
+    "es": "Período",
+    "en": "Period"
+  },
+  "Período:": {
+    "pt": "Período:",
+    "es": "Período:",
+    "en": "Period:"
+  },
+  "Pesquisar vendedor...": {
+    "pt": "Pesquisar vendedor...",
+    "es": "Buscar vendedor...",
+    "en": "Search salesperson..."
+  },
+  "Preencher valor restante": {
+    "pt": "Preencher valor restante",
+    "es": "Completar importe restante",
+    "en": "Fill remaining amount"
+  },
+  "Prev.": {
+    "pt": "Prev.",
+    "es": "Prev.",
+    "en": "Est."
+  },
+  "Prev. entrega": {
+    "pt": "Prev. entrega",
+    "es": "Entrega prevista",
+    "en": "Est. delivery"
+  },
+  "Prev. entrega:": {
+    "pt": "Prev. entrega:",
+    "es": "Entrega prevista:",
+    "en": "Est. delivery:"
+  },
+  "Previsão de entrega": {
+    "pt": "Previsão de entrega",
+    "es": "Entrega prevista",
+    "en": "Estimated delivery"
+  },
+  "Previsão de entrega:": {
+    "pt": "Previsão de entrega:",
+    "es": "Entrega prevista:",
+    "en": "Estimated delivery:"
+  },
+  "Processando": {
+    "pt": "Processando",
+    "es": "Procesando",
+    "en": "Processing"
+  },
+  "Processando…": {
+    "pt": "Processando…",
+    "es": "Procesando…",
+    "en": "Processing…"
+  },
+  "Produto": {
+    "pt": "Produto",
+    "es": "Producto",
+    "en": "Product"
+  },
+  "Produto não encontrado? Adicionar manualmente": {
+    "pt": "Produto não encontrado? Adicionar manualmente",
+    "es": "¿Producto no encontrado? Agregar manualmente",
+    "en": "Product not found? Add manually"
+  },
+  "Produtos": {
+    "pt": "Produtos",
+    "es": "Productos",
+    "en": "Products"
+  },
+  "Próxima": {
+    "pt": "Próxima",
+    "es": "Siguiente",
+    "en": "Next"
+  },
+  "Próxima →": {
+    "pt": "Próxima →",
+    "es": "Siguiente →",
+    "en": "Next →"
+  },
+  "Página": {
+    "pt": "Página",
+    "es": "Página",
+    "en": "Page"
+  },
+  "R$ (Reais)": {
+    "pt": "R$ (Reais)",
+    "es": "R$ (Reales)",
+    "en": "R$ (Brazilian reais)"
+  },
+  "Rastreamento": {
+    "pt": "Rastreamento",
+    "es": "Seguimiento",
+    "en": "Tracking"
+  },
+  "Rastreamento de Encomendas": {
+    "pt": "Rastreamento de Encomendas",
+    "es": "Seguimiento de paquetes",
+    "en": "Parcel tracking"
+  },
+  "Referência": {
+    "pt": "Referência",
+    "es": "Referencia",
+    "en": "Reference"
+  },
+  "Registrar pagamento": {
+    "pt": "Registrar pagamento",
+    "es": "Registrar pago",
+    "en": "Record payment"
+  },
+  "Rejeitada": {
+    "pt": "Rejeitada",
+    "es": "Rechazada",
+    "en": "Rejected"
+  },
+  "Rejeitar": {
+    "pt": "Rejeitar",
+    "es": "Rechazar",
+    "en": "Reject"
+  },
+  "Rua, número, bairro, cidade, estado, CEP": {
+    "pt": "Rua, número, bairro, cidade, estado, CEP",
+    "es": "Calle, número, barrio, ciudad, estado, código postal",
+    "en": "Street, number, district, city, state, postal code"
+  },
+  "Saldo": {
+    "pt": "Saldo",
+    "es": "Saldo",
+    "en": "Balance"
+  },
+  "Saldo devedor": {
+    "pt": "Saldo devedor",
+    "es": "Saldo pendiente",
+    "en": "Outstanding balance"
+  },
+  "Saldo:": {
+    "pt": "Saldo:",
+    "es": "Saldo:",
+    "en": "Balance:"
+  },
+  "Salvando...": {
+    "pt": "Salvando...",
+    "es": "Guardando...",
+    "en": "Saving..."
+  },
+  "Salvando…": {
+    "pt": "Salvando…",
+    "es": "Guardando…",
+    "en": "Saving…"
+  },
+  "Salvar": {
+    "pt": "Salvar",
+    "es": "Guardar",
+    "en": "Save"
+  },
+  "Salvar Taxas": {
+    "pt": "Salvar Taxas",
+    "es": "Guardar tipos de cambio",
+    "en": "Save rates"
+  },
+  "Selecione um vendedor": {
+    "pt": "Selecione um vendedor",
+    "es": "Selecciona un vendedor",
+    "en": "Select a salesperson"
+  },
+  "Sem descrição": {
+    "pt": "Sem descrição",
+    "es": "Sin descripción",
+    "en": "No description"
+  },
+  "Sem destinatário": {
+    "pt": "Sem destinatário",
+    "es": "Sin destinatario",
+    "en": "No recipient"
+  },
+  "Sem estoque": {
+    "pt": "Sem estoque",
+    "es": "Sin stock",
+    "en": "Out of stock"
+  },
+  "Sem informação": {
+    "pt": "Sem informação",
+    "es": "Sin información",
+    "en": "No information"
+  },
+  "Sim, Excluir": {
+    "pt": "Sim, Excluir",
+    "es": "Sí, eliminar",
+    "en": "Yes, delete"
+  },
+  "Status": {
+    "pt": "Status",
+    "es": "Estado",
+    "en": "Status"
+  },
+  "Status:": {
+    "pt": "Status:",
+    "es": "Estado:",
+    "en": "Status:"
+  },
+  "Subtotal": {
+    "pt": "Subtotal",
+    "es": "Subtotal",
+    "en": "Subtotal"
+  },
+  "Sucesso": {
+    "pt": "Sucesso",
+    "es": "Éxito",
+    "en": "Success"
+  },
+  "System Offline": {
+    "pt": "Sistema offline",
+    "es": "Sistema sin conexión",
+    "en": "System offline"
+  },
+  "System Online": {
+    "pt": "Sistema online",
+    "es": "Sistema en línea",
+    "en": "System online"
+  },
+  "TOTAL": {
+    "pt": "TOTAL",
+    "es": "TOTAL",
+    "en": "TOTAL"
+  },
+  "Tag": {
+    "pt": "Tag",
+    "es": "Etiqueta",
+    "en": "Tag"
+  },
+  "Tags": {
+    "pt": "Tags",
+    "es": "Etiquetas",
+    "en": "Tags"
+  },
+  "Tags de Status": {
+    "pt": "Tags de Status",
+    "es": "Etiquetas de estado",
+    "en": "Status tags"
+  },
+  "Tarde": {
+    "pt": "Tarde",
+    "es": "Tarde",
+    "en": "Afternoon"
+  },
+  "Taxa": {
+    "pt": "Taxa",
+    "es": "Tasa",
+    "en": "Rate"
+  },
+  "Taxa de Comissão": {
+    "pt": "Taxa de Comissão",
+    "es": "Tasa de comisión",
+    "en": "Commission rate"
+  },
+  "Taxa de Comissão (%)": {
+    "pt": "Taxa de Comissão (%)",
+    "es": "Tasa de comisión (%)",
+    "en": "Commission rate (%)"
+  },
+  "Taxa de Câmbio": {
+    "pt": "Taxa de Câmbio",
+    "es": "Tipo de cambio",
+    "en": "Exchange rate"
+  },
+  "Taxa:": {
+    "pt": "Taxa:",
+    "es": "Tasa:",
+    "en": "Rate:"
+  },
+  "Taxas atualizadas": {
+    "pt": "Taxas atualizadas",
+    "es": "Tasas actualizadas",
+    "en": "Rates updated"
+  },
+  "Taxas de Câmbio": {
+    "pt": "Taxas de Câmbio",
+    "es": "Tipos de cambio",
+    "en": "Exchange rates"
+  },
+  "Taxas de câmbio": {
+    "pt": "Taxas de câmbio",
+    "es": "Tasas de cambio",
+    "en": "Exchange rates"
+  },
+  "Telefone": {
+    "pt": "Telefone",
+    "es": "Teléfono",
+    "en": "Phone"
+  },
+  "Telefone:": {
+    "pt": "Telefone:",
+    "es": "Teléfono:",
+    "en": "Phone:"
+  },
+  "Tem certeza que deseja excluir": {
+    "pt": "Tem certeza que deseja excluir",
+    "es": "¿Seguro que deseas eliminar",
+    "en": "Are you sure you want to delete"
+  },
+  "Tem certeza que deseja excluir a folga de": {
+    "pt": "Tem certeza que deseja excluir a folga de",
+    "es": "¿Seguro que deseas eliminar el día libre de",
+    "en": "Are you sure you want to delete the day off for"
+  },
+  "Tem certeza que deseja excluir esta venda?": {
+    "pt": "Tem certeza que deseja excluir esta venda?",
+    "es": "¿Está seguro de eliminar esta venta?",
+    "en": "Are you sure you want to delete this sale?"
+  },
+  "Tem certeza que deseja remover o rastreamento {0}?": {
+    "pt": "Tem certeza que deseja remover o rastreamento {0}?",
+    "es": "¿Está seguro de eliminar el seguimiento {0}?",
+    "en": "Are you sure you want to remove tracking {0}?"
+  },
+  "Tente ajustar os filtros": {
+    "pt": "Tente ajustar os filtros",
+    "es": "Intente ajustar los filtros",
+    "en": "Try adjusting the filters"
+  },
+  "Tipo": {
+    "pt": "Tipo",
+    "es": "Tipo",
+    "en": "Type"
+  },
+  "Tipo de Folga": {
+    "pt": "Tipo de Folga",
+    "es": "Tipo de día libre",
+    "en": "Type of leave"
+  },
+  "Tipo de Folga:": {
+    "pt": "Tipo de Folga:",
+    "es": "Tipo de día libre:",
+    "en": "Type of leave:"
+  },
+  "Tipo:": {
+    "pt": "Tipo:",
+    "es": "Tipo:",
+    "en": "Type:"
+  },
+  "Todas": {
+    "pt": "Todas",
+    "es": "Todas",
+    "en": "All"
+  },
+  "Todas as moedas": {
+    "pt": "Todas as moedas",
+    "es": "Todas las monedas",
+    "en": "All currencies"
+  },
+  "Todos": {
+    "pt": "Todos",
+    "es": "Todos",
+    "en": "All"
+  },
+  "Todos (": {
+    "pt": "Todos (",
+    "es": "Todos (",
+    "en": "All ("
+  },
+  "Todos os Status": {
+    "pt": "Todos os Status",
+    "es": "Todos los estados",
+    "en": "All statuses"
+  },
+  "Todos os períodos": {
+    "pt": "Todos os períodos",
+    "es": "Todos los períodos",
+    "en": "All periods"
+  },
+  "Todos os vendedores": {
+    "pt": "Todos os vendedores",
+    "es": "Todos los vendedores",
+    "en": "All salespeople"
+  },
+  "Total": {
+    "pt": "Total",
+    "es": "Total",
+    "en": "Total"
+  },
+  "Total de Vendas": {
+    "pt": "Total de Vendas",
+    "es": "Total de ventas",
+    "en": "Total sales"
+  },
+  "Total de Vendedores": {
+    "pt": "Total de Vendedores",
+    "es": "Total de vendedores",
+    "en": "Total salespeople"
+  },
+  "Total do Mês": {
+    "pt": "Total do Mês",
+    "es": "Total del mes",
+    "en": "Monthly total"
+  },
+  "Total em aberto": {
+    "pt": "Total em aberto",
+    "es": "Total pendiente",
+    "en": "Total outstanding"
+  },
+  "Troco": {
+    "pt": "Troco",
+    "es": "Cambio",
+    "en": "Change"
+  },
+  "Trânsito": {
+    "pt": "Trânsito",
+    "es": "Tránsito",
+    "en": "In transit"
+  },
+  "Tudo": {
+    "pt": "Tudo",
+    "es": "Todo",
+    "en": "All"
+  },
+  "Tudo (": {
+    "pt": "Tudo (",
+    "es": "Todo (",
+    "en": "All ("
+  },
+  "U$ (Dólares)": {
+    "pt": "U$ (Dólares)",
+    "es": "U$ (Dólares)",
+    "en": "U$ (Dollars)"
+  },
+  "USD → Guarani (G$)": {
+    "pt": "USD → Guarani (G$)",
+    "es": "USD → Guaraní (G$)",
+    "en": "USD → Guaraní (G$)"
+  },
+  "USD → Real (R$)": {
+    "pt": "USD → Real (R$)",
+    "es": "USD → Real (R$)",
+    "en": "USD → Brazilian real (R$)"
+  },
+  "User not authenticated": {
+    "pt": "Usuário não autenticado",
+    "es": "Usuario no autenticado",
+    "en": "User not authenticated"
+  },
+  "Valor": {
+    "pt": "Valor",
+    "es": "Valor",
+    "en": "Amount"
+  },
+  "Valor Total": {
+    "pt": "Valor Total",
+    "es": "Valor total",
+    "en": "Total amount"
+  },
+  "Valor Total:": {
+    "pt": "Valor Total:",
+    "es": "Valor total:",
+    "en": "Total amount:"
+  },
+  "Varejo": {
+    "pt": "Varejo",
+    "es": "Minorista",
+    "en": "Retail"
+  },
+  "Venda concluída!": {
+    "pt": "Venda concluída!",
+    "es": "¡Venta completada!",
+    "en": "Sale completed!"
+  },
+  "Vendas": {
+    "pt": "Vendas",
+    "es": "Ventas",
+    "en": "Sales"
+  },
+  "Vendas Hoje": {
+    "pt": "Vendas Hoje",
+    "es": "Ventas de hoy",
+    "en": "Today's sales"
+  },
+  "Vendedor": {
+    "pt": "Vendedor",
+    "es": "Vendedor",
+    "en": "Salesperson"
+  },
+  "Vendedor ativo": {
+    "pt": "Vendedor ativo",
+    "es": "Vendedor activo",
+    "en": "Active salesperson"
+  },
+  "Vendedor, produto, etc...": {
+    "pt": "Vendedor, produto, etc...",
+    "es": "Vendedor, producto, etc...",
+    "en": "Salesperson, product, etc..."
+  },
+  "Vendedor:": {
+    "pt": "Vendedor:",
+    "es": "Vendedor:",
+    "en": "Salesperson:"
+  },
+  "Vendedores": {
+    "pt": "Vendedores",
+    "es": "Vendedores",
+    "en": "Salespeople"
+  },
+  "Vendedores Ativos": {
+    "pt": "Vendedores Ativos",
+    "es": "Vendedores activos",
+    "en": "Active salespeople"
+  },
+  "Vendedores Inativos": {
+    "pt": "Vendedores Inativos",
+    "es": "Vendedores inactivos",
+    "en": "Inactive salespeople"
+  },
+  "Ver Rastreamento": {
+    "pt": "Ver Rastreamento",
+    "es": "Ver seguimiento",
+    "en": "View tracking"
+  },
+  "Ver tudo →": {
+    "pt": "Ver tudo →",
+    "es": "Ver todo →",
+    "en": "View all →"
+  },
+  "Vincular Pedido (opcional)": {
+    "pt": "Vincular Pedido (opcional)",
+    "es": "Vincular pedido (opcional)",
+    "en": "Link order (optional)"
+  },
+  "Vincular cliente cadastrado": {
+    "pt": "Vincular cliente cadastrado",
+    "es": "Vincular cliente registrado",
+    "en": "Link registered customer"
+  },
+  "agora mesmo": {
+    "pt": "agora mesmo",
+    "es": "ahora mismo",
+    "en": "just now"
+  },
+  "aprovadas": {
+    "pt": "aprovadas",
+    "es": "aprobados",
+    "en": "approved"
+  },
+  "avulso": {
+    "pt": "avulso",
+    "es": "suelto",
+    "en": "unlisted"
+  },
+  "busca ·": {
+    "pt": "busca ·",
+    "es": "buscar ·",
+    "en": "search ·"
+  },
+  "de": {
+    "pt": "de",
+    "es": "de",
+    "en": "of"
+  },
+  "do dia": {
+    "pt": "do dia",
+    "es": "del día",
+    "en": "for the day"
+  },
+  "em dia": {
+    "pt": "em dia",
+    "es": "al día",
+    "en": "up to date"
+  },
+  "faltas": {
+    "pt": "faltas",
+    "es": "ausencias",
+    "en": "absences"
+  },
+  "folgas": {
+    "pt": "folgas",
+    "es": "días libres",
+    "en": "days off"
+  },
+  "há {0}d": {
+    "pt": "há {0}d",
+    "es": "hace {0} d",
+    "en": "{0} d ago"
+  },
+  "há {0}h": {
+    "pt": "há {0}h",
+    "es": "hace {0} h",
+    "en": "{0} h ago"
+  },
+  "há {0}min": {
+    "pt": "há {0}min",
+    "es": "hace {0} min",
+    "en": "{0} min ago"
+  },
+  "item": {
+    "pt": "item",
+    "es": "artículo",
+    "en": "item"
+  },
+  "licenças": {
+    "pt": "licenças",
+    "es": "permisos",
+    "en": "leave"
+  },
+  "pagar ·": {
+    "pt": "pagar ·",
+    "es": "pagar ·",
+    "en": "pay ·"
+  },
+  "rejeitadas": {
+    "pt": "rejeitadas",
+    "es": "rechazados",
+    "en": "rejected"
+  },
+  "selecionadas": {
+    "pt": "selecionadas",
+    "es": "seleccionadas",
+    "en": "selected"
+  },
+  "selecionadas?": {
+    "pt": "selecionadas?",
+    "es": "seleccionadas?",
+    "en": "selected?"
+  },
+  "sync": {
+    "pt": "sincronizar",
+    "es": "sincronizar",
+    "en": "sync"
+  },
+  "total": {
+    "pt": "total",
+    "es": "total",
+    "en": "total"
+  },
+  "un": {
+    "pt": "un",
+    "es": "un",
+    "en": "units"
+  },
+  "vendas": {
+    "pt": "vendas",
+    "es": "ventas",
+    "en": "sales"
+  },
+  "vinculado": {
+    "pt": "vinculado",
+    "es": "vinculado",
+    "en": "linked"
+  },
+  "voltar": {
+    "pt": "voltar",
+    "es": "volver",
+    "en": "back"
+  },
+  "{0} adicionado": {
+    "pt": "{0} adicionado",
+    "es": "{0} agregado",
+    "en": "{0} added"
+  },
+  "{0} folgas excluídas com sucesso!": {
+    "pt": "{0} folgas excluídas com sucesso!",
+    "es": "¡{0} días libres eliminados!",
+    "en": "{0} days off deleted!"
+  },
+  "{0} folgas {1} com sucesso!": {
+    "pt": "{0} folgas {1} com sucesso!",
+    "es": "¡{0} días libres {1}!",
+    "en": "{0} days off {1}!"
+  },
+  "Última att.": {
+    "pt": "Última att.",
+    "es": "Última act.",
+    "en": "Last updated"
+  },
+  "Última att.:": {
+    "pt": "Última att.:",
+    "es": "Última act.:",
+    "en": "Last updated:"
+  },
+  "Último evento": {
+    "pt": "Último evento",
+    "es": "Último evento",
+    "en": "Latest event"
+  },
+  "Últimos 4 dígitos": {
+    "pt": "Últimos 4 dígitos",
+    "es": "Últimos 4 dígitos",
+    "en": "Last 4 digits"
+  },
+  "Últimos Rastreamentos": {
+    "pt": "Últimos Rastreamentos",
+    "es": "Últimos seguimientos",
+    "en": "Latest tracking"
+  },
+  "Últimos atualizados": {
+    "pt": "Últimos atualizados",
+    "es": "Últimos actualizados",
+    "en": "Recently updated"
+  },
+  "— campos preenchidos automaticamente": {
+    "pt": "— campos preenchidos automaticamente",
+    "es": "— campos completados automáticamente",
+    "en": "— fields filled automatically"
+  },
+  "← Anterior": {
+    "pt": "← Anterior",
+    "es": "← Anterior",
+    "en": "← Previous"
+  },
+  "← Buscar rastreamentos cadastrados": {
+    "pt": "← Buscar rastreamentos cadastrados",
+    "es": "← Buscar seguimientos registrados",
+    "en": "← Search registered tracking"
+  },
+  "✓ Confirmar e imprimir": {
+    "pt": "✓ Confirmar e imprimir",
+    "es": "✓ Confirmar e imprimir",
+    "en": "✓ Confirm and print"
+  },
+  "✓ Pedido #": {
+    "pt": "✓ Pedido #",
+    "es": "✓ Pedido #",
+    "en": "✓ Order #"
+  },
+  "✓ Vinculado": {
+    "pt": "✓ Vinculado",
+    "es": "✓ Vinculado",
+    "en": "✓ Linked"
+  },
+  "✕ Desvincular": {
+    "pt": "✕ Desvincular",
+    "es": "✕ Desvincular",
+    "en": "✕ Unlink"
+  },
+  "🏦 Moeda": {
+    "pt": "🏦 Moeda",
+    "es": "🏦 Moneda",
+    "en": "🏦 Currency"
+  },
+  "🏦 Transf. Brasil": {
+    "pt": "🏦 Transf. Brasil",
+    "es": "🏦 Transf. Brasil",
+    "en": "🏦 Brazil transfer"
+  },
+  "🏦 Transf. Paraguai": {
+    "pt": "🏦 Transf. Paraguai",
+    "es": "🏦 Transf. Paraguay",
+    "en": "🏦 Paraguay transfer"
+  },
+  "👤 Vendedor": {
+    "pt": "👤 Vendedor",
+    "es": "👤 Vendedor",
+    "en": "👤 Salesperson"
+  },
+  "💰 Moeda": {
+    "pt": "💰 Moeda",
+    "es": "💰 Moneda",
+    "en": "💰 Currency"
+  },
+  "💰 Valor": {
+    "pt": "💰 Valor",
+    "es": "💰 Valor",
+    "en": "💰 Amount"
+  },
+  "💰 Vendas": {
+    "pt": "💰 Vendas",
+    "es": "💰 Ventas",
+    "en": "💰 Sales"
+  },
+  "💳 Cartão": {
+    "pt": "💳 Cartão",
+    "es": "💳 Tarjeta",
+    "en": "💳 Card"
+  },
+  "💳 Pagamento": {
+    "pt": "💳 Pagamento",
+    "es": "💳 Pago",
+    "en": "💳 Payment"
+  },
+  "💵 Dinheiro G$": {
+    "pt": "💵 Dinheiro G$",
+    "es": "💵 Efectivo PYG",
+    "en": "💵 Cash PYG"
+  },
+  "💵 Dinheiro R$": {
+    "pt": "💵 Dinheiro R$",
+    "es": "💵 Efectivo BRL",
+    "en": "💵 Cash BRL"
+  },
+  "💵 Dinheiro U$": {
+    "pt": "💵 Dinheiro U$",
+    "es": "💵 Efectivo USD",
+    "en": "💵 Cash USD"
+  },
+  "💵 Dinheiro €": {
+    "pt": "💵 Dinheiro €",
+    "es": "💵 Efectivo EUR",
+    "en": "💵 Cash EUR"
+  },
+  "📅 Data": {
+    "pt": "📅 Data",
+    "es": "📅 Fecha",
+    "en": "📅 Date"
+  },
+  "📅 Período": {
+    "pt": "📅 Período",
+    "es": "📅 Período",
+    "en": "📅 Period"
+  },
+  "📊 Lista de Vendas": {
+    "pt": "📊 Lista de Vendas",
+    "es": "📊 Lista de ventas",
+    "en": "📊 Sales list"
+  },
+  "📒 Caderno de Fiado": {
+    "pt": "📒 Caderno de Fiado",
+    "es": "📒 Cuaderno de crédito",
+    "en": "📒 Customer credit ledger"
+  },
+  "📒 Fiado": {
+    "pt": "📒 Fiado",
+    "es": "📒 Crédito a cuenta",
+    "en": "📒 On account"
+  },
+  "📦 Produto": {
+    "pt": "📦 Produto",
+    "es": "📦 Producto",
+    "en": "📦 Product"
+  },
+  "📲 QR Paraguai": {
+    "pt": "📲 QR Paraguai",
+    "es": "📲 QR Paraguay",
+    "en": "📲 Paraguay QR"
+  },
+  "🔄 PIX Cambista": {
+    "pt": "🔄 PIX Cambista",
+    "es": "🔄 PIX cambista",
+    "en": "🔄 Exchange agent PIX"
+  },
+  "🔍 Buscar": {
+    "pt": "🔍 Buscar",
+    "es": "🔍 Buscar",
+    "en": "🔍 Search"
+  },
+  "✓ Vinculado:": {
+    "pt": "✓ Vinculado:",
+    "es": "✓ Vinculado:",
+    "en": "✓ Linked:"
+  },
+  "Cliente atualizado.": {
+    "pt": "Cliente atualizado.",
+    "es": "Cliente actualizado.",
+    "en": "Customer updated."
+  },
+  "Cliente criado.": {
+    "pt": "Cliente criado.",
+    "es": "Cliente creado.",
+    "en": "Customer created."
+  },
+  "Inativar cliente \"{0}\"?": {
+    "pt": "Inativar cliente \"{0}\"?",
+    "es": "¿Desactivar al cliente \"{0}\"?",
+    "en": "Deactivate customer \"{0}\"?"
+  },
+  "Cliente inativado.": {
+    "pt": "Cliente inativado.",
+    "es": "Cliente desactivado.",
+    "en": "Customer deactivated."
+  },
+  "Erro ao inativar cliente.": {
+    "pt": "Erro ao inativar cliente.",
+    "es": "Error al desactivar al cliente.",
+    "en": "Could not deactivate customer."
+  },
+  "Buscar por nome, telefone, CPF, e-mail...": {
+    "pt": "Buscar por nome, telefone, CPF, e-mail...",
+    "es": "Buscar por nombre, teléfono, CPF, correo...",
+    "en": "Search by name, phone, CPF, email..."
+  },
+  "cliente": {
+    "pt": "cliente",
+    "es": "cliente",
+    "en": "customer"
+  },
+  "{0} cliente": {
+    "pt": "{0} cliente",
+    "es": "{0} cliente",
+    "en": "{0} customer"
+  },
+  "{0} clientes": {
+    "pt": "{0} clientes",
+    "es": "{0} clientes",
+    "en": "{0} customers"
+  },
+  "Carregando...": {
+    "pt": "Carregando...",
+    "es": "Cargando...",
+    "en": "Loading..."
+  },
+  "Cadastrar primeiro cliente": {
+    "pt": "Cadastrar primeiro cliente",
+    "es": "Registrar primer cliente",
+    "en": "Add first customer"
+  },
+  "Endereços deste cliente": {
+    "pt": "Endereços deste cliente",
+    "es": "Direcciones de este cliente",
+    "en": "This customer's addresses"
+  },
+  "Endereços": {
+    "pt": "Endereços",
+    "es": "Direcciones",
+    "en": "Addresses"
+  },
+  "Histórico de pedidos": {
+    "pt": "Histórico de pedidos",
+    "es": "Historial de pedidos",
+    "en": "Order history"
+  },
+  "Inativar": {
+    "pt": "Inativar",
+    "es": "Desactivar",
+    "en": "Deactivate"
+  },
+  "Carregar mais": {
+    "pt": "Carregar mais",
+    "es": "Cargar más",
+    "en": "Load more"
+  },
+  "Aguardando autor · expira em 24h": {
+    "pt": "Aguardando autor · expira em 24h",
+    "es": "Pendiente del autor · vence en 24 h",
+    "en": "Awaiting author · expires in 24h"
+  },
+  "Compartilhado": {
+    "pt": "Compartilhado",
+    "es": "Compartido",
+    "en": "Shared"
+  },
+  "Aguardando confirmação · expira em 24h": {
+    "pt": "Aguardando confirmação · expira em 24h",
+    "es": "Pendiente de confirmación · vence en 24 h",
+    "en": "Awaiting confirmation · expires in 24h"
+  },
+  "Cadastrada no ERP": {
+    "pt": "Cadastrada no ERP",
+    "es": "Registrada en el ERP",
+    "en": "Registered in ERP"
+  },
+  "Cancelada": {
+    "pt": "Cancelada",
+    "es": "Cancelada",
+    "en": "Canceled"
+  },
+  "Na fila": {
+    "pt": "Na fila",
+    "es": "En cola",
+    "en": "Queued"
+  },
+  "Processado": {
+    "pt": "Processado",
+    "es": "Procesado",
+    "en": "Processed"
+  },
+  "Falha": {
+    "pt": "Falha",
+    "es": "Error",
+    "en": "Failed"
+  },
+  "Enviando": {
+    "pt": "Enviando",
+    "es": "Enviando",
+    "en": "Sending"
+  },
+  "Aceito pelo provedor": {
+    "pt": "Aceito pelo provedor",
+    "es": "Aceptado por el proveedor",
+    "en": "Accepted by provider"
+  },
+  "Envio incerto": {
+    "pt": "Envio incerto",
+    "es": "Envío incierto",
+    "en": "Delivery uncertain"
+  },
+  "Janela expirada": {
+    "pt": "Janela expirada",
+    "es": "Ventana vencida",
+    "en": "Window expired"
+  },
+  "Acesso revogado": {
+    "pt": "Acesso revogado",
+    "es": "Acceso revocado",
+    "en": "Access revoked"
+  },
+  "Não foi possível concluir. Verifique os campos e seu acesso de administrador.": {
+    "pt": "Não foi possível concluir. Verifique os campos e seu acesso de administrador.",
+    "es": "No se pudo completar. Verifique los campos y su acceso de administrador.",
+    "en": "Could not complete. Check the fields and your administrator access."
+  },
+  "Edite os campos do acesso e clique em Salvar acesso.": {
+    "pt": "Edite os campos do acesso e clique em Salvar acesso.",
+    "es": "Edite los campos de acceso y haga clic en Guardar acceso.",
+    "en": "Edit the access fields and click Save access."
+  },
+  "Acesso salvo.": {
+    "pt": "Acesso salvo.",
+    "es": "Acceso guardado.",
+    "en": "Access saved."
+  },
+  "Mensagem recolocada na fila.": {
+    "pt": "Mensagem recolocada na fila.",
+    "es": "Mensaje vuelto a colocar en cola.",
+    "en": "Message queued again."
+  },
+  "← Dashboard": {
+    "pt": "← Dashboard",
+    "es": "← Panel",
+    "en": "← Dashboard"
+  },
+  "Assistente Eleven": {
+    "pt": "Assistente Eleven",
+    "es": "Asistente Eleven",
+    "en": "Eleven Assistant"
+  },
+  "WhatsApp individual e grupo Telegram, com memória operacional compartilhada.": {
+    "pt": "WhatsApp individual e grupo Telegram, com memória operacional compartilhada.",
+    "es": "WhatsApp individual y grupo de Telegram, con memoria operativa compartida.",
+    "en": "Individual WhatsApp and a Telegram group, with shared operational memory."
+  },
+  "Atualizando…": {
+    "pt": "Atualizando…",
+    "es": "Actualizando…",
+    "en": "Refreshing…"
+  },
+  "Configuração dos canais": {
+    "pt": "Configuração dos canais",
+    "es": "Configuración de canales",
+    "en": "Channel configuration"
+  },
+  "Assistente": {
+    "pt": "Assistente",
+    "es": "Asistente",
+    "en": "Assistant"
+  },
+  "Habilitado": {
+    "pt": "Habilitado",
+    "es": "Habilitado",
+    "en": "Enabled"
+  },
+  "Pausado": {
+    "pt": "Pausado",
+    "es": "Pausado",
+    "en": "Paused"
+  },
+  "Ativação pelo servidor": {
+    "pt": "Ativação pelo servidor",
+    "es": "Activación desde el servidor",
+    "en": "Activated on the server"
+  },
+  "Chave configurada": {
+    "pt": "Chave configurada",
+    "es": "Clave configurada",
+    "en": "Key configured"
+  },
+  "Configuração pendente": {
+    "pt": "Configuração pendente",
+    "es": "Configuración pendiente",
+    "en": "Configuration pending"
+  },
+  "Em standby": {
+    "pt": "Em standby",
+    "es": "En espera",
+    "en": "On standby"
+  },
+  "Configurado": {
+    "pt": "Configurado",
+    "es": "Configurado",
+    "en": "Configured"
+  },
+  "Conversas individuais": {
+    "pt": "Conversas individuais",
+    "es": "Conversaciones individuales",
+    "en": "Individual conversations"
+  },
+  "Grupo ainda não definido": {
+    "pt": "Grupo ainda não definido",
+    "es": "Grupo aún no definido",
+    "en": "Group not set yet"
+  },
+  "Configuração não comprova conexão. Verifique a fila após enviar uma mensagem de teste. Limite:": {
+    "pt": "Configuração não comprova conexão. Verifique a fila após enviar uma mensagem de teste. Limite:",
+    "es": "La configuración no confirma la conexión. Revise la cola después de enviar un mensaje de prueba. Límite:",
+    "en": "Configuration does not confirm connectivity. Check the queue after sending a test message. Limit:"
+  },
+  "mensagens por usuário em 24 horas.": {
+    "pt": "mensagens por usuário em 24 horas.",
+    "es": "mensajes por usuario en 24 horas.",
+    "en": "messages per user in 24 hours."
+  },
+  "Funcionários autorizados": {
+    "pt": "Funcionários autorizados",
+    "es": "Empleados autorizados",
+    "en": "Authorized employees"
+  },
+  "Vincule o WhatsApp e o ID do Telegram ao mesmo usuário do ERP. Confirme a identidade do funcionário antes de liberar acesso.": {
+    "pt": "Vincule o WhatsApp e o ID do Telegram ao mesmo usuário do ERP. Confirme a identidade do funcionário antes de liberar acesso.",
+    "es": "Vincule WhatsApp y el ID de Telegram al mismo usuario del ERP. Confirme la identidad del empleado antes de habilitar el acceso.",
+    "en": "Link WhatsApp and the Telegram ID to the same ERP user. Confirm the employee's identity before granting access."
+  },
+  "Canal": {
+    "pt": "Canal",
+    "es": "Canal",
+    "en": "Channel"
+  },
+  "Identificador": {
+    "pt": "Identificador",
+    "es": "Identificador",
+    "en": "Identifier"
+  },
+  "ID numérico do usuário": {
+    "pt": "ID numérico do usuário",
+    "es": "ID numérico del usuario",
+    "en": "Numeric user ID"
+  },
+  "Usuário ERP": {
+    "pt": "Usuário ERP",
+    "es": "Usuario ERP",
+    "en": "ERP user"
+  },
+  "Selecione": {
+    "pt": "Selecione",
+    "es": "Seleccione",
+    "en": "Select"
+  },
+  "Acesso ativo": {
+    "pt": "Acesso ativo",
+    "es": "Acceso activo",
+    "en": "Access active"
+  },
+  "Pode registrar ocorrências e preparar folgas (gestores)": {
+    "pt": "Pode registrar ocorrências e preparar folgas (gestores)",
+    "es": "Puede registrar incidencias y preparar descansos (responsables)",
+    "en": "Can record incidents and prepare time off (managers)"
+  },
+  "Salvar acesso": {
+    "pt": "Salvar acesso",
+    "es": "Guardar acceso",
+    "en": "Save access"
+  },
+  "Funcionário": {
+    "pt": "Funcionário",
+    "es": "Empleado",
+    "en": "Employee"
+  },
+  "Acesso": {
+    "pt": "Acesso",
+    "es": "Acceso",
+    "en": "Access"
+  },
+  "Registros": {
+    "pt": "Registros",
+    "es": "Registros",
+    "en": "Records"
+  },
+  "Suspenso": {
+    "pt": "Suspenso",
+    "es": "Suspendido",
+    "en": "Suspended"
+  },
+  "Permitido": {
+    "pt": "Permitido",
+    "es": "Permitido",
+    "en": "Allowed"
+  },
+  "Consulta": {
+    "pt": "Consulta",
+    "es": "Consulta",
+    "en": "Read only"
+  },
+  "Nenhum funcionário autorizado. O bot ignora remetentes desconhecidos.": {
+    "pt": "Nenhum funcionário autorizado. O bot ignora remetentes desconhecidos.",
+    "es": "Ningún empleado autorizado. El bot ignora remitentes desconocidos.",
+    "en": "No authorized employees. The bot ignores unknown senders."
+  },
+  "Memória da equipe": {
+    "pt": "Memória da equipe",
+    "es": "Memoria del equipo",
+    "en": "Team memory"
+  },
+  "O funcionário descreve a ocorrência em uma mensagem normal. O bot prepara a prévia; basta responder “confirmo” para compartilhar ou “cancela” para descartar. Conversas privadas não são copiadas para o grupo. Registros são relatos; não lançam vendas ou movimentam estoque.": {
+    "pt": "O funcionário descreve a ocorrência em uma mensagem normal. O bot prepara a prévia; basta responder “confirmo” para compartilhar ou “cancela” para descartar. Conversas privadas não são copiadas para o grupo. Registros são relatos; não lançam vendas ou movimentam estoque.",
+    "es": "El empleado describe la incidencia en un mensaje normal. El bot prepara una vista previa; responda “confirmo” para compartir o “cancela” para descartar. Las conversaciones privadas no se copian al grupo. Los registros son informes; no generan ventas ni movimientos de inventario.",
+    "en": "The employee describes the incident in a normal message. The bot prepares a preview; reply “confirmo” to share or “cancela” to discard it. Private conversations are not copied to the group. Records are reports; they do not create sales or stock movements."
+  },
+  "Nenhum registro ainda. Os últimos 100 aparecerão aqui.": {
+    "pt": "Nenhum registro ainda. Os últimos 100 aparecerão aqui.",
+    "es": "Aún no hay registros. Los últimos 100 aparecerán aquí.",
+    "en": "No records yet. The latest 100 will appear here."
+  },
+  "Cadastros de folgas pelo assistente": {
+    "pt": "Cadastros de folgas pelo assistente",
+    "es": "Descansos registrados por el asistente",
+    "en": "Time off registered by the assistant"
+  },
+  "O bot mostra a prévia e exige confirmação do autor na mesma conversa. Apenas administradores e gerentes com permissão de registro podem cadastrar. Folgas cadastradas aguardam aprovação no calendário.": {
+    "pt": "O bot mostra a prévia e exige confirmação do autor na mesma conversa. Apenas administradores e gerentes com permissão de registro podem cadastrar. Folgas cadastradas aguardam aprovação no calendário.",
+    "es": "El bot muestra una vista previa y exige confirmación del autor en la misma conversación. Solo administradores y gerentes con permiso de registro pueden registrar. Los descansos quedan pendientes de aprobación en el calendario.",
+    "en": "The bot shows a preview and requires confirmation from its author in the same conversation. Only administrators and managers with registration permission can register time off. Requests await approval in the calendar."
+  },
+  "Solicitado por": {
+    "pt": "Solicitado por",
+    "es": "Solicitado por",
+    "en": "Requested by"
+  },
+  "Dia": {
+    "pt": "Dia",
+    "es": "Día",
+    "en": "Day"
+  },
+  "Tipo / período": {
+    "pt": "Tipo / período",
+    "es": "Tipo / período",
+    "en": "Type / period"
+  },
+  "Estado": {
+    "pt": "Estado",
+    "es": "Estado",
+    "en": "State"
+  },
+  "Nenhuma solicitação de cadastro.": {
+    "pt": "Nenhuma solicitação de cadastro.",
+    "es": "Ninguna solicitud de registro.",
+    "en": "No registration requests."
+  },
+  "Processamento e envio": {
+    "pt": "Processamento e envio",
+    "es": "Procesamiento y envío",
+    "en": "Processing and sending"
+  },
+  "“Aceito pelo provedor” não significa lido ou entregue. Envio incerto exige conferência no canal para evitar duplicidade.": {
+    "pt": "“Aceito pelo provedor” não significa lido ou entregue. Envio incerto exige conferência no canal para evitar duplicidade.",
+    "es": "“Aceptado por el proveedor” no significa leído ni entregado. Un envío incierto exige revisar el canal para evitar duplicados.",
+    "en": "“Accepted by provider” does not mean read or delivered. Uncertain delivery requires checking the channel to avoid duplicates."
+  },
+  "Etapa": {
+    "pt": "Etapa",
+    "es": "Etapa",
+    "en": "Stage"
+  },
+  "Processar": {
+    "pt": "Processar",
+    "es": "Procesar",
+    "en": "Process"
+  },
+  "Enviar": {
+    "pt": "Enviar",
+    "es": "Enviar",
+    "en": "Send"
+  },
+  "Reprocessar": {
+    "pt": "Reprocessar",
+    "es": "Reprocesar",
+    "en": "Reprocess"
+  },
+  "Nenhuma mensagem recebida ou envio agendado.": {
+    "pt": "Nenhuma mensagem recebida ou envio agendado.",
+    "es": "Ningún mensaje recibido ni envío programado.",
+    "en": "No received messages or scheduled deliveries."
+  },
+  "Selecione um arquivo Excel": {
+    "pt": "Selecione um arquivo Excel",
+    "es": "Seleccione un archivo Excel",
+    "en": "Select an Excel file"
+  },
+  "Erro ao fazer preview: ": {
+    "pt": "Erro ao fazer preview: ",
+    "es": "Error al generar la vista previa: ",
+    "en": "Preview failed: "
+  },
+  "Erro na importação: ": {
+    "pt": "Erro na importação: ",
+    "es": "Error de importación: ",
+    "en": "Import failed: "
+  },
+  "Planilha VENDASgeral.xlsx": {
+    "pt": "Planilha VENDASgeral.xlsx",
+    "es": "Hoja VENDASgeral.xlsx",
+    "en": "VENDASgeral.xlsx workbook"
+  },
+  "Importar": {
+    "pt": "Importar",
+    "es": "Importar",
+    "en": "Import"
+  },
+  "Importadas": {
+    "pt": "Importadas",
+    "es": "Importadas",
+    "en": "Imported"
+  },
+  "Duplicadas": {
+    "pt": "Duplicadas",
+    "es": "Duplicadas",
+    "en": "Duplicates"
+  },
+  "Erros": {
+    "pt": "Erros",
+    "es": "Errores",
+    "en": "Errors"
+  },
+  "Última importação:": {
+    "pt": "Última importação:",
+    "es": "Última importación:",
+    "en": "Last import:"
+  },
+  "Importar Vendas - VENDASgeral.xlsx": {
+    "pt": "Importar Vendas - VENDASgeral.xlsx",
+    "es": "Importar ventas - VENDASgeral.xlsx",
+    "en": "Import sales - VENDASgeral.xlsx"
+  },
+  "📊 Dados Semanais - VENDASgeral.xlsx": {
+    "pt": "📊 Dados Semanais - VENDASgeral.xlsx",
+    "es": "📊 Datos semanales - VENDASgeral.xlsx",
+    "en": "📊 Weekly data - VENDASgeral.xlsx"
+  },
+  "Sistema otimizado para extrair totais semanais por vendedor e moeda:": {
+    "pt": "Sistema otimizado para extrair totais semanais por vendedor e moeda:",
+    "es": "Sistema optimizado para extraer totales semanales por vendedor y moneda:",
+    "en": "Extract weekly totals by seller and currency:"
+  },
+  "👥 Vendedores (Linha 2):": {
+    "pt": "👥 Vendedores (Linha 2):",
+    "es": "👥 Vendedores (fila 2):",
+    "en": "👥 Sellers (row 2):"
+  },
+  "Coluna D:": {
+    "pt": "Coluna D:",
+    "es": "Columna D:",
+    "en": "Column D:"
+  },
+  "Coluna E:": {
+    "pt": "Coluna E:",
+    "es": "Columna E:",
+    "en": "Column E:"
+  },
+  "Coluna F:": {
+    "pt": "Coluna F:",
+    "es": "Columna F:",
+    "en": "Column F:"
+  },
+  "Coluna G:": {
+    "pt": "Coluna G:",
+    "es": "Columna G:",
+    "en": "Column G:"
+  },
+  "Coluna H:": {
+    "pt": "Coluna H:",
+    "es": "Columna H:",
+    "en": "Column H:"
+  },
+  "💰 Moedas (Coluna C):": {
+    "pt": "💰 Moedas (Coluna C):",
+    "es": "💰 Monedas (columna C):",
+    "en": "💰 Currencies (column C):"
+  },
+  "Linha 3:": {
+    "pt": "Linha 3:",
+    "es": "Fila 3:",
+    "en": "Row 3:"
+  },
+  "Linha 4:": {
+    "pt": "Linha 4:",
+    "es": "Fila 4:",
+    "en": "Row 4:"
+  },
+  "Linha 5:": {
+    "pt": "Linha 5:",
+    "es": "Fila 5:",
+    "en": "Row 5:"
+  },
+  "Linha 6:": {
+    "pt": "Linha 6:",
+    "es": "Fila 6:",
+    "en": "Row 6:"
+  },
+  "📈 O sistema extrairá os valores das interseções (ex: D3 = vendas do Junior em G$)": {
+    "pt": "📈 O sistema extrairá os valores das interseções (ex: D3 = vendas do Junior em G$)",
+    "es": "📈 El sistema extraerá los valores de las intersecciones (ej.: D3 = ventas de Junior en G$)",
+    "en": "📈 Values are extracted from intersections (e.g. D3 = Junior's sales in G$)"
+  },
+  "Clique para selecionar": {
+    "pt": "Clique para selecionar",
+    "es": "Haga clic para seleccionar",
+    "en": "Click to select"
+  },
+  "sua planilha VENDASgeral.xlsx": {
+    "pt": "sua planilha VENDASgeral.xlsx",
+    "es": "su hoja VENDASgeral.xlsx",
+    "en": "your VENDASgeral.xlsx workbook"
+  },
+  "Formato personalizado com mapeamento de células": {
+    "pt": "Formato personalizado com mapeamento de células",
+    "es": "Formato personalizado con mapeo de celdas",
+    "en": "Custom format with cell mapping"
+  },
+  "Preview": {
+    "pt": "Preview",
+    "es": "Vista previa",
+    "en": "Preview"
+  },
+  "Preview da Importação": {
+    "pt": "Preview da Importação",
+    "es": "Vista previa de la importación",
+    "en": "Import preview"
+  },
+  "válidas": {
+    "pt": "válidas",
+    "es": "válidas",
+    "en": "valid"
+  },
+  "erros": {
+    "pt": "erros",
+    "es": "errores",
+    "en": "errors"
+  },
+  "Erros Encontrados:": {
+    "pt": "Erros Encontrados:",
+    "es": "Errores encontrados:",
+    "en": "Errors found:"
+  },
+  "... e mais": {
+    "pt": "... e mais",
+    "es": "... y otros",
+    "en": "... and another"
+  },
+  "Primeiras": {
+    "pt": "Primeiras",
+    "es": "Primeras",
+    "en": "First"
+  },
+  "vendas válidas:": {
+    "pt": "vendas válidas:",
+    "es": "ventas válidas:",
+    "en": "valid sales:"
+  },
+  "Importando...": {
+    "pt": "Importando...",
+    "es": "Importando...",
+    "en": "Importing..."
+  },
+  "Importar {0} vendas": {
+    "pt": "Importar {0} vendas",
+    "es": "Importar {0} ventas",
+    "en": "Import {0} sales"
+  },
+  "Importação Concluída!": {
+    "pt": "Importação Concluída!",
+    "es": "¡Importación completada!",
+    "en": "Import complete!"
+  },
+  "Erro na Importação": {
+    "pt": "Erro na Importação",
+    "es": "Error de importación",
+    "en": "Import error"
+  },
+  "vendas importadas": {
+    "pt": "vendas importadas",
+    "es": "ventas importadas",
+    "en": "sales imported"
+  },
+  "vendas duplicadas (ignoradas)": {
+    "pt": "vendas duplicadas (ignoradas)",
+    "es": "ventas duplicadas (ignoradas)",
+    "en": "duplicate sales (skipped)"
+  },
+  "erros encontrados": {
+    "pt": "erros encontrados",
+    "es": "errores encontrados",
+    "en": "errors found"
+  },
+  "Tem certeza que deseja excluir a tag \"{0}\"?": {
+    "pt": "Tem certeza que deseja excluir a tag \"{0}\"?",
+    "es": "¿Desea eliminar la etiqueta \"{0}\"?",
+    "en": "Are you sure you want to delete tag \"{0}\"?"
+  },
+  "Gerenciar Tags": {
+    "pt": "Gerenciar Tags",
+    "es": "Gestionar etiquetas",
+    "en": "Manage tags"
+  },
+  "Criar Nova Tag": {
+    "pt": "Criar Nova Tag",
+    "es": "Crear nueva etiqueta",
+    "en": "Create new tag"
+  },
+  "Nome da Tag": {
+    "pt": "Nome da Tag",
+    "es": "Nombre de la etiqueta",
+    "en": "Tag name"
+  },
+  "Ex: Separado, Pago, Enviado...": {
+    "pt": "Ex: Separado, Pago, Enviado...",
+    "es": "Ej.: Separado, Pagado, Enviado...",
+    "en": "E.g. Set aside, Paid, Shipped..."
+  },
+  "Cor": {
+    "pt": "Cor",
+    "es": "Color",
+    "en": "Color"
+  },
+  "Descrição (opcional)": {
+    "pt": "Descrição (opcional)",
+    "es": "Descripción (opcional)",
+    "en": "Description (optional)"
+  },
+  "Descrição da tag...": {
+    "pt": "Descrição da tag...",
+    "es": "Descripción de la etiqueta...",
+    "en": "Tag description..."
+  },
+  "Ordem": {
+    "pt": "Ordem",
+    "es": "Orden",
+    "en": "Order"
+  },
+  "Criar Tag": {
+    "pt": "Criar Tag",
+    "es": "Crear etiqueta",
+    "en": "Create tag"
+  },
+  "Preview:": {
+    "pt": "Preview:",
+    "es": "Vista previa:",
+    "en": "Preview:"
+  },
+  "Tags Existentes": {
+    "pt": "Tags Existentes",
+    "es": "Etiquetas existentes",
+    "en": "Existing tags"
+  },
+  "Carregando tags...": {
+    "pt": "Carregando tags...",
+    "es": "Cargando etiquetas...",
+    "en": "Loading tags..."
+  },
+  "Nenhuma tag encontrada.": {
+    "pt": "Nenhuma tag encontrada.",
+    "es": "No se encontraron etiquetas.",
+    "en": "No tags found."
+  },
+  "Ordem:": {
+    "pt": "Ordem:",
+    "es": "Orden:",
+    "en": "Order:"
+  },
+  "Editar tag": {
+    "pt": "Editar tag",
+    "es": "Editar etiqueta",
+    "en": "Edit tag"
+  },
+  "Desativar tag": {
+    "pt": "Desativar tag",
+    "es": "Desactivar etiqueta",
+    "en": "Disable tag"
+  },
+  "Ativar tag": {
+    "pt": "Ativar tag",
+    "es": "Activar etiqueta",
+    "en": "Enable tag"
+  },
+  "Excluir tag": {
+    "pt": "Excluir tag",
+    "es": "Eliminar etiqueta",
+    "en": "Delete tag"
+  },
+  "Criar Tags Padrão": {
+    "pt": "Criar Tags Padrão",
+    "es": "Crear etiquetas predeterminadas",
+    "en": "Create default tags"
+  },
+  "Editar Tag": {
+    "pt": "Editar Tag",
+    "es": "Editar etiqueta",
+    "en": "Edit tag"
+  },
+  "Permissão de câmera negada. Verifique as configurações do navegador.": {
+    "pt": "Permissão de câmera negada. Verifique as configurações do navegador.",
+    "es": "Permiso de cámara denegado. Verifique la configuración del navegador.",
+    "en": "Camera permission denied. Check your browser settings."
+  },
+  "Câmera não disponível neste dispositivo.": {
+    "pt": "Câmera não disponível neste dispositivo.",
+    "es": "Cámara no disponible en este dispositivo.",
+    "en": "Camera is not available on this device."
+  },
+  "Próximo": {
+    "pt": "Próximo",
+    "es": "Siguiente",
+    "en": "Next"
+  },
+  "Remover anexo": {
+    "pt": "Remover anexo",
+    "es": "Eliminar adjunto",
+    "en": "Remove attachment"
+  },
+  "Remover": {
+    "pt": "Remover",
+    "es": "Eliminar",
+    "en": "Remove"
+  },
+  "Imagem {0}": {
+    "pt": "Imagem {0}",
+    "es": "Imagen {0}",
+    "en": "Image {0}"
+  },
+  "Enviando...": {
+    "pt": "Enviando...",
+    "es": "Enviando...",
+    "en": "Sending..."
+  },
+  "Limite atingido": {
+    "pt": "Limite atingido",
+    "es": "Límite alcanzado",
+    "en": "Limit reached"
+  },
+  "Galeria": {
+    "pt": "Galeria",
+    "es": "Galería",
+    "en": "Gallery"
+  },
+  "Câmera": {
+    "pt": "Câmera",
+    "es": "Cámara",
+    "en": "Camera"
+  },
+  "Tirar foto": {
+    "pt": "Tirar foto",
+    "es": "Tomar foto",
+    "en": "Take photo"
+  },
+  "Foto capturada": {
+    "pt": "Foto capturada",
+    "es": "Foto capturada",
+    "en": "Captured photo"
+  },
+  "Capturar": {
+    "pt": "Capturar",
+    "es": "Capturar",
+    "en": "Capture"
+  },
+  "Tirar novamente": {
+    "pt": "Tirar novamente",
+    "es": "Volver a tomar",
+    "en": "Retake"
+  },
+  "Usar esta foto": {
+    "pt": "Usar esta foto",
+    "es": "Usar esta foto",
+    "en": "Use this photo"
+  },
+  "Editar pedido": {
+    "pt": "Editar pedido",
+    "es": "Editar pedido",
+    "en": "Edit order"
+  },
+  "Ver rastreamento": {
+    "pt": "Ver rastreamento",
+    "es": "Ver seguimiento",
+    "en": "View tracking"
+  },
+  "Rastreado": {
+    "pt": "Rastreado",
+    "es": "Rastreado",
+    "en": "Tracked"
+  },
+  "Criar rastreamento": {
+    "pt": "Criar rastreamento",
+    "es": "Crear seguimiento",
+    "en": "Create tracking"
+  },
+  "Rastrear": {
+    "pt": "Rastrear",
+    "es": "Rastrear",
+    "en": "Track"
+  },
+  "Ver detalhes": {
+    "pt": "Ver detalhes",
+    "es": "Ver detalles",
+    "en": "View details"
+  },
+  "Azul": {
+    "pt": "Azul",
+    "es": "Azul",
+    "en": "Blue"
+  },
+  "Vermelho": {
+    "pt": "Vermelho",
+    "es": "Rojo",
+    "en": "Red"
+  },
+  "Verde": {
+    "pt": "Verde",
+    "es": "Verde",
+    "en": "Green"
+  },
+  "Laranja": {
+    "pt": "Laranja",
+    "es": "Naranja",
+    "en": "Orange"
+  },
+  "Roxo": {
+    "pt": "Roxo",
+    "es": "Violeta",
+    "en": "Purple"
+  },
+  "Ciano": {
+    "pt": "Ciano",
+    "es": "Cian",
+    "en": "Cyan"
+  },
+  "Laranja Escuro": {
+    "pt": "Laranja Escuro",
+    "es": "Naranja oscuro",
+    "en": "Dark orange"
+  },
+  "Lima": {
+    "pt": "Lima",
+    "es": "Lima",
+    "en": "Lime"
+  },
+  "Cinza Escuro": {
+    "pt": "Cinza Escuro",
+    "es": "Gris oscuro",
+    "en": "Dark gray"
+  },
+  "Cinza": {
+    "pt": "Cinza",
+    "es": "Gris",
+    "en": "Gray"
+  },
+  "Vermelho Escuro": {
+    "pt": "Vermelho Escuro",
+    "es": "Rojo oscuro",
+    "en": "Dark red"
+  },
+  "Verde Escuro": {
+    "pt": "Verde Escuro",
+    "es": "Verde oscuro",
+    "en": "Dark green"
+  },
+  "Roxo Escuro": {
+    "pt": "Roxo Escuro",
+    "es": "Violeta oscuro",
+    "en": "Dark purple"
+  },
+  "Rosa": {
+    "pt": "Rosa",
+    "es": "Rosa",
+    "en": "Pink"
+  },
+  "Azul Teal": {
+    "pt": "Azul Teal",
+    "es": "Azul verdoso",
+    "en": "Teal"
+  },
+  "Verde Limão": {
+    "pt": "Verde Limão",
+    "es": "Verde lima",
+    "en": "Lime green"
+  },
+  "Vermelho Intenso": {
+    "pt": "Vermelho Intenso",
+    "es": "Rojo intenso",
+    "en": "Deep red"
+  },
+  "Marrom": {
+    "pt": "Marrom",
+    "es": "Marrón",
+    "en": "Brown"
+  },
+  "Marrom Escuro": {
+    "pt": "Marrom Escuro",
+    "es": "Marrón oscuro",
+    "en": "Dark brown"
+  },
+  "Preto": {
+    "pt": "Preto",
+    "es": "Negro",
+    "en": "Black"
+  },
+  "Personalizada": {
+    "pt": "Personalizada",
+    "es": "Personalizada",
+    "en": "Custom"
+  },
+  "Escolha uma cor": {
+    "pt": "Escolha uma cor",
+    "es": "Elija un color",
+    "en": "Choose a color"
+  },
+  "Cores Recomendadas": {
+    "pt": "Cores Recomendadas",
+    "es": "Colores recomendados",
+    "en": "Recommended colors"
+  },
+  "Outras Cores": {
+    "pt": "Outras Cores",
+    "es": "Otros colores",
+    "en": "Other colors"
+  },
+  "Cor Personalizada": {
+    "pt": "Cor Personalizada",
+    "es": "Color personalizado",
+    "en": "Custom color"
+  },
+  "Erro ao salvar cliente.": {
+    "pt": "Erro ao salvar cliente.",
+    "es": "Error al guardar el cliente.",
+    "en": "Could not save customer."
+  },
+  "Editar Cliente": {
+    "pt": "Editar Cliente",
+    "es": "Editar cliente",
+    "en": "Edit customer"
+  },
+  "Novo Cliente": {
+    "pt": "Novo Cliente",
+    "es": "Nuevo cliente",
+    "en": "New customer"
+  },
+  "Nome completo": {
+    "pt": "Nome completo",
+    "es": "Nombre completo",
+    "en": "Full name"
+  },
+  "Endereço": {
+    "pt": "Endereço",
+    "es": "Dirección",
+    "en": "Address"
+  },
+  "Endereço completo": {
+    "pt": "Endereço completo",
+    "es": "Dirección completa",
+    "en": "Full address"
+  },
+  "Cole ou digite o endereço completo aqui": {
+    "pt": "Cole ou digite o endereço completo aqui",
+    "es": "Pegue o escriba la dirección completa aquí",
+    "en": "Paste or enter the full address here"
+  },
+  "Ex: Rua das Flores, 123, Bairro Centro, São Paulo - SP, CEP 01310-100": {
+    "pt": "Ex: Rua das Flores, 123, Bairro Centro, São Paulo - SP, CEP 01310-100",
+    "es": "Ej.: Rua das Flores, 123, Bairro Centro, São Paulo - SP, CEP 01310-100",
+    "en": "E.g. Rua das Flores, 123, Bairro Centro, São Paulo - SP, CEP 01310-100"
+  },
+  "Campo livre — cole o endereço como preferir.": {
+    "pt": "Campo livre — cole o endereço como preferir.",
+    "es": "Campo libre — pegue la dirección como prefiera.",
+    "en": "Free text — paste the address in your preferred format."
+  },
+  "Salvar alterações": {
+    "pt": "Salvar alterações",
+    "es": "Guardar cambios",
+    "en": "Save changes"
+  },
+  "Criar cliente": {
+    "pt": "Criar cliente",
+    "es": "Crear cliente",
+    "en": "Create customer"
+  },
+  "Informe a descrição": {
+    "pt": "Informe a descrição",
+    "es": "Ingrese la descripción",
+    "en": "Enter a description"
+  },
+  "Informe o preço": {
+    "pt": "Informe o preço",
+    "es": "Ingrese el precio",
+    "en": "Enter a price"
+  },
+  "Produto não encontrado": {
+    "pt": "Produto não encontrado",
+    "es": "Producto no encontrado",
+    "en": "Product not found"
+  },
+  "Adicione manualmente ao carrinho": {
+    "pt": "Adicione manualmente ao carrinho",
+    "es": "Añada manualmente al carrito",
+    "en": "Add to cart manually"
+  },
+  "Código escaneado:": {
+    "pt": "Código escaneado:",
+    "es": "Código escaneado:",
+    "en": "Scanned code:"
+  },
+  "Descrição do produto *": {
+    "pt": "Descrição do produto *",
+    "es": "Descripción del producto *",
+    "en": "Product description *"
+  },
+  "Ex: Camiseta azul M": {
+    "pt": "Ex: Camiseta azul M",
+    "es": "Ej.: Camiseta azul M",
+    "en": "E.g. Blue T-shirt M"
+  },
+  "Preço unitário (G$) *": {
+    "pt": "Preço unitário (G$) *",
+    "es": "Precio unitario (G$) *",
+    "en": "Unit price (G$) *"
+  },
+  "Qtd": {
+    "pt": "Qtd",
+    "es": "Cant.",
+    "en": "Qty"
+  },
+  "+ Adicionar ao carrinho": {
+    "pt": "+ Adicionar ao carrinho",
+    "es": "+ Añadir al carrito",
+    "en": "+ Add to cart"
+  },
+  "Dinheiro G$": {
+    "pt": "Dinheiro G$",
+    "es": "Efectivo G$",
+    "en": "Cash G$"
+  },
+  "Dinheiro R$": {
+    "pt": "Dinheiro R$",
+    "es": "Efectivo R$",
+    "en": "Cash R$"
+  },
+  "Dinheiro U$": {
+    "pt": "Dinheiro U$",
+    "es": "Efectivo U$",
+    "en": "Cash U$"
+  },
+  "Dinheiro €": {
+    "pt": "Dinheiro €",
+    "es": "Efectivo €",
+    "en": "Cash €"
+  },
+  "Cartão": {
+    "pt": "Cartão",
+    "es": "Tarjeta",
+    "en": "Card"
+  },
+  "Transf. Brasil": {
+    "pt": "Transf. Brasil",
+    "es": "Transf. Brasil",
+    "en": "Brazil transfer"
+  },
+  "Transf. Paraguai": {
+    "pt": "Transf. Paraguai",
+    "es": "Transf. Paraguay",
+    "en": "Paraguay transfer"
+  },
+  "PIX Cambista": {
+    "pt": "PIX Cambista",
+    "es": "PIX cambista",
+    "en": "Currency exchange PIX"
+  },
+  "QR Paraguai": {
+    "pt": "QR Paraguai",
+    "es": "QR Paraguay",
+    "en": "Paraguay QR"
+  },
+  "Erro ao gerar PDF. Tente usar o botão Imprimir.": {
+    "pt": "Erro ao gerar PDF. Tente usar o botão Imprimir.",
+    "es": "Error al generar el PDF. Intente usar el botón Imprimir.",
+    "en": "Could not generate PDF. Try the Print button."
+  },
+  "🖨 Imprimir": {
+    "pt": "🖨 Imprimir",
+    "es": "🖨 Imprimir",
+    "en": "🖨 Print"
+  },
+  "📄 Salvar PDF": {
+    "pt": "📄 Salvar PDF",
+    "es": "📄 Guardar PDF",
+    "en": "📄 Save PDF"
+  },
+  "Moda & Vestuário": {
+    "pt": "Moda & Vestuário",
+    "es": "Moda y ropa",
+    "en": "Fashion & clothing"
+  },
+  "Venda #": {
+    "pt": "Venda #",
+    "es": "Venta #",
+    "en": "Sale #"
+  },
+  "Cliente:": {
+    "pt": "Cliente:",
+    "es": "Cliente:",
+    "en": "Customer:"
+  },
+  "Obrigado pela sua compra!": {
+    "pt": "Obrigado pela sua compra!",
+    "es": "¡Gracias por su compra!",
+    "en": "Thank you for your purchase!"
+  },
+  "Volte sempre ✨": {
+    "pt": "Volte sempre ✨",
+    "es": "Vuelva pronto ✨",
+    "en": "Come back soon ✨"
+  },
+  "Erro ao fazer preview: {0}": {
+    "pt": "Erro ao fazer preview: {0}",
+    "es": "Error al generar la vista previa: {0}",
+    "en": "Preview failed: {0}"
+  },
+  "Erro na importação: {0}": {
+    "pt": "Erro na importação: {0}",
+    "es": "Error de importación: {0}",
+    "en": "Import failed: {0}"
+  },
+  "Atendimento": {
+    "pt": "Atendimento",
+    "es": "Atención",
+    "en": "Customer service"
+  },
+  "Devolução": {
+    "pt": "Devolução",
+    "es": "Devolución",
+    "en": "Return"
+  },
+  "Venda": {
+    "pt": "Venda",
+    "es": "Venta",
+    "en": "Sale"
+  },
+  "Geral": {
+    "pt": "Geral",
+    "es": "General",
+    "en": "General"
+  },
+  "Administrador": {
+    "pt": "Administrador",
+    "es": "Administrador",
+    "en": "Administrator"
+  },
+  "Gerente": {
+    "pt": "Gerente",
+    "es": "Gerente",
+    "en": "Manager"
+  },
+  "Operador": {
+    "pt": "Operador",
+    "es": "Operador",
+    "en": "Operator"
+  },
+  "Erro ao carregar tags.": {
+    "pt": "Erro ao carregar tags.",
+    "es": "Error al cargar las etiquetas.",
+    "en": "Could not load tags."
+  },
+  "Erro ao criar tag.": {
+    "pt": "Erro ao criar tag.",
+    "es": "Error al crear la etiqueta.",
+    "en": "Could not create tag."
+  },
+  "Erro ao criar tags padrão.": {
+    "pt": "Erro ao criar tags padrão.",
+    "es": "Error al crear etiquetas predeterminadas.",
+    "en": "Could not create default tags."
+  },
+  "Erro ao atualizar tag.": {
+    "pt": "Erro ao atualizar tag.",
+    "es": "Error al actualizar la etiqueta.",
+    "en": "Could not update tag."
+  },
+  "Erro ao alterar status da tag.": {
+    "pt": "Erro ao alterar status da tag.",
+    "es": "Error al cambiar el estado de la etiqueta.",
+    "en": "Could not change tag status."
+  },
+  "Erro ao excluir tag.": {
+    "pt": "Erro ao excluir tag.",
+    "es": "Error al eliminar la etiqueta.",
+    "en": "Could not delete tag."
+  },
+  "Dólar americano": {
+    "pt": "Dólar americano",
+    "es": "Dólar estadounidense",
+    "en": "US dollar"
+  },
+  "Guarani paraguaio": {
+    "pt": "Guarani paraguaio",
+    "es": "Guaraní paraguayo",
+    "en": "Paraguayan guaraní"
+  },
+  "Real brasileiro": {
+    "pt": "Real brasileiro",
+    "es": "Real brasileño",
+    "en": "Brazilian real"
+  },
+  "Euro": {
+    "pt": "Euro",
+    "es": "Euro",
+    "en": "Euro"
+  },
+  "Erro ao atualizar taxas de câmbio": {
+    "pt": "Erro ao atualizar taxas de câmbio",
+    "es": "Error al actualizar las tasas de cambio",
+    "en": "Could not update exchange rates"
+  },
+  "Usuário não autenticado": {
+    "pt": "Usuário não autenticado",
+    "es": "Usuario no autenticado",
+    "en": "User is not authenticated"
+  },
+  "Erro ao listar rastreamentos": {
+    "pt": "Erro ao listar rastreamentos",
+    "es": "Error al listar los seguimientos",
+    "en": "Could not list shipments"
+  },
+  "Erro ao obter rastreamento": {
+    "pt": "Erro ao obter rastreamento",
+    "es": "Error al obtener el seguimiento",
+    "en": "Could not load tracking"
+  },
+  "Erro ao atualizar rastreamento": {
+    "pt": "Erro ao atualizar rastreamento",
+    "es": "Error al actualizar el seguimiento",
+    "en": "Could not update tracking"
+  },
+  "Erro ao remover rastreamento": {
+    "pt": "Erro ao remover rastreamento",
+    "es": "Error al eliminar el seguimiento",
+    "en": "Could not remove tracking"
+  },
+  "Erro ao consultar rastreamento online": {
+    "pt": "Erro ao consultar rastreamento online",
+    "es": "Error al consultar el seguimiento en línea",
+    "en": "Could not retrieve online tracking"
+  },
+  "Erro ao obter resumo da dashboard": {
+    "pt": "Erro ao obter resumo da dashboard",
+    "es": "Error al obtener el resumen del panel",
+    "en": "Could not load the dashboard summary"
+  },
+  "Erro ao atualizar rastreamentos": {
+    "pt": "Erro ao atualizar rastreamentos",
+    "es": "Error al actualizar los seguimientos",
+    "en": "Could not update shipments"
+  }
+}

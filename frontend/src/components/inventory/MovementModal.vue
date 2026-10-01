@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Movimentação de Estoque</h2>
+        <h2>{{ tr('Movimentação de Estoque') }}</h2>
         <button @click="emit('close')" class="close-btn">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -14,14 +14,14 @@
         <div v-if="item" class="item-info">
           <span class="item-name">{{ item.name }}</span>
           <div class="item-stock-row">
-            <span class="item-stock">Loja: <strong>{{ item.stock_loja ?? item.current_stock }}</strong></span>
+            <span class="item-stock">{{ tr('Loja:') }} <strong>{{ item.stock_loja ?? item.current_stock }}</strong></span>
             <span class="item-stock-sep">·</span>
-            <span class="item-stock">Depósito: <strong>{{ item.stock_deposito ?? 0 }}</strong></span>
+            <span class="item-stock">{{ tr('Depósito:') }} <strong>{{ item.stock_deposito ?? 0 }}</strong></span>
           </div>
         </div>
 
         <div class="form-group">
-          <label>Tipo de Movimentação *</label>
+          <label>{{ tr('Tipo de Movimentação *') }}</label>
           <div class="movement-type-grid">
             <button
               v-for="t in movementTypes"
@@ -30,26 +30,26 @@
               :class="['type-btn', { active: form.movement_type === t.value }, t.color]"
               type="button"
             >
-              {{ t.label }}
+              {{ tr(t.label) }}
             </button>
           </div>
         </div>
 
         <!-- Location selector (entry / exit) -->
-        <div v-if="form.movement_type === 'entry' || form.movement_type === 'exit'" class="form-group">
-          <label>Local *</label>
+        <div v-if="form.movement_type === 'entry' || form.movement_type === 'exit' || form.movement_type === 'adjustment'" class="form-group">
+          <label>{{ tr('Local *') }}</label>
           <div class="loc-toggle">
-            <button type="button" :class="['loc-btn', { active: form.location === 'loja' }]" @click="form.location = 'loja'">Loja</button>
-            <button type="button" :class="['loc-btn', { active: form.location === 'deposito' }]" @click="form.location = 'deposito'">Depósito</button>
+            <button type="button" :class="['loc-btn', { active: form.location === 'loja' }]" @click="form.location = 'loja'">{{ tr('Loja') }}</button>
+            <button type="button" :class="['loc-btn', { active: form.location === 'deposito' }]" @click="form.location = 'deposito'">{{ tr('Depósito') }}</button>
           </div>
         </div>
 
         <!-- Transfer direction -->
         <div v-if="form.movement_type === 'transfer'" class="form-group">
-          <label>Direção *</label>
+          <label>{{ tr('Direção *') }}</label>
           <div class="loc-toggle">
-            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'deposito' }]" @click="form.location_from = 'deposito'; form.location_to = 'loja'">Depósito → Loja</button>
-            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'loja' }]" @click="form.location_from = 'loja'; form.location_to = 'deposito'">Loja → Depósito</button>
+            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'deposito' }]" @click="form.location_from = 'deposito'; form.location_to = 'loja'">{{ tr('Depósito → Loja') }}</button>
+            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'loja' }]" @click="form.location_from = 'loja'; form.location_to = 'deposito'">{{ tr('Loja → Depósito') }}</button>
           </div>
         </div>
 
@@ -57,7 +57,7 @@
         <div v-if="form.movement_type === 'entry'" class="form-group">
           <label class="checkbox-label">
             <input type="checkbox" v-model="batchMode" />
-            Entrada em lote
+            {{ tr('Entrada em lote') }}
           </label>
         </div>
 
@@ -65,25 +65,25 @@
         <template v-if="!batchMode">
           <div class="form-row">
             <div class="form-group">
-              <label>Quantidade *</label>
-              <input v-model.number="form.quantity" type="number" min="1" class="form-input" :class="{ error: errors.quantity }" />
-              <span v-if="errors.quantity" class="error-msg">{{ errors.quantity }}</span>
+              <label>{{ tr('Quantidade *') }}</label>
+              <input v-model.number="form.quantity" type="number" :min="form.movement_type === 'adjustment' ? 0 : 1" class="form-input" :class="{ error: errors.quantity }" />
+              <span v-if="errors.quantity" class="error-msg">{{ tr(errors.quantity) }}</span>
             </div>
             <div class="form-group" v-if="form.movement_type === 'entry'">
-              <label>Custo Unitário</label>
+              <label>{{ tr('Custo Unitário') }}</label>
               <input v-model.number="form.unit_cost" type="number" step="0.01" min="0" class="form-input" />
             </div>
           </div>
 
           <div class="form-group">
-            <label :class="{ required: form.movement_type === 'adjustment' }">Motivo</label>
-            <input v-model="form.reason" type="text" class="form-input" :class="{ error: errors.reason }" placeholder="Motivo da movimentação..." />
-            <span v-if="errors.reason" class="error-msg">{{ errors.reason }}</span>
+            <label :class="{ required: form.movement_type === 'adjustment' }">{{ tr('Motivo') }}</label>
+            <input v-model="form.reason" type="text" class="form-input" :class="{ error: errors.reason }" :placeholder="tr('Motivo da movimentação...')" />
+            <span v-if="errors.reason" class="error-msg">{{ tr(errors.reason) }}</span>
           </div>
 
           <div class="form-group">
-            <label>Observações</label>
-            <textarea v-model="form.notes" class="form-input" rows="2" placeholder="Notas adicionais..."></textarea>
+            <label>{{ tr('Observações') }}</label>
+            <textarea v-model="form.notes" class="form-input" rows="2" :placeholder="tr('Notas adicionais...')"></textarea>
           </div>
         </template>
 
@@ -91,26 +91,26 @@
         <template v-if="batchMode">
           <div class="batch-list">
             <div v-for="(line, idx) in batchLines" :key="idx" class="batch-line">
-              <input v-model="line.item_id" type="text" class="form-input" placeholder="ID do item" />
-              <input v-model.number="line.quantity" type="number" min="1" class="form-input small" placeholder="Qtd" />
-              <input v-model.number="line.unit_cost" type="number" step="0.01" min="0" class="form-input small" placeholder="Custo" />
+              <input v-model="line.item_id" type="text" class="form-input" :placeholder="tr('ID do item')" />
+              <input v-model.number="line.quantity" type="number" min="1" class="form-input small" :placeholder="tr('Qtd')" />
+              <input v-model.number="line.unit_cost" type="number" step="0.01" min="0" class="form-input small" :placeholder="tr('Custo')" />
               <button @click="batchLines.splice(idx, 1)" class="remove-btn" type="button">×</button>
             </div>
             <button @click="batchLines.push({ item_id: '', quantity: 1, unit_cost: 0 })" class="add-line-btn" type="button">
-              + Adicionar linha
+              {{ tr('+ Adicionar linha') }}
             </button>
           </div>
           <div class="form-group">
-            <label>Motivo</label>
-            <input v-model="form.reason" type="text" class="form-input" placeholder="Motivo da entrada..." />
+            <label>{{ tr('Motivo') }}</label>
+            <input v-model="form.reason" type="text" class="form-input" :placeholder="tr('Motivo da entrada...')" />
           </div>
         </template>
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary">Cancelar</button>
+        <button @click="emit('close')" class="btn btn-secondary">{{ tr('Cancelar') }}</button>
         <button @click="handleSubmit" class="btn btn-primary" :disabled="saving">
-          {{ saving ? 'Salvando...' : 'Registrar' }}
+          {{ saving ? tr('Salvando...') : tr('Registrar') }}
         </button>
       </div>
     </div>
@@ -118,6 +118,8 @@
 </template>
 
 <script setup lang="ts">
+import { useInventoryI18n } from '@/components/inventory/i18n'
+const { tr } = useInventoryI18n()
 import { ref, reactive } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 
@@ -157,7 +159,7 @@ const batchLines = ref([{ item_id: '', quantity: 1, unit_cost: 0 }])
 function validate() {
   Object.keys(errors).forEach(k => delete errors[k])
   if (!batchMode.value) {
-    if (!form.quantity || form.quantity < 1) errors.quantity = 'Quantidade deve ser ao menos 1'
+    if (!Number.isInteger(form.quantity) || form.quantity < (form.movement_type === 'adjustment' ? 0 : 1)) errors.quantity = 'Quantidade deve ser um inteiro positivo; ajuste pode ser zero.'
     if (form.movement_type === 'adjustment' && !form.reason) errors.reason = 'Motivo obrigatório para ajuste'
   }
   return Object.keys(errors).length === 0
@@ -179,7 +181,7 @@ async function handleSubmit() {
         quantity: form.quantity,
         reason: form.reason || undefined,
         unit_cost: form.movement_type === 'entry' ? form.unit_cost : undefined,
-        location: (form.movement_type === 'entry' || form.movement_type === 'exit') ? form.location : undefined,
+        location: (form.movement_type === 'entry' || form.movement_type === 'exit' || form.movement_type === 'adjustment') ? form.location : undefined,
         location_from: form.movement_type === 'transfer' ? form.location_from : undefined,
         location_to: form.movement_type === 'transfer' ? form.location_to : undefined,
         notes: form.notes || undefined,

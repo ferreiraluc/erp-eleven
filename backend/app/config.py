@@ -13,6 +13,8 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     WONCA_API_KEY: str = os.getenv("WONCA_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    VISION_PROVIDER: str = os.getenv("VISION_PROVIDER", "auto").strip().lower()
+    DEEPSEEK_VISION_MODEL: str = os.getenv("DEEPSEEK_VISION_MODEL", "deepseek-flash")
     ASSISTANT_ENABLED: bool = os.getenv("ASSISTANT_ENABLED", "false").lower() == "true"
     ASSISTANT_TELEGRAM_ENABLED: bool = os.getenv("ASSISTANT_TELEGRAM_ENABLED", "true").lower() == "true"
     ASSISTANT_WHATSAPP_ENABLED: bool = os.getenv("ASSISTANT_WHATSAPP_ENABLED", "false").lower() == "true"

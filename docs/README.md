@@ -8,6 +8,12 @@ O [README principal](../README.md) apresenta o sistema e os comandos essenciais.
 | [Arquitetura](ARQUITETURA.md) | Localizar telas, APIs, tabelas, serviços e workers |
 | [Desenvolvimento](DESENVOLVIMENTO.md) | Configurar um ambiente, validar mudanças e preparar migrações |
 | [Operação](OPERACAO.md) | Publicar, configurar provedores e diagnosticar filas |
+| [Acesso e auditoria](ACESSO_AUDITORIA.md) | Sessões, contas individuais, vendas pessoais e atividade |
+| [Clientes e pacotes](CLIENTES_PEDIDOS_RASTREIOS.md) | Vínculos explícitos e entrega de pedidos com vários pacotes |
+| [Comprovantes por foto](RASTREIOS_COMPROVANTES.md) | Conferir e cadastrar rastreios enviados ao Telegram |
+| [Remetentes gerados](REMETENTES_GERADOS.md) | Gerar/importar pessoa, revisar e aprovar cadastro |
+| [Estoque e OCR](ESTOQUE_OCR.md) | Conferência visual, saldos por local e movimentações |
+| [Idiomas](IDIOMAS.md) | Catálogos PT/ES/EN e manutenção das traduções |
 | [Ativação do assistente](ASSISTENTE_ATIVACAO.md) | Habilitar canais e vincular usuários |
 | [Fluxos do assistente](ASSISTENTE_FLUXOS_OPERACIONAIS.md) | Rastreios, contexto, estoque e impressão de PDFs |
 | [Endereços e SuperFrete](GESTOR_ENDERECOS_SUPERFRETE.md) | Cadastro único, impressão A4, CEP e emissão de etiquetas |

@@ -1,402 +1,142 @@
 <template>
   <div class="ocr-overlay" @click.self="emit('close')">
-    <div class="ocr-modal">
-      <div class="ocr-header">
-        <div class="ocr-header-left">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" class="ocr-header-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <h3>Ler Etiqueta com IA</h3>
-        </div>
-        <button @click="emit('close')" class="close-btn">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Brand selector (always visible) -->
-      <div class="brand-bar">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" class="brand-icon">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        </svg>
-        <input
-          v-model="selectedBrand"
-          type="text"
-          class="brand-input"
-          placeholder="Marca (opcional — melhora precisão)"
-          list="brand-datalist"
-        />
-        <datalist id="brand-datalist">
-          <option v-for="b in knownBrands" :key="b.brand" :value="b.brand">
-            {{ b.brand }} ({{ b.count }} {{ b.count === 1 ? 'modelo' : 'modelos' }})
-          </option>
-        </datalist>
-        <span v-if="selectedBrand && templateCount > 0" class="brand-trained-badge">
-          {{ templateCount }} modelo{{ templateCount > 1 ? 's' : '' }} treinado{{ templateCount > 1 ? 's' : '' }}
-        </span>
-      </div>
-
+    <div class="ocr-modal" role="dialog" aria-modal="true" :aria-label="t('title')">
+      <div class="ocr-header"><h3>{{ t('title') }}</h3><button class="close-btn" :aria-label="t('close')" @click="emit('close')">×</button></div>
+      <div class="brand-bar"><input v-model="selectedBrand" class="brand-input" :placeholder="t('brandHint')" :aria-label="t('brandHint')" list="brand-datalist" maxlength="100" :disabled="phase === 'processing'" /><datalist id="brand-datalist"><option v-for="brand in knownBrands" :key="brand.brand" :value="brand.brand" /></datalist><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
       <div class="ocr-body">
-        <!-- Camera phase -->
+        <p class="ocr-notice">{{ t('transient') }}</p>
         <div v-if="phase === 'camera'" class="camera-wrap">
-          <video ref="videoRef" autoplay playsinline class="camera-feed"></video>
-          <div class="scan-frame">
-            <div class="corner tl"></div><div class="corner tr"></div>
-            <div class="corner bl"></div><div class="corner br"></div>
-          </div>
-          <p class="camera-hint">Enquadre a etiqueta dentro da moldura</p>
-          <button @click="capture" class="capture-btn">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="22" height="22">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="2" fill="none" />
-            </svg>
-            Capturar
-          </button>
+          <video ref="videoRef" autoplay playsinline muted class="camera-feed" />
+          <p class="camera-hint">{{ t('frame') }}</p><button class="capture-btn" @click="capture">{{ t('capture') }}</button>
         </div>
-
-        <!-- Processing phase -->
-        <div v-if="phase === 'processing'" class="processing-wrap">
-          <img v-if="capturedImageUrl" :src="capturedImageUrl" class="preview-img" alt="captura" />
-          <div class="processing-status">
-            <div class="ai-spinner">
-              <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
-            </div>
-            <div class="processing-text">
-              <p class="processing-title">Analisando com IA{{ selectedBrand ? ` · ${selectedBrand}` : '' }}</p>
-              <p class="processing-sub">{{ statusMsg }}</p>
-            </div>
-          </div>
+        <div v-if="phase === 'camera' || phase === 'error'" class="ocr-file-picker">
+          <label class="btn btn-ghost">{{ t('upload') }}<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseFile" /></label><small>{{ t('formats') }}</small>
         </div>
-
-        <!-- Results phase -->
+        <div v-if="phase === 'processing'" class="processing-wrap"><img :src="capturedImageUrl" class="preview-img" alt="" /><p class="processing-title" role="status">{{ t('processing') }}</p></div>
         <div v-if="phase === 'results'" class="results-wrap">
-          <div class="results-top">
-            <img v-if="capturedImageUrl" :src="capturedImageUrl" class="preview-thumb" alt="captura" />
-            <div class="results-meta">
-              <span class="results-brand-pill" v-if="selectedBrand">{{ selectedBrand }}</span>
-              <span class="results-hint">Corrija os campos se necessário</span>
-            </div>
-          </div>
-
-          <!-- Raw text (collapsible) -->
-          <details class="raw-text-details" v-if="rawText">
-            <summary>Texto detectado na etiqueta</summary>
-            <pre class="raw-text">{{ rawText }}</pre>
-          </details>
-
-          <!-- Editable fields -->
+          <div class="results-top"><img :src="capturedImageUrl" class="preview-thumb" alt="" /><p class="results-hint">{{ t('reviewHint') }}</p></div>
+          <ul v-if="warningKeys.length" class="ocr-warnings"><li v-for="key in warningKeys" :key="key">{{ t(key) }}</li></ul>
+          <div v-if="reading && reading.matches_total" class="ocr-matches"><p>{{ t('matches', { count: reading.matches_total }) }}</p><ul><li v-for="match in reading.matches" :key="match.id">{{ match.name }} · {{ match.sku_internal }}</li></ul></div>
+          <details v-if="reading?.texto_bruto" class="raw-text-details"><summary>{{ t('raw') }}</summary><pre class="raw-text">{{ reading.texto_bruto }}</pre></details>
           <div class="fields-grid">
-            <div v-for="field in editableFields" :key="field.key" class="field-card" :class="{ detected: !!field.value }">
-              <label class="field-label">{{ field.label }}</label>
-              <input
-                v-model="field.value"
-                type="text"
-                class="field-input"
-                :placeholder="field.placeholder"
-              />
-              <div class="field-status">
-                <span v-if="field.value" class="fstatus-ok">
-                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                  detectado
-                </span>
-                <span v-else class="fstatus-empty">não detectado</span>
-              </div>
+            <div v-for="field in fields" :key="field.key" class="field-card" :class="{ detected: !!values[field.key] }">
+              <label class="field-label" :for="`ocr-${field.key}`">{{ t(field.key) }}</label><input :id="`ocr-${field.key}`" v-model="values[field.key]" class="field-input" :inputmode="field.key === 'sale_price' ? 'decimal' : 'text'" :maxlength="field.key === 'name' ? 200 : field.key === 'brand' ? 100 : 50" />
+              <span class="field-status">{{ !values[field.key] ? t('empty') : values[field.key] === originals[field.key] ? t('detected') : t('edited') }}</span>
+              <small v-if="reading?.evidencias[field.source]" class="ocr-evidence">{{ reading.evidencias[field.source] }}</small>
             </div>
+            <div class="field-card"><label class="field-label" for="ocr-currency">{{ t('currency') }}</label><select id="ocr-currency" v-model="currency" class="field-input"><option value="">{{ t('unknown') }}</option><option v-for="code in currencies" :key="code" :value="code">{{ code }}</option></select></div>
           </div>
-
-          <div class="results-actions">
-            <button @click="retake" class="btn btn-ghost">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Nova foto
-            </button>
-            <button @click="openSaveTemplate" class="btn btn-learn" title="Salvar este exemplo para treinar a IA">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              Treinar IA
-            </button>
-            <button @click="applyFields" class="btn btn-primary" :disabled="!hasAnyField">
-              Usar dados
-            </button>
-          </div>
+          <label class="ocr-review"><input v-model="reviewed" type="checkbox" />{{ t('reviewed') }}</label><p class="ocr-next">{{ t('next') }}</p>
+          <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p>
+          <p v-if="exampleSaved" class="ocr-success" role="status">{{ t('saved') }}</p>
+          <div class="results-actions"><button class="btn btn-ghost" @click="retake">{{ t('retake') }}</button><button class="btn btn-learn" :disabled="!reviewed || !hasAnyField" @click="openSaveTemplate">{{ t('saveExample') }}</button><button class="btn btn-primary" :disabled="!reviewed || !hasAnyField" @click="applyFields">{{ t('use') }}</button></div>
         </div>
-
-        <!-- Save template confirmation dialog -->
         <div v-if="phase === 'saving-template'" class="save-template-wrap">
-          <img v-if="capturedImageUrl" :src="capturedImageUrl" class="preview-thumb" alt="captura" />
-
-          <div class="save-template-form">
-            <h4>Treinar IA com esta etiqueta</h4>
-            <p class="save-hint">Salve este exemplo para que a IA aprenda o formato desta marca. Quanto mais exemplos, maior a precisão.</p>
-
-            <div class="stf-group">
-              <label>Marca *</label>
-              <input v-model="saveForm.brand" type="text" class="stf-input" placeholder="Ex: Nike, Zara, Riachuelo..." list="brand-datalist" />
-            </div>
-            <div class="stf-group">
-              <label>Notas para a IA (opcional)</label>
-              <textarea v-model="saveForm.notes" class="stf-input stf-textarea" rows="2"
-                placeholder="Ex: 'O modelo fica na 2ª linha'; 'Preços sempre em Guaranis'; 'Tamanho no canto inferior'" />
-            </div>
-
-            <div class="stf-fields-preview">
-              <span v-for="f in editableFields.filter(f => f.value)" :key="f.key" class="stf-field-chip">
-                <strong>{{ f.label }}:</strong> {{ f.value }}
-              </span>
-            </div>
-          </div>
-
-          <div class="results-actions">
-            <button @click="phase = 'results'" class="btn btn-ghost">Voltar</button>
-            <button @click="saveTemplate" class="btn btn-primary" :disabled="!saveForm.brand || savingTemplate">
-              {{ savingTemplate ? 'Salvando...' : 'Salvar modelo' }}
-            </button>
-          </div>
+          <h4>{{ t('exampleTitle') }}</h4><p class="save-hint">{{ t('exampleHint') }}</p><img :src="capturedImageUrl" class="preview-thumb" alt="" />
+          <div class="stf-group"><label for="ocr-example-brand">{{ t('brand') }} *</label><input id="ocr-example-brand" v-model="saveForm.brand" maxlength="100" class="stf-input" /></div>
+          <div class="stf-group"><label for="ocr-example-notes">{{ t('notes') }}</label><textarea id="ocr-example-notes" v-model="saveForm.notes" maxlength="1500" class="stf-input stf-textarea" /></div>
+          <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p><div class="results-actions"><button class="btn btn-ghost" :disabled="savingTemplate" @click="phase = 'results'">{{ t('back') }}</button><button class="btn btn-primary" :disabled="savingTemplate || !saveForm.brand.trim()" @click="saveTemplate">{{ t('save') }}</button></div>
         </div>
-
-        <!-- Template saved confirmation -->
-        <div v-if="phase === 'template-saved'" class="saved-wrap">
-          <div class="saved-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="#10b981" width="36" height="36">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h4>Modelo salvo!</h4>
-          <p>Próximas etiquetas de <strong>{{ saveForm.brand }}</strong> serão analisadas com mais precisão.</p>
-          <div class="results-actions">
-            <button @click="applyFields" class="btn btn-primary">Usar dados detectados</button>
-          </div>
-        </div>
-
-        <!-- Camera error -->
-        <div v-if="phase === 'error'" class="error-wrap">
-          <svg fill="none" viewBox="0 0 24 24" stroke="#dc2626" width="32" height="32">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p class="error-msg-big">{{ errorMsg }}</p>
-          <button @click="emit('close')" class="btn btn-ghost">Fechar</button>
-        </div>
+        <div v-if="phase === 'error'" class="error-wrap"><p class="error-msg-big" role="alert">{{ t(errorKey) }}</p><button class="btn btn-ghost" @click="retake">{{ t('camera') }}</button></div>
       </div>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { isAxiosError } from 'axios'
 import { ocrAPI } from '@/services/api'
-
-interface OcrResult {
-  name?: string
-  brand?: string
-  size?: string
-  color?: string
-  barcode?: string
-  sale_price?: number
-  currency?: string
-}
-
-const emit = defineEmits<{
-  (e: 'result', data: OcrResult): void
-  (e: 'close'): void
-}>()
-
+import type { OcrAppliedFields, OcrParsedLabel, OcrCurrency } from '@/services/ocr'
+import { ocrMessages } from './ocrMessages'
+const { t } = useI18n({ useScope: 'local', messages: ocrMessages })
+const emit = defineEmits<{ result: [data: OcrAppliedFields]; close: [] }>()
 const videoRef = ref<HTMLVideoElement>()
-const capturedImageUrl = ref('')
-const phase = ref<'camera' | 'processing' | 'results' | 'saving-template' | 'template-saved' | 'error'>('camera')
-const statusMsg = ref('Enviando imagem para análise...')
-const rawText = ref('')
-const errorMsg = ref('')
-const selectedBrand = ref('')
+const phase = ref<'camera' | 'processing' | 'results' | 'saving-template' | 'error'>('camera')
+const capturedImageUrl = ref(''), selectedBrand = ref(''), errorKey = ref('cameraFailed'), formError = ref('')
+const reading = ref<OcrParsedLabel | null>(null), reviewed = ref(false), savingTemplate = ref(false), exampleSaved = ref(false)
 const knownBrands = ref<Array<{ brand: string; count: number }>>([])
-const savingTemplate = ref(false)
-
+const currencies: OcrCurrency[] = ['PYG', 'BRL', 'USD', 'EUR']
+const currency = ref<OcrCurrency | ''>('')
+const fields = [
+  { key: 'name', source: 'nome' }, { key: 'brand', source: 'marca' }, { key: 'size', source: 'tamanho' },
+  { key: 'color', source: 'cor' }, { key: 'barcode', source: 'codigo_barras' }, { key: 'sale_price', source: 'preco' },
+] as const
+const values = reactive({ name: '', brand: '', size: '', color: '', barcode: '', sale_price: '' })
+const originals = reactive({ ...values })
 const saveForm = reactive({ brand: '', notes: '' })
-
-let stream: MediaStream | null = null
-
-interface EditableField {
-  key: keyof OcrResult
-  label: string
-  placeholder: string
-  value: string
+const hasAnyField = computed(() => Object.values(values).some(value => value.trim()))
+const templateCount = computed(() => knownBrands.value.find(brand => brand.brand.toLowerCase() === selectedBrand.value.toLowerCase())?.count || 0)
+const warningKeys = computed(() => [...new Set((reading.value?.avisos || []).filter(key => key !== 'barcode_exists').map(key => key.startsWith('unverified_') ? 'unverified' : key))])
+let stream: MediaStream | null = null, controller: AbortController | null = null
+let disposed = false, cameraRequest = 0
+watch([values, currency], () => { reviewed.value = false; formError.value = '' }, { deep: true })
+function stopCamera() { cameraRequest++; stream?.getTracks().forEach(track => track.stop()); stream = null }
+async function startCamera() {
+  const request = ++cameraRequest
+  try {
+    const camera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1600 }, height: { ideal: 1200 } } })
+    if (disposed || request !== cameraRequest) { camera.getTracks().forEach(track => track.stop()); return }
+    stream = camera; await nextTick(); if (videoRef.value) videoRef.value.srcObject = camera
+  } catch { if (!disposed && request === cameraRequest) { errorKey.value = 'cameraFailed'; phase.value = 'error' } }
 }
-
-const editableFields = reactive<EditableField[]>([
-  { key: 'name',       label: 'Nome do produto', placeholder: 'Ex: Camiseta Polo Basic',   value: '' },
-  { key: 'brand',      label: 'Marca',            placeholder: 'Ex: Nike',                  value: '' },
-  { key: 'size',       label: 'Tamanho',           placeholder: 'M, G, 42...',               value: '' },
-  { key: 'color',      label: 'Cor',               placeholder: 'Azul, Preto...',            value: '' },
-  { key: 'barcode',    label: 'Código de barras',  placeholder: '7891234567890',             value: '' },
-  { key: 'sale_price', label: 'Preço',             placeholder: '150000',                    value: '' },
-])
-
-const hasAnyField = computed(() => editableFields.some(f => f.value.trim()))
-
-const templateCount = computed(() => {
-  const b = knownBrands.value.find(k => k.brand.toLowerCase() === selectedBrand.value.toLowerCase())
-  return b?.count ?? 0
-})
-
-// Sync brand input to brand field
-watch(selectedBrand, (val) => {
-  const f = editableFields.find(f => f.key === 'brand')
-  if (f && !f.value) f.value = val
-})
-
-onMounted(async () => {
-  // Load known brands
-  try {
-    knownBrands.value = await ocrAPI.getBrands()
-  } catch {}
-
-  // Start camera
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    })
-    if (videoRef.value) videoRef.value.srcObject = stream
-  } catch {
-    phase.value = 'error'
-    errorMsg.value = 'Câmera não disponível. Verifique as permissões do navegador.'
-  }
-})
-
-onUnmounted(() => {
-  if (stream) stream.getTracks().forEach(t => t.stop())
-})
-
 function capture() {
   const video = videoRef.value
-  if (!video || !video.videoWidth) return
-
-  // Resize to max 1000px width — keep color for Claude Vision
-  const MAX = 1000
-  const scale = Math.min(MAX / video.videoWidth, 1)
-  const w = Math.round(video.videoWidth * scale)
-  const h = Math.round(video.videoHeight * scale)
-  const canvas = document.createElement('canvas')
-  canvas.width = w; canvas.height = h
-  canvas.getContext('2d')!.drawImage(video, 0, 0, w, h)
-
-  capturedImageUrl.value = canvas.toDataURL('image/jpeg', 0.85)
-  if (stream) stream.getTracks().forEach(t => t.stop())
-  phase.value = 'processing'
-
-  runOcr(capturedImageUrl.value)
+  if (!video?.videoWidth) return
+  const scale = Math.min(1600 / Math.max(video.videoWidth, video.videoHeight), 1)
+  const canvas = document.createElement('canvas'); canvas.width = Math.round(video.videoWidth * scale); canvas.height = Math.round(video.videoHeight * scale)
+  canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height)
+  void runOcr(canvas.toDataURL('image/jpeg', .9))
 }
-
-async function runOcr(imageBase64: string) {
+async function chooseFile(event: Event) {
+  const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
+  if (!file) return
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { stopCamera(); errorKey.value = 'invalidFile'; phase.value = 'error'; return }
+  const reader = new FileReader()
+  reader.onload = () => { if (!disposed && typeof reader.result === 'string') void runOcr(reader.result) }
+  reader.onerror = () => { if (!disposed) { errorKey.value = 'invalidFile'; phase.value = 'error' } }
+  reader.readAsDataURL(file)
+}
+async function runOcr(image: string) {
+  stopCamera(); controller?.abort(); const request = new AbortController(); controller = request
+  capturedImageUrl.value = image; phase.value = 'processing'; reading.value = null; reviewed.value = false; exampleSaved.value = false
   try {
-    statusMsg.value = 'Reconhecendo texto e campos...'
-    const data = await ocrAPI.parseLabel(imageBase64, selectedBrand.value || undefined)
-    populateFields(data)
-    phase.value = 'results'
-  } catch (e: any) {
-    const detail = e?.response?.data?.detail || e?.message || 'Erro desconhecido'
-    phase.value = 'error'
-    errorMsg.value = `Erro ao analisar etiqueta: ${detail}`
+    const result = await ocrAPI.parseLabel(image, selectedBrand.value || undefined, request.signal)
+    if (disposed || request !== controller) return
+    reading.value = result
+    for (const field of fields) values[field.key] = result[field.source] == null ? '' : String(result[field.source])
+    Object.assign(originals, values); currency.value = result.moeda || ''; phase.value = 'results'
+  } catch (error) {
+    if (disposed || request !== controller) return
+    errorKey.value = isAxiosError(error) && error.response?.status === 503 ? 'unavailable' : 'readingFailed'; phase.value = 'error'
   }
 }
-
-function toTitleCase(s: string | undefined | null): string {
-  if (!s) return ''
-  return s.trim().toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-}
-
-function populateFields(data: any) {
-  rawText.value = data.texto_bruto || ''
-
-  const rawBrand = data.marca || selectedBrand.value || ''
-  const map: Record<string, string> = {
-    name:       toTitleCase(data.nome),
-    brand:      toTitleCase(rawBrand),
-    size:       (data.tamanho || '').trim().toUpperCase(),
-    color:      toTitleCase(data.cor),
-    barcode:    data.codigo_barras || '',
-    sale_price: data.preco != null ? String(data.preco) : '',
+function retake() { stopCamera(); controller?.abort(); controller = null; capturedImageUrl.value = ''; reading.value = null; reviewed.value = false; phase.value = 'camera'; void startCamera() }
+function reviewedResult(): OcrAppliedFields | null {
+  if (!reviewed.value) return null
+  const result: OcrAppliedFields = {}
+  for (const key of ['name', 'brand', 'size', 'color', 'barcode'] as const) if (values[key].trim()) result[key] = values[key].trim()
+  if (values.sale_price.trim()) {
+    const number = values.sale_price.trim().replace(',', '.')
+    if (!/^\d+(?:\.\d{1,2})?$/.test(number) || !currency.value || Number(number) > 1_000_000_000) { formError.value = 'invalidPrice'; return null }
+    result.sale_price = Number(number); result.currency = currency.value
   }
-
-  editableFields.forEach(f => {
-    f.value = map[f.key] || ''
-  })
-
-  // Sync brand selector (normalized)
-  if (data.marca) selectedBrand.value = toTitleCase(data.marca)
+  return result
 }
-
-function retake() {
-  phase.value = 'camera'
-  rawText.value = ''
-  capturedImageUrl.value = ''
-  editableFields.forEach(f => { f.value = '' })
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    .then(s => {
-      stream = s
-      if (videoRef.value) videoRef.value.srcObject = s
-    })
-    .catch(() => { phase.value = 'error'; errorMsg.value = 'Câmera não disponível.' })
-}
-
-function openSaveTemplate() {
-  saveForm.brand = selectedBrand.value || editableFields.find(f => f.key === 'brand')?.value || ''
-  saveForm.notes = ''
-  phase.value = 'saving-template'
-}
-
+function applyFields() { const result = reviewedResult(); if (result) emit('result', result) }
+function openSaveTemplate() { if (!reviewedResult()) return; saveForm.brand = values.brand || selectedBrand.value; saveForm.notes = ''; formError.value = ''; phase.value = 'saving-template' }
 async function saveTemplate() {
-  if (!saveForm.brand) return
-  savingTemplate.value = true
+  const result = reviewedResult(); if (!result || !saveForm.brand.trim() || savingTemplate.value) return
+  savingTemplate.value = true; formError.value = ''
   try {
-    const nameField   = editableFields.find(f => f.key === 'name')
-    const sizeField   = editableFields.find(f => f.key === 'size')
-    const colorField  = editableFields.find(f => f.key === 'color')
-    const codeField   = editableFields.find(f => f.key === 'barcode')
-    const priceField  = editableFields.find(f => f.key === 'sale_price')
-
-    await ocrAPI.saveTemplate({
-      brand:            saveForm.brand,
-      notes:            saveForm.notes || undefined,
-      sample_image:     capturedImageUrl.value,
-      parsed_name:      nameField?.value   || undefined,
-      parsed_size:      sizeField?.value   || undefined,
-      parsed_color:     colorField?.value  || undefined,
-      parsed_barcode:   codeField?.value   || undefined,
-      parsed_price:     priceField?.value  || undefined,
-      parsed_currency:  'PYG',
-    })
-
-    // Refresh brand list
-    knownBrands.value = await ocrAPI.getBrands().catch(() => knownBrands.value)
-    selectedBrand.value = saveForm.brand
-    phase.value = 'template-saved'
-  } catch (e: any) {
-    alert('Erro ao salvar modelo: ' + (e?.response?.data?.detail || e?.message))
-    phase.value = 'results'
-  } finally {
-    savingTemplate.value = false
-  }
+    await ocrAPI.saveTemplate({ brand: saveForm.brand.trim(), notes: saveForm.notes || undefined, sample_image: capturedImageUrl.value, parsed_name: result.name, parsed_size: result.size, parsed_color: result.color, parsed_barcode: result.barcode, parsed_price: result.sale_price == null ? undefined : String(result.sale_price), parsed_currency: result.currency })
+    if (disposed) return
+    exampleSaved.value = true; phase.value = 'results'; knownBrands.value = await ocrAPI.getBrands().catch(() => knownBrands.value)
+  } catch { formError.value = 'saveFailed' }
+  finally { savingTemplate.value = false }
 }
-
-function applyFields() {
-  const result: OcrResult = {}
-  editableFields.forEach(f => {
-    if (!f.value.trim()) return
-    if (f.key === 'sale_price') {
-      const n = parseFloat(f.value.replace(',', '.'))
-      if (!isNaN(n)) result.sale_price = n
-    } else {
-      (result as any)[f.key] = f.value.trim()
-    }
-  })
-  // Fallback: if brand wasn't in editableFields (empty field), use selectedBrand
-  if (!result.brand && selectedBrand.value) {
-    result.brand = selectedBrand.value
-  }
-  emit('result', result)
-}
+onMounted(() => { void ocrAPI.getBrands().then(brands => { if (!disposed) knownBrands.value = brands }).catch(() => undefined); void startCamera() })
+onUnmounted(() => { disposed = true; stopCamera(); controller?.abort(); capturedImageUrl.value = ''; reading.value = null })
 </script>
 
 <style scoped>
@@ -561,4 +301,13 @@ function applyFields() {
 @media (max-width: 500px) {
   .fields-grid { grid-template-columns: 1fr; }
 }
+.ocr-notice, .ocr-next { font-size: .76rem; color: #64748b; padding: .7rem 1rem; margin: 0; line-height: 1.5; }
+.ocr-file-picker { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: 1rem; color: #64748b; }
+.ocr-file-picker input { max-width: 200px; font-size: .7rem; margin-left: .5rem; }
+.ocr-review { display: flex; align-items: flex-start; gap: .5rem; padding: .7rem 0; font-size: .8rem; color: #334155; }
+.ocr-review input { margin-top: .15rem; }
+.ocr-warnings, .ocr-matches { padding: .8rem 1rem .8rem 1.7rem; background: #fffbeb; color: #92400e; border-radius: 8px; font-size: .78rem; line-height: 1.6; }
+.ocr-evidence { display: block; color: #64748b; font-size: .68rem; margin-top: .3rem; overflow-wrap: anywhere; }
+.ocr-success { color: #15803d; font-size: .8rem; }
+button:disabled { opacity: .5; cursor: not-allowed; }
 </style>

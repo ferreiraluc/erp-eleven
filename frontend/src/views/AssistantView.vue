@@ -1,67 +1,68 @@
 <template>
   <main class="assistant-page">
     <header>
-      <div><RouterLink to="/dashboard">← Dashboard</RouterLink><h1>Assistente Eleven</h1>
-        <p>WhatsApp individual e grupo Telegram, com memória operacional compartilhada.</p></div>
-      <button :disabled="loading" @click="load">{{ loading ? 'Atualizando…' : 'Atualizar' }}</button>
+      <div><RouterLink to="/dashboard">{{ uiText(`← Dashboard`) }}</RouterLink><h1>{{ uiText(`Assistente Eleven`) }}</h1>
+        <p>{{ uiText(`WhatsApp individual e grupo Telegram, com memória operacional compartilhada.`) }}</p></div>
+      <button :disabled="loading" @click="load">{{ loading ? uiText(`Atualizando…`) : uiText(`Atualizar`) }}</button>
     </header>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p v-if="notice" role="status" class="notice">{{ notice }}</p>
     <template v-if="status">
-      <section class="status-grid" aria-label="Configuração dos canais">
-        <article><span>Assistente</span><strong>{{ status.enabled ? 'Habilitado' : 'Pausado' }}</strong><small>Ativação pelo servidor</small></article>
-        <article><span>DeepSeek</span><strong>{{ status.deepseek_configured ? 'Chave configurada' : 'Configuração pendente' }}</strong><small>{{ status.model }}</small></article>
-        <article><span>WhatsApp · Twilio</span><strong>{{ !status.whatsapp_enabled ? 'Em standby' : status.twilio_configured ? 'Configurado' : 'Configuração pendente' }}</strong><small>Conversas individuais</small></article>
-        <article><span>Telegram</span><strong>{{ !status.telegram_enabled ? 'Pausado' : status.telegram_configured ? 'Configurado' : 'Configuração pendente' }}</strong><small>{{ status.telegram_group_id || 'Grupo ainda não definido' }}</small></article>
+      <section class="status-grid" :aria-label="uiText(`Configuração dos canais`)">
+        <article><span>{{ uiText(`Assistente`) }}</span><strong>{{ status.enabled ? uiText(`Habilitado`) : uiText(`Pausado`) }}</strong><small>{{ uiText(`Ativação pelo servidor`) }}</small></article>
+        <article><span>DeepSeek</span><strong>{{ status.deepseek_configured ? uiText(`Chave configurada`) : uiText(`Configuração pendente`) }}</strong><small>{{ status.model }}</small></article>
+        <article><span>WhatsApp · Twilio</span><strong>{{ !status.whatsapp_enabled ? uiText(`Em standby`) : status.twilio_configured ? uiText(`Configurado`) : uiText(`Configuração pendente`) }}</strong><small>{{ uiText(`Conversas individuais`) }}</small></article>
+        <article><span>Telegram</span><strong>{{ !status.telegram_enabled ? uiText(`Pausado`) : status.telegram_configured ? uiText(`Configurado`) : uiText(`Configuração pendente`) }}</strong><small>{{ status.telegram_group_id || uiText(`Grupo ainda não definido`) }}</small></article>
       </section>
-      <p class="hint">Configuração não comprova conexão. Verifique a fila após enviar uma mensagem de teste. Limite: {{ status.daily_messages_per_user }} mensagens por usuário em 24 horas.</p>
+      <p class="hint">{{ uiText(`Configuração não comprova conexão. Verifique a fila após enviar uma mensagem de teste. Limite:`) }} {{ status.daily_messages_per_user }} {{ uiText(`mensagens por usuário em 24 horas.`) }}</p>
 
       <section class="card">
-        <h2>Funcionários autorizados</h2>
-        <p>Vincule o WhatsApp e o ID do Telegram ao mesmo usuário do ERP. Confirme a identidade do funcionário antes de liberar acesso.</p>
+        <h2>{{ uiText(`Funcionários autorizados`) }}</h2>
+        <p>{{ uiText(`Vincule o WhatsApp e o ID do Telegram ao mesmo usuário do ERP. Confirme a identidade do funcionário antes de liberar acesso.`) }}</p>
         <form @submit.prevent="saveIdentity">
-          <label>Canal<select v-model="form.channel" aria-label="Canal"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select></label>
-          <label>Identificador<input v-model.trim="form.external_id" required :placeholder="form.channel === 'whatsapp' ? 'whatsapp:+5511999999999' : 'ID numérico do usuário'" /></label>
-          <label>Usuário ERP<select v-model="form.user_id" required aria-label="Usuário ERP"><option disabled value="">Selecione</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ u.role }}</option></select></label>
-          <label class="check"><input v-model="form.active" type="checkbox" /> Acesso ativo</label>
-          <label class="check"><input v-model="form.can_register" type="checkbox" /> Pode registrar ocorrências e preparar folgas (gestores)</label>
-          <button :disabled="saving" type="submit">{{ saving ? 'Salvando…' : 'Salvar acesso' }}</button>
+          <label>{{ uiText(`Canal`) }}<select v-model="form.channel" :aria-label="uiText(`Canal`)"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select></label>
+          <label>{{ uiText(`Identificador`) }}<input v-model.trim="form.external_id" required :placeholder="form.channel === 'whatsapp' ? 'whatsapp:+5511999999999' : uiText(`ID numérico do usuário`)" /></label>
+          <label>{{ uiText(`Usuário ERP`) }}<select v-model="form.user_id" required :aria-label="uiText(`Usuário ERP`)"><option disabled value="">{{ uiText(`Selecione`) }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ roleLabel(u.role) }}</option></select></label>
+          <label class="check"><input v-model="form.active" type="checkbox" /> {{ uiText(`Acesso ativo`) }}</label>
+          <label class="check"><input v-model="form.can_register" type="checkbox" /> {{ uiText(`Pode registrar ocorrências e preparar folgas (gestores)`) }}</label>
+          <button :disabled="saving" type="submit">{{ saving ? uiText(`Salvando…`) : uiText(`Salvar acesso`) }}</button>
         </form>
-        <div class="scroll"><table><thead><tr><th>Canal</th><th>Identificador</th><th>Funcionário</th><th>Acesso</th><th>Registros</th><th></th></tr></thead>
-          <tbody><tr v-for="i in identities" :key="i.id"><td>{{ i.channel }}</td><td>{{ i.external_id }}</td><td>{{ userName(i.user_id) }}</td><td>{{ i.active ? 'Ativo' : 'Suspenso' }}</td><td>{{ i.can_register ? 'Permitido' : 'Consulta' }}</td><td><button @click="editIdentity(i)">Editar</button></td></tr>
-          <tr v-if="!identities.length"><td colspan="6">Nenhum funcionário autorizado. O bot ignora remetentes desconhecidos.</td></tr></tbody></table></div>
+        <div class="scroll"><table><thead><tr><th>{{ uiText(`Canal`) }}</th><th>{{ uiText(`Identificador`) }}</th><th>{{ uiText(`Funcionário`) }}</th><th>{{ uiText(`Acesso`) }}</th><th>{{ uiText(`Registros`) }}</th><th></th></tr></thead>
+          <tbody><tr v-for="i in identities" :key="i.id"><td>{{ i.channel }}</td><td>{{ i.external_id }}</td><td>{{ userName(i.user_id) }}</td><td>{{ i.active ? uiText(`Ativo`) : uiText(`Suspenso`) }}</td><td>{{ i.can_register ? uiText(`Permitido`) : uiText(`Consulta`) }}</td><td><button @click="editIdentity(i)">{{ uiText(`Editar`) }}</button></td></tr>
+          <tr v-if="!identities.length"><td colspan="6">{{ uiText(`Nenhum funcionário autorizado. O bot ignora remetentes desconhecidos.`) }}</td></tr></tbody></table></div>
       </section>
 
       <section class="card">
-        <h2>Memória da equipe</h2>
-        <p>O funcionário descreve a ocorrência em uma mensagem normal. O bot prepara a prévia; basta responder “confirmo” para compartilhar ou “cancela” para descartar. Conversas privadas não são copiadas para o grupo. Registros são relatos; não lançam vendas ou movimentam estoque.</p>
+        <h2>{{ uiText(`Memória da equipe`) }}</h2>
+        <p>{{ uiText(`O funcionário descreve a ocorrência em uma mensagem normal. O bot prepara a prévia; basta responder “confirmo” para compartilhar ou “cancela” para descartar. Conversas privadas não são copiadas para o grupo. Registros são relatos; não lançam vendas ou movimentam estoque.`) }}</p>
         <div class="notes"><article v-for="n in notes" :key="n.id" class="note">
-          <div class="note-top"><strong>{{ n.kind }}</strong><span>{{ noteState(n.status) }}</span></div>
+          <div class="note-top"><strong>{{ noteKind(n.kind) }}</strong><span>{{ noteState(n.status) }}</span></div>
           <p>{{ n.content }}</p><small>{{ userName(n.user_id) }} · {{ date(n.created_at) }}</small>
           <code>{{ n.id }}</code>
-        </article><p v-if="!notes.length">Nenhum registro ainda. Os últimos 100 aparecerão aqui.</p></div>
+        </article><p v-if="!notes.length">{{ uiText(`Nenhum registro ainda. Os últimos 100 aparecerão aqui.`) }}</p></div>
       </section>
 
       <section class="card">
-        <h2>Cadastros de folgas pelo assistente</h2>
-        <p>O bot mostra a prévia e exige confirmação do autor na mesma conversa. Apenas administradores e gerentes com permissão de registro podem cadastrar. Folgas cadastradas aguardam aprovação no calendário.</p>
-        <div class="scroll"><table><thead><tr><th>Solicitado por</th><th>Vendedor</th><th>Dia</th><th>Tipo / período</th><th>Estado</th></tr></thead>
-          <tbody><tr v-for="a in actions" :key="a.id"><td>{{ userName(a.user_id) }}</td><td>{{ a.vendedor }}</td><td>{{ a.data?.split('-').reverse().join('/') }}</td><td>{{ a.tipo }} / {{ a.periodo }}</td><td>{{ actionState(a.status) }}</td></tr>
-          <tr v-if="!actions.length"><td colspan="5">Nenhuma solicitação de cadastro.</td></tr></tbody></table></div>
+        <h2>{{ uiText(`Cadastros de folgas pelo assistente`) }}</h2>
+        <p>{{ uiText(`O bot mostra a prévia e exige confirmação do autor na mesma conversa. Apenas administradores e gerentes com permissão de registro podem cadastrar. Folgas cadastradas aguardam aprovação no calendário.`) }}</p>
+        <div class="scroll"><table><thead><tr><th>{{ uiText(`Solicitado por`) }}</th><th>{{ uiText(`Vendedor`) }}</th><th>{{ uiText(`Dia`) }}</th><th>{{ uiText(`Tipo / período`) }}</th><th>{{ uiText(`Estado`) }}</th></tr></thead>
+          <tbody><tr v-for="a in actions" :key="a.id"><td>{{ userName(a.user_id) }}</td><td>{{ a.vendedor }}</td><td>{{ dateOnly(a.data) }}</td><td>{{ absenceLabel(a.tipo) }} / {{ absenceLabel(a.periodo) }}</td><td>{{ actionState(a.status) }}</td></tr>
+          <tr v-if="!actions.length"><td colspan="5">{{ uiText(`Nenhuma solicitação de cadastro.`) }}</td></tr></tbody></table></div>
       </section>
 
       <section class="card">
-        <h2>Processamento e envio</h2>
-        <p>“Aceito pelo provedor” não significa lido ou entregue. Envio incerto exige conferência no canal para evitar duplicidade.</p>
-        <div class="scroll"><table><thead><tr><th>Data</th><th>Canal</th><th>Etapa</th><th>Estado</th><th>Erro</th><th></th></tr></thead>
-          <tbody><tr v-for="q in queue" :key="q.id"><td>{{ date(q.created_at) }}</td><td>{{ q.channel }}</td><td>{{ q.kind === 'message' ? 'Processar' : 'Enviar' }}</td><td>{{ queueState(q.status) }}</td><td>{{ q.error_code || '—' }}</td><td><button v-if="q.kind === 'message' && q.status === 'failed'" :disabled="saving" @click="retry(q.id)">Reprocessar</button></td></tr>
-          <tr v-if="!queue.length"><td colspan="6">Nenhuma mensagem recebida ou envio agendado.</td></tr></tbody></table></div>
+        <h2>{{ uiText(`Processamento e envio`) }}</h2>
+        <p>{{ uiText(`“Aceito pelo provedor” não significa lido ou entregue. Envio incerto exige conferência no canal para evitar duplicidade.`) }}</p>
+        <div class="scroll"><table><thead><tr><th>{{ uiText(`Data`) }}</th><th>{{ uiText(`Canal`) }}</th><th>{{ uiText(`Etapa`) }}</th><th>{{ uiText(`Estado`) }}</th><th>{{ uiText(`Erro`) }}</th><th></th></tr></thead>
+          <tbody><tr v-for="q in queue" :key="q.id"><td>{{ date(q.created_at) }}</td><td>{{ q.channel }}</td><td>{{ q.kind === 'message' ? uiText(`Processar`) : uiText(`Enviar`) }}</td><td>{{ queueState(q.status) }}</td><td>{{ q.error_code || '—' }}</td><td><button v-if="q.kind === 'message' && q.status === 'failed'" :disabled="saving" @click="retry(q.id)">{{ uiText(`Reprocessar`) }}</button></td></tr>
+          <tr v-if="!queue.length"><td colspan="6">{{ uiText(`Nenhuma mensagem recebida ou envio agendado.`) }}</td></tr></tbody></table></div>
       </section>
     </template>
   </main>
 </template>
 
 <script setup lang="ts">
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/services/api'
@@ -81,13 +82,17 @@ const queue = ref<QueueItem[]>([])
 const loading = ref(false), saving = ref(false), error = ref(''), notice = ref('')
 const form = ref<Omit<Identity, 'id'>>({ channel: 'whatsapp', external_id: '', user_id: '', active: true, can_register: false })
 const userName = (id: string) => users.value.find(u => u.id === id)?.nome || id
-const date = (value: string) => new Date(value).toLocaleString('pt-BR')
-const noteState = (state: string) => ({ draft: 'Aguardando autor · expira em 24h', shared: 'Compartilhado', cancelled: 'Cancelado' }[state] || state)
-const actionState = (state: string) => ({ draft: 'Aguardando confirmação · expira em 24h', executed: 'Cadastrada no ERP', cancelled: 'Cancelada' }[state] || state)
-const queueState = (state: string) => ({ pending: 'Na fila', done: 'Processado', failed: 'Falha', sending: 'Enviando', accepted: 'Aceito pelo provedor', uncertain: 'Envio incerto', expired: 'Janela expirada', cancelled: 'Cancelado', rejected: 'Acesso revogado' }[state] || state)
+const date = (value: string) => new Date(value).toLocaleString(uiLocale())
+const dateOnly = (value?: string) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(uiLocale()) : '—'
+const noteKind = (kind: string) => ({ atendimento: uiText('Atendimento'), devolucao: uiText('Devolução'), pedido: uiText('Pedido'), venda: uiText('Venda'), endereco: uiText('Endereço'), geral: uiText('Geral') }[kind] || kind)
+const roleLabel = (role: string) => ({ admin: uiText('Administrador'), gerente: uiText('Gerente'), operador: uiText('Operador') }[role.toLowerCase()] || role)
+const absenceLabel = (value?: string) => ({ FOLGA: uiText('Folga'), FERIAS: uiText('Férias'), FALTA: uiText('Falta'), LICENCA: uiText('Licença'), MEIO_PERIODO: uiText('Meio Período'), COMPLETO: uiText('Dia Completo'), MANHA: uiText('Manhã'), TARDE: uiText('Tarde') }[value || ''] || value || '—')
+const noteState = (state: string) => ({ draft: uiText(`Aguardando autor · expira em 24h`), shared: uiText(`Compartilhado`), cancelled: uiText(`Cancelado`) }[state] || state)
+const actionState = (state: string) => ({ draft: uiText(`Aguardando confirmação · expira em 24h`), executed: uiText(`Cadastrada no ERP`), cancelled: uiText(`Cancelada`) }[state] || state)
+const queueState = (state: string) => ({ pending: uiText(`Na fila`), done: uiText(`Processado`), failed: uiText(`Falha`), sending: uiText(`Enviando`), accepted: uiText(`Aceito pelo provedor`), uncertain: uiText(`Envio incerto`), expired: uiText(`Janela expirada`), cancelled: uiText(`Cancelado`), rejected: uiText(`Acesso revogado`) }[state] || state)
 function explainError(e: unknown) {
   const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
-  return typeof detail === 'string' ? detail : 'Não foi possível concluir. Verifique os campos e seu acesso de administrador.'
+  return typeof detail === 'string' ? detail : uiText(`Não foi possível concluir. Verifique os campos e seu acesso de administrador.`)
 }
 async function load() {
   loading.value = true; error.value = ''
@@ -99,16 +104,16 @@ async function load() {
   } catch (e) { error.value = explainError(e) }
   finally { loading.value = false }
 }
-function editIdentity(i: Identity) { form.value = { channel: i.channel, external_id: i.external_id, user_id: i.user_id, active: i.active, can_register: i.can_register }; notice.value = 'Edite os campos do acesso e clique em Salvar acesso.' }
+function editIdentity(i: Identity) { form.value = { channel: i.channel, external_id: i.external_id, user_id: i.user_id, active: i.active, can_register: i.can_register }; notice.value = uiText(`Edite os campos do acesso e clique em Salvar acesso.`) }
 async function saveIdentity() {
   saving.value = true; notice.value = ''; error.value = ''
-  try { await api.post('/api/assistant/identities', form.value); await load(); notice.value = 'Acesso salvo.' }
+  try { await api.post('/api/assistant/identities', form.value); await load(); notice.value = uiText(`Acesso salvo.`) }
   catch (e) { error.value = explainError(e) }
   finally { saving.value = false }
 }
 async function retry(id: string) {
   saving.value = true; error.value = ''; notice.value = ''
-  try { await api.post(`/api/assistant/messages/${id}/retry`); await load(); notice.value = 'Mensagem recolocada na fila.' }
+  try { await api.post(`/api/assistant/messages/${id}/retry`); await load(); notice.value = uiText(`Mensagem recolocada na fila.`) }
   catch (e) { error.value = explainError(e) }
   finally { saving.value = false }
 }

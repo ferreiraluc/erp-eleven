@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { uiText, uiLocale } from '@/i18n/uiText'
 import { defineStore } from 'pinia'
 import { exchangeRateAPI, type QuickRateUpdate } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -56,10 +57,10 @@ export const useCurrencyStore = defineStore('currency', () => {
   })
 
   const availableCurrencies = computed(() => [
-    { code: 'USD' as CurrencyCode, name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-    { code: 'G$' as CurrencyCode, name: 'Paraguayan Guaraní', symbol: '₲', flag: '🇵🇾' },
-    { code: 'R$' as CurrencyCode, name: 'Brazilian Real', symbol: 'R$', flag: '🇧🇷' },
-    { code: 'EUR' as CurrencyCode, name: 'Euro', symbol: '€', flag: '🇪🇺' }
+    { code: 'USD' as CurrencyCode, name: uiText("Dólar americano"), symbol: '$', flag: '🇺🇸' },
+    { code: 'G$' as CurrencyCode, name: uiText("Guarani paraguaio"), symbol: '₲', flag: '🇵🇾' },
+    { code: 'R$' as CurrencyCode, name: uiText("Real brasileiro"), symbol: 'R$', flag: '🇧🇷' },
+    { code: 'EUR' as CurrencyCode, name: uiText("Euro"), symbol: '€', flag: '🇪🇺' }
   ])
 
   const getCurrentCurrency = computed(() => {
@@ -95,7 +96,7 @@ export const useCurrencyStore = defineStore('currency', () => {
     
     if (!currencyInfo) return amount.toString()
 
-    const formattedAmount = amount.toLocaleString('pt-BR', {
+    const formattedAmount = amount.toLocaleString(uiLocale(), {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })
@@ -130,7 +131,7 @@ export const useCurrencyStore = defineStore('currency', () => {
       saveCachedRates(exchangeRates.value)
       
     } catch (err: any) {
-      error.value = err.message || 'Failed to load exchange rates'
+      error.value = err.message || uiText("Erro ao carregar taxas de câmbio")
       console.error('Error loading exchange rates:', err)
     } finally {
       isLoading.value = false
@@ -145,7 +146,7 @@ export const useCurrencyStore = defineStore('currency', () => {
   }) => {
     try {
       const authStore = useAuthStore()
-      if (!authStore.user) throw new Error('User not authenticated')
+      if (!authStore.user) throw new Error(uiText("Usuário não autenticado"))
 
       isLoading.value = true
       error.value = null
@@ -163,7 +164,7 @@ export const useCurrencyStore = defineStore('currency', () => {
       await loadCurrentRates()
       
     } catch (err: any) {
-      error.value = err.message || 'Failed to update exchange rates'
+      error.value = err.message || uiText("Erro ao atualizar taxas de câmbio")
       console.error('Error updating exchange rates:', err)
       throw err
     } finally {
