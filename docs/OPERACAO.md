@@ -102,3 +102,16 @@ BI está em `/api/sales-bi/sources`, autenticado.
 O agente tem credencial própria, limitada à impressora. Para substituir/revogar, use o fluxo
 administrativo e reinstale a credencial no Windows; não copie token para URLs ou documentação.
 Consulte os guias específicos antes de registrar novamente webhooks ativos.
+
+## Verificação de publicação — 04/10/2026
+
+- Cabeçalho unificado: `170ef02` / `0a89d49`; saudação e navegação de conta no mesmo cabeçalho do dashboard, com conferência visual desktop e 390px. Outras rotas mantêm a navegação de conta.
+- Logística e recuperação: `26d0cb9`; RUC/C.I em PY, reconhecimento conservador de variantes de endereço, diagnóstico SuperFrete e recuperação sem repetir pagamento incerto.
+- [CI 37257127551](https://github.com/ferreiraluc/erp-eleven/actions/runs/37257127551): **685 testes backend e 164 frontend passaram**, com PostgreSQL isolado, tipagem e build.
+- Backup privado verificado antes da manutenção. Migração `c9d0e1f2a3b4` e as quatro colunas de recuperação conferidas no banco publicado; API, banco, worker do bot e worker de etiquetas online.
+- Os arquivos servidos pelo frontend já contêm o cabeçalho integrado, as mensagens de recuperação e o campo RUC/C.I. A consulta autenticada somente leitura à SuperFrete retornou disponível.
+- Uma consolidação dirigida preservou os dois IDs e seis usos históricos (duas impressões e quatro cotações). Solicitações antigas com documento inválido receberam diagnóstico, preservando o estado incerto e a mensagem anterior; nenhuma foi cobrada, recriada ou impressa.
+
+A validação automatizada usa provedores simulados. A manutenção não emitiu etiquetas
+nem enviou impressões ou mensagens de teste à operação. A aprovação do CI não atesta
+saldo, documentos reais válidos nem disponibilidade contínua da transportadora.
