@@ -7,6 +7,11 @@ da loja. Denis, Sol e Junior têm acesso operacional aos módulos, mas consultam
 somente suas próprias vendas. A tela de usuários, disponível para Lucas, permite
 cadastrar contas, ativar/desativar, alterar vínculos e redefinir senha temporária.
 
+No dashboard, Minha conta, Usuários, Auditoria, Sair e o seletor de idioma ficam
+no cabeçalho original, junto à saudação. As demais telas mantêm a barra de navegação;
+Usuários e Auditoria aparecem somente para Lucas. O comportamento da sessão e as
+permissões continuam iguais em ambos os lugares.
+
 O vínculo de uma conta tem dois identificadores financeiros: `vendedor_id` para
 vendas operacionais e `sales_seller` para o nome canônico do vendedor no Excel.
 O PDV usa o próprio ID do usuário como vendedor. Sem vínculo suficiente, consultas

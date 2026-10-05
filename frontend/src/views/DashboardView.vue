@@ -16,6 +16,8 @@
         </div>
 
         <div class="header-right">
+          <AccountNavigation embedded />
+          <div class="header-tools">
           <div class="header-left-controls">
             <!-- Currency and Exchange Rates (Mobile only) -->
             <div class="mobile-controls">
@@ -136,6 +138,7 @@
 
 
 
+          </div>
           </div>
         </div>
       </div>
@@ -545,6 +548,7 @@ import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
 import AddressSummaryCard from '@/components/dashboard/AddressSummaryCard.vue'
 import SalesSummaryCard from '@/components/dashboard/SalesSummaryCard.vue'
+import AccountNavigation from '@/components/AccountNavigation.vue'
 import { inventoryAPI, healthAPI, type AlertSummary, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock, stockAlertLevel } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
@@ -1163,12 +1167,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 }
 
 .header-left {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .app-logo {
@@ -1202,10 +1209,17 @@ onUnmounted(() => {
 
 .header-right {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .6rem;
+  min-width: 0;
+}
+
+.header-tools {
+  display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
-  flex: 1;
 }
 
 .header-left-controls {
@@ -1549,14 +1563,14 @@ onUnmounted(() => {
   .quick-strip {
     grid-template-columns: repeat(3, 1fr);
   }
-  /* Header: single compact row for iPad/tablet */
-  .header-content { padding: 0.45rem 0.75rem; flex-direction: row; align-items: center; }
-  .app-logo { width: 1.6rem; height: 1.6rem; border-radius: 0.375rem; }
-  .logo-icon { width: 0.95rem; height: 0.95rem; }
-  .app-title { font-size: 0.9rem; }
-  .welcome-text { display: none !important; }
-  .header-left { gap: 0.4rem; }
-  .header-right { flex: 1; flex-direction: row !important; align-items: center; justify-content: flex-end; gap: 0.3rem; width: auto !important; flex-wrap: nowrap !important; }
+  /* Account navigation can wrap without squeezing the greeting or controls. */
+  .header-content { padding: .75rem; align-items: flex-start; flex-wrap: wrap; }
+  .app-logo { width: 2rem; height: 2rem; border-radius: .5rem; }
+  .logo-icon { width: 1.15rem; height: 1.15rem; }
+  .app-title { font-size: 1rem; }
+  .welcome-text { font-size: .75rem; overflow-wrap: anywhere; }
+  .header-left { gap: .6rem; }
+  .header-right { flex: 1 1 420px; }
   .header-left-controls { flex-direction: row !important; align-items: center; gap: 0.2rem; }
   .mobile-controls { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.2rem; }
   .mobile-controls .currency-selector-group { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.15rem; margin-bottom: 0 !important; }
@@ -2695,12 +2709,10 @@ onUnmounted(() => {
     display: none !important;
   }
 
-  /* Mobile: single-row header, even more compact */
-  .header-content { flex-direction: row !important; padding: 0.3rem 0.5rem !important; gap: 0.2rem; }
-  .app-logo { width: 1.35rem; height: 1.35rem; }
-  .logo-icon { width: 0.8rem; height: 0.8rem; }
-  .app-title { font-size: 0.75rem; }
-  .header-right { flex: 1 !important; justify-content: flex-end !important; width: auto !important; }
+  .header-content { padding: .75rem; gap: .65rem; }
+  .header-left { flex-shrink: 1; }
+  .header-right { flex: 1 1 100%; align-items: stretch; }
+  .header-tools { justify-content: flex-start; }
   .header-left-controls { gap: 0.15rem !important; }
   .header-dropdown-button { padding: 0.12rem 0.18rem !important; font-size: 0.55rem !important; min-width: auto !important; }
   .exchange-rates-header { padding: 0.1rem 0.22rem !important; gap: 0.1rem !important; }
