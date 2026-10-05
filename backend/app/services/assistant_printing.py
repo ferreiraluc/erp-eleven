@@ -29,6 +29,17 @@ def printable_cpf(value):
     return f'{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}'
 
 
+def document_line(address, *, preview=False):
+    """The persisted key stays cpf; Paraguay documents keep the supplied text."""
+    if address['pais'] == 'BR':
+        value = printable_cpf(address.get('cpf'))
+        label = 'CPF do destinatário' if preview else 'CPF'
+    else:
+        value = (address.get('cpf') or '').strip()
+        label = 'RUC/C.I do destinatário' if preview else 'RUC/C.I'
+    return f'{label}: {value}' if value else ''
+
+
 class AddressArgs(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     pais: Literal['BR', 'PY']
@@ -40,7 +51,7 @@ class AddressArgs(BaseModel):
     cidade: str = Field(default='', max_length=100)
     estado: str = Field(default='', max_length=60, description='UF obrigatória no Brasil; departamento opcional no Paraguai.')
     cep: str = Field(default='', max_length=15)
-    cpf: str = Field(default='', max_length=20, description='CPF opcional do destinatário. Extraia do endereço informado. Ausente ou pedido sem CPF: string vazia. Nunca preencha zeros nem use CPF do remetente.')
+    cpf: str = Field(default='', max_length=20, description='Documento opcional do destinatário: CPF no BR; RUC/C.I no PY, preservando texto, letras, pontos e hífen sem validar como CPF brasileiro. Extraia somente do endereço informado. Ausente ou pedido sem documento: string vazia. Nunca preencha zeros nem use documento do remetente.')
     telefone: str = Field(default='', max_length=40)
     remetente: str | None = Field(default=None, max_length=30, description='ID do remetente ativo cadastrado no gestor; debora e mona são os iniciais.')
 
@@ -69,7 +80,6 @@ class AddressArgs(BaseModel):
                 raise ValueError('Escolha um remetente ativo cadastrado no gestor.')
         else:
             self.remetente = None
-            self.cpf = ''
         return self
 
 
@@ -88,7 +98,7 @@ def render_address(payload):
               'cidade':' - '.join(value for value in (p['cidade'],p['estado']) if value),
               'cep':'CEP '+p['cep'] if p['cep'] else '', 'pais':'Brasil' if p['pais']=='BR' else 'Paraguay',
               'telefone':'Tel.: '+p['telefone'] if p['telefone'] else '',
-              'cpf':'CPF: '+printable_cpf(p.get('cpf')) if p['pais']=='BR' and printable_cpf(p.get('cpf')) else ''}
+              'cpf':document_line(p)}
     rows = [fields[key] for key in layout.fields]
     def paragraph(text, style):
         return Paragraph(escape(text).replace('\n', '<br/>'), style)
@@ -108,8 +118,8 @@ def print_preview(action):
     from .postal_codes import street_line
     lines = [p['nome'], street_line(p), ' - '.join(value for value in (p['cidade'], p['estado']) if value), p['cep'], p['telefone']]
     lines += action.payload.get('postal_warnings', [])
-    if p['pais'] == 'BR' and printable_cpf(p.get('cpf')):
-        lines.append('CPF do destinatário: ' + printable_cpf(p.get('cpf')))
+    if document := document_line(p, preview=True):
+        lines.append(document)
     sender = action.payload.get('remetente')
     from .assistant_controls import preview_reply
     return preview_reply(action, ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
@@ -122,7 +132,10 @@ def print_preview(action):
 def prepare_print(db, message, identity, args, postal_check=None):
     if not message.should_reply or not may_schedule(db, message, identity):
         return {'erro': 'Impressão exige pedido direto de ADMIN/GERENTE habilitado para registros.'}
-    if re.search(r'\bsem\s+(?:o\s+)?cpf\b', message.text, re.I):
+    omit_document = re.search(r'\bsem\s+(?:o\s+)?cpf\b', message.text, re.I)
+    if args.pais == 'PY':
+        omit_document = omit_document or re.search(r'\bsem\s+(?:o\s+)?(?:ruc|c\.?\s*i\.?|documento)(?=\W|$)', message.text, re.I)
+    if omit_document:
         args = args.model_copy(update={'cpf': ''})
     previous = db.query(AssistantAction).filter_by(source_message_id=message.id).first()
     if previous:

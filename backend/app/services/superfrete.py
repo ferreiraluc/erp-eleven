@@ -1,6 +1,6 @@
 """Official SuperFrete v0. Never retry a charge with an uncertain outcome."""
 import re
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 from urllib.parse import quote, urlparse
 import requests
@@ -12,6 +12,7 @@ from ..models.address_book import SavedAddress, FreightOrder
 from ..models.printing import PrintSender
 from ..schemas.address_book import AddressData
 from ..models.assistant import utcnow
+from .superfrete_errors import ProviderError, response_error, valid_document, UNAVAILABLE, UNCERTAIN
 
 
 class Package(BaseModel):
@@ -58,18 +59,17 @@ def call(method,path,body=None):
     try:
         r=requests.request(method,base+'/api/v0/'+path,json=body,headers={
             'Authorization':'Bearer '+settings.SUPERFRETE_TOKEN,'User-Agent':f'ERP Eleven 1.0 ({settings.SUPERFRETE_CONTACT_EMAIL})'},timeout=(5,35),allow_redirects=False)
-        if not 200<=r.status_code<300:
-            if r.status_code in (400,422):
-                try:fields=r.json().get('errors',{})
-                except (ValueError,AttributeError):fields={}
-                labels={'origin_postcode':'CEP de origem','destination_postcode':'CEP de destino',
-                        'weight':'peso','height':'altura','width':'largura','length':'comprimento',
-                        'document':'CPF/CNPJ','postal_code':'CEP','district':'bairro','address':'rua'}
-                invalid=sorted({label for field in fields for key,label in labels.items() if key in field}) if isinstance(fields,dict) else []
-                if invalid:raise HTTPException(400,'SuperFrete: confira '+', '.join(invalid)+'.')
-            raise HTTPException(502,f'SuperFrete recusou a solicitação (HTTP {r.status_code}). Confira os dados e a conta.')
-        return r.json()
-    except (requests.RequestException,ValueError):raise HTTPException(502,'Não foi possível confirmar a resposta da SuperFrete.') from None
+    except requests.ConnectTimeout:
+        raise ProviderError('unavailable', UNAVAILABLE, rejected=True) from None
+    except requests.RequestException:
+        raise ProviderError('unavailable', UNAVAILABLE) from None
+    try: result = r.json()
+    except ValueError: result = None
+    if not 200 <= r.status_code < 300:
+        raise response_error(r.status_code, result)
+    if result is None:
+        raise ProviderError('unknown', 'Resposta incompleta da SuperFrete. A operação precisa de consulta.')
+    return result
 
 
 def party(data,recipient=False):
@@ -86,6 +86,9 @@ def party(data,recipient=False):
         who='destinatário' if recipient else 'remetente'
         raise HTTPException(400,f'Complete no {who}: '+', '.join(missing)+'.')
     if recipient and (len(p['document']) not in (11,14) or len(set(p['document']))==1):raise HTTPException(400,'A emissão SuperFrete exige CPF/CNPJ do destinatário.')
+    if p['document'] and not valid_document(p['document']):
+        who='destinatário' if recipient else 'remetente'
+        raise HTTPException(400,f'CPF/CNPJ do {who} inválido. Confira os dígitos com o titular e corrija o endereço; nenhum pagamento foi realizado.')
     return p
 
 
@@ -115,17 +118,59 @@ def quote_order(db,body,user_id):
              '_request':body.model_dump(mode='json',exclude={'request_key'})}
     payload['_postal_warnings'] = ['Remetente: '+w for w in sender_check['warnings']] + ['Destinatário: '+w for w in recipient_check['warnings']]
     if not body.non_commercial:payload['options']['invoice']={'number':body.invoice}
-    rates=call('POST','calculator',{'from':{'postal_code':origin['postal_code']},'to':{'postal_code':destination['postal_code']},
-             'services':'1,2,17','options':{'own_hand':False,'receipt':False,'use_insurance_value':False},'package':body.package.model_dump()})
-    if not isinstance(rates,list):raise HTTPException(502,'Resposta de cotação inesperada.')
-    rates=[r for r in rates if not r.get('has_error') and r.get('price') is not None and int(r.get('id',0)) in (1,2,17)]
-    if not rates:raise HTTPException(400,'Nenhum serviço disponível para este pacote.')
-    row=FreightOrder(request_key=body.request_key,user_id=user_id,address_id=address.id,environment=environment(),payload=payload,rates=rates)
-    db.add(row);db.flush();return row
+    row=FreightOrder(request_key=body.request_key,user_id=user_id,address_id=address.id,environment=environment(),payload=payload,rates=[],state='quoting')
+    db.add(row);db.flush()
+    return calculate(db,row)
+
+
+def calculate(db,row):
+    """Calculator has no purchase side effect, so a transient failure is retryable."""
+    try:
+        rates=call('POST','calculator',{'from':{'postal_code':row.payload['from']['postal_code']},
+            'to':{'postal_code':row.payload['to']['postal_code']},'services':'1,2,17',
+            'options':{'own_hand':False,'receipt':False,'use_insurance_value':False},'package':row.payload['volumes']})
+        if not isinstance(rates,list):raise ProviderError('unknown','Resposta de cotação inesperada. Confira a solicitação antes de continuar.')
+        rates=[r for r in rates if isinstance(r,dict) and not r.get('has_error') and r.get('price') is not None and str(r.get('id')) in ('1','2','17')]
+        if not rates:raise HTTPException(400,'Nenhum serviço disponível para este pacote.')
+        rates=[{**rate,'id':int(rate['id']),'price':str(provider_price(rate['price']))} for rate in rates]
+        row.rates=rates;row.state='quoted';row.error=None;row.error_category=None
+        row.payload={**row.payload,'_quoted_at':utcnow().isoformat()}
+        row.recovery_kind=None;row.recovery_check_at=None
+    except HTTPException as exc:
+        row.error=str(exc.detail)[:200]
+        row.error_category=getattr(exc,'category','validation' if exc.status_code==400 else 'unknown')
+        if row.error_category=='unavailable':
+            row.state='retry_waiting';schedule_recovery(row,'quote')
+        else:row.state='rejected';row.recovery_kind=None;row.recovery_check_at=None
+    row.updated_at=utcnow();db.flush();return row
+
+
+def schedule_recovery(row,kind):
+    row.recovery_kind=kind
+    row.recovery_check_at=utcnow()+timedelta(seconds=min(300,30*2**min(row.recovery_attempts or 0,4)))
+
+
+def quote_time(row):
+    from datetime import datetime
+    stamp=row.payload.get('_quoted_at')
+    value=datetime.fromisoformat(stamp) if stamp else row.created_at
+    return value.replace(tzinfo=utcnow().tzinfo) if value.tzinfo is None else value
+
+
+def provider_price(value):
+    """Provider money must fit the persisted amount without silent rounding."""
+    try:
+        amount=Decimal(str(value))
+        if not amount.is_finite() or amount<0 or amount>Decimal('9999999999.99') or amount!=amount.quantize(Decimal('.01')):
+            raise ValueError('invalid amount')
+        return amount
+    except (InvalidOperation,ValueError,TypeError):
+        raise ProviderError('unknown','Valor retornado pela SuperFrete inválido. A operação precisa de consulta.') from None
 
 
 def summary(r):
     return {'id':str(r.id),'state':r.state,'environment':r.environment,'recipient':r.payload.get('to',{}).get('name'),'postal_warnings':r.payload.get('_postal_warnings',[]),
+            'recovery_kind':r.recovery_kind,'recovery_attempts':r.recovery_attempts,'recovery_check_at':r.recovery_check_at.isoformat() if r.recovery_check_at else None,'error_category':r.error_category,
             'provider_id':r.provider_id,'service':r.service,'price':str(r.price) if r.price is not None else None,
             'tracking':r.tracking,'label_url':r.label_url,'label_status':r.label_status,'pdf_available':r.label_status=='ready','label_error':r.label_error,'auto_print':r.auto_print,'print_job_id':str(r.print_job_id) if r.print_job_id else None,'error':r.error,'created_at':r.created_at.isoformat() if r.created_at else None,
             'rates':[{'id':v['id'],'name':v.get('name'),'price':str(v['price']),'delivery_time':v.get('delivery_time')} for v in r.rates]}
@@ -142,7 +187,7 @@ def cart(db,key,service):
     row=locked(db,key)
     if row.provider_id:return row
     if row.state!='quoted':raise HTTPException(409,'Operação já iniciada. Confira no SuperFrete antes de criar outro frete.')
-    created=row.created_at.replace(tzinfo=utcnow().tzinfo) if row.created_at.tzinfo is None else row.created_at
+    created=quote_time(row)
     if utcnow()-created>timedelta(minutes=30):raise HTTPException(409,'Cotação expirada. Faça uma nova cotação.')
     rate=next((v for v in row.rates if v['id']==service),None)
     if not rate:raise HTTPException(400,'Serviço não pertence à cotação.')
@@ -150,13 +195,30 @@ def cart(db,key,service):
     packages=rate.get('packages',[])
     if len(packages)==1 and packages[0].get('dimensions'):
         payload['volumes']={**packages[0]['dimensions'],'weight':packages[0]['weight']}
-    row.service=service;row.state='creating';row.updated_at=utcnow();db.commit()  # durable before external effect
+    tag='eleven:'+str(row.id)
+    payload['options']={**payload.get('options',{}),'tags':[{'tag':tag,'url':''}]}
+    row.payload={**row.payload,'_provider_tag':tag}
+    row.service=service;row.state='creating';row.updated_at=utcnow();schedule_recovery(row,'reconcile');db.commit()  # durable before external effect
     try:
         result=call('POST','cart',payload)
-        if not result.get('id') or result.get('price') is None:raise HTTPException(502,'Resposta incompleta ao criar frete.')
-        row.provider_id=str(result['id']);row.price=Decimal(str(result['price']));row.state='pending'
-    except (HTTPException,ValueError,TypeError):
-        row.state='uncertain';row.error='Criação sem confirmação. Confira no painel SuperFrete; não repita automaticamente.'
+        if not isinstance(result,dict) or not result.get('id') or result.get('price') is None:raise HTTPException(502,'Resposta incompleta ao criar frete.')
+        price=provider_price(result['price'])
+        row=locked(db,key)
+        # A recovery may have located this cart while the original POST was
+        # waiting. Its later reply must not undo payment or confirmed progress.
+        if row.provider_id or row.state not in ('creating','uncertain'):return row
+        row.provider_id=str(result['id']);row.price=price;row.state='pending'
+        row.error=None;row.error_category=None;row.recovery_kind=None;row.recovery_check_at=None
+    except (HTTPException,ValueError,TypeError) as exc:
+        row=locked(db,key)
+        if row.provider_id or row.state not in ('creating','uncertain'):return row
+        row.error_category=getattr(exc,'category','unknown')
+        if isinstance(exc,ProviderError) and exc.rejected:
+            row.error=str(exc.detail)[:200]
+            if exc.category=='unavailable':row.state='retry_waiting';schedule_recovery(row,'cart')
+            else:row.state='rejected';row.recovery_kind=None;row.recovery_check_at=None
+        else:
+            row.state='uncertain';row.error=UNCERTAIN;schedule_recovery(row,'reconcile')
     db.commit();return row
 
 
@@ -168,12 +230,19 @@ def checkout(db,key,expected_price):
     row.state='paying';row.updated_at=utcnow();db.commit()
     try:
         result=call('POST','checkout',{'orders':[row.provider_id]})
-        orders=result.get('purchase',{}).get('orders',[])
-        order=next((o for o in orders if str(o.get('id'))==row.provider_id),None)
+        if not isinstance(result,dict):raise ValueError('invalid checkout response')
+        purchase=result.get('purchase')
+        if not isinstance(purchase,dict) or not isinstance(purchase.get('orders'),list):raise ValueError('invalid checkout orders')
+        order=next((o for o in purchase['orders'] if isinstance(o,dict) and str(o.get('id'))==row.provider_id),None)
         if not result.get('success') or not order:raise HTTPException(502,'Pagamento não confirmado.')
-        row.state='released';row.tracking=order.get('tracking');row.label_url=safe_label(order.get('print',{}).get('url'))
+        row=locked(db,key)
+        if row.state in ('released','posted','delivered','cancelled'):return row
+        printed=order.get('print') if isinstance(order.get('print'),dict) else {}
+        row.state='released';row.tracking=order.get('tracking');row.label_url=safe_label(printed.get('url'))
         row.error=None
     except (HTTPException,ValueError,TypeError):
+        row=locked(db,key)
+        if row.state in ('released','posted','delivered','cancelled'):return row
         row.state='uncertain';row.error='Pagamento sem confirmação. Consulte o estado; não efetue outro pagamento.'
     db.commit();return row
 
@@ -185,6 +254,13 @@ def safe_label(url):
     return url
 
 
+def may_advance_state(current, observed):
+    stages={'pending':0,'released':1,'posted':2,'delivered':3}
+    if current=='cancelled':return observed=='cancelled'
+    if current=='uncertain' and observed=='pending':return False
+    return not (current in stages and observed in stages and stages[observed]<stages[current])
+
+
 def refresh(db,key):
     row=locked(db,key)
     if not row.provider_id:raise HTTPException(409,'Sem identificador confirmado. Confira a criação no painel SuperFrete.')
@@ -193,12 +269,13 @@ def refresh(db,key):
         if utcnow()-updated<timedelta(minutes=2):raise HTTPException(409,'Operação em andamento; aguarde antes de consultar.')
         row.state='uncertain'
     result=call('GET','order/info/'+quote(row.provider_id,safe=''))
+    if not isinstance(result,dict):raise ProviderError('unknown','Resposta de consulta inesperada.')
     if str(result.get('id'))!=row.provider_id:raise HTTPException(502,'Identificador retornado não confere.')
     state=result.get('status')
     if state=='generated':state='released'
     if state in ('pending','released','posted','delivered','cancelled'):
         # Do not re-enable payment after an uncertain charge until manually reconciled.
-        if not (row.state=='uncertain' and state=='pending'):row.state=state;row.error=None
+        if may_advance_state(row.state,state):row.state=state;row.error=None
     row.tracking=result.get('tracking') or row.tracking
     sync_tracking(db,row)
     if row.state in ('released','posted','delivered') and not row.label_pdf:

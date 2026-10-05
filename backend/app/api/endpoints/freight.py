@@ -13,7 +13,8 @@ router=APIRouter()
 
 @router.get('/status')
 def status(user=Depends(manager)):
-    return {'configured':bool(settings.SUPERFRETE_TOKEN and settings.SUPERFRETE_CONTACT_EMAIL),'environment':sf.environment()}
+    from ...services.freight_recovery import service_status
+    return service_status()
 
 
 @router.get('/orders')

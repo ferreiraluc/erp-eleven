@@ -29,7 +29,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Câmbio/transferências | `ExchangeRateManagement`, `stores/currency` | `exchange-rates`, `money-transfers`, `cambistas` | `thais_transfer_service`, modelos financeiros |
 | PDV/fiado | `PDVView`, `FiadoView`, `components/pdv/`, `stores/pdv` | `pdv` | `models/pdv`, `inventory_service` para baixas/devoluções |
 | Endereços/impressão | `AddressesView`, `components/addresses/` | `address-manager`, `printing` | `address_book`, `address_identity`, `address_usage`, `address_manager`, `assistant_printing`, `postal_codes`, modelos `address_book`/`printing` |
-| Etiquetas | Aba SuperFrete em `AddressesView` | `freight` | `superfrete`, `assistant_freight`, `freight_labels`, `freight_webhook` |
+| Etiquetas | Aba SuperFrete em `AddressesView` | `freight` | `superfrete`, `superfrete_errors`, `assistant_freight`, `freight_recovery`, `freight_labels`, `freight_webhook` |
 | Assistente | `AssistantView` | `assistant` | `assistant_*`, `models/assistant` |
 | BI OneDrive | `SalesBiView`, `services/salesBi` | `sales-bi` | `sales_bi`, `sales_bi_parser`, `sales_bi_onedrive`, `sales_bi_sync`, `sales_bi_schedule` |
 
@@ -75,7 +75,9 @@ em `assistant_documents`, sem guardar conteúdo no banco.
 
 **Frete:** `freight_orders` registra cotação/compra/etiqueta. Webhooks assinados apenas
 agendam consulta autenticada. `freight_labels` recupera PDFs atrasados, persiste o documento,
-enfileira impressão única e notificação; não repete pagamentos.
+enfileira impressão única e notificação; não repete pagamentos. `freight_recovery`
+retenta cotações e criações comprovadamente recusadas, concilia criações incertas
+pela identificação do pedido e devolve a confirmação do preço ao usuário.
 
 **BI:** links configurados → OneDrive somente leitura → resultados XLSX salvos → parser →
 `SalesBIWorkbook.snapshot` → agregação → frontend. Uma escolha por mês elimina sobreposição

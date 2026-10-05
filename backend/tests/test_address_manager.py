@@ -91,6 +91,26 @@ def test_safe_label_and_document_validation():
     with pytest.raises(sf.HTTPException):sf.party({'pais':'PY'})
 
 
+@pytest.mark.parametrize('confirmed', ['released','posted','delivered','cancelled'])
+def test_stale_provider_pending_never_reopens_a_confirmed_payment(env,monkeypatch,confirmed):
+    factory,client,uid,_=env
+    key=sf_order(factory,uid,confirmed)
+    with factory() as db:
+        row=db.get(FreightOrder,key);row.provider_id='already-paid';row.price=Decimal('20.00');db.commit()
+    calls=[]
+    def provider(method,path,body=None):
+        calls.append(path)
+        if path=='order/info/already-paid':return {'id':'already-paid','status':'pending'}
+        if path=='tag/print':return {}
+        raise AssertionError('A stale status must never authorize another checkout')
+    monkeypatch.setattr(sf,'call',provider)
+    monkeypatch.setattr(sf,'sync_tracking',lambda db,row:None)
+    assert client.post(f'/freight/orders/{key}/refresh').json()['state']==confirmed
+    response=client.post(f'/freight/orders/{key}/pay',json={'expected_price':'20.00'})
+    assert response.status_code==(409 if confirmed=='cancelled' else 200)
+    assert 'checkout' not in calls
+
+
 def test_bot_paid_pdf_delivered_and_printed_automatically(env,monkeypatch):
     from app.services import assistant_freight as bot
     from app.services.assistant_schedule import confirm_action

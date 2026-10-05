@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from ..models.address_book import SavedAddress
 from ..models.assistant import utcnow
-from .address_identity import fingerprint, digits, matches_optional_district
+from .address_identity import fingerprint, digits, matches_optional_district, matches_known_variants
 
 
 def lock_addresses(db):
@@ -23,9 +23,17 @@ def resolve_address(db, key):
 
 
 def compatible(row, data, cliente_id=None, pdv_cliente_id=None):
-    before, after = digits(row.data.get('cpf')), digits(data.get('cpf'))
-    if before and after and len(set(before))>1 and len(set(after))>1 and before!=after:
-        raise HTTPException(409,'Já existe esse destinatário e endereço com outro CPF/CNPJ. Confira o documento no cadastro antes de continuar.')
+    if str(data.get('pais','')).upper() == 'PY':
+        # RUC/C.I may contain letters. Equal numeric parts do not establish
+        # the same document, and repeated digits are not Brazilian placeholders.
+        document = lambda value: ''.join(c for c in str(value or '').casefold() if c.isalnum())
+        before, after = document(row.data.get('cpf')), document(data.get('cpf'))
+        if before and after and before != after:
+            raise HTTPException(409,'Já existe esse destinatário e endereço com outro RUC/C.I. Confira o documento no cadastro antes de continuar.')
+    else:
+        before, after = digits(row.data.get('cpf')), digits(data.get('cpf'))
+        if before and after and len(set(before))>1 and len(set(after))>1 and before!=after:
+            raise HTTPException(409,'Já existe esse destinatário e endereço com outro CPF/CNPJ. Confira o documento no cadastro antes de continuar.')
     linked = (row.cliente_id, row.pdv_cliente_id)
     incoming = (cliente_id,pdv_cliente_id)
     if any(linked) and any(incoming) and linked != incoming:
@@ -40,9 +48,10 @@ def find_equivalent_address(db, data, exclude_id=None):
     row = roots.filter_by(dedup_key=key).with_for_update().first() if key else None
     if row:
         return row
-    candidates = [row for row in roots.with_for_update() if matches_optional_district(data, row.data)]
+    candidates = [row for row in roots.with_for_update() if (
+        matches_optional_district(data, row.data) or matches_known_variants(data, row.data))]
     if len(candidates) > 1:
-        raise HTTPException(409, 'Há mais de um endereço compatível. Informe o bairro para identificar o cadastro correto.')
+        raise HTTPException(409, 'Há mais de um endereço compatível. Confira os cadastros na agenda antes de continuar.')
     return candidates[0] if candidates else None
 
 

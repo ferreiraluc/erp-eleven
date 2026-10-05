@@ -60,6 +60,10 @@ class FreightOrder(Base):
     notify_channel = Column(String(16))
     notify_destination = Column(String(120))
     error = Column(String(200))
+    error_category = Column(String(24))
+    recovery_kind = Column(String(24))
+    recovery_attempts = Column(Integer, nullable=False, default=0)
+    recovery_check_at = Column(DateTime(timezone=True), index=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 

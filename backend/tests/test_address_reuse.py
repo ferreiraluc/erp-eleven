@@ -19,6 +19,14 @@ from app.services.address_book import resolve_address
 BASE={'pais':'BR','nome':'Izabela Lima da Silva','cpf':'12345678909','endereco':'Rua Teste','numero':'25','bairro':'José Bonifácio','complemento':'Ap 12','cidade':'São Paulo','estado':'SP','cep':'08250-520'}
 
 
+def test_paraguay_document_letters_survive_address_identity_checks(env):
+    _, client, _, _ = env
+    data={'pais':'PY','nome':'Teste PY','cidade':'Asunción','telefone':'123','cpf':'ABC-11'}
+    first=create(client,data)
+    assert create(client,{**data,'cpf':'abc 11'})['id']==first['id']
+    assert client.post('/manager/addresses',json={'label':'Conflito','data':{**data,'cpf':'DEF-11'}}).status_code==409
+
+
 def create(client,data=None,label='Casa'):
     result=client.post('/manager/addresses',json={'label':label,'data':data or BASE})
     assert result.status_code==200,result.text

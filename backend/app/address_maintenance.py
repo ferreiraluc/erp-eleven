@@ -1,0 +1,40 @@
+"""Plan one explicit address merge; use --apply --expected-plan to persist it."""
+import argparse
+import json
+import uuid
+
+from fastapi import HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+
+from .database import SessionLocal
+from .services.address_maintenance import merge_addresses
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', choices=['merge'])
+    parser.add_argument('--target', type=uuid.UUID, required=True, help='Cadastro principal que continuará visível')
+    parser.add_argument('--source', type=uuid.UUID, required=True, help='Cadastro que será preservado como referência ao principal')
+    parser.add_argument('--apply', action='store_true', help='Aplicar o par explicitamente revisado; por padrão apenas simula')
+    parser.add_argument('--expected-plan', help='plan_token retornado pela simulação imediatamente anterior')
+    args = parser.parse_args(argv)
+    if args.apply and not args.expected_plan:
+        parser.error('--apply exige --expected-plan retornado pela simulação')
+    with SessionLocal() as db:
+        try:
+            result = merge_addresses(db, args.target, args.source, apply=args.apply, expected_plan=args.expected_plan)
+            if args.apply:
+                db.commit()
+            else:
+                db.rollback()
+        except HTTPException as error:
+            db.rollback()
+            raise SystemExit(error.detail) from None
+        except SQLAlchemyError:
+            db.rollback()
+            raise SystemExit('Não foi possível confirmar o resultado no banco. Confira o par antes de repetir; nenhum dado do cadastro foi exibido.') from None
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+if __name__ == '__main__':
+    main()

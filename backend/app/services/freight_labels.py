@@ -135,7 +135,9 @@ def process_label():
 def main(stop_event):
     while not stop_event.is_set():
         try:
-            if not process_label():stop_event.wait(3)
+            from .freight_recovery import process_recovery
+            recovered=process_recovery()
+            if not process_label() and not recovered:stop_event.wait(3)
         except Exception:
             logger.warning('label_worker_iteration_failed')
             stop_event.wait(10)

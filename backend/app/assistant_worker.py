@@ -18,6 +18,7 @@ from .database import SessionLocal
 from .models.assistant import AssistantMessage, AssistantDelivery, utcnow
 from .services.assistant_agent import AgentError, respond
 from .services.assistant_channels import authorized_identity, send_delivery, DeliveryError, enabled_channels
+from .services.assistant_delivery_policy import delivery_rejection, cancel_pending_dependents
 
 logger = logging.getLogger("assistant_worker")
 
@@ -106,30 +107,40 @@ def process_outbox():
         predecessor_accepted = db.query(predecessor.id).filter(
             predecessor.id == AssistantDelivery.depends_on_id, predecessor.status == "accepted",
         ).exists()
+        predecessor_cancelled = db.query(predecessor.id).filter(
+            predecessor.id == AssistantDelivery.depends_on_id,
+            predecessor.status.in_(("cancelled", "expired", "failed")),
+        ).exists()
         delivery = db.query(AssistantDelivery).filter(
             AssistantDelivery.channel.in_(enabled_channels()),
             AssistantDelivery.status == "pending", AssistantDelivery.available_at <= utcnow(),
-            or_(AssistantDelivery.depends_on_id.is_(None), predecessor_accepted),
+            or_(AssistantDelivery.depends_on_id.is_(None), predecessor_accepted, predecessor_cancelled),
         ).order_by(AssistantDelivery.created_at).with_for_update(skip_locked=True).first()
         if not delivery:
             db.commit()
             return False
+        if delivery.depends_on_id:
+            parent = db.get(AssistantDelivery, delivery.depends_on_id)
+            if parent and parent.status in ("cancelled", "expired", "failed"):
+                delivery.status = "cancelled"
+                delivery.error_code = "delivery_dependency_unavailable"
+                cancel_pending_dependents(db, delivery.id)
+                db.commit()
+                return True
         expires = delivery.expires_at
         if expires and expires.tzinfo is None:
             expires = expires.replace(tzinfo=utcnow().tzinfo)
         if expires and expires <= utcnow():
             delivery.status = "expired"
-            delivery.error_code = "whatsapp_window_closed"
+            delivery.error_code = "whatsapp_window_closed" if delivery.channel == "whatsapp" else "delivery_expired"
+            cancel_pending_dependents(db, delivery.id)
             db.commit()
             return True
-        if delivery.channel == "whatsapp":
-            identity = authorized_identity(db, "whatsapp", delivery.destination)
-            if not identity or identity.user_id != delivery.user_id:
-                delivery.status = "cancelled"
-                db.commit()
-                return True
-        if delivery.channel == "telegram" and delivery.destination.split(":")[0] != settings.TELEGRAM_GROUP_ID:
+        rejection = delivery_rejection(db, delivery)
+        if rejection:
             delivery.status = "cancelled"
+            delivery.error_code = rejection
+            cancel_pending_dependents(db, delivery.id)
             db.commit()
             return True
         delivery.status = "sending"
@@ -149,6 +160,8 @@ def process_outbox():
         except Exception:
             delivery.status = "uncertain"
             delivery.error_code = "send_outcome_unknown"
+        if delivery.status == "failed":
+            cancel_pending_dependents(db, delivery.id)
         db.commit()
         return True
 

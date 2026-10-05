@@ -57,7 +57,7 @@ cópia local conectada à produção para testes. Veja [Arquitetura](ARQUITETURA
 
 - BI: 18h `America/Sao_Paulo` ou botão manual; recarregar dashboard consulta snapshots, não sincroniza OneDrive.
 - Rastreios: atualização diária às 19h no mesmo fuso.
-- Etiquetas: consultas progressivas após emissão até o PDF ficar disponível, sem novo pagamento.
+- Etiquetas: consultas progressivas após emissão até o PDF ficar disponível, sem novo pagamento. Cotações interrompidas e criações incertas também têm recuperação persistida; consulte as regras e os limites no [gestor](GESTOR_ENDERECOS_SUPERFRETE.md#recuperação-de-solicitações-e-diagnóstico).
 - Bot: recebimento por webhook, execução/entrega por fila.
 - Impressão: o Windows deve estar conectado, com sessão e agente abertos.
 
@@ -87,6 +87,7 @@ Não executar downgrade destrutivo como reação automática a uma falha.
 | --- | --- |
 | Bot não responde | Flags, vínculo ativo do autor, grupo, segredo do webhook, filas no painel e worker |
 | WhatsApp sem resposta | Habilitação externa do remetente, URL/assinatura Twilio e flag; ter token não comprova entrega |
+| Emissão temporariamente indisponível | `error_category`, `recovery_kind` e próxima consulta; documento inválido pede correção, nunca zeros. Criação antiga sem ID/tag exige conferência no provedor |
 | Etiqueta paga sem PDF | Estado do frete e worker de etiquetas; usar Consultar para recuperar, não pagar outra vez |
 | Impressão parada | Agente Windows, driver, Sumatra, `last_seen_at`, estados pending/claimed/uncertain |
 | BI não atualizou | Fontes, última leitura, próximo horário, erro por arquivo e salvamento do Excel |

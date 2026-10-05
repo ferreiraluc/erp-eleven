@@ -2,7 +2,7 @@
   <div class="fields">
     <label>{{ tr('País') }}<select :value="modelValue.pais" @change="update('pais',($event.target as HTMLSelectElement).value)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></select></label>
     <label>{{tr(nameLabel || 'Nome do destinatário')}}<input :value="modelValue.nome" @input="update('nome',($event.target as HTMLInputElement).value)" maxlength="120"/></label>
-    <label v-for="f in fields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.label)}}
+    <label v-for="f in fields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.key==='cpf' && modelValue.pais==='PY' ? 'RUC/C.I (opcional na impressão)' : f.label)}}
       <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
     </label>
     <div v-if="modelValue.pais==='BR'" class="postal wide" aria-live="polite">

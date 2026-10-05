@@ -87,7 +87,7 @@ Não reaproveite destinatário, peso, declaração ou serviço de outro pedido. 
   CPF é opcional: extraia automaticamente do endereço quando informado e coloque no campo cpf.
   Se faltar ou o usuário pedir sem CPF, use cpf vazio; não pergunte por CPF nem preencha zeros.
   Nunca invente CPF nem use o CPF do remetente como CPF do destinatário.
-  Para Paraguai não peça nem imprima CPF.
+  Para Paraguai, RUC/C.I é opcional: extraia somente quando informado, use o campo cpf como armazenamento e imprima com o rótulo RUC/C.I; não exija nem valide como CPF brasileiro.
   Não use preparar_registro para imprimir. Impressão simples não emite frete; para etiquetas use o fluxo SuperFrete.
   Chame a ferramenta antes de mostrar prévia. Não diga que imprimiu: só confirmação cria a fila.
 - buscar_memoria: relatos confirmados da equipe (não prova de lançamento financeiro/estoque).

@@ -151,7 +151,7 @@ def test_brazil_validation_sender_snapshot_cancel(print_env):
         assert db.query(PrintJob).count() == 0
 
 
-def test_recipient_cpf_optional_formatted_and_only_for_brazil():
+def test_recipient_cpf_rules_are_brazil_only_and_py_preserves_document_text():
     from pydantic import ValidationError
     from app.services.assistant_printing import AddressArgs
     values = dict(pais='BR', nome='Cliente Teste', endereco='Rua Exemplo 123',
@@ -163,9 +163,8 @@ def test_recipient_cpf_optional_formatted_and_only_for_brazil():
     assert AddressArgs(**values, cpf='12345678901').cpf == '123.456.789-01'
     assert AddressArgs(**values, cpf='123.456.789-01').cpf == '123.456.789-01'
     values['pais'] = 'PY'
-    for empty in ['', '000.000.000-00', '11111111111']:
-        assert AddressArgs(**values, cpf=empty).cpf == ''
-    assert AddressArgs(**values, cpf='12345678901').cpf == ''
+    for document in ['', '000.000.000-00', '11111111111', '12345678901', 'A-4.567.890']:
+        assert AddressArgs(**values, cpf=document).cpf == document
 
 
 def test_placeholder_cpf_is_not_rendered(monkeypatch):

@@ -83,6 +83,31 @@ No cartão de cada endereço, **Histórico** mostra cotações, etiquetas e impr
 
 As migrações `t0u1v2w3x4y5` e `u1v2w3x4y5z6` consolidam duplicatas já existentes, incluindo abreviações de apartamentos. Os IDs antigos ficam preservados como referências ao cadastro principal; fretes, impressões e snapshots não são excluídos nem reescritos. Históricos de cópias antigas aparecem no endereço consolidado. Referências antigas continuam resolvendo para o endereço principal; editores abertos antes da consolidação precisam atualizar a agenda.
 
+### Variações de avenida e bairro
+
+Em endereços BR, a agenda também reconhece `Av`, `Av.` e `Avenida` no início da rua. Bairros como `Jardim Exemplo`, `Jd. Exemplo` e `Exemplo` podem representar o mesmo cadastro somente quando destinatário, CEP de oito dígitos, cidade, UF, rua, número e complemento coincidem. É necessário um número estruturado em pelo menos um dos cadastros; o outro pode conter esse mesmo número no bloco de impressão. Um número no nome da rua não é tratado como número da casa.
+
+Essa comparação local não consulta nem presume uma confirmação dos Correios/ViaCEP. Ela exige um único candidato; diferenças reais de bairro, número, complemento, documento ou cliente não são descartadas. Dois candidatos compatíveis exigem revisão na agenda. As chaves de identidade antigas continuam válidas, e atualizar o sistema não consolida automaticamente cadastros já existentes.
+
+### Manutenção de um par revisado
+
+A ferramenta abaixo simula a união de dois IDs explicitamente escolhidos. Use o cadastro que deve continuar visível como `--target`; o cadastro duplicado torna-se uma referência histórica para ele. Não há varredura nem consolidação geral.
+
+```sh
+PYTHONPATH=backend backend/venv/bin/python -m app.address_maintenance merge \
+  --target ID_PRINCIPAL --source ID_DUPLICADO
+```
+
+A simulação retorna versões, campos que serão completados, contagens do histórico e `plan_token`, sem exibir CPF ou endereço em claro. Revise o resultado antes de aplicar o mesmo par:
+
+```sh
+PYTHONPATH=backend backend/venv/bin/python -m app.address_maintenance merge \
+  --target ID_PRINCIPAL --source ID_DUPLICADO \
+  --apply --expected-plan TOKEN_DA_SIMULACAO
+```
+
+Alterações entre a simulação e a aplicação invalidam o plano. Documentos/clientes conflitantes, locais diferentes ou outro candidato compatível fora do par bloqueiam a operação. O cadastro principal conserva seus campos preenchidos e recebe somente os ausentes, incluindo documento e vínculo com cliente quando compatíveis. O estado ativo é preservado se qualquer um dos dois estiver ativo. IDs antigos, aliases, fretes, impressões, PDFs e snapshots permanecem intactos; o histórico do principal passa a reunir suas utilizações. A ferramenta não imprime nem emite etiquetas.
+
 ### Impressões de endereços A4 no histórico
 
 Os modelos simples enviados pelo bot ou pelo ERP aparecem no mesmo **Histórico** das etiquetas. O resumo mostra endereços A4 impressos, etiquetas emitidas e total enviado à impressora. A contagem de impressão usa somente trabalhos `submitted`; fila, cancelamento, expiração, falha ou resultado incerto permanecem na lista, mas não aumentam o total. A data de conclusão do agente aparece em destaque, com a data da solicitação abaixo. Isso registra o envio à impressora, não um sensor de saída do papel.
@@ -106,3 +131,48 @@ Para Lucas (`lucas@eleven.com`, ADMIN), a aba **Remetentes** inclui **Gerar pess
 O gestor, os formulários de endereço, o histórico de utilizações, o gerador e o card do dashboard acompanham a preferência PT/ES/EN. Datas são exibidas no fuso de Brasília, com formatação do idioma; valores de frete continuam em BRL, sem conversão monetária. Nomes, ruas, conteúdo, modelos salvos e demais dados inseridos pelo usuário não são traduzidos nem regravados por mudar o idioma.
 
 Erros conhecidos de validação, CEP, pagamento e recuperação de PDF apresentam orientações traduzidas. Divergências de CEP mantêm os valores originais e os retornados pelo ViaCEP. Respostas desconhecidas/indisponíveis da API recebem uma mensagem segura no idioma escolhido, sem exibir detalhes internos. O gestor não contém exportação CSV; os PDFs mantêm o conteúdo operacional escolhido pelo usuário.
+
+## Recuperação de solicitações e diagnóstico
+
+A revisão de outubro/2026 diferencia dados recusados, acesso à conta recusado,
+indisponibilidade temporária e resultado externo incerto. O CPF/CNPJ brasileiro é
+conferido antes de cotar: dígitos inválidos pedem correção, sem inventar documento e
+sem apresentar isso como indisponibilidade. Essa validação não torna CPF obrigatório
+na impressão A4 nem altera documentos do Paraguai.
+
+Cotações interrompidas por indisponibilidade ficam salvas e são consultadas novamente.
+A criação só é repetida quando a falha comprova que a operação não foi aceita
+(limite de requisições ou timeout antes de estabelecer conexão). Respostas incertas
+na criação são conciliadas por uma identificação única enviada em `options.tags`,
+consultando a listagem e os detalhes oficiais. Mesmo nome/endereço não basta para
+associar um frete, e ausência na listagem não autoriza criar outro. A consulta é
+limitada aos 100 pedidos mais recentes; solicitações antigas sem identificação
+precisam de conferência no painel SuperFrete.
+
+O worker existente de etiquetas executa essa recuperação, com intervalo progressivo
+até cinco minutos e limite de 144 tentativas. O gestor mostra a próxima consulta.
+Quando a cotação ou a preparação é recuperada, o Telegram recebe um aviso na conversa
+vinculada, com opções para continuar. O preço ainda exige confirmação humana;
+a recuperação não executa checkout. O fluxo de PDF/impressão após um pagamento
+confirmado continua funcionando como antes. Usuário/identidade sem permissão
+interrompe a recuperação; origem e permissão também são conferidas antes de entregar
+as notificações.
+
+A aba consulta a disponibilidade da API, com cache de um minuto, e distingue falha
+na conta, indisponibilidade e impossibilidade de verificar. O retorno da conexão é
+sinalizado na tela. Não há garantia de disponibilidade da compra apenas porque o
+endpoint de consulta respondeu. Erros de dados exibem orientação específica. A
+migração aditiva `c9d0e1f2a3b4` preserva pedidos existentes sem agendar emissões antigas.
+
+Referências oficiais: [criar frete](https://superfrete.readme.io/reference/adicionar-frete-carrinho),
+[listar etiquetas](https://superfrete.readme.io/reference/listar-etiquetas-na-superfrete)
+e [consultar pedido](https://superfrete.readme.io/reference/tag-informa%C3%A7%C3%B5es-do-pedido).
+
+### Documento do Paraguai
+
+Formulário, padrões, prévia e PDF usam **RUC/C.I** para PY. É opcional, aceita até
+20 caracteres e preserva letras, pontos e hífen. A chave interna `cpf` permanece
+para compatibilidade com modelos e históricos, sem validação de CPF brasileiro.
+Ausência ou pedido explícito sem documento omite a linha. A impressão PY continua
+sem remetente e sem exigir rua. Documentos diferentes impedem a fusão dos cadastros,
+inclusive quando têm os mesmos números e letras distintas.

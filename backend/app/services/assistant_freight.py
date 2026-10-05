@@ -78,6 +78,8 @@ def execute(db,message,identity,name,args):
             with SessionLocal() as external:
                 order=external.get(FreightOrder,a.freight_id)
                 if not order or order.user_id!=message.user_id:return {'erro':'Cotação não disponível para este usuário. Escolha um serviço na próxima mensagem.'}
+                order.payload={**order.payload,'_recovery_source':str(message.id)}
+                external.commit()
                 row=sf.cart(external,a.freight_id,a.service)
                 if row.state!='pending':return sf.summary(row)
                 selected=next((r for r in row.rates if r['id']==row.service),{})
@@ -129,6 +131,7 @@ def confirm(db,message,action):
 
 def quote_preview(order):
     """Stable option order and quote identity, persisted with the bot response."""
+    if order.state!='quoted':return order.error or 'A cotação está sendo consultada. Avisaremos quando puder continuar.'
     lines=[f"Cotação para {order.payload['to']['name']}, remetente {order.payload['from']['name']}:"]
     lines += order.payload.get('_postal_warnings', [])
     for index,rate in enumerate(order.rates,1):
@@ -167,7 +170,7 @@ def service_choice(db,message,identity,content):
     if not order:return 'Cotação indisponível para seu usuário nesta conversa.' if callback else None
     if order.state not in ('quoted','pending'):
         return 'Esta cotação já avançou ou precisa de conferência. Consulte a etiqueta existente antes de emitir outra.'
-    created=order.created_at.replace(tzinfo=utcnow().tzinfo) if order.created_at.tzinfo is None else order.created_at
+    created=sf.quote_time(order)
     if order.state=='quoted' and utcnow()-created>timedelta(minutes=30):return 'Essa cotação expirou. Peça uma nova cotação com os mesmos dados; nenhuma etiqueta foi comprada.'
     value=match[1].lower() if match else ''
     if callback:
