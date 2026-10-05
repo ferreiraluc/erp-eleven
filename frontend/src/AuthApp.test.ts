@@ -7,7 +7,7 @@ import i18n from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { authAPI, type User } from '@/services/api'
 import { saveToken, storedToken } from '@/services/sessionStorage'
-const mocks = vi.hoisted(() => ({ replace: vi.fn(), route: { path: '/conta', meta: { requiresAuth: true } } }))
+const mocks = vi.hoisted(() => ({ replace: vi.fn(), route: { path: '/conta', matched: [{ path: '/conta' }], meta: { requiresAuth: true } } }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ replace: mocks.replace }), useRoute: () => mocks.route,
   RouterLink: { template: '<a><slot /></a>' }, RouterView: { template: '<input data-private-form value="draft" />' } }))
 vi.mock('@/components/NotificationToast.vue', () => ({ default: { template: '<div />' } }))
