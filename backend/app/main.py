@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 import time
 import traceback
@@ -185,7 +186,7 @@ async def security_headers_middleware(request: Request, call_next):
         response.headers["Pragma"] = "no-cache"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["X-XSS-Protection"] = "0"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     
@@ -243,6 +244,14 @@ async def log_requests(request: Request, call_next):
         logger.info(f"[RES] {status} {route} ({elapsed:.3f}s)")
 
     return response
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Pydantic's default response echoes the submitted input, including passwords.
+    errors = [{key: error[key] for key in ('type', 'loc', 'msg') if key in error}
+              for error in exc.errors()]
+    return JSONResponse(status_code=422, content={'detail': errors})
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):

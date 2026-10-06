@@ -28,9 +28,13 @@
               <label for="email" class="form-label">{{ $t('auth.emailLabel') }}</label>
               <input
                 id="email"
+                name="username"
                 v-model="credentials.email"
                 type="email"
-                autocomplete="email"
+                autocomplete="username"
+                autocapitalize="none"
+                :spellcheck="false"
+                maxlength="100"
                 required
                 class="input-field"
                 :placeholder="$t('auth.emailPlaceholder')"
@@ -42,9 +46,11 @@
               <label for="password" class="form-label">{{ $t('auth.passwordLabel') }}</label>
               <input
                 id="password"
+                name="password"
                 v-model="credentials.senha"
                 type="password"
                 autocomplete="current-password"
+                maxlength="72"
                 required
                 class="input-field"
                 :placeholder="$t('auth.passwordPlaceholder')"
@@ -92,9 +98,6 @@
 
     </div>
 
-    <footer class="login-footer">
-      <a href="https://www.siterastreio.com.br/" target="_blank">Rastreamento</a>
-    </footer>
   </div>
 </template>
 
@@ -316,22 +319,4 @@ const handleLogin = async () => {
   }
 }
 
-.login-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  text-align: center;
-  padding: 0.5rem;
-}
-
-.footer-link {
-  font-size: 0.7rem;
-  color: #9ca3af;
-  text-decoration: none;
-}
-
-.footer-link:hover {
-  color: #6b7280;
-}
 </style>

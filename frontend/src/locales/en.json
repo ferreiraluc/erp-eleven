@@ -137,6 +137,7 @@
     "language": "Language",
     "navigation": "Account navigation",
     "connectionError": "Could not verify the ERP connection. Please try again.",
+    "tooManyAttempts": "Too many sign-in attempts. Wait a few minutes and try again.",
     "invalidLogin": "Incorrect email or password.",
     "resetHelp": "Forgot your password? Ask Lucas for a temporary password.",
     "back": "Back to dashboard",

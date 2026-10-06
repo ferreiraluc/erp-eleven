@@ -1,5 +1,6 @@
 from threading import Lock
 import time
+import secrets
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
@@ -16,24 +17,34 @@ from ...services.user_audit import bind_actor, record
 router = APIRouter()
 _attempts = {}
 _attempts_lock = Lock()
+_dummy_hash = get_password_hash(secrets.token_urlsafe(32))
 
 
 def authenticate_user(db, email, password):
     user = db.query(Usuario).filter(func.lower(Usuario.email) == email.strip().lower()).first()
-    return user if user and verify_password(password, user.senha_hash) else None
+    # Equal bcrypt work for unknown/inactive accounts; never interpolate SQL.
+    valid = verify_password(password, user.senha_hash if user else _dummy_hash)
+    return user if user and valid else None
 
 
 def login_limit(email, address):
-    key = (email.lower(), address)
+    key = ('pair', email.strip().lower(), address)
+    buckets = [(key, 12), (('account', email.strip().lower()), 30), (('ip', address), 60)]
     current = time.monotonic()
     with _attempts_lock:
         expired = [k for k, (_, since) in _attempts.items() if current - since > 600]
         for k in expired: _attempts.pop(k, None)
-        count, since = _attempts.get(key, (0, current))
-        if count >= 12:
-            raise HTTPException(429, 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.')
-        if len(_attempts) >= 10000: _attempts.pop(next(iter(_attempts)))
-        _attempts[key] = (count + 1, since)
+        for bucket, limit in buckets:
+            count, since = _attempts.get(bucket, (0, current))
+            if count >= limit:
+                raise HTTPException(429, 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.',
+                                    headers={'Retry-After': str(max(1, int(600 - (current - since))))})
+        if len(_attempts) + len(buckets) > 10000:
+            # Do not evict active counters: rotating usernames must not reset limits.
+            raise HTTPException(429, 'Muitas tentativas. Tente novamente em alguns minutos.', headers={'Retry-After': '600'})
+        for bucket, _ in buckets:
+            count, since = _attempts.get(bucket, (0, current))
+            _attempts[bucket] = (count + 1, since)
     return key
 
 

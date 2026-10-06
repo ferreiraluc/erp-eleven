@@ -30,6 +30,25 @@ de Lucas.
 
 ## Sessão e senha
 
+O login não contém links externos de rastreamento. E-mail/senha têm limites no
+cliente e no servidor; a senha nunca é truncada nem incluída nas respostas de
+validação. A consulta usa parâmetros SQLAlchemy e o bcrypt também é executado
+quando a conta não existe, reduzindo diferenças de tempo que revelam cadastros.
+Erros de credenciais são genéricos. Tentativas são limitadas por par conta/IP,
+conta e IP durante dez minutos, com resposta 429 e `Retry-After`.
+Esses contadores são locais ao processo e reiniciam com o deploy; antes de escalar
+a API para várias instâncias é necessário um limitador compartilhado/no gateway.
+
+O frontend publica CSP (`frame-ancestors`, `form-action`, `base-uri`, `object-src`),
+`X-Frame-Options: DENY`, `nosniff` e `Referrer-Policy: no-referrer`, configurados no
+Render e em `render.yaml`. O servidor Node opcional aplica as mesmas regras.
+Isso impede enquadrar o ERP em sites terceiros e limita formulários/navegação base,
+mas não impede que alguém crie uma cópia visual em outro domínio. Não há passkeys
+nem MFA nesta versão; a sessão continua usando o mecanismo de tokens existente.
+Referências: [autenticação OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html),
+[SQL parametrizado](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)
+e [defesa contra clickjacking](https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html).
+
 O frontend não confia no usuário salvo no navegador. Verifica `/api/auth/me` antes
 de abrir telas privadas e novamente ao retomar a janela. Token antigo, expirado,
 revogado ou de conta desativada leva ao login; falha de rede permite tentar de novo.

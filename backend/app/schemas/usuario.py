@@ -43,8 +43,14 @@ class UsuarioResponse(UsuarioBase):
         from_attributes = True
 
 class UsuarioLogin(BaseModel):
-    email: EmailStr = Field(..., description="Email do usuário")
-    senha: str = Field(..., min_length=1, description="Senha do usuário")
+    email: EmailStr = Field(..., max_length=100, description="Email do usuário")
+    senha: str = Field(..., min_length=1, max_length=72, repr=False, description="Senha do usuário")
+
+    @validator('senha')
+    def login_password_bytes(cls, value):
+        if len(value.encode('utf-8')) > 72:
+            raise ValueError('Senha excede o limite de 72 bytes.')
+        return value
 
 class Token(BaseModel):
     access_token: str

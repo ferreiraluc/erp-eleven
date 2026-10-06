@@ -137,6 +137,7 @@
     "language": "Idioma",
     "navigation": "Navegação da conta",
     "connectionError": "Não foi possível validar a conexão com o ERP. Tente novamente.",
+    "tooManyAttempts": "Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente.",
     "invalidLogin": "E-mail ou senha incorretos.",
     "resetHelp": "Esqueceu a senha? Peça ao Lucas uma senha temporária.",
     "back": "Voltar ao painel",

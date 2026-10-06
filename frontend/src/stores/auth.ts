@@ -91,7 +91,10 @@ export const useAuthStore = defineStore('auth', () => {
       return result
     } catch (e) {
       if (operation !== operationEpoch || storedToken() !== expectedToken || isAuthOperationSuperseded(e)) throw new AuthOperationSuperseded()
-      if (!error.value) error.value = i18n.global.t(axios.isAxiosError(e) && e.response?.status === 401 ? 'access.invalidLogin' : 'access.connectionError')
+      if (!error.value) {
+        const status = axios.isAxiosError(e) ? e.response?.status : undefined
+        error.value = i18n.global.t(status === 429 ? 'access.tooManyAttempts' : status === 401 || status === 422 ? 'access.invalidLogin' : 'access.connectionError')
+      }
       throw e
     } finally { if (operation === operationEpoch) isLoading.value = false }
   }

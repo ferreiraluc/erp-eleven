@@ -14,6 +14,9 @@ app.disable('x-powered-by')
 app.use(compression())
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'")
+  res.setHeader('Referrer-Policy', 'no-referrer')
   next()
 })
 app.get('/health', (_req, res) => {
