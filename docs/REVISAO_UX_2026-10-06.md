@@ -115,3 +115,6 @@ somente em viewport emulada.
   única ao limpar, catálogo realmente vazio, traduções e parâmetros da agenda.
 - Próxima prioridade: itens 1–3 acima (navegação de rastreio, filtro de clientes,
   paginação real de pedidos). Não repetir os itens 4–5 resolvidos.
+- Publicado: commit `e10212d`, Render Live no deploy `dep-db26f1jncjis73c9sspg`.
+  CI de código `37408022884`. Servidores QA encerrados, aba temporária fechada e
+  viewport restaurada. Consumo após publicação: 36% usado (64% restante).
