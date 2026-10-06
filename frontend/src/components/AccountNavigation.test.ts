@@ -48,17 +48,17 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); element?.remove() })
 
 describe('Account navigation inside the dashboard header', () => {
-  it('shows one navigation within the original greeting header, including owner actions', async () => {
+  it('shows one navigation within the personalized header, including owner actions', async () => {
     await mount()
     expect(element.querySelectorAll('.account-navigation')).toHaveLength(1)
     expect(element.querySelector('.account-bar')).toBeNull()
     const header = element.querySelector('.dashboard-header')!
-    expect(header.querySelector('.welcome-text')?.textContent).toContain('Lucas')
+    expect(header.querySelector('.app-title')?.textContent).toBe('ERP Eleven, Lucas')
     const nav = header.querySelector('nav')!
     expect(nav.getAttribute('aria-label')).toBe(i18n.global.t('access.navigation'))
     expect(Array.from(nav.querySelectorAll('a')).map(a => a.getAttribute('href'))).toEqual(['/conta', '/usuarios', '/auditoria'])
     expect(nav.querySelector('button')?.textContent).toContain('Sair')
-    expect(header.querySelector('.header-tools .currency-selector-group')).not.toBeNull()
+    expect(header.querySelector('.header-preferences .currency-selector-group')).not.toBeNull()
     expect(header.querySelector('.current-time')?.textContent?.trim()).not.toBe('')
   })
 

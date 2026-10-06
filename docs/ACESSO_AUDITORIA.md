@@ -7,8 +7,10 @@ da loja. Denis, Sol e Junior têm acesso operacional aos módulos, mas consultam
 somente suas próprias vendas. A tela de usuários, disponível para Lucas, permite
 cadastrar contas, ativar/desativar, alterar vínculos e redefinir senha temporária.
 
-No dashboard, Minha conta, Usuários, Auditoria, Sair e o seletor de idioma ficam
-no cabeçalho original, junto à saudação. As demais telas mantêm a barra de navegação;
+No dashboard, Minha conta, Usuários, Auditoria e Sair ficam no cabeçalho original,
+com o título “ERP Eleven, NOME” do usuário conectado. Moeda, idioma com bandeira
+e cotações ocupam uma linha compacta, tanto no celular quanto no desktop.
+As demais telas mantêm a barra de navegação;
 Usuários e Auditoria aparecem somente para Lucas. O comportamento da sessão e as
 permissões continuam iguais em ambos os lugares.
 

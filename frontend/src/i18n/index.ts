@@ -36,9 +36,9 @@ export const i18n = createI18n({
 if (typeof document !== 'undefined') document.documentElement.lang = i18n.global.locale.value
 
 export const availableLocales = [
-  { code: 'en', name: 'English', flag: 'US' },
-  { code: 'es', name: 'Español', flag: 'ES' },
-  { code: 'pt', name: 'Português (BR)', flag: 'BR' }
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Español', flag: '🇵🇾' },
+  { code: 'pt', name: 'Português (BR)', flag: '🇧🇷' }
 ]
 
 export const setLocale = (locale: string) => {

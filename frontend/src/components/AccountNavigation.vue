@@ -14,27 +14,19 @@
         <button type="button" @click="logoutToLogin(auth, router)"><LogOut aria-hidden="true" />{{ $t('common.logout') }}</button>
       </div>
     </template>
-    <label class="locale-control">
-      <Globe aria-hidden="true" />
-      <span v-if="!embedded">{{ $t('access.language') }}</span>
-      <select :aria-label="$t('access.language')" :value="locale" @change="setLocale(($event.target as HTMLSelectElement).value)">
-        <option v-for="lang in availableLocales" :key="lang.code" :value="lang.code">{{ lang.name }}</option>
-      </select>
-    </label>
+    <LanguageSelector v-if="!hideLanguage" :hide-label="embedded" />
   </nav>
 </template>
 
 <script setup lang="ts">
 import { RouterLink, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { Globe, LogOut, ShieldCheck, UserRound, UsersRound } from 'lucide-vue-next'
+import { LogOut, ShieldCheck, UserRound, UsersRound } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { availableLocales, setLocale } from '@/i18n'
+import LanguageSelector from '@/components/LanguageSelector.vue'
 import { logoutToLogin } from '@/services/logoutNavigation'
 
-defineProps<{ embedded?: boolean }>()
+defineProps<{ embedded?: boolean; hideLanguage?: boolean }>()
 const auth = useAuthStore(), router = useRouter()
-const { locale } = useI18n()
 </script>
 
 <style scoped>
@@ -48,8 +40,6 @@ const { locale } = useI18n()
 .account-links a.router-link-active { color: #1d4ed8; background: #eff6ff; border-color: #dbeafe; }
 .account-links a:focus-visible, .account-links button:focus-visible, select:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .account-navigation svg { width: 15px; height: 15px; flex: 0 0 15px; }
-.locale-control { display: inline-flex; align-items: center; gap: .45rem; margin-left: auto; }
-.locale-control select { min-height: 36px; max-width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: .4rem .5rem; background: #fff; color: #334155; font: inherit; cursor: pointer; }
 .account-navigation-embedded { justify-content: flex-end; gap: .5rem; }
 .account-navigation-embedded .locale-control { margin-left: 0; }
 @media (max-width: 600px) {
@@ -57,6 +47,5 @@ const { locale } = useI18n()
   .account-links a, .account-links button { min-height: 40px; padding: .5rem; }
   .account-navigation-embedded { width: 100%; justify-content: space-between; }
   .account-navigation-embedded .account-links { gap: .15rem; }
-  .locale-control select { min-height: 40px; }
 }
 </style>
