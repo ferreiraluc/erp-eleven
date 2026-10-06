@@ -142,3 +142,18 @@ somente em viewport emulada.
   QA local encerrado, abas temporárias fechadas e viewport restaurada.
   Consumo após publicação: 38% usado (62% restante). Antes da próxima ação,
   consultar novamente o limite; ao atingir 39%, pausar a automação.
+
+## Encerramento preventivo — 02h00
+
+- Nova consulta de uso retornou 39% semanal consumido (61% restante), atingindo
+  o limiar preventivo. Nenhuma nova implementação foi iniciada nesta rodada.
+- Automação `melhorar-ui-do-erp-nesta-madrugada` confirmada como PAUSED; os dois
+  agentes já estavam concluídos, sem trabalho em execução.
+- Variação observada desde o início: aproximadamente dez pontos percentuais da
+  cota compartilhada da conta. Esse indicador inclui outras tarefas da conta e
+  não permite atribuir todo o consumo exclusivamente a esta revisão.
+- Três rodadas publicadas e validadas. Pendências para futura retomada: atalhos
+  de pedido para rastreio, paginação real de pedidos e paginação de clientes
+  acima de 200 registros. Não há promessa de conclusão de toda a revisão.
+- Nenhuma compra de créditos ou uso de reset. Arquivo de teste preexistente não
+  rastreado preservado; encerramento altera somente este diário.
