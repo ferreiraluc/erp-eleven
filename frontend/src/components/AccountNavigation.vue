@@ -46,6 +46,9 @@ const auth = useAuthStore(), router = useRouter()
   .account-bar { padding: .5rem .75rem; gap: .5rem; }
   .account-links a, .account-links button { min-height: 40px; padding: .5rem; }
   .account-navigation-embedded { width: 100%; justify-content: center; }
-  .account-navigation-embedded .account-links { justify-content: center; gap: .25rem; }
+  .account-navigation-embedded .account-links { justify-content: center; flex-wrap: nowrap; gap: .25rem; width: 100%; }
+  .account-navigation-embedded .account-links a,
+  .account-navigation-embedded .account-links button { min-height: 36px; padding: .35rem .25rem; }
+  .account-navigation-embedded .account-links svg { display: none; }
 }
 </style>

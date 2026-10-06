@@ -20,6 +20,7 @@ O [README principal](../README.md) apresenta o sistema e os comandos essenciais.
 | [Impressão Windows](IMPRESSAO_WINDOWS.md) | Instalar e operar o agente na máquina da loja |
 | [BI de vendas](sales-bi.md) | Interpretar totais, cobertura, correções e sincronização OneDrive |
 | [Auditoria de manutenção](AUDITORIA_MANUTENCAO.md) | Evidências de limpeza e pendências técnicas |
+| [Revisão de UX de 06/10](REVISAO_UX_2026-10-06.md) | Rodadas de revisão, evidências e melhorias pendentes |
 | [Histórico](archive/README.md) | Entender decisões antigas; não é um manual de instalação |
 
 Não duplicar listas detalhadas de endpoints em vários arquivos. O contrato

@@ -31,6 +31,11 @@ O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.
 | Assistente | Linguagem natural, ferramentas autorizadas, memória confirmada e botões Telegram | Mensagem comum ou texto de terceiros não é autorização para executar |
 | Acesso/auditoria | Sessões revogáveis, contas individuais, troca de senha e atividade por usuário | Só Lucas administra usuários e consulta auditoria; vendas pessoais são filtradas no backend |
 
+Em **Vendedores**, falhas ao carregar a lista permitem tentar novamente; uma busca
+sem resultado oferece limpar os filtros. Ativar ou inativar informa o andamento e
+eventuais erros na linha do vendedor, bloqueando alterações repetidas enquanto a
+solicitação está em andamento. O estado exibido muda após a resposta do servidor.
+
 ## Endereços e documentos
 
 - A4 comum, uma cópia por solicitação. PY usa somente os dados enviados, sem remetente nem exigência de rua.

@@ -99,11 +99,12 @@
                 <h3 class="inv-title">{{ $tr("Estoque") }}</h3>
               </div>
               <div class="inv-header-actions" @click.stop>
-                <button class="inv-add-btn erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")'>
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
+                <button class="inv-add-btn erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")' :aria-label='$tr("Novo produto")'>
+                  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                   </svg>
-                  {{ $tr("Novo produto") }}
+                  <span class="inv-add-label">{{ $tr("Novo produto") }}</span>
+                  <span class="inv-add-label-short" aria-hidden="true">{{ $tr("Novo") }}</span>
                 </button>
                 <router-link to="/inventory" class="inv-link-all" @click.stop>{{ $tr("Ver tudo →") }}</router-link>
               </div>
@@ -841,6 +842,7 @@ onUnmounted(() => {
   transition: background 0.15s;
 }
 .inv-add-btn:hover { background: #dcfce7; }
+.inv-add-label-short { display: none; }
 
 .inv-link-all {
   font-size: 0.8rem;
@@ -2509,9 +2511,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .header-content { padding: .75rem; gap: .65rem; }
-  .header-left { flex-shrink: 1; }
-  .header-right { flex: 1 1 100%; align-items: stretch; }
+  .header-content { padding: .5rem .75rem; gap: .25rem; }
+  .header-left { flex-shrink: 1; max-width: 100%; }
+  .header-left .app-logo { flex-shrink: 0; }
+  .app-info { min-width: 0; }
+  .app-title { overflow-wrap: anywhere; }
+  .header-right { flex: 1 1 100%; align-items: stretch; gap: .25rem; }
   .header-tools { justify-content: center; }
   .header-preferences { gap: .625rem; }
   .compact-exchange { gap: .3rem; padding-inline: .3rem; }
@@ -2673,6 +2678,8 @@ onUnmounted(() => {
 }
 
 @media (max-width: 360px) {
+  .inv-add-label { display: none; }
+  .inv-add-label-short { display: inline; }
   .header-preferences { gap: .375rem; }
   .preference-button { padding-inline: .35rem; gap: .25rem; font-size: .6875rem; }
   .compact-exchange { font-size: .625rem; }
@@ -2805,12 +2812,13 @@ onUnmounted(() => {
     gap: 0.3rem;
     margin-left: auto;
   }
-  .inv-add-btn {
-    font-size: 0.68rem;
-    padding: 0.2rem 0.45rem;
+  :is(#app, body) .inv-add-btn.erp-button--sm {
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.45rem;
     gap: 0.2rem;
+    white-space: nowrap;
   }
-  .inv-add-btn svg { width: 11px; height: 11px; }
+  :is(#app, body) .inv-add-btn.erp-button--sm > svg { width: 12px; height: 12px; }
   .inv-link-all {
     font-size: 0.68rem;
     padding: 0.2rem 0.45rem;

@@ -110,13 +110,19 @@
           <p>{{ $tr("Carregando vendedores...") }}</p>
         </div>
         
+        <div v-else-if="loadError" class="empty-state load-error" role="alert">
+          <p>{{ activityT('loadVendorsError') }}</p>
+          <button @click="loadVendors" class="erp-button erp-button--secondary">{{ activityT('retry') }}</button>
+        </div>
+
         <div v-else-if="filteredVendors.length === 0" class="empty-state">
           <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           <h3>{{ $tr("Nenhum vendedor encontrado") }}</h3>
-          <p>{{ currentFilter === 'all' ? uiText(`Cadastre seu primeiro vendedor`) : uiText(`Nenhum vendedor corresponde aos filtros aplicados`) }}</p>
-          <button v-if="currentFilter === 'all'" @click="openCreateModal" class="create-button erp-button erp-button--primary">
+          <p>{{ hasFilters ? uiText(`Nenhum vendedor corresponde aos filtros aplicados`) : uiText(`Cadastre seu primeiro vendedor`) }}</p>
+          <button v-if="hasFilters" @click="clearFilters" class="erp-button erp-button--secondary">{{ uiText(`Limpar Filtros`) }}</button>
+          <button v-else @click="openCreateModal" class="create-button erp-button erp-button--primary">
             {{ $tr("Cadastrar Vendedor") }}
           </button>
         </div>
@@ -164,7 +170,7 @@
                 <td class="actions-column">
                   <div class="action-buttons">
                     <button class="erp-button erp-button--secondary erp-button--sm" @click="activityVendor=vendor">{{ activityT('activity') }}</button>
-                    <button @click="editVendor(vendor)" class="action-button edit erp-button erp-button--ghost erp-button--icon">
+                    <button @click="editVendor(vendor)" :disabled="pendingVendorIds.has(vendor.id)" class="action-button edit erp-button erp-button--ghost erp-button--icon">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
@@ -172,6 +178,10 @@
                     <button class="erp-button erp-button--ghost erp-button--icon"
                       @click="toggleVendorStatus(vendor)" 
                       :class="['action-button', vendor.ativo ? 'deactivate' : 'activate']"
+                      :disabled="pendingVendorIds.has(vendor.id)"
+                      :aria-busy="pendingVendorIds.has(vendor.id)"
+                      :aria-label="activityT(vendor.ativo ? 'deactivateVendor' : 'activateVendor', { name: vendor.nome })"
+                      :title="activityT(vendor.ativo ? 'deactivateVendor' : 'activateVendor', { name: vendor.nome })"
                     >
                       <svg v-if="vendor.ativo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
@@ -181,6 +191,8 @@
                       </svg>
                     </button>
                   </div>
+                  <p v-if="pendingVendorIds.has(vendor.id)" class="status-feedback" role="status">{{ uiText(`Salvando...`) }}</p>
+                  <p v-else-if="statusErrors[vendor.id]" class="status-feedback status-error" role="alert">{{ activityT('statusUpdateError') }}</p>
                 </td>
               </tr>
             </tbody>
@@ -316,6 +328,9 @@ const activityVendor=ref<VendorResponse|null>(null)
 // Reactive data
 const vendors = ref<VendorResponse[]>([])
 const isLoading = ref(false)
+const loadError = ref(false)
+const pendingVendorIds = ref(new Set<string>())
+const statusErrors = ref<Record<string, boolean>>({})
 const showModal = ref(false)
 const isEditing = ref(false)
 const isSubmitting = ref(false)
@@ -338,6 +353,7 @@ const form = ref<VendorCreate & { id?: string }>({
 const activeVendors = computed(() => vendors.value.filter(v => v.ativo).length)
 const inactiveVendors = computed(() => vendors.value.filter(v => !v.ativo).length)
 const totalVendors = computed(() => vendors.value.length)
+const hasFilters = computed(() => currentFilter.value !== 'all' || !!searchQuery.value.trim())
 
 const filteredVendors = computed(() => {
   let filtered = vendors.value
@@ -351,7 +367,7 @@ const filteredVendors = computed(() => {
 
   // Filter by search query
   if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase()
+    const query = searchQuery.value.trim().toLowerCase()
     filtered = filtered.filter(v => 
       v.nome.toLowerCase().includes(query) ||
       v.telefone?.toLowerCase().includes(query)
@@ -362,19 +378,28 @@ const filteredVendors = computed(() => {
 })
 
 // Methods
+let loadSequence = 0
 const loadVendors = async () => {
+  const sequence = ++loadSequence
   try {
     isLoading.value = true
-    vendors.value = await vendorsAPI.getAll()
-  } catch (error) {
-    console.error('Error loading vendors:', error)
+    loadError.value = false
+    const result = await vendorsAPI.getAll()
+    if (sequence === loadSequence) vendors.value = result
+  } catch {
+    if (sequence === loadSequence) loadError.value = true
   } finally {
-    isLoading.value = false
+    if (sequence === loadSequence) isLoading.value = false
   }
 }
 
 const setFilter = (filter: 'all' | 'active' | 'inactive') => {
   currentFilter.value = filter
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  currentFilter.value = 'all'
 }
 
 const openCreateModal = () => {
@@ -444,11 +469,17 @@ const submitForm = async () => {
 }
 
 const toggleVendorStatus = async (vendor: VendorResponse) => {
+  if (pendingVendorIds.value.has(vendor.id)) return
+  pendingVendorIds.value.add(vendor.id)
+  delete statusErrors.value[vendor.id]
   try {
-    await vendorsAPI.update(vendor.id, { ativo: !vendor.ativo })
-    await loadVendors()
-  } catch (error) {
-    console.error('Error toggling vendor status:', error)
+    const updated = await vendorsAPI.update(vendor.id, { ativo: !vendor.ativo })
+    const index = vendors.value.findIndex(item => item.id === vendor.id)
+    if (index !== -1) vendors.value[index] = updated
+  } catch {
+    statusErrors.value[vendor.id] = true
+  } finally {
+    pendingVendorIds.value.delete(vendor.id)
   }
 }
 
@@ -843,6 +874,17 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   gap: 0.5rem;
+}
+
+.status-feedback {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.status-error,
+.load-error p {
+  color: #b91c1c;
 }
 
 .action-button {
