@@ -42,11 +42,11 @@ def compatible_person(customer, data):
     return not (doc and old_doc and doc != old_doc)
 
 
-def find_customer(db, data):
+def find_customer(db, data, *, customers=None):
     name = name_key(data.get('nome'))
     phone = phone_key(data.get('telefone'), data.get('pais'))
     doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
-    customers = db.query(Cliente).all()
+    customers = db.query(Cliente).all() if customers is None else customers
     named = [c for c in customers if name and name_key(c.nome) == name]
     same_person = lambda c: bool(name and (name_key(c.nome) == name or set(name.split()).issubset(name_key(c.nome).split())))
     documented = [c for c in customers if doc and document_key(c.cpf) == doc]
@@ -104,6 +104,6 @@ def ensure_customer(db, row):
     return True
 
 
-def match_recipient(db, name, phone=None, email=None):
-    customer, reason, _ = find_customer(db, {'nome': name, 'telefone': phone, 'email': email})
+def match_recipient(db, name, phone=None, email=None, *, customers=None):
+    customer, reason, _ = find_customer(db, {'nome': name, 'telefone': phone, 'email': email}, customers=customers)
     return customer if customer and customer.ativo else None

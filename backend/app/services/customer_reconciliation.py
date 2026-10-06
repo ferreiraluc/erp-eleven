@@ -10,10 +10,10 @@ from .customer_links import validate_order_customer, inherit_order_customer, val
 from .user_audit import record
 
 
-def auto_link_tracking(db, row):
+def auto_link_tracking(db, row, *, customers=None):
     if row.cliente_id: return False
     order = db.get(Pedido, row.pedido_id) if row.pedido_id else None
-    customer = db.get(Cliente, order.cliente_id) if order and order.cliente_id else match_recipient(db, row.destinatario)
+    customer = db.get(Cliente, order.cliente_id) if order and order.cliente_id else match_recipient(db, row.destinatario, customers=customers)
     if not customer: return False
     validate_tracking_links(db, pedido_id=row.pedido_id, cliente_id=customer.id, allow_inactive_customer=True)
     row.cliente_id = customer.id
@@ -33,9 +33,10 @@ def reconcile(db):
         if row.customer_link_review:
             result['address_reviews'].append({'id': str(row.id), 'reason': row.customer_link_reason})
     db.flush()
+    customers = db.query(Cliente).all()
     for row in db.query(Pedido).order_by(Pedido.id).with_for_update():
         if not row.cliente_id:
-            customer = match_recipient(db, row.cliente_nome, row.cliente_telefone, row.cliente_email)
+            customer = match_recipient(db, row.cliente_nome, row.cliente_telefone, row.cliente_email, customers=customers)
             if customer:
                 try: validate_order_customer(db, row, customer.id)
                 except HTTPException:
@@ -46,7 +47,7 @@ def reconcile(db):
             except HTTPException: result['order_reviews'].append(str(row.id))
     db.flush()
     for row in db.query(Rastreamento).filter_by(cliente_id=None).order_by(Rastreamento.id).with_for_update():
-        auto_link_tracking(db, row)
+        auto_link_tracking(db, row, customers=customers)
         if row.cliente_id:
             result['tracking_linked'] += 1
             if db.info.get('audit_actor'):
