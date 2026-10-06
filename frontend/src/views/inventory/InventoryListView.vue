@@ -239,7 +239,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
       <p>{{ tr('Nenhum item encontrado') }}</p>
-      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem;">{{ tr('Criar primeiro item') }}</button>
+      <button v-if="hasActiveFilters" @click="clearItemFilters" class="btn btn-secondary erp-button erp-button--secondary" style="margin-top:1rem;">{{ tr('Limpar Filtros') }}</button>
+      <button v-else @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem;">{{ tr('Novo item') }}</button>
     </div>
 
     <!-- Items list -->
@@ -812,6 +813,26 @@ function toggleExpand(groupKey: string) {
 }
 
 const filterUngroupedOnly = ref(false)
+const hasActiveFilters = computed(() => !!searchQuery.value.trim() || filterUngroupedOnly.value ||
+  Object.values(inventoryStore.filters).some(value => !!value))
+
+function clearItemFilters() {
+  searchQuery.value = ''
+  activeStatus.value = ''
+  filterBrand.value = ''
+  filterCategory.value = ''
+  filterLocation.value = ''
+  filterUngroupedOnly.value = false
+  brandSearch.value = ''
+  categorySearch.value = ''
+  openFilter.value = null
+  Object.assign(inventoryStore.filters, {
+    search: '', status: '', category: '', brand: '', location: '', size: '', color: '', location_stock: '',
+  })
+  if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
+  reloadItems()
+  if (groupMode.value) loadGroupsFiltered()
+}
 
 /** Reloads items always respecting the current groupMode (ungrouped_only when in group mode or when filterUngroupedOnly is active) */
 function reloadItems(page = 1, append = false) {
@@ -1198,6 +1219,7 @@ watch(searchQuery, (val) => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     const trimmed = val.trim()
+    if (trimmed === inventoryStore.filters.search) return
     inventoryStore.filters.search = trimmed
     if (groupMode.value) {
       Promise.all([loadGroupsFiltered(), inventoryStore.loadItems(1, false, true)])
@@ -1397,6 +1419,7 @@ function onDocClick(e: MouseEvent) {
 
 onUnmounted(() => {
   diagnosticOpenGeneration++
+  if (searchTimer) clearTimeout(searchTimer)
   scrollObserver?.disconnect()
   document.removeEventListener('click', onDocClick)
 })

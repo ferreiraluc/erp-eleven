@@ -7,12 +7,13 @@ import type { InventoryItem } from '@/services/api'
 const mocks = vi.hoisted(() => ({
   diagnostics: vi.fn(), getItem: vi.fn(), getGroups: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn(),
   listItems: [] as InventoryItem[], loadItems: vi.fn(), loadAlerts: vi.fn(), listError: null as string | null,
+  listFilters: {} as Record<string, string>,
 }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
 vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { get: mocks.diagnostics } }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
   getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues }, ocrAPI: {} }))
-vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: {}, alerts: null, loading: false, error: mocks.listError,
+vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: mocks.listFilters, alerts: null, loading: false, error: mocks.listError,
   pagination: { page: 1, total_pages: 1 }, loadItems: mocks.loadItems, loadAlerts: mocks.loadAlerts }) }))
 vi.mock('@/components/inventory/ItemFormModal.vue', () => ({ default: {
   props: ['item'], emits: ['close'], render(this: { item: { id: string } }) { return h('div', { 'data-editor-id': this.item?.id }, 'Existing product editor') },
@@ -39,7 +40,7 @@ async function openPanel() {
 beforeEach(() => {
   vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} unobserve() {} })
   localStorage.clear()
-  mocks.listError = null; mocks.listItems = []
+  mocks.listError = null; mocks.listItems = []; mocks.listFilters = {}
   mocks.getGroups.mockResolvedValue([]); mocks.getSuppliers.mockResolvedValue([])
   mocks.getDistinctValues.mockResolvedValue({ brands: [], categories: [] })
   mocks.loadItems.mockResolvedValue(undefined); mocks.loadAlerts.mockResolvedValue(undefined)
@@ -49,7 +50,40 @@ beforeEach(() => {
     items: [{ id: 'known-item', name: 'Fixture', sku_internal: 'ITEM-1', barcode: null, normalized_barcode: null, brand: null, size: null, color: null,
       current_stock: 2, stock_loja: 1, stock_deposito: 0, expected_stock: 1, delta: 1, issues: ['stock_mismatch'], duplicate_count: 0 }] })
 })
-afterEach(() => { app?.unmount(); container?.remove(); vi.resetAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { app?.unmount(); container?.remove(); vi.useRealTimers(); vi.resetAllMocks(); vi.unstubAllGlobals() })
+
+describe('Inventory empty search recovery', () => {
+  it('clears an unmatched search and combined filters once, without opening a product form', async () => {
+    mocks.listFilters = { brand: 'Fixture', category: 'shirts', location_stock: 'loja', status: 'low_stock' }
+    await mount()
+    vi.useFakeTimers()
+    const search = container.querySelector<HTMLInputElement>('.search-input')!
+    search.value = 'no-match'; search.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick(); await vi.advanceTimersByTimeAsync(300)
+    expect(container.querySelector('.empty-state')?.textContent).toContain('Limpar Filtros')
+    expect(container.querySelector('.empty-state')?.textContent).not.toContain('Criar primeiro item')
+    const before = mocks.loadItems.mock.calls.length
+    button('Limpar Filtros').click()
+    await nextTick(); await vi.advanceTimersByTimeAsync(300)
+    expect(search.value).toBe('')
+    expect(Object.values(mocks.listFilters).every(value => value === '')).toBe(true)
+    expect(mocks.loadItems).toHaveBeenCalledTimes(before + 1)
+    expect(mocks.loadItems).toHaveBeenLastCalledWith(1, false, false)
+    expect(container.querySelector('[data-editor-id]')).toBeNull()
+  })
+
+  it('preserves grouped view when resetting filters and offers normal creation for an unfiltered empty list', async () => {
+    localStorage.setItem('inv_group_mode', 'true')
+    mocks.listFilters = { search: 'no-match' }
+    await mount()
+    button('Limpar Filtros').click()
+    await nextTick()
+    expect(mocks.loadItems).toHaveBeenLastCalledWith(1, false, true)
+    expect(mocks.getGroups).toHaveBeenLastCalledWith({})
+    expect(localStorage.getItem('inv_group_mode')).toBe('true')
+    expect(container.querySelector('.empty-state')?.textContent).not.toContain('Criar primeiro item')
+  })
+})
 
 describe('Inventory diagnostics entry point', () => {
   it('shows a translated recoverable list error instead of an empty inventory and keeps diagnostics available', async () => {

@@ -1,5 +1,12 @@
 # Estoque e leitura de etiquetas
 
+## Busca no catálogo
+
+Uma busca ou filtro sem correspondências oferece **Limpar Filtros**, removendo
+texto, status, marca, categoria, local e seleção de itens sem grade. O modo de
+visualização e agrupamento é preservado. Uma lista vazia sem filtros permite
+**Novo item**, sem afirmar que não existem outros produtos fora da seleção.
+
 ## Leitura revisável com IA
 
 No formulário de produto, **Conferir etiqueta com IA** aceita câmera ou arquivo

@@ -82,10 +82,10 @@ Confirmar o problema no navegador e limitar o trabalho antes de implementar:
 3. Pedidos: `filteredPedidos` é renderizado inteiro e Próxima só muda `currentPage`;
    consulta inicial limitada a 100 pela API. Resolver paginação/filtros de forma
    coerente para o conjunto todo, sem simplesmente paginar os primeiros 100.
-4. Estoque: busca sem resultados oferece Criar primeiro item mesmo com sete
+4. **Resolvido na rodada 2.** Estoque: busca sem resultados oferecia Criar primeiro item mesmo com sete
    produtos existentes. `InventoryListView.vue`, vazio próximo à linha 241.
    Diferenciar filtros sem correspondências de catálogo vazio; oferecer limpar busca.
-5. Endereços: busca sem resultados oferece Nenhum endereço aqui ainda/Cadastrar
+5. **Resolvido na rodada 2.** Endereços: busca sem resultados oferecia Nenhum endereço aqui ainda/Cadastrar
    endereço e paginação 1–0 de 0. `AddressesView.vue`, início do template.
    Mostrar ausência de correspondência e intervalo correto para zero resultados.
 
@@ -94,3 +94,24 @@ Preservar o arquivo preexistente não rastreado
 Registrar abaixo cada rodada: evidência, arquivos, testes, commit/deploy, consumo
 e pendências. Não declarar UI perfeita nem dispositivo físico testado com base
 somente em viewport emulada.
+
+## Rodada 2 — buscas vazias (00h09–00h15)
+
+- Consumo inicial 33%; medição após implementação 35% usado (65% restante).
+- Estoque: busca/filtros sem correspondências permitem Limpar Filtros; lista vazia
+  sem filtros oferece Novo item. Reset limpa os filtros, conserva visualização/
+  agrupamento e não abre formulário. Debounce não repete a consulta ao limpar e é
+  cancelado ao desmontar a tela.
+- Endereços: diferencia busca aplicada de primeiro cadastro; limpa os filtros
+  explicitamente e retorna aos ativos. Paginação vazia é 0–0 de 0, e a faixa não
+  ultrapassa a quantidade real de itens retornados. Textos em PT/ES/EN.
+- QA local: estoque com sete produtos → busca vazia → limpar → sete produtos;
+  agenda com um endereço → busca vazia → limpar → um endereço e faixa 1–1 de 1.
+  Sem cadastro, impressão, compra, sync ou alteração de dados da loja.
+- Estoque validado em 384px; agenda em 320/384/768/1280px sem overflow horizontal,
+  com botão de recuperação dentro da largura disponível.
+- 173 testes passaram em 29 arquivos; type-check, build e diff-check passaram.
+  Casos novos cobrem filtros combinados, preservação de agrupamento, consulta
+  única ao limpar, catálogo realmente vazio, traduções e parâmetros da agenda.
+- Próxima prioridade: itens 1–3 acima (navegação de rastreio, filtro de clientes,
+  paginação real de pedidos). Não repetir os itens 4–5 resolvidos.

@@ -12,6 +12,10 @@ A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDF
 
 ## Frontend
 
+A agenda diferencia um cadastro vazio de uma consulta sem correspondências. Quando
+uma busca ou filtro não encontra endereços, **Limpar filtros** restaura a consulta de
+ativos, de todos os países e clientes. A paginação sem resultados mostra **0–0 de 0**.
+
 1. Cadastre endereço brasileiro completo e remetente com dados estruturados.
 2. No endereço, clique em **Frete**. Informe peso em kg, medidas em cm e conteúdo real. Informe a chave da nota fiscal ou selecione declaração de conteúdo quando o envio for não comercial.
 3. Faça a cotação e selecione um dos serviços disponíveis: PAC, SEDEX ou Mini Envios.
