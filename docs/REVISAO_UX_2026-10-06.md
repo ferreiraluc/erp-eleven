@@ -62,7 +62,12 @@ testes de componente com mocks. Não interromper servidores sem verificar quem o
   foi classificado como defeito persistente.
 - Validação: 168 testes em 28 arquivos passaram, type-check/build e diff-check.
   Build conserva aviso anterior de importação estática/dinâmica de `api.ts`.
-- Última medição intermediária: 30% usado, 70% restante.
+- Publicação: commit `8686d8e`, frontend Render confirmado Live às 00h06;
+  deploy `dep-db26atk9v7es7385ruvg`. CI de código: execução `37407324766`.
+- Consumo ao concluir o código: 33% usado, 67% restante; incremento de quatro
+  pontos desde o início, incluindo os dois agentes da revisão inicial.
+- Servidores locais de QA encerrados após validar; reiniciar conforme os comandos
+  acima na próxima rodada. Abas temporárias fechadas e viewport restaurada.
 
 ## Próximas correções candidatas
 
