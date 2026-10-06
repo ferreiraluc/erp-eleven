@@ -391,7 +391,8 @@ def test_full_model_tool_round_trip_creates_only_draft(setup, monkeypatch):
         assert "Já lancei" not in answer
         assert db.query(AssistantNote).one().status == "draft"
         assert tools.search_memory(db, "João") == []
-        assert captured[1][-1]["role"] == "tool"
+        # The server returns the persisted draft without another model response.
+        assert len(captured) == 1
 
 
 def test_provider_rate_limit_retries_but_crashed_sending_is_uncertain(setup, monkeypatch):

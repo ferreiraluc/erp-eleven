@@ -10,6 +10,24 @@ def normalized(value):
     return ' '.join(re.sub(r'[^\w\s]', ' ', ''.join(c for c in unicodedata.normalize('NFKD', value.casefold()) if not unicodedata.combining(c))).split())
 
 
+def offers_preview(value):
+    """Recognize prose that promises a confirmable action, including copied A4 text."""
+    plain = re.sub(r'[*_`]', '', value)
+    return bool(re.search(
+        r'\b(?:pr[ée]via|rascunho)[^\n]{0,60}:|'
+        r'\bconfirma(?:r|rmos|[rm]?[eo]s?)?\s+(?:o|a|esse|este|essa|esta|seu|sua)\s+'
+        r'(?:cadastro|registro|folga|ocorr[êe]ncia|impress[aã]o|envio|etiqueta|pagamento)|'
+        r'\b(?:aguardando|aguardo)\s+(?:a\s+)?(?:sua\s+)?confirma[çc][ãa]o',
+        plain, re.I,
+    ) or re.search(
+        r'\b(?:diga|digite|responda|escreva|envie)\s+(?:sim\s+)?confirm(?:o|ar|a|e)\b|'
+        r'\bconfirm(?:a|e|ar)\s+para\s+(?:enviar|imprimir|cadastrar|salvar|emitir|pagar)\b|'
+        r'\bprevia valida (?:por|ate)\b|'
+        r'\bimprimir endereco em a4\b',
+        normalized(plain),
+    ))
+
+
 class InteractiveReply(str):
     def __new__(cls, text, rows, document_url=None):
         result = super().__new__(cls, text)

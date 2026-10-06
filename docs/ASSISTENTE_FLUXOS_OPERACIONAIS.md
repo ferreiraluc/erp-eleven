@@ -1,6 +1,6 @@
 # Fluxos operacionais do assistente
 
-Atualização de 01/10/2026, conforme os fluxos implementados e testes isolados.
+Atualização de 05/10/2026, conforme os fluxos implementados e testes isolados.
 
 ## Rastreios de clientes
 
@@ -13,6 +13,14 @@ Um destinatário identificado recebe cada código em uma mensagem isolada, segui
 Continuações usam somente o histórico do próprio autor no canal/conversa. Cadastros e memória confirmada continuam compartilhados conforme as permissões. Não se reaproveitam dados de outro funcionário. Dados históricos de pacote/declaração são referência, não padrão automático para novos envios.
 
 Cotações só são apresentadas após uma operação real persistida. Escolhas curtas como “2” se vinculam à última cotação mostrada ao autor; botões identificam a cotação exata. Consultas de PDF/etiquetas não são substituídas por uma resposta de rastreio apenas porque apareceu um código.
+
+## Prévias de impressão e confirmação
+
+Depois de um pedido de impressão, enviar somente os dados do destinatário continua o pedido na mesma conversa. Para PY, use os dados disponíveis, sem exigir rua, remetente ou documento; RUC/C.I é opcional.
+
+A confirmação é vinculada a uma solicitação persistida. O servidor devolve sua prévia com **Imprimir** e **Cancelar** assim que a ferramenta a prepara, sem outra chamada à IA para reescrever o resultado. Respostas em texto que imitam a prévia A4 ou pedem “diga confirmo” sem criar essa solicitação são retidas e encaminhadas novamente à preparação. Essas prévias inválidas antigas deixam de servir como exemplo no contexto da IA, preservando os dados enviados pelo autor e o histórico original no ERP.
+
+“Confirmo” executa uma única prévia pendente do próprio autor, na mesma conversa, válida por 24 horas. Havendo várias, o bot mostra botões para escolher ou aceita “confirmar impressão NOME”; não seleciona silenciosamente outra impressão ou um pagamento. O botão identifica a solicitação exata, e repetir a confirmação não duplica o trabalho. Se a ferramenta não conseguir preparar a solicitação, o bot informa a falha sem oferecer uma confirmação sem efeito. Corrigir o fluxo não reenvia impressões antigas.
 
 ## Comprovantes dos Correios em foto
 
