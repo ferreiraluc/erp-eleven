@@ -2,9 +2,9 @@
   <div class="receipt-overlay" @click.self="$emit('close')">
     <div class="receipt-modal">
       <div class="receipt-actions no-print">
-        <button class="receipt-btn-print" @click="printReceipt">{{ uiText(`🖨 Imprimir`) }}</button>
-        <button class="receipt-btn-pdf" @click="savePDF">{{ uiText(`📄 Salvar PDF`) }}</button>
-        <button class="receipt-btn-close" @click="$emit('close')">{{ uiText(`Fechar`) }}</button>
+        <button class="receipt-btn-print erp-button erp-button--primary" @click="printReceipt">{{ uiText(`🖨 Imprimir`) }}</button>
+        <button class="receipt-btn-pdf erp-button erp-button--secondary" @click="savePDF">{{ uiText(`📄 Salvar PDF`) }}</button>
+        <button class="receipt-btn-close erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Fechar`) }}</button>
       </div>
 
       <!-- Receipt body (printable) -->

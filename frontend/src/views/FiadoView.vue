@@ -2,8 +2,8 @@
   <div class="fiado-root">
     <div class="fiado-header">
       <div class="fiado-title-row">
-        <h1 class="fiado-title">{{ $tr("📒 Caderno de Fiado") }}</h1>
-        <button class="fiado-btn-new" @click="openNewClient">{{ $tr("+ Novo cliente") }}</button>
+        <h1 class="fiado-title">{{ $tr("Pagadores") }}</h1>
+        <button class="fiado-btn-new erp-button erp-button--primary" @click="openNewClient">{{ $tr("+ Novo cliente") }}</button>
       </div>
       <p class="fiado-subtitle">{{ $tr("Controle de contas a receber de clientes atacadistas") }}</p>
 
@@ -60,7 +60,7 @@
 
     <div v-else-if="!loading" class="fiado-empty">
       <p>{{ search ? uiText(`Nenhum cliente encontrado`) : uiText(`Nenhum cliente cadastrado`) }}</p>
-      <button class="fiado-btn-new" @click="openNewClient">{{ $tr("+ Adicionar primeiro cliente") }}</button>
+      <button class="fiado-btn-new erp-button erp-button--primary" @click="openNewClient">{{ $tr("+ Adicionar primeiro cliente") }}</button>
     </div>
 
     <!-- Client detail modal -->
@@ -72,7 +72,7 @@
             <p v-if="selectedClient.doc" class="fiado-detail-meta">{{ selectedClient.doc }}</p>
             <p v-if="selectedClient.telefone" class="fiado-detail-meta">{{ selectedClient.telefone }}</p>
           </div>
-          <button class="fiado-detail-close" @click="selectedClient = null">×</button>
+          <button class="fiado-detail-close erp-button erp-button--ghost erp-button--icon" @click="selectedClient = null">×</button>
         </div>
 
         <div class="fiado-detail-balance">
@@ -95,7 +95,7 @@
               />
             </div>
             <input v-model="paymentNotes" type="text" :placeholder='$tr("Observações (opcional)")' class="fiado-payment-notes" />
-            <button class="fiado-payment-btn" @click="recordPayment" :disabled="!paymentAmount || payingLoading">
+            <button class="fiado-payment-btn erp-button erp-button--primary" @click="recordPayment" :disabled="!paymentAmount || payingLoading">
               {{ payingLoading ? '…' : uiText(`Confirmar`) }}
             </button>
           </div>
@@ -103,10 +103,10 @@
             <button
               v-for="amt in quickAmounts"
               :key="amt"
-              class="fiado-quick-btn"
+              class="fiado-quick-btn erp-control"
               @click="paymentAmount = amt"
             >{{ fmtGs(amt) }}</button>
-            <button class="fiado-quick-btn fiado-quick-all" @click="paymentAmount = Math.ceil((selectedClient.saldo_fiado_gs ?? 0))">
+            <button class="fiado-quick-btn fiado-quick-all erp-control" @click="paymentAmount = Math.ceil((selectedClient.saldo_fiado_gs ?? 0))">
               {{ $tr("Tudo (") }}{{ fmtGs((selectedClient.saldo_fiado_gs ?? 0)) }})
             </button>
           </div>
@@ -142,7 +142,7 @@
       <div class="fiado-new-modal">
         <div class="fiado-new-header">
           <h3>{{ $tr("Novo cliente") }}</h3>
-          <button @click="showNewClient = false">×</button>
+          <button class="erp-button erp-button--ghost erp-button--icon" @click="showNewClient = false">×</button>
         </div>
         <div class="fiado-new-body">
           <div class="fiado-field">
@@ -179,8 +179,8 @@
           <div v-if="newClientError" class="fiado-error">{{ newClientError }}</div>
         </div>
         <div class="fiado-new-footer">
-          <button class="fiado-btn-cancel" @click="showNewClient = false">{{ $tr("Cancelar") }}</button>
-          <button class="fiado-btn-save" @click="saveNewClient" :disabled="!newClient.nome || savingClient">
+          <button class="fiado-btn-cancel erp-button erp-button--secondary" @click="showNewClient = false">{{ $tr("Cancelar") }}</button>
+          <button class="fiado-btn-save erp-button erp-button--primary" @click="saveNewClient" :disabled="!newClient.nome || savingClient">
             {{ savingClient ? uiText(`Salvando…`) : uiText(`Cadastrar`) }}
           </button>
         </div>

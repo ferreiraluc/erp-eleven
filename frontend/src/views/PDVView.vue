@@ -3,14 +3,14 @@
 
     <!-- PDV Header -->
     <div class="pdv-header">
-      <button class="pdv-back-btn" @click="router.push('/dashboard')">
+      <button class="pdv-back-btn erp-button erp-button--secondary" @click="router.push('/dashboard')">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         {{ $tr("Dashboard") }}
       </button>
       <span class="pdv-header-title">PDV</span>
 
       <!-- Exchange rate button (same as dashboard) -->
-      <button class="pdv-rate-btn" @click="openRateModal" :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)">
+      <button class="pdv-rate-btn erp-control" @click="openRateModal" :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)">
         <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ rateUsd.toLocaleString(uiLocale()) }}</span>
         <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ uiNumber(currencyStore.exchangeRates['R$'],2) }}</span>
         <svg v-if="canEditRates" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="13" height="13" class="pdv-rate-edit-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -19,11 +19,11 @@
 
     <!-- Mobile tab bar -->
     <div class="pdv-tab-bar mobile-only">
-      <button :class="['pdv-tab', { active: mobileTab === 'products' }]" @click="mobileTab = 'products'">
+      <button class="erp-control" :class="['pdv-tab', { active: mobileTab === 'products' }]" @click="mobileTab = 'products'">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         {{ $tr("Produtos") }}
       </button>
-      <button :class="['pdv-tab', { active: mobileTab === 'cart' }]" @click="mobileTab = 'cart'">
+      <button class="erp-control" :class="['pdv-tab', { active: mobileTab === 'cart' }]" @click="mobileTab = 'cart'">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         {{ $tr("Carrinho") }}
         <span v-if="pdv.cartCount > 0" class="pdv-tab-badge">{{ pdv.cartCount }}</span>
@@ -42,9 +42,9 @@
             <input ref="searchInput" v-model="searchQuery" type="text"
               :placeholder='$tr("Buscar produto, SKU ou código de barras… (F2)")'
               class="pdv-search-input" @keydown.enter="onSearchEnter" @input="onSearchInput" />
-            <button v-if="searchQuery" class="pdv-search-clear" @click="clearSearch">×</button>
+            <button v-if="searchQuery" class="pdv-search-clear erp-button erp-button--ghost erp-button--icon" @click="clearSearch">×</button>
           </div>
-          <button class="pdv-scan-btn" @click="showScanner = true" :title='$tr("Escanear código")'>
+          <button class="pdv-scan-btn erp-button erp-button--primary erp-button--icon" @click="showScanner = true" :title='$tr("Escanear código")'>
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12v.01M12 8h.01M4 8h.01M20 8h.01M4 4h4M20 4h-4M4 20h4M20 20h-4"/></svg>
           </button>
         </div>
@@ -81,7 +81,7 @@
                   <span class="pdv-price-orig">{{ fmtGs(item.sale_price) }}</span>
                 </template>
               </div>
-              <button class="pdv-result-add" :disabled="!canAddProduct(item)">+</button>
+              <button class="pdv-result-add erp-button erp-button--primary erp-button--icon" :disabled="!canAddProduct(item)">+</button>
             </div>
           </div>
           <div v-if="searchQuery && !loadingSearch && !searchError" class="pdv-result-avulso" @click="openAvulso()">
@@ -98,7 +98,7 @@
         <div v-else-if="searchError" class="pdv-search-error" role="alert">{{ cartText('searchFailed') }}</div>
         <div v-else class="pdv-no-results">
           <p>{{ $tr("Nenhum produto encontrado para \"") }}{{ searchQuery }}"</p>
-          <button class="pdv-btn-avulso" @click="openAvulso(searchQuery)">{{ $tr("+ Adicionar como item avulso") }}</button>
+          <button class="pdv-btn-avulso erp-button erp-button--primary" @click="openAvulso(searchQuery)">{{ $tr("+ Adicionar como item avulso") }}</button>
         </div>
       </div>
 
@@ -109,7 +109,7 @@
         <div class="pdv-cart-header">
           <span class="pdv-cart-title">{{ $tr("Carrinho") }}</span>
           <span class="pdv-cart-count">{{ pdv.cartCount }} {{ $tr("item") }}{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
-          <button v-if="pdv.cart.length" class="pdv-cart-clear" @click="confirmClear">🗑</button>
+          <button v-if="pdv.cart.length" class="pdv-cart-clear erp-button erp-button--danger" @click="confirmClear">🗑</button>
         </div>
 
         <!-- Scrollable body -->
@@ -147,12 +147,12 @@
                 </div>
                 <div class="pdv-ci-controls">
                   <div class="pdv-qty-stepper">
-                    <button class="qty-btn" @click="changeQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1">−</button>
+                    <button class="qty-btn erp-button erp-button--ghost erp-button--icon" @click="changeQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1">−</button>
                     <input type="number" :value="quantityDrafts[item.id] ?? item.quantity" :min="item.is_avulso ? 0.001 : 1" :step="item.is_avulso ? 0.001 : 1" class="qty-input"
                       :aria-invalid="!!quantityErrors[item.id]"
                       @input="quantityDrafts[item.id] = ($event.target as HTMLInputElement).value"
                       @change="changeQuantity(item, Number(($event.target as HTMLInputElement).value))" />
-                    <button class="qty-btn" @click="changeQuantity(item, item.quantity + 1)" :disabled="!canIncrease(item)">+</button>
+                    <button class="qty-btn erp-button erp-button--ghost erp-button--icon" @click="changeQuantity(item, item.quantity + 1)" :disabled="!canIncrease(item)">+</button>
                   </div>
                   <span v-if="quantityErrors[item.id]" class="pdv-quantity-error" role="alert">{{ cartErrorText(quantityErrors[item.id]) }}</span>
                   <div class="pdv-ci-price-wrap">
@@ -161,7 +161,7 @@
                       @change="pdv.updateItemOriginalPrice(item.id, Number(($event.target as HTMLInputElement).value), getRate(item.sale_currency))" />
                   </div>
                   <span class="pdv-ci-total">{{ fmtGs(item.quantity * item.unit_price_gs - item.discount_gs) }}</span>
-                  <button class="pdv-ci-remove" @click="removeCartItem(item.id)">×</button>
+                  <button class="pdv-ci-remove erp-button erp-button--danger erp-button--icon" @click="removeCartItem(item.id)">×</button>
                 </div>
               </div>
             </div>
@@ -208,7 +208,7 @@
                   <span v-if="p.currency !== 'GS'" class="pay-orig-amount">{{ p.currency }} {{ fmtNum(p.amount_original) }}</span>
                   <span class="pay-gs-amount">{{ fmtGs(p.amount_gs) }}</span>
                 </div>
-                <button class="pay-entry-remove" @click="removePayment(p.id)">×</button>
+                <button class="pay-entry-remove erp-button erp-button--danger erp-button--icon" @click="removePayment(p.id)">×</button>
               </div>
               <div v-if="!localPayments.length" class="pay-empty">{{ $tr("Nenhum pagamento adicionado") }}</div>
             </div>
@@ -234,9 +234,9 @@
                     :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
                     @keydown.enter="addPayment" />
                 </div>
-                <button class="pay-btn-total" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
+                <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
-                <button class="pay-btn-add" @click="addPayment" :disabled="!newAmount">{{ $tr("+ Add") }}</button>
+                <button class="pay-btn-add erp-button erp-button--primary erp-button--sm" @click="addPayment" :disabled="!newAmount">{{ $tr("+ Add") }}</button>
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
                 <span>{{ $tr("Taxa:") }}</span>
@@ -266,7 +266,7 @@
 
         <!-- Sticky confirm button -->
         <div class="pdv-pay-area">
-          <button class="pay-confirm-btn"
+          <button class="pay-confirm-btn erp-button erp-button--primary"
             :disabled="!canConfirmPayment || pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft || !pdv.cart.length"
             @click="confirmPayment">
             <span v-if="pdv.loading">{{ $tr("Processando…") }}</span>
@@ -290,7 +290,7 @@
       <div class="er-modal">
         <div class="er-header">
           <h2>{{ $tr("Taxas de Câmbio") }}</h2>
-          <button class="er-close" @click="showRateModal = false">
+          <button class="er-close erp-button erp-button--ghost erp-button--icon" @click="showRateModal = false">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -316,8 +316,8 @@
           </div>
         </div>
         <div class="er-footer">
-          <button class="er-btn-cancel" @click="showRateModal = false">{{ $tr("Cancelar") }}</button>
-          <button v-if="canEditRates" class="er-btn-save" @click="saveRates" :disabled="savingRates">
+          <button class="er-btn-cancel erp-button erp-button--secondary" @click="showRateModal = false">{{ $tr("Cancelar") }}</button>
+          <button v-if="canEditRates" class="er-btn-save erp-button erp-button--primary" @click="saveRates" :disabled="savingRates">
             <span v-if="savingRates">{{ $tr("Salvando…") }}</span>
             <span v-else>{{ $tr("Salvar Taxas") }}</span>
           </button>

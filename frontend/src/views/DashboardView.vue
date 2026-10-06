@@ -21,7 +21,7 @@
               <div class="currency-selector-group dropdown" @keydown.esc="showCurrencyDropdown = false">
                 <button
                   type="button"
-                  class="preference-button"
+                  class="preference-button erp-control"
                   :aria-label="$t('footer.currency')"
                   :aria-expanded="showCurrencyDropdown"
                   aria-controls="dashboard-currencies"
@@ -38,7 +38,7 @@
                     v-for="currency in currencyStore.availableCurrencies"
                     :key="currency.code"
                     type="button"
-                    class="header-dropdown-item"
+                    class="header-dropdown-item erp-control"
                     :class="{ active: currency.code === currencyStore.selectedCurrency }"
                     :aria-pressed="currency.code === currencyStore.selectedCurrency"
                     @click="handleCurrencyChange(currency.code)"
@@ -54,7 +54,7 @@
 
               <LanguageSelector compact />
 
-              <button type="button" class="compact-exchange" :disabled="!canEditRates" :title="$t('dashboard.exchangeRates')" aria-haspopup="dialog" @click="handleHeaderClick">
+              <button type="button" class="compact-exchange erp-control" :disabled="!canEditRates" :title="$t('dashboard.exchangeRates')" aria-haspopup="dialog" @click="handleHeaderClick">
                 <span class="compact-rate">
                   <span class="compact-rate-flags">🇺🇸→🇵🇾</span>
                   <span>{{ typeof exchangeRates['G$'] === 'number' ? uiNumber(exchangeRates['G$'],0) : '7500' }}</span>
@@ -99,7 +99,7 @@
                 <h3 class="inv-title">{{ $tr("Estoque") }}</h3>
               </div>
               <div class="inv-header-actions" @click.stop>
-                <button class="inv-add-btn" @click="navigateToNewProduct" :title='$tr("Novo produto")'>
+                <button class="inv-add-btn erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")'>
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                   </svg>
@@ -175,7 +175,7 @@
         <div class="quick-strip-card">
           <p class="quick-strip-title">{{ $tr("Ações Rápidas") }}</p>
           <div class="quick-strip">
-            <button class="quick-btn q-primary" @click="navigateToNewSale">
+            <button class="quick-btn q-primary erp-control" @click="navigateToNewSale">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -183,7 +183,7 @@
               </div>
               <span>{{ $tr("Nova Venda") }}</span>
             </button>
-            <button class="quick-btn q-orange" @click="navigateToInventory">
+            <button class="quick-btn q-orange erp-control" @click="navigateToInventory">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -191,7 +191,7 @@
               </div>
               <span>{{ $tr("Estoque") }}</span>
             </button>
-            <button class="quick-btn q-green" @click="navigateToVendors">
+            <button class="quick-btn q-green erp-control" @click="navigateToVendors">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -199,7 +199,7 @@
               </div>
               <span>{{ $tr("Vendedores") }}</span>
             </button>
-            <button class="quick-btn q-purple" @click="navigateToPedidos">
+            <button class="quick-btn q-purple erp-control" @click="navigateToPedidos">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -207,7 +207,7 @@
               </div>
               <span>{{ $tr("Pedidos") }}</span>
             </button>
-            <button class="quick-btn q-teal" @click="navigateToRastreamento">
+            <button class="quick-btn q-teal erp-control" @click="navigateToRastreamento">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -216,7 +216,7 @@
               </div>
               <span>{{ $tr("Rastreamento") }}</span>
             </button>
-            <button class="quick-btn q-indigo" @click="navigateToClientes">
+            <button class="quick-btn q-indigo erp-control" @click="navigateToClientes">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -224,15 +224,15 @@
               </div>
               <span>{{ $tr("Clientes") }}</span>
             </button>
-            <button v-if="!authStore.ownSales" class="quick-btn q-amber" @click="router.push('/fiado')">
+            <button v-if="!authStore.ownSales" class="quick-btn q-amber erp-control" @click="router.push('/fiado')">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <span>{{ $tr("Fiado") }}</span>
+              <span>{{ $tr("Pagadores") }}</span>
             </button>
-            <button v-if="authStore.user?.role === 'ADMIN'" class="quick-btn q-indigo" @click="router.push('/assistente')">
+            <button v-if="authStore.user?.role === 'ADMIN'" class="quick-btn q-indigo erp-control" @click="router.push('/assistente')">
               <div class="quick-btn-icon" aria-hidden="true">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H9l-5 2V6a2 2 0 012-2z" /></svg>
               </div>
@@ -317,7 +317,7 @@
                 <button
                   v-if="canEditRates"
                   @click.stop="openCardModal"
-                  class="edit-rate-btn-compact"
+                  class="edit-rate-btn-compact erp-button erp-button--ghost erp-button--icon"
                   style="cursor: pointer;"
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -365,20 +365,20 @@
 
         <div class="footer-right">
           <div class="footer-links">
-            <button class="footer-link">
+            <button class="footer-link erp-button erp-button--ghost erp-button--sm">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {{ $t('footer.help') }}
             </button>
-            <button class="footer-link">
+            <button class="footer-link erp-button erp-button--ghost erp-button--sm">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               {{ $t('footer.settings') }}
             </button>
-            <button class="footer-link">
+            <button class="footer-link erp-button erp-button--ghost erp-button--sm">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -395,7 +395,7 @@
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2>{{ $tr("Editar Taxas de Câmbio") }}</h2>
-          <button @click="closeExchangeRateModals" class="modal-close">
+          <button @click="closeExchangeRateModals" class="modal-close erp-button erp-button--secondary erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -459,10 +459,10 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="closeExchangeRateModals" class="btn btn-secondary">
+          <button @click="closeExchangeRateModals" class="btn btn-secondary erp-button erp-button--secondary">
             {{ $tr("Cancelar") }}
           </button>
-          <button @click="saveExchangeRates" :disabled="isLoadingRates" class="btn btn-primary">
+          <button @click="saveExchangeRates" :disabled="isLoadingRates" class="btn btn-primary erp-button erp-button--primary">
             <span v-if="isLoadingRates">{{ $tr("Salvando...") }}</span>
             <span v-else>{{ $tr("Salvar Taxas") }}</span>
           </button>
@@ -1141,20 +1141,20 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: .35rem;
+  align-items: center;
+  gap: .625rem;
   min-width: 0;
 }
 
 .header-tools {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   flex-wrap: wrap;
   gap: .5rem .75rem;
 }
 
-.header-preferences { display: flex; align-items: center; gap: .375rem; flex: 0 0 auto; }
+.header-preferences { display: flex; align-items: center; gap: .75rem; flex: 0 0 auto; }
 .currency-selector-group { display: flex; align-items: center; }
 .preference-button, .compact-exchange { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; height: 32px; padding: .25rem .5rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #f9fafb; color: #475569; font-family: inherit; font-size: .75rem; font-weight: 500; white-space: nowrap; cursor: pointer; }
 .preference-button:hover, .compact-exchange:not(:disabled):hover { background: #f3f4f6; border-color: #9ca3af; }
@@ -2512,8 +2512,8 @@ onUnmounted(() => {
   .header-content { padding: .75rem; gap: .65rem; }
   .header-left { flex-shrink: 1; }
   .header-right { flex: 1 1 100%; align-items: stretch; }
-  .header-tools { justify-content: flex-start; }
-  .header-preferences { gap: .25rem; }
+  .header-tools { justify-content: center; }
+  .header-preferences { gap: .625rem; }
   .compact-exchange { gap: .3rem; padding-inline: .3rem; }
   .compact-rate + .compact-rate { padding-left: .3rem; }
 
@@ -2673,7 +2673,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 360px) {
-  .header-preferences { gap: .2rem; }
+  .header-preferences { gap: .375rem; }
   .preference-button { padding-inline: .35rem; gap: .25rem; font-size: .6875rem; }
   .compact-exchange { font-size: .625rem; }
   .compact-edit-icon { display: none; }

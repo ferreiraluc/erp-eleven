@@ -7,8 +7,8 @@
         <small v-if="checkedAt">{{ t('checkedAt', { date: checkedAt }) }}</small>
       </div>
       <div class="diagnostics-actions">
-        <button type="button" class="diag-button" :disabled="loading" @click="load()">{{ t('refresh') }}</button>
-        <button type="button" class="diag-button close-button" :aria-label="t('close')" @click="emit('close')">×</button>
+        <button type="button" class="diag-button erp-button erp-button--secondary" :disabled="loading" @click="load()">{{ t('refresh') }}</button>
+        <button type="button" class="diag-button close-button erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" @click="emit('close')">×</button>
       </div>
     </header>
 
@@ -43,13 +43,13 @@
           <option v-for="size in [25, 50, 100]" :key="size" :value="size">{{ size }}</option>
         </select>
       </label>
-      <button class="diag-button primary" type="submit">{{ t('search') }}</button>
-      <button v-if="issue !== 'all' || query || searchDraft" class="diag-button" type="button" @click="clearFilters()">{{ t('clear') }}</button>
+      <button class="diag-button primary erp-button erp-button--primary" type="submit">{{ t('search') }}</button>
+      <button v-if="issue !== 'all' || query || searchDraft" class="diag-button erp-button erp-button--secondary" type="button" @click="clearFilters()">{{ t('clear') }}</button>
     </form>
 
     <p v-if="loading" class="diagnostics-state" role="status">{{ t('loading') }}</p>
     <div v-else-if="loadError" class="diagnostics-error" role="alert">
-      <span>{{ t('error') }}</span><button type="button" class="diag-button" @click="load()">{{ t('retry') }}</button>
+      <span>{{ t('error') }}</span><button type="button" class="diag-button erp-button erp-button--secondary" @click="load()">{{ t('retry') }}</button>
     </div>
     <template v-else-if="data">
       <p v-if="openError" class="diagnostics-error" role="alert">{{ t(openError) }}</p>
@@ -71,16 +71,16 @@
             <td v-for="key in stockKeys" :key="key" class="stock-value" :class="{ negative: item[key] !== null && item[key]! < 0 }" :title="item[key] === null ? t('absent') : undefined">{{ number(item[key]) }}</td>
             <td class="stock-value" :class="{ difference: item.delta !== null && item.delta !== 0 }" :title="item.delta === null ? t('absent') : undefined">{{ number(item.delta, true) }}</td>
             <td><div class="diagnostic-issues"><span v-for="alert in item.issues" :key="alert" class="issue-badge" :class="{ severe: alert === 'negative_stock' }">{{ t(isKnownIssue(alert) ? alert : 'other') }}</span></div></td>
-            <td><button class="diag-button open-product" type="button" :disabled="!!openingId" @click="emit('open-item', item.id)">{{ t(openingId === item.id ? 'opening' : 'openItem') }}</button></td>
+            <td><button class="diag-button open-product erp-button erp-button--secondary erp-button--sm" type="button" :disabled="!!openingId" @click="emit('open-item', item.id)">{{ t(openingId === item.id ? 'opening' : 'openItem') }}</button></td>
           </tr></tbody>
         </table>
       </div>
       <footer class="diagnostics-pagination">
         <span>{{ t('results', { count: number(data.total_items) }) }}</span>
         <nav :aria-label="t('page', { page: data.page, pages })">
-          <button type="button" class="diag-button" :disabled="data.page <= 1" @click="load(data.page - 1)">{{ t('previous') }}</button>
+          <button type="button" class="diag-button erp-button erp-button--secondary" :disabled="data.page <= 1" @click="load(data.page - 1)">{{ t('previous') }}</button>
           <span>{{ t('page', { page: data.page, pages }) }}</span>
-          <button type="button" class="diag-button" :disabled="data.page >= pages" @click="load(data.page + 1)">{{ t('next') }}</button>
+          <button type="button" class="diag-button erp-button erp-button--secondary" :disabled="data.page >= pages" @click="load(data.page + 1)">{{ t('next') }}</button>
         </nav>
       </footer>
     </template>

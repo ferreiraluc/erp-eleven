@@ -9,7 +9,7 @@
     <p class="usage-note">{{ tr('O total inclui') }} {{ result.summary.address_prints }} {{ tr('endereço(s) A4 e') }} {{ result.summary.label_prints }} {{ tr('etiqueta(s). Conta somente envios confirmados pelo agente; cancelamentos, falhas e trabalhos na fila não entram no total. A saída física do papel depende da impressora.') }}<br/><strong v-if="result.summary.last_printed_at">{{ tr('Última impressão:') }} {{ date(result.summary.last_printed_at) }}</strong></p>
     <div class="usage-toolbar">
       <label>{{ tr('Mostrar') }} <select v-model="kind" @change="offset=0;load()"><option value="all">{{ tr('Todas as utilizações') }}</option><option value="frete">{{ tr('Cotações e etiquetas') }}</option><option value="impressao">{{ tr('Impressões') }}</option></select></label>
-      <button :disabled="loading" @click="load">{{ tr('Atualizar') }}</button>
+      <button class="erp-button erp-button--secondary erp-button--sm" :disabled="loading" @click="load">{{ tr('Atualizar') }}</button>
     </div>
     <p v-if="error" role="alert" class="usage-error">{{ tr(error) }}</p>
     <p v-if="loading" role="status" class="usage-empty">{{ tr('Carregando histórico…') }}</p>
@@ -19,12 +19,12 @@
           <td>{{ date(entry.finished_at || entry.created_at) }}<small>{{ entry.user }}</small><small v-if="entry.finished_at">{{ tr('Solicitada em') }} {{ date(entry.created_at) }}</small></td>
           <td><strong>{{ entry.kind==='frete'?tr('Frete SuperFrete'):entry.source==='superfrete'?tr('Impressão de etiqueta'):tr('Endereço A4 · modelo simples') }}</strong><small>{{ entry.environment==='sandbox'?tr('Ambiente de testes'):entry.source==='bot'?tr('Solicitada pelo bot'):entry.source==='erp'?tr('Solicitada pelo ERP'):'' }}</small></td>
           <td><span class="usage-badge">{{ entry.kind==='impressao' && entry.status==='pending'?tr('Na fila de impressão'):tr(states[entry.status] || entry.status) }}</span><small v-if="entry.price">{{ money(entry.price) }}</small><code v-if="entry.tracking">{{ entry.tracking }}</code></td>
-          <td><details><summary>{{ entry.recipient || tr('Ver endereço utilizado') }}</summary><p>{{ entry.address_text || tr('Sem detalhes de rua informados.') }}</p></details><button @click="entry.kind==='frete'?$emit('freight',entry.id):$emit('print',entry.id)">{{ entry.kind==='frete'?tr('Abrir frete'):tr('Ver PDF') }}</button></td>
+          <td><details><summary>{{ entry.recipient || tr('Ver endereço utilizado') }}</summary><p>{{ entry.address_text || tr('Sem detalhes de rua informados.') }}</p></details><button class="erp-button erp-button--secondary erp-button--sm" @click="entry.kind==='frete'?$emit('freight',entry.id):$emit('print',entry.id)">{{ entry.kind==='frete'?tr('Abrir frete'):tr('Ver PDF') }}</button></td>
         </tr>
         <tr v-if="!result.items.length"><td colspan="4" class="usage-empty">{{ kind==='all'?tr('Nenhuma utilização registrada. O histórico aparecerá ao cotar um frete ou enviar uma impressão.'):tr('Nenhuma utilização deste tipo.') }}</td></tr>
       </tbody></table>
     </div>
-    <footer><span>{{ result.total }} {{ result.total===1?tr('registro'):tr('registros') }}<small>{{ result.summary.prints }} {{ tr('solicitações de impressão ·') }} {{ result.summary.quotes }} {{ tr('cotações') }}</small><small v-if="result.summary.last_used_at">{{ tr('Última utilização:') }} {{ date(result.summary.last_used_at) }}</small></span><div><button :disabled="offset===0 || loading" @click="offset-=30;load()">{{ tr('Anterior') }}</button><button :disabled="offset+30>=result.total || loading" @click="offset+=30;load()">{{ tr('Próxima') }}</button></div></footer>
+    <footer><span>{{ result.total }} {{ result.total===1?tr('registro'):tr('registros') }}<small>{{ result.summary.prints }} {{ tr('solicitações de impressão ·') }} {{ result.summary.quotes }} {{ tr('cotações') }}</small><small v-if="result.summary.last_used_at">{{ tr('Última utilização:') }} {{ date(result.summary.last_used_at) }}</small></span><div><button class="erp-button erp-button--secondary erp-button--sm" :disabled="offset===0 || loading" @click="offset-=30;load()">{{ tr('Anterior') }}</button><button class="erp-button erp-button--secondary erp-button--sm" :disabled="offset+30>=result.total || loading" @click="offset+=30;load()">{{ tr('Próxima') }}</button></div></footer>
   </div>
 </template>
 

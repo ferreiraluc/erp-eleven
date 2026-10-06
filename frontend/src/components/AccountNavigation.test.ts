@@ -83,9 +83,10 @@ describe('Account navigation inside the dashboard header', () => {
 
   it('changes and persists the language through the header selector', async () => {
     await mount()
-    const select = element.querySelector('.dashboard-header select') as HTMLSelectElement
-    expect(select.getAttribute('aria-label')).toBe('Idioma')
-    select.value = 'es'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    const trigger = element.querySelector('.dashboard-header .locale-trigger') as HTMLButtonElement
+    expect(trigger.getAttribute('aria-label')).toBe('Idioma')
+    trigger.click(); await nextTick()
+    ;(element.querySelector('.locale-option[aria-label="Español"]') as HTMLButtonElement).click(); await nextTick()
     expect(i18n.global.locale.value).toBe('es'); expect(localStorage.getItem('locale')).toBe('es')
     expect(document.documentElement.lang).toBe('es')
     expect(element.querySelector('.account-links a')?.textContent).toContain(i18n.global.t('access.account'))
@@ -95,7 +96,23 @@ describe('Account navigation inside the dashboard header', () => {
     await mount(true, '/pedidos')
     expect(element.querySelectorAll('.account-navigation')).toHaveLength(1)
     expect(element.querySelector('.account-bar a[href="/usuarios"]')).not.toBeNull()
-    expect(element.querySelector('.account-bar select')).not.toBeNull()
+    expect(element.querySelector('.account-bar .locale-trigger')).not.toBeNull()
+    expect(element.querySelector('.account-bar')?.classList.contains('operational-account-bar')).toBe(true)
+  })
+
+  it('supports keyboard selection and closes the language menu on Escape or outside click', async () => {
+    await mount()
+    const trigger = element.querySelector('.locale-trigger') as HTMLButtonElement
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); await nextTick()
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Português (BR)')
+    document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true })); await nextTick()
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('English')
+    document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await nextTick()
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(trigger)
+    trigger.click(); await nextTick()
+    element.querySelector<HTMLElement>('.app-title')!.click(); await nextTick()
+    expect(element.querySelector('.locale-menu')).toBeNull()
   })
 
   it('logs out immediately from the header without letting an old response redirect a new account', async () => {

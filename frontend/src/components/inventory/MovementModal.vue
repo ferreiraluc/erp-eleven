@@ -3,7 +3,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>{{ tr('Movimentação de Estoque') }}</h2>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -25,7 +25,7 @@
         <div class="form-group">
           <label>{{ tr('Tipo de Movimentação *') }}</label>
           <div class="movement-type-grid">
-            <button
+            <button class="erp-control"
               v-for="t in movementTypes"
               :key="t.value"
               @click="form.movement_type = t.value"
@@ -41,8 +41,8 @@
         <div v-if="form.movement_type === 'entry' || form.movement_type === 'exit' || form.movement_type === 'adjustment'" class="form-group">
           <label>{{ tr('Local *') }}</label>
           <div class="loc-toggle">
-            <button type="button" :class="['loc-btn', { active: form.location === 'loja' }]" @click="form.location = 'loja'">{{ tr('Loja') }}</button>
-            <button type="button" :class="['loc-btn', { active: form.location === 'deposito' }]" @click="form.location = 'deposito'">{{ tr('Depósito') }}</button>
+            <button class="erp-control" type="button" :class="['loc-btn', { active: form.location === 'loja' }]" @click="form.location = 'loja'">{{ tr('Loja') }}</button>
+            <button class="erp-control" type="button" :class="['loc-btn', { active: form.location === 'deposito' }]" @click="form.location = 'deposito'">{{ tr('Depósito') }}</button>
           </div>
         </div>
 
@@ -50,8 +50,8 @@
         <div v-if="form.movement_type === 'transfer'" class="form-group">
           <label>{{ tr('Direção *') }}</label>
           <div class="loc-toggle">
-            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'deposito' }]" @click="form.location_from = 'deposito'; form.location_to = 'loja'">{{ tr('Depósito → Loja') }}</button>
-            <button type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'loja' }]" @click="form.location_from = 'loja'; form.location_to = 'deposito'">{{ tr('Loja → Depósito') }}</button>
+            <button class="erp-control" type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'deposito' }]" @click="form.location_from = 'deposito'; form.location_to = 'loja'">{{ tr('Depósito → Loja') }}</button>
+            <button class="erp-control" type="button" :class="['loc-btn loc-btn-wide', { active: form.location_from === 'loja' }]" @click="form.location_from = 'loja'; form.location_to = 'deposito'">{{ tr('Loja → Depósito') }}</button>
           </div>
         </div>
 
@@ -96,9 +96,9 @@
               <input v-model="line.item_id" type="text" class="form-input" :placeholder="tr('ID do item')" />
               <input v-model.number="line.quantity" type="number" min="1" class="form-input small" :placeholder="tr('Qtd')" />
               <input v-model.number="line.unit_cost" type="number" step="0.01" min="0" class="form-input small" :placeholder="tr('Custo')" />
-              <button @click="batchLines.splice(idx, 1)" class="remove-btn" type="button">×</button>
+              <button @click="batchLines.splice(idx, 1)" class="remove-btn erp-button erp-button--danger erp-button--icon" type="button">×</button>
             </div>
-            <button @click="batchLines.push({ item_id: '', quantity: 1, unit_cost: 0 })" class="add-line-btn" type="button">
+            <button @click="batchLines.push({ item_id: '', quantity: 1, unit_cost: 0 })" class="add-line-btn erp-button erp-button--primary" type="button">
               {{ tr('+ Adicionar linha') }}
             </button>
           </div>
@@ -111,8 +111,8 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary">{{ tr('Cancelar') }}</button>
-        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving || unknownStock">
+        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr('Cancelar') }}</button>
+        <button @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || unknownStock">
           {{ saving ? tr('Salvando...') : tr('Registrar') }}
         </button>
       </div>

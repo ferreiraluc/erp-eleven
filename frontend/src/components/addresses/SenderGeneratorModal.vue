@@ -1,7 +1,7 @@
 <template>
   <div class="generator-overlay" @click.self="close">
     <section ref="dialog" class="generator-dialog" role="dialog" aria-modal="true" :aria-label="t('title')" tabindex="-1" @keydown.esc.prevent="close" @keydown.tab="trapFocus">
-      <header><div><span class="eyebrow">4DEVS · {{ t('synthetic') }}</span><h2>{{ t('title') }}</h2></div><button type="button" :disabled="busy || saving" :aria-label="t('close')" @click="close"><X :size="20"/></button></header>
+      <header><div><span class="eyebrow">4DEVS · {{ t('synthetic') }}</span><h2>{{ t('title') }}</h2></div><button class="erp-button erp-button--secondary erp-button--icon" type="button" :disabled="busy || saving" :aria-label="t('close')" @click="close"><X :size="20"/></button></header>
       <p class="intro">{{ t('intro') }}</p>
       <div class="origin-note"><Sparkles :size="17"/><p>{{ t('origin') }}</p></div>
       <p v-if="error" class="error" role="alert">{{ t('errors.' + error) }}</p>
@@ -9,14 +9,14 @@
         <label>{{ t('sex') }}<select v-model="options.sexo" :disabled="busy || saving"><option value="I">{{ t('random') }}</option><option value="M">{{ t('male') }}</option><option value="F">{{ t('female') }}</option></select></label>
         <label>{{ t('age') }}<input v-model.number="age" type="number" min="18" max="90" :placeholder="t('optional')" :disabled="busy || saving"/></label>
         <label>{{ t('state') }}<select v-model="options.estado" :disabled="busy || saving"><option value="">{{ t('random') }}</option><option v-for="state in BRAZIL_STATES" :key="state">{{ state }}</option></select></label>
-        <button type="button" class="primary" :disabled="busy || saving" @click="generate"><RefreshCw v-if="busy" :size="16" class="spin"/><Sparkles v-else :size="16"/>{{ busy ? t('generating') : t('generate') }}</button>
+        <button type="button" class="primary erp-button erp-button--primary" :disabled="busy || saving" @click="generate"><RefreshCw v-if="busy" :size="16" class="spin"/><Sparkles v-else :size="16"/>{{ busy ? t('generating') : t('generate') }}</button>
       </div>
       <details class="manual" :open="manualOpen">
         <summary @click.prevent="manualOpen = !manualOpen">{{ t('manualTitle') }}</summary>
         <p>{{ t('manualHelp') }}</p>
         <a :href="FOURDEVS_PAGE" target="_blank" rel="noopener noreferrer">{{ t('openProvider') }} <ExternalLink :size="14"/></a>
         <label>{{ t('pasteJson') }}<textarea v-model="jsonInput" maxlength="30000" rows="5" placeholder='[{"nome":"...","cpf":"...","endereco":"..."}]' spellcheck="false" :disabled="busy || saving"/></label>
-        <button type="button" :disabled="busy || saving || !jsonInput.trim()" @click="importJson">{{ t('importJson') }}</button>
+        <button class="erp-button erp-button--secondary" type="button" :disabled="busy || saving || !jsonInput.trim()" @click="importJson">{{ t('importJson') }}</button>
       </details>
       <form v-if="preview" class="review" @submit.prevent="save">
         <div class="review-heading"><div><h3>{{ t('reviewTitle') }}</h3><p>{{ t('reviewHelp') }}</p></div><span class="badge">{{ t('notSaved') }}</span></div>
@@ -32,7 +32,7 @@
         <div class="print-preview"><span>{{ t('senderPreview') }}</span><p>{{ printedLines.join('\n') }}</p></div>
         <label class="check"><input v-model="active" type="checkbox" :disabled="saving"/>{{ t('active') }}</label>
         <label class="check approval"><input v-model="approved" type="checkbox" required :disabled="saving"/>{{ t('approval') }}</label>
-        <footer><button type="button" :disabled="saving" @click="close">{{ t('discard') }}</button><button class="primary" :disabled="!approved || saving || busy"><CheckCircle2 :size="17"/>{{ saving ? t('saving') : t('save') }}</button></footer>
+        <footer><button class="erp-button erp-button--secondary" type="button" :disabled="saving" @click="close">{{ t('discard') }}</button><button class="primary erp-button erp-button--primary" :disabled="!approved || saving || busy"><CheckCircle2 :size="17"/>{{ saving ? t('saving') : t('save') }}</button></footer>
       </form>
       <div v-else class="empty"><UserRound :size="35"/><h3>{{ t('emptyTitle') }}</h3><p>{{ t('emptyHelp') }}</p></div>
     </section>

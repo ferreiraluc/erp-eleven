@@ -849,6 +849,11 @@
     "es": "Cerrar",
     "en": "Close"
   },
+  "Pagadores": {
+    "pt": "Pagadores",
+    "es": "Pagadores",
+    "en": "Payers"
+  },
   "Fiado": {
     "pt": "Fiado",
     "es": "Crédito",

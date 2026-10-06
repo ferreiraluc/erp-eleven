@@ -5,7 +5,7 @@
     <div v-if="anexos.length" class="carousel">
       <!-- Main image -->
       <div class="carousel-main">
-        <button v-if="anexos.length > 1" class="nav-btn nav-prev" @click.prevent="prev" :aria-label="uiText(`Anterior`)">
+        <button v-if="anexos.length > 1" class="nav-btn nav-prev erp-button erp-button--secondary" @click.prevent="prev" :aria-label="uiText(`Anterior`)">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
@@ -20,7 +20,7 @@
           </div>
         </div>
 
-        <button v-if="anexos.length > 1" class="nav-btn nav-next" @click.prevent="next" :aria-label="uiText(`Próximo`)">
+        <button v-if="anexos.length > 1" class="nav-btn nav-next erp-button erp-button--secondary" @click.prevent="next" :aria-label="uiText(`Próximo`)">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
       </div>
@@ -31,7 +31,7 @@
         <span class="file-size">{{ formatSize(anexos[current].tamanho) }}</span>
         <button
           v-if="editable"
-          class="del-btn"
+          class="del-btn erp-button erp-button--danger"
           @click.prevent="emit('delete', anexos[current])"
           :title="uiText(`Remover anexo`)"
         >
@@ -40,7 +40,7 @@
 
       <!-- Thumbnails -->
       <div class="thumbs" v-if="anexos.length > 1">
-        <button
+        <button class="erp-control"
           v-for="(a, i) in anexos"
           :key="a.id"
           :class="['thumb-btn', { active: i === current }]"
@@ -52,7 +52,7 @@
 
       <!-- Dots -->
       <div v-if="anexos.length > 1" class="dots">
-        <button
+        <button class="erp-control"
           v-for="(_, i) in anexos"
           :key="i"
           :class="['dot', { active: i === current }]"
@@ -75,7 +75,7 @@
       <div class="upload-btns-row">
         <button
           type="button"
-          class="upload-btn"
+          class="upload-btn erp-button erp-button--secondary"
           @click="fileInput?.click()"
           :disabled="uploading || anexos.length >= 10"
         >
@@ -85,7 +85,7 @@
         </button>
         <button
           type="button"
-          class="upload-btn camera-btn"
+          class="upload-btn camera-btn erp-button erp-button--secondary"
           @click="openCamera"
           :disabled="uploading || anexos.length >= 10"
         >
@@ -102,7 +102,7 @@
         <div class="camera-modal">
           <div class="camera-header">
             <span>{{ uiText(`Tirar foto`) }}</span>
-            <button type="button" @click="closeCamera" class="camera-close">
+            <button type="button" @click="closeCamera" class="camera-close erp-button erp-button--ghost erp-button--icon">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -116,12 +116,12 @@
 
           <div class="camera-footer">
             <template v-if="!capturedDataUrl">
-              <button type="button" class="btn-capture" @click="capturePhoto" :disabled="!cameraReady">
+              <button type="button" class="btn-capture erp-button erp-button--primary" @click="capturePhoto" :disabled="!cameraReady">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg> {{ uiText(`Capturar`) }} </button>
             </template>
             <template v-else>
-              <button type="button" class="btn-retake" @click="retakePhoto">{{ uiText(`Tirar novamente`) }}</button>
-              <button type="button" class="btn-use-photo" @click="usePhoto">{{ uiText(`Usar esta foto`) }}</button>
+              <button type="button" class="btn-retake erp-button erp-button--secondary" @click="retakePhoto">{{ uiText(`Tirar novamente`) }}</button>
+              <button type="button" class="btn-use-photo erp-button erp-button--primary" @click="usePhoto">{{ uiText(`Usar esta foto`) }}</button>
             </template>
           </div>
         </div>
@@ -131,10 +131,10 @@
     <!-- Lightbox -->
     <teleport to="body">
       <div v-if="lightboxIndex !== null" class="lightbox" @click="lightboxIndex = null">
-        <button class="lb-close" @click.stop="lightboxIndex = null">
+        <button class="lb-close erp-button erp-button--ghost erp-button--icon" @click.stop="lightboxIndex = null">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        <button v-if="anexos.length > 1" class="lb-nav lb-prev" @click.stop="lightboxPrev">
+        <button v-if="anexos.length > 1" class="lb-nav lb-prev erp-button erp-button--secondary" @click.stop="lightboxPrev">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <img
@@ -143,7 +143,7 @@
           class="lb-img"
           @click.stop
         />
-        <button v-if="anexos.length > 1" class="lb-nav lb-next" @click.stop="lightboxNext">
+        <button v-if="anexos.length > 1" class="lb-nav lb-next erp-button erp-button--secondary" @click.stop="lightboxNext">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
         <p class="lb-caption">{{ anexos[lightboxIndex].nome_arquivo }}</p>

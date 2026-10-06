@@ -3,7 +3,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>{{ tr('Importar Estoque') }}</h2>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -12,10 +12,10 @@
 
       <!-- Type selector -->
       <div class="type-tabs">
-        <button @click="importType = 'csv'" :class="['type-tab', { active: importType === 'csv' }]">
+        <button class="erp-control" @click="importType = 'csv'" :class="['type-tab', { active: importType === 'csv' }]">
           {{ tr('CSV / Planilha') }}
         </button>
-        <button @click="importType = 'nfe'" :class="['type-tab', { active: importType === 'nfe' }]">
+        <button class="erp-control" @click="importType = 'nfe'" :class="['type-tab', { active: importType === 'nfe' }]">
           NF-e XML
         </button>
       </div>
@@ -26,7 +26,7 @@
           <div class="info-box">
             <p>{{ tr('O arquivo CSV deve ter cabeçalhos em português ou inglês. Colunas aceitas:') }}</p>
             <code>nome, categoria, tamanho, cor, unidade, codigo_barras, custo, preco_venda, moeda, estoque_minimo, estoque_maximo, localizacao, estoque_inicial</code>
-            <button @click="downloadTemplate" class="download-link">
+            <button @click="downloadTemplate" class="download-link erp-button erp-button--ghost">
               {{ tr('Baixar template CSV') }}
             </button>
           </div>
@@ -115,7 +115,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p class="file-name">{{ selectedFile.name }}</p>
-            <button @click.stop="selectedFile = null; result = null" class="remove-file">{{ tr('× remover') }}</button>
+            <button @click.stop="selectedFile = null; result = null" class="remove-file erp-button erp-button--danger">{{ tr('× remover') }}</button>
           </template>
         </div>
 
@@ -135,16 +135,16 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary">{{ result ? tr('Fechar') : tr('Cancelar') }}</button>
+        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ result ? tr('Fechar') : tr('Cancelar') }}</button>
         <button
           v-if="!result"
           @click="handleImport"
-          class="btn btn-primary"
+          class="btn btn-primary erp-button erp-button--primary"
           :disabled="!selectedFile || uploading"
         >
           {{ uploading ? tr('Importando...') : tr('Importar') }}
         </button>
-        <button v-if="result && result.created > 0" @click="emit('imported'); emit('close')" class="btn btn-primary">
+        <button v-if="result && result.created > 0" @click="emit('imported'); emit('close')" class="btn btn-primary erp-button erp-button--primary">
           {{ tr('Ver itens importados') }}
         </button>
       </div>

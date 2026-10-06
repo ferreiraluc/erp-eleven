@@ -3,7 +3,7 @@
     <header>
       <div><RouterLink to="/dashboard">{{ uiText(`← Dashboard`) }}</RouterLink><h1>{{ uiText(`Assistente Eleven`) }}</h1>
         <p>{{ uiText(`WhatsApp individual e grupo Telegram, com memória operacional compartilhada.`) }}</p></div>
-      <button :disabled="loading" @click="load">{{ loading ? uiText(`Atualizando…`) : uiText(`Atualizar`) }}</button>
+      <button class="erp-button erp-button--secondary" :disabled="loading" @click="load">{{ loading ? uiText(`Atualizando…`) : uiText(`Atualizar`) }}</button>
     </header>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p v-if="notice" role="status" class="notice">{{ notice }}</p>
@@ -25,10 +25,10 @@
           <label>{{ uiText(`Usuário ERP`) }}<select v-model="form.user_id" required :aria-label="uiText(`Usuário ERP`)"><option disabled value="">{{ uiText(`Selecione`) }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ roleLabel(u.role) }}</option></select></label>
           <label class="check"><input v-model="form.active" type="checkbox" /> {{ uiText(`Acesso ativo`) }}</label>
           <label class="check"><input v-model="form.can_register" type="checkbox" /> {{ uiText(`Pode registrar ocorrências e preparar folgas (gestores)`) }}</label>
-          <button :disabled="saving" type="submit">{{ saving ? uiText(`Salvando…`) : uiText(`Salvar acesso`) }}</button>
+          <button class="erp-button erp-button--secondary" :disabled="saving" type="submit">{{ saving ? uiText(`Salvando…`) : uiText(`Salvar acesso`) }}</button>
         </form>
         <div class="scroll"><table><thead><tr><th>{{ uiText(`Canal`) }}</th><th>{{ uiText(`Identificador`) }}</th><th>{{ uiText(`Funcionário`) }}</th><th>{{ uiText(`Acesso`) }}</th><th>{{ uiText(`Registros`) }}</th><th></th></tr></thead>
-          <tbody><tr v-for="i in identities" :key="i.id"><td>{{ i.channel }}</td><td>{{ i.external_id }}</td><td>{{ userName(i.user_id) }}</td><td>{{ i.active ? uiText(`Ativo`) : uiText(`Suspenso`) }}</td><td>{{ i.can_register ? uiText(`Permitido`) : uiText(`Consulta`) }}</td><td><button @click="editIdentity(i)">{{ uiText(`Editar`) }}</button></td></tr>
+          <tbody><tr v-for="i in identities" :key="i.id"><td>{{ i.channel }}</td><td>{{ i.external_id }}</td><td>{{ userName(i.user_id) }}</td><td>{{ i.active ? uiText(`Ativo`) : uiText(`Suspenso`) }}</td><td>{{ i.can_register ? uiText(`Permitido`) : uiText(`Consulta`) }}</td><td><button class="erp-button erp-button--secondary erp-button--sm" @click="editIdentity(i)">{{ uiText(`Editar`) }}</button></td></tr>
           <tr v-if="!identities.length"><td colspan="6">{{ uiText(`Nenhum funcionário autorizado. O bot ignora remetentes desconhecidos.`) }}</td></tr></tbody></table></div>
       </section>
 
@@ -54,7 +54,7 @@
         <h2>{{ uiText(`Processamento e envio`) }}</h2>
         <p>{{ uiText(`“Aceito pelo provedor” não significa lido ou entregue. Envio incerto exige conferência no canal para evitar duplicidade.`) }}</p>
         <div class="scroll"><table><thead><tr><th>{{ uiText(`Data`) }}</th><th>{{ uiText(`Canal`) }}</th><th>{{ uiText(`Etapa`) }}</th><th>{{ uiText(`Estado`) }}</th><th>{{ uiText(`Erro`) }}</th><th></th></tr></thead>
-          <tbody><tr v-for="q in queue" :key="q.id"><td>{{ date(q.created_at) }}</td><td>{{ q.channel }}</td><td>{{ q.kind === 'message' ? uiText(`Processar`) : uiText(`Enviar`) }}</td><td>{{ queueState(q.status) }}</td><td>{{ q.error_code || '—' }}</td><td><button v-if="q.kind === 'message' && q.status === 'failed'" :disabled="saving" @click="retry(q.id)">{{ uiText(`Reprocessar`) }}</button></td></tr>
+          <tbody><tr v-for="q in queue" :key="q.id"><td>{{ date(q.created_at) }}</td><td>{{ q.channel }}</td><td>{{ q.kind === 'message' ? uiText(`Processar`) : uiText(`Enviar`) }}</td><td>{{ queueState(q.status) }}</td><td>{{ q.error_code || '—' }}</td><td><button class="erp-button erp-button--secondary erp-button--sm" v-if="q.kind === 'message' && q.status === 'failed'" :disabled="saving" @click="retry(q.id)">{{ uiText(`Reprocessar`) }}</button></td></tr>
           <tr v-if="!queue.length"><td colspan="6">{{ uiText(`Nenhuma mensagem recebida ou envio agendado.`) }}</td></tr></tbody></table></div>
       </section>
     </template>

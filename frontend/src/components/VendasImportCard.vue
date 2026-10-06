@@ -6,7 +6,7 @@
         <p class="card-subtitle">{{ uiText(`Planilha VENDASgeral.xlsx`) }}</p>
       </div>
       <div class="header-right">
-        <button @click="openImportModal" class="import-button">
+        <button @click="openImportModal" class="import-button erp-button erp-button--primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
           </svg> {{ uiText(`Importar`) }} </button>
@@ -73,7 +73,7 @@
       <div class="import-modal" @click.stop>
         <div class="modal-header">
           <h2>{{ uiText(`Importar Vendas - VENDASgeral.xlsx`) }}</h2>
-          <button @click="closeImportModal" class="close-button">
+          <button @click="closeImportModal" class="close-button erp-button erp-button--secondary erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -147,7 +147,7 @@
                     <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
                   </div>
                 </div>
-                <button @click="clearFile" class="remove-file-btn">
+                <button @click="clearFile" class="remove-file-btn erp-button erp-button--danger erp-button--icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
@@ -157,7 +157,7 @@
             </div>
 
             <div v-if="selectedFile" class="form-actions">
-              <button @click="previewUpload" :disabled="loading" class="btn btn-secondary">
+              <button @click="previewUpload" :disabled="loading" class="btn btn-secondary erp-button erp-button--secondary">
                 {{ loading ? uiText(`Carregando...`) : uiText(`Preview`) }}
               </button>
             </div>
@@ -213,11 +213,11 @@
             </div>
 
             <div class="preview-actions">
-              <button @click="clearPreview" class="btn btn-secondary"> {{ uiText(`Cancelar`) }} </button>
+              <button @click="clearPreview" class="btn btn-secondary erp-button erp-button--secondary"> {{ uiText(`Cancelar`) }} </button>
               <button 
                 @click="confirmImport" 
                 :disabled="loading || previewData.valid_rows === 0"
-                class="btn btn-primary"
+                class="btn btn-primary erp-button erp-button--primary"
               >
                 {{ loading ? uiText(`Importando...`) : uiText(`Importar {0} vendas`,{0:previewData.valid_rows}) }}
               </button>
@@ -250,7 +250,7 @@
             </div>
 
             <div class="result-actions">
-              <button @click="closeImportModal" class="btn btn-primary"> {{ uiText(`Fechar`) }} </button>
+              <button @click="closeImportModal" class="btn btn-primary erp-button erp-button--primary"> {{ uiText(`Fechar`) }} </button>
             </div>
           </div>
         </div>

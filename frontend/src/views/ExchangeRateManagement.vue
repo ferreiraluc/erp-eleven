@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="management-header">
       <div class="header-left">
-        <button @click="goBack" class="back-button">
+        <button @click="goBack" class="back-button erp-button erp-button--ghost">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
@@ -15,34 +15,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <!-- Language Selector -->
-        <div class="language-selector">
-          <button
-            @click="showLanguageDropdown = !showLanguageDropdown"
-            class="language-button"
-          >
-            <span class="language-flag">{{ currentLocale.flag }}</span>
-            <span class="language-text">{{ currentLocale.code.toUpperCase() }}</span>
-            <svg class="dropdown-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </button>
-
-          <div v-if="showLanguageDropdown" class="language-dropdown">
-            <button
-              v-for="lang in availableLocales"
-              :key="lang.code"
-              @click="handleLanguageChange(lang.code)"
-              class="language-option"
-              :class="{ 'active': lang.code === locale }"
-            >
-              <span class="option-flag">{{ lang.flag }}</span>
-              <span class="option-name">{{ lang.name }}</span>
-            </button>
-          </div>
-        </div>
-
-        <button @click="showQuickUpdateModal = true" class="btn btn-primary">
+        <button @click="showQuickUpdateModal = true" class="btn btn-primary erp-button erp-button--primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
@@ -114,7 +87,7 @@
             <option value="30">{{ $t('exchangeManagement.last30Days') }}</option>
             <option value="90">{{ $t('exchangeManagement.last3Months') }}</option>
           </select>
-          <button @click="loadHistory" class="btn btn-secondary">
+          <button @click="loadHistory" class="btn btn-secondary erp-button erp-button--secondary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
@@ -131,7 +104,7 @@
       <div v-else-if="historyError" class="error-state">
         <div class="error-icon" aria-hidden="true">⚠</div>
         <p>{{ historyError }}</p>
-        <button @click="loadHistory" class="btn btn-primary">{{ $t('exchangeManagement.tryAgain') }}</button>
+        <button @click="loadHistory" class="btn btn-primary erp-button erp-button--primary">{{ $t('exchangeManagement.tryAgain') }}</button>
       </div>
 
       <div v-else-if="historicalRates.length === 0" class="empty-state">
@@ -201,7 +174,7 @@
                   <button
                     v-if="editingRate?.id !== rate.id && !rate.is_active"
                     @click="startEdit(rate)"
-                    class="btn-icon edit"
+                    class="btn-icon edit erp-button erp-button--ghost erp-button--icon"
                     :title="$t('exchangeManagement.editRate')"
                   >
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -210,12 +183,12 @@
                   </button>
 
                   <template v-if="editingRate?.id === rate.id">
-                    <button @click="saveEditedRate" class="btn-icon save" :title="$t('exchangeManagement.saveChanges')">
+                    <button @click="saveEditedRate" class="btn-icon save erp-button erp-button--primary erp-button--icon" :title="$t('exchangeManagement.saveChanges')">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                       </svg>
                     </button>
-                    <button @click="cancelEdit" class="btn-icon cancel" :title="$t('common.cancel')">
+                    <button @click="cancelEdit" class="btn-icon cancel erp-button erp-button--ghost erp-button--icon" :title="$t('common.cancel')">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
@@ -225,7 +198,7 @@
                   <button
                     v-if="editingRate?.id !== rate.id && !rate.is_active"
                     @click="confirmDelete(rate)"
-                    class="btn-icon delete"
+                    class="btn-icon delete erp-button erp-button--danger erp-button--icon"
                     :title="$t('exchangeManagement.deleteRate')"
                   >
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -245,7 +218,7 @@
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>{{ $t('exchangeManagement.quickUpdateTitle') }}</h3>
-          <button @click="showQuickUpdateModal = false" class="modal-close">
+          <button @click="showQuickUpdateModal = false" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -285,8 +258,8 @@
           <div v-if="updateError" class="error-message">{{ updateError }}</div>
         </div>
         <div class="modal-footer">
-          <button @click="showQuickUpdateModal = false" class="btn btn-secondary">{{ $t('common.cancel') }}</button>
-          <button @click="performQuickUpdate" :disabled="isUpdating" class="btn btn-primary">
+          <button @click="showQuickUpdateModal = false" class="btn btn-secondary erp-button erp-button--secondary">{{ $t('common.cancel') }}</button>
+          <button @click="performQuickUpdate" :disabled="isUpdating" class="btn btn-primary erp-button erp-button--primary">
             <span v-if="isUpdating">{{ $t('exchangeManagement.updating') }}</span>
             <span v-else>{{ $t('exchangeManagement.updateRates') }}</span>
           </button>
@@ -310,8 +283,8 @@
           <p class="warning-text">{{ $t('exchangeManagement.warning') }}</p>
         </div>
         <div class="modal-footer">
-          <button @click="showDeleteModal = false" class="btn btn-secondary">{{ $t('common.cancel') }}</button>
-          <button @click="deleteRate" :disabled="isDeleting" class="btn btn-danger">
+          <button @click="showDeleteModal = false" class="btn btn-secondary erp-button erp-button--secondary">{{ $t('common.cancel') }}</button>
+          <button @click="deleteRate" :disabled="isDeleting" class="btn btn-danger erp-button erp-button--danger">
             <span v-if="isDeleting">{{ $t('exchangeManagement.deleting') }}</span>
             <span v-else>{{ $t('common.delete') }}</span>
           </button>
@@ -323,24 +296,15 @@
 
 <script setup lang="ts">
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { setLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { locale, t } = useI18n()
-
-// Language settings
-const showLanguageDropdown = ref(false)
-const availableLocales = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'pt', name: 'Português', flag: '🇧🇷' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' }
-]
+const { t } = useI18n()
 
 // Reactive data
 const currentRates = ref<any>(null)
@@ -580,16 +544,6 @@ const deleteRate = async () => {
   }
 }
 
-// Language functions
-const currentLocale = computed(() => {
-  return availableLocales.find(loc => loc.code === locale.value) || availableLocales[0]
-})
-
-const handleLanguageChange = (langCode: string) => {
-  setLocale(langCode)
-  showLanguageDropdown.value = false
-}
-
 const resetQuickUpdateForm = () => {
   quickUpdateRates.value = {
     usd_to_pyg: undefined,
@@ -639,17 +593,6 @@ const getCurrencyFlag = (pair: string) => {
   return flags[pair] || '[EXCHANGE]'
 }
 
-// Close dropdown when clicking outside
-const handleClickOutside = (event: Event) => {
-  const target = event.target as Element
-  const languageSelector = document.querySelector('.language-selector')
-
-  if (languageSelector && !languageSelector.contains(target)) {
-    showLanguageDropdown.value = false
-  }
-}
-
-
 // Initialize data
 onMounted(async () => {
   // Initialize form with translated values
@@ -661,14 +604,8 @@ onMounted(async () => {
     loadSalesAverage()
   ])
 
-  // Add click outside listener
-  document.addEventListener('click', handleClickOutside)
 })
 
-// Cleanup
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <style scoped>
@@ -739,106 +676,6 @@ onUnmounted(() => {
   display: flex;
   gap: 1rem;
   align-items: center;
-}
-
-/* Language Selector */
-.language-selector {
-  position: relative;
-}
-
-.language-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background-color: #f9fafb;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.language-button:hover {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
-  color: #374151;
-}
-
-.language-flag {
-  font-size: 0.875rem;
-  width: 1.25rem;
-  display: inline-block;
-}
-
-.language-text {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.dropdown-icon {
-  width: 1rem;
-  height: 1rem;
-  transition: transform 0.2s;
-}
-
-.language-selector:hover .dropdown-icon {
-  transform: rotate(180deg);
-}
-
-.language-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background-color: white;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 50;
-  margin-top: 0.25rem;
-  min-width: 160px;
-}
-
-.language-option {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.75rem;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-size: 0.875rem;
-}
-
-.language-option:hover {
-  background-color: #f3f4f6;
-}
-
-.language-option.active {
-  background-color: #dbeafe;
-  color: #2563eb;
-}
-
-.language-option:first-child {
-  border-radius: 0.5rem 0.5rem 0 0;
-}
-
-.language-option:last-child {
-  border-radius: 0 0 0.5rem 0.5rem;
-}
-
-.option-flag {
-  font-size: 1rem;
-  width: 1.5rem;
-  display: inline-block;
-}
-
-.option-name {
-  font-weight: 500;
 }
 
 /* Current Rates Section */

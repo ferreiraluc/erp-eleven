@@ -3,7 +3,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h2 class="modal-title">{{ isEditing ? uiText(`Editar Cliente`) : uiText(`Novo Cliente`) }}</h2>
-        <button class="close-btn" @click="$emit('close')">
+        <button class="close-btn erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -53,8 +53,8 @@
         <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
-          <button type="submit" class="btn btn-primary" :disabled="submitting || !form.nome.trim()">
+          <button type="button" class="btn btn-secondary erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
+          <button type="submit" class="btn btn-primary erp-button erp-button--primary" :disabled="submitting || !form.nome.trim()">
             {{ submitting ? uiText(`Salvando...`) : (isEditing ? uiText(`Salvar alterações`) : uiText(`Criar cliente`)) }}
           </button>
         </div>

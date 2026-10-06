@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="header-left">
           <div class="header-top">
-            <button @click="$router.replace('/dashboard')" class="back-button">
+            <button @click="$router.replace('/dashboard')" class="back-button erp-button erp-button--ghost erp-button--icon">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -15,7 +15,7 @@
           <p class="page-subtitle">{{ $tr("Gerencie todos os pedidos da loja") }}</p>
         </div>
         <div class="header-right">
-          <button @click="openCreateModal" class="btn btn-primary">
+          <button @click="openCreateModal" class="btn btn-primary erp-button erp-button--primary">
             <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -67,7 +67,7 @@
 
         <!-- View Toggle -->
         <div class="view-toggle">
-          <button
+          <button class="erp-control"
             @click="viewMode = 'list'"
             :class="['toggle-btn', { active: viewMode === 'list' }]"
           >
@@ -76,7 +76,7 @@
             </svg>
             {{ $tr("Lista") }}
           </button>
-          <button
+          <button class="erp-control"
             @click="viewMode = 'cards'"
             :class="['toggle-btn', { active: viewMode === 'cards' }]"
           >
@@ -104,7 +104,7 @@
       </div>
       <h3>{{ $tr("Nenhum pedido encontrado") }}</h3>
       <p>{{ $tr("Não há pedidos que correspondam aos filtros selecionados") }}</p>
-      <button @click="clearFilters" class="btn btn-secondary">
+      <button @click="clearFilters" class="btn btn-secondary erp-button erp-button--secondary">
         {{ $tr("Limpar Filtros") }}
       </button>
     </div>
@@ -161,7 +161,7 @@
           <div class="col col-actions">
             <button
               @click.stop="openEditModal(pedido)"
-              class="action-btn edit-btn"
+              class="action-btn edit-btn erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Editar")'
             >
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -170,7 +170,7 @@
             </button>
             <button
               @click.stop="createRastreamento(pedido)"
-              class="action-btn track-btn"
+              class="action-btn track-btn erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Rastreamento")'
             >
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,7 +199,7 @@
         <button
           @click="previousPage"
           :disabled="currentPage === 1"
-          class="pagination-btn"
+          class="pagination-btn erp-button erp-button--secondary erp-button--sm"
         >
           {{ $tr("Anterior") }}
         </button>
@@ -211,7 +211,7 @@
         <button
           @click="nextPage"
           :disabled="currentPage === totalPages"
-          class="pagination-btn"
+          class="pagination-btn erp-button erp-button--secondary erp-button--sm"
         >
           {{ $tr("Próxima") }}
         </button>

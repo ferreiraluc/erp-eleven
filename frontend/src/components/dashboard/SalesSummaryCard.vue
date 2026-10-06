@@ -23,7 +23,7 @@
       </div>
       <div v-else-if="error" class="summary-error" role="alert">
         <span>{{t('summaryError')}}</span
-        ><button @click="load">{{t('retry')}}</button>
+        ><button class="erp-button erp-button--secondary" @click="load">{{t('retry')}}</button>
       </div>
       <template v-else-if="data && latest">
         <div class="period-line">
@@ -123,7 +123,7 @@
         >
       </nav>
       <button
-        class="summary-refresh"
+        class="summary-refresh erp-button erp-button--ghost erp-button--icon"
         :disabled="loading"
         @click="load"
         :aria-label="t('reloadSummaryAria')"

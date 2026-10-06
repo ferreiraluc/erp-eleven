@@ -4,7 +4,7 @@
     <div class="page-header">
       <div class="header-content">
         <div class="header-title">
-          <button @click="goBack" class="back-button">
+          <button @click="goBack" class="back-button erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
@@ -14,7 +14,7 @@
             <p class="subtitle">{{ $tr("Cadastre, edite e gerencie seus vendedores") }}</p>
           </div>
         </div>
-        <button @click="openCreateModal" class="create-button">
+        <button @click="openCreateModal" class="create-button erp-button erp-button--primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
@@ -67,19 +67,19 @@
       <!-- Filters -->
       <div class="filters-section">
         <div class="filters-group">
-          <button 
+          <button class="erp-control"
             @click="setFilter('all')" 
             :class="['filter-button', { active: currentFilter === 'all' }]"
           >
             {{ $tr("Todos (") }}{{ totalVendors }})
           </button>
-          <button 
+          <button class="erp-control"
             @click="setFilter('active')" 
             :class="['filter-button', { active: currentFilter === 'active' }]"
           >
             {{ $tr("Ativos (") }}{{ activeVendors }})
           </button>
-          <button 
+          <button class="erp-control"
             @click="setFilter('inactive')" 
             :class="['filter-button', { active: currentFilter === 'inactive' }]"
           >
@@ -114,7 +114,7 @@
           </svg>
           <h3>{{ $tr("Nenhum vendedor encontrado") }}</h3>
           <p>{{ currentFilter === 'all' ? uiText(`Cadastre seu primeiro vendedor`) : uiText(`Nenhum vendedor corresponde aos filtros aplicados`) }}</p>
-          <button v-if="currentFilter === 'all'" @click="openCreateModal" class="create-button">
+          <button v-if="currentFilter === 'all'" @click="openCreateModal" class="create-button erp-button erp-button--primary">
             {{ $tr("Cadastrar Vendedor") }}
           </button>
         </div>
@@ -161,12 +161,12 @@
                 </td>
                 <td class="actions-column">
                   <div class="action-buttons">
-                    <button @click="editVendor(vendor)" class="action-button edit">
+                    <button @click="editVendor(vendor)" class="action-button edit erp-button erp-button--ghost erp-button--icon">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button 
+                    <button class="erp-button erp-button--ghost erp-button--icon"
                       @click="toggleVendorStatus(vendor)" 
                       :class="['action-button', vendor.ativo ? 'deactivate' : 'activate']"
                     >
@@ -191,7 +191,7 @@
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2>{{ isEditing ? uiText(`Editar Vendedor`) : uiText(`Novo Vendedor`) }}</h2>
-          <button @click="closeModal" class="modal-close">
+          <button @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -282,10 +282,10 @@
           </div>
 
           <div class="modal-footer">
-            <button type="button" @click="closeModal" class="button secondary">
+            <button type="button" @click="closeModal" class="button secondary erp-button erp-button--secondary">
               {{ $tr("Cancelar") }}
             </button>
-            <button type="submit" :disabled="isSubmitting" class="button primary">
+            <button type="submit" :disabled="isSubmitting" class="button primary erp-button erp-button--primary">
               <span v-if="isSubmitting">{{ isEditing ? uiText(`Salvando...`) : uiText(`Criando...`) }}</span>
               <span v-else>{{ isEditing ? uiText(`Salvar`) : uiText(`Criar Vendedor`) }}</span>
             </button>

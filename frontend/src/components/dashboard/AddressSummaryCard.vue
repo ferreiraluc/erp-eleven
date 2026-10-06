@@ -26,7 +26,7 @@
       <template v-else>
         <div v-if="overviewError" class="summary-error" role="alert">
           <span>{{ tr('Não foi possível carregar o resumo de endereços.') }}</span
-          ><button @click="load">{{ tr('Tentar novamente') }}</button>
+          ><button class="erp-button erp-button--secondary" @click="load">{{ tr('Tentar novamente') }}</button>
         </div>
         <template v-if="overview">
           <div class="address-metrics">
@@ -72,7 +72,7 @@
         </div>
         <div v-if="historyError" class="summary-error" role="alert">
           <span>{{ tr('Histórico indisponível no momento.') }}</span
-          ><button @click="load">{{ tr('Tentar novamente') }}</button>
+          ><button class="erp-button erp-button--secondary" @click="load">{{ tr('Tentar novamente') }}</button>
         </div>
         <ul v-else-if="jobs.length" class="summary-list">
           <li v-for="job in jobs" :key="job.id">
@@ -120,7 +120,7 @@
         >
       </nav>
       <button
-        class="summary-refresh"
+        class="summary-refresh erp-button erp-button--ghost erp-button--icon"
         :disabled="refreshing"
         @click="load"
         :aria-label="tr('Atualizar resumo de endereços')"

@@ -8,13 +8,13 @@
           <p class="subtitle">{{ $tr("Gerencie e visualize todas as vendas do sistema") }}</p>
         </div>
         <div class="action-buttons">
-          <button v-if="!auth.ownSales" @click="showImportModal = true" class="btn-primary">
+          <button v-if="!auth.ownSales" @click="showImportModal = true" class="btn-primary erp-button erp-button--primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             {{ $tr("Importar Vendas") }}
           </button>
-          <button @click="showAddModal = true" class="btn-secondary">
+          <button @click="showAddModal = true" class="btn-secondary erp-button erp-button--secondary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
             </svg>
@@ -121,8 +121,8 @@
         </div>
 
         <div class="filter-actions">
-          <button @click="applyFilters" class="btn-primary">{{ $tr("Filtrar") }}</button>
-          <button @click="clearFilters" class="btn-ghost">{{ $tr("Limpar") }}</button>
+          <button @click="applyFilters" class="btn-primary erp-button erp-button--primary">{{ $tr("Filtrar") }}</button>
+          <button @click="clearFilters" class="btn-ghost erp-button erp-button--secondary">{{ $tr("Limpar") }}</button>
         </div>
       </div>
     </div>
@@ -132,7 +132,7 @@
       <div class="table-header">
         <h2>{{ $tr("📊 Lista de Vendas") }}</h2>
         <div class="table-actions">
-          <button @click="exportVendas" class="btn-ghost">
+          <button @click="exportVendas" class="btn-ghost erp-button erp-button--secondary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
             </svg>
@@ -191,12 +191,12 @@
                 <span class="produto-desc">{{ venda.descricao_produto || 'N/A' }}</span>
               </td>
               <td class="actions-cell">
-                <button @click="editVenda(venda)" class="btn-action edit">
+                <button @click="editVenda(venda)" class="btn-action edit erp-button erp-button--ghost erp-button--icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>
                 </button>
-                <button @click="deleteVenda(venda)" class="btn-action delete">
+                <button @click="deleteVenda(venda)" class="btn-action delete erp-button erp-button--danger erp-button--icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -211,7 +211,7 @@
           <div class="empty-icon">📊</div>
           <h3>{{ $tr("Nenhuma venda encontrada") }}</h3>
           <p>{{ hasFilters ? uiText(`Tente ajustar os filtros`) : uiText(`Comece importando ou criando uma nova venda`) }}</p>
-          <button v-if="hasFilters || !auth.ownSales" @click="hasFilters ? clearFilters() : showImportModal = true" class="btn-primary">
+          <button v-if="hasFilters || !auth.ownSales" @click="hasFilters ? clearFilters() : showImportModal = true" class="btn-primary erp-button erp-button--primary">
             {{ hasFilters ? uiText(`Limpar Filtros`) : uiText(`Importar Vendas`) }}
           </button>
         </div>
@@ -226,7 +226,7 @@
           <button
             @click="currentPage--"
             :disabled="currentPage === 1"
-            class="btn-pagination"
+            class="btn-pagination erp-button erp-button--secondary erp-button--sm"
           >
             {{ $tr("← Anterior") }}
           </button>
@@ -236,7 +236,7 @@
           <button
             @click="currentPage++"
             :disabled="currentPage === totalPages"
-            class="btn-pagination"
+            class="btn-pagination erp-button erp-button--secondary erp-button--sm"
           >
             {{ $tr("Próxima →") }}
           </button>
@@ -249,7 +249,7 @@
       <div class="modal" @click.stop>
         <VendasImportCard />
         <div class="modal-actions">
-          <button @click="showImportModal = false" class="btn-secondary">{{ $tr("Fechar") }}</button>
+          <button @click="showImportModal = false" class="btn-secondary erp-button erp-button--secondary">{{ $tr("Fechar") }}</button>
         </div>
       </div>
     </div>

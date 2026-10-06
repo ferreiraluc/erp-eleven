@@ -6,7 +6,7 @@
       <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
     </label>
     <div v-if="modelValue.pais==='BR'" class="postal wide" aria-live="polite">
-      <button type="button" @click="lookup" :disabled="busy || !validCep">{{busy ? tr('Consultando CEP…') : tr('Conferir e completar pelo CEP')}}</button>
+      <button class="erp-button erp-button--secondary" type="button" @click="lookup" :disabled="busy || !validCep">{{busy ? tr('Consultando CEP…') : tr('Conferir e completar pelo CEP')}}</button>
       <p v-if="message">{{tr(message)}}</p>
       <template v-if="conflicts.length">
         <p class="warning">{{ tr('O endereço informado difere da consulta. Seus dados foram mantidos:') }}</p>

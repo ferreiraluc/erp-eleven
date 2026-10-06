@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="header-left">
           <div class="header-top">
-            <button @click="$router.replace('/dashboard')" class="back-button">
+            <button @click="$router.replace('/dashboard')" class="back-button erp-button erp-button--ghost erp-button--icon">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -15,23 +15,23 @@
           <p class="page-subtitle">{{ tr('Gerencie os itens do inventário') }}</p>
         </div>
         <div class="header-right">
-          <button @click="showDiagnostics = !showDiagnostics" class="btn btn-secondary diagnostics-toggle" :aria-expanded="showDiagnostics" aria-controls="inventory-diagnostics">
+          <button @click="showDiagnostics = !showDiagnostics" class="btn btn-secondary diagnostics-toggle erp-button erp-button--secondary erp-button--sm" :aria-expanded="showDiagnostics" aria-controls="inventory-diagnostics">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M9 4H5v16h14V4h-4M9 3h6v4H9z" /></svg>
             {{ diagnosticsText('open') }}
           </button>
-          <button @click="showLabelTemplates = true" class="btn btn-secondary btn-modelos-ia-desktop">
+          <button @click="showLabelTemplates = true" class="btn btn-secondary btn-modelos-ia-desktop erp-button erp-button--secondary erp-button--sm">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
             {{ tr('Exemplos de etiquetas') }}
           </button>
-          <button @click="showImport = true" class="btn btn-secondary">
+          <button @click="showImport = true" class="btn btn-secondary erp-button erp-button--secondary erp-button--sm">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             {{ tr('Importar') }}
           </button>
-          <button @click="openCreate" class="btn btn-primary">
+          <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary erp-button--sm">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -49,11 +49,11 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input v-model="searchQuery" type="text" :placeholder="tr('Buscar por nome, SKU, código...')" class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
-          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn" :title="tr('Limpar busca')" type="button">
+          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Limpar busca')" type="button">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <button @click="showScanner = true" class="camera-btn" :title="tr('Escanear código')">
+        <button @click="showScanner = true" class="camera-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Escanear código')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -64,7 +64,7 @@
       <!-- Filter chips (status + marca + categoria + ver grupos) -->
       <div class="filter-chips" ref="filterChipsRef">
         <!-- Status -->
-        <button
+        <button class="erp-control"
           v-for="chip in statusChips"
           :key="chip.value"
           @click="setStatusFilter(chip.value)"
@@ -76,44 +76,44 @@
 
         <!-- Marca dropdown chip -->
         <div class="chip-dd-wrap" v-if="distinctBrands.length > 0">
-          <button @click="toggleFilter('brand')" :class="['chip', { active: !!filterBrand }]">
+          <button class="erp-control" @click="toggleFilter('brand')" :class="['chip', { active: !!filterBrand }]">
             {{ filterBrand || tr('Marca') }} <span class="chip-caret">▾</span>
           </button>
           <div v-if="openFilter === 'brand'" class="chip-dropdown">
             <div class="chip-dd-search-wrap">
               <input v-model="brandSearch" class="chip-dd-search" :placeholder="tr('Buscar marca...')" @click.stop type="text" autocomplete="off" />
             </div>
-            <button @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">{{ tr('Todas as marcas') }}</button>
-            <button v-for="b in filteredBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
+            <button class="erp-control" @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">{{ tr('Todas as marcas') }}</button>
+            <button class="erp-control" v-for="b in filteredBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
           </div>
         </div>
 
         <!-- Categoria dropdown chip -->
         <div class="chip-dd-wrap" v-if="distinctCategories.length > 0">
-          <button @click="toggleFilter('category')" :class="['chip', { active: !!filterCategory }]">
+          <button class="erp-control" @click="toggleFilter('category')" :class="['chip', { active: !!filterCategory }]">
             {{ filterCategory ? formatCategory(filterCategory) : tr('Categoria') }} <span class="chip-caret">▾</span>
           </button>
           <div v-if="openFilter === 'category'" class="chip-dropdown">
             <div class="chip-dd-search-wrap">
               <input v-model="categorySearch" class="chip-dd-search" :placeholder="tr('Buscar categoria...')" @click.stop type="text" autocomplete="off" />
             </div>
-            <button @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">{{ tr('Todas as categorias') }}</button>
-            <button v-for="c in filteredCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
+            <button class="erp-control" @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">{{ tr('Todas as categorias') }}</button>
+            <button class="erp-control" v-for="c in filteredCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
           </div>
         </div>
 
         <!-- Location chips -->
-        <button @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">
+        <button class="erp-control" @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">
           {{ tr('Loja') }}
           <span v-if="inventoryStore.alerts?.loja_count !== undefined" class="chip-count">{{ inventoryStore.alerts.loja_count }}</span>
         </button>
-        <button @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">
+        <button class="erp-control" @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">
           {{ tr('Depósito') }}
           <span v-if="inventoryStore.alerts?.deposito_count !== undefined" class="chip-count">{{ inventoryStore.alerts.deposito_count }}</span>
         </button>
 
         <!-- Ver grades (só aparece se existem grupos) -->
-        <button v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
+        <button class="erp-control" v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
           {{ tr('Ver grades') }}
           <span v-if="inventoryStore.alerts?.group_count" class="chip-count">{{ inventoryStore.alerts.group_count }}</span>
           <span v-if="groupMode" class="chip-check">✓</span>
@@ -127,7 +127,7 @@
           v-for="sg in suggestedGroups.slice(0, 4)"
           :key="sg.name"
           @click="selectSuggestedGroup(sg)"
-          class="sug-chip"
+          class="sug-chip erp-control"
           :title="tr('{count} itens com nome similar', { count: sg.items.length })"
         >
           {{ sg.name }} ({{ sg.items.length }})
@@ -147,7 +147,7 @@
         </span>
         <span class="inv-stat-sep">·</span>
         <button
-          class="inv-stat inv-stat-btn"
+          class="inv-stat inv-stat-btn erp-control"
           :class="{ 'inv-stat-btn-active': filterUngroupedOnly }"
           @click="toggleUngroupedFilter"
           :title="tr('Filtrar itens sem grade')"
@@ -158,7 +158,7 @@
         <template v-if="inventoryStore.alerts.low_stock_count > 0">
           <span class="inv-stat-sep">·</span>
           <button
-            class="inv-stat inv-stat-btn inv-stat-warn"
+            class="inv-stat inv-stat-btn inv-stat-warn erp-control"
             :class="{ 'inv-stat-btn-active inv-stat-warn-active': activeStatus === 'low_stock' }"
             @click="setStatusFilter(activeStatus === 'low_stock' ? '' : 'low_stock')"
             :title="tr('Filtrar estoque baixo')"
@@ -170,7 +170,7 @@
         <template v-if="inventoryStore.alerts.out_of_stock_count > 0">
           <span class="inv-stat-sep">·</span>
           <button
-            class="inv-stat inv-stat-btn inv-stat-danger"
+            class="inv-stat inv-stat-btn inv-stat-danger erp-control"
             :class="{ 'inv-stat-btn-active inv-stat-danger-active': activeStatus === 'out_of_stock' }"
             @click="setStatusFilter(activeStatus === 'out_of_stock' ? '' : 'out_of_stock')"
             :title="tr('Filtrar sem estoque')"
@@ -184,26 +184,26 @@
       <!-- View mode switcher -->
       <div class="view-switcher">
         <span class="view-label">{{ tr('Visualização:') }}</span>
-        <button :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" :title="tr('Lista')">
+        <button class="erp-control" :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" :title="tr('Lista')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
           {{ tr('Lista') }}
         </button>
-        <button :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" :title="tr('Compacto')">
+        <button class="erp-control" :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" :title="tr('Compacto')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h7M4 12h7M4 19h7M14 5h6M14 12h6M14 19h6" />
           </svg>
           {{ tr('Compacto') }}
         </button>
-        <button :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" :title="tr('Grade')">
+        <button class="erp-control" :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" :title="tr('Grade')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
           </svg>
           {{ tr('Grade') }}
         </button>
         <span class="view-sep">|</span>
-        <button :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar para agrupar')">
+        <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar para agrupar')">
           {{ tr('Agrupar') }}
         </button>
       </div>
@@ -224,7 +224,7 @@
         <strong>{{ tr('Não foi possível carregar a lista de produtos.') }}</strong>
         <p>{{ tr('Os dados do estoque não foram confirmados. Tente novamente ou abra a conferência de estoque.') }}</p>
       </div>
-      <button @click="reloadItems()" class="btn btn-secondary" :disabled="inventoryStore.loading">{{ tr('Tentar novamente') }}</button>
+      <button @click="reloadItems()" class="btn btn-secondary erp-button erp-button--secondary" :disabled="inventoryStore.loading">{{ tr('Tentar novamente') }}</button>
     </div>
 
     <!-- Loading -->
@@ -239,7 +239,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
       <p>{{ tr('Nenhum item encontrado') }}</p>
-      <button @click="openCreate" class="btn btn-primary" style="margin-top:1rem;">{{ tr('Criar primeiro item') }}</button>
+      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem;">{{ tr('Criar primeiro item') }}</button>
     </div>
 
     <!-- Items list -->
@@ -297,12 +297,12 @@
               </span>
             </div>
             <div class="group-btns">
-              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
+              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
-              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn" :title="tr('Desagrupar')">
+              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Desagrupar')">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
               </button>
             </div>
@@ -323,14 +323,14 @@
               </span>
               <div class="chip-remove-wrap">
                 <button
-                  class="chip-remove"
+                  class="chip-remove erp-button erp-button--danger erp-button--icon"
                   :title="tr('Remover do grupo')"
                   @click.stop="confirmRemoveChip = v.id"
                 >×</button>
                 <div v-if="confirmRemoveChip === v.id" class="chip-remove-confirm">
                   <span>{{ tr('Remover?') }}</span>
-                  <button @click.stop="doRemoveFromGroup(v.id, entry.group.group_key)">{{ tr('Sim') }}</button>
-                  <button @click.stop="confirmRemoveChip = null">{{ tr('Não') }}</button>
+                  <button class="erp-button erp-button--danger" @click.stop="doRemoveFromGroup(v.id, entry.group.group_key)">{{ tr('Sim') }}</button>
+                  <button class="erp-button erp-button--secondary" @click.stop="confirmRemoveChip = null">{{ tr('Não') }}</button>
                 </div>
               </div>
             </span>
@@ -359,26 +359,26 @@
               </span>
               <div class="exp-actions">
                 <div class="exit-wrap">
-                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit" :title="tr('Consumir 1')" :disabled="!canWithdrawStock(item)">−1</button>
+                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit erp-button erp-button--danger erp-button--sm" :title="tr('Consumir 1')" :disabled="!canWithdrawStock(item)">−1</button>
                   <div v-if="confirmExitId === item.id" class="exit-confirm-popover">
                     <template v-if="exitLocations(item).loja && exitLocations(item).deposito">
                       <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ displayStock(item.stock_loja) }})</button>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ displayStock(item.stock_deposito) }})</button>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja erp-button erp-button--secondary erp-button--sm">{{ tr('Loja (') }}{{ displayStock(item.stock_loja) }})</button>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep erp-button erp-button--secondary erp-button--sm">{{ tr('Dep. (') }}{{ displayStock(item.stock_deposito) }})</button>
                     </template>
                     <template v-else-if="exitLocations(item).deposito">
                       <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-yes">{{ tr('Sim') }}</button>
+                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
                     </template>
                     <template v-else>
                       <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-yes">{{ tr('Sim') }}</button>
+                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
                     </template>
-                    <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
+                    <button @click.stop="confirmExitId = null" class="confirm-no erp-button erp-button--ghost erp-button--icon">×</button>
                   </div>
                 </div>
-                <button @click.stop="openMovement(item)" :disabled="!hasKnownStock(item)" class="exp-btn exp-move" :title="tr('Movimentar')">⇅</button>
-                <button @click.stop="openEdit(item)" class="exp-btn exp-edit" :title="tr('Editar')">✏</button>
+                <button @click.stop="openMovement(item)" :disabled="!hasKnownStock(item)" class="exp-btn exp-move erp-button erp-button--ghost erp-button--icon" :title="tr('Movimentar')">⇅</button>
+                <button @click.stop="openEdit(item)" class="exp-btn exp-edit erp-button erp-button--ghost erp-button--icon" :title="tr('Editar')">✏</button>
               </div>
             </div>
           </div>
@@ -440,26 +440,26 @@
             </div>
             <div class="list-actions">
               <div class="exit-wrap">
-                <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn" :disabled="!canWithdrawStock(entry.item)">−1</button>
+                <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn erp-button erp-button--danger erp-button--sm" :disabled="!canWithdrawStock(entry.item)">−1</button>
                 <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
                   <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
                     <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja erp-button erp-button--secondary erp-button--sm">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep erp-button erp-button--secondary erp-button--sm">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
                   </template>
                   <template v-else-if="exitLocations(entry.item).deposito">
                     <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">{{ tr('Sim') }}</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
                   </template>
                   <template v-else>
                     <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">{{ tr('Sim') }}</button>
+                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
                   </template>
-                  <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
+                  <button @click.stop="confirmExitId = null" class="confirm-no erp-button erp-button--ghost erp-button--icon">×</button>
                 </div>
               </div>
-              <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn list-btn">{{ tr('Movimentar') }}</button>
-              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn">{{ tr('Editar') }}</button>
+              <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn list-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Movimentar') }}</button>
+              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Editar') }}</button>
             </div>
           </div>
 
@@ -501,26 +501,26 @@
                 </div>
                 <div class="item-actions">
                   <div class="exit-wrap">
-                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn" :disabled="!canWithdrawStock(entry.item)">−1</button>
+                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn erp-button erp-button--danger erp-button--sm" :disabled="!canWithdrawStock(entry.item)">−1</button>
                     <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
                       <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
                         <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja erp-button erp-button--secondary erp-button--sm">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep erp-button erp-button--secondary erp-button--sm">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
                       </template>
                       <template v-else-if="exitLocations(entry.item).deposito">
                         <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes">{{ tr('Sim') }}</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
                       </template>
                       <template v-else>
                         <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes">{{ tr('Sim') }}</button>
+                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
                       </template>
-                      <button @click.stop="confirmExitId = null" class="confirm-no">×</button>
+                      <button @click.stop="confirmExitId = null" class="confirm-no erp-button erp-button--ghost erp-button--icon">×</button>
                     </div>
                   </div>
-                  <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn">{{ tr('Movimentar') }}</button>
-                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn">{{ tr('Editar') }}</button>
+                  <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Movimentar') }}</button>
+                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Editar') }}</button>
                 </div>
               </div>
             </div>
@@ -560,7 +560,7 @@
     <!-- Image modal -->
     <div v-if="imageModalSrc" class="image-modal-overlay" @click="imageModalSrc = null">
       <img :src="imageModalSrc" alt="" class="image-modal-img" @click.stop />
-      <button class="image-modal-close" @click="imageModalSrc = null">✕</button>
+      <button class="image-modal-close erp-button erp-button--ghost erp-button--icon" @click="imageModalSrc = null">✕</button>
     </div>
 
     <!-- Toast -->
@@ -628,20 +628,20 @@
       <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit" class="selection-bar">
         <span class="sel-count">{{ tr('Itens selecionados: {count}', { count: selectedIds.length }) }}</span>
         <div class="sel-actions">
-          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary">{{ tr('Agrupar') }}</button>
-          <button @click="openBulkEdit" class="sel-btn sel-btn-primary">
+          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
+          <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
             <span class="sel-label-short">{{ tr('Editar') }}</span>
           </button>
-          <button @click="openBulkTransfer" class="sel-btn sel-btn-transfer">
+          <button @click="openBulkTransfer" class="sel-btn sel-btn-transfer erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Transferir') }}</span>
             <span class="sel-label-short">{{ tr('Transf.') }}</span>
           </button>
-          <button @click="selectAll" class="sel-btn">
+          <button @click="selectAll" class="sel-btn erp-button erp-button--secondary erp-button--sm">
             <span class="sel-label-full">{{ tr('Sel. todos') }}</span>
             <span class="sel-label-short">{{ tr('Todos') }}</span>
           </button>
-          <button @click="selectedIds = []" class="sel-btn">{{ tr('Limpar') }}</button>
+          <button @click="selectedIds = []" class="sel-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Limpar') }}</button>
         </div>
       </div>
     </transition>
@@ -677,8 +677,8 @@
         </datalist>
         <p class="gmodal-hint">{{ tr('Sugestão baseada nos nomes:') }} <strong>{{ groupNameSuggestion }}</strong></p>
         <div class="gmodal-footer">
-          <button @click="showGroupModal = false" class="sel-btn">{{ tr('Cancelar') }}</button>
-          <button @click="confirmGroup" class="sel-btn sel-btn-primary"
+          <button @click="showGroupModal = false" class="sel-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
+          <button @click="confirmGroup" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm"
             :disabled="!groupNameInput.trim() || grouping || selectedUngrouped.length < 2">
             {{ grouping ? tr('Agrupando...') : tr('Agrupar {count}', { count: selectedUngrouped.length }) }}
           </button>
@@ -1466,6 +1466,7 @@ onMounted(async () => {
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
 .header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; }
+.header-left { min-width: 0; }
 .header-right { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; }
 .header-top { display: flex; align-items: center; gap: 0.75rem; }
 .back-button { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
@@ -1478,7 +1479,7 @@ onMounted(async () => {
   .page-header { padding: 0.4rem 0.75rem; }
   .header-content { padding: 0; }
   .header-content { flex-wrap: wrap; gap: .5rem; }
-  .header-right { flex: 1; }
+  .header-right { flex: 1 1 100%; justify-content: flex-start; }
   .page-subtitle { display: none; }
   .page-title { font-size: 1rem; }
   .header-top { gap: 0.5rem; }
@@ -1516,7 +1517,7 @@ onMounted(async () => {
 /* --- COMPACT view (default, 2 cols) --- */
 .view-compact {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.3rem;
 }
 .view-compact .item-grid-image { display: none; }
@@ -1579,7 +1580,7 @@ onMounted(async () => {
 .view-grid .action-btn { font-size: 0.68rem; padding: 0.25rem 0.45rem; }
 
 @media (max-width: 600px) {
-  .view-compact { grid-template-columns: 1fr; }
+  .view-compact { grid-template-columns: minmax(0, 1fr); }
   .view-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .item-color-tag { max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
 }
@@ -1760,6 +1761,7 @@ onMounted(async () => {
 }
 
 .item-card {
+  min-width: 0;
   background: white;
   border-radius: 7px;
   padding: 0.45rem 0.6rem;
@@ -1808,7 +1810,7 @@ onMounted(async () => {
 .item-price { color: #059669; font-weight: 600; }
 
 /* Row 3: stock + location + badge + actions */
-.item-bottom-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin-top: 0.1rem; }
+.item-bottom-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.1rem; }
 .item-left-info { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 .stock-number { font-size: 0.72rem; font-weight: 700; }
 .stock-out      { color: #dc2626; }

@@ -1,16 +1,16 @@
 <template>
   <div class="ocr-overlay" @click.self="emit('close')">
     <div class="ocr-modal" role="dialog" aria-modal="true" :aria-label="t('title')">
-      <div class="ocr-header"><h3>{{ t('title') }}</h3><button class="close-btn" :aria-label="t('close')" @click="emit('close')">×</button></div>
+      <div class="ocr-header"><h3>{{ t('title') }}</h3><button class="close-btn erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" @click="emit('close')">×</button></div>
       <div class="brand-bar"><input v-model="selectedBrand" class="brand-input" :placeholder="t('brandHint')" :aria-label="t('brandHint')" list="brand-datalist" maxlength="100" :disabled="phase === 'processing'" /><datalist id="brand-datalist"><option v-for="brand in knownBrands" :key="brand.brand" :value="brand.brand" /></datalist><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
       <div class="ocr-body">
         <p class="ocr-notice">{{ t('transient') }}</p>
         <div v-if="phase === 'camera'" class="camera-wrap">
           <video ref="videoRef" autoplay playsinline muted class="camera-feed" />
-          <p class="camera-hint">{{ t('frame') }}</p><button class="capture-btn" @click="capture">{{ t('capture') }}</button>
+          <p class="camera-hint">{{ t('frame') }}</p><button class="capture-btn erp-button erp-button--primary" @click="capture">{{ t('capture') }}</button>
         </div>
         <div v-if="phase === 'camera' || phase === 'error'" class="ocr-file-picker">
-          <label class="btn btn-ghost">{{ t('upload') }}<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseFile" /></label><small>{{ t('formats') }}</small>
+          <label class="btn btn-ghost erp-button erp-button--secondary">{{ t('upload') }}<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseFile" /></label><small>{{ t('formats') }}</small>
         </div>
         <div v-if="phase === 'processing'" class="processing-wrap"><img :src="capturedImageUrl" class="preview-img" alt="" /><p class="processing-title" role="status">{{ t('processing') }}</p></div>
         <div v-if="phase === 'results'" class="results-wrap">
@@ -29,15 +29,15 @@
           <label class="ocr-review"><input v-model="reviewed" type="checkbox" />{{ t('reviewed') }}</label><p class="ocr-next">{{ t('next') }}</p>
           <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p>
           <p v-if="exampleSaved" class="ocr-success" role="status">{{ t('saved') }}</p>
-          <div class="results-actions"><button class="btn btn-ghost" @click="retake">{{ t('retake') }}</button><button class="btn btn-learn" :disabled="!reviewed || !hasAnyField" @click="openSaveTemplate">{{ t('saveExample') }}</button><button class="btn btn-primary" :disabled="!reviewed || !hasAnyField" @click="applyFields">{{ t('use') }}</button></div>
+          <div class="results-actions"><button class="btn btn-ghost erp-button erp-button--secondary" @click="retake">{{ t('retake') }}</button><button class="btn btn-learn erp-button erp-button--primary" :disabled="!reviewed || !hasAnyField" @click="openSaveTemplate">{{ t('saveExample') }}</button><button class="btn btn-primary erp-button erp-button--primary" :disabled="!reviewed || !hasAnyField" @click="applyFields">{{ t('use') }}</button></div>
         </div>
         <div v-if="phase === 'saving-template'" class="save-template-wrap">
           <h4>{{ t('exampleTitle') }}</h4><p class="save-hint">{{ t('exampleHint') }}</p><img :src="capturedImageUrl" class="preview-thumb" alt="" />
           <div class="stf-group"><label for="ocr-example-brand">{{ t('brand') }} *</label><input id="ocr-example-brand" v-model="saveForm.brand" maxlength="100" class="stf-input" /></div>
           <div class="stf-group"><label for="ocr-example-notes">{{ t('notes') }}</label><textarea id="ocr-example-notes" v-model="saveForm.notes" maxlength="1500" class="stf-input stf-textarea" /></div>
-          <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p><div class="results-actions"><button class="btn btn-ghost" :disabled="savingTemplate" @click="phase = 'results'">{{ t('back') }}</button><button class="btn btn-primary" :disabled="savingTemplate || !saveForm.brand.trim()" @click="saveTemplate">{{ t('save') }}</button></div>
+          <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p><div class="results-actions"><button class="btn btn-ghost erp-button erp-button--secondary" :disabled="savingTemplate" @click="phase = 'results'">{{ t('back') }}</button><button class="btn btn-primary erp-button erp-button--primary" :disabled="savingTemplate || !saveForm.brand.trim()" @click="saveTemplate">{{ t('save') }}</button></div>
         </div>
-        <div v-if="phase === 'error'" class="error-wrap"><p class="error-msg-big" role="alert">{{ t(errorKey) }}</p><button class="btn btn-ghost" @click="retake">{{ t('camera') }}</button></div>
+        <div v-if="phase === 'error'" class="error-wrap"><p class="error-msg-big" role="alert">{{ t(errorKey) }}</p><button class="btn btn-ghost erp-button erp-button--secondary" @click="retake">{{ t('camera') }}</button></div>
       </div>
     </div>
   </div>

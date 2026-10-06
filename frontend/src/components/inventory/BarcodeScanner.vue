@@ -3,7 +3,7 @@
     <div class="barcode-scanner-modal">
       <div class="scanner-header">
         <h3>{{ tr('Escanear Código') }}</h3>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--ghost erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -35,7 +35,7 @@
               @keyup.enter="submitManual"
               ref="manualInputRef"
             />
-            <button @click="submitManual" class="manual-btn" :disabled="!manualCode.trim()">
+            <button @click="submitManual" class="manual-btn erp-button erp-button--primary" :disabled="!manualCode.trim()">
               {{ tr('Buscar') }}
             </button>
           </div>

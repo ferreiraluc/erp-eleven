@@ -8,7 +8,10 @@ O ERP coordena logística, produtos, equipe e impressão. Os vendedores continua
 lançando vendas nas planilhas do OneDrive. O BI é um consumidor de resultados
 salvos; não substitui a planilha por um caixa novo nem altera seus lançamentos.
 
-O dashboard reúne estoque, rastreamentos, folgas, status do sistema e câmbio. Os
+O dashboard reúne estoque, rastreamentos, folgas, status do sistema e câmbio.
+No celular (até 600px), os rastreios recentes acompanham a rolagem da página;
+no tablet e desktop, a lista mantém rolagem interna. O módulo de contas a receber
+se chama **Pagadores**; a rota `/fiado` e os registros financeiros são preservados. Os
 cards de Endereços e Visão de vendas exibem resumos antes de abrir o módulo, com
 atalhos que levam diretamente à fila, impressão, etiquetas, vendedor ou período.
 O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.

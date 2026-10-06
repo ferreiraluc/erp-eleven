@@ -11,7 +11,7 @@
       <div class="header-right">
         <button
           @click.stop="$emit('edit', pedido)"
-          class="action-btn edit-btn"
+          class="action-btn edit-btn erp-button erp-button--ghost erp-button--icon"
           :title="uiText(`Editar pedido`)"
         >
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +83,7 @@
       <button
         v-if="pedido.codigo_rastreio"
         @click.stop="$emit('track', pedido)"
-        class="track-btn has-tracking"
+        class="track-btn has-tracking erp-button erp-button--secondary erp-button--sm"
         :title="uiText(`Ver rastreamento`)"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,7 +92,7 @@
       <button
         v-else
         @click.stop="$emit('track', pedido)"
-        class="track-btn no-tracking"
+        class="track-btn no-tracking erp-button erp-button--secondary erp-button--sm"
         :title="uiText(`Criar rastreamento`)"
       >
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,7 +109,7 @@
       <div class="footer-right">
         <button
           @click.stop="$emit('view', pedido)"
-          class="view-btn"
+          class="view-btn erp-button erp-button--secondary erp-button--sm"
         > {{ uiText(`Ver detalhes`) }} <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>

@@ -7,13 +7,13 @@
           <span class="pedido-number">{{ pedido.numero_pedido }}</span>
         </div>
         <div class="header-actions">
-          <button @click="$emit('edit', pedido)" class="edit-btn">
+          <button @click="$emit('edit', pedido)" class="edit-btn erp-button erp-button--secondary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
             {{ $tr("Editar") }}
           </button>
-          <button @click="$emit('close')" class="modal-close">
+          <button @click="$emit('close')" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -104,14 +104,14 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="createRastreamento" class="btn-secondary">
+        <button @click="createRastreamento" class="btn-secondary erp-button erp-button--secondary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           {{ pedido.codigo_rastreio ? uiText(`Ver Rastreamento`) : uiText(`Criar Rastreamento`) }}
         </button>
-        <button @click="$emit('edit', pedido)" class="btn-primary">
+        <button @click="$emit('edit', pedido)" class="btn-primary erp-button erp-button--primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>

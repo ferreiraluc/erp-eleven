@@ -3,7 +3,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>{{ tr('Editar Massivo') }} <span class="item-count">({{ items.length }} {{ tr('itens)') }}</span></h2>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -23,7 +23,7 @@
             <div class="image-area">
               <div v-if="sharedImage" class="image-preview">
                 <img :src="sharedImage" :alt="tr('Preview')" />
-                <button @click="sharedImage = ''" class="remove-img-btn" type="button">×</button>
+                <button @click="sharedImage = ''" class="remove-img-btn erp-button erp-button--danger erp-button--icon" type="button">×</button>
               </div>
               <div v-else class="image-placeholder" @click="triggerFileInput">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -218,8 +218,8 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary" :disabled="saving">{{ tr('Cancelar') }}</button>
-        <button @click="save" class="btn btn-primary" :disabled="saving || !hasChanges">
+        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary" :disabled="saving">{{ tr('Cancelar') }}</button>
+        <button @click="save" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || !hasChanges">
           <span v-if="saving">{{ tr('Salvando...') }}</span>
           <span v-else>{{ tr('Salvar') }} {{ items.length }} {{ tr('itens') }}</span>
         </button>

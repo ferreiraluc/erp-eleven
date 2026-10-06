@@ -1,0 +1,95 @@
+/* Explicit action variants override legacy scoped decoration, including teleported
+   dialogs under body. Layout/visibility stay with the owning component. */
+:root {
+  --button-radius: 8px;
+  --button-primary: #2563eb;
+  --button-primary-hover: #1d4ed8;
+  --button-danger: #b91c1c;
+}
+
+:is(#app, body) .erp-button {
+  --button-bg: #fff;
+  --button-fg: #475569;
+  --button-border: #cbd5e1;
+  --button-hover: #f1f5f9;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 40px;
+  max-width: 100%;
+  height: auto;
+  padding: .5rem .875rem;
+  border: 1px solid var(--button-border);
+  border-radius: var(--button-radius);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  font-family: inherit;
+  font-size: .875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+
+/* Kept at low specificity so mobile-only/desktop-only display rules still win. */
+.erp-button { display: inline-flex; }
+
+:is(#app, body) .erp-button--primary {
+  --button-bg: var(--button-primary);
+  --button-border: var(--button-primary);
+  --button-fg: #fff;
+  --button-hover: var(--button-primary-hover);
+}
+:is(#app, body) .erp-button--danger {
+  --button-bg: #fff1f2;
+  --button-border: #fecdd3;
+  --button-fg: var(--button-danger);
+  --button-hover: #ffe4e6;
+}
+:is(#app, body) .erp-button--ghost {
+  --button-bg: transparent;
+  --button-border: transparent;
+}
+:is(#app, body) .erp-button--sm {
+  min-height: 32px;
+  padding: .375rem .625rem;
+  font-size: .75rem;
+  line-height: 1rem;
+  gap: .375rem;
+}
+:is(#app, body) .erp-button--icon {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: .375rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+:is(#app, body) .erp-button > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+:is(#app, body) .erp-button:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--button-hover);
+  color: var(--button-fg);
+  border-color: var(--button-border);
+  box-shadow: none;
+}
+:is(#app, body) :is(.erp-button, .erp-control):focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+:is(#app, body) :is(.erp-button, .erp-control):is(:disabled, [aria-disabled="true"]) {
+  opacity: .5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#app, body) .erp-button { transition: none; }
+}

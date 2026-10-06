@@ -3,6 +3,11 @@
 O ERP oferece português (`pt`), espanhol (`es`) e inglês (`en`). O idioma fica no
 dispositivo e acompanha a sessão pelas opções da interface. `setLocale` atualiza
 Vue I18n, `localStorage` e o atributo `lang` do documento. O fallback é português.
+O seletor do cabeçalho usa um dropdown com bandeiras, siglas e nomes dos idiomas,
+no mesmo estilo do seletor de moeda. Fecha ao escolher, clicar fora ou pressionar
+Escape; também permite navegar pelas opções com o teclado.
+Todos os cabeçalhos usam `LanguageSelector.vue`, inclusive o acesso público.
+No celular, as telas operacionais deixam o idioma e a conta no dashboard.
 
 ## Onde ficam os textos
 

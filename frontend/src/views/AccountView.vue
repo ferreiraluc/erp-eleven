@@ -1,6 +1,6 @@
 <template>
   <main class="access-page account-page">
-    <header class="access-head"><div><h1>{{ $t('access.account') }}</h1><p>{{ auth.userName }} · {{ auth.user?.email }}</p></div><RouterLink v-if="!auth.user?.must_change_password" class="button" to="/dashboard">{{ $t('access.back') }}</RouterLink></header>
+    <header class="access-head"><div><h1>{{ $t('access.account') }}</h1><p>{{ auth.userName }} · {{ auth.user?.email }}</p></div><RouterLink v-if="!auth.user?.must_change_password" class="button erp-button erp-button--secondary" to="/dashboard">{{ $t('access.back') }}</RouterLink></header>
     <p v-if="auth.user?.must_change_password" class="notice">{{ $t('access.firstPassword') }}</p>
     <p v-if="error" class="notice error" role="alert">{{ error }}</p>
     <section class="access-card"><h2>{{ $t('access.changePassword') }}</h2><p>{{ $t('access.passwordHelp') }}</p>
@@ -8,7 +8,7 @@
         <label>{{ $t('access.currentPassword') }}<input v-model="current" type="password" autocomplete="current-password" required /></label>
         <label>{{ $t('access.newPassword') }}<input v-model="password" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
         <label>{{ $t('access.confirmPassword') }}<input v-model="confirm" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
-      </div><div class="actions"><button class="primary" :disabled="saving">{{ saving ? $t('common.loading') : $t('access.savePassword') }}</button></div></form>
+      </div><div class="actions"><button class="primary erp-button erp-button--primary" :disabled="saving">{{ saving ? $t('common.loading') : $t('access.savePassword') }}</button></div></form>
     </section>
     <p class="muted">{{ $t('access.activityNotice') }}</p>
   </main>

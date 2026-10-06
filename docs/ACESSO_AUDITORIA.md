@@ -10,7 +10,9 @@ cadastrar contas, ativar/desativar, alterar vínculos e redefinir senha temporá
 No dashboard, Minha conta, Usuários, Auditoria e Sair ficam no cabeçalho original,
 com o título “ERP Eleven, NOME” do usuário conectado. Moeda, idioma com bandeira
 e cotações ocupam uma linha compacta, tanto no celular quanto no desktop.
-As demais telas mantêm a barra de navegação;
+As demais telas mantêm a barra de navegação no desktop. Em telas de até 768px,
+a barra global fica apenas no dashboard, liberando espaço para as ferramentas
+dos módulos; o botão de voltar de cada módulo leva ao dashboard.
 Usuários e Auditoria aparecem somente para Lucas. O comportamento da sessão e as
 permissões continuam iguais em ambos os lugares.
 

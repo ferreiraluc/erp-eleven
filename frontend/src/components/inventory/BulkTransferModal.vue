@@ -3,7 +3,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>{{ tr('Transferência em Lote') }}</h2>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -16,10 +16,10 @@
         <div class="form-group">
           <label>{{ tr('Direção *') }}</label>
           <div class="dir-toggle">
-            <button type="button" :class="['dir-btn', { active: direction === 'deposito_to_loja' }]" @click="direction = 'deposito_to_loja'">
+            <button class="erp-control" type="button" :class="['dir-btn', { active: direction === 'deposito_to_loja' }]" @click="direction = 'deposito_to_loja'">
               {{ tr('Depósito → Loja') }}
             </button>
-            <button type="button" :class="['dir-btn', { active: direction === 'loja_to_deposito' }]" @click="direction = 'loja_to_deposito'">
+            <button class="erp-control" type="button" :class="['dir-btn', { active: direction === 'loja_to_deposito' }]" @click="direction = 'loja_to_deposito'">
               {{ tr('Loja → Depósito') }}
             </button>
           </div>
@@ -29,7 +29,7 @@
         <div class="items-section">
           <div class="items-header">
             <span class="items-title">{{ tr('Itens selecionados: {count}', { count: items.length }) }}</span>
-            <button type="button" class="max-all-btn" @click="setAllMax" :disabled="unknownStock">{{ tr('Máximo disponível') }}</button>
+            <button type="button" class="max-all-btn erp-button erp-button--secondary erp-button--sm" @click="setAllMax" :disabled="unknownStock">{{ tr('Máximo disponível') }}</button>
           </div>
           <div class="items-list">
             <div v-for="item in items" :key="item.id" class="transfer-row">
@@ -42,7 +42,7 @@
                 </span>
               </div>
               <div class="row-qty">
-                <button type="button" class="qty-btn" @click="dec(item.id)" :disabled="!hasKnownStock(item) || (quantities[item.id] ?? 1) <= 0">−</button>
+                <button type="button" class="qty-btn erp-button erp-button--ghost erp-button--icon" @click="dec(item.id)" :disabled="!hasKnownStock(item) || (quantities[item.id] ?? 1) <= 0">−</button>
                 <input
                   v-model.number="quantities[item.id]"
                   type="number"
@@ -51,7 +51,7 @@
                   :disabled="!hasKnownStock(item)"
                   class="qty-input"
                 />
-                <button type="button" class="qty-btn" @click="inc(item.id, sourceStock(item))" :disabled="!canIncrease(item)">+</button>
+                <button type="button" class="qty-btn erp-button erp-button--ghost erp-button--icon" @click="inc(item.id, sourceStock(item))" :disabled="!canIncrease(item)">+</button>
               </div>
             </div>
           </div>
@@ -69,8 +69,8 @@
         <div class="footer-summary">
           {{ tr('Unidades a transferir: {count}', { count: totalQty }) }}
         </div>
-        <button @click="emit('close')" class="btn btn-secondary">{{ tr('Cancelar') }}</button>
-        <button @click="handleSubmit" class="btn btn-primary" :disabled="saving || unknownStock || totalQty === 0">
+        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr('Cancelar') }}</button>
+        <button @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || unknownStock || totalQty === 0">
           {{ saving ? tr('Transferindo...') : tr('Transferir') }}
         </button>
       </div>

@@ -4,7 +4,7 @@
     <div class="calendar-header">
       <div class="header-controls">
         <div class="month-navigation">
-          <button @click="previousMonth" class="nav-button">
+          <button @click="previousMonth" class="nav-button erp-button erp-button--ghost erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -12,7 +12,7 @@
           <h3 class="month-title">
             {{ monthNames[currentMonth] }} {{ currentYear }}
           </h3>
-          <button @click="nextMonth" class="nav-button">
+          <button @click="nextMonth" class="nav-button erp-button erp-button--ghost erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
@@ -56,19 +56,19 @@
         <!-- Ações em lote -->
         <div class="bulk-actions" v-if="selectedFolgas.length > 0">
           <span class="selected-count">{{ selectedFolgas.length }} {{ $tr("selecionadas") }}</span>
-          <button @click="approveSelected" class="bulk-btn approve">
+          <button @click="approveSelected" class="bulk-btn approve erp-button erp-button--primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
             {{ $tr("Aprovar") }}
           </button>
-          <button @click="rejectSelected" class="bulk-btn reject">
+          <button @click="rejectSelected" class="bulk-btn reject erp-button erp-button--danger">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
             {{ $tr("Rejeitar") }}
           </button>
-          <button @click="deleteSelected" class="bulk-btn delete">
+          <button @click="deleteSelected" class="bulk-btn delete erp-button erp-button--danger">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
             </svg>
@@ -155,12 +155,12 @@
                 </svg>
               </div>
               <div class="action-buttons">
-                <button @click.stop="editFolga(folga)" class="action-btn edit">
+                <button @click.stop="editFolga(folga)" class="action-btn edit erp-button erp-button--ghost erp-button--icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="m18 2 4 4-14 14H4v-4L18 2zM14.5 5.5 18.5 9.5"/>
                   </svg>
                 </button>
-                <button @click.stop="deleteFolga(folga)" class="action-btn delete">
+                <button @click.stop="deleteFolga(folga)" class="action-btn delete erp-button erp-button--danger erp-button--icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -177,7 +177,7 @@
       <div class="day-modal" @click.stop>
         <div class="day-modal-header">
           <h4>{{ formatDate(selectedDay.date) }}</h4>
-          <button @click="closeDayModal" class="close-button">
+          <button @click="closeDayModal" class="close-button erp-button erp-button--ghost erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -208,10 +208,10 @@
                   <span :class="['status-badge', getStatusClass(folga)]">
                     {{ getStatusText(folga) }}
                   </span>
-                  <button @click="editFolga(folga)" class="btn btn-sm btn-secondary">
+                  <button @click="editFolga(folga)" class="btn btn-sm btn-secondary erp-button erp-button--secondary erp-button--sm">
                     {{ $tr("Editar") }}
                   </button>
-                  <button @click="deleteFolga(folga)" class="btn btn-sm btn-danger">
+                  <button @click="deleteFolga(folga)" class="btn btn-sm btn-danger erp-button erp-button--danger erp-button--sm">
                     {{ $tr("Excluir") }}
                   </button>
                 </div>
@@ -231,7 +231,7 @@
           </div>
 
           <div class="day-modal-actions">
-            <button @click="addFolga(selectedDay.date)" class="btn btn-primary">
+            <button @click="addFolga(selectedDay.date)" class="btn btn-primary erp-button erp-button--primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
               </svg>
@@ -247,7 +247,7 @@
       <div class="day-modal" @click.stop>
         <div class="day-modal-header">
           <h4>{{ editingFolga ? uiText(`Editar Folga`) : uiText(`Adicionar Folga`) }}</h4>
-          <button @click="closeFolgaModal" class="close-button">
+          <button @click="closeFolgaModal" class="close-button erp-button erp-button--secondary erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -311,10 +311,10 @@
             </div>
 
             <div class="form-actions">
-              <button type="button" @click="closeFolgaModal" class="btn btn-secondary">
+              <button type="button" @click="closeFolgaModal" class="btn btn-secondary erp-button erp-button--secondary">
                 {{ $tr("Cancelar") }}
               </button>
-              <button type="submit" class="btn btn-primary" :disabled="loading">
+              <button type="submit" class="btn btn-primary erp-button erp-button--primary" :disabled="loading">
                 {{ loading ? uiText(`Salvando...`) : editingFolga ? uiText(`Atualizar`) : uiText(`Salvar`) }}
               </button>
             </div>
@@ -347,10 +347,10 @@
         </div>
 
         <div class="delete-modal-actions">
-          <button @click="cancelDelete" class="btn btn-secondary">
+          <button @click="cancelDelete" class="btn btn-secondary erp-button erp-button--secondary">
             {{ $tr("Cancelar") }}
           </button>
-          <button @click="confirmDelete" class="btn btn-danger" :disabled="loading">
+          <button @click="confirmDelete" class="btn btn-danger erp-button erp-button--danger" :disabled="loading">
             {{ loading ? uiText(`Excluindo...`) : uiText(`Sim, Excluir`) }}
           </button>
         </div>

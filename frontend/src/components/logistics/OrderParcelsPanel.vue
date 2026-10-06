@@ -2,19 +2,19 @@
   <section class="logistics-panel" :aria-label="t('parcels')">
     <h4>{{ t('parcels') }}</h4>
     <p v-if="loading" role="status">{{ t('loading') }}</p>
-    <div v-if="loadError" role="alert" class="link-error">{{ t('error') }} <button @click="load()">{{ t('retry') }}</button></div>
+    <div v-if="loadError" role="alert" class="link-error">{{ t('error') }} <button class="erp-button erp-button--secondary erp-button--sm" @click="load()">{{ t('retry') }}</button></div>
     <p v-else-if="!loading && !parcels.length" class="muted">{{ t('emptyParcels') }}</p>
     <article v-for="parcel in parcels" :key="parcel.id" class="logistics-row">
       <div class="row-top"><RouterLink class="tracking-code" :to="{ path: '/rastreamento', query: { search: parcel.codigo_rastreio } }">{{ parcel.codigo_rastreio }}</RouterLink><span class="state">{{ parcel.ativo ? t(`states.${parcel.status}`) : t('archived') }}</span></div>
       <p>{{ parcel.destinatario || t('noName') }}</p><small>{{ new Date(parcel.created_at).toLocaleDateString(locale) }}</small>
     </article>
-    <button v-if="hasMore" :disabled="loading" @click="load(true)">{{ t('more') }}</button>
+    <button class="erp-button erp-button--secondary erp-button--sm" v-if="hasMore" :disabled="loading" @click="load(true)">{{ t('more') }}</button>
     <details class="link-form">
       <summary>{{ t('addParcel') }}</summary><p class="muted">{{ t('hint') }}</p>
-      <form @submit.prevent="find"><label class="identifier">{{ t('code') }}<input v-model="code" required maxlength="100" :disabled="saving" @input="candidate = null" /></label><button :disabled="finding || saving || !code.trim()">{{ t('find') }}</button></form>
+      <form @submit.prevent="find"><label class="identifier">{{ t('code') }}<input v-model="code" required maxlength="100" :disabled="saving" @input="candidate = null" /></label><button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !code.trim()">{{ t('find') }}</button></form>
       <div v-if="candidate" class="link-preview">
         <strong class="tracking-code">{{ candidate.codigo_rastreio }}</strong><p>{{ candidate.destinatario || t('noName') }}</p><p>{{ t('confirmOrder', { number: order.numero_pedido }) }}</p>
-        <button class="primary" :disabled="saving" @click="confirmLink">{{ t('confirm') }}</button><button :disabled="saving" @click="candidate = null">{{ t('cancel') }}</button>
+        <button class="primary erp-button erp-button--primary erp-button--sm" :disabled="saving" @click="confirmLink">{{ t('confirm') }}</button><button class="erp-button erp-button--secondary erp-button--sm" :disabled="saving" @click="candidate = null">{{ t('cancel') }}</button>
       </div>
       <p v-if="feedback" :class="feedbackError ? 'link-error' : 'link-success'" role="status">{{ feedback }}</p>
     </details>

@@ -3,7 +3,7 @@
     <div class="modal-container" @click.stop>
       <div class="modal-header">
         <h2 class="modal-title">{{ uiText(`Gerenciar Tags`) }}</h2>
-        <button @click="$emit('close')" class="modal-close">
+        <button @click="$emit('close')" class="modal-close erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -76,7 +76,7 @@
               <button
                 type="submit"
                 :disabled="!newTag.nome || isCreating"
-                class="btn-primary"
+                class="btn-primary erp-button erp-button--primary"
               >
                 <svg v-if="isCreating" class="loading-icon" fill="none" viewBox="0 0 24 24">
                   <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -143,14 +143,14 @@
               <div class="tag-actions">
                 <button
                   @click="editTag(tag)"
-                  class="action-btn edit-btn"
+                  class="action-btn edit-btn erp-button erp-button--ghost erp-button--icon"
                   :title="uiText(`Editar tag`)"
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <button
+                <button class="erp-button erp-button--ghost erp-button--icon"
                   @click="toggleTagStatus(tag)"
                   :class="['action-btn', tag.ativo ? 'deactivate-btn' : 'activate-btn']"
                   :title="tag.ativo ? uiText(`Desativar tag`) : uiText(`Ativar tag`)"
@@ -165,7 +165,7 @@
                 </button>
                 <button
                   @click="deleteTag(tag)"
-                  class="action-btn delete-btn"
+                  class="action-btn delete-btn erp-button erp-button--danger erp-button--icon"
                   :title="uiText(`Excluir tag`)"
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -179,8 +179,8 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="createDefaultTags" class="btn-secondary"> {{ uiText(`Criar Tags Padrão`) }} </button>
-        <button @click="$emit('close')" class="btn-primary"> {{ uiText(`Fechar`) }} </button>
+        <button @click="createDefaultTags" class="btn-secondary erp-button erp-button--secondary"> {{ uiText(`Criar Tags Padrão`) }} </button>
+        <button @click="$emit('close')" class="btn-primary erp-button erp-button--primary"> {{ uiText(`Fechar`) }} </button>
       </div>
     </div>
 
@@ -189,7 +189,7 @@
       <div class="modal-container edit-modal" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">{{ uiText(`Editar Tag`) }}</h3>
-          <button @click="cancelEdit" class="modal-close">
+          <button @click="cancelEdit" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -268,11 +268,11 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="cancelEdit" class="btn-secondary"> {{ uiText(`Cancelar`) }} </button>
+          <button @click="cancelEdit" class="btn-secondary erp-button erp-button--secondary"> {{ uiText(`Cancelar`) }} </button>
           <button
             @click="updateTag"
             :disabled="!editForm.nome || isUpdating"
-            class="btn-primary"
+            class="btn-primary erp-button erp-button--primary"
           >
             <svg v-if="isUpdating" class="loading-icon" fill="none" viewBox="0 0 24 24">
               <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

@@ -71,7 +71,7 @@
 
             <button
               type="submit"
-              class="btn-primary login-button"
+              class="btn-primary login-button erp-button erp-button--primary"
               :disabled="authStore.isLoading"
             >
               <svg

@@ -1,10 +1,13 @@
 <template>
   <div id="app">
-    <AccountNavigation v-if="!route.matched.some(record => record.path === '/dashboard') || !auth.isAuthenticated" />
+    <AccountNavigation
+      v-if="!route.matched.some(record => record.path === '/dashboard') || !auth.isAuthenticated"
+      :class="{ 'operational-account-bar': route.meta.requiresAuth }"
+    />
     <div v-if="auth.status === 'checking'" class="session-state" role="status">{{ $t('access.checking') }}</div>
     <section v-else-if="auth.status === 'error' && route.meta.requiresAuth" class="session-state session-error" role="alert">
       <p>{{ $t('access.connectionError') }}</p>
-      <div><button @click="retrySession">{{ $t('common.refresh') }}</button><button @click="logout">{{ $t('common.logout') }}</button></div>
+      <div><button class="erp-button erp-button--secondary" @click="retrySession">{{ $t('common.refresh') }}</button><button class="erp-button erp-button--secondary" @click="logout">{{ $t('common.logout') }}</button></div>
     </section>
     <RouterView v-else-if="!route.meta.requiresAuth || auth.isAuthenticated" :key="auth.user?.id || 'guest'" />
     <NotificationToast />
@@ -27,6 +30,9 @@ async function retrySession() {
 function logout() { return logoutToLogin(auth, router) }
 </script>
 <style>
+@media (max-width: 768px) {
+  #app > .operational-account-bar { display: none; }
+}
 .session-error { align-content: center; gap: 1rem; padding: 1.5rem; text-align: center; }
 .session-error p { max-width: 36rem; margin: 0; }
 .session-error button { margin: 0 .4rem; padding: .55rem .9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #1d4ed8; cursor: pointer; }

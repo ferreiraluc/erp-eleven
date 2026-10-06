@@ -4,7 +4,7 @@
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
-          <button @click="$router.replace('/dashboard')" class="back-button">
+          <button @click="$router.replace('/dashboard')" class="back-button erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
@@ -17,7 +17,7 @@
         
         <div class="header-actions">
           
-          <button @click="abrirModalCriacao" class="btn btn-primary">
+          <button @click="abrirModalCriacao" class="btn btn-primary erp-button erp-button--primary erp-button--icon">
             <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -130,7 +130,7 @@
         </svg>
         <h3>{{ $tr("Nenhum rastreamento encontrado") }}</h3>
         <p>{{ $tr("Adicione um novo rastreamento para começar") }}</p>
-        <button @click="abrirModalCriacao" class="btn btn-primary">
+        <button @click="abrirModalCriacao" class="btn btn-primary erp-button erp-button--primary">
           {{ $tr("Adicionar Rastreamento") }}
         </button>
       </div>
@@ -164,7 +164,7 @@
                 <div class="mch-top">
                   <div class="mch-name-wrap">
                     <span class="mch-name">{{ (rastreamento.pedido_id && rastreamento.cliente_nome) ? rastreamento.cliente_nome : (rastreamento.destinatario || uiText(`Sem destinatário`)) }}</span>
-                    <button v-if="rastreamento.pedido_id" class="mch-pedido-badge mch-pedido-btn" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0, 8) }}</button>
+                    <button v-if="rastreamento.pedido_id" class="mch-pedido-badge mch-pedido-btn erp-button erp-button--secondary erp-button--sm" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0, 8) }}</button>
                   </div>
                   <span class="status-badge-inline mch-badge" :class="getStatusBadgeClass(rastreamento.status)">{{ getStatusText(rastreamento.status) }}</span>
                   <div class="mobile-expand-icon">
@@ -177,7 +177,7 @@
                 <div class="mch-code-row">
                   <span class="mobile-code">{{ rastreamento.codigo_rastreio }}</span>
                   <span v-if="getBadgeText(rastreamento.rastreio_info)" class="mch-service">{{ getBadgeText(rastreamento.rastreio_info) }}</span>
-                  <button @click.stop="copiarCodigo(rastreamento)" class="mobile-copy-btn" :title='$tr("Copiar")'>
+                  <button @click.stop="copiarCodigo(rastreamento)" class="mobile-copy-btn erp-button erp-button--ghost erp-button--icon" :title='$tr("Copiar")'>
                     <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
@@ -212,7 +212,7 @@
                   <!-- Detalhes -->
                   <div v-if="rastreamento.pedido_id" class="mobile-content-row">
                     <span class="mobile-content-label">{{ $tr("Pedido:") }}</span>
-                    <button class="mobile-content-value pedido-link-badge pedido-link-btn" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0,8) }}</button>
+                    <button class="mobile-content-value pedido-link-badge pedido-link-btn erp-button erp-button--secondary erp-button--sm" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0,8) }}</button>
                   </div>
                   <div class="mobile-content-row" v-if="rastreamento.destinatario">
                     <span class="mobile-content-label">{{ $tr("Destinatário:") }}</span>
@@ -259,7 +259,7 @@
                   <div class="mobile-content-actions">
                     <button
                       @click="editarRastreamento(rastreamento)"
-                      class="mobile-action-btn-expanded edit"
+                      class="mobile-action-btn-expanded edit erp-button erp-button--secondary erp-button--sm"
                       :title='$tr("Editar")'
                     >
                       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -269,7 +269,7 @@
                     </button>
                     <button
                       @click="removerRastreamento(rastreamento)"
-                      class="mobile-action-btn-expanded delete"
+                      class="mobile-action-btn-expanded delete erp-button erp-button--danger erp-button--sm"
                       :title='$tr("Excluir")'
                     >
                       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -280,7 +280,7 @@
                     <button
                       @click.stop="atualizarOnline(rastreamento)"
                       :disabled="isRefreshing(rastreamento.id)"
-                      class="mobile-action-btn-expanded refresh"
+                      class="mobile-action-btn-expanded refresh erp-button erp-button--secondary erp-button--sm"
                       :title='$tr("Atualizar via API")'
                     >
                       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'spin': isRefreshing(rastreamento.id) }">
@@ -323,7 +323,7 @@
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
               @click="copiarCodigo(rastreamento)"
-              class="copy-btn"
+              class="copy-btn erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Copiar Código")'
             >
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -336,7 +336,7 @@
           <!-- Destinatário + Pedido -->
           <div class="row-destinatario">
             <span class="row-dest-name">{{ (rastreamento.pedido_id && rastreamento.cliente_nome) ? rastreamento.cliente_nome : (rastreamento.destinatario || '-') }}</span>
-            <button v-if="rastreamento.pedido_id" class="pedido-link-badge pedido-link-btn" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || '?' }}</button>
+            <button v-if="rastreamento.pedido_id" class="pedido-link-badge pedido-link-btn erp-button erp-button--secondary erp-button--sm" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || '?' }}</button>
           </div>
 
           <!-- Descrição -->
@@ -371,7 +371,7 @@
             <button
               @click="atualizarOnline(rastreamento)"
               :disabled="isRefreshing(rastreamento.id)"
-              class="action-btn refresh"
+              class="action-btn refresh erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Atualizar via API")'
             >
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'spin': isRefreshing(rastreamento.id) }">
@@ -380,7 +380,7 @@
             </button>
             <button
               @click="editarRastreamento(rastreamento)"
-              class="action-btn"
+              class="action-btn erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Editar")'
             >
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -389,7 +389,7 @@
             </button>
             <button
               @click="removerRastreamento(rastreamento)"
-              class="action-btn delete"
+              class="action-btn delete erp-button erp-button--danger erp-button--icon"
               :title='$tr("Excluir")'
             >
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -456,7 +456,7 @@
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2>{{ editandoRastreamento ? uiText(`Editar`) : uiText(`Novo`) }} {{ $tr("Rastreamento") }}</h2>
-          <button @click="fecharModal" class="modal-close">
+          <button @click="fecharModal" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -484,7 +484,7 @@
                   @blur="hideOrderSuggestions"
                   style="width:100%;box-sizing:border-box;"
                 />
-                <button
+                <button class="erp-button erp-button--danger"
                   v-if="selectedPedido"
                   type="button"
                   @click="clearPedido"
@@ -495,7 +495,7 @@
                     v-for="p in pedidoSuggestions"
                     :key="p.id"
                     type="button"
-                    class="pedido-suggestion-item"
+                    class="pedido-suggestion-item erp-control"
                     @mousedown.prevent="selectPedido(p)"
                   >
                     <span class="sug-num">#{{ p.numero_pedido }}</span>
@@ -585,7 +585,7 @@
         </div>
 
         <div class="modal-footer">
-          <button @click="fecharModal" class="btn btn-secondary">
+          <button @click="fecharModal" class="btn btn-secondary erp-button erp-button--secondary">
             {{ $tr("Cancelar") }}
           </button>
           
@@ -593,7 +593,7 @@
             v-if="!editandoRastreamento"
             @click="consultarESalvar"
             :disabled="!formData.codigo_rastreio || salvando"
-            class="btn btn-success"
+            class="btn btn-success erp-button erp-button--primary"
           >
             <span v-if="salvando">{{ $tr("Consultando...") }}</span>
             <span v-else>{{ $tr("Consultar e Salvar") }}</span>
@@ -602,7 +602,7 @@
           <button 
             @click="salvarRastreamento" 
             :disabled="!formData.codigo_rastreio || salvando" 
-            class="btn btn-primary"
+            class="btn btn-primary erp-button erp-button--primary"
           >
             <span v-if="salvando">{{ $tr("Salvando...") }}</span>
             <span v-else>{{ editandoRastreamento ? uiText(`Atualizar`) : uiText(`Salvar`) }}</span>

@@ -5,7 +5,7 @@
         <h2 class="modal-title">
           {{ isEditing ? uiText(`Editar Pedido`) : uiText(`Novo Pedido`) }}
         </h2>
-        <button @click="closeModal" class="modal-close">
+        <button @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -82,14 +82,14 @@
                     @focus="onRastreioFocus"
                     @blur="hideTrackingSuggestions"
                   />
-                  <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn">✕</button>
+                  <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn erp-button erp-button--ghost erp-button--icon">✕</button>
                   <!-- Dropdown de sugestões -->
                   <div v-if="showRastreioSuggestions" class="rastreio-list">
                     <button
                       v-for="r in rastreioFiltered"
                       :key="r.id"
                       type="button"
-                      class="rastreio-item"
+                      class="rastreio-item erp-control"
                       @mousedown.prevent="selectRastreio(r)"
                     >
                       <span class="rastreio-name">{{ r.destinatario || uiText(`Sem destinatário`) }}</span>
@@ -118,7 +118,7 @@
                   {{ rastreioStatusLabel(selectedRastreio.status) }}
                 </p>
                 <!-- Toggle entre modos -->
-                <button type="button" @click="rastreioManual = !rastreioManual; clearRastreio()" class="rastreio-toggle">
+                <button type="button" @click="rastreioManual = !rastreioManual; clearRastreio()" class="rastreio-toggle erp-button erp-button--ghost">
                   {{ rastreioManual ? uiText(`← Buscar rastreamentos cadastrados`) : uiText(`Digitar código manualmente`) }}
                 </button>
                 <!-- Ver Rastreamento (apenas no modo edição) -->
@@ -126,7 +126,7 @@
                   <button
                     v-if="selectedRastreio || (rastreioManual && formData.codigo_rastreio)"
                     type="button"
-                    class="btn-ver-rastreio"
+                    class="btn-ver-rastreio erp-button erp-button--secondary erp-button--sm"
                     @click="verRastreamento"
                   >
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -157,13 +157,13 @@
                   @blur="hideCustomerSuggestions"
                   style="width:100%;box-sizing:border-box;"
                 />
-                <button v-if="selectedCliente" type="button" @click="clearCliente" style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;">{{ $tr("✕ Desvincular") }}</button>
+                <button class="erp-button erp-button--danger" v-if="selectedCliente" type="button" @click="clearCliente" style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.8rem;">{{ $tr("✕ Desvincular") }}</button>
                 <div v-if="showSuggestions" class="suggestion-list">
                   <button
                     v-for="c in clienteSuggestions"
                     :key="c.id"
                     type="button"
-                    class="suggestion-item"
+                    class="suggestion-item erp-control"
                     @mousedown.prevent="selectCliente(c)"
                   >
                     <span class="sug-name">{{ c.nome }}</span>
@@ -247,7 +247,7 @@
               <button
                 type="button"
                 @click="openTagManager"
-                class="btn-secondary btn-small"
+                class="btn-secondary btn-small erp-button erp-button--secondary erp-button--sm"
               >
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -286,7 +286,7 @@
             </div>
             <p v-else class="no-tags">
               {{ $tr("Nenhuma tag disponível.") }}
-              <button type="button" @click="createDefaultTags" class="link-button">
+              <button type="button" @click="createDefaultTags" class="link-button erp-button erp-button--ghost">
                 {{ $tr("Criar tags padrão") }}
               </button>
             </p>
@@ -296,14 +296,14 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" @click="closeModal" class="btn-secondary">
+        <button type="button" @click="closeModal" class="btn-secondary erp-button erp-button--secondary">
           {{ $tr("Cancelar") }}
         </button>
         <button
           type="button"
           @click="handleSubmit"
           :disabled="isSubmitting || !isFormValid"
-          class="btn-primary"
+          class="btn-primary erp-button erp-button--primary"
         >
           <svg v-if="isSubmitting" class="loading-icon" fill="none" viewBox="0 0 24 24">
             <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

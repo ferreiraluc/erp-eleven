@@ -7,7 +7,7 @@
           <h3>{{ uiText(`Produto não encontrado`) }}</h3>
           <p>{{ uiText(`Adicione manualmente ao carrinho`) }}</p>
         </div>
-        <button class="avulso-close" @click="$emit('close')">×</button>
+        <button class="avulso-close erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">×</button>
       </div>
 
       <div class="avulso-body">
@@ -59,8 +59,8 @@
       </div>
 
       <div class="avulso-footer">
-        <button class="avulso-btn-cancel" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
-        <button class="avulso-btn-add" @click="submit" :disabled="!canSubmit"> {{ uiText(`+ Adicionar ao carrinho`) }} </button>
+        <button class="avulso-btn-cancel erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
+        <button class="avulso-btn-add erp-button erp-button--primary" @click="submit" :disabled="!canSubmit"> {{ uiText(`+ Adicionar ao carrinho`) }} </button>
       </div>
     </div>
   </div>

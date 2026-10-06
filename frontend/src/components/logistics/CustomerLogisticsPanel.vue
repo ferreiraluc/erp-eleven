@@ -1,7 +1,7 @@
 <template>
   <section class="logistics-panel" :aria-label="t('title')">
     <p v-if="loading" role="status">{{ t('loading') }}</p>
-    <div v-if="loadError" role="alert" class="link-error">{{ t('error') }} <button @click="load()">{{ t('retry') }}</button></div>
+    <div v-if="loadError" role="alert" class="link-error">{{ t('error') }} <button class="erp-button erp-button--secondary erp-button--sm" @click="load()">{{ t('retry') }}</button></div>
     <template v-if="data">
       <div class="logistics-stats">
         <div><strong>{{ data.order_total }}</strong><span>{{ t('orders') }}</span></div>
@@ -16,7 +16,7 @@
             <div class="row-top"><RouterLink :to="{ path: '/pedidos', query: { pedido_id: order.id } }">#{{ order.numero_pedido }}</RouterLink><span class="state">{{ t(`states.${order.status}`) }}</span></div>
             <p>{{ order.descricao }}</p><small>{{ order.moeda || 'G$' }} {{ Number(order.valor_total).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} · {{ date(order.created_at) }}</small>
           </article>
-          <button v-if="orders.length < data.order_total" :disabled="loading" @click="load('orders')">{{ t('more') }}</button>
+          <button class="erp-button erp-button--secondary erp-button--sm" v-if="orders.length < data.order_total" :disabled="loading" @click="load('orders')">{{ t('more') }}</button>
         </section>
         <section>
           <h4>{{ t('parcels') }}</h4><p v-if="!parcels.length" class="muted">{{ t('emptyParcels') }}</p>
@@ -24,7 +24,7 @@
             <div class="row-top"><RouterLink class="tracking-code" :to="{ path: '/rastreamento', query: { search: parcel.codigo_rastreio } }">{{ parcel.codigo_rastreio }}</RouterLink><span class="state">{{ parcel.ativo ? t(`states.${parcel.status}`) : t('archived') }}</span></div>
             <p>{{ parcel.destinatario || t('noName') }}</p><small>{{ parcel.numero_pedido ? `#${parcel.numero_pedido}` : t('noOrder') }} · {{ date(parcel.created_at) }}</small>
           </article>
-          <button v-if="parcels.length < data.shipment_total" :disabled="loading" @click="load('parcels')">{{ t('more') }}</button>
+          <button class="erp-button erp-button--secondary erp-button--sm" v-if="parcels.length < data.shipment_total" :disabled="loading" @click="load('parcels')">{{ t('more') }}</button>
         </section>
       </div>
     </template>
@@ -33,12 +33,12 @@
       <form @submit.prevent="find">
         <label>{{ t('kind') }}<select v-model="kind" :disabled="saving" @change="candidate = null"><option value="rastreamento">{{ t('parcel') }}</option><option value="pedido">{{ t('order') }}</option></select></label>
         <label class="identifier">{{ t('identifier') }}<input v-model="identifier" required maxlength="100" :disabled="saving" @input="candidate = null" /></label>
-        <button :disabled="finding || saving || !identifier.trim()">{{ t('find') }}</button>
+        <button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !identifier.trim()">{{ t('find') }}</button>
       </form>
       <div v-if="candidate" class="link-preview">
         <strong>{{ candidate.title }}</strong><p>{{ candidate.description }}</p><p>{{ t('confirmTo', { name: customer.nome }) }}</p>
-        <button class="primary" :disabled="saving" @click="confirmLink">{{ t('confirm') }}</button>
-        <button :disabled="saving" @click="candidate = null">{{ t('cancel') }}</button>
+        <button class="primary erp-button erp-button--primary erp-button--sm" :disabled="saving" @click="confirmLink">{{ t('confirm') }}</button>
+        <button class="erp-button erp-button--secondary erp-button--sm" :disabled="saving" @click="candidate = null">{{ t('cancel') }}</button>
       </div>
       <p v-if="feedback" :class="feedbackError ? 'link-error' : 'link-success'" role="status">{{ feedback }}</p>
     </details>

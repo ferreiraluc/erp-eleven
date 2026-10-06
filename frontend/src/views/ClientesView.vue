@@ -3,7 +3,7 @@
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
-          <button @click="$router.replace('/dashboard')" class="back-btn">
+          <button @click="$router.replace('/dashboard')" class="back-btn erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
@@ -12,7 +12,7 @@
             <h1 class="page-title">{{ uiText(`Clientes`) }}</h1>
           </div>
         </div>
-        <button @click="openCreate" class="btn btn-primary">
+        <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg> {{ uiText(`Novo cliente`) }} </button>
@@ -28,7 +28,7 @@
         <input v-model="searchQuery" type="text" :placeholder="uiText(`Buscar por nome, telefone, CPF, e-mail...`)" class="search-input" />
       </div>
       <div class="filter-row">
-        <button :class="['chip', { active: showInactive }]" @click="showInactive = !showInactive">
+        <button class="erp-control" :class="['chip', { active: showInactive }]" @click="showInactive = !showInactive">
           {{ showInactive ? uiText(`Todos`) : uiText(`Ativos`) }}
         </button>
         <span class="total-count">{{ store.clientes.length === 1 ? uiText('{0} cliente',{0:store.clientes.length}) : uiText('{0} clientes',{0:store.clientes.length}) }}</span>
@@ -47,7 +47,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
       <p>{{ uiText(`Nenhum cliente encontrado`) }}</p>
-      <button @click="openCreate" class="btn btn-primary" style="margin-top:1rem">{{ uiText(`Cadastrar primeiro cliente`) }}</button>
+      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem">{{ uiText(`Cadastrar primeiro cliente`) }}</button>
     </div>
 
     <!-- List -->
@@ -87,9 +87,9 @@
             </div>
           </div>
           <div class="cliente-actions">
-            <RouterLink :to="{path:'/enderecos',query:{customer_id:c.id}}" class="action-btn edit-btn" :title="uiText(`Endereços deste cliente`)">{{ uiText(`Endereços`) }}</RouterLink>
+            <RouterLink :to="{path:'/enderecos',query:{customer_id:c.id}}" class="action-btn edit-btn erp-button erp-button--secondary erp-button--sm" :title="uiText(`Endereços deste cliente`)">{{ uiText(`Endereços`) }}</RouterLink>
             <!-- Histórico toggle -->
-            <button
+            <button class="erp-button erp-button--ghost erp-button--icon"
               @click="toggleHistory(c.id)"
               :class="['action-btn', 'hist-btn', { active: expandedId === c.id }]"
               :title="uiText(`Histórico de pedidos`)"
@@ -98,10 +98,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </button>
-            <button @click="openEdit(c)" class="action-btn edit-btn" :title="uiText(`Editar`)">
+            <button @click="openEdit(c)" class="action-btn edit-btn erp-button erp-button--ghost erp-button--icon" :title="uiText(`Editar`)">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
             </button>
-            <button v-if="c.ativo" @click="confirmDelete(c)" class="action-btn delete-btn" :title="uiText(`Inativar`)">
+            <button v-if="c.ativo" @click="confirmDelete(c)" class="action-btn delete-btn erp-button erp-button--danger erp-button--icon" :title="uiText(`Inativar`)">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
             </button>
           </div>
@@ -115,7 +115,7 @@
 
     <!-- Pagination sentinel -->
     <div v-if="hasMore" class="load-more-wrap">
-      <button @click="loadMore" class="btn btn-secondary" :disabled="store.loading">{{ uiText(`Carregar mais`) }}</button>
+      <button @click="loadMore" class="btn btn-secondary erp-button erp-button--secondary" :disabled="store.loading">{{ uiText(`Carregar mais`) }}</button>
     </div>
 
     <!-- Form Modal -->

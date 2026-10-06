@@ -3,7 +3,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -12,13 +12,13 @@
 
       <!-- Tabs -->
       <div class="tabs">
-        <button @click="activeTab = 'basic'" :class="['tab', { active: activeTab === 'basic' }]">{{ tr('Básico') }}</button>
-        <button @click="activeTab = 'stock'" :class="['tab', { active: activeTab === 'stock' }]">{{ tr('Estoque') }}</button>
-        <button v-if="!isEdit" @click="activeTab = 'grade'" :class="['tab', { active: activeTab === 'grade' }]">
+        <button class="erp-control" @click="activeTab = 'basic'" :class="['tab', { active: activeTab === 'basic' }]">{{ tr('Básico') }}</button>
+        <button class="erp-control" @click="activeTab = 'stock'" :class="['tab', { active: activeTab === 'stock' }]">{{ tr('Estoque') }}</button>
+        <button class="erp-control" v-if="!isEdit" @click="activeTab = 'grade'" :class="['tab', { active: activeTab === 'grade' }]">
           {{ tr('Grade') }}
           <span v-if="gradeSizes.length > 0" class="tab-badge">{{ gradeSizes.length }}</span>
         </button>
-        <button @click="activeTab = 'photo'" :class="['tab', { active: activeTab === 'photo' }]">
+        <button class="erp-control" @click="activeTab = 'photo'" :class="['tab', { active: activeTab === 'photo' }]">
           {{ tr('Foto') }}
           <span v-if="form.image_data" class="tab-dot"></span>
         </button>
@@ -46,13 +46,13 @@
         <div v-if="activeTab === 'basic'" class="tab-content">
           <!-- OCR button -->
           <div class="ocr-btn-row">
-            <button @click="showOcr = true" class="ocr-btn" type="button">
+            <button @click="showOcr = true" class="ocr-btn erp-button erp-button--secondary" type="button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               {{ ocrText('title') }}
             </button>
-            <button @click="showLabelTemplates = true" class="ocr-btn ocr-btn-templates" type="button">
+            <button @click="showLabelTemplates = true" class="ocr-btn ocr-btn-templates erp-button erp-button--secondary" type="button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
@@ -135,7 +135,7 @@
             <label>{{ tr('Código de Barras') }}</label>
             <div class="barcode-row">
               <input v-model="form.barcode" type="text" class="form-input" :placeholder="tr('EAN, QR, etc.')" />
-              <button @click="showScanner = true" class="scan-btn" type="button" :title="tr('Escanear')">
+              <button @click="showScanner = true" class="scan-btn erp-button erp-button--ghost erp-button--icon" type="button" :title="tr('Escanear')">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3a2 2 0 00-2 2v3a2 2 0 002 2h2" />
                 </svg>
@@ -197,8 +197,8 @@
             <div class="form-group">
               <label>{{ tr('Cadastrar em') }}</label>
               <div class="loc-toggle">
-                <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
-                <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
+                <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
+                <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
               </div>
             </div>
             <div class="form-group">
@@ -222,7 +222,7 @@
           <div class="form-group">
             <label>{{ tr('Modelo de grade') }}</label>
             <div class="grade-presets">
-              <button
+              <button class="erp-control"
                 v-for="preset in allPresets"
                 :key="preset.label"
                 @click="applyPreset(preset)"
@@ -237,7 +237,7 @@
                   :title="tr('Remover modelo')"
                 >×</span>
               </button>
-              <button
+              <button class="erp-button erp-button--ghost erp-button--icon"
                 @click="showNewPreset = !showNewPreset"
                 :class="['preset-btn', 'preset-add-btn', { active: showNewPreset }]"
                 type="button"
@@ -256,7 +256,7 @@
               <div class="grade-chips" @click="newPresetInputRef?.focus()">
                 <span v-for="(s, i) in newPresetSizes" :key="i" class="grade-chip">
                   {{ s }}
-                  <button @click.stop="newPresetSizes.splice(i, 1)" class="chip-x" type="button">×</button>
+                  <button @click.stop="newPresetSizes.splice(i, 1)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
                 </span>
                 <input
                   ref="newPresetInputRef"
@@ -273,10 +273,10 @@
                 <button
                   @click="saveCustomPreset"
                   type="button"
-                  class="preset-btn preset-save-btn"
+                  class="preset-btn preset-save-btn erp-button erp-button--primary erp-button--sm"
                   :disabled="!newPresetName.trim() || newPresetSizes.length === 0"
                 >{{ tr('Salvar modelo') }}</button>
-                <button @click="showNewPreset = false" type="button" class="preset-btn">{{ tr('Cancelar') }}</button>
+                <button @click="showNewPreset = false" type="button" class="preset-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
               </div>
             </div>
           </div>
@@ -287,7 +287,7 @@
             <div class="grade-chips" @click="focusChipInput">
               <span v-for="(size, i) in gradeSizes" :key="i" class="grade-chip">
                 {{ size }}
-                <button @click.stop="removeGradeSize(i)" class="chip-x" type="button">×</button>
+                <button @click.stop="removeGradeSize(i)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
               </span>
               <input
                 ref="chipInputRef"
@@ -308,7 +308,7 @@
                 class="form-input add-size-input"
                 :placeholder="tr('Adicionar tamanho (ex: 3XL, 46...)')"
               />
-              <button @click="addCustomSize" type="button" class="btn-add-chip">{{ tr('+ Add') }}</button>
+              <button @click="addCustomSize" type="button" class="btn-add-chip erp-button erp-button--primary erp-button--sm">{{ tr('+ Add') }}</button>
             </div>
           </div>
 
@@ -316,7 +316,7 @@
           <div class="form-group">
             <label>{{ tr('Cores') }} <span class="size-count">({{ gradeColors.length }}{{ gradeColors.length > 0 && gradeSizes.length > 0 ? tr(' × {count} tam.', { count: gradeSizes.length }) : '' }})</span></label>
             <div class="quick-colors">
-              <button
+              <button class="erp-control"
                 v-for="c in QUICK_COLORS"
                 :key="c"
                 @click="toggleQuickColor(c)"
@@ -331,7 +331,7 @@
             <div class="grade-chips" @click="focusColorInput">
               <span v-for="(color, i) in gradeColors" :key="i" class="grade-chip grade-chip-color">
                 {{ color }}
-                <button @click.stop="gradeColors.splice(i, 1)" class="chip-x" type="button">×</button>
+                <button @click.stop="gradeColors.splice(i, 1)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
               </span>
               <input
                 ref="colorInputRef"
@@ -359,8 +359,8 @@
           <div class="form-group" v-if="gradeInitialStock > 0">
             <label>{{ tr('Cadastrar em') }}</label>
             <div class="loc-toggle">
-              <button type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
-              <button type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
+              <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
+              <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
             </div>
           </div>
 
@@ -412,7 +412,7 @@
           <!-- Current image preview -->
           <div v-if="form.image_data" class="photo-preview">
             <img :src="form.image_data" :alt="tr('Foto do item')" class="item-photo" />
-            <button @click="form.image_data = ''" class="remove-photo">{{ tr('× Remover foto') }}</button>
+            <button @click="form.image_data = ''" class="remove-photo erp-button erp-button--danger">{{ tr('× Remover foto') }}</button>
           </div>
 
           <div v-else class="photo-placeholder">
@@ -423,13 +423,13 @@
           </div>
 
           <div class="photo-actions">
-            <button @click="photoInputRef?.click()" class="btn btn-secondary" type="button">
+            <button @click="photoInputRef?.click()" class="btn btn-secondary erp-button erp-button--secondary" type="button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               {{ tr('Galeria') }}
             </button>
-            <button @click="showCameraPhoto = true" class="btn btn-secondary" type="button">
+            <button @click="showCameraPhoto = true" class="btn btn-secondary erp-button erp-button--secondary" type="button">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="2" fill="none" />
@@ -450,8 +450,8 @@
           <div v-if="showCameraPhoto" class="inline-camera">
             <video ref="photoVideoRef" autoplay playsinline class="inline-video"></video>
             <div class="inline-camera-btns">
-              <button @click="capturePhoto" class="btn btn-primary" type="button">{{ tr('Capturar') }}</button>
-              <button @click="stopCameraPhoto" class="btn btn-secondary" type="button">{{ tr('Cancelar') }}</button>
+              <button @click="capturePhoto" class="btn btn-primary erp-button erp-button--primary" type="button">{{ tr('Capturar') }}</button>
+              <button @click="stopCameraPhoto" class="btn btn-secondary erp-button erp-button--secondary" type="button">{{ tr('Cancelar') }}</button>
             </div>
           </div>
 
@@ -460,8 +460,8 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
-        <button v-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary" :disabled="saving">
+        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
+        <button v-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving">
           <template v-if="saving">{{ tr('Salvando...') }}</template>
           <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
           <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>

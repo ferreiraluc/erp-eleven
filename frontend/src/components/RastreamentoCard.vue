@@ -6,7 +6,7 @@
         <button 
           v-if="canManageRastreamento"
           @click.stop="openRastreamentoModal"
-          class="edit-rate-btn"
+          class="edit-rate-btn erp-button erp-button--ghost erp-button--icon"
           :title='$tr("Adicionar Rastreamento")'
         >
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -79,7 +79,7 @@
               </span>
               <button
                 @click.stop="copiarCodigo(rastreamento.codigo_rastreio)"
-                class="track-copy"
+                class="track-copy erp-button erp-button--ghost erp-button--icon"
                 :title='$tr("Copiar código")'
               >
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,7 +122,7 @@
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h2>{{ $tr("Novo Rastreamento") }}</h2>
-        <button @click="closeModal" class="modal-close">
+        <button @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -198,7 +198,7 @@
           <button 
             @click="consultarECriar"
             :disabled="!novoRastreamento.codigo_rastreio || isCreating"
-            class="btn btn-consultar"
+            class="btn btn-consultar erp-button erp-button--primary"
           >
             <span v-if="isCreating">{{ $tr("Consultando...") }}</span>
             <span v-else>{{ $tr("Consultar e Adicionar") }}</span>
@@ -207,13 +207,13 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="closeModal" class="btn btn-secondary">
+        <button @click="closeModal" class="btn btn-secondary erp-button erp-button--secondary">
           {{ $tr("Cancelar") }}
         </button>
         <button 
           @click="criarRastreamento" 
           :disabled="!novoRastreamento.codigo_rastreio || isCreating" 
-          class="btn btn-primary"
+          class="btn btn-primary erp-button erp-button--primary"
         >
           <span v-if="isCreating">{{ $tr("Criando...") }}</span>
           <span v-else>{{ $tr("Criar Rastreamento") }}</span>
@@ -969,5 +969,9 @@ onMounted(() => {
   .modal-footer {
     padding: 1rem;
   }
+}
+/* Phones scroll the page as one surface; tablet/desktop retain the inner list. */
+@media (max-width: 600px) {
+  .rastreamentos-list { max-height: none; overflow-y: visible; }
 }
 </style>

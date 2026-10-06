@@ -7,6 +7,12 @@ backend e PostgreSQL como estado persistente. Os endpoints usam serviços e/ou s
 SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou Celery.
 
 - `frontend/src/main.ts` inicia Vue, Pinia, router e i18n; `App.vue` contém as telas e notificações.
+- `frontend/src/assets/buttons.css` define os botões de ação: `erp-button` com
+  variantes `--primary`, `--secondary`, `--danger` e `--ghost`; `--sm` para ações
+  compactas e `--icon` para ícones. Cor, tipografia, foco e desabilitado são centrais,
+  inclusive em modais teleportados. Layout e visibilidade responsiva pertencem à tela.
+  Abas, opções, filtros e cards clicáveis usam `erp-control`, conservando indicação
+  de seleção e formato próprios. A navegação de conta e os dropdowns têm estilo próprio.
 - `frontend/src/router/index.ts` declara rotas, autenticação e restrições de ADMIN/GERENTE na navegação.
 - `frontend/src/services/api.ts` centraliza Axios e os contratos dos módulos; `salesBi.ts` isola o BI.
 - `backend/app/main.py` registra routers, CORS, tratamento de erros, migrações e processos de fundo.

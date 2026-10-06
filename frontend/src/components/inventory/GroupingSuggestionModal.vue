@@ -3,7 +3,7 @@
     <div class="modal-container">
       <div class="modal-header">
         <h2>{{ tr('Agrupar sugestão') }} <span class="item-count">({{ localItems.length }} {{ tr('itens)') }}</span></h2>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -57,7 +57,7 @@
                 </div>
               </div>
               <div class="item-stock">{{ displayStock(item.current_stock) }}<small v-if="!hasKnownStock(item)"> · {{ tr('Revisar estoque') }}</small></div>
-              <button class="remove-btn" @click="removeItem(item.id)" :title="tr('Remover da seleção')">×</button>
+              <button class="remove-btn erp-button erp-button--danger erp-button--icon" @click="removeItem(item.id)" :title="tr('Remover da seleção')">×</button>
             </div>
           </div>
           <div v-else class="empty-items">
@@ -67,10 +67,10 @@
       </div>
 
       <div class="modal-footer">
-        <button @click="emit('close')" class="btn btn-secondary" :disabled="grouping">{{ tr('Cancelar') }}</button>
+        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary" :disabled="grouping">{{ tr('Cancelar') }}</button>
         <button
           @click="confirm"
-          class="btn btn-primary"
+          class="btn btn-primary erp-button erp-button--primary"
           :disabled="!groupName.trim() || localItems.length < 2 || grouping"
         >
           <span v-if="grouping">{{ tr('Agrupando...') }}</span>

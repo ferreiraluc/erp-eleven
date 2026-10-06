@@ -8,7 +8,7 @@
           </svg>
           <h3>{{ ocrText('savedExamples') }}</h3>
         </div>
-        <button @click="emit('close')" class="close-btn">
+        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -17,14 +17,14 @@
 
       <!-- Brand filter tabs -->
       <div class="lt-brand-bar" v-if="brands.length > 0">
-        <button
+        <button class="erp-control"
           @click="activeBrand = null"
           :class="['brand-tab', { active: activeBrand === null }]"
         >
           {{ tr('Todas') }}
           <span class="brand-count">{{ templates.length }}</span>
         </button>
-        <button
+        <button class="erp-control"
           v-for="b in brands"
           :key="b.brand"
           @click="activeBrand = b.brand"
@@ -116,7 +116,7 @@
 
             <!-- Delete button -->
             <button
-              class="lt-delete-btn"
+              class="lt-delete-btn erp-button erp-button--danger erp-button--icon"
               @click="confirmDelete(tpl)"
               :disabled="deletingId === tpl.id"
               :title="tr('Excluir exemplo')"
@@ -137,7 +137,7 @@
           </svg>
           {{ tr('Os exemplos auxiliam a leitura; sempre revise os dados extraídos.') }}
         </span>
-        <button @click="emit('close')" class="btn-close-footer">{{ tr('Fechar') }}</button>
+        <button @click="emit('close')" class="btn-close-footer erp-button erp-button--secondary">{{ tr('Fechar') }}</button>
       </div>
     </div>
   </div>
@@ -145,7 +145,7 @@
   <!-- Image preview lightbox -->
   <div v-if="previewImage" class="lt-lightbox" @click="previewImage = null">
     <img :src="previewImage" class="lt-lightbox-img" :alt="tr('etiqueta')" />
-    <button class="lt-lightbox-close" @click="previewImage = null">
+    <button class="lt-lightbox-close erp-button erp-button--ghost erp-button--icon" @click="previewImage = null">
       <svg fill="none" viewBox="0 0 24 24" stroke="white" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
@@ -158,8 +158,8 @@
       <p>{{ tr('Excluir exemplo de {brand}?', { brand: deleteTarget.brand }) }}</p>
       <p class="lt-confirm-sub">{{ tr('Esta ação não pode ser desfeita. O exemplo deixará de ser usado como referência.') }}</p>
       <div class="lt-confirm-actions">
-        <button @click="deleteTarget = null" class="btn-ghost-sm">{{ tr('Cancelar') }}</button>
-        <button @click="doDelete" class="btn-danger-sm" :disabled="deletingId !== null">
+        <button @click="deleteTarget = null" class="btn-ghost-sm erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
+        <button @click="doDelete" class="btn-danger-sm erp-button erp-button--danger erp-button--sm" :disabled="deletingId !== null">
           {{ deletingId ? tr('Excluindo...') : tr('Excluir') }}
         </button>
       </div>
