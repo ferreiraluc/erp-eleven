@@ -136,3 +136,29 @@ Testes adicionais em `tests/test_assistant_sales_bi.py`: SQLite com dados sinté
 fonte corrente duplicada, fechamento corrigido, permissões/identidade, comparação,
 paginação, datas reais, snapshots antigos e respostas simuladas da IA. Não há
 sincronização, envio de mensagens ou acesso a planilhas reais nesses testes.
+
+## Ficha do vendedor
+
+Em `/vendors`, **Vendas e folgas** reúne os resultados mensais corrigidos, moedas,
+melhor semana e calendário do vendedor, com filtro de ano/mês e acesso à Visão de
+vendas. A fonte continua sendo o snapshot sincronizado; abrir a ficha não solicita
+sync nem duplica vendas operacionais/PDV.
+
+`Vendedor.sales_seller` guarda o nome canônico usado no BI. A conciliação administrativa
+`app.customer_reconciliation` usa primeiro `Usuario.vendedor_id` + `sales_seller` e,
+na ausência, um nome/alias único reconhecido no BI (`Wiss` → `Wissam`, `Juninho` →
+`Junior`). Ambiguidades não são atribuídas e nomes históricos sem vendedor continuam
+apenas no BI. Novos vínculos podem ser conciliados pelo mesmo comando após o cadastro.
+As folgas já pertencem ao vendedor por `Folga.vendedor_id`; nenhuma folga é recriada.
+
+`GET /api/vendedores/{id}/atividade?ano=2026&mes=9` valida a visibilidade financeira
+no backend e projeta o snapshot para esse vendedor antes de agregar. Contas com escopo
+pessoal só recebem vendas quando vendedor e identidade BI coincidem com sua conta.
+Podem consultar o calendário operacional de outros vendedores, mas não seus valores,
+rankings ou diagnósticos financeiros. Ausência de dados aparece como “—”, nunca zero
+inventado. A data de sincronização e o estado em andamento contextualizam os resultados.
+
+As planilhas atualmente sincronizadas não identificam clientes nas linhas individuais.
+Por isso, o histórico do cliente reúne pedidos e logística, sem atribuir compras do
+Excel por suposição. `Venda` operacional também não contém identidade de cliente;
+não é somada a pedidos ou ao BI no histórico.

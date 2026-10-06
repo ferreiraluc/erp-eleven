@@ -28,6 +28,8 @@
         </section>
       </div>
     </template>
+    <AddressUsageHistory :customer="customer" @freight="openFreight" @print="openPrint" />
+    <p v-if="pdfError" role="alert" class="link-error">{{ t('error') }}</p>
     <details v-if="customer.ativo" class="link-form">
       <summary>{{ t('link') }}</summary><p class="muted">{{ t('hint') }}</p>
       <form @submit.prevent="find">
@@ -49,9 +51,15 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isAxiosError } from 'axios'
-import { pedidosAPI, type Cliente, type Pedido } from '@/services/api'
+import api, { pedidosAPI, type Cliente, type Pedido } from '@/services/api'
 import { customerLogisticsAPI, type CustomerLogistics, type CustomerParcel } from '@/services/customerLogistics'
+import { useRouter } from 'vue-router'
+import AddressUsageHistory from '@/components/addresses/AddressUsageHistory.vue'
 import { messages } from './messages'
+const router=useRouter()
+const pdfError=ref(false)
+const openFreight=(id:string)=>router.push({path:'/enderecos',query:{tab:'freight',freight_id:id}})
+async function openPrint(id:string){pdfError.value=false;try{const r=await api.get('/api/address-manager/history/'+id+'/pdf',{responseType:'blob'});const url=URL.createObjectURL(r.data);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000)}catch{pdfError.value=true}}
 const props = defineProps<{ customer: Cliente }>()
 const { t, locale } = useI18n({ useScope: 'local', messages })
 const data = ref<CustomerLogistics | null>(null)

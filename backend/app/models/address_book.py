@@ -2,7 +2,7 @@
 import uuid
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, JSON, ForeignKey, Numeric, LargeBinary, Index, event, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import deferred
+from sqlalchemy.orm import deferred, relationship
 from ..database import Base
 from .assistant import utcnow
 
@@ -13,6 +13,9 @@ class SavedAddress(Base):
     label = Column(String(120), nullable=False)
     cliente_id = Column(UUID(as_uuid=True), ForeignKey('clientes.id'), index=True)
     pdv_cliente_id = Column(UUID(as_uuid=True), ForeignKey('pdv_clientes.id'), index=True)
+    cliente = relationship('Cliente', foreign_keys=[cliente_id])
+    customer_link_review = Column(Boolean, nullable=False, default=False, server_default='false')
+    customer_link_reason = Column(String(40))
     data = Column(JSON, nullable=False)
     dedup_key = Column(String(64))
     merged_into_id = Column(UUID(as_uuid=True), ForeignKey('saved_addresses.id'), index=True)

@@ -70,11 +70,16 @@ def save_or_reuse(db, data, user_id, *, label=None, cliente_id=None, pdv_cliente
         if active and not row.active:row.active=True;changed=True
         if changed:
             row.data=enriched;row.version+=1;row.updated_at=utcnow()
+        from .customer_identity import ensure_customer
+        if ensure_customer(db, row) and not changed:
+            row.version += 1; row.updated_at=utcnow()
         db.flush()
         return row, True
     row=SavedAddress(label=label or data.get('nome') or 'Endereço',data=data,created_by=user_id,
         cliente_id=cliente_id,pdv_cliente_id=pdv_cliente_id,active=active,dedup_key=key)
     db.add(row);db.flush()
+    from .customer_identity import ensure_customer
+    ensure_customer(db, row)
     return row, False
 
 
@@ -101,8 +106,13 @@ def edit_address(db, key, body):
         target,_=save_or_reuse(db,body.data.model_dump(),row.created_by,label=body.label,
             cliente_id=body.cliente_id,pdv_cliente_id=body.pdv_cliente_id,active=body.active)
         return target, True
+    if (body.cliente_id or body.pdv_cliente_id) and (body.customer_link_confirmed or
+            (row.cliente_id, row.pdv_cliente_id) != (body.cliente_id, body.pdv_cliente_id)):
+        row.customer_link_review=False;row.customer_link_reason='manual'
     for attr in ('label','cliente_id','pdv_cliente_id','active'):setattr(row,attr,getattr(body,attr))
     row.data=body.data.model_dump();row.dedup_key=new_key;row.version+=1;row.updated_at=utcnow()
+    from .customer_identity import ensure_customer
+    ensure_customer(db, row)
     db.flush()
     return row,False
 

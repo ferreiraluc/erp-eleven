@@ -24,7 +24,7 @@ O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.
 | Clientes/pedidos | Contatos, tags, anexos, valores e estado dos pedidos | Clientes de pedidos e clientes de PDV são entidades distintas |
 | Rastreamento | Busca por nome/código/período/status, atualização Wonca e associação com pedidos | Bot consulta o estado salvo, sem inventar eventos |
 | Folgas/equipe | Consulta de calendário e cadastro confirmado pelo bot | Um nome ou apelido que identifica um único vendedor basta |
-| Endereços | Brasil/Paraguai, remetentes, vínculo opcional a cliente, padrões A4 e CEP | Mesmo destinatário/local é reutilizado; diferenças reais não são fundidas |
+| Endereços | Brasil/Paraguai, remetentes, vínculo automático a cliente com revisão de ambiguidades, padrões A4 e CEP | Mesmo destinatário/local é reutilizado; diferenças reais não são fundidas |
 | Impressão | Prévias, fila, histórico, novas cópias e agente Windows | `submitted` é envio ao Windows, não confirmação física do papel |
 | SuperFrete | Cotação, serviço, pagamento confirmado, recuperação de PDF, rastreio e impressão | Cotação não compra; resultado incerto não autoriza pagar novamente |
 | BI | Total mensal/ano, comparação entre anos, ranking por vendedor/semana e moedas | Fechamento salvo prevalece; diferenças são destacadas para revisão |

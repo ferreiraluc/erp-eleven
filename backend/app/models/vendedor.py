@@ -11,6 +11,7 @@ class Vendedor(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nome = Column(String(100), nullable=False)
+    sales_seller = Column(String(100), unique=True)
     usuario_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
     taxa_comissao = Column(DECIMAL(5,2), default=10.00)
     meta_semanal = Column(DECIMAL(12,2), default=0)

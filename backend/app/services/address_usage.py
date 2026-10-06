@@ -33,6 +33,10 @@ def usage_stats(db, ids):
 
 def history(db, address, offset=0, limit=30, kind='all'):
     ids=address_family(db,address)
+    return history_for_ids(db, ids, offset, limit, kind)
+
+
+def history_for_ids(db, ids, offset=0, limit=30, kind='all'):
     table=usage_query(ids)
     query=select(table)
     if kind!='all':query=query.where(table.c.kind==kind)

@@ -108,8 +108,8 @@ def test_print_usage_repeat_is_idempotent_and_edit_preserves_snapshot(env):
 
 def test_edited_duplicate_is_redirected_and_history_stays_accessible(env):
     factory,c,uid,did=env
-    original=create(c,{'pais':'PY','nome':'Juan','cidade':'Asunción','telefone':'123'})
-    another=create(c,{'pais':'PY','nome':'Juan','cidade':'Encarnación','telefone':'123'})
+    original=create(c,{'pais':'PY','nome':'Juan Perez','cidade':'Asunción','telefone':'123'})
+    another=create(c,{'pais':'PY','nome':'Juan Perez','cidade':'Encarnación','telefone':'123'})
     payload={'request_key':str(uuid.uuid4()),'address_id':original['id'],'device_id':did,'data':original['data']}
     assert c.post('/manager/print',json=payload).status_code==200
     body={k:original[k] for k in ['label','version','cliente_id','pdv_cliente_id','active']};body['data']=another['data']

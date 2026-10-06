@@ -211,6 +211,8 @@ def confirm_receipt(db, message, action):
         )
         try:
             with db.begin_nested():
+                from .customer_reconciliation import auto_link_tracking
+                auto_link_tracking(db, tracking)
                 db.add(tracking)
                 db.flush()
         except IntegrityError:

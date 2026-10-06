@@ -103,7 +103,7 @@ revogação e crédito de atividade; `ActivitySpan` agrega intervalos por módul
 
 ## Entidades que não são intercambiáveis
 
-- `Usuario`: autenticação e perfil; `Vendedor`: vendas, apelidos e agenda; `Funcionario`: dados funcionais.
+- `Usuario`: autenticação e perfil; `Vendedor`: vendas, identidade BI (`sales_seller`), apelidos e agenda; `Funcionario`: dados funcionais.
 - `Cliente` e `PdvCliente`: cadastros separados, com IDs e relações próprios.
 - `Venda`, `PdvSale` e `SalesBIWorkbook`: lançamento operacional, caixa/estoque e visão de planilha.
 - `AssistantNote`: ocorrência confirmada; `AssistantAction`: autorização/execução de uma ação real.
@@ -124,3 +124,12 @@ Chaves externas ficam no backend. Variáveis `VITE_*` são incorporadas ao JavaS
 no build e nunca devem conter tokens. Credenciais do agente são protegidas no Windows e
 armazenadas como hash no servidor. Segredo de webhook SuperFrete persistido usa cifra ligada
 à `SECRET_KEY`; não rotacionar essa chave sem plano para os dados dependentes.
+
+### Identidade entre módulos
+
+`customer_identity` resolve o cliente de um endereço salvo, sem fundir pessoas nem
+reescrever snapshots. `customer_reconciliation` associa registros históricos sob locks;
+rastreios desconhecidos não geram clientes. `address_usage.history_for_ids` serve a
+agenda e a ficha do cliente com as mesmas operações originais. `vendor_activity` reúne
+BI e calendário por identidade persistida, aplicando a autorização financeira antes de
+agregar. A CLI `app.customer_reconciliation` é uma entrada operacional ativa.

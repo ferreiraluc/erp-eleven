@@ -2,6 +2,8 @@ import { useI18n } from 'vue-i18n'
 
 // UI copy only. Customer names, addresses and operational values are never translated.
 const messages: Record<string, [string, string]> = {
+  "Confira o vínculo do cliente: nome incompleto ou dados divergentes.": ["Revise el vínculo del cliente: nombre incompleto o datos diferentes.", "Review the customer link: incomplete name or conflicting details."],
+  "Ao salvar, o endereço será associado a um cliente existente ou criará um novo cadastro.": ["Al guardar, la dirección se vinculará a un cliente existente o creará uno nuevo.", "Saving links this address to an existing customer or creates a new customer."],
   "Resposta incompleta da SuperFrete. A operação precisa de consulta.": ["Respuesta incompleta de SuperFrete. La operación necesita una consulta.", "Incomplete SuperFrete response. The operation needs to be checked."],
   "Não foi possível confirmar a resposta da SuperFrete. A operação precisa de consulta.": ["No se pudo confirmar la respuesta de SuperFrete. Es necesario consultar la operación.", "Could not confirm the SuperFrete response. The operation needs to be checked."],
   "Valor retornado pela SuperFrete inválido. A operação precisa de consulta.": ["SuperFrete devolvió un importe inválido. Consulte la operación.", "SuperFrete returned an invalid amount. The operation needs to be checked."],

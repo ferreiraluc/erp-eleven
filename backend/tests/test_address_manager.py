@@ -8,6 +8,7 @@ from app.models.address_book import SavedAddress,PrintLayout,FreightOrder,Freigh
 from app.models.printing import PrintDevice,PrintJob,PrintSender
 from app.models.usuario import Usuario,UsuarioRole
 from app.models.cliente import Cliente
+from app.models.access import AuditEvent
 from app.api.endpoints import address_manager as api,freight
 from app.services import superfrete as sf
 from test_assistant import setup
@@ -17,7 +18,7 @@ from test_assistant import setup
 def env(setup):
     factory,_,uid=setup
     with factory() as db:
-        Base.metadata.create_all(db.get_bind(),tables=[m.__table__ for m in [SavedAddress,PrintLayout,PrintDevice,PrintJob,PrintSender,FreightOrder,FreightWebhook]])
+        Base.metadata.create_all(db.get_bind(),tables=[m.__table__ for m in [SavedAddress,PrintLayout,PrintDevice,PrintJob,PrintSender,FreightOrder,FreightWebhook,AuditEvent]])
         user=db.get(Usuario,uid);user.role=UsuarioRole.ADMIN
         device=PrintDevice(name='Teste',token_hash='x'*64)
         db.add(device);db.flush();did=str(device.id);db.commit()

@@ -60,6 +60,8 @@ class RastreamentoSyncService:
             destinatario=pedido.cliente_nome, destino=pedido.endereco_entrega, created_by=user_id,
         )
         db.add(row)
+        from .customer_reconciliation import auto_link_tracking
+        auto_link_tracking(db, row)
         return row, True
 
     @staticmethod

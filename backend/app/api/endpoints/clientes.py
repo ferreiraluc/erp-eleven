@@ -231,3 +231,24 @@ def vincular_ao_cliente(
         row.cliente_id = customer_id
     db.commit()
     return {"linked": True, "kind": link.kind, "target_id": link.target_id, "cliente_id": customer_id}
+
+
+@router.get("/{cliente_id}/historico-enderecos")
+def historico_enderecos_cliente(
+    cliente_id: str, offset: int = Query(0, ge=0), limit: int = Query(30, ge=1, le=100),
+    kind: str = Query('all', pattern='^(all|frete|impressao)$'),
+    db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user),
+):
+    from ...models.address_book import SavedAddress
+    from ...services.address_book import address_family
+    from ...services.address_usage import history_for_ids
+    customer_id = validate_uuid(cliente_id)
+    if not db.get(Cliente, customer_id):
+        raise HTTPException(404, 'Cliente não encontrado.')
+    addresses = db.query(SavedAddress).filter_by(cliente_id=customer_id, merged_into_id=None).order_by(SavedAddress.updated_at.desc()).all()
+    ids = set()
+    for address in addresses:
+        ids.update(address_family(db, address))
+    return {**history_for_ids(db, ids, offset, limit, kind),
+            'addresses': [{'id': str(row.id), 'label': row.label, 'active': row.active,
+                           'review': row.customer_link_review} for row in addresses]}

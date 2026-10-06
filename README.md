@@ -13,9 +13,9 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | --- | --- | --- |
 | Dashboard | Estoque e rastreios; cards lado a lado de endereços e vendas, resumos e atalhos | `/dashboard` |
 | Estoque | Produtos, variantes, loja/depósito, movimentações, contagem, conferência de saldos/códigos, etiquetas e OCR | `/inventory` |
-| Clientes e pedidos | Cadastros, tags, anexos, etapas do pedido e vínculos logísticos | `/clientes`, `/pedidos` |
+| Clientes e pedidos | Cadastros, endereços, impressões, pedidos e vínculos logísticos | `/clientes`, `/pedidos` |
 | Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
-| Equipe e folgas | Vendedores, calendário, consulta e cadastro de folgas | `/vendors`, card de folgas |
+| Equipe e folgas | Vendedores com resultados do BI, calendário e histórico de folgas | `/vendors`, card de folgas |
 | Endereços e envios | Agenda sem duplicatas, remetentes, modelos A4, histórico, CEP e SuperFrete | `/enderecos` |
 | Visão de vendas | Resultados salvos das planilhas OneDrive, comparações, moedas e rankings | `/bi-vendas` |
 | Assistente IA | Vínculos de funcionários, ações confirmadas, memória, consultas e filas | `/assistente` |

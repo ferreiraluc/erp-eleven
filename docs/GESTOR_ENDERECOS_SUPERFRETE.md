@@ -176,3 +176,12 @@ para compatibilidade com modelos e históricos, sem validação de CPF brasileir
 Ausência ou pedido explícito sem documento omite a linha. A impressão PY continua
 sem remetente e sem exigir rua. Documentos diferentes impedem a fusão dos cadastros,
 inclusive quando têm os mesmos números e letras distintas.
+
+### Cliente associado ao endereço
+
+Salvar/cotar um endereço ou confirmar sua impressão também associa um cliente existente
+ou cria o cadastro em Clientes. Endereços ambíguos mostram um aviso para conferir o
+vínculo; selecionar o cliente no editor confirma a revisão. A impressão mantém as
+mesmas confirmações e não ganha exigências de rua/CPF para PY. O histórico de Clientes
+reúne A4 e etiquetas de todos os seus endereços, preservando os registros originais.
+Regras e conciliação: [Clientes, pedidos e pacotes](CLIENTES_PEDIDOS_RASTREIOS.md).

@@ -106,6 +106,8 @@ def criar_rastreamento(
     data = rastreamento.model_dump()
     data.update(codigo_rastreio=codigo, cliente_id=cliente.id if cliente else None)
     db_rastreamento = Rastreamento(**data, created_by=current_user.id)
+    from ...services.customer_reconciliation import auto_link_tracking
+    auto_link_tracking(db, db_rastreamento)
     db.add(db_rastreamento)
     try:
         db.flush()

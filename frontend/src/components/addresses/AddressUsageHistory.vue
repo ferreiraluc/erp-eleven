@@ -1,6 +1,7 @@
 <template>
   <div class="usage-history">
-    <p class="intro"><strong>{{ address.label }}</strong><br/>{{ tr('Endereços A4 e etiquetas aparecem juntos, com a data e o responsável por cada utilização.') }}</p>
+    <p class="intro"><strong>{{ address?.label || customer?.nome }}</strong><br/>{{ tr('Endereços A4 e etiquetas aparecem juntos, com a data e o responsável por cada utilização.') }}</p>
+    <p v-if="customer" class="intro"><RouterLink :to="{path:'/enderecos',query:{customer_id:customer.id}}">{{ tr('Endereços salvos') }}: {{ result.addresses?.length || 0 }}</RouterLink></p>
     <div class="usage-metrics">
       <div><strong>{{ result.summary.address_prints }}</strong><span>{{ tr('Endereços A4 impressos') }}</span></div>
       <div><strong>{{ result.summary.labels }}</strong><span>{{ tr('Etiquetas emitidas') }}</span></div>
@@ -29,19 +30,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted,ref,onUnmounted } from 'vue'
+import { watch,ref,onUnmounted } from 'vue'
 import api from '@/services/api'
 import { useAddressI18n } from './i18n'
 import type { SavedAddress, AddressUsage } from './types'
 const {tr,date,money,errorKey}=useAddressI18n()
-const props=defineProps<{address:SavedAddress}>()
+const props=defineProps<{address?:SavedAddress;customer?:{id:string;nome:string}}>()
 defineEmits<{freight:[id:string];print:[id:string]}>()
 const result=ref<AddressUsage>({total:0,summary:{total:0,quotes:0,labels:0,prints:0,completed_prints:0,address_prints:0,label_prints:0,last_used_at:null,last_printed_at:null},items:[]})
 const kind=ref('all'),offset=ref(0),loading=ref(false),error=ref('')
 let sequence=0
-async function load(){const current=++sequence;loading.value=true;error.value='';try{const {data}=await api.get('/api/address-manager/addresses/'+props.address.id+'/usage',{params:{offset:offset.value,kind:kind.value}});if(current===sequence)result.value=data}catch(e){if(current===sequence)error.value=errorKey(e)}finally{if(current===sequence)loading.value=false}}
+async function load(){const current=++sequence;loading.value=true;error.value='';try{const {data}=await api.get(props.customer ? '/api/clientes/'+props.customer.id+'/historico-enderecos' : '/api/address-manager/addresses/'+props.address?.id+'/usage',{params:{offset:offset.value,kind:kind.value}});if(current===sequence)result.value=data}catch(e){if(current===sequence)error.value=errorKey(e)}finally{if(current===sequence)loading.value=false}}
 const states:Record<string,string>={quoted:'Cotação realizada',creating:'Criando frete',pending:'Aguardando pagamento',paying:'Pagamento em andamento',released:'Etiqueta emitida',posted:'Postado',delivered:'Entregue',cancelled:'Cancelado',uncertain:'Conferência necessária',claimed:'Retirada pelo agente',submitted:'Enviada à impressora',failed:'Falha',expired:'Expirada'}
-onMounted(load)
+watch(()=>[props.address?.id,props.customer?.id],()=>{offset.value=0;void load()},{immediate:true})
 onUnmounted(()=>{sequence++})
 </script>
 

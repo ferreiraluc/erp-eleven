@@ -20,6 +20,7 @@ class AddressData(BaseModel):
 
 
 class AddressInput(BaseModel):
+    customer_link_confirmed: bool = False
     model_config = ConfigDict(extra='forbid')
     label: str = Field(min_length=1,max_length=120)
     cliente_id: UUID | None = None

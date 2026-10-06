@@ -100,6 +100,11 @@ def criar_pedido(
 
     db_pedido = Pedido(**pedido_data)
 
+    if not cliente_obj:
+        from ...services.customer_identity import match_recipient
+        matched = match_recipient(db, db_pedido.cliente_nome, db_pedido.cliente_telefone, db_pedido.cliente_email)
+        if matched: db_pedido.cliente_id = matched.id
+
     if cliente_obj:
         _sync_cliente_fields(db_pedido, cliente_obj)
 

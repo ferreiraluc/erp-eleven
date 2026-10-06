@@ -101,6 +101,8 @@
         </div>
       </div>
 
+      <VendorActivityPanel v-if="activityVendor" :vendor="activityVendor" @close="activityVendor=null" />
+
       <!-- Vendors Table -->
       <div class="table-section">
         <div v-if="isLoading" class="loading-state">
@@ -161,6 +163,7 @@
                 </td>
                 <td class="actions-column">
                   <div class="action-buttons">
+                    <button class="erp-button erp-button--secondary erp-button--sm" @click="activityVendor=vendor">{{ activityT('activity') }}</button>
                     <button @click="editVendor(vendor)" class="action-button edit erp-button erp-button--ghost erp-button--icon">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -300,10 +303,15 @@
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import VendorActivityPanel from '@/components/vendors/VendorActivityPanel.vue'
+import { vendorActivityMessages } from '@/components/vendors/messages'
 import ColorPicker from '@/components/ColorPicker.vue'
 import { vendorsAPI, type VendorResponse, type VendorCreate } from '@/services/api'
 
 const router = useRouter()
+const {t:activityT}=useI18n({useScope:'local',messages:vendorActivityMessages})
+const activityVendor=ref<VendorResponse|null>(null)
 
 // Reactive data
 const vendors = ref<VendorResponse[]>([])

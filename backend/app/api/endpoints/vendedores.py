@@ -333,3 +333,14 @@ def obter_estatisticas_resumo(
         vendedores=estatisticas,
         total_dias_uteis=total_dias_uteis
     )
+
+@router.get('/{vendedor_id}/atividade')
+def atividade_vendedor(
+    vendedor_id: str, ano: int = Query(..., ge=2000, le=2100),
+    mes: int | None = Query(None, ge=1, le=12),
+    db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user),
+):
+    from ...services.vendor_activity import activity
+    vendor = db.get(Vendedor, validate_uuid(vendedor_id))
+    if not vendor: raise HTTPException(404, 'Vendedor não encontrado.')
+    return activity(db, vendor, current_user, ano, mes)

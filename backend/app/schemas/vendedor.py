@@ -17,6 +17,7 @@ class VendedorCreate(VendedorBase):
     usuario_id: Optional[uuid.UUID] = None
 
 class VendedorResponse(VendedorBase):
+    sales_seller: Optional[str] = None
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime

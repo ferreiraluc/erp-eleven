@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import ValidationError
 from sqlalchemy import or_, cast, String, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
 from ...database import get_db
 from ...dependencies import require_role, require_owner
@@ -33,6 +33,8 @@ def postal_code(body:AddressData,user=Depends(manager)):
 def item(row):
     return {'id':str(row.id),'label':row.label,'cliente_id':str(row.cliente_id) if row.cliente_id else None,
             'pdv_cliente_id':str(row.pdv_cliente_id) if row.pdv_cliente_id else None,
+            'cliente_nome':row.cliente.nome if row.cliente else None,
+            'customer_link_review':row.customer_link_review, 'customer_link_reason':row.customer_link_reason,
             'data':row.data,'active':row.active,'version':row.version,'updated_at':row.updated_at}
 
 
@@ -57,7 +59,7 @@ def customers(q:str=Query('',max_length=100),user=Depends(manager),db:Session=De
 @router.get('/addresses')
 def addresses(q:str=Query('',max_length=100),country:str='',customer_id:uuid.UUID|None=None,active:bool=True,
               offset:int=Query(0,ge=0),limit:int=Query(30,ge=1,le=100),user=Depends(manager),db:Session=Depends(get_db)):
-    query=db.query(SavedAddress).filter(SavedAddress.active==active,SavedAddress.merged_into_id.is_(None))
+    query=db.query(SavedAddress).options(selectinload(SavedAddress.cliente)).filter(SavedAddress.active==active,SavedAddress.merged_into_id.is_(None))
     if q:query=query.filter(or_(SavedAddress.label.ilike(pattern(q),escape='\\'),cast(SavedAddress.data,String).ilike(pattern(q),escape='\\')))
     if country:query=query.filter(SavedAddress.data['pais'].as_string()==country)
     if customer_id:query=query.filter(or_(SavedAddress.cliente_id==customer_id,SavedAddress.pdv_cliente_id==customer_id))
