@@ -142,6 +142,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://erp-eleven-frontend.onrender.com",
+        "https://elevenparispy.com",
+        "https://www.elevenparispy.com",
         "https://erp-eleven-backend.onrender.com", 
         "https://erp-eleven.onrender.com",
         "http://localhost:3000",

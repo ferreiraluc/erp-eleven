@@ -130,3 +130,13 @@ migrações e concorrência entre abas. Testes frontend verificam sessão expira
 respostas atrasadas de outra conta e troca de senha durante validação em segundo plano.
 `authConcurrency.test.ts` e `authRequests.test.ts` exercitam respostas fora de ordem
 e a associação da requisição ao token original, sem consultar contas reais.
+
+## Domínio próprio
+
+O frontend atende `https://elevenparispy.com`; `www.elevenparispy.com` redireciona
+para o domínio principal no Render. Ambos constam na lista exata de origens CORS
+permitidas em `app/main.py`. `VITE_API_BASE_URL` continua apontando para a API do Render.
+Adicionar um domínio ao frontend não altera automaticamente a lista do backend.
+Não é necessário mudar usuários, senhas ou banco de dados. O armazenamento da sessão
+é separado por origem; no primeiro acesso ao domínio novo é necessário entrar novamente.
+Não usar `*` ou permitir subdomínios arbitrários para contornar CORS.
