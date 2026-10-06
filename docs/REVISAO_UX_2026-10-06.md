@@ -137,3 +137,8 @@ somente em viewport emulada.
   o escopo desta rodada foi situação/busca, não paginação de grandes cadastros.
   A API continua aceitando skip/limit. Registrar essa paginação para rodada futura.
 - Pendências principais: atalhos de rastreio do pedido e paginação de pedidos.
+- Publicado: commit `dfc4b92`, frontend e backend confirmados Live no Render
+  (`dep-db277d6q1p3s73ebot60` / `dep-db277d6q1p3s73ebosp0`). CI `37412104934`.
+  QA local encerrado, abas temporárias fechadas e viewport restaurada.
+  Consumo após publicação: 38% usado (62% restante). Antes da próxima ação,
+  consultar novamente o limite; ao atingir 39%, pausar a automação.
