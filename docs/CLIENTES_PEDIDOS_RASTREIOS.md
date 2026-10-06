@@ -7,6 +7,10 @@ no módulo de vendas operacionais ou no PDV.
 
 ## No ERP
 
+- Em **Clientes**, Ativos é a seleção inicial; Inativos mostra apenas os cadastros
+  desativados e Todos inclui os dois estados. A busca respeita a seleção. A API
+  mantém ativos como padrão e aceita `include_inactive=true` para consultar ambos.
+  Falha de consulta oferece tentar novamente, sem tratar a falha como lista vazia.
 - Em **Clientes**, abra o histórico do cliente: o painel reúne pedidos, pacotes,
   entregues e em trânsito. Há paginação independente das duas listas. O mesmo painel
   reúne os endereços, impressões A4 e etiquetas, com data, situação e responsável.

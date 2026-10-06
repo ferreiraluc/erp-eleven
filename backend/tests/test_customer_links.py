@@ -46,6 +46,50 @@ def customer(db, name='Ana'):
     return row
 
 
+@pytest.mark.parametrize(('params', 'expected'), [
+    ({}, ['Ana Ativa', 'Clara Ativa']),
+    ({'ativo': 'false'}, ['Bia Inativa']),
+    ({'include_inactive': 'false'}, ['Ana Ativa', 'Clara Ativa']),
+    ({'include_inactive': 'true'}, ['Ana Ativa', 'Bia Inativa', 'Clara Ativa']),
+    ({'include_inactive': 'true', 'ativo': 'false'}, ['Ana Ativa', 'Bia Inativa', 'Clara Ativa']),
+])
+def test_customer_list_status_filters(logistics, params, expected):
+    factory, client, _ = logistics
+    with factory() as db:
+        customer(db, 'Ana Ativa')
+        customer(db, 'Bia Inativa').ativo = False
+        customer(db, 'Clara Ativa')
+        db.commit()
+    response = client.get('/api/clientes/', params=params)
+    assert response.status_code == 200
+    assert [row['nome'] for row in response.json()] == expected
+
+
+def test_customer_list_all_statuses_keeps_search_and_pagination(logistics):
+    factory, client, _ = logistics
+    with factory() as db:
+        customer(db, 'Ana Grupo')
+        customer(db, 'Bia Grupo').ativo = False
+        customer(db, 'Clara Grupo')
+        customer(db, 'Dora Outra')
+        db.commit()
+    params = {'include_inactive': 'true', 'search': 'grupo', 'skip': 1, 'limit': 1}
+    response = client.get('/api/clientes/', params=params)
+    assert response.status_code == 200
+    assert [(row['nome'], row['ativo']) for row in response.json()] == [('Bia Grupo', False)]
+    params['skip'] = 2
+    assert [row['nome'] for row in client.get('/api/clientes/', params=params).json()] == ['Clara Grupo']
+    params['skip'] = 3
+    assert client.get('/api/clientes/', params=params).json() == []
+
+
+def test_customer_list_rejects_invalid_include_inactive_query(logistics):
+    _, client, _ = logistics
+    response = client.get('/api/clientes/', params={'include_inactive': 'invalid'})
+    assert response.status_code == 422
+    assert response.json()['detail'][0]['loc'] == ['query', 'include_inactive']
+
+
 def order(db, client=None, number=None, status=PedidoStatus.PROCESSANDO, **kwargs):
     row = Pedido(numero_pedido=number or str(uuid.uuid4()), descricao='Pacotes independentes', valor_total=1,
                  cliente_id=client.id if client else None, status=status, **kwargs)

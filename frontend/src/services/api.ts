@@ -505,10 +505,11 @@ export const pedidoAnexosAPI = {
 // ─── Clientes API ──────────────────────────────────────────────────────────────
 
 export const clientesAPI = {
-  getAll: (params?: { search?: string; ativo?: boolean; skip?: number; limit?: number }): Promise<Cliente[]> => {
+  getAll: (params?: { search?: string; ativo?: boolean; include_inactive?: boolean; skip?: number; limit?: number }): Promise<Cliente[]> => {
     const p = new URLSearchParams()
     if (params?.search) p.append('search', params.search)
     if (params?.ativo !== undefined) p.append('ativo', String(params.ativo))
+    if (params?.include_inactive !== undefined) p.append('include_inactive', String(params.include_inactive))
     if (params?.skip !== undefined) p.append('skip', String(params.skip))
     if (params?.limit !== undefined) p.append('limit', String(params.limit))
     return api.get(`/api/clientes/?${p.toString()}`).then(r => r.data)

@@ -25,12 +25,13 @@ def listar_clientes(
     limit: int = Query(100, ge=1, le=500),
     search: Optional[str] = Query(None),
     ativo: Optional[bool] = Query(True),
+    include_inactive: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Lista clientes com busca por nome, email, telefone ou CPF."""
+    """Lista clientes; include_inactive inclui ambos os estados, ignorando ativo."""
     query = db.query(Cliente)
-    if ativo is not None:
+    if not include_inactive and ativo is not None:
         query = query.filter(Cliente.ativo == ativo)
     if search:
         term = f"%{search}%"

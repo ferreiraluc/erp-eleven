@@ -77,7 +77,7 @@ Confirmar o problema no navegador e limitar o trabalho antes de implementar:
    usam a rota inexistente `rastreamento-detalhes`. A alternativa passa `pedido_id`
    e `codigo_rastreio`, mas `RastreamentoView.vue` só lê `query.search`. Usar a busca
    existente para consulta; qualquer criação deve abrir uma prévia e exigir salvar.
-2. Clientes: botão Todos altera `showInactive`, mas o store não envia esse filtro;
+2. **Resolvido na rodada 3.** Clientes: botão Todos alterava `showInactive`, mas o store não enviava esse filtro;
    API assume `ativo=true`. Tornar a seleção efetiva sem mudar o padrão da API.
 3. Pedidos: `filteredPedidos` é renderizado inteiro e Próxima só muda `currentPage`;
    consulta inicial limitada a 100 pela API. Resolver paginação/filtros de forma
@@ -118,3 +118,22 @@ somente em viewport emulada.
 - Publicado: commit `e10212d`, Render Live no deploy `dep-db26f1jncjis73c9sspg`.
   CI de código `37408022884`. Servidores QA encerrados, aba temporária fechada e
   viewport restaurada. Consumo após publicação: 36% usado (64% restante).
+
+## Rodada 3 — filtros de clientes (01h00)
+
+- Consumo inicial: 36%; após implementação: 37% usado, 63% restante. Escolhido o
+  filtro de clientes como correção pequena, compatível com a margem disponível.
+- Seleção explícita Ativos/Inativos/Todos. API mantém ativos como padrão, aceita
+  `ativo=false` para inativos e `include_inactive=true` para ambos, sem mudar
+  autenticação, busca ou paginação. Nenhuma migração necessária.
+- Respostas antigas não sobrescrevem o filtro atual; erros mostram Tentar novamente.
+  Busca sem resultado oferece Limpar Filtros. Salvar/inativar recarrega a seleção.
+- QA somente local: dois ativos e um inativo fictícios, resultados 2/1/3; busca de
+  inativo em Todos, resultado vazio em Ativos e recuperação ao limpar. Larguras
+  320/384/768/1280 sem overflow; nenhum cadastro real alterado.
+- 24 testes direcionados do backend e 176 testes frontend passaram; type-check e
+  build passaram após completar tradução de retry e ajustar NodeList no teste.
+- Limitação anterior mantida: Clientes ainda carrega até 200 itens na interface;
+  o escopo desta rodada foi situação/busca, não paginação de grandes cadastros.
+  A API continua aceitando skip/limit. Registrar essa paginação para rodada futura.
+- Pendências principais: atalhos de rastreio do pedido e paginação de pedidos.

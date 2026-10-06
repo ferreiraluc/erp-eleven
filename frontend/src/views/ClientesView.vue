@@ -28,8 +28,8 @@
         <input v-model="searchQuery" type="text" :placeholder="uiText(`Buscar por nome, telefone, CPF, e-mail...`)" class="search-input" />
       </div>
       <div class="filter-row">
-        <button class="erp-control" :class="['chip', { active: showInactive }]" @click="showInactive = !showInactive">
-          {{ showInactive ? uiText(`Todos`) : uiText(`Ativos`) }}
+        <button v-for="filter in statusFilters" :key="filter.value" class="erp-control" :class="['chip', { active: statusFilter === filter.value }]" :aria-pressed="statusFilter === filter.value" @click="statusFilter = filter.value">
+          {{ uiText(filter.label) }}
         </button>
         <span class="total-count">{{ store.clientes.length === 1 ? uiText('{0} cliente',{0:store.clientes.length}) : uiText('{0} clientes',{0:store.clientes.length}) }}</span>
       </div>
@@ -41,13 +41,19 @@
       <p>{{ uiText(`Carregando...`) }}</p>
     </div>
 
+    <div v-else-if="store.error" class="empty-state" role="alert">
+      <p>{{ uiText('Não foi possível carregar os clientes.') }}</p>
+      <button @click="reload" class="erp-button erp-button--secondary">{{ uiText('Tentar novamente') }}</button>
+    </div>
+
     <!-- Empty -->
     <div v-else-if="!store.loading && store.clientes.length === 0" class="empty-state">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
       <p>{{ uiText(`Nenhum cliente encontrado`) }}</p>
-      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem">{{ uiText(`Cadastrar primeiro cliente`) }}</button>
+      <button v-if="searchQuery.trim() || statusFilter !== 'active'" @click="clearFilters" class="erp-button erp-button--secondary" style="margin-top:1rem">{{ uiText('Limpar Filtros') }}</button>
+      <button v-else @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem">{{ uiText(`Novo cliente`) }}</button>
     </div>
 
     <!-- List -->
@@ -135,15 +141,16 @@
 
 <script setup lang="ts">
 import { uiText } from '@/i18n/uiText'
-import { ref, watch, onMounted } from 'vue'
-import { useClientesStore } from '@/stores/clientes'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useClientesStore, type CustomerStatusFilter } from '@/stores/clientes'
 import { type Cliente } from '@/services/api'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
 import CustomerLogisticsPanel from '@/components/logistics/CustomerLogisticsPanel.vue'
 
 const store = useClientesStore()
 const searchQuery = ref('')
-const showInactive = ref(false)
+const statusFilter = ref<CustomerStatusFilter>('active')
+const statusFilters = [{ value: 'active', label: 'Ativos' }, { value: 'inactive', label: 'Inativos' }, { value: 'all', label: 'Todos' }] as const
 const showForm = ref(false)
 const editingCliente = ref<Cliente | null>(null)
 const toast = ref<{ message: string; type: string } | null>(null)
@@ -161,17 +168,24 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(searchQuery, () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => reload(), 300)
-})
-watch(showInactive, () => reload())
+}, { flush: 'sync' })
+watch(statusFilter, () => reload())
 
 function reload() {
+  if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
   page.value = 0
-  store.loadClientes(searchQuery.value || undefined)
+  return store.loadClientes(searchQuery.value.trim() || undefined, statusFilter.value)
+}
+
+function clearFilters() {
+  searchQuery.value = ''
+  if (statusFilter.value !== 'active') statusFilter.value = 'active'
+  else reload()
 }
 
 function loadMore() {
   page.value++
-  store.loadClientes(searchQuery.value || undefined)
+  store.loadClientes(searchQuery.value.trim() || undefined, statusFilter.value)
 }
 
 function openCreate() {
@@ -188,6 +202,7 @@ function onSaved(c: Cliente) {
   const idx = store.clientes.findIndex(x => x.id === c.id)
   if (idx !== -1) store.clientes[idx] = c
   else store.clientes.unshift(c)
+  void reload()
   showToast(editingCliente.value ? uiText(`Cliente atualizado.`) : uiText(`Cliente criado.`), 'success')
 }
 
@@ -195,6 +210,7 @@ async function confirmDelete(c: Cliente) {
   if (!confirm(uiText(`Inativar cliente "{0}"?`,{0:c.nome}))) return
   try {
     await store.deleteCliente(c.id)
+    await reload()
     showToast(uiText(`Cliente inativado.`), 'success')
   } catch {
     showToast(uiText(`Erro ao inativar cliente.`), 'error')
@@ -207,6 +223,7 @@ function showToast(message: string, type: string) {
 }
 
 onMounted(() => reload())
+onUnmounted(() => { if (searchTimer) clearTimeout(searchTimer) })
 </script>
 
 <style scoped>

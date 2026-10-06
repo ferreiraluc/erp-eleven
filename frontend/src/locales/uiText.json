@@ -1,4 +1,14 @@
 {
+  "Tentar novamente": {
+    "pt": "Tentar novamente",
+    "es": "Reintentar",
+    "en": "Try again"
+  },
+  "Não foi possível carregar os clientes.": {
+    "pt": "Não foi possível carregar os clientes.",
+    "es": "No se pudieron cargar los clientes.",
+    "en": "Could not load customers."
+  },
   "\"{0}\" excede 5 MB.": {
     "pt": "\"{0}\" excede 5 MB.",
     "es": "\"{0}\" supera los 5 MB.",

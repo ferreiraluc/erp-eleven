@@ -1,21 +1,25 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { clientesAPI, type Cliente, type ClienteCreate } from '@/services/api'
+export type CustomerStatusFilter = 'active' | 'inactive' | 'all'
 
 export const useClientesStore = defineStore('clientes', () => {
   const clientes = ref<Cliente[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function loadClientes(search?: string) {
+  let loadSequence = 0
+  async function loadClientes(search?: string, status: CustomerStatusFilter = 'active') {
+    const sequence = ++loadSequence
     try {
       loading.value = true
       error.value = null
-      clientes.value = await clientesAPI.getAll({ search, limit: 200 })
+      const result = await clientesAPI.getAll({ search, ativo: status !== 'inactive', include_inactive: status === 'all', limit: 200 })
+      if (sequence === loadSequence) clientes.value = result
     } catch (e: any) {
-      error.value = e.response?.data?.detail || 'Erro ao carregar clientes'
+      if (sequence === loadSequence) error.value = e.response?.data?.detail || 'Erro ao carregar clientes'
     } finally {
-      loading.value = false
+      if (sequence === loadSequence) loading.value = false
     }
   }
 
