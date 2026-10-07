@@ -125,7 +125,7 @@ def confirm(db,message,action):
         # Printing is read-only externally; queue and confirmation commit together.
         job=sf.print_label(db,key,devices[0].id,action.id,message.user_id)
         action.status='executed';action.result_id=job.id;action.executed_at=utcnow()
-        return 'Etiqueta enviada à fila da loja: uma cópia A4. Confira a saída na impressora.'
+        return f'Etiqueta enviada à fila da loja: uma cópia A4. Impressora: {devices[0].name}. Confira a saída na impressora.'
     except HTTPException as e:return str(e.detail)
 
 

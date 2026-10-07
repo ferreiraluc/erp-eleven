@@ -201,3 +201,75 @@ def test_paraguay_prints_supplied_fields_without_street(monkeypatch):
     assert 'Cliente Teste' in captured and 'Asunción' in captured
     assert 'Tel.: +595 900 123456' in captured
     assert not any('REMETENTE' in t or 'CPF' in t or 'CEP' in t for t in captured)
+
+
+def test_agent_replacement_preserves_identity_queue_and_credential(print_env):
+    factory, client = print_env
+    old, headers = device(client)
+    other, _ = device(client)
+    job = enqueue(client, old).json()
+    for _ in range(2):
+        response = client.post('/api/printing/agent/connect', headers=headers,
+                               json={'name': ' Samsung SL-M2035W '})
+        assert response.status_code == 200
+        assert response.json() == {'id': old['id'], 'name': 'Samsung SL-M2035W'}
+    with factory() as db:
+        current = db.get(PrintDevice, uuid.UUID(old['id']))
+        assert current.token_hash == hashlib.sha256(old['token'].encode()).hexdigest()
+        assert current.last_seen_at is not None
+        assert db.query(PrintDevice).count() == 2
+        assert db.get(PrintDevice, uuid.UUID(other['id'])).name == other['name']
+        pending = db.get(PrintJob, uuid.UUID(job['id']))
+        assert pending.device_id == current.id and pending.status == 'pending'
+    assert client.post('/api/printing/agent/claim', headers=headers).json()['id'] == job['id']
+    assert client.post('/api/printing/agent/claim', headers=headers).status_code == 204
+    assert client.post('/api/printing/agent/connect', headers=headers,
+                       json={'name': 'Other', 'device_id': other['id']}).status_code == 422
+    for name in (' ', 'Line\nbreak', 'x' * 101):
+        assert client.post('/api/printing/agent/connect', headers=headers,
+                           json={'name': name}).status_code == 422
+    assert client.post('/api/printing/agent/connect', json={'name': 'Samsung'}).status_code == 401
+    client.post(f"/api/printing/devices/{old['id']}/revoke")
+    assert client.post('/api/printing/agent/connect', headers=headers,
+                       json={'name': 'Samsung'}).status_code == 401
+
+
+def test_agent_package_has_only_distributable_files(print_env):
+    import io
+    from zipfile import ZipFile
+    _, client = print_env
+    response = client.get('/api/printing/agent-package')
+    assert response.status_code == 200
+    assert response.headers['cache-control'] == 'no-store'
+    with ZipFile(io.BytesIO(response.content)) as archive:
+        assert set(archive.namelist()) == {'Eleven-Impressao/' + name for name in (
+            'Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'LEIA-ME.txt')}
+        assert b'Samsung SL-M2035W' in archive.read('Eleven-Impressao/Instalar.ps1')
+    app = FastAPI()
+    app.include_router(printing.router, prefix='/api/printing')
+    d, headers = device(client)
+    with TestClient(app) as anonymous:
+        assert anonymous.get('/api/printing/agent-package').status_code in (401, 403)
+        assert anonymous.get('/api/printing/agent-package', headers=headers).status_code in (401, 403)
+
+
+def test_bot_print_uses_replacement_name_without_new_device(print_env):
+    from app.models.assistant import AssistantIdentity, AssistantAction
+    from app.models.usuario import UsuarioRole
+    from app.services.assistant_printing import AddressArgs, prepare_print
+    from app.services.assistant_documents import query_prints
+    from app.services.assistant_queries import QueryArgs
+    from test_assistant import incoming
+    factory, client = print_env
+    old, headers = device(client)
+    client.post('/api/printing/agent/connect', headers=headers, json={'name': 'Samsung SL-M2035W'})
+    with factory() as db:
+        user = db.query(Usuario).one(); user.role = UsuarioRole.ADMIN
+        identity = db.query(AssistantIdentity).filter_by(channel='telegram').one()
+        msg = incoming(db, user.id, 'Imprime este endereço', channel='telegram')
+        response = prepare_print(db, msg, identity, AddressArgs(pais='PY', nome='Cliente Teste'))
+        assert 'Samsung SL-M2035W' in response['confirmacao']
+        action = db.query(AssistantAction).one()
+        assert action.payload['device_id'] == old['id']
+        assert db.query(PrintJob).count() == 0
+        assert query_prints(db, msg, identity, QueryArgs())['impressoras'][0]['nome'] == 'Samsung SL-M2035W'

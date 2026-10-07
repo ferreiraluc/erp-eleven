@@ -1,45 +1,54 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - ATUALIZACAO SAMSUNG SL-M2035W
 
-Este pacote deve ser instalado no computador Windows conectado a HP.
+Instale no computador Windows da loja onde a Samsung ja imprime.
 Nao instale no laptop usado para desenvolver o ERP.
+Driver Samsung e SumatraPDF devem funcionar no Windows. Este pacote nao os substitui.
+Suporte oficial: https://www.samsung.com/sec/support/model/SL-M2035W/
 
-PREPARACAO
-1. SumatraPDF e driver da HP instalados; teste de impressao concluido.
-2. Extraia TODOS os arquivos do ZIP para uma pasta no Windows da loja.
+ATUALIZAR A IMPRESSORA
+1. Aguarde o trabalho atual terminar e feche a janela Eleven Impressao.
+2. Extraia TODOS os arquivos do ZIP para uma pasta. Use a mesma conta Windows.
 3. Abra Instalar.cmd. Nao e necessario executar como administrador.
-4. A impressora sugerida e HP Laserjet M14-M17.
-5. Informe somente a credencial exclusiva de impressao emitida pelo ERP.
-   Sem credencial, pressione Enter: a instalacao fica preparada e desconectada.
-6. Abra Eleven Impressao na Area de Trabalho depois do pareamento.
+4. Selecione o numero da Samsung na lista. O nome da fila pode diferir do modelo.
+   Se houver exatamente uma SL-M2035W, Enter aceita a sugestao; confira antes.
+5. Na credencial, pressione Enter para MANTER a credencial existente.
+   A primeira instalacao precisa da credencial exclusiva do dispositivo ERP.
+   Nunca informe senha de login, token Telegram ou chave da IA.
+6. Abra Eleven Impressao na Area de Trabalho. Aguarde a mensagem Conectado.
+7. O ERP passa a exibir o nome da fila selecionada no Windows. Confira em Enderecos.
 
-O processo usa A4, uma copia, preto e branco, frente unica. Nao amplia A5
-para A4; reduz somente quando necessario para caber na area imprimivel.
-Mantenha computador ligado, conectado a internet e janela do agente aberta.
-Fechar a janela para o agente. Nao ha inicializacao automatica nesta versao.
+Nao apague a pasta %LOCALAPPDATA%\ElevenPrint nem o diario journal.
+A atualizacao preserva a credencial, o dispositivo, o historico e a fila.
+A instalacao nao imprime. Ao abrir o agente, os trabalhos pendentes autorizados
+voltam a ser processados. Trabalhos enviados/incertos nao sao repetidos.
+Se a credencial foi criada por outro usuario Windows, informe a credencial novamente.
+
+USO
+ERP, Telegram, PDFs avulsos e etiquetas SuperFrete usam a mesma ponte.
+Papel A4, uma copia, preto e branco, frente unica. Nao amplia A5 para A4;
+reduz somente quando necessario para caber na area imprimivel.
+Mantenha computador ligado, internet, sessao Windows e janela do agente abertos.
+Nao ha inicializacao automatica. Fechar a janela para o agente.
 O instalador nao altera permanentemente a politica de PowerShell do Windows.
 Nao desative politicas da empresa caso a execucao seja bloqueada.
 
+DOCUMENTOS
+- Paraguai: somente os dados do destinatario, sem remetente obrigatorio.
+- Brasil: destinatario e remetente escolhido. CPF ausente nao gera zeros.
+- O ERP gera o documento solicitado; nao imprime a lista historica do Word.
+- Confirmacoes e protecao contra duplicacao permanecem ativas.
+
 ESTADOS
-submitted: Sumatra aceitou o envio a fila do Windows; nao comprova saida do papel.
-uncertain: envio interrompido ou resposta inconclusiva. Confira a fila e a HP.
+submitted: Sumatra aceitou o envio ao Windows; nao comprova saida fisica do papel.
+uncertain: envio interrompido/inconclusivo; confira a fila do Windows e a impressora.
 O agente nunca reimprime automaticamente um trabalho ja despachado.
 
-O token fica protegido pelo Windows (DPAPI), ligado ao usuario que instalou.
-Nao copie config.json entre computadores ou contas Windows.
-Nenhuma porta de rede e aberta. O agente acessa somente o ERP por HTTPS.
-Os PDFs locais sao removidos apos o resultado ser confirmado pelo servidor.
-
-ESTADO DESTA ENTREGA
-Agente e API da fila preparados. A API ainda precisa ser publicada e pareada.
-A interpretacao de enderecos pelo Telegram e os dois modelos de documento
-ainda precisam ser integrados. Instalar este pacote nao ativa isso sozinho.
-
-REGRAS DOS DOCUMENTOS A INTEGRAR
-- Folha A4 comum; documento novo somente com destinatarios solicitados.
-- Paraguai: somente destinatario.
-- Brasil: destinatario e remetente escolhido entre os cadastrados.
-- Nunca imprimir a lista historica inteira do Word.
+SEGURANCA
+Token protegido pelo Windows (DPAPI), ligado ao usuario que instalou.
+Nao copie config.json nem config.json.bak para outro computador/conta Windows.
+Nenhuma porta de rede e aberta; somente HTTPS para o ERP.
+PDFs temporarios sao removidos apos o resultado ser confirmado pelo servidor.
 
 REMOVER
-Feche o agente, apague o atalho e a pasta %LOCALAPPDATA%\ElevenPrint.
-Revogue tambem a credencial do dispositivo no ERP.
+Feche o agente, revogue a credencial no ERP e guarde o diario antes de remover.
+Nao remova/reinstale para trocar apenas a impressora; use a atualizacao acima.

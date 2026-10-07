@@ -70,7 +70,7 @@ def validate_pdf(data):
 
 def file_preview(action):
     p=action.payload
-    return preview_reply(action,f"Imprimir PDF: {p['pages']} página(s), uma cópia na impressora da loja.\nO documento não será arquivado no ERP nem usado para cadastrar dados.\nConfirme para enviar à fila ou cancele.")
+    return preview_reply(action,f"Imprimir PDF: {p['pages']} página(s), uma cópia na impressora da loja.\nImpressora: {p.get('device_name', 'da loja')}.\nO documento não será arquivado no ERP nem usado para cadastrar dados.\nConfirme para enviar à fila ou cancele.")
 
 
 def prepare_file(db,message,identity,args):
@@ -91,7 +91,7 @@ def prepare_file(db,message,identity,args):
     except ValueError as exc:return {'erro':str(exc)}
     action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind='arquivo_imprimir',payload={
         'attachment_message_id':str(source.id),'pages':pages,
-        'sha256':hashlib.sha256(pdf).hexdigest(),'device_id':str(devices[0].id)})
+        'sha256':hashlib.sha256(pdf).hexdigest(),'device_id':str(devices[0].id),'device_name':devices[0].name})
     db.add(action);db.flush()
     return {'confirmacao':file_preview(action)}
 
@@ -113,7 +113,7 @@ def confirm_file(db,message,action):
         db.add(job);db.flush()
     source.attachment=None
     action.status='executed';action.result_id=job.id;action.executed_at=utcnow()
-    return f"PDF encaminhado à impressora: {p['pages']} página(s), uma cópia. O ERP não arquiva esse documento. O envio à fila ainda não confirma a saída do papel."
+    return f"PDF encaminhado à impressora: {p['pages']} página(s), uma cópia. Destino: {device.name}. O ERP não arquiva esse documento. O envio à fila ainda não confirma a saída do papel."
 
 
 def ephemeral_pdf(job):
@@ -140,6 +140,7 @@ def query_prints(db,message,identity,args):
     q=db.query(PrintJob).filter(PrintJob.source!='bot_pdf_ephemeral')
     if args.termo:q=q.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(args.termo),escape='\\'))
     total=q.count();rows=q.order_by(PrintJob.created_at.desc()).offset((args.pagina-1)*args.limite).limit(args.limite).all()
-    return {'total':total,'resultados':[{'id':str(j.id),'status':j.status,'origem':j.source,'data':j.created_at.isoformat(),
+    return {'impressoras':[{'nome':d.name,'ultimo_contato':d.last_seen_at.isoformat() if d.last_seen_at else None} for d in db.query(PrintDevice).filter_by(active=True)],
+        'total':total,'resultados':[{'id':str(j.id),'status':j.status,'origem':j.source,'data':j.created_at.isoformat(),
         'arquivo':(j.snapshot or {}).get('filename'),'destinatario':(j.snapshot or {}).get('endereco',{}).get('nome')} for j in rows],
         'aviso':'submitted significa enviado pelo agente à impressora, não comprova saída física do papel. Nunca reimprima sem pedido explícito.'}

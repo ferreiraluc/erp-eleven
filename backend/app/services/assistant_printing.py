@@ -125,6 +125,7 @@ def print_preview(action):
     return preview_reply(action, ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
             '\nPaís: ' + ('Brasil' if p['pais'] == 'BR' else 'Paraguai') +
             '\nRemetente: ' + (sender['nome'] if sender else 'sem remetente') +
+            '\nImpressora: ' + action.payload.get('device_name', 'da loja') +
             '\nDiga “confirmo” para enviar à impressora da loja ou “cancela”.\n' +
             'Ainda não foi enviado. Prévia válida por 24 horas.\nIdentificador da prévia: ' + str(action.id)))
 
@@ -151,7 +152,7 @@ def prepare_print(db, message, identity, args, postal_check=None):
             return {'erro': 'Remetente ainda não configurado no ERP. Nenhuma impressão enviada.'}
         sender = {'nome': profile.name, 'linhas': sender_lines(profile)}
     from .address_manager import get_layout
-    payload = {'layout': get_layout(db, args.pais), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id)}
+    payload = {'layout': get_layout(db, args.pais), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id), 'device_name': devices[0].name}
     if postal_check:
         payload['postal_warnings'] = postal_check['warnings']
     action = AssistantAction(source_message_id=message.id, user_id=message.user_id, kind='impressao', payload=payload)
@@ -182,5 +183,6 @@ def enqueue_print(db, action):
         db.flush()
     action.status, action.result_id, action.executed_at = 'executed', job.id, utcnow()
     return ('Endereço enviado à fila de impressão da loja: uma folha A4, uma cópia. '
+            f'Impressora: {device.name}. '
             'Mantenha o Eleven Impressao aberto no Windows. O envio à fila ainda não confirma a saída do papel. '
             'Trabalho: ' + str(job.id))

@@ -2,18 +2,48 @@
 
 ## Instalação e operação atuais
 
-O bot Telegram e o gestor de endereços já enviam trabalhos para a HP LaserJet
-M14-M17 no computador Windows da loja. O responsável confirmou impressão física
-A4 em 22/09/2026. O laptop de desenvolvimento é outra máquina; não instalar nele
-um segundo agente conectado à fila da loja.
+O bot Telegram, o gestor de endereços e as etiquetas compartilham o mesmo agente
+Windows e a mesma fila. Em 07/10/2026 a loja informou a troca para **Samsung
+SL-M2035W**, já imprimindo pelo Windows. A configuração do agente e uma impressão
+física pelo ERP ainda precisam ser conferidas nesse computador após a atualização.
+O laptop de desenvolvimento é outra máquina; não instalar nele um segundo agente.
 
-Pacote: `tools/eleven-print-agent/`, com `Instalar.cmd`, `Instalar.ps1`, `Agente.ps1`
-e `LEIA-ME.txt`. Requisitos: driver da HP, SumatraPDF funcionando e credencial do
-dispositivo criada por ADMIN. O instalador não baixa programas de terceiros.
+Pacote: `tools/eleven-print-agent/`, com `Instalar.cmd`, `Instalar.ps1`,
+`Configuracao.ps1`, `Agente.ps1` e `LEIA-ME.txt`. ADMIN pode baixá-lo em
+**Endereços → Configurar impressora da loja → Baixar agente Windows**. O download
+usa `/api/printing/agent-package`, inclui somente esses cinco arquivos e nunca
+credenciais ou configurações locais. O driver e o SumatraPDF devem estar instalados;
+o instalador não baixa nem substitui drivers/programas de terceiros.
+
+### Trocar a impressora no mesmo computador
+
+1. Aguarde a impressão atual terminar e feche **Eleven Impressao**. O instalador
+   recusa atualizar com o agente aberto, usando o mesmo lock local.
+2. Extraia todos os arquivos do pacote atualizado em uma pasta, usando a mesma
+   conta Windows que já executava o agente. Não apague `%LOCALAPPDATA%\ElevenPrint`.
+3. Abra `Instalar.cmd` e selecione a fila da Samsung que já imprime no Windows.
+   Uma única correspondência SL-M2035W é sugerida, mas ainda exige Enter; nomes de
+   driver diferentes ou duas filas semelhantes exigem escolher o número da lista.
+4. No campo da credencial, pressione **Enter para manter a existente**. O agente
+   mantém o Sumatra e o diário local; cria backup da configuração protegida por DPAPI.
+   Credencial de outro computador/usuário Windows não é reutilizada silenciosamente.
+5. Abra **Eleven Impressao**. Ao conectar, `/api/printing/agent/connect` atualiza
+   somente o nome do próprio dispositivo autenticado, conservando ID, credencial,
+   fila, prévias e histórico. ERP e consultas/prévias novas do bot usam esse cadastro.
+6. Confira o nome no gestor e peça uma impressão quando desejar validar o papel.
+   A instalação não imprime; abrir o agente retoma trabalhos pendentes já autorizados.
+   Trabalhos já enviados ou incertos não são reimpressos automaticamente.
+
+O nome mostrado no ERP é o nome real da fila do Windows; pode ser diferente do nome
+comercial do modelo. A4, uma cópia, preto e branco e frente única continuam iguais.
+Referência do fabricante: [Samsung SL-M2035W](https://www.samsung.com/sec/support/model/SL-M2035W/).
+Se a impressora já imprime pelo Windows, não é necessário reinstalar seu driver.
+
+### Primeira instalação
 
 1. Instale o driver e o SumatraPDF no Windows; teste um PDF diretamente pelo Sumatra.
 2. Obtenha uma credencial de dispositivo pelo fluxo administrativo `/api/printing/devices`.
-3. Execute `Instalar.cmd` e informe os dados pedidos, incluindo a credencial. DPAPI protege a cópia local; o servidor guarda o hash.
+3. Execute `Instalar.cmd`, selecione a impressora e informe a credencial. DPAPI protege a cópia local; o servidor guarda o hash.
 4. Abra **Eleven Impressao**. Mantenha a janela, a sessão Windows e a conexão ativas.
 5. Confira o último contato/conexão no ERP e envie uma solicitação explícita de teste. Verifique o papel antes de considerar a instalação concluída.
 
@@ -76,3 +106,7 @@ Nenhuma impressão é enviada automaticamente só por rodar a suíte de testes.
 
 Veja também [Gestor de endereços e SuperFrete](GESTOR_ENDERECOS_SUPERFRETE.md) e
 [Operação](OPERACAO.md).
+
+O pacote é montado a partir de `tools/eleven-print-agent` no checkout completo do
+Render. Instalações Docker contendo apenas `backend/` não incluem esse diretório e
+retornam 503 no download; nesses ambientes distribua o ZIP a partir do repositório.

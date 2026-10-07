@@ -41,7 +41,7 @@ try {
     if ($config.server -ne 'https://erp-eleven-backend.onrender.com') { throw 'Servidor nao autorizado.' }
     if (-not $config.token) { throw 'Instalado sem credencial. Execute Instalar.cmd quando receber a credencial exclusiva.' }
     if (-not (Test-Path -LiteralPath $config.sumatra)) { throw 'SumatraPDF nao encontrado. Execute Instalar.cmd novamente.' }
-    if (@([Drawing.Printing.PrinterSettings]::InstalledPrinters) -notcontains $config.printer) { throw 'A impressora configurada nao esta instalada.' }
+    if (@([Drawing.Printing.PrinterSettings]::InstalledPrinters) -notcontains $config.printer) { throw 'A impressora configurada nao esta instalada. Execute o novo Instalar.cmd para selecionar a Samsung.' }
     $secure = ConvertTo-SecureString $config.token
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $script:token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
@@ -50,8 +50,16 @@ try {
     New-Item -ItemType Directory -Force -Path $journal | Out-Null
     Write-Host "Eleven Impressao | $($config.printer) | A4"
     Write-Host 'Conectando ao ERP. Feche esta janela para parar.'
+    $connected = $false
     while ($true) {
         try {
+            if (-not $connected) {
+                # Update only this credential's existing device; never create a second queue.
+                $name = $config.printer.Substring(0, [Math]::Min(100, $config.printer.Length))
+                Api 'POST' 'connect' @{ name = $name } | Out-Null
+                $connected = $true
+                Write-Host 'Conectado. Destino atualizado no ERP e no bot.'
+            }
             # Finish acknowledgements before accepting another job. Never repeat a print.
             foreach ($file in Get-ChildItem -LiteralPath $journal -Filter '*.json') {
                 $record = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json

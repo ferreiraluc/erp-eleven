@@ -54,7 +54,7 @@ flowchart LR
     API <--> SF[SuperFrete]
     DB --> Fila[Fila de impressão]
     Windows[Agente Windows da loja] --> Fila
-    Windows --> Sumatra[SumatraPDF + HP M14-M17]
+    Windows --> Sumatra[SumatraPDF + Samsung SL-M2035W]
 ```
 
 O bot conversa em linguagem natural. Consultas leem o estado do ERP; operações

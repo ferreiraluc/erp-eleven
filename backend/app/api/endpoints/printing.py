@@ -1,11 +1,14 @@
 """Private printer API. Device credentials cannot query any other ERP data."""
 import hashlib
 import secrets
+import io
+from pathlib import Path
+from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import timedelta
 from uuid import UUID
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Header, Response, UploadFile, File, Form
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from ...database import get_db
@@ -29,7 +32,41 @@ def printer(authorization: str = Header(default=""), db: Session = Depends(get_d
 
 
 class DeviceInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     name: str = Field(min_length=1, max_length=100)
+
+    @field_validator('name')
+    @classmethod
+    def clean_name(cls, value):
+        value = value.strip()
+        if not value or any(ord(c) < 32 for c in value):
+            raise ValueError('Informe um nome de impressora válido')
+        return value
+
+
+@router.get('/agent-package')
+def agent_package(user=Depends(administrator)):
+    root = Path(__file__).resolve().parents[4] / 'tools' / 'eleven-print-agent'
+    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'LEIA-ME.txt')
+    if not all((root / name).is_file() for name in files):
+        raise HTTPException(503, 'Pacote do agente indisponível nesta instalação')
+    data = io.BytesIO()
+    with ZipFile(data, 'w', compression=ZIP_DEFLATED) as archive:
+        for name in files:
+            archive.write(root / name, 'Eleven-Impressao/' + name)
+    return Response(data.getvalue(), media_type='application/zip', headers={
+        'Content-Disposition': 'attachment; filename="Eleven-Impressao-Windows.zip"',
+        'Cache-Control': 'no-store',
+    })
+
+
+@router.post('/agent/connect')
+def connect(body: DeviceInput, device=Depends(printer), db: Session = Depends(get_db)):
+    # The scoped credential may rename only its own device; IDs/jobs/tokens survive replacement.
+    device.name = body.name
+    device.last_seen_at = utcnow()
+    db.commit()
+    return {'id': str(device.id), 'name': device.name}
 
 
 @router.post("/devices")
