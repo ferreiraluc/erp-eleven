@@ -1,29 +1,14 @@
 <template>
   <div class="pedidos-view">
     <!-- Header -->
-    <header class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-top">
-            <button @click="$router.replace('/dashboard')" class="back-button erp-button erp-button--ghost erp-button--icon">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h1 class="page-title">{{ $tr("Pedidos") }}</h1>
-          </div>
-          <p class="page-subtitle">{{ $tr("Gerencie todos os pedidos da loja") }}</p>
-        </div>
-        <div class="header-right">
-          <button @click="openCreateModal" class="btn btn-primary erp-button erp-button--primary">
-            <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            {{ $tr("Novo Pedido") }}
-          </button>
-        </div>
-      </div>
-    </header>
+    <ModuleHeader :title="$tr('Pedidos')">
+      <button @click="openCreateModal" class="btn btn-primary erp-button erp-button--primary">
+        <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        {{ $tr("Novo Pedido") }}
+      </button>
+    </ModuleHeader>
 
     <!-- Filters and Controls -->
     <div class="filters-section">
@@ -237,6 +222,7 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -475,63 +461,6 @@ onMounted(async () => {
   padding: 1.5rem;
   background-color: #f9fafb;
   min-height: 100vh;
-}
-
-.page-header {
-  background-color: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-top {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.back-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  background-color: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.back-button:hover {
-  background-color: #e5e7eb;
-  border-color: #9ca3af;
-}
-
-.back-button svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.page-subtitle {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.875rem;
 }
 
 .btn {
@@ -980,15 +909,6 @@ onMounted(async () => {
   .pedidos-cards {
     grid-template-columns: 1fr;
     padding: 1rem;
-  }
-
-  .header-right .btn {
-    padding: 0.4rem 0.65rem;
-    font-size: 0.75rem;
-  }
-  .header-right .btn-icon {
-    width: 0.875rem;
-    height: 0.875rem;
   }
 }
 </style>

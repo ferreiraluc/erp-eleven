@@ -1,23 +1,13 @@
 <template>
   <div class="clientes-view">
-    <header class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <button @click="$router.replace('/dashboard')" class="back-btn erp-button erp-button--ghost erp-button--icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 class="page-title">{{ uiText(`Clientes`) }}</h1>
-          </div>
-        </div>
-        <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg> {{ uiText(`Novo cliente`) }} </button>
-      </div>
-    </header>
+    <ModuleHeader :title="uiText('Clientes')">
+      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        {{ uiText(`Novo cliente`) }}
+      </button>
+    </ModuleHeader>
 
     <!-- Search -->
     <div class="search-section">
@@ -140,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText } from '@/i18n/uiText'
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useClientesStore, type CustomerStatusFilter } from '@/stores/clientes'
@@ -228,11 +219,7 @@ onUnmounted(() => { if (searchTimer) clearTimeout(searchTimer) })
 
 <style scoped>
 .clientes-view { min-height: 100vh; background: #f9fafb; }
-.page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: .75rem 1rem; position: sticky; top: 0; z-index: 10; }
-.header-content { display: flex; align-items: center; justify-content: space-between; max-width: 1000px; margin: 0 auto; }
-.header-left { display: flex; align-items: center; gap: .75rem; }
-.back-btn { background: none; border: none; cursor: pointer; color: #6b7280; padding: .25rem; }
-.page-title { font-size: 1.1rem; font-weight: 700; color: #111827; margin: 0; }
+.clientes-view > .erp-module-header { position: sticky; top: 0; z-index: 10; }
 .btn { display: flex; align-items: center; gap: .4rem; padding: .45rem .9rem; border-radius: 8px; font-size: .875rem; cursor: pointer; border: none; font-weight: 600; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
@@ -294,8 +281,6 @@ onUnmounted(() => { if (searchTimer) clearTimeout(searchTimer) })
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(8px); }
 
 @media (max-width: 600px) {
-  .page-header { padding: .4rem .75rem; }
-  .page-title { font-size: 1rem; }
   .btn { padding: .35rem .65rem; font-size: .75rem; }
   .cliente-details { gap: .35rem .6rem; }
 }

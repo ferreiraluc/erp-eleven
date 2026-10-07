@@ -1,28 +1,14 @@
 <template>
   <div class="exchange-management">
     <!-- Header -->
-    <div class="management-header">
-      <div class="header-left">
-        <button @click="goBack" class="back-button erp-button erp-button--ghost">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          {{ $t('exchangeManagement.backToDashboard') }}
-        </button>
-        <div class="page-title">
-          <h1>{{ $t('exchangeManagement.title') }}</h1>
-          <p>{{ $t('exchangeManagement.subtitle') }}</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button @click="showQuickUpdateModal = true" class="btn btn-primary erp-button erp-button--primary">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          {{ $t('exchangeManagement.quickUpdateRates') }}
-        </button>
-      </div>
-    </div>
+    <ModuleHeader :title="$t('exchangeManagement.title')">
+      <button @click="showQuickUpdateModal = true" class="btn btn-primary erp-button erp-button--primary">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        {{ $t("exchangeManagement.quickUpdateRates") }}
+      </button>
+    </ModuleHeader>
 
     <!-- Current Rates Overview -->
     <div class="current-rates-section">
@@ -295,14 +281,13 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
 
@@ -431,9 +416,6 @@ const currentRatesDisplay = computed(() => {
 })
 
 // Methods
-const goBack = () => {
-  router.push('/dashboard')
-}
 
 const loadCurrentRates = async () => {
   try {
@@ -616,67 +598,6 @@ onMounted(async () => {
 }
 
 /* Header */
-.management-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 2rem;
-  background: white;
-  padding: 1.5rem;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: none;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  color: #6b7280;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: fit-content;
-}
-
-.back-button:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
-  color: #374151;
-}
-
-.back-button svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.page-title h1 {
-  margin: 0;
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #111827;
-}
-
-.page-title p {
-  margin: 0.25rem 0 0 0;
-  color: #6b7280;
-  font-size: 1rem;
-}
-
-.header-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
 
 /* Current Rates Section */
 .current-rates-section {
@@ -1231,11 +1152,6 @@ onMounted(async () => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .management-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
 
   .form-row {
     grid-template-columns: 1fr;

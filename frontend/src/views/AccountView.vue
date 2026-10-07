@@ -1,6 +1,8 @@
 <template>
   <main class="access-page account-page">
-    <header class="access-head"><div><h1>{{ $t('access.account') }}</h1><p>{{ auth.userName }} · {{ auth.user?.email }}</p></div><RouterLink v-if="!auth.user?.must_change_password" class="button erp-button erp-button--secondary" to="/dashboard">{{ $t('access.back') }}</RouterLink></header>
+    <ModuleHeader :title="$t('access.account')" :show-back="!auth.user?.must_change_password">
+      <template #meta>{{ auth.userName }} · {{ auth.user?.email }}</template>
+    </ModuleHeader>
     <p v-if="auth.user?.must_change_password" class="notice">{{ $t('access.firstPassword') }}</p>
     <p v-if="error" class="notice error" role="alert">{{ error }}</p>
     <section class="access-card"><h2>{{ $t('access.changePassword') }}</h2><p>{{ $t('access.passwordHelp') }}</p>
@@ -14,8 +16,9 @@
   </main>
 </template>
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { ref, onUnmounted } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'

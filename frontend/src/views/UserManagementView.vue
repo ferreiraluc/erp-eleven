@@ -1,6 +1,11 @@
 <template>
   <main class="access-page">
-    <header class="access-head"><div><h1>{{ $t('access.users') }}</h1><p>{{ $t('access.usersSubtitle') }}</p></div><div class="row-actions"><button class="erp-button erp-button--secondary" :disabled="loading" @click="loadPage">{{ $t('common.refresh') }}</button><button class="primary erp-button erp-button--primary" @click="edit()">{{ $t('access.addUser') }}</button></div></header>
+    <ModuleHeader :title="$t('access.users')">
+      <button class="erp-button erp-button--secondary" :disabled="loading" @click="loadPage">
+        {{ $t("common.refresh") }}
+      </button>
+      <button class="primary erp-button erp-button--primary" @click="edit()">{{ $t("access.addUser") }}</button>
+    </ModuleHeader>
     <p v-if="error" class="notice error" role="alert">{{ error }}</p><p v-if="notice" class="notice success" role="status">{{ notice }}</p>
     <section class="access-card"><div v-if="loading" class="empty">{{ $t('common.loading') }}</div><div v-else class="table-wrap"><table><thead><tr><th>{{ $t('access.user') }}</th><th>{{ $t('access.profile') }}</th><th>{{ $t('access.salesAccess') }}</th><th>{{ $t('access.lastLogin') }}</th><th>{{ $t('access.actions') }}</th></tr></thead><tbody><tr v-for="u in users" :key="u.id"><td><strong>{{ u.nome }}</strong><small class="email">{{ u.email }}</small><span v-if="!u.ativo" class="muted">{{ $t('access.inactive') }}</span><span v-if="u.must_change_password" class="badge">{{ $t('access.temporaryPassword') }}</span></td><td>{{ u.role==='ADMIN' ? $t('access.admin') : $t('access.operational') }}</td><td>{{ u.sales_scope==='own' ? $t('access.onlyOwn') : $t('access.allSales') }}<small class="email">{{ u.sales_seller }}</small></td><td>{{ date(u.ultimo_login) }}</td><td><div class="row-actions"><button class="erp-button erp-button--secondary erp-button--sm" @click="edit(u)">{{ $t('common.edit') }}</button><button class="erp-button erp-button--secondary erp-button--sm" v-if="u.id!==auth.user?.id" @click="resetUser=u;temporary='';error=''">{{ $t('access.resetPassword') }}</button></div></td></tr></tbody></table></div></section>
     <p class="muted">{{ $t('access.userRules') }}</p>
@@ -17,6 +22,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { accessAPI, type UserAccess } from '@/services/access'

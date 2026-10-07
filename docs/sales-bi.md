@@ -4,6 +4,12 @@ O painel `/bi-vendas`, acessível pelo dashboard a administradores e gerentes, l
 
 ## Resultados e cobertura
 
+O cabeçalho segue o padrão dos módulos, sem o título decorativo e o subtítulo.
+**Fontes** e **Atualizar dados** usam botões compactos no celular. O estado da
+sincronização continua abaixo do cabeçalho; consultar a tela não inicia uma leitura
+do OneDrive. O título **Minhas vendas** e a visibilidade de **Fontes** continuam
+respeitando o perfil do usuário.
+
 - O leitor usa `openpyxl` com `data_only=True`, `read_only=True` e `keep_links=False`. Consome os resultados calculados e salvos pelo Excel, incluindo correções já incorporadas. Não executa fórmulas, não remove constantes das fórmulas e não as envia à API do frontend.
 - Na planilha **atual**, soma os resultados salvos de semanas únicas e da aba corrente. Isso acompanha novos lançamentos mesmo quando o resumo mensal lateral, preenchido manualmente, ainda não foi atualizado. A identidade dos lançamentos evita contar a aba corrente novamente quando já foi copiada para uma semana.
 - Nos arquivos **mensais**, o total vem do fechamento mensal salvo. O resultado mensal por vendedor tem prioridade quando publicado. Quando ele não existe, só é derivado de semanas cujo detalhamento foi identificado. Uma divergência entre um resumo de semana e a aba impede atribuir esse detalhamento a um período por suposição.

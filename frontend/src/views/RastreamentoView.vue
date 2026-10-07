@@ -1,30 +1,18 @@
 <template>
   <div class="rastreamento-page">
     <!-- Header -->
-    <header class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <button @click="$router.replace('/dashboard')" class="back-button erp-button erp-button--ghost erp-button--icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div class="header-info">
-            <h1 class="page-title">{{ $tr("Rastreamento de Encomendas") }}</h1>
-            <p class="page-subtitle">{{ $tr("Gerencie e acompanhe todas as suas entregas") }}</p>
-          </div>
-        </div>
-        
-        <div class="header-actions">
-          
-          <button @click="abrirModalCriacao" class="btn btn-primary erp-button erp-button--primary erp-button--icon">
-            <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </header>
+    <ModuleHeader :title="$tr('Rastreamento de Encomendas')">
+      <button
+        :aria-label="$tr('Adicionar Rastreamento')"
+        :title="$tr('Adicionar Rastreamento')"
+        @click="abrirModalCriacao"
+        class="btn btn-primary erp-button erp-button--primary erp-button--icon"
+      >
+        <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </button>
+    </ModuleHeader>
 
     <!-- Stats Cards -->
     <div class="stats-section">
@@ -614,6 +602,7 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -1058,61 +1047,6 @@ function hideOrderSuggestions() {
 }
 
 /* Header */
-.page-header {
-  background-color: white;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.back-button {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.5rem;
-  background-color: #f3f4f6;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  transition: all 0.2s;
-}
-
-.back-button:hover {
-  background-color: #e5e7eb;
-  color: #374151;
-}
-
-.back-button svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.page-subtitle {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
 
 .header-actions {
   display: flex;
@@ -2063,17 +1997,6 @@ function hideOrderSuggestions() {
 
   .mobile-action-btn-expanded.delete { color: #dc2626; border-color: #fca5a5; }
   .mobile-action-btn-expanded.delete:hover { background: #fef2f2; border-color: #f87171; }
-  
-  .header-content {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .header-left {
-    flex: 1;
-  }
 
   .header-actions {
     justify-content: flex-end;
@@ -2579,24 +2502,6 @@ function hideOrderSuggestions() {
 /* ===== Ajustes de TAMANHO: somente MOBILE ===== */
 @media (max-width: 768px) {
   /* Header mais compacto */
-  .page-header { border-bottom-width: 0; }
-  .header-content {
-    padding: 0.75rem 1rem;
-    gap: 0.5rem;
-  }
-  .back-button {
-    width: 2rem; height: 2rem; border-radius: 0.4rem;
-  }
-  .back-button svg { width: 1rem; height: 1rem; }
-
-  .page-title {
-    font-size: 1.125rem; /* antes 1.5rem */
-    line-height: 1.2;
-  }
-  .page-subtitle {
-    font-size: 0.75rem;   /* menor */
-    color: #6b7280;
-  }
 
   /* Botão "Novo Rastreamento" menor e no canto direito */
   .header-actions {
@@ -2741,7 +2646,6 @@ function hideOrderSuggestions() {
 }
 
 @media (max-width: 380px) {
-  .page-title { font-size: 1rem; }
   .header-actions .btn.btn-primary { font-size: 0.8rem; padding: 0.45rem 0.7rem; }
   .stat-value { font-size: 0.7rem; }
   .stat-label { font-size: 0.45rem; }

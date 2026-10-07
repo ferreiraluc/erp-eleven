@@ -7,6 +7,10 @@ backend e PostgreSQL como estado persistente. Os endpoints usam serviços e/ou s
 SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou Celery.
 
 - `frontend/src/main.ts` inicia Vue, Pinia, router e i18n; `App.vue` contém as telas e notificações.
+- `frontend/src/components/ModuleHeader.vue` padroniza os cabeçalhos dos módulos:
+  voltar, título e ações compactas que se reorganizam no celular. As ações e suas
+  permissões continuam nas telas. Dashboard e login mantêm composição própria;
+  textos de orientação operacional ficam no conteúdo, fora do cabeçalho.
 - `frontend/src/assets/buttons.css` define os botões de ação: `erp-button` com
   variantes `--primary`, `--secondary`, `--danger` e `--ghost`; `--sm` para ações
   compactas e `--icon` para ícones. Cor, tipografia, foco e desabilitado são centrais,

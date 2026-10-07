@@ -1,27 +1,14 @@
 <template>
   <div class="vendor-management">
     <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-title">
-          <button @click="goBack" class="back-button erp-button erp-button--ghost erp-button--icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1>{{ $tr("Gerenciar Vendedores") }}</h1>
-            <p class="subtitle">{{ $tr("Cadastre, edite e gerencie seus vendedores") }}</p>
-          </div>
-        </div>
-        <button @click="openCreateModal" class="create-button erp-button erp-button--primary">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          {{ $tr("Novo Vendedor") }}
-        </button>
-      </div>
-    </div>
+    <ModuleHeader :title="$tr('Gerenciar Vendedores')">
+      <button @click="openCreateModal" class="create-button erp-button erp-button--primary">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        {{ $tr("Novo Vendedor") }}
+      </button>
+    </ModuleHeader>
 
     <!-- Content -->
     <div class="page-content">
@@ -312,16 +299,15 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import VendorActivityPanel from '@/components/vendors/VendorActivityPanel.vue'
 import { vendorActivityMessages } from '@/components/vendors/messages'
 import ColorPicker from '@/components/ColorPicker.vue'
 import { vendorsAPI, type VendorResponse, type VendorCreate } from '@/services/api'
 
-const router = useRouter()
 const {t:activityT}=useI18n({useScope:'local',messages:vendorActivityMessages})
 const activityVendor=ref<VendorResponse|null>(null)
 
@@ -494,9 +480,6 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString(uiLocale())
 }
 
-const goBack = () => {
-  router.replace('/dashboard')
-}
 
 // Lifecycle
 onMounted(() => {
@@ -511,52 +494,6 @@ onMounted(() => {
 }
 
 /* Header */
-.page-header {
-  background-color: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1.5rem 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.back-button {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  color: #6b7280;
-  transition: all 0.2s;
-}
-
-.back-button:hover {
-  background-color: #f3f4f6;
-  color: #374151;
-}
-
-.back-button svg {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.header-title h1 {
-  margin: 0;
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #111827;
-}
 
 .subtitle {
   margin: 0.25rem 0 0 0;
@@ -1109,18 +1046,9 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .page-header {
-    padding: 1rem;
-  }
 
   .page-content {
     padding: 1rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
   }
 
   .stats-row {

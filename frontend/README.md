@@ -2,6 +2,15 @@
 
 Vue 3 + TypeScript + Vite + Pinia. Este é o frontend do ERP em produção, não um template.
 
+Os 15 módulos roteados usam `components/ModuleHeader.vue`: voltar ao dashboard,
+título e ações, sem textos promocionais. O componente centraliza tipografia,
+espaçamento e botões compactos (34px no desktop, 32px até 600px), permitindo quebra
+de linha quando necessário. A página continua responsável pelas permissões,
+visibilidade e eventos das ações. `showBack` preserva o bloqueio de navegação na
+troca obrigatória de senha; o slot `meta` mantém a identificação em Minha conta.
+Dashboard e login conservam seus cabeçalhos próprios. Novos módulos devem reutilizar
+esse componente, sem copiar os estilos antigos de cabeçalho.
+
 ```sh
 nvm use
 npm ci --include=dev

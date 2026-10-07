@@ -1,4 +1,9 @@
 {
+  "Voltar ao dashboard": {
+    "pt": "Voltar ao dashboard",
+    "es": "Volver al panel",
+    "en": "Back to dashboard"
+  },
   "Tentar novamente": {
     "pt": "Tentar novamente",
     "es": "Reintentar",

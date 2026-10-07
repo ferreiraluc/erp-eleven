@@ -1,28 +1,24 @@
 <template>
   <div class="vendas-view">
     <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <h1>{{ $tr("💰 Vendas") }}</h1>
-          <p class="subtitle">{{ $tr("Gerencie e visualize todas as vendas do sistema") }}</p>
-        </div>
-        <div class="action-buttons">
-          <button v-if="!auth.ownSales" @click="showImportModal = true" class="btn-primary erp-button erp-button--primary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
-            {{ $tr("Importar Vendas") }}
-          </button>
-          <button @click="showAddModal = true" class="btn-secondary erp-button erp-button--secondary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            {{ $tr("Nova Venda") }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ModuleHeader :title="$tr('Vendas')">
+      <button v-if="!auth.ownSales" @click="showImportModal = true" class="btn-primary erp-button erp-button--primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          />
+        </svg>
+        {{ $tr("Importar Vendas") }}
+      </button>
+      <button @click="showAddModal = true" class="btn-secondary erp-button erp-button--secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        {{ $tr("Nova Venda") }}
+      </button>
+    </ModuleHeader>
 
     <!-- Stats Cards -->
     <div class="stats-grid">
@@ -257,6 +253,7 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
 import { salesAPI, vendorsAPI, type Sale, type VendorResponse } from '@/services/api'
@@ -498,33 +495,11 @@ onMounted(() => {
 }
 
 /* Page Header */
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-}
-
-.title-section h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0 0 0.5rem;
-}
 
 .subtitle {
   color: #6b7280;
   font-size: 1rem;
   margin: 0;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 1rem;
 }
 
 /* Buttons */
@@ -963,19 +938,6 @@ onMounted(() => {
 @media (max-width: 768px) {
   .vendas-view {
     padding: 1rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-buttons {
-    justify-content: stretch;
-  }
-
-  .action-buttons > * {
-    flex: 1;
   }
 
   .stats-grid {

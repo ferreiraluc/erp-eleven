@@ -1,45 +1,55 @@
 <template>
   <div class="inventory-view">
     <div class="sticky-toolbar">
-    <header class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-top">
-            <button @click="$router.replace('/dashboard')" class="back-button erp-button erp-button--ghost erp-button--icon">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h1 class="page-title">{{ tr('Estoque') }}</h1>
-          </div>
-          <p class="page-subtitle">{{ tr('Gerencie os itens do inventário') }}</p>
-        </div>
-        <div class="header-right">
-          <button @click="showDiagnostics = !showDiagnostics" class="btn btn-secondary diagnostics-toggle erp-button erp-button--secondary erp-button--sm" :aria-expanded="showDiagnostics" aria-controls="inventory-diagnostics">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M9 4H5v16h14V4h-4M9 3h6v4H9z" /></svg>
-            {{ diagnosticsText('open') }}
-          </button>
-          <button @click="showLabelTemplates = true" class="btn btn-secondary btn-modelos-ia-desktop erp-button erp-button--secondary erp-button--sm">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            {{ tr('Exemplos de etiquetas') }}
-          </button>
-          <button @click="showImport = true" class="btn btn-secondary erp-button erp-button--secondary erp-button--sm">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            {{ tr('Importar') }}
-          </button>
-          <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary erp-button--sm">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            {{ tr('Novo item') }}
-          </button>
-        </div>
-      </div>
-    </header>
+    <ModuleHeader :title="tr('Estoque')">
+      <button
+        @click="showDiagnostics = !showDiagnostics"
+        class="btn btn-secondary diagnostics-toggle erp-button erp-button--secondary erp-button--sm"
+        :aria-expanded="showDiagnostics"
+        aria-controls="inventory-diagnostics"
+      >
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" aria-hidden="true">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4M9 4H5v16h14V4h-4M9 3h6v4H9z"
+          />
+        </svg>
+        {{ diagnosticsText("open") }}
+      </button>
+      <button
+        @click="showLabelTemplates = true"
+        class="btn btn-secondary btn-modelos-ia-desktop erp-button erp-button--secondary erp-button--sm"
+      >
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+          />
+        </svg>
+        {{ tr("Exemplos de etiquetas") }}
+      </button>
+      <button @click="showImport = true" class="btn btn-secondary erp-button erp-button--secondary erp-button--sm">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+          />
+        </svg>
+        {{ tr("Importar") }}
+      </button>
+      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary erp-button--sm">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        {{ tr("Novo item") }}
+      </button>
+    </ModuleHeader>
 
     <!-- Search + Camera -->
     <div class="search-section">
@@ -690,6 +700,7 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { displayStock, hasKnownStock, canWithdrawStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
@@ -1487,25 +1498,10 @@ onMounted(async () => {
 .list-load-error p { margin: .35rem 0 0; font-size: .8rem; }
 .list-load-error .btn:disabled { opacity: .5; cursor: not-allowed; }
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.page-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem; }
-.header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; }
-.header-left { min-width: 0; }
-.header-right { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; }
-.header-top { display: flex; align-items: center; gap: 0.75rem; }
-.back-button { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
-.page-title { font-size: 1.25rem; font-weight: 700; color: #111827; margin: 0; }
-.page-subtitle { font-size: 0.8rem; color: #6b7280; margin: 0.25rem 0 0 2.25rem; }
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
 @media (max-width: 600px) {
-  .page-header { padding: 0.4rem 0.75rem; }
-  .header-content { padding: 0; }
-  .header-content { flex-wrap: wrap; gap: .5rem; }
-  .header-right { flex: 1 1 100%; justify-content: flex-start; }
-  .page-subtitle { display: none; }
-  .page-title { font-size: 1rem; }
-  .header-top { gap: 0.5rem; }
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
   .btn-modelos-ia-desktop { display: none; }

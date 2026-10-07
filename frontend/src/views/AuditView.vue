@@ -1,6 +1,10 @@
 <template>
   <main class="access-page">
-    <header class="access-head"><div><h1>{{ $t('access.audit') }}</h1><p>{{ $t('access.auditSubtitle') }}</p></div><button class="erp-button erp-button--secondary" :disabled="loading" @click="load">{{ $t('common.refresh') }}</button></header>
+    <ModuleHeader :title="$t('access.audit')">
+      <button class="erp-button erp-button--secondary" :disabled="loading" @click="load">
+        {{ $t("common.refresh") }}
+      </button>
+    </ModuleHeader>
     <p class="notice">{{ $t('access.timeNotice') }}</p><p v-if="error" class="notice error" role="alert">{{ error }}</p>
     <section class="access-card filters">
       <label>{{ $t('access.period') }}<select v-model.number="days" @change="filter"><option :value="1">{{ $t('access.lastDay') }}</option><option :value="7">{{ $t('access.lastWeek') }}</option><option :value="30">{{ $t('access.lastMonth') }}</option><option :value="90">{{ $t('access.lastQuarter') }}</option></select></label>
@@ -21,6 +25,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { accessAPI, type AuditResult } from '@/services/access'

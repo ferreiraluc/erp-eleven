@@ -12,6 +12,10 @@ A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDF
 
 ## Frontend
 
+O cabeçalho usa o padrão compartilhado dos módulos: voltar, **Endereços e envios**
+e **Novo endereço**, com ação compacta e sem subtítulo. O botão continua abrindo o
+mesmo formulário de cadastro e vínculo com cliente.
+
 A agenda diferencia um cadastro vazio de uma consulta sem correspondências. Quando
 uma busca ou filtro não encontra endereços, **Limpar filtros** restaura a consulta de
 ativos, de todos os países e clientes. A paginação sem resultados mostra **0–0 de 0**.

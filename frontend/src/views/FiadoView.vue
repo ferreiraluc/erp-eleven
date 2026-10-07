@@ -1,11 +1,11 @@
 <template>
   <div class="fiado-root">
     <div class="fiado-header">
-      <div class="fiado-title-row">
-        <h1 class="fiado-title">{{ $tr("Pagadores") }}</h1>
-        <button class="fiado-btn-new erp-button erp-button--primary" @click="openNewClient">{{ $tr("+ Novo cliente") }}</button>
-      </div>
-      <p class="fiado-subtitle">{{ $tr("Controle de contas a receber de clientes atacadistas") }}</p>
+      <ModuleHeader :title="$tr('Pagadores')">
+      <button class="fiado-btn-new erp-button erp-button--primary" @click="openNewClient">
+        {{ $tr("+ Novo cliente") }}
+      </button>
+    </ModuleHeader>
 
       <!-- Summary bar -->
       <div v-if="clients.length" class="fiado-summary">
@@ -194,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted } from 'vue'
 import { pdvAPI, type PdvClienteResponse, type PdvFiadoMovementResponse } from '@/services/api'
@@ -322,9 +323,6 @@ onMounted(loadClients)
 .fiado-root { padding: 1.25rem; max-width: 900px; margin: 0 auto; }
 
 .fiado-header { margin-bottom: 1rem; }
-.fiado-title-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.25rem; }
-.fiado-title { margin: 0; font-size: 1.35rem; font-weight: 800; color: #111827; }
-.fiado-subtitle { margin: 0 0 0.875rem; font-size: 0.8rem; color: #9ca3af; }
 
 .fiado-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
 .fiado-sum-card { background: white; border-radius: 0.75rem; padding: 0.875rem 1rem; display: flex; flex-direction: column; gap: 0.2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }

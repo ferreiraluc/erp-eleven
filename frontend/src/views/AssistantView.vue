@@ -1,10 +1,10 @@
 <template>
   <main class="assistant-page">
-    <header>
-      <div><RouterLink to="/dashboard">{{ uiText(`← Dashboard`) }}</RouterLink><h1>{{ uiText(`Assistente Eleven`) }}</h1>
-        <p>{{ uiText(`WhatsApp individual e grupo Telegram, com memória operacional compartilhada.`) }}</p></div>
-      <button class="erp-button erp-button--secondary" :disabled="loading" @click="load">{{ loading ? uiText(`Atualizando…`) : uiText(`Atualizar`) }}</button>
-    </header>
+    <ModuleHeader :title="uiText('Assistente Eleven')">
+      <button class="erp-button erp-button--secondary" :disabled="loading" @click="load">
+        {{ loading ? uiText(`Atualizando…`) : uiText(`Atualizar`) }}
+      </button>
+    </ModuleHeader>
     <p v-if="error" role="alert" class="error">{{ error }}</p>
     <p v-if="notice" role="status" class="notice">{{ notice }}</p>
     <template v-if="status">
@@ -62,9 +62,9 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
 import api from '@/services/api'
 
 interface Identity { id: string; channel: 'whatsapp' | 'telegram'; external_id: string; user_id: string; active: boolean; can_register: boolean }

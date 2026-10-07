@@ -2,20 +2,32 @@
   <div class="pdv-root">
 
     <!-- PDV Header -->
-    <div class="pdv-header">
-      <button class="pdv-back-btn erp-button erp-button--secondary" @click="router.push('/dashboard')">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        {{ $tr("Dashboard") }}
-      </button>
-      <span class="pdv-header-title">PDV</span>
-
-      <!-- Exchange rate button (same as dashboard) -->
-      <button class="pdv-rate-btn erp-control" @click="openRateModal" :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)">
+    <ModuleHeader title="PDV">
+      <button
+        class="pdv-rate-btn erp-button erp-button--secondary"
+        @click="openRateModal"
+        :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)"
+      >
         <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ rateUsd.toLocaleString(uiLocale()) }}</span>
-        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ uiNumber(currencyStore.exchangeRates['R$'],2) }}</span>
-        <svg v-if="canEditRates" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="13" height="13" class="pdv-rate-edit-icon"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ uiNumber(currencyStore.exchangeRates["R$"], 2) }}</span>
+        <svg
+          v-if="canEditRates"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          width="13"
+          height="13"
+          class="pdv-rate-edit-icon"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+          />
+        </svg>
       </button>
-    </div>
+    </ModuleHeader>
 
     <!-- Mobile tab bar -->
     <div class="pdv-tab-bar mobile-only">
@@ -333,9 +345,9 @@
 </template>
 
 <script setup lang="ts">
+import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
 import { usePdvStore } from '@/stores/pdv'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
@@ -351,7 +363,6 @@ import { type StockLocation } from '@/services/pdvCart'
 import { usePdvCartText } from '@/components/pdv/cartMessages'
 const { cartText, cartErrorText } = usePdvCartText()
 
-const router = useRouter()
 const pdv = usePdvStore()
 const authStore = useAuthStore()
 const currencyStore = useCurrencyStore()
@@ -719,15 +730,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .pdv-root { display: flex; flex-direction: column; height: 100dvh; height: 100vh; background: #f3f4f6; overflow: hidden; }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
-.pdv-header { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.875rem; background: #1f2937; color: white; flex-shrink: 0; min-height: 44px; }
-.pdv-back-btn { display: flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.1); border: none; color: #d1d5db; padding: 0.3rem 0.625rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background 0.15s; white-space: nowrap; }
-.pdv-back-btn:hover { background: rgba(255,255,255,0.2); color: white; }
-.pdv-header-title { font-size: 0.95rem; font-weight: 800; color: white; letter-spacing: 0.05em; }
 
 /* Exchange rate button */
-.pdv-rate-btn { margin-left: auto; display: flex; align-items: center; gap: 0.4rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 0.5rem; padding: 0.3rem 0.6rem; cursor: pointer; transition: background 0.15s; }
-.pdv-rate-btn:hover { background: rgba(255,255,255,0.15); }
-.pdv-rate-pill { font-size: 0.72rem; color: #d1d5db; font-family: monospace; white-space: nowrap; }
+.pdv-rate-pill { font-size: 0.72rem; color: #475569; font-family: monospace; white-space: nowrap; }
 .pdv-rate-edit-icon { color: #9ca3af; flex-shrink: 0; }
 
 /* ── Mobile tabs ──────────────────────────────────────────────────────────── */
@@ -929,7 +934,6 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
   .pdv-result-right { flex: 0 0 100%; flex-wrap: wrap; justify-content: space-between; gap: .375rem; }
   .pdv-result-stock { white-space: normal; }
   .pdv-stock-location { cursor: pointer; }
-  .pdv-header-title { font-size: 0.85rem; }
   .pdv-rate-btn { padding: 0.25rem 0.4rem; }
   .pdv-rate-pill { font-size: 0.65rem; }
 }
