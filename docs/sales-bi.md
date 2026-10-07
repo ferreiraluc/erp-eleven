@@ -61,18 +61,19 @@ inicia uma leitura do OneDrive.
   separados. Não é uma contagem garantida de pedidos ou clientes únicos.
 - Datas completas ou dia/mês explícito do mês da planilha podem ser lidos de A ou
   de coluna `Data`; horário e cliente exigem cabeçalhos claros (`Hora`, `Cliente`).
-  `Data e hora` também é reconhecido. `SEG`, `TER` e `SAB/DOM` permanecem agrupadores
-  de dia da semana, sem receber uma data presumida. Data sem ano de outro mês não
-  ganha um ano por suposição. Horários não são herdados de linhas anteriores.
+  `Data e hora` também é reconhecido. Na consulta, `SEG`, `TER` etc. ganham datas
+  pelo calendário semanal definido pela loja, com indicação da origem. `SAB/DOM`
+  permanece um intervalo de dois dias. Data sem ano de outro mês não ganha um ano
+  por suposição. Horários não são herdados de linhas anteriores.
 - Intraday usa somente linhas com data **e** horário registrados. O instante da
   sincronização não representa o horário da venda. Cópias locais examinadas dos
-  modelos de 2021, 2023 e 2026 não tinham esse detalhamento; a tela mostra a ausência
-  e oferece movimento por dia da semana quando esse agrupador existe na origem.
+  modelos de 2021, 2023 e 2026 não tinham esse detalhamento de horário; resolver o
+  calendário semanal não inventa horários nem altera os registros originais.
 - Ao filtrar um dia explícito, o site e o bot procuram essa data nos snapshots
   escolhidos de todos os meses. Uma venda de 01/10 registrada na última semana
   de `Setembro.xlsx` continua visível, inclusive em semanas que atravessam o ano.
-  A prioridade entre arquivos do mesmo período permanece; linhas sem data não
-  são atribuídas ao dia consultado. A cobertura informa os arquivos examinados.
+  A prioridade entre arquivos do mesmo período permanece; linhas sem dia resolvido
+  não são atribuídas arbitrariamente ao dia consultado. A cobertura informa os arquivos examinados.
 - O fechamento corrigido continua oficial. A conferência dos valores líquidos
   contra os resumos salvos identifica diferenças por moeda, sem redistribuir
   correções nem expor as fórmulas. Filtros de dia/busca não redefinem o fechamento:
@@ -106,10 +107,13 @@ visível e autorizada; o total da consulta pode incluir outras páginas.
 - **Célula vazia significa Dinheiro**, conforme a convenção da loja. Essa regra
   vale para históricos já sincronizados, tabela, filtros, resumo, exportação e
   apresentação dos lançamentos pelo bot. O texto original do snapshot é preservado.
-- **Data inicial/final** incluem ambos os dias e pesquisam datas explícitas em
+- **Data inicial/final** incluem ambos os dias e pesquisam datas registradas ou
+  resolvidas pelo calendário semanal em
   todos os arquivos selecionados, incluindo semanas que cruzam mês/ano. Basta
-  preencher uma extremidade para filtrar a partir dela ou até ela. Linhas sem data
-  completa são excluídas do intervalo e sua quantidade é informada. Sem intervalo,
+  preencher uma extremidade para filtrar a partir dela ou até ela. Linhas com um
+  período conhecido entram quando todo esse período cabe no intervalo; uma seleção
+  parcial de `SAB/DOM` ou de uma semana sem dia não divide nem estima o valor.
+  Linhas sem semana identificável são excluídas e informadas. Sem intervalo,
   vale o mês/ano da planilha, incluindo linhas sem data ou com apenas SEG/TER etc.
 - Fechamento corrigido e reconciliação mensal permanecem referentes ao ano/mês e
   vendedor selecionados. Não mudam com pagamento, intervalo, busca ou moeda.
@@ -124,6 +128,39 @@ já possuem lançamentos. Novas linhas da planilha entram na leitura diária das
 ou pelo botão **Atualizar dados**. Consultar/filtrar não lê o OneDrive nem grava
 vendas. Testes: `test_sales_bi_payments.py` e `salesEntries.test.ts`, além das suítes
 de limites entre meses e autorização existentes.
+
+### Calendário automático e recebimento semanal
+
+A convenção da loja é aplicada em `sales_bi_dates` ao consultar os snapshots:
+
+- `semana1` é a semana de segunda a domingo que contém o primeiro dia do mês do
+  arquivo; `semana2` é a seguinte, e assim por diante. A semana pode começar no mês
+  anterior ou terminar no seguinte. `Planilha1`/`Vendas` corresponde à semana após
+  a última aba numerada fechada. Mês e ano vêm da fonte, nunca do dia da consulta.
+- Datas reais nas linhas têm prioridade. Uma aba com uma única semana de datas
+  registradas ancora seus agrupadores nesse período; se houver datas de semanas
+  diferentes na mesma aba, linhas sem data permanecem pendentes de identificação.
+- `SEG` a `DOM` resolvem o dia individual. `SAB/DOM` conserva sábado a domingo;
+  sem marcador de dia, a linha conserva a semana inteira. Esses períodos entram
+  em filtros que os cobrem integralmente. Não se atribui um sábado arbitrário a
+  `SAB/DOM`, nem se divide o pagamento entre dias.
+- O seletor **Semana para conferência** preenche segunda e domingo. Com pagamento
+  **Máquina**, destaca o **líquido da semana a conferir** e a segunda-feira seguinte,
+  conforme o ciclo informado pela loja. O bruto continua visível e o líquido
+  incompleto aparece como parcial. Esse relatório não registra quitação.
+- A busca semanal cruza os arquivos mensais quando necessário, preserva a escolha
+  entre atual/arquivo e não elimina vendas iguais. O filtro pessoal é aplicado antes
+  de resultados, opções e somas. O calendário estrutural da aba permanece o mesmo
+  no site e no bot após filtrar o vendedor.
+- Pendências de valores/vendedores e linhas sem semana são informadas apenas para
+  fontes do período consultado. Uma pendência de setembro/2021 não aparece na
+  conferência de outubro/2026. O aviso permite conferir arquivo e aba de origem.
+
+Não há alteração nas planilhas, migração ou sincronização extra: a regra também
+funciona com snapshots já importados. A tabela, exportação e resposta do bot
+distinguem data registrada, data pelo calendário semanal e período sem dia individual.
+Validação: `test_sales_bi_weekly_calendar.py` cobre viradas de mês/ano, ano bissexto,
+semana inicial parcial, permissões, `SAB/DOM`, dados antigos e preservação do snapshot.
 
 O painel, seu card do dashboard e o detalhamento usam catálogos locais PT/ES/EN em
 `frontend/src/components/sales/`. Mês, número, moeda, gráfico, navegação e CSV
@@ -161,7 +198,8 @@ explicitamente solicitados, sem consolidar esses módulos com o Excel.
 - Lançamentos, grupos por dia/hora e rankings têm paginação de até 20 resultados.
   Busca textual de lançamentos não redefine os totais do fechamento. A conferência
   mensal continua identificada como comparação de todo o mês, sem filtros de dia
-  ou busca. Linhas sem data são contadas na cobertura, sem inventar intradiário.
+  ou busca. Datas seguem o calendário semanal acima; períodos sem dia individual
+  são identificados na cobertura, sem inventar intradiário.
 - A resposta identifica a origem BI/Excel, o período efetivo, as sincronizações do
   snapshot e pendências sem revelar URLs privadas, fórmulas ou mensagens internas.
   Consulta nenhuma altera o agendamento diário de 18h ou dispara sincronização.

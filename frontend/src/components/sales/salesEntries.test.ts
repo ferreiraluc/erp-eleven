@@ -14,6 +14,7 @@ function fixture(): EntriesResult {
       payment_method: null, payment_type: 'dinheiro', customer: null, date: '2026-09-23', time: null, day_group: null, synced_at: null, stale: false }],
     total: 52, offset: 0, limit: 50, sellers: ['Lucas'], currencies: ['BRL'], dates: ['2026-09-23'],
     payment_methods: [{ value: 'maquina', label: 'Máquina' }, { value: 'dinheiro', label: 'Dinheiro' }, { value: 'pix banco a', label: 'Pix Banco A' }],
+    weeks: [{ start: '2026-09-21', end: '2026-09-27', settlement_date: '2026-09-28' }],
     payments: [{ payment_type: 'maquina', label: 'Máquina', count: 2, currencies }, { payment_type: 'dinheiro', label: 'Dinheiro', count: 1, currencies }],
     summary: { count: 52, currencies, dated_count: 2, timed_count: 0, undated_count: 50, official_total_usd: 999 },
     daily: [{ date: '2026-09-23', count: 2, currencies }], hourly: [], weekdays: [], reconciliation: [],
@@ -70,7 +71,7 @@ describe('payment filters and receipt summaries', () => {
     vi.mocked(salesEntries.list).mockResolvedValue({ ...fixture(), coverage: { ...fixture().coverage, undated_excluded: 7 } })
     const dates = node.querySelectorAll<HTMLInputElement>('input[type=date]')
     await change(dates[0]!, '2026-09-30')
-    await vi.waitFor(() => expect(node.textContent).toContain('7 lançamentos compatíveis'))
+    await vi.waitFor(() => expect(node.textContent).toContain('7 lançamentos do período'))
     const calls = vi.mocked(salesEntries.list).mock.calls.length
     await change(dates[1]!, '2026-09-01')
     expect(salesEntries.list).toHaveBeenCalledTimes(calls)
@@ -92,6 +93,35 @@ describe('payment filters and receipt summaries', () => {
     const { node } = await mount()
     node.querySelector<HTMLButtonElement>('.daily-list button')!.click(); await nextTick()
     expect(salesEntries.list).toHaveBeenLastCalledWith(expect.objectContaining({ date_from: '2026-09-23', date_to: '2026-09-23' }))
+  })
+
+  it('selects Monday to Sunday and highlights the saved net for machine settlement', async () => {
+    const { node } = await mount()
+    const selects = node.querySelectorAll('select')
+    await change(selects[1]!, 'maquina')
+    await change(selects[2]!, '2026-09-21')
+    expect(salesEntries.list).toHaveBeenLastCalledWith(expect.objectContaining({ payment_method: 'maquina', date_from: '2026-09-21', date_to: '2026-09-27', offset: 0 }))
+    expect(node.querySelector('.settlement-summary')?.textContent).toContain('28/09/2026')
+    expect(node.querySelector('.currency-summary strong')?.textContent).toContain('4.400,00')
+    expect(node.querySelector('.currency-summary')?.textContent).toContain('4.500,00')
+    await change(node.querySelector<HTMLInputElement>('input[type=date]')!, '2026-09-22')
+    expect(selects[2]!.value).toBe('')
+    expect(node.querySelector('.settlement-summary')).toBeNull()
+    expect(node.querySelector('.currency-summary strong')?.textContent).toContain('4.500,00')
+  })
+
+  it('explains inferred dates, partial periods and the source of relevant incomplete rows', async () => {
+    const { node } = await mount()
+    const data = fixture()
+    data.items[0] = { ...data.items[0]!, date_source: 'week_day' }
+    data.coverage = { ...data.coverage, inferred_dates: 1, period_excluded: 2, skipped_rows: 1,
+      issues: [{ filename: 'Fixture.xlsx', sheet: 'semana2', skipped_rows: 1 }] }
+    vi.mocked(salesEntries.list).mockResolvedValue(data)
+    button(node, 'Recarregar').click()
+    await vi.waitFor(() => expect(node.textContent).toContain('Data pelo calendário semanal'))
+    expect(node.textContent).toContain('2 lançamentos têm apenas um período')
+    expect(node.querySelector('details.notice')?.textContent).toContain('Fixture.xlsx · semana2')
+    expect(node.querySelector('.notice.info')?.textContent).toContain('semana1, semana2')
   })
 
   it('exports blank payment cells as cash and only exports the authorized page', async () => {

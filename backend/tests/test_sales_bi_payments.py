@@ -72,7 +72,8 @@ def test_blank_and_explicit_cash_are_combined_without_modifying_originals():
 def test_date_range_is_inclusive_filters_all_aggregates_and_reports_unknown_dates():
     source = payment_book()
     result = build_entries([source], date_from='2026-09-23', date_to='2026-09-24', payment_method='dinheiro')
-    assert result['total'] == 2 and result['coverage']['undated_excluded'] == 1
+    assert result['total'] == 2 and result['coverage']['undated_excluded'] == 0
+    assert result['coverage']['period_excluded'] == 1
     assert result['summary']['currencies'][0]['gross'] == 70
     assert sum(d['count'] for d in result['daily']) == sum(h['count'] for h in result['hourly']) == 2
     assert build_entries([source], date_from='2026-09-24', payment_method='maquina')['total'] == 2
@@ -132,8 +133,9 @@ def test_api_payment_filter_cannot_leak_other_sellers_through_totals_or_options(
     response = browser.get('/bi/entries?seller=Lucas&payment_method=dinheiro&date_from=2026-09-01&date_to=2026-09-30')
     assert response.status_code == 200
     body = response.json()
-    assert body['total'] == 0 and body['coverage']['undated_excluded'] == 1
-    assert body['payments'] == [] and body['summary']['official_total_usd'] == 100
+    assert body['total'] == 1 and body['coverage']['undated_excluded'] == 0
+    assert body['coverage']['period_included'] == 1
+    assert body['payments'][0]['count'] == 1 and body['summary']['official_total_usd'] == 100
     assert 'Lucas' not in response.text and 'Sol' not in response.text and 'USD' not in response.text
     assert browser.get('/bi/entries?payment_method=dinheiro').json()['total'] == 1
     user.sales_scope = 'all'

@@ -67,7 +67,7 @@ def test_entries_preserve_equal_real_rows_and_canonical_sellers():
     assert '=SUM' not in json.dumps(data)
 
 
-def test_intraday_requires_real_date_and_time_not_week_label_or_sync():
+def test_calendar_resolves_weekdays_but_never_invents_intraday_times():
     rows = details()['rows']
     assert rows[0]['date'] == '2026-09-23' and rows[0]['time'] == '10:30:00'
     assert rows[2]['time'] == '11:45:00'
@@ -75,10 +75,10 @@ def test_intraday_requires_real_date_and_time_not_week_label_or_sync():
     assert rows[4]['date'] is None
     result = build_entries([workbook()])
     assert result['summary']['count'] == 5
-    assert result['summary']['dated_count'] == 3
+    assert result['summary']['dated_count'] == 4
     assert result['summary']['timed_count'] == 3
     assert [(v['hour'], v['count']) for v in result['hourly']] == [(10, 2), (11, 1)]
-    assert result['dates'] == ['2026-09-23']
+    assert result['dates'] == ['2026-09-23', '2026-09-22']
     assert result['weekdays'][0]['day'] == 'tue' and result['weekdays'][0]['count'] == 1
     assert result['summary']['official_total_usd'] == 777
 

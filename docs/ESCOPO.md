@@ -94,7 +94,10 @@ Arquivos mensais têm prioridade sobre a planilha corrente do mesmo período, ev
 contagem dupla. Um valor ausente permanece ausente; zero é um resultado válido.
 Os lançamentos individuais permanecem ligados à planilha, aba e linha de origem.
 Linhas iguais podem ser vendas diferentes: não são eliminadas por valor/nome iguais.
-Dias/horas ausentes não são inferidos do horário da sincronização. Ajustes no total
+Dias podem ser resolvidos pelo mês e pela sequência das abas semanais, conforme a
+convenção da loja: semana1 contém o primeiro dia do mês e a aba corrente segue as
+semanas fechadas. SAB/DOM conserva os dois dias e só entra em filtros que abrangem
+todo o período. Horários ausentes não são inventados. Ajustes no total
 mensal não são distribuídos artificialmente entre os lançamentos.
 
 Denis, Sol e Junior consultam suas vendas; Lucas e Wissam consultam o geral.

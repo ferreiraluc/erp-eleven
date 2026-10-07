@@ -100,6 +100,7 @@ def private_workbooks(rows, seller):
     """Project before aggregation: never expose colleagues through rankings/warnings/totals."""
     from types import SimpleNamespace
     from copy import deepcopy
+    from .sales_bi_dates import sheet_calendar
     projected = []
     for row in rows:
         if not row.snapshot:
@@ -112,6 +113,10 @@ def private_workbooks(rows, seller):
         snapshot['source_cell'] = mine.get('source_cell')
         snapshot['warnings'] = []
         if snapshot.get('entries'):
+            # Keep the sheet's calendar stable when removing colleagues' rows.
+            # This metadata contains only sheet names and calendar week starts.
+            snapshot['entry_calendar'] = {name: anchor.isoformat() if anchor else None
+                                          for name, anchor in sheet_calendar(row).items()}
             snapshot['entries']['rows'] = [entry for entry in snapshot['entries'].get('rows', []) if entry.get('seller') == seller]
             snapshot['entries']['diagnostics'] = []
         for week in snapshot.get('weeks', []):

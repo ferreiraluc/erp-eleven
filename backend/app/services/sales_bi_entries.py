@@ -1,10 +1,12 @@
 """Read-only, seller-scoped exploration of individual Excel observations."""
 from collections import defaultdict
+from datetime import date, timedelta
 from decimal import Decimal
 from hashlib import sha256
 
 from .sales_bi import choose_workbooks, money, total, value
 from .sales_bi_parser import normal
+from .sales_bi_dates import overlaps, resolve_date, sheet_calendar, source_period
 
 
 PAYMENT_LABELS = {'maquina': 'Máquina', 'credito': 'Crédito', 'debito': 'Débito',
@@ -47,13 +49,20 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     entries = []
     missing_sources = 0
     skipped = 0
+    issues = []
+    lower, upper = day or date_from, day or date_to
+    relevant_sources = set()
     for source in observation_sources:
+        period = source_period(source)
+        relevant = not date_filter or overlaps(*period, lower, upper)
+        if relevant:
+            relevant_sources.add(source.id)
         details = source.snapshot.get('entries')
         if not details:
-            missing_sources += 1
+            missing_sources += int(relevant)
             continue
-        if not private:
-            skipped += sum(d.get('skipped_rows', 0) for d in details.get('diagnostics', []))
+        calendar = sheet_calendar(source)
+        source_entries = []
         for item in details.get('rows', []):
             if seller and item.get('seller') != seller:
                 continue
@@ -62,11 +71,24 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
             fields = ('sheet', 'row', 'source_cell', 'week_index', 'week_label', 'seller',
                       'currency', 'gross', 'net', 'payment_method', 'customer', 'date', 'time', 'day_group')
             entry = {k: item.get(k) for k in fields}
+            entry.update(resolve_date(entry, calendar))
             entry['payment_type'] = payment_key(entry['payment_method'])
             entry.update(id=sha256(f"{source.id}:{item['sheet']}:{item['row']}".encode()).hexdigest()[:32],
                          source_id=source.id, filename=source.filename, year=source.year, month=source.month,
                          synced_at=source.synced_at, stale=bool(source.error))
             entries.append(entry)
+            source_entries.append(entry)
+        # A dated row can belong to a workbook of another month. Include its
+        # diagnostics when it actually overlaps, but not unrelated 2021 files.
+        relevant = relevant or any(overlaps(r['period_start'], r['period_end'], lower, upper) for r in source_entries)
+        if relevant:
+            relevant_sources.add(source.id)
+        if relevant and not private:
+            for diagnostic in details.get('diagnostics', []):
+                count = diagnostic.get('skipped_rows', 0)
+                skipped += count
+                if count:
+                    issues.append({'filename': source.filename, 'sheet': diagnostic['sheet'], 'skipped_rows': count})
     available_dates = sorted({r['date'] for r in entries if r['date']}, reverse=True)
     available_sellers = sorted({r['seller'] for r in entries})
     available_currencies = sorted({r['currency'] for r in entries})
@@ -77,11 +99,13 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     matching = [r for r in entries if (not currency or r['currency'] == currency)
                 and (not payment_method or r['payment_type'] == payment_key(payment_method))
                 and (not search or normal(search) in normal(' '.join(str(r[k] or '') for k in ('customer', 'seller', 'payment_method', 'payment_type', 'source_cell'))))]
-    undated_excluded = sum(not r['date'] for r in matching) if date_filter else 0
-    scope = [r for r in matching if (not date_filter or r['date'])
-             and (not day or r['date'] == day)
-             and (not date_from or r['date'] >= date_from)
-             and (not date_to or r['date'] <= date_to)]
+    undated_excluded = sum(not r['period_start'] and r['source_id'] in relevant_sources for r in matching) if date_filter else 0
+    def in_range(row):
+        return bool(row['period_start'] and (not lower or row['period_start'] >= lower)
+                    and (not upper or row['period_end'] <= upper))
+    period_excluded = sum(not r['date'] and overlaps(r['period_start'], r['period_end'], lower, upper)
+                          and not in_range(r) for r in matching) if date_filter else 0
+    scope = [r for r in matching if not date_filter or in_range(r)]
     scope.sort(key=lambda r: (r['date'] or f"{r['year']:04d}-{r['month']:02d}-00", r['time'] or '',
                               r['year'], r['month'], r['week_index'] or 0, r['sheet'], r['row']), reverse=True)
     dated = [r for r in scope if r['date']]
@@ -115,10 +139,14 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
                                    'published': money(published), 'observed_net': money(net),
                                    'difference': money(net - published) if net is not None and published is not None else None})
     page = [{**r, 'gross': money(r['gross']), 'net': money(r['net'])} for r in scope[offset:offset + limit]]
+    selected_ids = {r.id for r in selected}
+    week_starts = sorted({r['week_start'] for r in entries if r['source_id'] in selected_ids and r['week_start']}, reverse=True)
     return {
         'items': page, 'total': len(scope), 'offset': offset, 'limit': limit,
         'sellers': available_sellers, 'currencies': available_currencies, 'dates': available_dates,
         'payment_methods': [{'value': key, 'label': methods[key]} for key in sorted(methods)],
+        'weeks': [{'start': start, 'end': (date.fromisoformat(start) + timedelta(days=6)).isoformat(),
+                   'settlement_date': (date.fromisoformat(start) + timedelta(days=7)).isoformat()} for start in week_starts],
         'payments': [{'payment_type': key, 'label': methods[key], 'count': len(group), 'currencies': _currencies(group)}
                      for key, group in sorted(payments.items())],
         'summary': {'count': len(scope), 'currencies': _currencies(scope), 'dated_count': len(dated),
@@ -131,5 +159,8 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
         'reconciliation': reconciliation,
         'coverage': {'source_count': len(observation_sources), 'needs_sync': missing_sources > 0,
                      'sources_without_entries': missing_sources, 'skipped_rows': skipped if not private else None,
-                     'undated_excluded': undated_excluded},
+                     'undated_excluded': undated_excluded, 'period_excluded': period_excluded,
+                     'inferred_dates': sum(r['date_source'] == 'week_day' for r in scope),
+                     'period_included': sum(r['date_source'] == 'week_period' for r in scope),
+                     'issues': issues},
     }

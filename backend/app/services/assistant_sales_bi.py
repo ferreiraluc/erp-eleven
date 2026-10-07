@@ -129,7 +129,7 @@ def query_spreadsheet_sales(db, args, user_id):
     output = {
         'origem': {'tipo':'BI das planilhas Excel / OneDrive', 'pagina':'/bi-vendas', 'leitura':'snapshot salvo, sem iniciar sincronização',
                    'sincronizacao':'diária às 18h de Brasília ou botão manual no ERP', 'fontes_no_periodo':len(examined),
-                   'criterio_fontes':'todos os snapshots selecionados, pesquisados pela data explícita' if day else 'snapshots do período mensal selecionado',
+                   'criterio_fontes':'todos os snapshots selecionados, pesquisados pela data explícita ou resolvida pelo calendário semanal' if day else 'snapshots do período mensal selecionado',
                    'snapshot_mais_antigo_em':sync_dates[0] if sync_dates else None, 'snapshot_mais_recente_em':sync_dates[-1] if sync_dates else None,
                    'fontes_com_pendencia':sum(bool(r.error) for r in examined)},
         'acesso': {'escopo':'pessoal' if private else 'loja', 'vendedor':seller},
@@ -160,10 +160,10 @@ def query_spreadsheet_sales(db, args, user_id):
             search=args.busca, offset=0, limit=1, private=private)['summary'] if day else details['summary']
         output['cobertura_datas_no_periodo'] = {k:date_coverage[k] for k in ('count', 'dated_count', 'timed_count', 'undated_count')}
         if day:
-            output['avisos'].append('A consulta pelo dia usa a data explícita em todos os snapshots selecionados, inclusive de outros meses/anos. A origem e a cobertura de datas descrevem esses snapshots; o fechamento e a conferência mensal continuam referentes ao mês consultado.')
+            output['avisos'].append('A consulta pelo dia usa datas registradas ou resolvidas pelo calendário semanal, inclusive em arquivos de outros meses/anos. O fechamento e a conferência mensal continuam referentes ao mês consultado.')
         if date_coverage['undated_count']:
-            output['avisos'].append('Há lançamentos sem data explícita no período: consultas por dia/hora não representam todas as vendas.')
-        output['avisos'].append('Datas e horas vêm de células explícitas. Horário da sincronização, nome da aba e dia da semana não provam a data de venda. Linhas iguais podem ser vendas distintas.')
+            output['avisos'].append('Há lançamentos sem dia individual resolvido: consultas por dia/hora podem não incluir grupos SAB/DOM ou semanas inteiras.')
+        output['avisos'].append('Pela convenção da loja, semana1 contém o primeiro dia do mês e Planilha1 segue as abas semanaN fechadas. SEG/TER etc. resolvem o dia; SAB/DOM continua um período. Datas registradas têm prioridade. Horários não são inventados. Linhas iguais podem ser vendas distintas.')
         if details['coverage']['needs_sync']:
             output['avisos'].append('Parte dos snapshots ainda não contém lançamentos individuais. Aguarde a leitura diária ou atualize pelo botão do ERP; a consulta não dispara leitura.')
         if args.visao in ('por_dia','por_hora'):
@@ -175,6 +175,7 @@ def query_spreadsheet_sales(db, args, user_id):
                           tem_mais=details['offset'] + args.limite < details['total'], resultados=[{
                 'vendedor':r['seller'], 'moeda':r['currency'], 'bruto':r['gross'], 'liquido':r['net'],
                 'data':r['date'], 'hora':r['time'], 'dia_da_semana':r['day_group'],
+                'origem_data':r['date_source'], 'periodo_inicio':r['period_start'], 'periodo_fim':r['period_end'],
                 'cliente':r['customer'], 'pagamento':PAYMENT_LABELS.get(r['payment_type'], r['payment_method']), 'celula':r['source_cell'],
                 'ano':r['year'], 'mes':r['month'], 'sincronizado_em':r['synced_at'], 'snapshot_com_pendencia':r['stale'],
             } for r in details['items']])
