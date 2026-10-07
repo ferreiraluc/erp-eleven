@@ -4,6 +4,19 @@ from decimal import Decimal
 from hashlib import sha256
 
 from .sales_bi import choose_workbooks, money, total, value
+from .sales_bi_parser import normal
+
+
+PAYMENT_LABELS = {'maquina': 'Máquina', 'credito': 'Crédito', 'debito': 'Débito',
+                  'thais': 'Thais', 'dinheiro': 'Dinheiro', 'pix': 'Pix'}
+PAYMENT_ALIASES = {'cartao de credito': 'credito', 'cartao credito': 'credito',
+                   'cartao de debito': 'debito', 'cartao debito': 'debito'}
+
+
+def payment_key(value):
+    """Blank payment cells mean cash by the store's spreadsheet convention."""
+    key = ' '.join(normal(value).split())
+    return PAYMENT_ALIASES.get(key, key) if key else 'dinheiro'
 
 
 def _currencies(entries):
@@ -17,6 +30,7 @@ def _currencies(entries):
 
 
 def build_entries(rows, *, year=None, month=None, seller=None, currency=None, day=None,
+                  date_from=None, date_to=None, payment_method=None,
                   search=None, offset=0, limit=50, private=False):
     """The endpoint must enforce the authenticated seller before calling this.
 
@@ -28,7 +42,8 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     # searched in every selected snapshot; workbook periods still own closing
     # totals and monthly reconciliation, never the day's observed amounts.
     selected = [r for r in available if (not year or r.year == year) and (not month or r.month == month)]
-    observation_sources = available if day else selected
+    date_filter = bool(day or date_from or date_to)
+    observation_sources = available if date_filter else selected
     entries = []
     missing_sources = 0
     skipped = 0
@@ -47,6 +62,7 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
             fields = ('sheet', 'row', 'source_cell', 'week_index', 'week_label', 'seller',
                       'currency', 'gross', 'net', 'payment_method', 'customer', 'date', 'time', 'day_group')
             entry = {k: item.get(k) for k in fields}
+            entry['payment_type'] = payment_key(entry['payment_method'])
             entry.update(id=sha256(f"{source.id}:{item['sheet']}:{item['row']}".encode()).hexdigest()[:32],
                          source_id=source.id, filename=source.filename, year=source.year, month=source.month,
                          synced_at=source.synced_at, stale=bool(source.error))
@@ -54,9 +70,18 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     available_dates = sorted({r['date'] for r in entries if r['date']}, reverse=True)
     available_sellers = sorted({r['seller'] for r in entries})
     available_currencies = sorted({r['currency'] for r in entries})
-    scope = [r for r in entries if (not currency or r['currency'] == currency)
+    methods = {}
+    for entry in entries:
+        key = entry['payment_type']
+        methods.setdefault(key, PAYMENT_LABELS.get(key) or entry['payment_method'])
+    matching = [r for r in entries if (not currency or r['currency'] == currency)
+                and (not payment_method or r['payment_type'] == payment_key(payment_method))
+                and (not search or normal(search) in normal(' '.join(str(r[k] or '') for k in ('customer', 'seller', 'payment_method', 'payment_type', 'source_cell'))))]
+    undated_excluded = sum(not r['date'] for r in matching) if date_filter else 0
+    scope = [r for r in matching if (not date_filter or r['date'])
              and (not day or r['date'] == day)
-             and (not search or search.casefold() in ' '.join(str(r[k] or '') for k in ('customer', 'seller', 'payment_method', 'source_cell')).casefold())]
+             and (not date_from or r['date'] >= date_from)
+             and (not date_to or r['date'] <= date_to)]
     scope.sort(key=lambda r: (r['date'] or f"{r['year']:04d}-{r['month']:02d}-00", r['time'] or '',
                               r['year'], r['month'], r['week_index'] or 0, r['sheet'], r['row']), reverse=True)
     dated = [r for r in scope if r['date']]
@@ -64,6 +89,9 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     daily = defaultdict(list)
     hourly = defaultdict(list)
     weekdays = defaultdict(list)
+    payments = defaultdict(list)
+    for entry in scope:
+        payments[entry['payment_type']].append(entry)
     for entry in dated:
         daily[entry['date']].append(entry)
     # Hour-of-day across the selected dates; exact dates are included in table
@@ -90,6 +118,9 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
     return {
         'items': page, 'total': len(scope), 'offset': offset, 'limit': limit,
         'sellers': available_sellers, 'currencies': available_currencies, 'dates': available_dates,
+        'payment_methods': [{'value': key, 'label': methods[key]} for key in sorted(methods)],
+        'payments': [{'payment_type': key, 'label': methods[key], 'count': len(group), 'currencies': _currencies(group)}
+                     for key, group in sorted(payments.items())],
         'summary': {'count': len(scope), 'currencies': _currencies(scope), 'dated_count': len(dated),
                     'timed_count': len(timed), 'undated_count': len(scope) - len(dated),
                     'official_total_usd': total(value(r.snapshot, seller) for r in selected)},
@@ -99,5 +130,6 @@ def build_entries(rows, *, year=None, month=None, seller=None, currency=None, da
                      for key in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'weekend') if key in weekdays],
         'reconciliation': reconciliation,
         'coverage': {'source_count': len(observation_sources), 'needs_sync': missing_sources > 0,
-                     'sources_without_entries': missing_sources, 'skipped_rows': skipped if not private else None},
+                     'sources_without_entries': missing_sources, 'skipped_rows': skipped if not private else None,
+                     'undated_excluded': undated_excluded},
     }

@@ -20,7 +20,7 @@
     "timed": "Com data e horário",
     "timeHelp": "Somente horários presentes na planilha.",
     "closing": "Fechamento do período · USD",
-    "closingHelp": "Resultado corrigido do Excel para o período e vendedor; filtros de dia, moeda e busca afetam o detalhe.",
+    "closingHelp": "Fechamento corrigido do ano/mês e vendedor. Datas, pagamento, moeda e busca filtram somente os lançamentos.",
     "gross": "Bruto",
     "net": "Líquido",
     "netPartial": "Disponível em {count} de {total} linhas",
@@ -43,7 +43,7 @@
     "previous": "Anterior",
     "next": "Próxima",
     "reconciliation": "Conferir diferenças com os resumos",
-    "reconciliationHelp": "Compara os valores líquidos das linhas reconhecidas com os resumos salvos de cada moeda no período. O fechamento corrigido permanece como resultado oficial. Os filtros de dia e busca não alteram esta conferência.",
+    "reconciliationHelp": "Compara os valores líquidos de todas as linhas do ano/mês selecionado com os resumos salvos por moeda. Datas, pagamento, moeda e busca não alteram esta conferência.",
     "period": "Período",
     "savedSummary": "Resumo salvo",
     "observedNet": "Líquido das linhas",
@@ -61,7 +61,25 @@
       "weekend": "Sábado / domingo"
     },
     "byWeekday": "Por dia da semana",
-    "weekdayHelp": "Agrupadores escritos na planilha. Sábado/domingo permanece junto quando a origem não separa os dias."
+    "weekdayHelp": "Agrupadores escritos na planilha. Sábado/domingo permanece junto quando a origem não separa os dias.",
+    "allPayments": "Todos os pagamentos",
+    "dateFrom": "Data inicial",
+    "dateTo": "Data final",
+    "invalidRange": "A data inicial deve ser anterior ou igual à data final.",
+    "paymentSummary": "Recebimentos por tipo",
+    "paymentSummaryHelp": "Totais dos lançamentos filtrados, separados por moeda. Pagamento vazio na planilha conta como dinheiro.",
+    "paymentCount": "{count} lançamentos",
+    "periodHelp": "Sem datas específicas, vale o ano e mês selecionado acima, incluindo linhas sem data completa.",
+    "dateRangeHelp": "O intervalo usa as datas registradas nas linhas, mesmo em arquivos de outro mês. O fechamento acima continua no período mensal selecionado.",
+    "undatedExcluded": "{count} lançamentos compatíveis não têm data completa e ficaram fora do intervalo. Limpe as datas para consultá-los pelo mês da planilha.",
+    "paymentTypes": {
+      "maquina": "Máquina",
+      "credito": "Crédito",
+      "debito": "Débito",
+      "thais": "Thais",
+      "dinheiro": "Dinheiro",
+      "pix": "Pix"
+    }
   },
   "es": {
     "title": "Registros y movimiento diario",
@@ -84,7 +102,7 @@
     "timed": "Con fecha y hora",
     "timeHelp": "Solo las horas presentes en la planilla.",
     "closing": "Cierre del período · USD",
-    "closingHelp": "Resultado corregido de Excel para el período y vendedor; los filtros de día, moneda y búsqueda afectan el detalle.",
+    "closingHelp": "Cierre corregido del año/mes y vendedor. Fechas, pago, moneda y búsqueda filtran solo los registros.",
     "gross": "Bruto",
     "net": "Neto",
     "netPartial": "Disponible en {count} de {total} filas",
@@ -107,7 +125,7 @@
     "previous": "Anterior",
     "next": "Siguiente",
     "reconciliation": "Revisar diferencias con los resúmenes",
-    "reconciliationHelp": "Compara los importes netos de las filas reconocidas con los resúmenes guardados de cada moneda del período. El cierre corregido se mantiene como resultado oficial. Los filtros de día y búsqueda no modifican esta revisión.",
+    "reconciliationHelp": "Compara los importes netos de todas las filas del año/mes seleccionado con los resúmenes guardados por moneda. Fechas, pago, moneda y búsqueda no modifican esta revisión.",
     "period": "Período",
     "savedSummary": "Resumen guardado",
     "observedNet": "Neto de las filas",
@@ -125,7 +143,25 @@
       "weekend": "Sábado / domingo"
     },
     "byWeekday": "Por día de la semana",
-    "weekdayHelp": "Grupos escritos en la planilla. Sábado/domingo permanece unido cuando el origen no separa los días."
+    "weekdayHelp": "Grupos escritos en la planilla. Sábado/domingo permanece unido cuando el origen no separa los días.",
+    "allPayments": "Todos los pagos",
+    "dateFrom": "Fecha inicial",
+    "dateTo": "Fecha final",
+    "invalidRange": "La fecha inicial debe ser anterior o igual a la fecha final.",
+    "paymentSummary": "Cobros por tipo",
+    "paymentSummaryHelp": "Totales de los registros filtrados, separados por moneda. Una celda de pago vacía cuenta como efectivo.",
+    "paymentCount": "{count} registros",
+    "periodHelp": "Sin fechas específicas, se aplica el año y mes seleccionado arriba, incluyendo filas sin fecha completa.",
+    "dateRangeHelp": "El intervalo usa las fechas registradas en las filas, incluso en archivos de otro mes. El cierre de arriba mantiene el período mensual seleccionado.",
+    "undatedExcluded": "{count} registros coincidentes no tienen fecha completa y quedaron fuera del intervalo. Borre las fechas para consultarlos por el mes de la planilla.",
+    "paymentTypes": {
+      "maquina": "Máquina",
+      "credito": "Crédito",
+      "debito": "Débito",
+      "thais": "Thais",
+      "dinheiro": "Efectivo",
+      "pix": "Pix"
+    }
   },
   "en": {
     "title": "Entries and daily activity",
@@ -148,7 +184,7 @@
     "timed": "With date and time",
     "timeHelp": "Only times present in the spreadsheet.",
     "closing": "Period closing · USD",
-    "closingHelp": "Corrected Excel result for the period and seller; day, currency and search filters apply to the details.",
+    "closingHelp": "Corrected closing for the year/month and seller. Dates, payment, currency and search filter entries only.",
     "gross": "Gross",
     "net": "Net",
     "netPartial": "Available in {count} of {total} rows",
@@ -171,7 +207,7 @@
     "previous": "Previous",
     "next": "Next",
     "reconciliation": "Review differences against summaries",
-    "reconciliationHelp": "Compares net amounts from recognized rows with each currency's saved period summaries. The corrected closing remains the official result. Day and search filters do not change this review.",
+    "reconciliationHelp": "Compares net amounts from all rows in the selected year/month with saved summaries by currency. Dates, payment, currency and search do not change this review.",
     "period": "Period",
     "savedSummary": "Saved summary",
     "observedNet": "Net from rows",
@@ -189,6 +225,24 @@
       "weekend": "Saturday / Sunday"
     },
     "byWeekday": "By weekday",
-    "weekdayHelp": "Weekday groups written in the spreadsheet. Saturday/Sunday stays combined when the source does not separate the days."
+    "weekdayHelp": "Weekday groups written in the spreadsheet. Saturday/Sunday stays combined when the source does not separate the days.",
+    "allPayments": "All payments",
+    "dateFrom": "Start date",
+    "dateTo": "End date",
+    "invalidRange": "The start date must be on or before the end date.",
+    "paymentSummary": "Receipts by payment type",
+    "paymentSummaryHelp": "Totals of filtered entries, separated by currency. A blank payment cell counts as cash.",
+    "paymentCount": "{count} entries",
+    "periodHelp": "Without specific dates, the year and month selected above apply, including rows without a full date.",
+    "dateRangeHelp": "The range uses dates recorded in the rows, including files from another month. The closing above keeps the selected monthly period.",
+    "undatedExcluded": "{count} matching entries have no full date and were excluded from the range. Clear the dates to view them by spreadsheet month.",
+    "paymentTypes": {
+      "maquina": "Card terminal",
+      "credito": "Credit",
+      "debito": "Debit",
+      "thais": "Thais",
+      "dinheiro": "Cash",
+      "pix": "Pix"
+    }
   }
 }

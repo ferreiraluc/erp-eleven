@@ -121,7 +121,7 @@ def test_day_search_excludes_undated_rows_deduplicates_snapshot_sources_and_keep
     assert daily["summary"]["currencies"][0]["gross"] == 10
     assert daily["summary"]["official_total_usd"] == monthly["summary"]["official_total_usd"] == 100
     assert daily["reconciliation"] == monthly["reconciliation"] == [{"year": 2026, "month": 10, "currency": "BRL", "published": 7.0, "observed_net": 10.0, "difference": 3.0}]
-    assert daily["coverage"] == {"source_count": 3, "needs_sync": True, "sources_without_entries": 1, "skipped_rows": None}
+    assert daily["coverage"] == {"source_count": 3, "needs_sync": True, "sources_without_entries": 1, "skipped_rows": None, "undated_excluded": 1}
     assert monthly["coverage"]["source_count"] == 1 and monthly["summary"]["undated_count"] == 1
     assert [row.snapshot for row in sources] == before
 

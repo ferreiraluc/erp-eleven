@@ -88,6 +88,41 @@ tentativas de consultar outro vendedor. Nenhuma migração adicional é necessá
 `test_sales_bi_day_boundary.py` verifica datas na fronteira de mês/ano no bot e
 na API, preservando o escopo pessoal e o fechamento mensal.
 
+### Conferência por forma de pagamento
+
+Em **Lançamentos**, combine ano/mês e vendedor com **Pagamento** e **Moeda**.
+O resumo **Recebimentos por tipo** apresenta quantidade de lançamentos, bruto e
+líquido por moeda, considerando todos os resultados filtrados antes da paginação.
+Clicar no tipo também aplica o filtro. **Exportar página** exporta somente a página
+visível e autorizada; o total da consulta pode incluir outras páginas.
+
+- A coluna E (`Método Pgto`) continua sendo a origem. `Máquina`/`Maquina`,
+  crédito, débito, Thais, dinheiro e Pix são reconhecidos sem diferenciar caixa ou
+  acentos. Máquina é uma categoria própria: crédito/débito antigos não são
+  reclassificados como máquina. Outros textos preenchidos continuam como tipos
+  próprios, sem perder o rótulo da planilha.
+- **Célula vazia significa Dinheiro**, conforme a convenção da loja. Essa regra
+  vale para históricos já sincronizados, tabela, filtros, resumo, exportação e
+  apresentação dos lançamentos pelo bot. O texto original do snapshot é preservado.
+- **Data inicial/final** incluem ambos os dias e pesquisam datas explícitas em
+  todos os arquivos selecionados, incluindo semanas que cruzam mês/ano. Basta
+  preencher uma extremidade para filtrar a partir dela ou até ela. Linhas sem data
+  completa são excluídas do intervalo e sua quantidade é informada. Sem intervalo,
+  vale o mês/ano da planilha, incluindo linhas sem data ou com apenas SEG/TER etc.
+- Fechamento corrigido e reconciliação mensal permanecem referentes ao ano/mês e
+  vendedor selecionados. Não mudam com pagamento, intervalo, busca ou moeda.
+  Líquido incompleto aparece como parcial; não há estimativa de taxas nem
+  confirmação de depósito bancário. Moedas nunca são somadas diretamente entre si.
+- O endpoint aceita `payment_method`, `date_from` e `date_to`; `day` continua
+  disponível para consumidores existentes, mas não pode ser combinado ao intervalo.
+  Vendedor autorizado é imposto antes das opções de pagamento e das somas.
+
+Nenhuma migração ou nova sincronização é necessária para categorizar snapshots que
+já possuem lançamentos. Novas linhas da planilha entram na leitura diária das 18h
+ou pelo botão **Atualizar dados**. Consultar/filtrar não lê o OneDrive nem grava
+vendas. Testes: `test_sales_bi_payments.py` e `salesEntries.test.ts`, além das suítes
+de limites entre meses e autorização existentes.
+
 O painel, seu card do dashboard e o detalhamento usam catálogos locais PT/ES/EN em
 `frontend/src/components/sales/`. Mês, número, moeda, gráfico, navegação e CSV
 acompanham o idioma selecionado; nomes de arquivos, vendedores e rótulos escritos

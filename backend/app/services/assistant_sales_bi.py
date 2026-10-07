@@ -10,7 +10,7 @@ from ..models.sales_bi import SalesBIWorkbook
 from ..models.usuario import Usuario
 from .access_policy import own_sales
 from .sales_bi import build_overview, choose_workbooks, private_workbooks
-from .sales_bi_entries import build_entries
+from .sales_bi_entries import build_entries, PAYMENT_LABELS
 from .sales_bi_parser import normal, seller_name
 
 
@@ -175,7 +175,7 @@ def query_spreadsheet_sales(db, args, user_id):
                           tem_mais=details['offset'] + args.limite < details['total'], resultados=[{
                 'vendedor':r['seller'], 'moeda':r['currency'], 'bruto':r['gross'], 'liquido':r['net'],
                 'data':r['date'], 'hora':r['time'], 'dia_da_semana':r['day_group'],
-                'cliente':r['customer'], 'pagamento':r['payment_method'], 'celula':r['source_cell'],
+                'cliente':r['customer'], 'pagamento':PAYMENT_LABELS.get(r['payment_type'], r['payment_method']), 'celula':r['source_cell'],
                 'ano':r['year'], 'mes':r['month'], 'sincronizado_em':r['synced_at'], 'snapshot_com_pendencia':r['stale'],
             } for r in details['items']])
         # Reconciliation is the whole selected month, not a day/currency-filtered total.

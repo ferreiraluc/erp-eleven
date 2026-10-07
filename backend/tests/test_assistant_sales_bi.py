@@ -65,6 +65,12 @@ def run(bi_env, **kwargs):
     with factory() as db:return query(db,Args(**kwargs),uid)
 
 
+def test_bot_labels_blank_payment_cells_as_cash(bi_env):
+    result = run(bi_env, visao='lancamentos', vendedor='Junior')
+    cash = [row for row in result['resultados'] if row['bruto'] == 80]
+    assert len(cash) == 1 and cash[0]['pagamento'] == 'Dinheiro'
+
+
 def test_default_snapshot_corrected_closing_no_duplicate_or_sync(bi_env):
     factory,uid=bi_env
     with factory() as db:
