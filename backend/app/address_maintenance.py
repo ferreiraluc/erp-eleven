@@ -22,6 +22,14 @@ def main(argv=None):
         parser.error('--apply exige --expected-plan retornado pela simulação')
     with SessionLocal() as db:
         try:
+            if args.apply:
+                from .models.usuario import Usuario
+                from .services.access_policy import OWNER_EMAIL
+                from .services.user_audit import bind_actor
+                owner = db.query(Usuario).filter_by(email=OWNER_EMAIL, ativo=True).one_or_none()
+                if not owner:
+                    raise SystemExit('Administrador ativo não encontrado para registrar a auditoria.')
+                bind_actor(db, owner, source='reconciliation')
             result = merge_addresses(db, args.target, args.source, apply=args.apply, expected_plan=args.expected_plan)
             if args.apply:
                 db.commit()

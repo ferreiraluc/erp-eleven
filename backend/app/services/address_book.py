@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from ..models.address_book import SavedAddress
 from ..models.assistant import utcnow
-from .address_identity import fingerprint, digits, matches_optional_district, matches_known_variants
+from .address_identity import fingerprint, digits, equivalent
 
 
 def lock_addresses(db):
@@ -48,8 +48,7 @@ def find_equivalent_address(db, data, exclude_id=None):
     row = roots.filter_by(dedup_key=key).with_for_update().first() if key else None
     if row:
         return row
-    candidates = [row for row in roots.with_for_update() if (
-        matches_optional_district(data, row.data) or matches_known_variants(data, row.data))]
+    candidates = [row for row in roots.with_for_update() if equivalent(data, row.data)]
     if len(candidates) > 1:
         raise HTTPException(409, 'Há mais de um endereço compatível. Confira os cadastros na agenda antes de continuar.')
     return candidates[0] if candidates else None

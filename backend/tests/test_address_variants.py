@@ -202,7 +202,11 @@ def test_cli_defaults_to_dry_run_and_applies_only_expected_pair(env, monkeypatch
     from app.models.address_book import SavedAddress
     factory, _, user_id, _ = env
     monkeypatch.setattr(command, 'SessionLocal', factory)
+    from app.models.usuario import Usuario
+    from app.models.access import AuditEvent
+    from app.services.access_policy import OWNER_EMAIL
     with factory() as db:
+        db.get(Usuario, user_id).email = OWNER_EMAIL
         target, source = legacy_pair(db, user_id)
         target_id, source_id = target.id, source.id; db.commit()
     args = ['merge', '--target', str(target_id), '--source', str(source_id)]
@@ -217,3 +221,7 @@ def test_cli_defaults_to_dry_run_and_applies_only_expected_pair(env, monkeypatch
     assert json.loads(capsys.readouterr().out)['state'] == 'merged'
     with factory() as db:
         assert db.get(SavedAddress, source_id).merged_into_id == target_id
+        event = db.query(AuditEvent).filter_by(action='address_merged').one()
+        assert event.user_id == user_id and event.source == 'reconciliation'
+        assert event.changes['source_id'] == str(source_id)
+        assert VARIANT['cpf'] not in str(event.changes)

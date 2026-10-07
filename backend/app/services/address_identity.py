@@ -84,15 +84,8 @@ def matches_known_variants(left, right):
     if not any(digits(number) for number in numbers) or (all(numbers) and numbers[0] != numbers[1]):
         return False
 
-    def location(data):
-        if not normalized(data.get('endereco')):
-            return ''
-        value = normalized(' '.join(str(data.get(key) or '') for key in ('endereco', 'numero', 'complemento')))
-        value = re.sub(r'^av\s+', 'avenida ', value)
-        return re.sub(r'\b(?:apartamento|apto|apt|ap)\s+(?=[0-9])', 'apartamento ', value)
-
-    street = location(left)
-    if not street or not any(char.isdigit() for char in street) or street != location(right):
+    street = _br_location(left, right)
+    if not street or not any(char.isdigit() for char in street) or street != _br_location(right, left):
         return False
     before, after = normalized(left.get('bairro')), normalized(right.get('bairro'))
     if before == after:
@@ -104,3 +97,55 @@ def matches_known_variants(left, right):
         return True
     core = lambda value: re.sub(r'^(?:jardim|jd)\s+', '', value)
     return bool(core(before)) and core(before) == core(after)
+
+
+def _br_location(data, reference):
+    """Compare fields with a legacy street block without duplicating its suffix.
+
+    Only remove a whole suffix corroborated by a structured field. Never strip
+    arbitrary digits (Rua 25), guess a missing apartment or modify saved data.
+    """
+    def part(value):
+        value = normalized(value)
+        value = re.sub(r'^(?:av)\s+', 'avenida ', value)
+        value = re.sub(r'^r\s+', 'rua ', value)
+        return re.sub(r'\b(?:apartamento|apto|apt|ap)\s+(?=[0-9])', 'apartamento ', value)
+
+    street = part(data.get('endereco'))
+    if not street:
+        return ''
+    parts = {}
+    for field in ('complemento', 'numero'):
+        own = part(data.get(field))
+        suffix = own or part(reference.get(field))
+        stem = street[:-len(suffix)].strip() if suffix and street.endswith(' ' + suffix) else ''
+        if stem and stem not in {'rua', 'avenida', 'travessa', 'estrada', 'rodovia'}:
+            street = stem
+            parts[field] = suffix
+        else:
+            parts[field] = own
+    return ' '.join(value for value in (street, parts['numero'], parts['complemento']) if value)
+
+
+def matches_paraguay_phone(left, right):
+    """A PY phone's local/DDI spelling does not create another destination."""
+    from .customer_identity import full_name, phone_key
+
+    if any(normalized(data.get('pais')) != 'py' for data in (left, right)):
+        return False
+    if not full_name(left.get('nome')) or not normalized(left.get('cidade')):
+        return False
+    for field in ('nome', 'endereco', 'numero', 'bairro', 'complemento', 'cidade', 'estado', 'cep'):
+        if normalized(left.get(field)) != normalized(right.get(field)):
+            return False
+    before, after = (data.get('telefone') for data in (left, right))
+    if not before or not after:
+        return True  # Only a unique otherwise identical destination can be reused.
+    phone = phone_key(before, 'PY')
+    return bool(phone) and phone == phone_key(after, 'PY')
+
+
+def equivalent(left, right):
+    """Shared location comparison; callers still validate document/customer IDs."""
+    key = fingerprint(left)
+    return bool(key and key == fingerprint(right)) or matches_optional_district(left, right) or matches_known_variants(left, right) or matches_paraguay_phone(left, right)

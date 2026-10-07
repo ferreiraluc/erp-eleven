@@ -7,13 +7,8 @@ from fastapi import HTTPException
 from ..models.address_book import SavedAddress
 from ..models.assistant import utcnow
 from .address_book import address_family, compatible, lock_addresses, resolve_address
-from .address_identity import fingerprint, matches_known_variants, matches_optional_district
+from .address_identity import equivalent
 from .address_usage import usage_stats
-
-
-def equivalent(left, right):
-    key = fingerprint(left)
-    return bool(key and key == fingerprint(right)) or matches_optional_district(left, right) or matches_known_variants(left, right)
 
 
 def _snapshot(row):
@@ -89,4 +84,9 @@ def merge_addresses(db, target_id, source_id, *, apply=False, expected_plan=None
     target.version += 1
     target.updated_at = utcnow()
     db.flush()
+    if db.info.get('audit_actor'):
+        from .user_audit import record
+        record(db, 'address_merged', 'enderecos', entity='saved_addresses', entity_id=str(target.id),
+               changes={'source_id': str(source.id), 'target_id': str(target.id), 'fields_added': sorted(added),
+                        'history_total': history['total']})
     return {**result, 'state': 'merged', 'target_version': target.version, 'source_version': source.version}

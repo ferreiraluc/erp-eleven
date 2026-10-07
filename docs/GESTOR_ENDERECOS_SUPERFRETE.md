@@ -97,6 +97,27 @@ Em endereços BR, a agenda também reconhece `Av`, `Av.` e `Avenida` no início 
 
 Essa comparação local não consulta nem presume uma confirmação dos Correios/ViaCEP. Ela exige um único candidato; diferenças reais de bairro, número, complemento, documento ou cliente não são descartadas. Dois candidatos compatíveis exigem revisão na agenda. As chaves de identidade antigas continuam válidas, e atualizar o sistema não consolida automaticamente cadastros já existentes.
 
+### Rua com número e complemento no mesmo campo
+
+O bot e o editor reconhecem `Rua das Flores 101 Casa 40` e os campos separados
+`Rua das Flores`, número `101`, complemento `Casa 40` como o mesmo local, mesmo
+quando número e complemento aparecem repetidos nos campos estruturados. `R.` e
+`Rua` também são equivalentes. A comparação remove apenas sufixos confirmados
+pelos campos de um dos cadastros; não tenta adivinhar números nem apartamentos.
+CEP, destinatário, cidade, UF e demais dados de entrega continuam sendo conferidos.
+Apartamento/casa diferente ou complemento ausente sem confirmação no texto não
+é descartado para forçar uma união.
+
+No PY, um telefone local e o mesmo número com `+595` ou `00595` reutilizam o
+cadastro. Se o telefone for omitido, nome completo, cidade e os demais campos de
+entrega iguais podem identificar um único endereço existente. Múltiplos candidatos,
+documentos divergentes ou clientes diferentes continuam exigindo revisão.
+
+Essas regras rodam localmente, sem chamadas extras à IA. O vínculo com o cliente
+existente é preservado; quando ainda não existe vínculo, a rotina compartilhada
+de identificação de clientes o resolve antes de concluir a gravação. Usos novos
+continuam gerando seu próprio histórico, sem criar outra ficha de endereço.
+
 ### Manutenção de um par revisado
 
 A ferramenta abaixo simula a união de dois IDs explicitamente escolhidos. Use o cadastro que deve continuar visível como `--target`; o cadastro duplicado torna-se uma referência histórica para ele. Não há varredura nem consolidação geral.
@@ -115,6 +136,10 @@ PYTHONPATH=backend backend/venv/bin/python -m app.address_maintenance merge \
 ```
 
 Alterações entre a simulação e a aplicação invalidam o plano. Documentos/clientes conflitantes, locais diferentes ou outro candidato compatível fora do par bloqueiam a operação. O cadastro principal conserva seus campos preenchidos e recebe somente os ausentes, incluindo documento e vínculo com cliente quando compatíveis. O estado ativo é preservado se qualquer um dos dois estiver ativo. IDs antigos, aliases, fretes, impressões, PDFs e snapshots permanecem intactos; o histórico do principal passa a reunir suas utilizações. A ferramenta não imprime nem emite etiquetas.
+
+A aplicação exige o administrador proprietário ativo e registra `address_merged`
+na auditoria, com IDs envolvidos, campos completados e contagem de utilizações,
+sem copiar documentos ou o endereço em claro para o evento.
 
 ### Impressões de endereços A4 no histórico
 

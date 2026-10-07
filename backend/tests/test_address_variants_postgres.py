@@ -4,10 +4,12 @@ from threading import Barrier
 import uuid
 
 import sqlalchemy as sa
+import pytest
 from sqlalchemy.orm import sessionmaker
 
 from test_access_postgres import pg
 from test_address_variants import ADDRESS, VARIANT
+from test_address_embedded_fields import ADDRESS as STRUCTURED, EMBEDDED
 from app.database import Base
 from app.models import Usuario, Vendedor, Cliente
 from app.models.address_book import SavedAddress, FreightOrder
@@ -17,7 +19,8 @@ from app.services.address_book import save_or_reuse
 from app.services.address_maintenance import merge_addresses
 
 
-def test_parallel_spelling_variants_reuse_one_row_and_legacy_pair_merges(pg):
+@pytest.mark.parametrize('address,variant', [(ADDRESS, VARIANT), (STRUCTURED | {'cpf': ''}, EMBEDDED)])
+def test_parallel_spelling_variants_reuse_one_row_and_legacy_pair_merges(pg, address, variant):
     engine, schema = pg
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
     models = (Usuario, Vendedor, Cliente, PdvCliente, SavedAddress, PrintDevice, PrintJob, FreightOrder)
@@ -39,15 +42,15 @@ def test_parallel_spelling_variants_reuse_one_row_and_legacy_pair_merges(pg):
                 return key, reused
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(executor.map(save, [ADDRESS, VARIANT]))
+            results = list(executor.map(save, [address, variant]))
         assert results[0][0] == results[1][0]
         assert sorted(reused for _, reused in results) == [False, True]
         with factory() as db:
             assert db.query(SavedAddress).count() == 1
-            assert db.query(SavedAddress).one().data['cpf'] == VARIANT['cpf']
+            assert db.query(SavedAddress).one().data['cpf'] == variant['cpf']
             # Simulate only one pair of old roots under their unchanged hashes.
-            target = SavedAddress(label='Legacy target', data=ADDRESS | {'nome': 'Legacy Fixture'}, created_by=user_id)
-            source = SavedAddress(label='Legacy source', data=VARIANT | {'nome': 'Legacy Fixture'}, created_by=user_id)
+            target = SavedAddress(label='Legacy target', data=address | {'nome': 'Legacy Fixture'}, created_by=user_id)
+            source = SavedAddress(label='Legacy source', data=variant | {'nome': 'Legacy Fixture'}, created_by=user_id)
             db.add_all([target, source]); db.commit()
             plan = merge_addresses(db, target.id, source.id)
             assert source.merged_into_id is None
@@ -56,6 +59,6 @@ def test_parallel_spelling_variants_reuse_one_row_and_legacy_pair_merges(pg):
             db.commit()
             assert db.query(SavedAddress).filter_by(merged_into_id=None).count() == 2
             assert source.dedup_key is None
-            assert target.data['cpf'] == VARIANT['cpf']
+            assert target.data['cpf'] == variant['cpf']
     finally:
         isolated.dispose()
