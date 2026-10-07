@@ -83,3 +83,4 @@ class RastreamentoResumo(BaseModel):
     pendentes: int
     com_erro: int
     rastreamentos_recentes: List[RastreamentoResponse]
+    rastreamentos_pendentes: List[RastreamentoResponse] = Field(default_factory=list)

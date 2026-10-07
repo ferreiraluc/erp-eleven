@@ -9,10 +9,13 @@ lançando vendas nas planilhas do OneDrive. O BI é um consumidor de resultados
 salvos; não substitui a planilha por um caixa novo nem altera seus lançamentos.
 
 O dashboard reúne estoque, rastreamentos, folgas, status do sistema e câmbio.
-O card de rastreamento lista no máximo os três envios ativos mais recentemente
-cadastrados que ainda não foram entregues (pendentes, em trânsito ou com consulta
-não resolvida). Os contadores continuam gerais; pacotes entregues ficam na página
-de rastreamento. Novo produto e Ver tudo usam a mesma altura compacta no card Estoque.
+No celular (até 600px), o card de rastreamento lista no máximo os três envios ativos
+mais recentemente cadastrados ainda não entregues (pendentes, em trânsito ou com
+consulta não resolvida). No desktop e tablet, conserva os últimos 12 rastreios
+atualizados, incluindo entregues. As duas seleções são independentes, mantendo os
+pendentes do celular mesmo quando os 12 últimos atualizados já foram entregues.
+Os contadores continuam gerais. Novo produto e Ver tudo usam a mesma altura compacta
+no card Estoque.
 No celular (até 600px), os rastreios recentes acompanham a rolagem da página;
 no tablet e desktop, a lista mantém rolagem interna. O módulo de contas a receber
 se chama **Pagadores**; a rota `/fiado` e os registros financeiros são preservados. Os

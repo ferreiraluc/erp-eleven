@@ -13,7 +13,8 @@ def test_dashboard_limits_after_excluding_delivered_and_archived(logistics):
         # Delivered records are newer than every pending shipment, including their updates.
         for i in range(14):
             db.add(Rastreamento(codigo_rastreio=f'DELIVERED-{i}', status=Status.ENTREGUE,
-                                created_at=start + timedelta(days=5, minutes=i)))
+                                created_at=start + timedelta(days=5, minutes=i),
+                                updated_at=start + timedelta(days=20, minutes=i)))
         for i, status in enumerate([Status.PENDENTE, Status.EM_TRANSITO, Status.NAO_ENCONTRADO, Status.ERRO, Status.EM_TRANSITO]):
             db.add(Rastreamento(codigo_rastreio=f'PENDING-{i}', status=status,
                                 created_at=start + timedelta(minutes=i),
@@ -24,7 +25,8 @@ def test_dashboard_limits_after_excluding_delivered_and_archived(logistics):
     response = client.get('/api/rastreamento/resumo/dashboard')
     assert response.status_code == 200
     summary = response.json()
-    assert [r['codigo_rastreio'] for r in summary['rastreamentos_recentes']] == ['PENDING-4', 'PENDING-3', 'PENDING-2']
+    assert [r['codigo_rastreio'] for r in summary['rastreamentos_pendentes']] == ['PENDING-4', 'PENDING-3', 'PENDING-2']
+    assert [r['codigo_rastreio'] for r in summary['rastreamentos_recentes']] == [f'DELIVERED-{i}' for i in range(13, 1, -1)]
     assert summary['total_rastreamentos'] == 19
     assert summary['entregues'] == 14
     assert summary['em_transito'] == 2
@@ -41,5 +43,6 @@ def test_dashboard_empty_pending_list_keeps_delivered_totals(logistics):
         db.add(Rastreamento(codigo_rastreio='DELIVERED', status=Status.ENTREGUE))
         db.commit()
     summary = client.get('/api/rastreamento/resumo/dashboard').json()
-    assert summary['rastreamentos_recentes'] == []
+    assert summary['rastreamentos_pendentes'] == []
+    assert summary['rastreamentos_recentes'][0]['codigo_rastreio'] == 'DELIVERED'
     assert summary['total_rastreamentos'] == summary['entregues'] == 1

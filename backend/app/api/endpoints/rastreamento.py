@@ -328,9 +328,12 @@ def obter_resumo_dashboard(
         Rastreamento.status.in_([RastreamentoStatus.ERRO, RastreamentoStatus.NAO_ENCONTRADO])
     ).count()
     
-    # Pending delivery includes transit and unresolved queries. Filter before limit
-    # so delivered parcels cannot crowd the dashboard's three newest shipments out.
+    # Preserve the desktop/tablet list, including delivered parcels.
     recentes = db.query(Rastreamento).filter(
+        Rastreamento.ativo == True
+    ).order_by(desc(Rastreamento.updated_at), desc(Rastreamento.id)).limit(12).all()
+    # Mobile selection is independent: pending shipments may precede all 12 recent updates.
+    pendentes_recentes = db.query(Rastreamento).filter(
         Rastreamento.ativo == True,
         Rastreamento.status != RastreamentoStatus.ENTREGUE
     ).order_by(desc(Rastreamento.created_at), desc(Rastreamento.id)).limit(3).all()
@@ -341,7 +344,8 @@ def obter_resumo_dashboard(
         entregues=entregues,
         pendentes=pendentes,
         com_erro=com_erro,
-        rastreamentos_recentes=recentes
+        rastreamentos_recentes=recentes,
+        rastreamentos_pendentes=pendentes_recentes
     )
 
 

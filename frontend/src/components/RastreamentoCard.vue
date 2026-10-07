@@ -52,11 +52,11 @@
         </div>
       </div>
       
-      <div v-if="rastreamentosPendentesRecentes.length" class="rastreamentos-recentes">
-        <h4 class="recentes-title">{{ $tr("Últimos envios pendentes") }}</h4>
+      <div v-if="rastreamentosVisiveis.length" class="rastreamentos-recentes">
+        <h4 class="recentes-title">{{ $tr(isMobile ? "Últimos envios pendentes" : "Últimos Rastreamentos") }}</h4>
         <div class="rastreamentos-list">
           <div
-            v-for="rastreamento in rastreamentosPendentesRecentes"
+            v-for="rastreamento in rastreamentosVisiveis"
             :key="rastreamento.id"
             class="track-card"
             :class="`track-${getStatusClass(rastreamento.status)}`"
@@ -112,7 +112,7 @@
         <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v4m-6 0h6" />
         </svg>
-        <p class="empty-text">{{ $tr("Nenhum envio pendente de entrega") }}</p>
+        <p class="empty-text">{{ $tr(isMobile ? "Nenhum envio pendente de entrega" : "Nenhum rastreamento") }}</p>
       </div>
     </div>
   </div>
@@ -225,7 +225,7 @@
 
 <script setup lang="ts">
 import { uiText, uiLocale } from '@/i18n/uiText'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import { useAuthStore } from '@/stores/auth'
@@ -240,12 +240,16 @@ const showModal = ref(false)
 const isCreating = ref(false)
 const modalError = ref<string | null>(null)
 const resumo = ref<RastreamentoResumo | null>(null)
-// Guard the card while frontend/backend deployments roll out independently.
-const rastreamentosPendentesRecentes = computed(() =>
-  (resumo.value?.rastreamentos_recentes || [])
+const mobileQuery = window.matchMedia('(max-width: 600px)')
+const isMobile = ref(mobileQuery.matches)
+const updateViewport = (event: MediaQueryListEvent) => { isMobile.value = event.matches }
+const rastreamentosVisiveis = computed(() => {
+  if (!isMobile.value) return resumo.value?.rastreamentos_recentes || []
+  // Fallback supports the older API while the two deployments roll out.
+  return (resumo.value?.rastreamentos_pendentes ?? resumo.value?.rastreamentos_recentes ?? [])
     .filter(r => r.ativo && r.status !== 'ENTREGUE')
     .slice(0, 3)
-)
+})
 
 const novoRastreamento = ref<RastreamentoCreate>({
   codigo_rastreio: '',
@@ -403,8 +407,10 @@ const copiarCodigo = async (codigo: string) => {
 }
 
 onMounted(() => {
+  mobileQuery.addEventListener('change', updateViewport)
   loadResumo()
 })
+onUnmounted(() => mobileQuery.removeEventListener('change', updateViewport))
 </script>
 
 <style scoped>

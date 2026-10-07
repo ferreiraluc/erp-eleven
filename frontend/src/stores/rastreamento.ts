@@ -80,6 +80,7 @@ export interface RastreamentoResumo {
   pendentes: number
   com_erro: number
   rastreamentos_recentes: Rastreamento[]
+  rastreamentos_pendentes?: Rastreamento[]
 }
 
 export const useRastreamentoStore = defineStore('rastreamento', () => {
