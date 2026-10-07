@@ -7,9 +7,51 @@ texto, status, marca, categoria, local e seleção de itens sem grade. O modo de
 visualização e agrupamento é preservado. Uma lista vazia sem filtros permite
 **Novo item**, sem afirmar que não existem outros produtos fora da seleção.
 
+## Cadastro unificado: foto, etiqueta e estoque
+
+**Estoque → Novo item** e o atalho **Novo produto** do dashboard abrem o mesmo
+cadastro, em três etapas:
+
+1. **Foto e etiqueta**: duas fontes opcionais, em qualquer ordem. Pode usar só uma,
+   ambas ou continuar sem imagens. Cada assistente adiciona sugestões à mesma
+   conferência; não cria produtos nem lança estoque. Os provedores continuam
+   independentes, sem uma terceira chamada paga para combinar os resultados.
+2. **Conferência**: foto escolhida e dados em um formulário. Campos vazios recebem
+   as sugestões; valores diferentes aparecem como escolhas **Manter formulário**,
+   **Usar foto** ou **Usar etiqueta**. Preço e moeda são tratados juntos. Reabrir uma
+   leitura já aplicada não desfaz correções manuais. As diferenças devem ser
+   resolvidas e a revisão marcada; mudar os dados/foto reinicia a revisão.
+3. **Estoque**: escolha loja/depósito e quantidade. O resumo informa produtos e
+   unidades antes de criar. Quantidades não vêm da IA; zero cria somente o cadastro.
+
+**Criar grade deste modelo** habilita a grade apenas por escolha do operador.
+Ao selecionar **P → 2XL**, por exemplo, a peça branca P origina P, M, L, XL e 2XL
+no mesmo grupo, com foto, marca, descrição e preços compartilhados. O tamanho da
+peça base é preservado se estiver fora do modelo escolhido. Sem outras cores
+selecionadas, todas as variações usam a cor da peça. É possível cancelar a grade
+sem perder os dados e cadastrar somente a peça. O estoque informado na grade é
+**por variação**, com total visível antes da confirmação.
+
+Essa opção monta uma grade no novo cadastro; não procura nem completa grades de
+produtos já salvos. Códigos de barras iguais não provam identidade. O cadastro
+unificado mantém a regra de negócio da grade: **código de barras base + tamanho**
+(por exemplo, `789123P`, `789123M`, `789123XL`), além de um SKU independente por
+variação. A prévia mostra cada código resultante, inclusive na matriz de cores e
+tamanhos. No produto avulso o código permanece como informado. Os tamanhos de uma
+solicitação são normalizados e
+deduplicados no backend. Cada chamada de criação de grade confirma produtos e
+movimentações iniciais na mesma transação, com rollback se uma movimentação falhar.
+
+As prévias e leituras ficam em memória enquanto o cadastro está aberto. Reabrir
+**Rever foto/etiqueta** conserva a leitura e a edição já feitas, sem disparar IA.
+Falhar ou cancelar uma fonte não apaga os dados aplicados pela outra. A original
+é exibida junto da imagem recortada/gerada para comparação, mas não é enviada no
+cadastro do produto. Na edição de um item, as mesmas sugestões podem ser usadas
+com revisão, sem alterar saldos por isso.
+
 ## Leitura revisável com IA
 
-No formulário de produto, **Conferir etiqueta com IA** aceita câmera ou arquivo
+Em **Foto e etiqueta → Ler etiqueta**, o leitor aceita câmera ou arquivo
 JPEG, PNG ou WebP estático. O serviço compartilhado de visão usa
 `VISION_PROVIDER=auto`: prefere `DEEPSEEK_API_KEY` com
 `DEEPSEEK_VISION_MODEL=deepseek-flash`; sem essa chave, usa `ANTHROPIC_API_KEY`
@@ -31,9 +73,10 @@ Um preço sem moeda identificada também fica vazio: `$` sozinho não identifica
 A marca escolhida para localizar exemplos não é tratada como marca detectada.
 
 A prévia exibe os campos revisáveis, trechos que sustentam a leitura e possíveis
-cadastros com o mesmo código. O usuário precisa conferir e marcar a revisão antes
-de **Usar no formulário**. Alterar um campo exige revisar novamente. Esse botão
-somente preenche o formulário; o cadastro ainda exige seu botão de salvar. A foto
+cadastros com o mesmo código. **Adicionar à conferência** envia os rascunhos para
+revisão conjunta no cadastro. O componente também preserva seu modo independente,
+que exige revisão antes de **Usar no formulário**. Salvar um exemplo sempre exige
+revisão explícita, mesmo no modo integrado. Nenhuma dessas ações cria o produto. A foto
 não estabelece SKU, quantidade disponível, entrada, saída ou transferência.
 
 **Salvar exemplo revisado** é uma ação separada. A tela avisa que ela guarda a imagem
@@ -54,8 +97,8 @@ disponíveis no provedor.
 
 ## Cadastro por foto do produto
 
-**Estoque → Foto com IA** (ou **Cadastrar por foto** no formulário) abre um fluxo
-separado do OCR de etiquetas. Fotografe uma peça estendida inteira. A importação
+**Foto e etiqueta → Adicionar foto** prepara a imagem e as sugestões para o mesmo
+cadastro que recebe a etiqueta. Fotografe uma peça estendida inteira. A importação
 aceita JPEG/PNG/WebP de até 15 MB/48 MP e reduz a imagem para 1600 px, sem EXIF.
 O servidor valida novamente o formato real e os limites de imagem do ERP.
 
@@ -91,8 +134,10 @@ Falha/timeout não causa retentativa automática, e a interface bloqueia nova ed
 paga da foto na sessão. Memória de prévias é descartada em novas solicitações após
 o prazo, ou no reinício; não há histórico de arquivos de origem no banco.
 
-**Usar no cadastro** requer nome e conferência da foto/dados, e somente preenche o
-formulário existente. Alterar dados ou escolher outra foto reinicia a conferência.
+No cadastro unificado, **Adicionar à conferência** aceita também apenas a foto,
+sem nome e sem análise; a revisão é obrigatória no formulário conjunto. No modo
+independente do componente, **Usar no cadastro** ainda requer nome e revisão.
+Alterar dados ou escolher outra foto reinicia a conferência.
 Preço, estoque, código de barras, SKU e variantes nunca são inferidos pela imagem.
 O SKU continua sendo gerado pelo cadastro; códigos repetidos não mesclam produtos.
 O botão normal de salvar continua responsável por persistir e movimentar o estoque.
@@ -103,7 +148,7 @@ Não existe galeria nem armazenamento separado de original/alta resolução; use
 **Baixar foto escolhida** para conservar a prévia antes de fechar. Para um marketplace
 com muitas imagens, migrar a mídia para armazenamento próprio e miniaturas separadas.
 
-Código: `ProductPhotoAssistant.vue`, `services/productPhoto.ts`, worker de recorte,
+Código: `ItemFormModal.vue`, `services/productIntake.ts`, `ProductPhotoAssistant.vue`, `services/productPhoto.ts`, worker de recorte,
 `api/endpoints/product_photo.py`, `services/product_photo.py` e contrato correspondente.
 Testes usam fornecedores simulados, nunca imagens ou estoque da produção.
 
@@ -141,8 +186,8 @@ A conferência dos locais deve usar a contagem real, evitando transferir para um
 localização arbitrária apenas para fazer o total fechar.
 
 O formulário de movimentação permite selecionar loja/depósito também no ajuste
-físico, inclusive ajustar a zero. A criação de item com estoque inicial ainda usa
-etapas distintas. Se um item/parte da grade foi criado e a próxima etapa falhar,
+físico, inclusive ajustar a zero. A criação de item avulso e de lotes com várias cores ainda usa
+etapas distintas; uma chamada de grade de tamanhos é atômica. Se um item/parte da grade foi criado e a próxima etapa falhar,
 o formulário mostra os nomes e SKUs já persistidos, atualiza a lista e bloqueia
 repetir aquele cadastro. O operador deve conferir os saldos e movimentar somente
 o que faltar. Uma interrupção de rede sem resposta de criação também pede essa

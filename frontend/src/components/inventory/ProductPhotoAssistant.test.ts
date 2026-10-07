@@ -6,11 +6,11 @@ const mock = vi.hoisted(() => ({ analyzePhoto: vi.fn(), generateCatalog: vi.fn()
 vi.mock('@/services/productPhoto', () => mock)
 let app: App, root: HTMLDivElement
 const button = (text: string) => Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === text)!
-async function mount() {
+async function mount(props = {}) {
   root = document.createElement('div'); document.body.append(root)
   const result = vi.fn()
   const i18n = createI18n({ legacy: false, locale: 'pt', messages: { pt: {}, en: {}, es: {} } })
-  app = createApp(ProductPhotoAssistant, { onResult: result }).use(i18n); app.mount(root)
+  app = createApp(ProductPhotoAssistant, { onResult: result, ...props }).use(i18n); app.mount(root)
   await nextTick(); await nextTick()
   const file = document.querySelector('input[type=file]') as HTMLInputElement
   Object.defineProperty(file, 'files', { value: [new File(['test'], 'photo.jpg', { type: 'image/jpeg' })] })
@@ -32,6 +32,14 @@ beforeEach(() => {
 })
 afterEach(() => { app?.unmount(); root?.remove(); vi.clearAllMocks() })
 describe('Photo-assisted product form', () => {
+  it('can add only a photo to the unified review without inventing a name or calling AI', async () => {
+    const { result } = await mount({ draft: true })
+    expect(document.querySelector('input[type=checkbox]')).toBeNull()
+    button('Adicionar à conferência').click(); await nextTick(); await nextTick()
+    expect(result).toHaveBeenCalledWith(expect.objectContaining({ name: '', image_data: 'data:image/jpeg;base64,stored' }))
+    expect(mock.analyzePhoto).not.toHaveBeenCalled(); expect(mock.generateCatalog).not.toHaveBeenCalled()
+  })
+
   it('never calls paid providers on upload, needs review and only fills the product form', async () => {
     const { result } = await mount()
     expect(mock.analyzePhoto).not.toHaveBeenCalled(); expect(mock.generateCatalog).not.toHaveBeenCalled()

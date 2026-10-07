@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div class="photo-overlay" @keydown.esc.stop="close" @keydown.tab="trapFocus">
+    <div v-show="open" class="photo-overlay" @keydown.esc.stop="close" @keydown.tab="trapFocus">
       <section ref="dialog" class="photo-dialog" role="dialog" aria-modal="true" aria-labelledby="product-photo-title" tabindex="-1">
         <header><div><h2 id="product-photo-title">{{ t('title') }}</h2><p>{{ t('intro') }}</p></div>
           <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" :disabled="busy === 'generating'" @click="close">✕</button>
@@ -50,20 +50,21 @@
             </div>
           </div>
         </div>
-        <footer v-if="original"><label class="photo-reviewed"><input v-model="reviewed" type="checkbox" :disabled="!!busy" />{{ t('reviewed') }}</label>
-          <p>{{ t('next') }}</p><button type="button" class="erp-button erp-button--primary" :disabled="!reviewed || !fields.name.trim() || !!busy" @click="apply">{{ t('use') }}</button></footer>
+        <footer v-if="original"><label v-if="!draft" class="photo-reviewed"><input v-model="reviewed" type="checkbox" :disabled="!!busy" />{{ t('reviewed') }}</label>
+          <p>{{ t(draft ? 'draftNext' : 'next') }}</p><button type="button" class="erp-button erp-button--primary" :disabled="(!draft && (!reviewed || !fields.name.trim())) || !!busy" @click="apply">{{ t(draft ? 'draftUse' : 'use') }}</button></footer>
       </section>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { productPhotoMessages } from './productPhotoMessages'
 import { analyzePhoto, catalogForStorage, cutoutPhoto, generateCatalog, photoError, photoStatus, preparePhoto,
   type ProductPhotoFields, type ProductPhotoResult } from '@/services/productPhoto'
 const { t } = useI18n({ useScope: 'local', messages: productPhotoMessages })
+const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean }>(), { draft: false, open: true })
 const emit = defineEmits<{ (event: 'close'): void; (event: 'result', value: ProductPhotoResult): void }>()
 const fieldNames: (keyof ProductPhotoFields)[] = ['name', 'brand', 'category', 'color', 'size', 'description']
 const blank = (): ProductPhotoFields => ({ name: '', brand: '', category: '', color: '', size: '', description: '' })
@@ -79,6 +80,10 @@ const brandEvidence = ref(''), sizeEvidence = ref('')
 const controller = new AbortController()
 let alive = true
 let priorFocus: HTMLElement | null = null
+watch(() => props.open, async open => {
+  if (open) { priorFocus = document.activeElement as HTMLElement; await nextTick(); dialog.value?.focus() }
+  else priorFocus?.focus()
+})
 watch([fields, selected], () => { reviewed.value = false }, { deep: true, flush: 'sync' })
 onMounted(async () => {
   priorFocus = document.activeElement as HTMLElement
@@ -133,11 +138,11 @@ async function generate() {
   } catch (e) { if (alive) error.value = photoError(e) } finally { if (alive) busy.value = '' }
 }
 async function apply() {
-  if (!reviewed.value || busy.value || !fields.name.trim()) return
+  if (busy.value || (!props.draft && (!reviewed.value || !fields.name.trim()))) return
   busy.value = 'preparing'; error.value = ''
   try {
     const image_data = await catalogForStorage(selectedImage.value)
-    if (alive) emit('result', { ...fields, name: fields.name.trim(), image_data })
+    if (alive) emit('result', { ...fields, name: fields.name.trim(), image_data, ...(props.draft && selected.value !== 'original' ? { original_image: original.value } : {}) })
   } catch { if (alive) error.value = 'invalid_image' } finally { if (alive) busy.value = '' }
 }
 </script>

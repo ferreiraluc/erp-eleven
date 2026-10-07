@@ -1,5 +1,5 @@
 <template>
-  <div class="ocr-overlay" @click.self="emit('close')">
+  <div v-show="open" class="ocr-overlay" @click.self="emit('close')">
     <div class="ocr-modal" role="dialog" aria-modal="true" :aria-label="t('title')">
       <div class="ocr-header"><h3>{{ t('title') }}</h3><button class="close-btn erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" @click="emit('close')">×</button></div>
       <div class="brand-bar"><input v-model="selectedBrand" class="brand-input" :placeholder="t('brandHint')" :aria-label="t('brandHint')" list="brand-datalist" maxlength="100" :disabled="phase === 'processing'" /><datalist id="brand-datalist"><option v-for="brand in knownBrands" :key="brand.brand" :value="brand.brand" /></datalist><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
@@ -26,10 +26,10 @@
             </div>
             <div class="field-card"><label class="field-label" for="ocr-currency">{{ t('currency') }}</label><select id="ocr-currency" v-model="currency" class="field-input"><option value="">{{ t('unknown') }}</option><option v-for="code in currencies" :key="code" :value="code">{{ code }}</option></select></div>
           </div>
-          <label class="ocr-review"><input v-model="reviewed" type="checkbox" />{{ t('reviewed') }}</label><p class="ocr-next">{{ t('next') }}</p>
+          <label class="ocr-review"><input v-model="reviewed" type="checkbox" />{{ t(draft ? 'reviewExample' : 'reviewed') }}</label><p class="ocr-next">{{ t(draft ? 'draftNext' : 'next') }}</p>
           <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p>
           <p v-if="exampleSaved" class="ocr-success" role="status">{{ t('saved') }}</p>
-          <div class="results-actions"><button class="btn btn-ghost erp-button erp-button--secondary" @click="retake">{{ t('retake') }}</button><button class="btn btn-learn erp-button erp-button--primary" :disabled="!reviewed || !hasAnyField" @click="openSaveTemplate">{{ t('saveExample') }}</button><button class="btn btn-primary erp-button erp-button--primary" :disabled="!reviewed || !hasAnyField" @click="applyFields">{{ t('use') }}</button></div>
+          <div class="results-actions"><button class="btn btn-ghost erp-button erp-button--secondary" @click="retake">{{ t('retake') }}</button><button class="btn btn-learn erp-button erp-button--primary" :disabled="!reviewed || !hasAnyField" @click="openSaveTemplate">{{ t('saveExample') }}</button><button class="btn btn-primary erp-button erp-button--primary" :disabled="(!draft && !reviewed) || !hasAnyField" @click="applyFields">{{ t(draft ? 'draftUse' : 'use') }}</button></div>
         </div>
         <div v-if="phase === 'saving-template'" class="save-template-wrap">
           <h4>{{ t('exampleTitle') }}</h4><p class="save-hint">{{ t('exampleHint') }}</p><img :src="capturedImageUrl" class="preview-thumb" alt="" />
@@ -50,6 +50,7 @@ import { ocrAPI } from '@/services/api'
 import type { OcrAppliedFields, OcrParsedLabel, OcrCurrency } from '@/services/ocr'
 import { ocrMessages } from './ocrMessages'
 const { t } = useI18n({ useScope: 'local', messages: ocrMessages })
+const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean }>(), { draft: false, open: true })
 const emit = defineEmits<{ result: [data: OcrAppliedFields]; close: [] }>()
 const videoRef = ref<HTMLVideoElement>()
 const phase = ref<'camera' | 'processing' | 'results' | 'saving-template' | 'error'>('camera')
@@ -71,6 +72,10 @@ const warningKeys = computed(() => [...new Set((reading.value?.avisos || []).fil
 let stream: MediaStream | null = null, controller: AbortController | null = null
 let disposed = false, cameraRequest = 0
 watch([values, currency], () => { reviewed.value = false; formError.value = '' }, { deep: true })
+watch(() => props.open, open => {
+  if (!open) stopCamera()
+  else if (phase.value === 'camera') void startCamera()
+})
 function stopCamera() { cameraRequest++; stream?.getTracks().forEach(track => track.stop()); stream = null }
 async function startCamera() {
   const request = ++cameraRequest
@@ -112,8 +117,8 @@ async function runOcr(image: string) {
   }
 }
 function retake() { stopCamera(); controller?.abort(); controller = null; capturedImageUrl.value = ''; reading.value = null; reviewed.value = false; phase.value = 'camera'; void startCamera() }
-function reviewedResult(): OcrAppliedFields | null {
-  if (!reviewed.value) return null
+function reviewedResult(requireReview = true): OcrAppliedFields | null {
+  if (requireReview && !reviewed.value) return null
   const result: OcrAppliedFields = {}
   for (const key of ['name', 'brand', 'size', 'color', 'barcode'] as const) if (values[key].trim()) result[key] = values[key].trim()
   if (values.sale_price.trim()) {
@@ -123,7 +128,7 @@ function reviewedResult(): OcrAppliedFields | null {
   }
   return result
 }
-function applyFields() { const result = reviewedResult(); if (result) emit('result', result) }
+function applyFields() { const result = reviewedResult(!props.draft); if (result) emit('result', result) }
 function openSaveTemplate() { if (!reviewedResult()) return; saveForm.brand = values.brand || selectedBrand.value; saveForm.notes = ''; formError.value = ''; phase.value = 'saving-template' }
 async function saveTemplate() {
   const result = reviewedResult(); if (!result || !saveForm.brand.trim() || savingTemplate.value) return

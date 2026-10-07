@@ -1,6 +1,12 @@
 {
-  "Cadastrar por foto": ["Registrar por foto", "Register from photo"],
-  "Foto com IA": ["Foto con IA", "AI photo"],
+  "Cadastrar por foto": [
+    "Registrar por foto",
+    "Register from photo"
+  ],
+  "Foto com IA": [
+    "Foto con IA",
+    "AI photo"
+  ],
   "Escanear Código": [
     "Escanear código",
     "Scan code"
@@ -1200,5 +1206,149 @@
   "Total salvo": [
     "Total guardado",
     "Stored total"
+  ],
+  "Etapas do cadastro": [
+    "Pasos del registro",
+    "Registration steps"
+  ],
+  "Foto e etiqueta": [
+    "Foto y etiqueta",
+    "Photo & label"
+  ],
+  "Conferência": [
+    "Revisión",
+    "Review"
+  ],
+  "Use a foto da peça, a etiqueta ou as duas. Você também pode continuar sem imagens e preencher manualmente.": [
+    "Use la foto de la prenda, la etiqueta o ambas. También puede continuar sin imágenes y completar manualmente.",
+    "Use the garment photo, label or both. You can also continue without images and enter details manually."
+  ],
+  "Foto do produto": [
+    "Foto del producto",
+    "Product photo"
+  ],
+  "Opcional": [
+    "Opcional",
+    "Optional"
+  ],
+  "Nome, categoria, cor e foto de catálogo. Marca e tamanho somente quando legíveis.": [
+    "Nombre, categoría, color y foto de catálogo. Marca y talla solo cuando sean legibles.",
+    "Name, category, color and catalog photo. Brand and size only when legible."
+  ],
+  "Rever foto": [
+    "Revisar foto",
+    "Review photo"
+  ],
+  "Adicionar foto": [
+    "Agregar foto",
+    "Add photo"
+  ],
+  "Etiqueta": [
+    "Etiqueta",
+    "Label"
+  ],
+  "Texto, marca, tamanho, código de barras e preço com moeda. Complementa os dados da foto.": [
+    "Texto, marca, talla, código de barras y precio con moneda. Complementa los datos de la foto.",
+    "Text, brand, size, barcode and price with currency. Complements the photo details."
+  ],
+  "Leitura adicionada": [
+    "Lectura agregada",
+    "Reading added"
+  ],
+  "Rever etiqueta": [
+    "Revisar etiqueta",
+    "Review label"
+  ],
+  "Ler etiqueta": [
+    "Leer etiqueta",
+    "Read label"
+  ],
+  "Dados reunidos para conferência. Nenhum produto foi criado.": [
+    "Datos reunidos para revisar. No se ha creado ningún producto.",
+    "Details combined for review. No product has been created."
+  ],
+  "Há {count} diferenças para conferir entre as sugestões e o formulário.": [
+    "Hay {count} diferencias para revisar entre las sugerencias y el formulario.",
+    "There are {count} differences to review between suggestions and the form."
+  ],
+  "Confira os dados reunidos e complete o que faltar. Código repetido não identifica o mesmo produto.": [
+    "Revise los datos reunidos y complete lo que falte. Un código repetido no identifica el mismo producto.",
+    "Review the combined details and fill in anything missing. A repeated barcode does not identify the same product."
+  ],
+  "Original": [
+    "Original",
+    "Original"
+  ],
+  "Remover foto": [
+    "Quitar foto",
+    "Remove photo"
+  ],
+  "Escolha os dados que deseja usar": [
+    "Elija los datos que desea usar",
+    "Choose which details to use"
+  ],
+  "As informações diferentes foram preservadas. Você também pode corrigir o campo e manter o valor do formulário.": [
+    "Se conservaron los datos diferentes. También puede corregir el campo y mantener el valor del formulario.",
+    "Different values were preserved. You can also correct the field and keep the form value."
+  ],
+  "Manter formulário": [
+    "Mantener formulario",
+    "Keep form value"
+  ],
+  "Usar foto": [
+    "Usar foto",
+    "Use photo"
+  ],
+  "Usar etiqueta": [
+    "Usar etiqueta",
+    "Use label"
+  ],
+  "Conferi os dados e a foto escolhida para este produto.": [
+    "Revisé los datos y la foto elegida para este producto.",
+    "I checked the details and selected photo for this product."
+  ],
+  "O estoque será lançado somente ao concluir o cadastro.": [
+    "Las existencias se registrarán solo al completar el registro.",
+    "Stock will only be recorded when registration is completed."
+  ],
+  "Volte à conferência para revisar os dados antes de criar.": [
+    "Vuelva a la revisión para comprobar los datos antes de crear.",
+    "Return to review to check details before creating."
+  ],
+  "Grade de tamanhos e cores (opcional)": [
+    "Variantes de tallas y colores (opcional)",
+    "Size and color variants (optional)"
+  ],
+  "Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.": [
+    "Al completar: {items} producto(s), {quantity} unidad(es) en {local}.",
+    "On completion: {items} product(s), {quantity} unit(s) in {local}."
+  ],
+  "Conferir dados": [
+    "Revisar datos",
+    "Review details"
+  ],
+  "Continuar para estoque": [
+    "Continuar a existencias",
+    "Continue to stock"
+  ],
+  "Confira os dados e resolva as diferenças antes de continuar.": [
+    "Revise los datos y resuelva las diferencias antes de continuar.",
+    "Review the details and resolve differences before continuing."
+  ],
+  "Criar grade deste modelo": [
+    "Crear variantes de este modelo",
+    "Create variants of this model"
+  ],
+  "Cadastrar apenas esta peça": [
+    "Registrar solo esta prenda",
+    "Register only this garment"
+  ],
+  "Escolha um modelo de tamanhos. Cada variação recebe a foto, marca, descrição e preços desta peça. Sem selecionar outras cores, será usada a cor {color}.": [
+    "Elija un modelo de tallas. Cada variante recibe la foto, marca, descripción y precios de esta prenda. Sin seleccionar otros colores, se usará el color {color}.",
+    "Choose a size preset. Each variant receives this garment’s photo, brand, description and prices. Without selecting other colors, {color} will be used."
+  ],
+  "Na grade, o código de barras recebe o tamanho. Cada variação também terá seu próprio SKU.": [
+    "En las variantes, el código de barras recibe la talla. Cada variante también tendrá su propio SKU.",
+    "For size variants, the barcode includes the size. Each variant also has its own SKU."
   ]
 }

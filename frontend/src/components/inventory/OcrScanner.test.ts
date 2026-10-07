@@ -16,11 +16,11 @@ function button(text: string): HTMLButtonElement {
   if (!found) throw new Error(`Button not found: ${text}`)
   return found
 }
-async function mount() {
+async function mount(props = {}) {
   container = document.createElement('div'); document.body.append(container)
   const result = vi.fn()
   const i18n = createI18n({ legacy: false, locale: 'pt', fallbackLocale: 'pt', messages: { pt: {}, es: {}, en: {} } })
-  app = createApp(OcrScanner, { onResult: result }).use(i18n); app.mount(container)
+  app = createApp(OcrScanner, { onResult: result, ...props }).use(i18n); app.mount(container)
   await nextTick()
   return { result, i18n }
 }
@@ -38,6 +38,14 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); container?.remove(); vi.clearAllMocks() })
 
 describe('OCR review', () => {
+  it('adds draft fields to unified review while still requiring review to save an example', async () => {
+    const { result } = await mount({ draft: true }); await upload()
+    expect(button('Salvar exemplo revisado').disabled).toBe(true)
+    button('Adicionar à conferência').click(); await nextTick()
+    expect(result).toHaveBeenCalledWith(expect.objectContaining({ name: 'Air Max', sale_price: 150, currency: 'BRL' }))
+    expect(mocked.saveTemplate).not.toHaveBeenCalled()
+  })
+
   it('requires human review and never uses the reference brand as an extracted value', async () => {
     const { result } = await mount()
     const brand = container.querySelector('.brand-input') as HTMLInputElement

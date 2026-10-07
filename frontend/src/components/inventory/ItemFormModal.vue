@@ -1,30 +1,23 @@
 <template>
   <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-container">
+    <div class="modal-container" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
       <div class="modal-header">
         <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
-        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="erp-control" @click="activeTab = 'basic'" :class="['tab', { active: activeTab === 'basic' }]">{{ tr('Básico') }}</button>
-        <button class="erp-control" @click="activeTab = 'stock'" :class="['tab', { active: activeTab === 'stock' }]">{{ tr('Estoque') }}</button>
-        <button class="erp-control" v-if="!isEdit" @click="activeTab = 'grade'" :class="['tab', { active: activeTab === 'grade' }]">
-          {{ tr('Grade') }}
-          <span v-if="gradeSizes.length > 0" class="tab-badge">{{ gradeSizes.length }}</span>
-        </button>
-        <button class="erp-control" @click="activeTab = 'photo'" :class="['tab', { active: activeTab === 'photo' }]">
-          {{ tr('Foto') }}
-          <span v-if="form.image_data" class="tab-dot"></span>
-        </button>
+      <div class="tabs" :aria-label="tr('Etapas do cadastro')">
+        <button v-if="!isEdit" class="erp-control tab" :class="{ active: activeTab === 'capture' }" :aria-current="activeTab === 'capture' ? 'step' : undefined" @click="activeTab = 'capture'">1 · {{ tr('Foto e etiqueta') }}</button>
+        <button class="erp-control tab" :class="{ active: activeTab === 'basic' }" :aria-current="activeTab === 'basic' ? 'step' : undefined" @click="activeTab = 'basic'">{{ isEdit ? tr('Básico') : '2 · ' + tr('Conferência') }}</button>
+        <button class="erp-control tab" :class="{ active: activeTab === 'stock' }" :aria-current="activeTab === 'stock' ? 'step' : undefined" @click="activeTab = 'stock'">{{ isEdit ? tr('Estoque') : '3 · ' + tr('Estoque') }}</button>
+        <button v-if="isEdit" class="erp-control tab" :class="{ active: activeTab === 'photo' }" @click="activeTab = 'photo'">{{ tr('Foto') }}<span v-if="form.image_data" class="tab-dot"></span></button>
       </div>
 
-      <div class="modal-body">
+      <div ref="modalBody" class="modal-body">
         <div v-if="isEdit && item" class="stock-readout">
           <div class="stock-readout-values">
             <span>{{ tr('Total salvo') }}: <strong>{{ displayStock(item.current_stock) }}</strong></span>
@@ -42,28 +35,51 @@
           <ul v-if="partialItems.length"><li v-for="created in partialItems" :key="created.id">{{ created.name }} · {{ created.sku_internal }}</li></ul>
           <p>{{ tr('Feche esta janela, confira os itens e use Movimentar para concluir apenas o estoque que faltar. O cadastro não será repetido aqui.') }}</p>
         </div>
+        <div v-if="activeTab === 'capture'" class="tab-content intake-capture">
+          <p class="intake-hint">{{ tr('Use a foto da peça, a etiqueta ou as duas. Você também pode continuar sem imagens e preencher manualmente.') }}</p>
+          <div class="intake-sources">
+            <section class="intake-source">
+              <img v-if="form.image_data" :src="form.image_data" :alt="tr('Foto do produto')" class="intake-thumbnail" />
+              <span v-else class="intake-source-icon" aria-hidden="true">📷</span>
+              <h3>{{ tr('Foto do produto') }} <small>{{ tr('Opcional') }}</small></h3>
+              <p>{{ tr('Nome, categoria, cor e foto de catálogo. Marca e tamanho somente quando legíveis.') }}</p>
+              <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="showProductPhoto = true">{{ tr(photoAdded ? 'Rever foto' : 'Adicionar foto') }}</button>
+            </section>
+            <section class="intake-source">
+              <span class="intake-source-icon" aria-hidden="true">🏷️</span>
+              <h3>{{ tr('Etiqueta') }} <small>{{ tr('Opcional') }}</small></h3>
+              <p>{{ tr('Texto, marca, tamanho, código de barras e preço com moeda. Complementa os dados da foto.') }}</p>
+              <span v-if="labelAdded" class="intake-ready">{{ tr('Leitura adicionada') }}</span>
+              <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="showOcr = true">{{ tr(labelAdded ? 'Rever etiqueta' : 'Ler etiqueta') }}</button>
+            </section>
+          </div>
+          <p v-if="photoAdded || labelAdded" class="intake-hint" role="status">{{ tr('Dados reunidos para conferência. Nenhum produto foi criado.') }}</p>
+          <p v-if="conflicts.length" class="intake-conflict-note">{{ tr('Há {count} diferenças para conferir entre as sugestões e o formulário.', { count: conflicts.length }) }}</p>
+          <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="showLabelTemplates = true">{{ ocrText('savedExamples') }}</button>
+        </div>
         <!-- ── Basic Tab ── -->
         <div v-if="activeTab === 'basic'" class="tab-content">
-          <button type="button" class="erp-button erp-button--secondary erp-button--sm" style="margin-bottom:12px" @click="showProductPhoto = true">📷 {{ tr("Cadastrar por foto") }}</button>
-          <!-- OCR button -->
-          <div class="ocr-btn-row">
-            <button @click="showOcr = true" class="ocr-btn erp-button erp-button--secondary" type="button">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              {{ ocrText('title') }}
-            </button>
-            <button @click="showLabelTemplates = true" class="ocr-btn ocr-btn-templates erp-button erp-button--secondary" type="button">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              {{ ocrText('savedExamples') }}
-            </button>
+          <div class="intake-review-heading">
+            <p class="intake-hint">{{ tr('Confira os dados reunidos e complete o que faltar. Código repetido não identifica o mesmo produto.') }}</p>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="activeTab = 'capture'">{{ tr('Foto e etiqueta') }}</button>
           </div>
-
+          <div v-if="form.image_data" class="intake-images">
+            <figure v-if="reviewOriginal && reviewOriginal !== form.image_data"><img :src="reviewOriginal" :alt="tr('Original')" /><figcaption>{{ tr('Original') }}</figcaption></figure>
+            <figure><img :src="form.image_data" :alt="tr('Foto do produto')" /><figcaption>{{ tr('Foto do produto') }}</figcaption></figure>
+            <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="form.image_data = ''; reviewOriginal = ''">{{ tr('Remover foto') }}</button>
+          </div>
+          <section v-if="conflicts.length" ref="conflictsPanel" class="intake-conflicts" aria-live="polite">
+            <h3>{{ tr('Escolha os dados que deseja usar') }}</h3>
+            <p>{{ tr('As informações diferentes foram preservadas. Você também pode corrigir o campo e manter o valor do formulário.') }}</p>
+            <div v-for="conflict in conflicts" :key="conflict.field + conflict.source" class="intake-conflict">
+              <strong>{{ tr(intakeLabels[conflict.field]) }}</strong>
+              <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="resolveConflict(conflict, false)">{{ tr('Manter formulário') }}: {{ currentIntake()[conflict.field] || '—' }}</button>
+              <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="resolveConflict(conflict, true)">{{ tr(conflict.source === 'photo' ? 'Usar foto' : 'Usar etiqueta') }}: {{ conflict.proposed }}</button>
+            </div>
+          </section>
           <div class="form-group">
             <label>{{ tr('Nome *') }}</label>
-            <input v-model="form.name" type="text" class="form-input" :class="{ error: errors.name }" :placeholder="tr('Nome do produto')" />
+            <input ref="nameInput" v-model="form.name" type="text" class="form-input" :class="{ error: errors.name }" :placeholder="tr('Nome do produto')" />
             <span v-if="errors.name" class="error-msg">{{ tr(errors.name) }}</span>
           </div>
 
@@ -126,7 +142,7 @@
         </div>
 
         <!-- ── Stock Tab ── -->
-        <div v-if="activeTab === 'stock'" class="tab-content">
+        <div v-if="isEdit ? activeTab === 'stock' : activeTab === 'basic'" class="tab-content intake-details">
           <div class="form-group">
             <label>{{ tr('Localização') }}</label>
             <input v-model="form.location" type="text" class="form-input" :placeholder="tr('Ex: A-12, Prateleira 3...')" />
@@ -193,8 +209,16 @@
             </div>
           </div>
 
+        </div>
+        <div v-if="!isEdit && activeTab === 'stock'" class="tab-content">
+          <p v-if="errors.name" class="error-msg" role="alert">{{ tr(errors.name) }}</p>
+          <div class="intake-stock-summary">
+            <img v-if="form.image_data" :src="form.image_data" :alt="tr('Foto do produto')" />
+            <div><strong>{{ form.name || tr('Nome do produto') }}</strong><p>{{ [form.brand, form.size, form.color].filter(Boolean).join(' · ') }}</p><p>{{ tr('O estoque será lançado somente ao concluir o cadastro.') }}</p></div>
+          </div>
+          <p v-if="!intakeReviewed || conflicts.length" class="intake-conflict-note">{{ tr('Volte à conferência para revisar os dados antes de criar.') }}</p>
           <!-- Initial stock + location — only when creating -->
-          <template v-if="!isEdit">
+          <template v-if="!isEdit && activeTab === 'stock'">
             <div class="form-group">
               <label>{{ tr('Cadastrar em') }}</label>
               <div class="loc-toggle">
@@ -202,7 +226,7 @@
                 <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
               </div>
             </div>
-            <div class="form-group">
+            <div v-if="!gradeItemCount" class="form-group">
               <label>{{ tr('Estoque inicial') }}</label>
               <input v-model.number="initialStock" type="number" min="0" class="form-input" placeholder="0" />
               <span class="form-hint">{{ tr('Quantidade adicionada ao {local} ao criar o item.', { local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</span>
@@ -210,8 +234,13 @@
           </template>
         </div>
 
-        <!-- ── Grade Tab ── -->
-        <div v-if="activeTab === 'grade'" class="tab-content">
+        <div v-if="!isEdit && activeTab === 'stock'" class="intake-grade-toggle">
+          <button v-if="!gradeEnabled" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="gradeEnabled = true">{{ tr('Criar grade deste modelo') }}</button>
+          <button v-else type="button" class="erp-button erp-button--ghost erp-button--sm" @click="disableGrade">{{ tr('Cadastrar apenas esta peça') }}</button>
+        </div>
+        <!-- Grade creation is explicitly enabled; presets create the selected variants together. -->
+        <section v-if="!isEdit && activeTab === 'stock' && gradeEnabled" class="intake-grade"><h3>{{ tr('Grade de tamanhos e cores (opcional)') }}</h3><div class="tab-content">
+          <p class="intake-hint">{{ tr('Escolha um modelo de tamanhos. Cada variação recebe a foto, marca, descrição e preços desta peça. Sem selecionar outras cores, será usada a cor {color}.', { color: form.color || '—' }) }}</p>
           <div class="grade-banner">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="flex-shrink:0">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -370,8 +399,8 @@
             <span class="hint-label">{{ tr('Cod. de barras base:') }}</span>
             <code class="hint-code">{{ form.barcode }}</code>
             <span class="hint-arrow">→</span>
-            <code class="hint-code">{{ form.barcode }}<strong>{{ gradeSizes[0] || 'P' }}</strong></code>
-            <span class="hint-etc">…</span>
+            <code class="hint-code">{{ form.barcode }}<strong>{{ gradeSizes[0] || form.size.trim().toUpperCase() }}</strong></code>
+            <span>{{ tr('Na grade, o código de barras recebe o tamanho. Cada variação também terá seu próprio SKU.') }}</span>
           </div>
 
           <!-- Preview -->
@@ -384,6 +413,7 @@
                     <span class="gp-size">{{ size }}</span>
                     <span class="gp-color-badge">{{ color }}</span>
                     <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + size + ' ' + color }}</span>
+                    <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
                   </div>
                 </template>
               </template>
@@ -391,6 +421,8 @@
                 <div v-for="color in gradeColors" :key="color" class="gp-row">
                   <span class="gp-color-badge">{{ color }}</span>
                   <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + color }}</span>
+                  <span v-if="form.size" class="gp-size">{{ form.size.trim().toUpperCase() }}</span>
+                  <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + form.size.trim().toUpperCase() }}</span>
                 </div>
               </template>
               <template v-else>
@@ -407,6 +439,8 @@
             {{ tr('Selecione um modelo acima ou adicione tamanhos e/ou cores.') }}
           </div>
         </div>
+
+        </section>
 
         <!-- ── Photo Tab ── -->
         <div v-if="activeTab === 'photo'" class="tab-content">
@@ -458,11 +492,18 @@
 
           <p class="photo-hint">{{ tr('A imagem é redimensionada para 400×400px e armazenada no banco de dados.') }}</p>
         </div>
+        <template v-if="activeTab === 'basic' && needsIntakeReview">
+          <label class="intake-review-check"><input ref="reviewInput" v-model="intakeReviewed" type="checkbox" :disabled="conflicts.length > 0" />{{ tr('Conferi os dados e a foto escolhida para este produto.') }}</label>
+          <p v-if="reviewError" class="error-msg" role="alert">{{ tr(reviewError) }}</p>
+        </template>
       </div>
 
+      <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeItemCount || 1, quantity: gradeItemCount ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer">
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
-        <button v-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving">
+        <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
+        <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
+        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
           <template v-if="saving">{{ tr('Salvando...') }}</template>
           <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
           <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>
@@ -471,9 +512,9 @@
       </div>
     </div>
 
-    <ProductPhotoAssistant v-if="showProductPhoto" @result="onProductPhotoResult" @close="showProductPhoto = false" />
+    <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
-    <OcrScanner v-if="showOcr" @result="onOcrResult" @close="showOcr = false" />
+    <OcrScanner v-if="labelOpened" :open="showOcr" draft @result="onOcrResult" @close="showOcr = false" />
     <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
   </div>
 </template>
@@ -481,12 +522,13 @@
 <script setup lang="ts">
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
-import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 import BarcodeScanner from './BarcodeScanner.vue'
 import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
 import type { ProductPhotoResult } from '@/services/productPhoto'
+import { mergeIntake, type IntakeDraft, type IntakeField, type IntakeConflict, type IntakeSource } from '@/services/productIntake'
 import OcrScanner from './OcrScanner.vue'
 import type { OcrAppliedFields } from '@/services/ocr'
 import { useI18n } from 'vue-i18n'
@@ -501,7 +543,6 @@ function toTitleCase(s: string | undefined | null): string {
 }
 
 const props = defineProps<{
-  startWithPhoto?: boolean
   item?: InventoryItem | null
   suppliers?: Array<{ id: string; name: string }>
   existingGroupKeys?: string[]
@@ -515,11 +556,23 @@ const emit = defineEmits<{
 }>()
 
 const isEdit = computed(() => !!props.item)
-const activeTab = ref('basic')
+const activeTab = ref(props.item ? 'basic' : 'capture')
+const modalBody = ref<HTMLElement>(), conflictsPanel = ref<HTMLElement>()
+const reviewInput = ref<HTMLInputElement>(), nameInput = ref<HTMLInputElement>()
+watch(activeTab, async () => { await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
 const showScanner = ref(false)
 const showOcr = ref(false)
 const showProductPhoto = ref(false)
 const showLabelTemplates = ref(false)
+const photoOpened = ref(false), labelOpened = ref(false)
+watch(showProductPhoto, value => { if (value) photoOpened.value = true })
+watch(showOcr, value => { if (value) labelOpened.value = true })
+const photoAdded = ref(false), labelAdded = ref(false), intakeReviewed = ref(false)
+const reviewOriginal = ref(''), reviewError = ref('')
+const needsIntakeReview = computed(() => !isEdit.value || photoAdded.value || labelAdded.value)
+const conflicts = ref<IntakeConflict[]>([])
+const previousSuggestions: Record<IntakeSource, IntakeDraft> = { photo: {}, label: {} }
+const intakeLabels: Record<IntakeField, string> = { name: 'Nome', description: 'Descrição', category: 'Categoria', brand: 'Marca', size: 'Tamanho', color: 'Cor', barcode: 'Código de barras', price: 'Preço de Venda' }
 const showCameraPhoto = ref(false)
 const saving = ref(false)
 const partialItems = ref<InventoryItem[]>([])
@@ -533,6 +586,10 @@ let photoStream: MediaStream | null = null
 
 // ── Grade state ──────────────────────────────────────────────────────────────
 const gradeSizes = ref<string[]>([])
+const gradeEnabled = ref(false)
+function disableGrade() {
+  gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0
+}
 const activePreset = ref('')
 const customSizeInput = ref('')
 const gradeInitialStock = ref(0)
@@ -595,7 +652,8 @@ const newPresetSizes = ref<string[]>([])
 const newPresetInput = ref('')
 
 function applyPreset(preset: GradePreset) {
-  gradeSizes.value = [...preset.sizes]
+  // The photographed variant must not disappear when applying a preset.
+  gradeSizes.value = [...new Set([form.size.trim().toUpperCase(), ...preset.sizes.map(size => size.trim().toUpperCase())].filter(Boolean))]
   activePreset.value = preset.label
 }
 
@@ -701,7 +759,6 @@ const form = reactive({
 const errors = reactive<Record<string, string>>({})
 
 onMounted(() => {
-  showProductPhoto.value = !!props.startWithPhoto
   if (props.item) {
     Object.assign(form, {
       name: props.item.name || '',
@@ -738,6 +795,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (barcodeTimer) clearTimeout(barcodeTimer)
   if (photoStream) photoStream.getTracks().forEach(t => t.stop())
 })
 
@@ -768,7 +826,7 @@ watch(() => form.barcode, (val) => {
 
 function validate() {
   Object.keys(errors).forEach(k => delete errors[k])
-  if (!form.name || form.name.length < 2) errors.name = 'Nome deve ter ao menos 2 caracteres'
+  if (form.name.trim().length < 2) errors.name = 'Nome deve ter ao menos 2 caracteres'
   const startingStock = (gradeSizes.value.length || gradeColors.value.length ? gradeInitialStock.value : initialStock.value) || 0
   if (!isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > 2_147_483_647)) {
     errors.name = 'Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.'
@@ -780,8 +838,13 @@ function validate() {
 
 async function handleSubmit() {
   if (saving.value || partialItems.value.length || uncertainSave.value) return
+  if (conflicts.value.length || (needsIntakeReview.value && !intakeReviewed.value)) {
+    reviewError.value = 'Confira os dados e resolva as diferenças antes de continuar.'
+    activeTab.value = 'basic'
+    return
+  }
   if (!validate()) {
-    activeTab.value = errors.name ? 'basic' : 'stock'
+    activeTab.value = errors.name?.startsWith('Estoque inicial') ? 'stock' : 'basic'
     return
   }
   saving.value = true
@@ -790,7 +853,7 @@ async function handleSubmit() {
   try {
     // ── Grade / color creation ────────────────────────────────────────────────
     if (!isEdit.value && (gradeSizes.value.length > 0 || gradeColors.value.length > 0)) {
-      const sharedGroupKey = form.group_key || `grade-${Date.now()}`
+      const sharedGroupKey = form.group_key || `grade-${crypto.randomUUID()}`
       const baseGradePayload = {
         name: form.name,
         description: form.description || null,
@@ -839,6 +902,8 @@ async function handleSubmit() {
           supplier_id: form.supplier_id || null,
           image_data: form.image_data || null,
           brand: form.brand || null,
+          size: form.size.trim().toUpperCase(),
+          barcode: form.barcode ? form.barcode + form.size.trim().toUpperCase() : '',
           group_key: sharedGroupKey,
         }
         for (const color of gradeColors.value) {
@@ -908,37 +973,72 @@ function onBarcodeDetected(code: string) {
   showScanner.value = false
 }
 
-function onProductPhotoResult(result: ProductPhotoResult) {
-  for (const field of ['name', 'description', 'brand', 'color', 'size'] as const) {
-    if (result[field]) form[field] = result[field]
-  }
-  if (result.category) {
-    categorySub.value = ''
-    categoryParent.value = parentCategories.includes(result.category) ? result.category : '_custom'
-    categoryCustom.value = result.category
-  }
-  form.image_data = result.image_data
-  showProductPhoto.value = false
-  activeTab.value = 'basic'
+// AI results may fill empty fields; competing evidence never overwrites a choice silently.
+function currentIntake(): IntakeDraft {
+  return { name: form.name, description: form.description, category: form.category, brand: form.brand,
+    color: form.color, size: form.size, barcode: form.barcode,
+    price: form.sale_price || priceEdited.value || isEdit.value ? `${form.sale_currency} ${form.sale_price}` : '' }
 }
-
-function onOcrResult(data: OcrAppliedFields) {
-  showOcr.value = false
-  if (data.name)       form.name  = toTitleCase(data.name)
-  if (data.brand)      form.brand = toTitleCase(data.brand)
-  if (data.size)       form.size  = data.size.trim().toUpperCase()
-  if (data.color)      form.color = toTitleCase(data.color)
-  if (data.barcode)    form.barcode   = data.barcode
-  if (data.sale_price != null) form.sale_price = data.sale_price
-  if (data.currency) { form.currency = data.currency; form.sale_currency = data.currency }
-
-  // Pre-populate grade color with detected color (normalized)
-  if (!isEdit.value && data.color) {
-    const normalized = toTitleCase(data.color)
-    if (!gradeColors.value.some(c => c.toLowerCase() === normalized.toLowerCase())) {
-      gradeColors.value = [normalized]
-    }
+const priceEdited = ref(false)
+watch(() => [form.sale_price, form.sale_currency], () => { priceEdited.value = true }, { flush: 'sync' })
+watch(form, () => { intakeReviewed.value = false; reviewError.value = '' }, { deep: true, flush: 'sync' })
+function applyIntake(data: IntakeDraft) {
+  for (const field of ['name', 'description', 'brand', 'color', 'size', 'barcode'] as const) {
+    if (data[field] !== undefined) form[field] = data[field]
   }
+  if (data.category !== undefined) {
+    const [parent, ...sub] = data.category.split('>')
+    categorySub.value = sub.join('>')
+    categoryParent.value = parentCategories.includes(parent) ? parent : '_custom'
+    categoryCustom.value = data.category
+    form.category = data.category
+  }
+  if (data.price) {
+    const [currency, amount] = data.price.split(' ')
+    form.sale_price = Number(amount); form.sale_currency = currency; form.currency = currency
+  }
+}
+function addSuggestions(data: IntakeDraft, source: IntakeSource) {
+  const merged = mergeIntake(currentIntake(), data, source, previousSuggestions[source])
+  // New evidence supersedes pending suggestions from the same source, not the form.
+  conflicts.value = conflicts.value.filter(c => c.source !== source || data[c.field] === previousSuggestions[source][c.field])
+  applyIntake(merged.additions)
+  for (const conflict of merged.conflicts) {
+    conflicts.value = conflicts.value.filter(c => c.field !== conflict.field || c.source !== conflict.source)
+    conflicts.value.push(conflict)
+  }
+  previousSuggestions[source] = { ...data }
+  intakeReviewed.value = false
+}
+function resolveConflict(conflict: IntakeConflict, useSuggestion: boolean) {
+  if (useSuggestion) applyIntake({ [conflict.field]: conflict.proposed })
+  conflicts.value = conflicts.value.filter(c => c.field !== conflict.field)
+  intakeReviewed.value = false
+}
+function onProductPhotoResult(result: ProductPhotoResult) {
+  addSuggestions(result, 'photo')
+  form.image_data = result.image_data
+  reviewOriginal.value = result.original_image || ''
+  photoAdded.value = true
+  showProductPhoto.value = false
+  activeTab.value = 'capture'
+}
+function onOcrResult(data: OcrAppliedFields) {
+  addSuggestions({ name: data.name, brand: data.brand, size: data.size, color: data.color, barcode: data.barcode,
+    price: data.sale_price != null && data.currency ? `${data.currency} ${data.sale_price}` : undefined }, 'label')
+  labelAdded.value = true
+  showOcr.value = false
+  activeTab.value = 'capture'
+}
+function continueToStock() {
+  if (conflicts.value.length || !intakeReviewed.value) {
+    reviewError.value = 'Confira os dados e resolva as diferenças antes de continuar.'
+    if (conflicts.value.length) conflictsPanel.value?.querySelector('button')?.focus()
+    else reviewInput.value?.focus()
+    return
+  }
+  if (!validate()) { nameInput.value?.focus(); return }
+  activeTab.value = 'stock'
 }
 
 // Photo handling
@@ -1019,6 +1119,52 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+
+.modal-container.intake-modal { max-width: 680px; }
+.intake-modal .tabs .tab { min-width: 0; padding: .8rem .45rem; font-size: .82rem; }
+.intake-hint { margin: 0; font-size: .83rem; line-height: 1.5; color: #64748b; }
+.intake-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.intake-source { display: flex; flex-direction: column; align-items: flex-start; gap: .65rem; padding: 1rem; border: 1px solid #dbe3ef; border-radius: 12px; background: #f8fafc; min-width: 0; }
+.intake-source h3 { font-size: .95rem; margin: 0; }
+.intake-source small { display: block; color: #64748b; font-size: .7rem; font-weight: 400; margin-top: .2rem; }
+.intake-source p { font-size: .8rem; line-height: 1.5; color: #64748b; margin: 0; flex: 1; }
+.intake-source-icon { font-size: 1.8rem; }
+.intake-thumbnail { height: 86px; width: 86px; object-fit: contain; border-radius: 8px; background: white; }
+.intake-ready { color: #15803d; font-size: .75rem; }
+.intake-review-heading { display: flex; align-items: flex-start; gap: 1rem; }
+.intake-review-heading .erp-button { flex-shrink: 0; }
+.intake-images { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.intake-images figure { margin: 0; }
+.intake-images img { width: 125px; height: 125px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 8px; }
+.intake-images figcaption { font-size: .7rem; text-align: center; color: #64748b; }
+.intake-details { margin-top: 1rem; }
+.intake-conflicts { border: 1px solid #fcd34d; border-radius: 10px; background: #fffbeb; padding: 1rem; }
+.intake-conflicts h3 { font-size: .9rem; margin: 0; color: #92400e; }
+.intake-conflicts p { font-size: .8rem; line-height: 1.5; color: #92400e; }
+.intake-conflict { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; min-width: 0; }
+.intake-conflict strong { font-size: .8rem; }
+.intake-conflict .erp-button { justify-content: flex-start; text-align: left; white-space: normal; overflow-wrap: anywhere; height: auto; }
+.intake-conflict-note { background: #fffbeb; border-radius: 8px; padding: .8rem; color: #92400e; font-size: .82rem; line-height: 1.5; }
+.intake-review-check { display: flex; align-items: flex-start; gap: .6rem; background: #eff6ff; padding: .85rem; border-radius: 8px; font-size: .85rem; margin-top: 1.2rem; }
+.intake-review-check input { accent-color: #2563eb; margin-top: .2rem; flex-shrink: 0; }
+.intake-stock-summary { display: flex; gap: 1rem; padding: .8rem; background: #f8fafc; border-radius: 10px; }
+.intake-stock-summary img { width: 64px; height: 64px; object-fit: contain; }
+.intake-stock-summary p { margin: .25rem 0; font-size: .8rem; color: #64748b; }
+.intake-grade { margin-top: 1rem; border: 1px solid #dbe3ef; border-radius: 10px; padding: .9rem; }
+.intake-grade-toggle { margin-top: 1rem; }
+.intake-grade h3 { margin: 0; cursor: pointer; color: #334155; font-size: .85rem; font-weight: 600; }
+.intake-grade .tab-content { margin-top: 1rem; }
+.intake-total { border-top: 1px solid #e2e8f0; padding: .8rem 1.25rem; font-size: .8rem; color: #475569; background: #f8fafc; }
+@media (max-width: 480px) {
+  .intake-modal .tabs .tab { font-size: .75rem; padding: .75rem .3rem; }
+  .intake-sources { grid-template-columns: 1fr; gap: .75rem; }
+  .intake-source { gap: .5rem; padding: .85rem; }
+  .intake-source-icon { font-size: 1.5rem; }
+  .intake-review-heading { flex-direction: column; gap: .65rem; }
+  .intake-modal .modal-footer { gap: .5rem; padding: .85rem; }
+  .intake-modal .modal-footer .erp-button { font-size: .8rem; padding-inline: .75rem; white-space: normal; }
+}
+
 .stock-readout { margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .stock-readout-values { display: flex; flex-wrap: wrap; gap: 1rem; padding: .75rem; font-size: .85rem; }
 .stock-readout-warning { padding: .75rem; background: #fffbeb; color: #92400e; font-size: .85rem; }
@@ -1036,24 +1182,6 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .tab-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; display: inline-block; margin-left: 4px; vertical-align: middle; }
 .modal-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
 .tab-content { display: flex; flex-direction: column; gap: 1rem; }
-.ocr-btn-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.ocr-btn {
-  display: flex; align-items: center; gap: 0.5rem; width: 100%;
-  padding: 0.6rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0;
-  border-radius: 8px; cursor: pointer; color: #15803d; font-size: 0.85rem; font-weight: 500;
-}
-.ocr-btn:hover { background: #dcfce7; }
-.ocr-btn-templates {
-  background: #faf5ff; border-color: #e9d5ff; color: #7c3aed;
-}
-.ocr-btn-templates:hover { background: #f3e8ff; }
-@media (min-width: 601px) {
-  .ocr-btn-templates { display: none; }
-}
 .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .form-group label { font-size: 0.8rem; font-weight: 500; color: #374151; display: flex; align-items: center; gap: 0.35rem; }

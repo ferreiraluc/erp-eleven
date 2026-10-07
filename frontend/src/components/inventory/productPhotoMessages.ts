@@ -1,5 +1,6 @@
 export const productPhotoMessages = {
   pt: {
+    draftUse: 'Adicionar à conferência', draftNext: 'A foto e a etiqueta serão reunidas no formulário para uma conferência única antes de criar o produto.', reviewExample: 'Conferi os dados para salvar como exemplo de etiqueta.',
     title: 'Cadastrar por foto', intro: 'Uma peça estendida, inteira e bem iluminada. Você confere tudo antes de salvar.',
     choose: 'Escolher foto', camera: 'Tirar foto', formats: 'JPEG, PNG ou WebP · até 15 MB · até 48 MP', close: 'Fechar',
     original: 'Original', cutout: 'Fundo branco', hanger: 'No cabide · IA', analyze: 'Sugerir dados', analyzing: 'Identificando a peça…',
@@ -26,6 +27,7 @@ export const productPhotoMessages = {
     manual: 'Você também pode preencher os campos sem consultar a IA.', download: 'Baixar foto escolhida',
   },
   es: {
+    draftUse: 'Agregar a la revisión', draftNext: 'La foto y la etiqueta se reunirán en el formulario para una revisión conjunta antes de crear el producto.', reviewExample: 'Revisé los datos para guardar como ejemplo de etiqueta.',
     title: 'Registrar por foto', intro: 'Una prenda extendida, completa y bien iluminada. Revise todo antes de guardar.',
     choose: 'Elegir foto', camera: 'Tomar foto', formats: 'JPEG, PNG o WebP · hasta 15 MB · hasta 48 MP', close: 'Cerrar',
     original: 'Original', cutout: 'Fondo blanco', hanger: 'En percha · IA', analyze: 'Sugerir datos', analyzing: 'Identificando la prenda…',
@@ -52,6 +54,7 @@ export const productPhotoMessages = {
     manual: 'También puede completar los campos sin consultar la IA.', download: 'Descargar foto elegida',
   },
   en: {
+    draftUse: 'Add to review', draftNext: 'The photo and label will be combined in the form for one review before creating the product.', reviewExample: 'I checked the details to save as a label example.',
     title: 'Register from photo', intro: 'One flat, fully visible, well-lit garment. Review everything before saving.',
     choose: 'Choose photo', camera: 'Take photo', formats: 'JPEG, PNG or WebP · up to 15 MB · up to 48 MP', close: 'Close',
     original: 'Original', cutout: 'White background', hanger: 'On hanger · AI', analyze: 'Suggest details', analyzing: 'Identifying the garment…',

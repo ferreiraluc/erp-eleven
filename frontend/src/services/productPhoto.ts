@@ -6,7 +6,7 @@ export interface ProductPhotoFields {
 export interface ProductPhotoAnalysis extends ProductPhotoFields {
   single_product: boolean; brand_evidence: string; size_evidence: string
 }
-export interface ProductPhotoResult extends ProductPhotoFields { image_data: string }
+export interface ProductPhotoResult extends ProductPhotoFields { image_data: string; original_image?: string }
 export const photoStatus = async () => (await api.get<{ editing_available: boolean; model: string }>('/api/product-photo/status')).data
 export const analyzePhoto = async (image: string, signal: AbortSignal) =>
   (await api.post<ProductPhotoAnalysis>('/api/product-photo/analyze', { image }, { signal, timeout: 45000 })).data

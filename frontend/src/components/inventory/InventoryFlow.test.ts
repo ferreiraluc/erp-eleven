@@ -17,10 +17,11 @@ async function mount(component: Component, props: Record<string, unknown> = {}) 
   container = document.createElement('div'); document.body.append(container)
   const i18n = createI18n({ legacy: false, locale: 'pt', fallbackLocale: 'pt', messages: { pt: {}, es: {}, en: {} } })
   app = createApp(component, props).use(i18n); app.mount(container); await nextTick()
+  if (component === ItemFormModal && !props.item) { button('Conferir dados').click(); await nextTick() }
   return i18n
 }
 function button(text: string) {
-  const found = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.trim() === text)
+  const found = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.trim() === text || b.textContent?.trim() === '3 · ' + text)
   if (!found) throw new Error(`Button missing: ${text}`)
   return found
 }
@@ -31,6 +32,12 @@ function field(label: string) {
   const group = Array.from(container.querySelectorAll('.form-group')).find(g => g.querySelector('label')?.textContent?.trim() === label)
   if (!group) throw new Error(`Field missing: ${label}`)
   return group.querySelector('input') as HTMLInputElement
+}
+async function reviewProduct() {
+  await nextTick()
+  const checkbox = container.querySelector('.intake-review-check input') as HTMLInputElement
+  checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+  button('Continuar para estoque').click(); await nextTick()
 }
 beforeEach(() => {
   localStorage.clear(); api.createMovement.mockResolvedValue({}); api.transferBulk.mockResolvedValue({})
@@ -95,7 +102,7 @@ describe('Initial stock registration failures', () => {
   it('rejects a fractional initial balance before creating any item', async () => {
     await mount(ItemFormModal)
     setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Loja')
-    button('Estoque').click(); await nextTick()
+    await reviewProduct()
     setInput(field('Estoque inicial'), '1.5')
     button('Criar').click(); await nextTick()
     expect(api.createItem).not.toHaveBeenCalled()
@@ -108,7 +115,7 @@ describe('Initial stock registration failures', () => {
     const saved = vi.fn(), partial = vi.fn()
     const i18n = await mount(ItemFormModal, { onSaved: saved, onPartial: partial })
     setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Loja')
-    button('Estoque').click(); await nextTick()
+    await reviewProduct()
     setInput(field('Estoque inicial'), '5')
     button('Criar').click()
     await vi.waitFor(() => expect(partial).toHaveBeenCalledWith([item]))
@@ -127,7 +134,7 @@ describe('Initial stock registration failures', () => {
     const saved = vi.fn(), partial = vi.fn()
     await mount(ItemFormModal, { onSaved: saved, onPartial: partial })
     setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Loja')
-    button('Estoque').click(); await nextTick()
+    await reviewProduct()
     setInput(field('Estoque inicial'), '3')
     button('Criar').click()
     await vi.waitFor(() => expect(saved).toHaveBeenCalledWith(item))
@@ -140,7 +147,7 @@ describe('Initial stock registration failures', () => {
     const saved = vi.fn(), partial = vi.fn()
     await mount(ItemFormModal, { onSaved: saved, onPartial: partial })
     setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Loja')
-    button('Grade').click(); await nextTick()
+    await reviewProduct(); button('Criar grade deste modelo').click(); await nextTick()
     button('Navy').click(); button('Branco').click(); await nextTick()
     setInput(field('Estoque inicial por tamanho'), '2')
     button('Criar grade (2 itens)').click()
@@ -158,7 +165,7 @@ describe('Initial stock registration failures', () => {
     const saved = vi.fn(), partial = vi.fn()
     await mount(ItemFormModal, { onSaved: saved, onPartial: partial })
     setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Loja')
-    button('Criar').click()
+    await reviewProduct(); button('Criar').click()
     await vi.waitFor(() => expect(partial).toHaveBeenCalledWith([]))
     expect(saved).not.toHaveBeenCalled(); expect(api.createMovement).not.toHaveBeenCalled()
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Confira o inventário antes de tentar criar novamente.')

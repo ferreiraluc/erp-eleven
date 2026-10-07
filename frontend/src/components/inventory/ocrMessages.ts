@@ -1,5 +1,6 @@
 export const ocrMessages = {
   pt: {
+    draftUse: 'Adicionar à conferência', draftNext: 'A foto e a etiqueta serão reunidas no formulário para uma conferência única antes de criar o produto.', reviewExample: 'Conferi os dados para salvar como exemplo de etiqueta.',
     savedExamples: 'Exemplos de etiquetas salvos', noExamples: 'Nenhum exemplo salvo.', noExamplesFor: 'Nenhum exemplo salvo para', useSaveExample: 'Use Salvar exemplo revisado no leitor de etiquetas para guardar referências.',
     title: 'Conferir etiqueta com IA', close: 'Fechar', brandHint: 'Marca de referência (opcional; não preenche a leitura)',
     examples: '{count} exemplos disponíveis', frame: 'Enquadre uma etiqueta legível, com boa iluminação.', capture: 'Capturar', upload: 'Escolher imagem',
@@ -21,6 +22,7 @@ export const ocrMessages = {
     ignored_template: 'Um exemplo antigo não pôde ser validado e foi ignorado.', unverified: 'Um ou mais campos não tiveram evidência suficiente e ficaram vazios.',
   },
   es: {
+    draftUse: 'Agregar a la revisión', draftNext: 'La foto y la etiqueta se reunirán en el formulario para una revisión conjunta antes de crear el producto.', reviewExample: 'Revisé los datos para guardar como ejemplo de etiqueta.',
     savedExamples: 'Ejemplos de etiquetas guardados', noExamples: 'No hay ejemplos guardados.', noExamplesFor: 'No hay ejemplos guardados para', useSaveExample: 'Use Guardar ejemplo revisado en el lector de etiquetas para guardar referencias.',
     title: 'Revisar etiqueta con IA', close: 'Cerrar', brandHint: 'Marca de referencia (opcional; no completa la lectura)',
     examples: '{count} ejemplos disponibles', frame: 'Encuadre una etiqueta legible con buena iluminación.', capture: 'Capturar', upload: 'Elegir imagen',
@@ -42,6 +44,7 @@ export const ocrMessages = {
     ignored_template: 'Un ejemplo anterior no pudo validarse y se ignoró.', unverified: 'Uno o más campos no tuvieron evidencia suficiente y quedaron vacíos.',
   },
   en: {
+    draftUse: 'Add to review', draftNext: 'The photo and label will be combined in the form for one review before creating the product.', reviewExample: 'I checked the details to save as a label example.',
     savedExamples: 'Saved label examples', noExamples: 'No saved examples.', noExamplesFor: 'No saved examples for', useSaveExample: 'Use Save reviewed example in the label reader to keep references.',
     title: 'Review label with AI', close: 'Close', brandHint: 'Reference brand (optional; does not fill the result)',
     examples: '{count} examples available', frame: 'Frame a readable label in good lighting.', capture: 'Capture', upload: 'Choose image',

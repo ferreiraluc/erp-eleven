@@ -537,7 +537,7 @@ def create_grade(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
     """Create a full size grid (grade) — one item per size, all sharing the same group_key."""
-    sizes = [s.strip() for s in grade.sizes if s.strip()]
+    sizes = list(dict.fromkeys(s.strip().upper() for s in grade.sizes if s.strip()))
     if not sizes:
         raise HTTPException(status_code=400, detail="Informe ao menos um tamanho para criar a grade")
 
@@ -555,7 +555,7 @@ def create_grade(
 
     created_items: list[Item] = []
     for size in sizes:
-        # Barcode: base_barcode + size (e.g. "7891234P" or "789123438")
+        # Store the explicit business code for the variant: base barcode + size.
         item_barcode = f"{grade.base_barcode}{size}" if grade.base_barcode else None
         item_name = f"{norm_name.strip()} {size}"
 
@@ -591,31 +591,31 @@ def create_grade(
         db.add(db_item)
         created_items.append(db_item)
 
+    # Persist variants and their initial movements together. A failed entry must not
+    # leave an undisclosed, half-created grade that would be duplicated on retry.
     try:
+        db.flush()
+        if grade.initial_stock and grade.initial_stock > 0:
+            for item in created_items:
+                create_movement(
+                    db=db,
+                    item_id=item.id,
+                    movement_type="entry",
+                    quantity=grade.initial_stock,
+                    reason="Estoque inicial — criação de grade",
+                    created_by=current_user.id,
+                    location=grade.stock_location or "loja",
+                )
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Erro ao criar grade — possível conflito de SKU")
+    except Exception:
+        db.rollback()
+        raise
 
     for item in created_items:
         db.refresh(item)
-
-    # Create initial stock movements if requested
-    if grade.initial_stock and grade.initial_stock > 0:
-        stock_loc = grade.stock_location or "loja"
-        for item in created_items:
-            create_movement(
-                db=db,
-                item_id=item.id,
-                movement_type="entry",
-                quantity=grade.initial_stock,
-                reason="Estoque inicial — criação de grade",
-                created_by=current_user.id,
-                location=stock_loc,
-            )
-        db.commit()
-        for item in created_items:
-            db.refresh(item)
 
     item_responses = []
     for item in created_items:

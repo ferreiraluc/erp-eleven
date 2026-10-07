@@ -119,8 +119,10 @@ só por ter pouco uso; sua retirada exige avaliar dados, referências e consumid
 
 ### Cadastro por foto do produto
 
-Fluxo separado do OCR, com sugestões revisáveis pelo provedor de visão, recorte local
-U2NetP e edição opcional no cabide com OpenAI em qualidade econômica. A foto não
-define estoque, preço, SKU ou identidade. A prévia exige revisão e só preenche o
-formulário existente. Limites de mídia, custos e manutenção do modelo estão no
+Cadastro unificado com foto e leitura de etiqueta opcionais, sugestões combinadas
+com escolha explícita quando há divergência e conferência manual antes do estoque.
+Preserva recorte local U2NetP e edição opcional no cabide com OpenAI em qualidade
+econômica. A foto não define estoque, preço, SKU ou identidade. A opção explícita
+**Criar grade deste modelo** reaproveita os dados e a foto nos tamanhos/cores
+selecionados no novo cadastro, sem gerar quantidades pela IA. Limites de mídia, custos e manutenção do modelo estão no
 [guia de estoque](ESTOQUE_OCR.md#cadastro-por-foto-do-produto).
