@@ -40,7 +40,7 @@
                     <p>{{ quantity(line.quantity) }} × {{ money(line.unit_price_gs) }} · {{ location(line.location) }}</p>
                     <p>{{ tr('Total desta linha') }}: <strong>{{ money(line.total_gs) }}</strong></p>
                     <p v-if="Number(line.discount_gs)">{{ tr('Desconto desta linha') }}: {{ money(line.discount_gs) }}</p>
-                    <p class="history-hint">{{ tr(line.link === 'item_id' ? 'Vínculo direto com este produto' : 'Referência histórica pelo SKU, sem vínculo direto') }}</p>
+                    <p class="history-hint">{{ tr(line.link === 'item_id' ? 'Vínculo direto com este produto' : line.link === 'revision' ? 'Item de uma revisão anterior da venda; consulte o gestor de Vendas para os dados atuais.' : 'Referência histórica pelo SKU, sem vínculo direto') }}</p>
                     <p v-if="line.is_avulso" class="history-warning">{{ tr('Item avulso: não movimenta estoque.') }}</p>
                   </div>
                   <p>{{ tr('Total da venda inteira') }}: {{ money(row.sale_total_gs) }}</p>
@@ -85,7 +85,7 @@ const quantity = (v: string | number | null) => v === null ? tr('Não informado'
 const money = (v: string | null) => v === null ? tr('Não informado') : `G$ ${Number(v).toLocaleString(numberLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const location = (v: string | null) => tr(v === 'loja' ? 'Loja' : v === 'deposito' ? 'Depósito' : v || 'Não informado')
 const value = (v: unknown) => v == null ? tr('Não registrado') : typeof v === 'boolean' ? tr(v ? 'Sim' : 'Não') : String(v)
-const status = (v: string) => tr(({ completed: 'Concluída', cancelled: 'Cancelada', open: 'Aberta', counting: 'Em contagem', reviewing: 'Em revisão', applied: 'Aplicada' } as Record<string, string>)[v] || v)
+const status = (v: string) => tr(({ completed: 'Concluída', partially_refunded: 'Devolução parcial', refunded: 'Estornada', cancelled: 'Cancelada', open: 'Aberta', counting: 'Em contagem', reviewing: 'Em revisão', applied: 'Aplicada' } as Record<string, string>)[v] || v)
 const reason = (v: string) => tr(v === 'pdv_sale' ? 'Venda PDV' : v === 'pdv_cancel' ? 'Cancelamento de venda PDV' : v)
 function heading(row: ProductHistory['rows'][number]) {
   if (row.kind === 'sales') return `${tr('Venda PDV')} · ${status(row.status)}`

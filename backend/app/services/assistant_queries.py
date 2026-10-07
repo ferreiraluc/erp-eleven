@@ -346,14 +346,14 @@ def query_sales(db, args, user_id):
             "resultados": [{"data": scalar(sale.data_venda), "vendedor": name, "moeda": scalar(sale.moeda),
                             "bruto": scalar(sale.valor_bruto), "liquido": scalar(sale.valor_liquido)} for sale, name in rows]}
     if args.origem in ("ambos", "pdv"):
-        q = db.query(PdvSale).outerjoin(Usuario, Usuario.id == PdvSale.vendedor_id).filter(PdvSale.status == "completed")
+        q = db.query(PdvSale).outerjoin(Usuario, Usuario.id == PdvSale.vendedor_id).filter(PdvSale.status.in_(['completed','partially_refunded']),PdvSale.deleted_at.is_(None))
         q = sales_query(q, PdvSale, user, pdv=True)
         q = date_filter(q, PdvSale.created_at, args, timestamp=True)
         if args.vendedor:
             q = q.filter(contains([Usuario.nome], args.vendedor))
-        total = q.with_entities(func.coalesce(func.sum(PdvSale.total_gs), 0)).scalar()
+        total = q.with_entities(func.coalesce(func.sum(PdvSale.total_gs-PdvSale.refunded_gs), 0)).scalar()
         rows, info = page(q.add_columns(Usuario.nome).order_by(PdvSale.created_at.desc(), PdvSale.id.desc()), args)
         result["pdv"] = {**info, "valor_total_gs": scalar(total), "moeda": "G$",
             "resultados": [{"data_utc": scalar(sale.created_at), "vendedor": name, "cliente": sale.cliente_nome,
-                            "total_gs": scalar(sale.total_gs)} for sale, name in rows]}
+                            "total_gs": scalar(sale.total_gs-sale.refunded_gs), "estornado_gs": scalar(sale.refunded_gs)} for sale, name in rows]}
     return result

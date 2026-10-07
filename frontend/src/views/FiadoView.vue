@@ -53,7 +53,7 @@
           <div class="fiado-saldo" :class="(client.saldo_fiado_gs ?? 0) > 0 ? 'saldo-debt' : 'saldo-zero'">
             {{ fmtGs((client.saldo_fiado_gs ?? 0)) }}
           </div>
-          <div class="fiado-saldo-label">{{ (client.saldo_fiado_gs ?? 0) > 0 ? 'deve' : uiText(`em dia`) }}</div>
+          <div class="fiado-saldo-label">{{ (client.saldo_fiado_gs ?? 0) > 0 ? 'deve' : (client.saldo_fiado_gs ?? 0) < 0 ? salesText('Crédito a favor do cliente') : uiText(`em dia`) }}</div>
         </div>
       </div>
     </div>
@@ -76,7 +76,7 @@
         </div>
 
         <div class="fiado-detail-balance">
-          <span class="fiado-balance-label">{{ $tr("Saldo devedor") }}</span>
+          <span class="fiado-balance-label">{{ (selectedClient.saldo_fiado_gs ?? 0) < 0 ? salesText('Crédito a favor do cliente') : $tr("Saldo devedor") }}</span>
           <span class="fiado-balance-value" :class="(selectedClient.saldo_fiado_gs ?? 0) > 0 ? 'saldo-debt' : 'saldo-zero'">
             {{ fmtGs((selectedClient.saldo_fiado_gs ?? 0)) }}
           </span>
@@ -121,7 +121,7 @@
             <div v-for="mv in movements" :key="mv.id" class="fiado-movement-row" :class="`mv-${mv.tipo}`">
               <div class="mv-icon">{{ mv.tipo === 'debit' ? '−' : '+' }}</div>
               <div class="mv-info">
-                <span class="mv-tipo">{{ mv.tipo === 'debit' ? uiText(`Compra`) : uiText(`Pagamento`) }}</span>
+                <span class="mv-tipo">{{ mv.tipo === 'debit' ? uiText(`Compra`) : mv.tipo === 'credit' ? salesText('Estorno de venda') : uiText(`Pagamento`) }}</span>
                 <span v-if="mv.notas" class="mv-notes">{{ mv.notas }}</span>
                 <span class="mv-date">{{ formatDate(mv.created_at) }}</span>
               </div>
@@ -194,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import { tr as salesText } from '@/components/pdv/management/i18n'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted } from 'vue'
@@ -218,7 +219,7 @@ interface Toast { msg: string; type: 'success' | 'error' }
 const toast = ref<Toast | null>(null)
 let toastTimer: ReturnType<typeof setTimeout>
 
-const totalSaldo = computed(() => clients.value.reduce((s, c) => s + (c.saldo_fiado_gs ?? 0), 0))
+const totalSaldo = computed(() => clients.value.reduce((s, c) => s + Math.max(c.saldo_fiado_gs ?? 0, 0), 0))
 const clientsWithBalance = computed(() => clients.value.filter(c => (c.saldo_fiado_gs ?? 0) > 0).length)
 const filteredClients = computed(() => {
   if (!search.value) return clients.value

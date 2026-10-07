@@ -10,7 +10,7 @@ export interface ProductMovement extends HistoryBase {
 export interface ProductSale extends HistoryBase {
   kind: 'sales'; status: string; updated_at: string | null; seller: string | null; customer: string | null
   stock_applied: boolean; sale_total_gs: string | null
-  lines: Array<{ id: string; link: 'item_id' | 'legacy_sku'; name: string; sku: string | null
+  lines: Array<{ id: string; link: 'item_id' | 'legacy_sku' | 'revision'; name: string; sku: string | null
     size: string | null; color: string | null; quantity: string | null; unit_price_gs: string | null
     discount_gs: string | null; total_gs: string | null; location: string | null; is_avulso: boolean }>
 }

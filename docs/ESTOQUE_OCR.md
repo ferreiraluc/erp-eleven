@@ -80,8 +80,9 @@ cuja consulta é paginada e não carrega fotos.
 A retirada do catálogo não cancela vendas, não devolve dinheiro, não remove
 faturamento histórico nem registra saída física fictícia. Saldos preservados não
 entram no disponível. Uma venda com produto excluído que precise de devolução de
-estoque exige revisão: o cancelamento é recusado atomicamente, sem reativar o
-produto nem fazer devolução silenciosa. A exclusão física para itens sem vínculos
+estoque exige revisão: a reposição é recusada atomicamente, sem reativar o
+produto. No gestor de Vendas, Lucas pode escolher estorno sem reposição, com
+prévia dos efeitos financeiros. A exclusão física para itens sem vínculos
 continua disponível pelo fluxo anterior.
 
 Migração: `f2a3b4c5d6e7`, sem alterar registros existentes. Testes de histórico,
@@ -395,7 +396,7 @@ original uma única vez. É possível devolver estoque de um produto que ficou
 inativo após a venda. Dados legados sem produto/local ou com quantidade de catálogo
 fracionária exigem revisão; o sistema não inventa o local nem arredonda a devolução.
 O histórico original é preservado. A permissão de vendas pessoais continua sendo
-verificada antes de permitir leitura ou cancelamento de outra venda.
+verificada na leitura. Cancelamentos e demais alterações são exclusivos de Lucas.
 
 Na tela, a busca indica o saldo por loja/depósito e permite escolher o local.
 Linhas de locais diferentes permanecem separadas. O carrinho considera todas as
@@ -410,10 +411,10 @@ incerto e bloqueia novo envio daquele rascunho. Confira o histórico antes de li
 o carrinho e tentar de novo. O POST de criação ainda não tem chave de idempotência;
 a trava na tela não garante execução única entre dispositivos ou chamadas diretas.
 
-Esta revisão trata de estoque. O cancelamento atual muda o estado e devolve os
-produtos, mas **não automatiza reembolso nem estorno do débito de fiado**. Validação
-financeira, arredondamento monetário e concorrência de saldos de fiado permanecem
-fluxos separados a revisar. O BI Excel não cria vendas ou baixas no PDV.
+O gestor documentado em [VENDAS_PDV.md](VENDAS_PDV.md) permite correção, devolução
+parcial, estorno integral e exclusão com histórico. Estoque e fiado são ajustados
+atomicamente; a prévia identifica o valor a devolver por fora do ERP. Nenhum
+reembolso bancário é automatizado. O BI Excel não cria vendas ou baixas no PDV.
 
 
 ## Contagem física por local

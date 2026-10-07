@@ -1,0 +1,534 @@
+{
+  "Abatimento do fiado": [
+    "Abono al crédito",
+    "Store credit reduction"
+  ],
+  "Adicionar item": [
+    "Añadir artículo",
+    "Add item"
+  ],
+  "Adicionar pagamento": [
+    "Añadir pago",
+    "Add payment"
+  ],
+  "Antes": [
+    "Antes",
+    "Before"
+  ],
+  "Até": [
+    "Hasta",
+    "To"
+  ],
+  "Buscando...": [
+    "Buscando...",
+    "Searching..."
+  ],
+  "Buscar cliente cadastrado": [
+    "Buscar cliente registrado",
+    "Search registered customer"
+  ],
+  "Buscar produto por nome, SKU ou código": [
+    "Buscar producto por nombre, SKU o código",
+    "Search product by name, SKU or code"
+  ],
+  "Canceladas": [
+    "Canceladas",
+    "Cancelled"
+  ],
+  "Carregando venda...": [
+    "Cargando venta...",
+    "Loading sale..."
+  ],
+  "Carregando vendas...": [
+    "Cargando ventas...",
+    "Loading sales..."
+  ],
+  "Cliente e vendedor": [
+    "Cliente y vendedor",
+    "Customer and seller"
+  ],
+  "Cliente não informado": [
+    "Cliente no indicado",
+    "Customer not provided"
+  ],
+  "Cliente selecionado": [
+    "Cliente seleccionado",
+    "Selected customer"
+  ],
+  "Cliente, produto, SKU ou código da venda": [
+    "Cliente, producto, SKU o código de venta",
+    "Customer, product, SKU or sale ID"
+  ],
+  "Conferi os itens, os valores e os efeitos desta operação.": [
+    "Revisé los artículos, valores y efectos de esta operación.",
+    "I reviewed the items, amounts and effects of this operation."
+  ],
+  "Confira antes de confirmar": [
+    "Revise antes de confirmar",
+    "Review before confirming"
+  ],
+  "Câmbio para G$": [
+    "Cambio a G$",
+    "Exchange rate to G$"
+  ],
+  "Código completo da venda": [
+    "Código completo de la venta",
+    "Full sale ID"
+  ],
+  "De": [
+    "Desde",
+    "From"
+  ],
+  "Depois": [
+    "Después",
+    "After"
+  ],
+  "Depósito": [
+    "Depósito",
+    "Warehouse"
+  ],
+  "Desconto da venda G$": [
+    "Descuento de la venta G$",
+    "Sale discount G$"
+  ],
+  "Desconto do item G$": [
+    "Descuento del artículo G$",
+    "Item discount G$"
+  ],
+  "Descreva o que precisa ser corrigido ou devolvido": [
+    "Describa lo que necesita corregirse o devolverse",
+    "Describe what needs correcting or returning"
+  ],
+  "Descrição do item": [
+    "Descripción del artículo",
+    "Item description"
+  ],
+  "Detalhes da venda": [
+    "Detalles de la venta",
+    "Sale details"
+  ],
+  "Devolução parcial": [
+    "Devolución parcial",
+    "Partial return"
+  ],
+  "Devoluções registradas": [
+    "Devoluciones registradas",
+    "Recorded refunds"
+  ],
+  "Devolver": [
+    "Devolver",
+    "Return"
+  ],
+  "Devolvidos": [
+    "Devueltos",
+    "Returned"
+  ],
+  "Diferença": [
+    "Diferencia",
+    "Difference"
+  ],
+  "Diferença entre pagamentos e total (pode incluir troco)": [
+    "Diferencia entre pagos y total (puede incluir cambio)",
+    "Difference between payments and total (may include change)"
+  ],
+  "Disponível": [
+    "Disponible",
+    "Available"
+  ],
+  "Editar venda": [
+    "Editar venta",
+    "Edit sale"
+  ],
+  "Efeito no estoque": [
+    "Efecto en el inventario",
+    "Inventory impact"
+  ],
+  "Efeito no fiado": [
+    "Efecto en el crédito",
+    "Store credit impact"
+  ],
+  "Estornado": [
+    "Reembolsado",
+    "Refunded"
+  ],
+  "Estornada": [
+    "Reembolsada",
+    "Refunded"
+  ],
+  "Estorno": [
+    "Reembolso",
+    "Refund"
+  ],
+  "Estorno integral": [
+    "Reembolso total",
+    "Full refund"
+  ],
+  "Estorno nesta operação": [
+    "Reembolso en esta operación",
+    "Refund in this operation"
+  ],
+  "Excluir venda": [
+    "Eliminar venta",
+    "Delete sale"
+  ],
+  "Exportar página": [
+    "Exportar página",
+    "Export page"
+  ],
+  "Histórico de alterações": [
+    "Historial de cambios",
+    "Revision history"
+  ],
+  "Histórico de excluídas": [
+    "Historial de eliminadas",
+    "Deleted sales history"
+  ],
+  "Informe os valores aplicados, sem incluir troco. A soma deve coincidir com o total corrigido.": [
+    "Indique los importes aplicados, sin incluir cambio. La suma debe coincidir con el total corregido.",
+    "Enter applied amounts, excluding change. They must match the corrected total."
+  ],
+  "Item avulso": [
+    "Artículo sin catálogo",
+    "Non-catalog item"
+  ],
+  "Itens da venda": [
+    "Artículos de la venta",
+    "Sale items"
+  ],
+  "Itens e pagamentos": [
+    "Artículos y pagos",
+    "Items and payments"
+  ],
+  "Limpar filtros": [
+    "Limpiar filtros",
+    "Clear filters"
+  ],
+  "Listagem": [
+    "Listado",
+    "Listing"
+  ],
+  "Local": [
+    "Ubicación",
+    "Location"
+  ],
+  "Loja": [
+    "Tienda",
+    "Store"
+  ],
+  "Motivo da alteração": [
+    "Motivo del cambio",
+    "Reason for change"
+  ],
+  "Nenhuma movimentação de estoque nesta operação.": [
+    "No hay movimiento de inventario en esta operación.",
+    "No inventory movement in this operation."
+  ],
+  "Nenhuma revisão registrada. As alterações são acompanhadas a partir desta versão.": [
+    "No hay revisiones registradas. Los cambios se registran a partir de esta versión.",
+    "No revisions recorded. Changes are tracked from this version onward."
+  ],
+  "Nenhuma venda encontrada neste filtro.": [
+    "No se encontraron ventas con este filtro.",
+    "No sales found with these filters."
+  ],
+  "Nome do cliente sem cadastro": [
+    "Nombre del cliente sin registro",
+    "Unregistered customer name"
+  ],
+  "Pagamentos": [
+    "Pagos",
+    "Payments"
+  ],
+  "Pagamentos aplicados à venda": [
+    "Pagos aplicados a la venta",
+    "Payments applied to the sale"
+  ],
+  "Preço unitário G$": [
+    "Precio unitario G$",
+    "Unit price G$"
+  ],
+  "Produto excluído: use devolução sem reposição para preservar o catálogo.": [
+    "Producto eliminado: use devolución sin reposición para preservar el catálogo.",
+    "Deleted product: use return without restocking to preserve the catalog."
+  ],
+  "Quantidade": [
+    "Cantidad",
+    "Quantity"
+  ],
+  "Quantidade devolvida": [
+    "Cantidad devuelta",
+    "Returned quantity"
+  ],
+  "Referência do pagamento": [
+    "Referencia del pago",
+    "Payment reference"
+  ],
+  "Registrado por": [
+    "Registrado por",
+    "Recorded by"
+  ],
+  "Remover item": [
+    "Quitar artículo",
+    "Remove item"
+  ],
+  "Remover pagamento": [
+    "Quitar pago",
+    "Remove payment"
+  ],
+  "Remover vínculo": [
+    "Quitar vínculo",
+    "Remove link"
+  ],
+  "Repor as peças restantes no estoque de origem": [
+    "Reponer las piezas restantes en el inventario de origen",
+    "Restock remaining items in the original location"
+  ],
+  "Repor no estoque": [
+    "Reponer en inventario",
+    "Restock"
+  ],
+  "Revisão": [
+    "Revisión",
+    "Revision"
+  ],
+  "Selecionar produto": [
+    "Seleccionar producto",
+    "Select product"
+  ],
+  "Selecione as quantidades devolvidas. Os descontos da venda são distribuídos proporcionalmente.": [
+    "Seleccione las cantidades devueltas. Los descuentos se distribuyen proporcionalmente.",
+    "Select returned quantities. Sale discounts are allocated proportionally."
+  ],
+  "Selecione um produto": [
+    "Seleccione un producto",
+    "Select a product"
+  ],
+  "Situação": [
+    "Estado",
+    "Status"
+  ],
+  "Total anterior": [
+    "Total anterior",
+    "Previous total"
+  ],
+  "Total corrigido": [
+    "Total corregido",
+    "Corrected total"
+  ],
+  "Total da venda": [
+    "Total de la venta",
+    "Sale total"
+  ],
+  "Total do item": [
+    "Total del artículo",
+    "Item total"
+  ],
+  "Valor a devolver fora do ERP": [
+    "Importe a devolver fuera del ERP",
+    "Amount to refund outside the ERP"
+  ],
+  "Valor após a operação": [
+    "Valor después de la operación",
+    "Amount after operation"
+  ],
+  "Valor líquido": [
+    "Valor neto",
+    "Net amount"
+  ],
+  "Valor líquido no ERP": [
+    "Valor neto en el ERP",
+    "Net amount in ERP"
+  ],
+  "Valor na moeda": [
+    "Importe en la moneda",
+    "Amount in currency"
+  ],
+  "Venda excluída da listagem. O histórico está preservado.": [
+    "Venta eliminada del listado. Se conserva el historial.",
+    "Sale removed from listing. History is preserved."
+  ],
+  "Vendas no período": [
+    "Ventas del período",
+    "Sales in period"
+  ],
+  "Vendas registradas no PDV. Os resultados das planilhas continuam na Visão de vendas.": [
+    "Ventas registradas en el PDV. Los resultados de las planillas siguen en Visión de ventas.",
+    "Sales recorded in POS. Spreadsheet results remain in Sales Insights."
+  ],
+  "Vendas visíveis": [
+    "Ventas visibles",
+    "Visible sales"
+  ],
+  "Vendedor não informado": [
+    "Vendedor no indicado",
+    "Seller not provided"
+  ],
+  "Ver itens antes e depois": [
+    "Ver artículos antes y después",
+    "View items before and after"
+  ],
+  "Ver venda": [
+    "Ver venta",
+    "View sale"
+  ],
+  "Você está consultando apenas suas vendas.": [
+    "Está consultando solo sus ventas.",
+    "You are viewing only your own sales."
+  ],
+  "Voltar à edição": [
+    "Volver a editar",
+    "Back to editing"
+  ],
+  "itens": [
+    "artículos",
+    "items"
+  ],
+  "vendas encontradas": [
+    "ventas encontradas",
+    "sales found"
+  ],
+  "Com reposição ao estoque": [
+    "Con reposición al inventario",
+    "With restocking"
+  ],
+  "Sem reposição ao estoque": [
+    "Sin reposición al inventario",
+    "Without restocking"
+  ],
+  "A exclusão retira a venda da listagem e estorna o saldo restante, preservando todos os registros.": [
+    "La eliminación retira la venta del listado y revierte el saldo restante, conservando todos los registros.",
+    "Deletion removes the sale from the listing and reverses the remaining amount, preserving all records."
+  ],
+  "O estorno integral devolve todas as peças restantes e registra a reversão do valor ainda não estornado.": [
+    "El reembolso total devuelve todas las piezas restantes y registra la reversión del importe pendiente.",
+    "A full refund returns all remaining items and reverses the amount not yet refunded."
+  ],
+  "Processando...": [
+    "Procesando...",
+    "Processing..."
+  ],
+  "Tentar a mesma confirmação": [
+    "Reintentar la misma confirmación",
+    "Retry the same confirmation"
+  ],
+  "Confirmar operação": [
+    "Confirmar operación",
+    "Confirm operation"
+  ],
+  "Conferindo...": [
+    "Revisando...",
+    "Reviewing..."
+  ],
+  "Revisar alterações": [
+    "Revisar cambios",
+    "Review changes"
+  ],
+  "Crédito a favor do cliente": [
+    "Crédito a favor del cliente",
+    "Credit in customer's favor"
+  ],
+  "Estorno de venda": [
+    "Reembolso de venta",
+    "Sale reversal"
+  ],
+  "Concluída": [
+    "Completada",
+    "Completed"
+  ],
+  "Cancelada": [
+    "Cancelada",
+    "Cancelled"
+  ],
+  "Dinheiro G$": [
+    "Efectivo G$",
+    "Cash G$"
+  ],
+  "Dinheiro R$": [
+    "Efectivo R$",
+    "Cash R$"
+  ],
+  "Dinheiro US$": [
+    "Efectivo US$",
+    "Cash US$"
+  ],
+  "Dinheiro €": [
+    "Efectivo €",
+    "Cash €"
+  ],
+  "Cartão": [
+    "Tarjeta",
+    "Card"
+  ],
+  "Fiado": [
+    "Crédito",
+    "Store credit"
+  ],
+  "Não foi possível concluir. Confira sua conexão e tente novamente.": [
+    "No se pudo completar. Compruebe la conexión e intente de nuevo.",
+    "Could not complete. Check your connection and try again."
+  ],
+  "Estorno registrado no ERP. A devolução por dinheiro, Pix ou cartão é realizada fora do sistema.": [
+    "Reembolso registrado en el ERP. La devolución por efectivo, Pix o tarjeta se realiza fuera del sistema.",
+    "Refund recorded in the ERP. Cash, Pix or card refunds are performed outside the system."
+  ],
+  "O abatimento gera saldo a favor do cliente no fiado; confira valores já recebidos antes de devolver dinheiro.": [
+    "El abono genera saldo a favor del cliente; revise los importes recibidos antes de devolver dinero.",
+    "The reversal creates a customer credit balance; review payments already received before returning cash."
+  ],
+  "Esta venda não possui baixa ativa de estoque; nenhuma reposição será feita.": [
+    "Esta venta no tiene salida de inventario activa; no se realizará reposición.",
+    "This sale has no active stock deduction; no restocking will occur."
+  ],
+  "A venda será retirada da listagem principal. Registros, revisões e comprovantes permanecem no histórico de excluídas.": [
+    "La venta se retirará del listado principal. Los registros y revisiones se conservan en el historial de eliminadas.",
+    "The sale will be removed from the main listing. Records and revisions remain in deleted sales history."
+  ],
+  "A venda, o estoque ou o fiado mudou. Confira uma nova prévia antes de confirmar.": [
+    "La venta, el inventario o el crédito cambiaron. Revise una nueva vista previa antes de confirmar.",
+    "The sale, stock or store credit changed. Review a new preview before confirming."
+  ],
+  "Os pagamentos corrigidos devem somar o total da venda, sem incluir troco.": [
+    "Los pagos corregidos deben sumar el total de la venta, sin incluir cambio.",
+    "Corrected payments must match the sale total, excluding change."
+  ],
+  "Estoque insuficiente para a alteração solicitada.": [
+    "Inventario insuficiente para el cambio solicitado.",
+    "Insufficient stock for the requested change."
+  ],
+  "Produto excluído do catálogo: escolha devolução sem reposição ou selecione outro produto na edição.": [
+    "Producto eliminado del catálogo: elija devolución sin reposición o seleccione otro producto al editar.",
+    "Product removed from catalog: return without restocking or choose another product when editing."
+  ],
+  "Venda com devolução ou cancelamento não pode ser reescrita. Consulte o histórico e registre uma nova venda.": [
+    "Una venta devuelta o cancelada no puede reescribirse. Consulte el historial y registre una nueva venta.",
+    "A returned or cancelled sale cannot be rewritten. Review its history and record a new sale."
+  ],
+  "Os pagamentos originais não cobrem a venda ou o fiado supera o total. Confira e corrija os pagamentos antes de estornar.": [
+    "Los pagos originales no cubren la venta o el crédito supera el total. Revise y corrija los pagos antes de reembolsar.",
+    "Original payments do not cover the sale or store credit exceeds its total. Review and correct payments before refunding."
+  ],
+  "O fiado lançado não confere com os pagamentos da venda. Revise o histórico antes de estornar.": [
+    "El crédito registrado no coincide con los pagos. Revise el historial antes de reembolsar.",
+    "Posted store credit does not match the sale payments. Review history before refunding."
+  ],
+  "Itens corrigidos": [
+    "Artículos corregidos",
+    "Corrected items"
+  ],
+  "Pagamentos corrigidos": [
+    "Pagos corregidos",
+    "Corrected payments"
+  ],
+  "Esta operação registra o estorno no ERP. A devolução por dinheiro, Pix ou cartão é realizada fora do sistema.": [
+    "Esta operación registra el reembolso en el ERP. La devolución por efectivo, Pix o tarjeta se realiza fuera del sistema.",
+    "This operation records the refund in the ERP. Cash, Pix or card refunds are performed outside the system."
+  ],
+  "A seleção contém peças já totalmente devolvidas. Atualize a venda.": [
+    "La selección contiene artículos ya devueltos por completo. Actualiza la venta.",
+    "The selection includes items already fully returned. Refresh the sale."
+  ],
+  "Não foi possível carregar os vendedores.": [
+    "No se pudieron cargar los vendedores.",
+    "Could not load sellers."
+  ]
+}

@@ -228,7 +228,11 @@
       "access_created": "Account created",
       "access_changed": "Permissions changed",
       "read": "Read",
-      "request": "Requested operation"
+      "request": "Requested operation",
+      "pdv_edit": "Sale corrected",
+      "pdv_return": "Partial return",
+      "pdv_cancel": "Full refund",
+      "pdv_delete": "Sale deleted"
     },
     "modules": {
       "dashboard": "Dashboard",

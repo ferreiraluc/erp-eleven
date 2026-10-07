@@ -146,3 +146,11 @@ Adicionar um domínio ao frontend não altera automaticamente a lista do backend
 Não é necessário mudar usuários, senhas ou banco de dados. O armazenamento da sessão
 é separado por origem; no primeiro acesso ao domínio novo é necessário entrar novamente.
 Não usar `*` ou permitir subdomínios arbitrários para contornar CORS.
+
+## Gestão das vendas do PDV
+
+Somente Lucas edita, exclui, registra devoluções parciais ou estornos integrais
+das vendas. A restrição também protege a API antiga de cancelamento. Wissam
+pode consultar o geral; Denis, Sol e Junior veem seu próprio escopo e todos
+continuam lançando novas vendas. As revisões completas antes/depois e seus
+motivos ficam disponíveis exclusivamente para Lucas. Veja [Vendas](VENDAS_PDV.md).

@@ -118,6 +118,7 @@ def test_multiple_lines_and_locations_consume_exactly_and_cancel_to_original_loc
     payload = sale_payload([item_id] * 4, customer_id)
     for line, quantity, location in zip(payload["items"], [2, 3, 4, 1], ["loja", "deposito", "loja", "deposito"]):
         line.update(quantity=quantity, location=location)
+    payload['payments'][0].update(amount_original=1000,amount_gs=1000)
     response = client.post("/api/pdv/sales", json=payload)
     assert response.status_code == 201, response.text
     sale_id = uuid.UUID(response.json()["id"])
@@ -138,8 +139,9 @@ def test_multiple_lines_and_locations_consume_exactly_and_cancel_to_original_loc
         sale = db.get(PdvSale, sale_id)
         assert sale.status == "cancelled" and sale.stock_applied is False
         entries = db.query(StockMovement).filter_by(movement_type=MovementType.entry).order_by(StockMovement.created_at).all()
-        assert [(m.quantity_before, m.quantity_after) for m in entries] == [(0, 2), (2, 5), (5, 9), (9, 10)]
-        assert [m.location_to for m in entries] == ["loja", "deposito", "loja", "deposito"]
+        assert [(m.quantity_before, m.quantity_after) for m in entries] == [(0, 4), (4, 10)]
+        assert {(m.location_to,m.quantity) for m in entries} == {('loja',6),('deposito',4)}
+        assert [m.location_to for m in entries] == ["deposito", "loja"]
         assert all(m.location_from is None and m.reason == "pdv_cancel"
                    and m.reference_id == str(sale_id) and m.reference_type == "pdv_sale" for m in entries)
 

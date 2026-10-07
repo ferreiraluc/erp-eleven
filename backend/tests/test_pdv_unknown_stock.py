@@ -13,14 +13,16 @@ from app.api.endpoints import pdv
 from app.database import Base, get_db
 from app.dependencies import get_current_active_user
 from app.models import Usuario, Vendedor, Cambista
+from app.models.usuario import UsuarioRole
+from app.models.access import AuditEvent
 from app.models.inventory import Item, Supplier, StockMovement
-from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
+from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement, PdvSaleEvent
 from app.schemas.pdv import PdvSaleItemCreate
 
 
 BALANCES = ("current_stock", "stock_loja", "stock_deposito")
 TABLES = (Usuario, Vendedor, Cambista, Supplier, Item, StockMovement,
-          PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement)
+          PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement, PdvSaleEvent, AuditEvent)
 
 
 @pytest.fixture
@@ -29,7 +31,7 @@ def pdv_app():
     Base.metadata.create_all(engine, tables=[model.__table__ for model in TABLES])
     factory = sessionmaker(bind=engine, autoflush=False)
     with factory() as db:
-        user = Usuario(nome="Operador sintético", email="fixture@example.com", senha_hash="unused")
+        user = Usuario(nome="Lucas sintético", email="lucas@eleven.com", role=UsuarioRole.ADMIN, senha_hash="unused")
         customer = PdvCliente(nome="Cliente sintético", saldo_fiado_gs=20)
         db.add_all([user, customer])
         db.flush()
@@ -156,7 +158,9 @@ def test_avulso_sale_does_not_consult_or_modify_inventory(pdv_app, referenced_un
     with factory() as db:
         assert balances(db, item_id) == (None, None, None)
         assert db.query(StockMovement).count() == 0
-        assert db.query(PdvPayment).count() == db.query(PdvFiadoMovement).count() == 1
+        assert db.query(PdvPayment).count() == 1
+        assert db.query(PdvFiadoMovement).count() == 2
+        assert db.query(PdvFiadoMovement).filter_by(tipo='credit').one().valor_gs == 100
 
 
 def test_helper_refreshes_cached_balances_and_rolls_back_pending_work_on_rejection(pdv_app):

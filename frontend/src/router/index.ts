@@ -16,6 +16,7 @@ import FiadoView from '@/views/FiadoView.vue'
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/vendas-pdv', name: 'vendas-pdv', component: () => import('@/views/SalesManagementView.vue'), meta: { requiresAuth: true } },
     { path: '/conta', name: 'conta', component: () => import('@/views/AccountView.vue'), meta: { requiresAuth: true } },
     { path: '/usuarios', name: 'usuarios', component: () => import('@/views/UserManagementView.vue'), meta: { requiresAuth: true, requiresOwner: true } },
     { path: '/auditoria', name: 'auditoria', component: () => import('@/views/AuditView.vue'), meta: { requiresAuth: true, requiresOwner: true } },

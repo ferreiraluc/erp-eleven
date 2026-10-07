@@ -17,6 +17,7 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
 | Equipe e folgas | Vendedores com resultados do BI, calendário e histórico de folgas | `/vendors`, card de folgas |
 | Endereços e envios | Agenda sem duplicatas, remetentes, modelos A4, histórico, CEP e SuperFrete | `/enderecos` |
+| Vendas do PDV | Consulta, correção exclusiva do Lucas, devoluções parciais, estorno e histórico preservado | `/vendas-pdv` |
 | Visão de vendas | Resultados salvos das planilhas OneDrive, comparações, moedas e rankings | `/bi-vendas` |
 | Assistente IA | Vínculos de funcionários, ações confirmadas, memória, consultas e filas | `/assistente` |
 | Acesso e auditoria | Conta individual, troca de senha, vendas pessoais e auditoria de alterações | `/conta`, `/usuarios`, `/auditoria` |
@@ -72,6 +73,7 @@ servidor de impressão.
 - [Acesso individual e auditoria](docs/ACESSO_AUDITORIA.md): sessões, permissões, senhas e uso das telas.
 - [Clientes, pedidos e pacotes](docs/CLIENTES_PEDIDOS_RASTREIOS.md): vínculos explícitos e entregas parciais.
 - [Comprovantes por foto](docs/RASTREIOS_COMPROVANTES.md) e [remetentes gerados](docs/REMETENTES_GERADOS.md).
+- [Gestor de Vendas do PDV](docs/VENDAS_PDV.md): permissões, correções, devoluções e estornos.
 - [Plano de conciliação PDV/caderno/planilhas](docs/CONCILIACAO_VENDAS.md): proposta de associação sem duplicar receitas.
 - [Auditoria de manutenção](docs/AUDITORIA_MANUTENCAO.md): remoções verificadas e dívida técnica restante.
 

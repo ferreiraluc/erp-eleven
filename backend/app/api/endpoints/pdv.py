@@ -3,10 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List, Optional
 from decimal import Decimal
+from datetime import date
 import uuid
 
 from ...database import get_db
-from ...dependencies import get_current_active_user
+from ...dependencies import get_current_active_user, require_owner
+from ...schemas.pdv_management import SaleCommand, SaleCommit
+from ...services import pdv_management
 from ...models.usuario import Usuario
 from ...models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
 from ...models.inventory import Item
@@ -92,16 +95,16 @@ def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uu
 def _update_fiado(db: Session, sale: PdvSale, created_by_id):
     """Create fiado debit for the fiado payment portion."""
     fiado_total = sum(
-        float(p.amount_gs) for p in sale.payments if p.method == "fiado"
+        p.amount_gs for p in sale.payments if p.method == "fiado"
     )
     if fiado_total <= 0 or not sale.cliente_id:
         return
 
-    cliente = db.query(PdvCliente).filter(PdvCliente.id == sale.cliente_id).first()
+    cliente = db.query(PdvCliente).filter(PdvCliente.id == sale.cliente_id).with_for_update().populate_existing().first()
     if not cliente:
         return
 
-    new_saldo = float(cliente.saldo_fiado_gs) + fiado_total
+    new_saldo = cliente.saldo_fiado_gs + fiado_total
     cliente.saldo_fiado_gs = Decimal(str(new_saldo))
 
     mv = PdvFiadoMovement(
@@ -116,6 +119,37 @@ def _update_fiado(db: Session, sale: PdvSale, created_by_id):
 
 
 # ── Sales ─────────────────────────────────────────────────────────────────────
+
+@router.get('/management')
+def managed_sales(page: int = Query(1,ge=1,le=100000), page_size: int = Query(25,ge=1,le=100),
+                  q: str = Query('',max_length=150), status: Optional[str] = None,
+                  date_from: Optional[date] = None, date_to: Optional[date] = None,
+                  seller_id: Optional[uuid.UUID] = None, payment: Optional[str] = None, deleted: bool = False,
+                  db: Session = Depends(get_db), user: Usuario = Depends(get_current_active_user)):
+    return pdv_management.listing(db,user,page=page,page_size=page_size,q=q,status=status,date_from=date_from,date_to=date_to,seller_id=seller_id,payment=payment,deleted=deleted)
+
+
+@router.get('/management/options')
+def managed_options(db: Session = Depends(get_db), user: Usuario = Depends(get_current_active_user)):
+    q=db.query(Usuario.id,Usuario.nome).filter(Usuario.ativo.is_(True))
+    if own_sales(user):q=q.filter(Usuario.id==user.id)
+    return {'sellers':[{'id':r.id,'name':r.nome} for r in q.order_by(Usuario.nome)]}
+
+
+@router.get('/management/{sale_id}')
+def managed_sale(sale_id: uuid.UUID,db: Session = Depends(get_db), user: Usuario = Depends(get_current_active_user)):
+    return pdv_management.detail(db,sale_id,user)
+
+
+@router.post('/management/{sale_id}/preview')
+def preview_sale_change(sale_id: uuid.UUID, body: SaleCommand, db: Session = Depends(get_db), user: Usuario = Depends(require_owner)):
+    try:return pdv_management.plan(db,sale_id,user,body)[-1]
+    except ValueError as e:raise HTTPException(422,str(e)) from None
+
+
+@router.post('/management/{sale_id}/commit')
+def commit_sale_change(sale_id: uuid.UUID, body: SaleCommit, db: Session = Depends(get_db), user: Usuario = Depends(require_owner)):
+    return pdv_management.commit(db,sale_id,user,body)
 
 @router.post("/sales", response_model=PdvSaleResponse, status_code=201)
 def create_sale(
@@ -205,7 +239,7 @@ def list_sales(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    q = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True)
+    q = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True).filter(PdvSale.deleted_at.is_(None))
     if status:
         q = q.filter(PdvSale.status == status)
     if cliente_id:
@@ -241,6 +275,8 @@ def get_sale(
     sale = sales_query(db.query(PdvSale), PdvSale, current_user, pdv=True).filter(PdvSale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
+    if sale.deleted_at and not pdv_management.is_owner(current_user):
+        raise HTTPException(404,'Venda não encontrada')
     return _sale_to_response(sale)
 
 
@@ -256,17 +292,13 @@ def cancel_sale(
     )
     if not sale:
         raise HTTPException(status_code=404, detail="Venda não encontrada")
+    pdv_management.owner(current_user)
     if sale.status == "cancelled":
         raise HTTPException(status_code=400, detail="Venda já cancelada")
 
-    stock_items = _lock_sale_stock(db, sale.items, allow_inactive=True) if sale.stock_applied else {}
-
-    # Reverse stock
-    if sale.stock_applied:
-        _apply_stock(db, sale, current_user.id, stock_items, reverse=True)
-    sale.status = "cancelled"
-
-    db.commit()
+    command=SaleCommand(operation='cancel',reason='Cancelamento integral pela API do PDV')
+    preview=pdv_management.plan(db,sale_id,current_user,command)[-1]
+    pdv_management.commit(db,sale_id,current_user,SaleCommit(command=command,plan_token=preview['plan_token'],request_id=uuid.uuid4(),confirm=True))
     return {"ok": True}
 
 
@@ -367,11 +399,14 @@ def record_fiado_payment(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     require_all_sales(current_user)
-    cliente = db.query(PdvCliente).filter(PdvCliente.id == cliente_id).first()
+    cliente = db.query(PdvCliente).filter(PdvCliente.id == cliente_id).with_for_update().populate_existing().first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
-    new_saldo = max(0.0, float(cliente.saldo_fiado_gs) - float(body.valor_gs))
+    value = pdv_management.positive(body.valor_gs)
+    if value <= 0 or value > cliente.saldo_fiado_gs:
+        raise HTTPException(422, 'O recebimento deve ser positivo e não pode superar o saldo devedor.')
+    new_saldo = cliente.saldo_fiado_gs - value
     cliente.saldo_fiado_gs = Decimal(str(new_saldo))
 
     mv = PdvFiadoMovement(

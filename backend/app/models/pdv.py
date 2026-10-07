@@ -1,6 +1,6 @@
 import enum
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Text, ForeignKey, Index
+from sqlalchemy import Column, String, Boolean, DateTime, Numeric, Text, ForeignKey, Index, Integer, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from ..database import Base
@@ -51,6 +51,10 @@ class PdvSale(Base):
 
     status = Column(String(20), default="completed")    # completed, cancelled
     stock_applied = Column(Boolean, default=False)
+    version = Column(Integer, nullable=False, default=1, server_default='1')
+    refunded_gs = Column(Numeric(15, 2), nullable=False, default=0, server_default='0')
+    fiado_reversed_gs = Column(Numeric(15, 2), nullable=False, default=0, server_default='0')
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     notas = Column(Text)
 
     created_at = Column(DateTime, default=lambda: settings.now())
@@ -84,6 +88,7 @@ class PdvSaleItem(Base):
     item_color = Column(String(50), nullable=True)
 
     quantity = Column(Numeric(10, 3), default=1)
+    returned_quantity = Column(Numeric(10, 3), nullable=False, default=0, server_default='0')
     unit_price_gs = Column(Numeric(15, 2), nullable=False)
     original_price_gs = Column(Numeric(15, 2), nullable=True)
     discount_gs = Column(Numeric(15, 2), default=0)
@@ -136,3 +141,19 @@ class PdvFiadoMovement(Base):
     __table_args__ = (
         Index("idx_pdv_fiado_cliente", "cliente_id"),
     )
+
+
+class PdvSaleEvent(Base):
+    __tablename__ = 'pdv_sale_events'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sale_id = Column(UUID(as_uuid=True), ForeignKey('pdv_sales.id'), nullable=False)
+    request_id = Column(UUID(as_uuid=True), nullable=False, unique=True)
+    fingerprint = Column(String(64), nullable=False)
+    operation = Column(String(20), nullable=False)
+    reason = Column(Text, nullable=False)
+    before = Column(JSON, nullable=False)
+    after = Column(JSON, nullable=False)
+    effects = Column(JSON, nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey('usuarios.id'), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: settings.now())
+    __table_args__ = (Index('ix_pdv_sale_events_sale', 'sale_id', 'created_at'),)

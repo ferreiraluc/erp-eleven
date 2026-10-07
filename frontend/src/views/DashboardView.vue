@@ -184,6 +184,10 @@
               </div>
               <span>{{ $tr("Nova Venda") }}</span>
             </button>
+            <button class="quick-btn q-primary erp-control" @click="router.push('/vendas-pdv')">
+              <div class="quick-btn-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3h8l4 4v14l-4-2-4 2-4-2-4 2V3h4zm0 6h8m-8 4h8" /></svg></div>
+              <span>{{ $tr("Vendas") }}</span>
+            </button>
             <button class="quick-btn q-orange erp-control" @click="navigateToInventory">
               <div class="quick-btn-icon">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">

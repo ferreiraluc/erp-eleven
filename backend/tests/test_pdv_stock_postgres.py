@@ -18,6 +18,7 @@ from app.api.endpoints import pdv
 from app.database import Base, get_db
 from app.dependencies import get_current_active_user
 from app.models import Usuario
+from app.models.usuario import UsuarioRole
 from app.models.inventory import Item, StockMovement
 from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
 
@@ -31,7 +32,7 @@ def pdv_pg(pg):
     factory=sessionmaker(bind=isolated,autoflush=False)
     uid,cid=uuid.uuid4(),uuid.uuid4()
     with factory() as db:
-        db.add(Usuario(id=uid,nome='Local PDV operator',email='fixture@example.com',senha_hash='unused'))
+        db.add(Usuario(id=uid,nome='Local PDV owner',email='lucas@eleven.com',role=UsuarioRole.ADMIN,senha_hash='unused'))
         db.add(PdvCliente(id=cid,nome='Local PDV customer',saldo_fiado_gs=0))
         db.commit()
     app=FastAPI();app.include_router(pdv.router,prefix='/api/pdv')

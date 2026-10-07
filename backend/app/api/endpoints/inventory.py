@@ -224,6 +224,8 @@ def list_items(
         query = query.filter(Item.is_active == True, ~_known_stock_filter())
     elif item_status == "inactive":
         query = query.filter(Item.is_active == False)
+    elif item_status == "active":
+        query = query.filter(Item.is_active == True)
     else:
         pass  # no filter, show all
 

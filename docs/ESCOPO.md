@@ -140,3 +140,12 @@ cancela vendas nem altera o financeiro; os registros ficam em Histórico de excl
 Detalhes e limites: [Estoque](ESTOQUE_OCR.md#histórico-por-produto-e-retirada-do-catálogo).
 A associação entre PDV e caderno/planilhas está **planejada, ainda não implementada**
 no [plano de conciliação](CONCILIACAO_VENDAS.md).
+
+## Administração das vendas do PDV
+
+`/vendas-pdv` reúne consultas, filtros, itens, pagamentos e revisões. Apenas Lucas
+pode corrigir, excluir da listagem ou estornar, integral ou parcialmente. Estoque
+e fiado são ajustados na mesma transação após revisão explícita; reembolsos por
+Pix/cartão/dinheiro continuam externos. Demais usuários lançam novas vendas e
+consultam o escopo permitido. Registros excluídos permanecem na auditoria.
+Regras e limitações: [Gestor de Vendas](VENDAS_PDV.md).

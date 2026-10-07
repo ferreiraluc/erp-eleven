@@ -5,10 +5,11 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import load_only
+from sqlalchemy import cast, String, func, or_, and_
 
 from ..config import settings
 from ..models.inventory import Item, StockMovement, InventorySessionItem, InventorySession
-from ..models.pdv import PdvSale, PdvSaleItem
+from ..models.pdv import PdvSale, PdvSaleItem, PdvSaleEvent
 from ..models.usuario import Usuario
 from ..models.access import AuditEvent
 from .access_policy import is_owner, own_sales, sales_query
@@ -50,7 +51,9 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
         raise HTTPException(403, 'Somente Lucas pode consultar a auditoria do produto.')
     link = product_sale_link(item)
     sale_ids = db.query(PdvSaleItem.sale_id).filter(link)
-    sales = sales_query(db.query(PdvSale).filter(PdvSale.id.in_(sale_ids)), PdvSale, user, pdv=True)
+    movement_sale_ids = db.query(PdvSale.id).join(StockMovement, and_(StockMovement.item_id == item.id,
+        StockMovement.reference_type == 'pdv_sale', func.replace(StockMovement.reference_id, '-', '') == func.replace(cast(PdvSale.id, String), '-', '')))
+    sales = sales_query(db.query(PdvSale).filter(or_(PdvSale.id.in_(sale_ids), PdvSale.id.in_(movement_sale_ids))), PdvSale, user, pdv=True)
     moves = db.query(StockMovement).filter_by(item_id=item.id)
     counts = db.query(InventorySessionItem).filter_by(item_id=item.id)
     changes = db.query(AuditEvent).filter(AuditEvent.entity == 'inventory_items',
@@ -76,6 +79,20 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
                 'quantity': amount(line.quantity), 'unit_price_gs': amount(line.unit_price_gs),
                 'discount_gs': amount(line.discount_gs), 'total_gs': amount(line.total_gs),
                 'location': line.location, 'is_avulso': line.is_avulso})
+        # A correction can replace this product with another one. Keep its
+        # original sale link discoverable through the stock ledger and revision.
+        if owner:
+            missing = [sale.id for sale in batch if not lines[sale.id]]
+            events = db.query(PdvSaleEvent).filter(PdvSaleEvent.sale_id.in_(missing)).order_by(PdvSaleEvent.created_at).all() if missing else []
+            for event in events:
+                if lines[event.sale_id]: continue
+                for line in (event.before or {}).get('items', []):
+                    if line.get('item_id') != str(item.id): continue
+                    lines[event.sale_id].append({'id':line['id'],'link':'revision',
+                        'name':f"Produto excluído — {line['item_name']}" if item.deleted_at else line['item_name'],
+                        'sku':line.get('item_sku'),'size':line.get('item_size'),'color':line.get('item_color'),
+                        'quantity':line['quantity'],'unit_price_gs':line['unit_price_gs'],'discount_gs':line['discount_gs'],
+                        'total_gs':line['total_gs'],'location':line['location'],'is_avulso':line['is_avulso']})
         rows = [{'id': str(sale.id), 'at': timestamp(sale.created_at), 'status': sale.status,
                  'updated_at': timestamp(sale.updated_at), 'seller': actors.get(sale.vendedor_id),
                  'actor': actors.get(sale.created_by), 'customer': sale.cliente_nome,

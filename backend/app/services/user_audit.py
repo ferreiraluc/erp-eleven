@@ -31,6 +31,7 @@ MODULES = {
     'exchange_rates': 'exchange-rates', 'money_transfers': 'vendas', 'money-transfers': 'vendas',
     'excel-import': 'vendas', 'comprovantes': 'vendas', 'cambistas': 'vendas',
     'pdv_clientes': 'pdv', 'pdv_sales': 'pdv', 'pdv_sale_items': 'pdv', 'pdv_payments': 'pdv', 'pdv_fiado_movements': 'fiado',
+    'pdv_sale_events': 'pdv',
 }
 
 

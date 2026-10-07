@@ -26,3 +26,5 @@ O [README principal](../README.md) apresenta o sistema e os comandos essenciais.
 Não duplicar listas detalhadas de endpoints em vários arquivos. O contrato
 executável é o OpenAPI gerado por `backend/app/main.py` em `/docs` e `/openapi.json`.
 As famílias de rotas e seus donos estão no mapa de arquitetura.
+
+- [Gestor de Vendas do PDV](VENDAS_PDV.md): consulta, correção, devoluções e estorno exclusivo do Lucas.

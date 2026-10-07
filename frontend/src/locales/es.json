@@ -228,7 +228,11 @@
       "access_created": "Cuenta creada",
       "access_changed": "Permisos modificados",
       "read": "Consulta",
-      "request": "Operación solicitada"
+      "request": "Operación solicitada",
+      "pdv_edit": "Venta corregida",
+      "pdv_return": "Devolución parcial",
+      "pdv_cancel": "Reembolso total",
+      "pdv_delete": "Venta eliminada"
     },
     "modules": {
       "dashboard": "Panel",

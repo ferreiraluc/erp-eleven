@@ -1706,5 +1706,17 @@
   "Produto excluído definitivamente.": [
     "Producto eliminado definitivamente.",
     "Product permanently deleted."
+  ],
+  "Item de uma revisão anterior da venda; consulte o gestor de Vendas para os dados atuais.": [
+    "Artículo de una revisión anterior de la venta; consulte el gestor de Ventas para los datos actuales.",
+    "Item from an earlier sale revision; check Sales for current details."
+  ],
+  "Devolução parcial": [
+    "Devolución parcial",
+    "Partial return"
+  ],
+  "Estornada": [
+    "Reembolsada",
+    "Refunded"
   ]
 }
