@@ -14,6 +14,7 @@ export default defineConfig(async ({ mode }) => {
 
   return {
   plugins,
+  worker: { format: 'es' },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

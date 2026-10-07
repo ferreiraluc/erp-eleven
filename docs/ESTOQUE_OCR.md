@@ -52,6 +52,67 @@ Referências: [visão da DeepSeek](https://api-docs.deepseek.com/guides/vision/)
 Os limites acima são os limites locais do ERP, independentemente de limites maiores
 disponíveis no provedor.
 
+## Cadastro por foto do produto
+
+**Estoque → Foto com IA** (ou **Cadastrar por foto** no formulário) abre um fluxo
+separado do OCR de etiquetas. Fotografe uma peça estendida inteira. A importação
+aceita JPEG/PNG/WebP de até 15 MB/48 MP e reduz a imagem para 1600 px, sem EXIF.
+O servidor valida novamente o formato real e os limites de imagem do ERP.
+
+- **Sugerir dados** usa o provedor de visão já configurado, uma foto e até 650 tokens
+  de saída. Sugere nome, descrição visual, categoria e cor. Marca e tamanho precisam
+  de evidência textual legível; ficam vazios sem ela. A análise não prova autenticidade.
+- **Remover fundo · grátis** executa U2NetP (Apache 2.0) em um Web Worker no navegador,
+  usando ONNX Runtime Web. Modelo e runtime são carregados sob demanda do próprio
+  ERP (aproximadamente 19 MB na primeira utilização). Não existe custo de API por
+  recorte nem upload para segmentação. A foto mantém a pose original, centralizada
+  em fundo branco. Bordas finas ou fundos semelhantes à roupa podem falhar.
+- **Gerar no cabide** é opcional e exige um segundo clique que informa o uso de
+  créditos OpenAI. Backend envia uma foto reduzida a 1024 px, prompt fixo, `n=1`,
+  `quality=low`, saída JPEG 1024×1024; sem retries nem troca automática de modelo.
+  A geração pode alterar estampas, logos ou o corte: a comparação com a original
+  e a revisão humana são obrigatórias antes de aplicar. Original/recorte/gerada
+  podem ser escolhidas e baixadas sem executar novamente a IA.
+
+`OPENAI_API_KEY` existe somente no backend, via ambiente ou `/etc/secrets/openai.env`
+no Render. `PRODUCT_PHOTO_IMAGE_MODEL` padrão é `gpt-image-1-mini`, escolhido pelo
+custo. Em 07/10/2026, a saída low quadrada custa US$ 0,005, além de tokens de entrada.
+O custo exibido após a geração é uma estimativa com o uso retornado, não consulta ao
+saldo da conta. O modelo tem retirada anunciada para **01/12/2026**: reavaliar preços
+antes de mudar a variável; não há fallback pago silencioso.
+
+Os endpoints `/api/product-photo/status`, `/analyze` e `/catalog` exigem ADMIN ou
+GERENTE. Não criam produtos, vínculos, códigos ou movimentações. Há limite inicial
+por processo de 20 solicitações por usuário/operação/hora e 32 prévias simultâneas.
+O cache em memória reutiliza a mesma foto/operação/usuário durante 10 minutos e
+bloqueia solicitações sobrepostas ou repetidas após erro; reinícios e múltiplos
+processos não compartilham esse cache. Não é idempotência de cobrança durável.
+Falha/timeout não causa retentativa automática, e a interface bloqueia nova edição
+paga da foto na sessão. Memória de prévias é descartada em novas solicitações após
+o prazo, ou no reinício; não há histórico de arquivos de origem no banco.
+
+**Usar no cadastro** requer nome e conferência da foto/dados, e somente preenche o
+formulário existente. Alterar dados ou escolher outra foto reinicia a conferência.
+Preço, estoque, código de barras, SKU e variantes nunca são inferidos pela imagem.
+O SKU continua sendo gerado pelo cadastro; códigos repetidos não mesclam produtos.
+O botão normal de salvar continua responsável por persistir e movimentar o estoque.
+
+Nesta versão a foto escolhida fica em `Item.image_data`, JPEG até 1200 px e cerca de
+250 KB, com redução adicional quando necessário, e aparece nas miniaturas existentes.
+Não existe galeria nem armazenamento separado de original/alta resolução; use
+**Baixar foto escolhida** para conservar a prévia antes de fechar. Para um marketplace
+com muitas imagens, migrar a mídia para armazenamento próprio e miniaturas separadas.
+
+Código: `ProductPhotoAssistant.vue`, `services/productPhoto.ts`, worker de recorte,
+`api/endpoints/product_photo.py`, `services/product_photo.py` e contrato correspondente.
+Testes usam fornecedores simulados, nunca imagens ou estoque da produção.
+
+Referências: [preço do Mini](https://developers.openai.com/api/docs/models/gpt-image-1-mini),
+[edição](https://developers.openai.com/api/reference/resources/images/methods/edit),
+[retirada anunciada](https://developers.openai.com/api/docs/deprecations),
+[U-2-Net](https://github.com/xuebinqin/U-2-Net) e
+[ONNX Runtime Web](https://onnxruntime.ai/docs/get-started/with-javascript/web.html).
+
 ## Integridade das movimentações
 
 O serviço de estoque bloqueia a linha do item e relê seus saldos por local antes de

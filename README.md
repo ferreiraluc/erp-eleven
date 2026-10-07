@@ -12,7 +12,7 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | Área | O que oferece | Tela |
 | --- | --- | --- |
 | Dashboard | Estoque e rastreios; cards lado a lado de endereços e vendas, resumos e atalhos | `/dashboard` |
-| Estoque | Produtos, variantes, loja/depósito, movimentações, contagem, conferência de saldos/códigos, etiquetas e OCR | `/inventory` |
+| Estoque | Produtos, variantes, loja/depósito, movimentações, contagem, conferência de saldos/códigos, etiquetas, OCR e cadastro por foto com IA | `/inventory` |
 | Clientes e pedidos | Cadastros, endereços, impressões, pedidos e vínculos logísticos | `/clientes`, `/pedidos` |
 | Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
 | Equipe e folgas | Vendedores com resultados do BI, calendário e histórico de folgas | `/vendors`, card de folgas |

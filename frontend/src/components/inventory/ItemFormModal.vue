@@ -44,6 +44,7 @@
         </div>
         <!-- ── Basic Tab ── -->
         <div v-if="activeTab === 'basic'" class="tab-content">
+          <button type="button" class="erp-button erp-button--secondary erp-button--sm" style="margin-bottom:12px" @click="showProductPhoto = true">📷 {{ tr("Cadastrar por foto") }}</button>
           <!-- OCR button -->
           <div class="ocr-btn-row">
             <button @click="showOcr = true" class="ocr-btn erp-button erp-button--secondary" type="button">
@@ -470,6 +471,7 @@
       </div>
     </div>
 
+    <ProductPhotoAssistant v-if="showProductPhoto" @result="onProductPhotoResult" @close="showProductPhoto = false" />
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
     <OcrScanner v-if="showOcr" @result="onOcrResult" @close="showOcr = false" />
     <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
@@ -483,6 +485,8 @@ import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 import BarcodeScanner from './BarcodeScanner.vue'
+import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
+import type { ProductPhotoResult } from '@/services/productPhoto'
 import OcrScanner from './OcrScanner.vue'
 import type { OcrAppliedFields } from '@/services/ocr'
 import { useI18n } from 'vue-i18n'
@@ -497,6 +501,7 @@ function toTitleCase(s: string | undefined | null): string {
 }
 
 const props = defineProps<{
+  startWithPhoto?: boolean
   item?: InventoryItem | null
   suppliers?: Array<{ id: string; name: string }>
   existingGroupKeys?: string[]
@@ -513,6 +518,7 @@ const isEdit = computed(() => !!props.item)
 const activeTab = ref('basic')
 const showScanner = ref(false)
 const showOcr = ref(false)
+const showProductPhoto = ref(false)
 const showLabelTemplates = ref(false)
 const showCameraPhoto = ref(false)
 const saving = ref(false)
@@ -695,6 +701,7 @@ const form = reactive({
 const errors = reactive<Record<string, string>>({})
 
 onMounted(() => {
+  showProductPhoto.value = !!props.startWithPhoto
   if (props.item) {
     Object.assign(form, {
       name: props.item.name || '',
@@ -899,6 +906,20 @@ async function handleSubmit() {
 function onBarcodeDetected(code: string) {
   form.barcode = code
   showScanner.value = false
+}
+
+function onProductPhotoResult(result: ProductPhotoResult) {
+  for (const field of ['name', 'description', 'brand', 'color', 'size'] as const) {
+    if (result[field]) form[field] = result[field]
+  }
+  if (result.category) {
+    categorySub.value = ''
+    categoryParent.value = parentCategories.includes(result.category) ? result.category : '_custom'
+    categoryCustom.value = result.category
+  }
+  form.image_data = result.image_data
+  showProductPhoto.value = false
+  activeTab.value = 'basic'
 }
 
 function onOcrResult(data: OcrAppliedFields) {

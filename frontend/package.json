@@ -30,6 +30,7 @@
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "lucide-vue-next": "^0.536.0",
+    "onnxruntime-web": "1.30.0",
     "pinia": "^3.0.3",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",

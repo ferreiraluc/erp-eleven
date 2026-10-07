@@ -6,6 +6,7 @@ from sqlalchemy.sql import func
 
 load_dotenv()
 load_dotenv("/etc/secrets/superfrete.env")
+load_dotenv("/etc/secrets/openai.env")
 
 class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/eleven")
@@ -13,6 +14,8 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     WONCA_API_KEY: str = os.getenv("WONCA_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    PRODUCT_PHOTO_IMAGE_MODEL: str = os.getenv("PRODUCT_PHOTO_IMAGE_MODEL", "gpt-image-1-mini")
     VISION_PROVIDER: str = os.getenv("VISION_PROVIDER", "auto").strip().lower()
     DEEPSEEK_VISION_MODEL: str = os.getenv("DEEPSEEK_VISION_MODEL", "deepseek-flash")
     ASSISTANT_ENABLED: bool = os.getenv("ASSISTANT_ENABLED", "false").lower() == "true"

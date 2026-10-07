@@ -21,7 +21,7 @@ MODULES = {
     'vendedores': 'vendors', 'funcionarios': 'vendors', 'folgas': 'vendors',
     'inventory_items': 'inventory', 'stock_movements': 'inventory', 'suppliers': 'inventory',
     'inventory_sessions': 'inventory', 'inventory_session_items': 'inventory',
-    'label_templates': 'inventory', 'ocr': 'inventory',
+    'label_templates': 'inventory', 'ocr': 'inventory', 'product-photo': 'inventory',
     'rastreamentos': 'rastreamento', 'pedido_anexos': 'pedidos', 'tags_status': 'pedidos', 'tags': 'pedidos',
     'saved_addresses': 'enderecos', 'print_layouts': 'enderecos', 'print_jobs': 'enderecos',
     'print_devices': 'enderecos', 'print_senders': 'enderecos', 'freight_orders': 'enderecos',

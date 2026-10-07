@@ -116,3 +116,11 @@ arbitrárias de estoque.
 A cobertura técnica e as pendências de manutenção estão em
 [AUDITORIA_MANUTENCAO.md](AUDITORIA_MANUTENCAO.md). Um módulo acessível não é código morto
 só por ter pouco uso; sua retirada exige avaliar dados, referências e consumidores.
+
+### Cadastro por foto do produto
+
+Fluxo separado do OCR, com sugestões revisáveis pelo provedor de visão, recorte local
+U2NetP e edição opcional no cabide com OpenAI em qualidade econômica. A foto não
+define estoque, preço, SKU ou identidade. A prévia exige revisão e só preenche o
+formulário existente. Limites de mídia, custos e manutenção do modelo estão no
+[guia de estoque](ESTOQUE_OCR.md#cadastro-por-foto-do-produto).

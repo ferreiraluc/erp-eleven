@@ -17,7 +17,7 @@ from .database import engine, Base, SessionLocal
 from .config import settings
 from .api.endpoints import assistant, printing, address_manager, freight, sales_bi, sales_bi_entries
 from .services import assistant_events  # register atomic tracking outbox listener
-from .api.endpoints import user_admin
+from .api.endpoints import user_admin, product_photo
 from .services import user_audit
 
 # Main
@@ -169,6 +169,7 @@ app.include_router(excel_import.router, prefix="/api/excel-import", tags=["excel
 app.include_router(inventory.router, prefix="/api/inventory", tags=["inventory"])
 app.include_router(clientes.router, prefix="/api/clientes", tags=["clientes"])
 app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
+app.include_router(product_photo.router, prefix="/api/product-photo", tags=["Product photo"])
 app.include_router(pdv.router, prefix="/api/pdv", tags=["pdv"])
 app.include_router(assistant.router, prefix="/api/assistant", tags=["assistant"])
 app.include_router(freight.router, prefix='/api/freight', tags=['freight'])

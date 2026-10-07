@@ -43,6 +43,7 @@
         </svg>
         {{ tr("Importar") }}
       </button>
+      <button @click="openCreateWithPhoto" class="erp-button erp-button--secondary erp-button--sm">📷 {{ tr("Foto com IA") }}</button>
       <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary erp-button--sm">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -583,6 +584,7 @@
     <ItemFormModal
       v-if="showItemForm"
       :item="editingItem"
+      :start-with-photo="startWithPhoto"
       :suppliers="suppliers"
       :existing-group-keys="existingGroupKeys"
       :existing-brands="existingBrands"
@@ -738,6 +740,7 @@ const searchQuery = ref('')
 const activeStatus = ref((route.query.status as string) || '')
 const showScanner = ref(false)
 const showItemForm = ref(false)
+const startWithPhoto = ref(false)
 const showMovementModal = ref(false)
 const showImport = ref(false)
 const showLabelTemplates = ref(false)
@@ -1305,12 +1308,19 @@ function loadMore() {
   reloadItems(nextPage, true)
 }
 
+function openCreateWithPhoto() {
+  openCreate()
+  startWithPhoto.value = true
+}
+
 function openCreate() {
+  startWithPhoto.value = false
   editingItem.value = null
   showItemForm.value = true
 }
 
 function openEdit(item: InventoryItem) {
+  startWithPhoto.value = false
   editingItem.value = item
   showItemForm.value = true
 }
