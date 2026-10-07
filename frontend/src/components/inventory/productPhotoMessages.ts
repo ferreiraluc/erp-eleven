@@ -1,5 +1,6 @@
 export const productPhotoMessages = {
   pt: {
+    chooseForHanger: 'Escolha ou tire uma foto da peça para gerar a imagem no cabide e usar como foto do produto.',
     draftUse: 'Adicionar à conferência', draftNext: 'A foto e a etiqueta serão reunidas no formulário para uma conferência única antes de criar o produto.', reviewExample: 'Conferi os dados para salvar como exemplo de etiqueta.',
     title: 'Cadastrar por foto', intro: 'Uma peça estendida, inteira e bem iluminada. Você confere tudo antes de salvar.',
     choose: 'Escolher foto', camera: 'Tirar foto', formats: 'JPEG, PNG ou WebP · até 15 MB · até 48 MP', close: 'Fechar',
@@ -27,6 +28,7 @@ export const productPhotoMessages = {
     manual: 'Você também pode preencher os campos sem consultar a IA.', download: 'Baixar foto escolhida',
   },
   es: {
+    chooseForHanger: 'Elija o tome una foto de la prenda para generar la imagen en percha y usarla como foto del producto.',
     draftUse: 'Agregar a la revisión', draftNext: 'La foto y la etiqueta se reunirán en el formulario para una revisión conjunta antes de crear el producto.', reviewExample: 'Revisé los datos para guardar como ejemplo de etiqueta.',
     title: 'Registrar por foto', intro: 'Una prenda extendida, completa y bien iluminada. Revise todo antes de guardar.',
     choose: 'Elegir foto', camera: 'Tomar foto', formats: 'JPEG, PNG o WebP · hasta 15 MB · hasta 48 MP', close: 'Cerrar',
@@ -54,6 +56,7 @@ export const productPhotoMessages = {
     manual: 'También puede completar los campos sin consultar la IA.', download: 'Descargar foto elegida',
   },
   en: {
+    chooseForHanger: 'Choose or take a garment photo to generate a hanger image and use it as the product photo.',
     draftUse: 'Add to review', draftNext: 'The photo and label will be combined in the form for one review before creating the product.', reviewExample: 'I checked the details to save as a label example.',
     title: 'Register from photo', intro: 'One flat, fully visible, well-lit garment. Review everything before saving.',
     choose: 'Choose photo', camera: 'Take photo', formats: 'JPEG, PNG or WebP · up to 15 MB · up to 48 MP', close: 'Close',

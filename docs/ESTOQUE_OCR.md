@@ -147,6 +147,13 @@ O servidor valida novamente o formato real e os limites de imagem do ERP.
   e a revisão humana são obrigatórias antes de aplicar. Original/recorte/gerada
   podem ser escolhidas e baixadas sem executar novamente a IA.
 
+O atalho **Gerar foto no cabide** aparece em **Foto e etiqueta** e junto à foto na
+**Conferência**, inclusive no celular. Ele reabre a foto já escolhida e a confirmação
+de custo; sem foto, pede a seleção ou captura primeiro. Os controles de edição
+ficam antes das prévias, no início do modal. Reabrir preserva a geração e o bloqueio
+contra repetição de uma tentativa paga. **Adicionar à conferência** usa a imagem
+selecionada como miniatura do produto após conferir e salvar o cadastro.
+
 `OPENAI_API_KEY` existe somente no backend, via ambiente ou `/etc/secrets/openai.env`
 no Render. `PRODUCT_PHOTO_IMAGE_MODEL` padrão é `gpt-image-1-mini`, escolhido pelo
 custo. Em 07/10/2026, a saída low quadrada custa US$ 0,005, além de tokens de entrada.

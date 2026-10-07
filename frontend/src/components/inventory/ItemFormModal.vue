@@ -44,7 +44,10 @@
               <span v-else class="intake-source-icon" aria-hidden="true">📷</span>
               <h3>{{ tr('Foto do produto') }} <small>{{ tr('Opcional') }}</small></h3>
               <p>{{ tr('Nome, categoria, cor e foto de catálogo. Marca e tamanho somente quando legíveis.') }}</p>
-              <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="showProductPhoto = true">{{ tr(photoAdded ? 'Rever foto' : 'Adicionar foto') }}</button>
+              <div class="intake-photo-actions">
+                <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto()">{{ tr(photoAdded ? 'Rever foto' : 'Adicionar foto') }}</button>
+                <button type="button" class="erp-button erp-button--primary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
+              </div>
             </section>
             <section class="intake-source">
               <span class="intake-source-icon" aria-hidden="true">🏷️</span>
@@ -67,6 +70,7 @@
           <div v-if="form.image_data" class="intake-images">
             <figure v-if="reviewOriginal && reviewOriginal !== form.image_data"><img :src="reviewOriginal" :alt="tr('Original')" /><figcaption>{{ tr('Original') }}</figcaption></figure>
             <figure><img :src="form.image_data" :alt="tr('Foto do produto')" /><figcaption>{{ tr('Foto do produto') }}</figcaption></figure>
+            <button v-if="!isEdit" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
             <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="form.image_data = ''; reviewOriginal = ''">{{ tr('Remover foto') }}</button>
           </div>
           <section v-if="conflicts.length" ref="conflictsPanel" class="intake-conflicts" aria-live="polite">
@@ -514,7 +518,7 @@
       </div>
     </div>
 
-    <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
+    <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" :start-with-hanger="startWithHanger" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
     <OcrScanner v-if="labelOpened" :open="showOcr" draft @result="onOcrResult" @close="showOcr = false" />
     <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
@@ -571,6 +575,8 @@ watch(activeTab, async () => { await nextTick(); if (modalBody.value) modalBody.
 const showScanner = ref(false)
 const showOcr = ref(false)
 const showProductPhoto = ref(false)
+const startWithHanger = ref(false)
+function openProductPhoto(hanger = false) { startWithHanger.value = hanger; showProductPhoto.value = true }
 const showLabelTemplates = ref(false)
 const photoOpened = ref(false), labelOpened = ref(false)
 watch(showProductPhoto, value => { if (value) photoOpened.value = true })
@@ -1137,6 +1143,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .intake-source small { display: block; color: #64748b; font-size: .7rem; font-weight: 400; margin-top: .2rem; }
 .intake-source p { font-size: .8rem; line-height: 1.5; color: #64748b; margin: 0; flex: 1; }
 .intake-source-icon { font-size: 1.8rem; }
+.intake-photo-actions { display: flex; flex-wrap: wrap; gap: .5rem; width: 100%; }
+.intake-photo-actions .erp-button { max-width: 100%; white-space: normal; height: auto; }
 .intake-thumbnail { height: 86px; width: 86px; object-fit: contain; border-radius: 8px; background: white; }
 .intake-ready { color: #15803d; font-size: .75rem; }
 .intake-review-heading { display: flex; align-items: flex-start; gap: 1rem; }
