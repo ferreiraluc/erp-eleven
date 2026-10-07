@@ -1,4 +1,268 @@
 {
+  "Excluir do catálogo e preservar histórico": [
+    "Eliminar del catálogo y conservar historial",
+    "Remove from catalog and preserve history"
+  ],
+  "O produto sai do estoque, das buscas e das opções de venda. Nos registros ficará identificado como Produto excluído, com o nome original.": [
+    "El producto deja el inventario, las búsquedas y las opciones de venta. Los registros mostrarán Producto eliminado junto al nombre original.",
+    "The product leaves inventory, search and sale options. Records will identify it as Deleted product with its original name."
+  ],
+  "Vendas, valores, saldos históricos e movimentações permanecem. A foto será removida. Isso não cancela vendas nem realiza estornos. Não é possível reativar este cadastro.": [
+    "Se conservan ventas, importes, saldos históricos y movimientos. Se quitará la foto. No se cancelan ventas ni se hacen reembolsos. Este registro no se puede reactivar.",
+    "Sales, amounts, historical balances and movements remain. The photo is removed. This does not cancel sales or issue refunds. This record cannot be reactivated."
+  ],
+  "Conferi os vínculos e quero retirar este produto do catálogo, preservando seu histórico.": [
+    "Revisé los vínculos y quiero quitar este producto del catálogo, conservando su historial.",
+    "I reviewed the links and want to remove this product from the catalog while preserving its history."
+  ],
+  "Excluir e manter histórico": [
+    "Eliminar y conservar historial",
+    "Remove and keep history"
+  ],
+  "Excluído do catálogo em": [
+    "Eliminado del catálogo el",
+    "Removed from catalog on"
+  ],
+  "Saldos preservados como histórico; não fazem parte do estoque disponível.": [
+    "Saldos conservados como historial; no forman parte del stock disponible.",
+    "Balances are kept as history and are not part of available stock."
+  ],
+  "Excluído do catálogo com histórico preservado": [
+    "Eliminado del catálogo conservando historial",
+    "Removed from catalog with history preserved"
+  ],
+  "Histórico de excluídos": [
+    "Historial de eliminados",
+    "Removed product history"
+  ],
+  "Produtos retirados do catálogo com registros preservados. Abra um produto para consultar seu histórico.": [
+    "Productos retirados del catálogo con registros conservados. Abra un producto para consultar su historial.",
+    "Products removed from the catalog with records preserved. Open a product to view its history."
+  ],
+  "Buscar por nome ou SKU": [
+    "Buscar por nombre o SKU",
+    "Search by name or SKU"
+  ],
+  "Produto excluído do catálogo. O histórico foi preservado; novas movimentações não são permitidas.": [
+    "Producto eliminado del catálogo. Se conservó el historial; no se permiten nuevos movimientos.",
+    "Product removed from catalog. History is preserved; new movements are not allowed."
+  ],
+  "Histórico": [
+    "Historial",
+    "History"
+  ],
+  "Histórico do produto": [
+    "Historial del producto",
+    "Product history"
+  ],
+  "Ver histórico e vínculos": [
+    "Ver historial y vínculos",
+    "View history and links"
+  ],
+  "Produto inativo": [
+    "Producto inactivo",
+    "Inactive product"
+  ],
+  "Criado em": [
+    "Creado el",
+    "Created on"
+  ],
+  "Cadastrado por": [
+    "Registrado por",
+    "Created by"
+  ],
+  "Última atualização": [
+    "Última actualización",
+    "Last updated"
+  ],
+  "Não registrado": [
+    "No registrado",
+    "Not recorded"
+  ],
+  "Total atual": [
+    "Total actual",
+    "Current total"
+  ],
+  "Movimentações": [
+    "Movimientos",
+    "Movements"
+  ],
+  "Contagens": [
+    "Conteos",
+    "Counts"
+  ],
+  "Alterações": [
+    "Cambios",
+    "Changes"
+  ],
+  "Vendas concluídas e canceladas são preservadas. Uma venda pode conter várias linhas deste produto.": [
+    "Se conservan las ventas completadas y canceladas. Una venta puede contener varias líneas de este producto.",
+    "Completed and cancelled sales are retained. A sale can contain several lines of this product."
+  ],
+  "Você vê apenas suas próprias vendas.": [
+    "Solo puede ver sus propias ventas.",
+    "You can only see your own sales."
+  ],
+  "Alterações registradas na auditoria. Dados anteriores à auditoria e valores não registrados não são reconstruídos.": [
+    "Cambios registrados en la auditoría. No se reconstruyen datos anteriores ni valores no registrados.",
+    "Changes recorded in the audit. Earlier data and unrecorded values are not reconstructed."
+  ],
+  "Carregando histórico...": [
+    "Cargando historial...",
+    "Loading history..."
+  ],
+  "Não foi possível carregar o histórico do produto.": [
+    "No se pudo cargar el historial del producto.",
+    "Could not load product history."
+  ],
+  "Nenhum registro nesta seção.": [
+    "No hay registros en esta sección.",
+    "No records in this section."
+  ],
+  "Registrado por": [
+    "Registrado por",
+    "Recorded by"
+  ],
+  "Quantidade definida no local": [
+    "Cantidad establecida en la ubicación",
+    "Quantity set at location"
+  ],
+  "Saldo total": [
+    "Saldo total",
+    "Total stock"
+  ],
+  "Motivo": [
+    "Motivo",
+    "Reason"
+  ],
+  "Movimentação operacional. Os detalhes desta venda seguem as permissões do vendedor.": [
+    "Movimiento operativo. Los detalles de esta venta siguen los permisos del vendedor.",
+    "Operational movement. Sale details follow seller access permissions."
+  ],
+  "Vínculo de origem": [
+    "Vínculo de origen",
+    "Source reference"
+  ],
+  "Baixa de estoque marcada na venda": [
+    "Salida de stock registrada en la venta",
+    "Sale marked as stock deducted"
+  ],
+  "Venda sem baixa ativa de estoque": [
+    "Venta sin descuento activo de stock",
+    "Sale without an active stock deduction"
+  ],
+  "Total desta linha": [
+    "Total de esta línea",
+    "Line total"
+  ],
+  "Desconto desta linha": [
+    "Descuento de esta línea",
+    "Line discount"
+  ],
+  "Vínculo direto com este produto": [
+    "Vínculo directo con este producto",
+    "Direct link to this product"
+  ],
+  "Referência histórica pelo SKU, sem vínculo direto": [
+    "Referencia histórica por SKU, sin vínculo directo",
+    "Historical SKU reference, without a direct link"
+  ],
+  "Item avulso: não movimenta estoque.": [
+    "Artículo libre: no mueve stock.",
+    "Custom item: does not change inventory."
+  ],
+  "Total da venda inteira": [
+    "Total de la venta completa",
+    "Whole sale total"
+  ],
+  "Identificação da venda": [
+    "Identificación de la venta",
+    "Sale identification"
+  ],
+  "Saldo na contagem": [
+    "Saldo al contar",
+    "Stock at count"
+  ],
+  "Quantidade contada": [
+    "Cantidad contada",
+    "Counted quantity"
+  ],
+  "Aplicado em": [
+    "Aplicado el",
+    "Applied on"
+  ],
+  "Origem": [
+    "Origen",
+    "Source"
+  ],
+  "Campo alterado; valores não registrados": [
+    "Campo modificado; valores no registrados",
+    "Field changed; values not recorded"
+  ],
+  "Sem detalhamento dos campos neste registro.": [
+    "Sin detalles de campos en este registro.",
+    "No field details in this record."
+  ],
+  "Concluída": [
+    "Completada",
+    "Completed"
+  ],
+  "Cancelada": [
+    "Cancelada",
+    "Cancelled"
+  ],
+  "Aberta": [
+    "Abierta",
+    "Open"
+  ],
+  "Em contagem": [
+    "En conteo",
+    "Counting"
+  ],
+  "Em revisão": [
+    "En revisión",
+    "Under review"
+  ],
+  "Aplicada": [
+    "Aplicada",
+    "Applied"
+  ],
+  "Venda PDV": [
+    "Venta POS",
+    "POS sale"
+  ],
+  "Cancelamento de venda PDV": [
+    "Cancelación de venta POS",
+    "POS sale cancellation"
+  ],
+  "Contagem de inventário": [
+    "Conteo de inventario",
+    "Inventory count"
+  ],
+  "Cadastro criado": [
+    "Registro creado",
+    "Product created"
+  ],
+  "Cadastro alterado": [
+    "Registro modificado",
+    "Product updated"
+  ],
+  "Cadastro excluído": [
+    "Registro eliminado",
+    "Product deleted"
+  ],
+  "Ajuste de estoque": [
+    "Ajuste de stock",
+    "Stock adjustment"
+  ],
+  "Moeda de custo": [
+    "Moneda de costo",
+    "Cost currency"
+  ],
+  "Moeda de venda": [
+    "Moneda de venta",
+    "Sale currency"
+  ],
   "Gerar foto no cabide": [
     "Generar foto en percha",
     "Generate hanger photo"

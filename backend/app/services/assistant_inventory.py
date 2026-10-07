@@ -61,7 +61,7 @@ def identity(data):
 
 
 def duplicate_items(db,items):
-    existing=db.query(Item.id,Item.name,Item.brand,Item.size,Item.color,Item.barcode,Item.sku_internal,Item.is_active).all()
+    existing=db.query(Item.id,Item.name,Item.brand,Item.size,Item.color,Item.barcode,Item.sku_internal,Item.is_active).filter(Item.deleted_at.is_(None)).all()
     seen=set();seen_barcodes=set();duplicates=[]
     for data in items:
         key=identity(data)
@@ -107,7 +107,7 @@ def prepare_inventory(db,message,identity_record,name,args):
             result=query_stock(db,StockArgs(termo=args.termo,tamanho=args.tamanho,cor=args.cor,limite=5))
             if result.get('total')!=1:return {'erro':'Escolha o produto/variante para a entrada.','candidatos':result.get('resultados',[])}
             item=db.get(Item,uuid.UUID(result['resultados'][0]['id']))
-        if not item or not item.is_active:return {'erro':'Produto não encontrado ou inativo.'}
+        if not item or not item.is_active or item.deleted_at:return {'erro':'Produto não encontrado ou inativo.'}
         payload={'item_id':str(item.id),'item_name':item.name,'sku':item.sku_internal,'quantidade':args.quantidade,'local':args.local};kind='estoque_entrada'
     action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind=kind,payload=payload)
     db.add(action);db.flush()
@@ -118,7 +118,7 @@ def confirm_inventory(db,message,action):
     if db.bind.dialect.name=='postgresql':db.execute(text('SELECT pg_advisory_xact_lock(711006)'))
     p=action.payload
     if action.kind=='estoque_entrada':
-        item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True).with_for_update().first()
+        item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True,deleted_at=None).with_for_update().first()
         if not item:return 'Produto inativo ou removido. Nenhuma entrada registrada.'
         from .inventory_service import StockMovementError
         try:

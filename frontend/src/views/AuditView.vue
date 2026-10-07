@@ -40,7 +40,7 @@ import type { User } from '@/services/api'
 const {t,te,locale}=useI18n()
 const days=ref(7),userId=ref(''),module=ref(''),action=ref(''),offset=ref(0),loading=ref(false),error=ref(''),data=ref<AuditResult|null>(null),users=ref<User[]>([])
 let requestId=0
-const actions=['login','logout','login_failed','create','update','delete','bulk_update','bulk_delete','password_changed','password_reset','access_created','access_changed','item_permanently_deleted']
+const actions=['login','logout','login_failed','create','update','delete','bulk_update','bulk_delete','password_changed','password_reset','access_created','access_changed','item_permanently_deleted','item_catalog_deleted']
 const modules=['dashboard','bi-vendas','enderecos','pedidos','inventory','rastreamento','vendas','pdv','fiado','vendors','exchange-rates','conta','usuarios','auditoria','assistente','clientes']
 const moduleName=(m:string)=>te('access.modules.'+m)?t('access.modules.'+m):m
 const actionName=(a:string)=>te('access.actionNames.'+a)?t('access.actionNames.'+a):a

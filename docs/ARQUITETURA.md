@@ -31,7 +31,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Login | `LoginView`, `stores/auth` | `auth` | `models/usuario`, `dependencies` |
 | Acesso/auditoria | `AccountView`, `UserManagementView`, `AuditView`, `services/activity` | `auth`, `access` | `access_policy`, `user_sessions`, `user_audit`, `models/access`, CLI `user_access_setup` |
 | Dashboard | `DashboardView`, `components/dashboard/*` | Resumos dos módulos | API de cada card; BI usa snapshots |
-| Estoque | `views/inventory/`, `components/inventory/`, `stores/inventory` | `inventory`, `ocr`, `product-photo` | `product_photo`, `inventory_service`, `inventory_diagnostics`, `ocr_service`, `models/inventory`, `label_template` |
+| Estoque | `views/inventory/`, `components/inventory/`, `stores/inventory` | `inventory`, `ocr`, `product-photo` | `product_photo`, `inventory_service`, `inventory_history`, `inventory_deletion`, `inventory_diagnostics`, `ocr_service`, `models/inventory`, `label_template` |
 | Pedidos/clientes | `PedidosView`, `ClientesView`, componentes de pedidos/clientes | `pedidos`, `clientes`, `tags` | `models/pedido`, `cliente`, `pedido_tag`, `pedido_anexo` |
 | Rastreio | `RastreamentoView`, `RastreamentoCard`, `stores/rastreamento` | `rastreamento` | `wonca_service`, `rastreamento_sync`, `models/rastreamento` |
 | Equipe/folgas | `VendorManagement`, `FolgasCard`, `FolgasCalendarAdvanced` | `vendedores` | `models/vendedor`, `funcionario`, `folga`, `assistant_schedule` |

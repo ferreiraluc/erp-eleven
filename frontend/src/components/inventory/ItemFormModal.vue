@@ -1,9 +1,11 @@
 <template>
-  <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @deleted="emit('deleted', $event)" />
-  <div v-show="!showDeletion" class="modal-overlay" @click.self="emit('close')">
+  <ProductHistoryModal v-if="showHistory && item" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
+  <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
+  <div v-show="!showDeletion && !showHistory" class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
       <div class="modal-header">
         <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
+        <button v-if="isEdit" ref="historyButton" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
         <button @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -533,6 +535,8 @@ import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 import BarcodeScanner from './BarcodeScanner.vue'
 import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
+import ProductHistoryModal from './ProductHistoryModal.vue'
+import type { HistorySection } from '@/services/inventoryHistory'
 import type { ProductPhotoResult } from '@/services/productPhoto'
 import { mergeIntake, type IntakeDraft, type IntakeField, type IntakeConflict, type IntakeSource } from '@/services/productIntake'
 import OcrScanner from './OcrScanner.vue'
@@ -565,6 +569,10 @@ const emit = defineEmits<{
 }>()
 
 const showDeletion = ref(false), deleteButton = ref<HTMLButtonElement>()
+const showHistory = ref(false), historySection = ref<HistorySection>('movements')
+const historyButton = ref<HTMLButtonElement>()
+function openHistory(section: HistorySection) { showDeletion.value = false; historySection.value = section; showHistory.value = true }
+async function closeHistory() { showHistory.value = false; await nextTick(); historyButton.value?.focus() }
 async function closeDeletion() { showDeletion.value = false; await nextTick(); deleteButton.value?.focus() }
 
 const isEdit = computed(() => !!props.item)

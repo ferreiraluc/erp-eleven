@@ -66,6 +66,12 @@ class Item(Base):
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
     image_data = Column(Text, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
+
+    @property
+    def history_name(self):
+        return f'Produto excluído — {self.name}' if self.deleted_at else self.name
 
     supplier = relationship("Supplier", back_populates="items")
     movements = relationship("StockMovement", back_populates="item")
@@ -91,6 +97,10 @@ class StockMovement(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
 
     item = relationship("Item", back_populates="movements")
+
+    @property
+    def item_name(self):
+        return self.item.history_name if self.item else None
 
 
 class InventorySession(Base):

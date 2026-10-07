@@ -2,6 +2,7 @@
   <div class="inventory-view">
     <div class="sticky-toolbar">
     <ModuleHeader :title="tr('Estoque')">
+      <button v-if="auth.isOwner" class="erp-button erp-button--secondary erp-button--sm" @click="showDeletedHistory = true">{{ tr('Histórico de excluídos') }}</button>
       <button
         @click="showDiagnostics = !showDiagnostics"
         class="btn btn-secondary diagnostics-toggle erp-button erp-button--secondary erp-button--sm"
@@ -580,6 +581,7 @@
     <!-- Modals -->
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
 
+    <DeletedProductsModal v-if="showDeletedHistory" @close="showDeletedHistory = false" />
     <ItemFormModal
       v-if="showItemForm"
       :item="editingItem"
@@ -714,6 +716,7 @@ import { useAuthStore } from '@/stores/auth'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
+import DeletedProductsModal from '@/components/inventory/DeletedProductsModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
 import ImportModal from '@/components/inventory/ImportModal.vue'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
@@ -742,6 +745,7 @@ const searchQuery = ref('')
 const activeStatus = ref((route.query.status as string) || '')
 const showScanner = ref(false)
 const showItemForm = ref(false)
+const showDeletedHistory = ref(false)
 const showMovementModal = ref(false)
 const showImport = ref(false)
 const showLabelTemplates = ref(false)

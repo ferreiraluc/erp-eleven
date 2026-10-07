@@ -214,6 +214,7 @@
     "identifier": "Identificador",
     "actionNames": {
       "item_permanently_deleted": "Eliminación definitiva de producto",
+      "item_catalog_deleted": "Eliminación del catálogo conservando historial",
       "login": "Inicio de sesión",
       "logout": "Cierre de sesión",
       "login_failed": "Acceso rechazado",

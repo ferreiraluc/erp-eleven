@@ -27,7 +27,7 @@ def diagnose_inventory(db, *, issue='all', q='', page=1, page_size=25):
         or_(Item.current_stock.is_(None), Item.stock_loja.is_(None), Item.stock_deposito.is_(None)).label('missing_stock'),
         func.coalesce(or_(Item.current_stock < 0, Item.stock_loja < 0, Item.stock_deposito < 0), False).label('negative_stock'),
         func.coalesce(Item.current_stock != expected, False).label('stock_mismatch'),
-    ).where(Item.is_active.is_(True)).cte('active_inventory')
+    ).where(Item.is_active.is_(True), Item.deleted_at.is_(None)).cte('active_inventory')
     duplicates = select(
         base.c.normalized_barcode, func.count().label('duplicate_count'),
     ).where(base.c.normalized_barcode != '').group_by(base.c.normalized_barcode).having(func.count() > 1).cte('duplicate_codes')

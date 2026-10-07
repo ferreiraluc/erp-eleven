@@ -55,6 +55,8 @@ def _lock_sale_stock(db: Session, sale_items, *, allow_inactive=False) -> dict[u
     if len(items) != len(item_ids):
         _stock_conflict(db, "Um produto de catálogo da venda não existe. Confira o cadastro antes de continuar.")
     for item in items:
+        if item.deleted_at:
+            _stock_conflict(db, 'Produto excluído do catálogo. Confira o histórico antes de alterar esta venda; o produto não será reativado.')
         if not allow_inactive and not item.is_active:
             _stock_conflict(db, f'Produto inativo: "{item.name}". Selecione um produto ativo para vender.')
         if any(value is None for value in (item.current_stock, item.stock_loja, item.stock_deposito)):
@@ -390,6 +392,17 @@ def record_fiado_payment(
 # ── Internal serializer ───────────────────────────────────────────────────────
 
 def _sale_to_response(sale: PdvSale) -> PdvSaleResponse:
+    from sqlalchemy.orm import object_session
+    from sqlalchemy import or_
+    db = object_session(sale)
+    product_ids = [line.item_id for line in sale.items if line.item_id]
+    legacy_skus = [line.item_sku for line in sale.items if not line.item_id and line.item_sku]
+    deleted = db.query(Item.id, Item.sku_internal).filter(Item.deleted_at.isnot(None),
+        or_(Item.id.in_(product_ids), Item.sku_internal.in_(legacy_skus))).all() if db else []
+    deleted_ids, deleted_skus = {r.id for r in deleted}, {r.sku_internal for r in deleted}
+    def history_name(line):
+        removed = line.item_id in deleted_ids if line.item_id else line.item_sku in deleted_skus
+        return f'Produto excluído — {line.item_name}' if removed else line.item_name
     return PdvSaleResponse(
         id=sale.id,
         vendedor_id=sale.vendedor_id,
@@ -404,7 +417,7 @@ def _sale_to_response(sale: PdvSale) -> PdvSaleResponse:
         created_at=sale.created_at,
         items=[
             dict(
-                id=i.id, item_id=i.item_id, item_name=i.item_name,
+                id=i.id, item_id=i.item_id, item_name=history_name(i),
                 item_sku=i.item_sku, item_category=i.item_category,
                 item_size=i.item_size, item_color=i.item_color,
                 quantity=float(i.quantity), unit_price_gs=float(i.unit_price_gs),

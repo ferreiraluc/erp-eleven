@@ -37,6 +37,58 @@ linha e FKs PostgreSQL para impedir vínculos órfãos em operações simultâne
 Falha de rede não provoca retentativa automática. Os testes de exclusão usam
 somente produtos locais descartáveis; não se remove estoque real para validar UI.
 
+## Histórico por produto e retirada do catálogo
+
+Em **Estoque → Editar → Histórico**, a ficha apresenta criação, responsável,
+última atualização, SKU/variante e saldos. As seções paginadas mostram:
+
+- **Movimentações**: entradas, saídas, ajustes, transferências, responsável, motivo,
+  local e saldo total antes/depois. No ajuste, a quantidade é o valor definido no
+  local; não uma quantidade vendida. Transferência conserva o total.
+- **Vendas**: vendas PDV distintas, inclusive canceladas, com suas linhas deste
+  produto, data, vendedor, cliente, valores em G$, ID e estado da baixa de estoque.
+  O total da linha e o total da venda inteira são identificados separadamente.
+  ID do produto é vínculo direto; SKU exato em linha antiga sem ID é referência
+  histórica. Mesmo nome/código de barras nunca cria vínculo.
+- **Contagens**: sessão, local, saldo de referência, quantidade contada e aplicação.
+- **Alterações**: auditoria de campos do produto, exclusiva de Lucas. Nomes antigos
+  e valores não registrados não são reconstruídos; campos apenas sinalizados como
+  alterados são apresentados dessa forma. Consultas não geram novos eventos.
+
+`GET /api/inventory/items/{id}/history` exige autenticação e aplica o escopo de
+vendas pessoais antes das contagens e da paginação. Movimentações de estoque são
+operacionais; para venda alheia, omite referência, notas, motivo livre e autor.
+Dados ausentes não viram zero. Não há backfill nem inferência de lançamentos.
+O histórico ainda não associa vendas operacionais/planilhas a itens, pois essas
+fontes não possuem vínculo estruturado de produto.
+
+Para produto com vínculos, o modal de exclusão oferece **Excluir e manter histórico**,
+exclusivo de Lucas, em `POST /api/inventory/items/{id}/delete-from-catalog`.
+Exige revisão e token do estado do produto; o atalho **Ver histórico e vínculos**
+abre a seção que explica o bloqueio. A contagem do aviso é de vendas distintas,
+e não de linhas de itens dentro da mesma venda.
+
+Essa modalidade marca `deleted_at`/`deleted_by`, inativa e remove a foto. O registro
+interno e seu SKU permanecem reservados para preservar FKs, nomes originais, saldos,
+vendas, contagens e movimentações. Nas respostas históricas aparece **Produto
+excluído — nome original**. Não é exclusão física da linha do banco nem simples
+inativação reversível. Não há reativação pelo formulário, ajustes ou pelo bot.
+As listas de estoque, inclusive inativos, grupos, opções, OCR, PDV, diagnósticos e
+bot excluem esses registros. Lucas os encontra em **Histórico de excluídos**,
+cuja consulta é paginada e não carrega fotos.
+
+A retirada do catálogo não cancela vendas, não devolve dinheiro, não remove
+faturamento histórico nem registra saída física fictícia. Saldos preservados não
+entram no disponível. Uma venda com produto excluído que precise de devolução de
+estoque exige revisão: o cancelamento é recusado atomicamente, sem reativar o
+produto nem fazer devolução silenciosa. A exclusão física para itens sem vínculos
+continua disponível pelo fluxo anterior.
+
+Migração: `f2a3b4c5d6e7`, sem alterar registros existentes. Testes de histórico,
+permissões, exclusão do catálogo e concorrência usam bases isoladas. O teste
+PostgreSQL comprova migração preservando linhas e movimentação concorrente
+bloqueada após a retirada do catálogo. Nenhum produto real é removido no deploy.
+
 ## Cadastro unificado: foto, etiqueta e estoque
 
 **Estoque → Novo item** e o atalho **Novo produto** do dashboard abrem o mesmo

@@ -165,6 +165,7 @@ class BatchMovementCreate(BaseModel):
 
 
 class MovementResponse(MovementBase):
+    item_name: Optional[str] = None
     id: uuid.UUID
     quantity_before: int
     quantity_after: int

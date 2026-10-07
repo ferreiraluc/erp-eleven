@@ -214,6 +214,7 @@
     "identifier": "Identifier",
     "actionNames": {
       "item_permanently_deleted": "Permanent product deletion",
+      "item_catalog_deleted": "Catalog removal with history preserved",
       "login": "Sign-in",
       "logout": "Sign-out",
       "login_failed": "Sign-in rejected",

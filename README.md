@@ -12,7 +12,7 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | Área | O que oferece | Tela |
 | --- | --- | --- |
 | Dashboard | Estoque e rastreios; cards lado a lado de endereços e vendas, resumos e atalhos | `/dashboard` |
-| Estoque | Produtos, variantes, loja/depósito, movimentações, contagem, conferência de saldos/códigos, etiquetas, OCR e cadastro por foto com IA | `/inventory` |
+| Estoque | Produtos, variantes, loja/depósito, movimentações, histórico por produto, contagem, conferência de saldos/códigos, etiquetas, OCR e cadastro por foto com IA | `/inventory` |
 | Clientes e pedidos | Cadastros, endereços, impressões, pedidos e vínculos logísticos | `/clientes`, `/pedidos` |
 | Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
 | Equipe e folgas | Vendedores com resultados do BI, calendário e histórico de folgas | `/vendors`, card de folgas |
@@ -72,6 +72,7 @@ servidor de impressão.
 - [Acesso individual e auditoria](docs/ACESSO_AUDITORIA.md): sessões, permissões, senhas e uso das telas.
 - [Clientes, pedidos e pacotes](docs/CLIENTES_PEDIDOS_RASTREIOS.md): vínculos explícitos e entregas parciais.
 - [Comprovantes por foto](docs/RASTREIOS_COMPROVANTES.md) e [remetentes gerados](docs/REMETENTES_GERADOS.md).
+- [Plano de conciliação PDV/caderno/planilhas](docs/CONCILIACAO_VENDAS.md): proposta de associação sem duplicar receitas.
 - [Auditoria de manutenção](docs/AUDITORIA_MANUTENCAO.md): remoções verificadas e dívida técnica restante.
 
 ## Estrutura

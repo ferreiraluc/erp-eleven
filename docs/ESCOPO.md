@@ -129,3 +129,14 @@ econômica. A foto não define estoque, preço, SKU ou identidade. A opção exp
 **Criar grade deste modelo** reaproveita os dados e a foto nos tamanhos/cores
 selecionados no novo cadastro, sem gerar quantidades pela IA. Limites de mídia, custos e manutenção do modelo estão no
 [guia de estoque](ESTOQUE_OCR.md#cadastro-por-foto-do-produto).
+
+### Histórico e produtos excluídos
+
+Cada produto possui histórico de criação, movimentações, contagens e vínculos com
+vendas PDV; alterações auditadas são exclusivas de Lucas. Vendas pessoais continuam
+filtradas no backend. Lucas pode retirar um produto vinculado do catálogo mantendo
+os registros internos identificados como produto excluído. Essa retirada não
+cancela vendas nem altera o financeiro; os registros ficam em Histórico de excluídos.
+Detalhes e limites: [Estoque](ESTOQUE_OCR.md#histórico-por-produto-e-retirada-do-catálogo).
+A associação entre PDV e caderno/planilhas está **planejada, ainda não implementada**
+no [plano de conciliação](CONCILIACAO_VENDAS.md).

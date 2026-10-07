@@ -67,7 +67,7 @@ def parse_label(
     except OcrProviderError as error:
         raise HTTPException(502, str(error)) from None
     if result.get('codigo_barras'):
-        matches = db.query(Item).filter(Item.barcode == result['codigo_barras'], Item.is_active == True)
+        matches = db.query(Item).filter(Item.barcode == result['codigo_barras'], Item.is_active == True, Item.deleted_at.is_(None))
         result['matches_total'] = matches.count()
         result['matches'] = [{'id': str(row.id), 'name': row.name, 'sku_internal': row.sku_internal}
                              for row in matches.order_by(Item.name, Item.id).limit(5).all()]

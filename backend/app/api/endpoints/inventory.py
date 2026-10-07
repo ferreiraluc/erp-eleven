@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Body
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_, or_
 from typing import List, Optional, Literal
@@ -31,7 +31,8 @@ from ...schemas.inventory import (
 from ...schemas.inventory_diagnostics import InventoryDiagnostics, IssueFilter
 from ...dependencies import get_current_active_user, require_role, require_owner
 from ...schemas.inventory_deletion import ItemDeletionConfirmation
-from ...services.inventory_deletion import deletion_preview, permanently_delete_item
+from ...services.inventory_deletion import deletion_preview, permanently_delete_item, delete_from_catalog
+from ...services.inventory_history import product_history
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level, StockMovementError
 from ..validators import validate_uuid
 from datetime import datetime as dt
@@ -131,13 +132,25 @@ def create_supplier(
 
 # --- Items -------------------------------------------------------------------
 
+@router.get('/items/deleted-history')
+def deleted_product_history(q: str = Query('', max_length=150), page: int = Query(1, ge=1, le=20000),
+                            db: Session = Depends(get_db), owner: Usuario = Depends(require_owner)):
+    query = db.query(Item.id, Item.name, Item.sku_internal, Item.deleted_at).filter(Item.deleted_at.isnot(None))
+    if q.strip():
+        term = q.strip().replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        query = query.filter(or_(Item.name.ilike(f'%{term}%', escape='\\'), Item.sku_internal.ilike(f'%{term}%', escape='\\')))
+    total = query.count()
+    rows = query.order_by(Item.deleted_at.desc(), Item.id.desc()).offset((page-1)*20).limit(20).all()
+    return {'total': total, 'page': page, 'page_size': 20, 'items': [
+        {'id': row.id, 'name': f'Produto excluído — {row.name}', 'sku': row.sku_internal, 'deleted_at': row.deleted_at} for row in rows]}
+
 @router.get("/items/distinct-values")
 def get_distinct_values(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    brands = db.query(Item.brand).filter(Item.brand.isnot(None), Item.brand != '').distinct().all()
-    categories = db.query(Item.category).filter(Item.category.isnot(None), Item.category != '').distinct().all()
+    brands = db.query(Item.brand).filter(Item.deleted_at.is_(None), Item.brand.isnot(None), Item.brand != '').distinct().all()
+    categories = db.query(Item.category).filter(Item.deleted_at.is_(None), Item.category.isnot(None), Item.category != '').distinct().all()
     return {
         "brands": sorted([b[0] for b in brands]),
         "categories": sorted([c[0] for c in categories]),
@@ -162,7 +175,7 @@ def list_items(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = db.query(Item)
+    query = db.query(Item).filter(Item.deleted_at.is_(None))
 
     if search:
         for token in search.strip().split():
@@ -271,7 +284,7 @@ def get_items_by_barcode(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    items = db.query(Item).filter(Item.barcode == code, Item.is_active == True).all()
+    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.barcode == code, Item.is_active == True).all()
     result = []
     for item in items:
         resp = ItemResponse.model_validate(item)
@@ -286,14 +299,14 @@ def get_alerts_summary(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     from sqlalchemy import func as sqlfunc
-    active_items = db.query(Item).filter(Item.is_active == True).all()
+    active_items = db.query(Item).filter(Item.deleted_at.is_(None), Item.is_active == True).all()
     known_items = [i for i in active_items if _compute_alert_level(i) != 'unknown']
     low_stock = sum(1 for i in known_items if i.min_stock is not None and 0 < i.current_stock < i.min_stock)
     out_of_stock = sum(1 for i in known_items if i.current_stock <= 0)
     overstocked = sum(1 for i in known_items if i.max_stock is not None and i.max_stock > 0 and i.current_stock > i.max_stock)
-    inactive_count = db.query(Item).filter(Item.is_active == False).count()
+    inactive_count = db.query(Item).filter(Item.deleted_at.is_(None), Item.is_active == False).count()
     grouped_items_count = sum(1 for i in active_items if i.group_key)
-    group_count = db.query(Item.group_key).filter(
+    group_count = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
         Item.group_key.isnot(None), Item.is_active == True
     ).distinct().count()
     loja_count = sum(1 for i in active_items if i.stock_loja is not None and i.stock_loja > 0)
@@ -330,7 +343,7 @@ def get_groups(
     # A group is included if ANY item matches — then ALL items of that group are shown.
     filter_keys: Optional[set] = None
     if brand or category or item_status or location_stock:
-        kq = db.query(Item.group_key).filter(
+        kq = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
             Item.is_active == True,
         )
@@ -363,7 +376,7 @@ def get_groups(
         for token in tokens:
             like = f"%{token}%"
             rows = (
-                db.query(Item.group_key)
+                db.query(Item.group_key).filter(Item.deleted_at.is_(None))
                 .filter(
                     Item.group_key.isnot(None),
                     Item.is_active == True,
@@ -399,7 +412,7 @@ def get_groups(
         return []
 
     # Step 4: Load all items from matching groups
-    item_query = db.query(Item).filter(Item.group_key.isnot(None), Item.is_active == True)
+    item_query = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key.isnot(None), Item.is_active == True)
     if matching_keys is not None:
         item_query = item_query.filter(Item.group_key.in_(matching_keys))
     items = item_query.order_by(Item.group_key, Item.name).all()
@@ -435,7 +448,7 @@ def rename_group(
         raise HTTPException(status_code=400, detail="O nome do grupo não pode ser vazio")
     if new_key == old_key:
         return {"message": "Nenhuma alteração", "count": 0}
-    items = db.query(Item).filter(Item.group_key == old_key).all()
+    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key == old_key).all()
     if not items:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
     for item in items:
@@ -451,7 +464,7 @@ def get_suggestions(
 ):
     """Returns grouping suggestions based on ALL ungrouped active items in DB"""
     items = (
-        db.query(Item)
+        db.query(Item).filter(Item.deleted_at.is_(None))
         .filter(Item.group_key == None, Item.is_active == True)
         .order_by(Item.name)
         .all()
@@ -486,7 +499,7 @@ def get_item(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     item_uuid = validate_uuid(item_id)
-    item = db.query(Item).filter(Item.id == item_uuid).first()
+    item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     resp = ItemResponse.model_validate(item)
@@ -502,7 +515,7 @@ def update_item(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
     item_uuid = validate_uuid(item_id)
-    db_item = db.query(Item).filter(Item.id == item_uuid).first()
+    db_item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).with_for_update().populate_existing().first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -523,7 +536,7 @@ def group_items_batch(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
-    items = db.query(Item).filter(Item.id.in_(request.item_ids)).all()
+    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found")
     for item in items:
@@ -638,7 +651,7 @@ def ungroup_items(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    items = db.query(Item).filter(Item.group_key == body.group_key).all()
+    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key == body.group_key).all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found with this group_key")
     for item in items:
@@ -655,7 +668,7 @@ def remove_item_from_group(
 ):
     """Remove a single item from its group (set group_key to None)"""
     item_uuid = validate_uuid(item_id)
-    item = db.query(Item).filter(Item.id == item_uuid).first()
+    item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     if not item.group_key:
@@ -672,7 +685,7 @@ def batch_edit_items(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
-    items = db.query(Item).filter(Item.id.in_(request.item_ids)).order_by(Item.id).with_for_update().all()
+    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).with_for_update().all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found")
 
@@ -780,6 +793,21 @@ def bulk_transfer_items(
     return {"message": f"Transferred {count} items", "count": count}
 
 
+@router.get('/items/{item_id}/history')
+def get_product_history(item_id: str, section: Literal['movements', 'sales', 'counts', 'changes'] = 'movements',
+                        page: int = Query(1, ge=1, le=20000), page_size: int = Query(20, ge=1, le=100),
+                        db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user)):
+    return product_history(db, validate_uuid(item_id), current_user, section=section, page=page, page_size=page_size)
+
+
+@router.post('/items/{item_id}/delete-from-catalog')
+def remove_from_catalog(item_id: str, body: ItemDeletionConfirmation,
+                        db: Session = Depends(get_db), owner: Usuario = Depends(require_owner)):
+    result = delete_from_catalog(db, validate_uuid(item_id), owner, body)
+    db.commit()
+    return result
+
+
 @router.get('/items/{item_id}/deletion-preview')
 def preview_item_deletion(item_id: str, db: Session = Depends(get_db), owner: Usuario = Depends(require_owner)):
     return deletion_preview(db, validate_uuid(item_id), owner)
@@ -800,7 +828,7 @@ def delete_item(
     current_user: Usuario = Depends(require_role(["ADMIN"])),
 ):
     item_uuid = validate_uuid(item_id)
-    db_item = db.query(Item).filter(Item.id == item_uuid).first()
+    db_item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).with_for_update().populate_existing().first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
     db_item.is_active = False
@@ -918,7 +946,7 @@ def list_movements(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = db.query(StockMovement)
+    query = db.query(StockMovement).options(joinedload(StockMovement.item).load_only(Item.name, Item.deleted_at))
     if item_id:
         item_uuid = validate_uuid(item_id, "item_id")
         query = query.filter(StockMovement.item_id == item_uuid)
@@ -942,6 +970,7 @@ def get_item_movements(
     item_uuid = validate_uuid(item_id)
     return (
         db.query(StockMovement)
+        .options(joinedload(StockMovement.item).load_only(Item.name, Item.deleted_at))
         .filter(StockMovement.item_id == item_uuid)
         .order_by(StockMovement.created_at.desc())
         .offset(skip)
@@ -1034,7 +1063,7 @@ def scan_item(
     if session.status not in (SessionStatus.open, SessionStatus.counting):
         raise HTTPException(409, 'A sessão não está aberta para contagem. Sessões em revisão, aplicadas ou canceladas não recebem novas leituras.')
 
-    item = db.query(Item).filter(Item.id == scan.item_id).with_for_update().populate_existing().first()
+    item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == scan.item_id).with_for_update().populate_existing().first()
     if not item or not item.is_active:
         raise HTTPException(status_code=404, detail="Item not found")
     system_quantity = item.stock_loja if session.count_location == 'loja' else item.stock_deposito

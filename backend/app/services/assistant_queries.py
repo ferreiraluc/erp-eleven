@@ -272,7 +272,7 @@ def query_orders(db, args):
 def query_stock(db, args):
     i = Item
     qty = {"total": i.current_stock, "loja": i.stock_loja, "deposito": i.stock_deposito}[args.local]
-    q = db.query(i).filter(i.is_active.is_(True))
+    q = db.query(i).filter(i.is_active.is_(True), i.deleted_at.is_(None))
     if args.termo:
         q = q.filter(contains([i.name, i.sku_internal, i.barcode, i.brand, i.category], args.termo))
     for column, value in ((i.category, args.categoria), (i.size, args.tamanho), (i.color, args.cor)):

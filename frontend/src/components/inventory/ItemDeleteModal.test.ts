@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import ItemDeleteModal from './ItemDeleteModal.vue'
-const api = vi.hoisted(() => ({ preview: vi.fn(), remove: vi.fn() }))
+const api = vi.hoisted(() => ({ preview: vi.fn(), remove: vi.fn(), preserveHistory: vi.fn() }))
 vi.mock('@/services/inventoryDeletion', () => ({ inventoryDeletionAPI: api }))
 const preview = { allowed: true, blockers: [], movement_count: 1, plan_token: 'reviewed-token',
   item: { id: 'product', name: 'Camiseta Teste', sku_internal: 'SKU-TESTE', size: 'M', color: 'Branco', stock_loja: 2, stock_deposito: 0, current_stock: 2 } }
@@ -48,5 +48,17 @@ describe('Permanent product deletion', () => {
     button('Conferir novamente').click(); await vi.waitFor(() => expect(root.querySelector('input')).not.toBeNull())
     expect((root.querySelector('input') as HTMLInputElement).checked).toBe(false)
     expect(api.remove).toHaveBeenCalledTimes(1)
+  })
+  it('offers a separately confirmed catalog removal for linked products and keeps the physical deletion blocked', async () => {
+    api.preview.mockResolvedValue({ ...preview, allowed:false, plan_token:null, preserve_history_token:'history-token', blockers:[{code:'sales',count:2}] })
+    api.preserveHistory.mockResolvedValue({deleted:true,id:'product',history_preserved:true})
+    const deleted=vi.fn();await mount({onDeleted:deleted})
+    expect(button('Excluir definitivamente')).toBeUndefined()
+    expect(button('Excluir e manter histórico').disabled).toBe(true)
+    await approve();button('Excluir e manter histórico').click();button('Excluir e manter histórico').click()
+    await vi.waitFor(()=>expect(deleted).toHaveBeenCalledWith('product'))
+    expect(api.preserveHistory).toHaveBeenCalledTimes(1)
+    expect(api.preserveHistory).toHaveBeenCalledWith('product',{sku:'SKU-TESTE',plan_token:'history-token',confirm:true})
+    expect(api.remove).not.toHaveBeenCalled()
   })
 })

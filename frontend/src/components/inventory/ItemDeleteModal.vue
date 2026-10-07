@@ -20,12 +20,20 @@
           <template v-else>
             <p>{{ tr('Este produto tem vínculos operacionais e não pode ser excluído definitivamente.') }}</p>
             <ul><li v-for="blocker in preview.blockers" :key="blocker.code">{{ tr(blockerLabels[blocker.code]) }}: {{ blocker.count }}</li></ul>
+            <button class="erp-button erp-button--secondary erp-button--sm" @click="emit('history', preview.blockers.some(b => b.code === 'sales') ? 'sales' : preview.blockers.some(b => b.code === 'inventory_counts') ? 'counts' : 'movements')">{{ tr('Ver histórico e vínculos') }}</button>
+            <div v-if="preview.preserve_history_token" class="preserve-history">
+              <h3>{{ tr('Excluir do catálogo e preservar histórico') }}</h3>
+              <p>{{ tr('O produto sai do estoque, das buscas e das opções de venda. Nos registros ficará identificado como Produto excluído, com o nome original.') }}</p>
+              <p>{{ tr('Vendas, valores, saldos históricos e movimentações permanecem. A foto será removida. Isso não cancela vendas nem realiza estornos. Não é possível reativar este cadastro.') }}</p>
+              <label class="confirm-check"><input v-model="confirmed" type="checkbox" :disabled="busy" />{{ tr('Conferi os vínculos e quero retirar este produto do catálogo, preservando seu histórico.') }}</label>
+            </div>
           </template>
         </template>
       </main>
       <footer>
         <button class="erp-button erp-button--secondary" :disabled="busy" @click="close">{{ tr('Voltar') }}</button>
-        <button v-if="preview?.allowed && !error" class="erp-button erp-button--danger" :disabled="!confirmed || busy || loading" @click="remove">{{ tr(busy ? 'Excluindo...' : 'Excluir definitivamente') }}</button>
+        <button v-if="preview?.allowed && !error" class="erp-button erp-button--danger" :disabled="!confirmed || busy || loading" @click="remove()">{{ tr(busy ? 'Excluindo...' : 'Excluir definitivamente') }}</button>
+        <button v-else-if="preview?.preserve_history_token && !error" class="erp-button erp-button--danger" :disabled="!confirmed || busy || loading" @click="remove(true)">{{ tr(busy ? 'Excluindo...' : 'Excluir e manter histórico') }}</button>
       </footer>
     </section>
   </div>
@@ -36,7 +44,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { inventoryDeletionAPI, type ItemDeletionPreview } from '@/services/inventoryDeletion'
 import { useInventoryI18n } from './i18n'
 const props = defineProps<{ itemId: string }>()
-const emit = defineEmits<{ (e: 'close'): void; (e: 'deleted', id: string): void }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'deleted', id: string): void; (e: 'history', section: 'sales' | 'counts' | 'movements'): void }>()
 const { tr } = useInventoryI18n()
 const preview = ref<ItemDeletionPreview | null>(null), dialog = ref<HTMLElement>()
 const loading = ref(true), busy = ref(false), confirmed = ref(false), error = ref('')
@@ -50,11 +58,13 @@ async function load() {
   catch (cause: any) { if (mounted) error.value = typeof cause.response?.data?.detail === 'string' ? cause.response.data.detail : 'Não foi possível conferir os vínculos do produto.' }
   finally { if (mounted) { loading.value = false; await nextTick(); dialog.value?.focus() } }
 }
-async function remove() {
-  if (busy.value || !confirmed.value || !preview.value?.allowed || !preview.value.plan_token) return
+async function remove(preserve = false) {
+  const token = preserve ? preview.value?.preserve_history_token : preview.value?.allowed ? preview.value.plan_token : null
+  if (busy.value || !confirmed.value || !preview.value || !token) return
   busy.value = true
   try {
-    const result = await inventoryDeletionAPI.remove(props.itemId, { sku: preview.value.item.sku_internal, plan_token: preview.value.plan_token, confirm: true })
+    const operation = preserve ? inventoryDeletionAPI.preserveHistory : inventoryDeletionAPI.remove
+    const result = await operation(props.itemId, { sku: preview.value.item.sku_internal, plan_token: token, confirm: true })
     if (!result.deleted || result.id !== props.itemId) throw new Error('Deletion not confirmed')
     emit('deleted', result.id)
   } catch (cause: any) {
@@ -82,6 +92,7 @@ main { overflow-y: auto; padding: 1.25rem; font-size: .9rem; line-height: 1.5; }
 .product-identity { display: flex; flex-direction: column; overflow-wrap: anywhere; } .product-identity strong { color: #111827; font-size: 1rem; } code { font-size: .8rem; color: #6b7280; }
 dl { padding: .75rem; background: #f8fafc; border-radius: 8px; } dl div { display: flex; justify-content: space-between; gap: 1rem; } dd { margin: 0; font-weight: 600; }
 .audit-note { color: #6b7280; font-size: .8rem; } .confirm-check { display: flex; gap: .6rem; align-items: flex-start; } input { margin-top: .3rem; flex-shrink: 0; }
+.preserve-history { margin-top:1rem; padding:1rem; border:1px solid #fcd34d; border-radius:10px; background:#fffbeb; } .preserve-history h3 { font-size:.95rem; margin:0; }
 footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; border-top: 1px solid #e5e7eb; } footer button { white-space: normal; }
 @media(max-width: 480px) { .delete-overlay { padding: .6rem; } .delete-dialog { max-height: calc(100dvh - 1.2rem); } main { padding: 1rem; } footer { padding: .85rem; } footer button { flex: 1; font-size: .8rem; } }
 </style>

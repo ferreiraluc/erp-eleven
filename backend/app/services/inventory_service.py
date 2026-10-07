@@ -46,10 +46,12 @@ def create_movement(
         raise ValueError(f"Item {item_id} not found")
     # A prior lookup may have populated this session before the row lock waited.
     # Refresh stock columns explicitly so the identity map cannot supply stale balances.
-    refresh_fields = ['current_stock', 'stock_loja', 'stock_deposito']
+    refresh_fields = ['current_stock', 'stock_loja', 'stock_deposito', 'deleted_at']
     if not inspect(item).attrs.cost_price.history.has_changes():
         refresh_fields.append('cost_price')
     db.refresh(item, attribute_names=refresh_fields, with_for_update=True)
+    if item.deleted_at:
+        raise StockMovementError('Produto excluído do catálogo. O histórico foi preservado; novas movimentações não são permitidas.', 409)
     if any(value is None for value in (item.current_stock, item.stock_loja, item.stock_deposito)):
         raise StockMovementError('Há saldo desconhecido neste produto. Nenhuma movimentação foi registrada; confira os dados do estoque.', 409)
 
@@ -185,7 +187,7 @@ def apply_session(
            or not 0 <= row.counted_quantity <= 2_147_483_647 for row in counted):
         raise StockMovementError('A contagem contém uma quantidade inválida. Retorne à contagem e confira os valores.', 409)
     items = db.query(Item).filter(Item.id.in_([row.item_id for row in counted])).order_by(Item.id).with_for_update().populate_existing().all()
-    if len(items) != len(counted) or any(not item.is_active for item in items):
+    if len(items) != len(counted) or any(not item.is_active or item.deleted_at for item in items):
         raise StockMovementError('Um produto da contagem está inativo ou não existe. Confira a sessão antes de aplicar.', 409)
     by_id = {item.id: item for item in items}
     for row in counted:
