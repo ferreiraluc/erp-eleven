@@ -66,7 +66,7 @@ def test_new_migrations_preserve_users_and_only_backfill_explicit_customers(pg):
             conn.execute(sa.text('UPDATE usuarios SET vendedor_id=:id'),{'id':uuid.uuid4()})
 
 
-def test_activity_endpoint_serializes_credit_across_concurrent_tabs(pg, monkeypatch):
+def test_disabled_activity_endpoint_preserves_old_spans_across_concurrent_tabs(pg, monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
     from datetime import timedelta
     from threading import Barrier
@@ -103,9 +103,10 @@ def test_activity_endpoint_serializes_credit_across_concurrent_tabs(pg, monkeypa
     try:
         with ThreadPoolExecutor(max_workers=2) as executor:
             results=list(executor.map(tick,span_ids))
-        assert sum(r['active_seconds'] for r in results)==15
+        assert all(r=={'active_seconds':0,'tracking_enabled':False} for r in results)
         with factory() as db:
-            assert db.query(sa.func.sum(ActivitySpan.active_seconds)).scalar()==15
+            assert db.query(sa.func.sum(ActivitySpan.active_seconds)).scalar()==0
+            assert db.query(ActivitySpan).count()==2
     finally:
         isolated.dispose()
 

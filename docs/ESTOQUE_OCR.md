@@ -7,6 +7,36 @@ texto, status, marca, categoria, local e seleção de itens sem grade. O modo de
 visualização e agrupamento é preservado. Uma lista vazia sem filtros permite
 **Novo item**, sem afirmar que não existem outros produtos fora da seleção.
 
+## Exclusão definitiva de produto
+
+Somente Lucas (`lucas@eleven.com`, ADMIN) vê **Excluir definitivamente** ao editar
+um produto. O backend aplica a mesma autorização nas rotas
+`GET /api/inventory/items/{id}/deletion-preview` e
+`DELETE /api/inventory/items/{id}/permanent`. A desativação existente continua
+separada; não há exclusão em lote nem ferramenta de exclusão no bot.
+
+A prévia mostra nome, tamanho, cor, SKU, saldos e quantidade de movimentações a
+remover. Após marcar a conferência e confirmar, apaga o item, a imagem armazenada
+nele e suas movimentações sem vínculo operacional, inclusive a entrada inicial
+de um cadastro de teste. Não exige zerar um estoque de teste. As demais variações
+da grade permanecem. Auditoria conserva ator, identificação do produto, saldos e
+quantidade removidos; não guarda a imagem nem recria o cadastro excluído.
+
+Vendas PDV (inclusive canceladas), referências históricas pelo SKU, contagens de
+inventário e movimentações com referências a pedidos/vendas/outras operações
+impedem a exclusão. Referências de entrada pelo assistente são permitidas; suas
+ações e mensagens históricas continuam preservadas. O bloqueio verifica vínculos
+registrados, não infere relações por nomes iguais ou códigos de barras repetidos.
+Pedidos em texto livre e linhas financeiras do Excel não possuem relação
+estruturada com itens de estoque; esta regra não comprova ausência de menções a
+um produto nesses textos.
+
+A confirmação contém o SKU e o token da prévia. Alteração do produto ou de suas
+movimentações exige nova conferência. A remoção é transacional e usa bloqueio da
+linha e FKs PostgreSQL para impedir vínculos órfãos em operações simultâneas.
+Falha de rede não provoca retentativa automática. Os testes de exclusão usam
+somente produtos locais descartáveis; não se remove estoque real para validar UI.
+
 ## Cadastro unificado: foto, etiqueta e estoque
 
 **Estoque → Novo item** e o atalho **Novo produto** do dashboard abrem o mesmo

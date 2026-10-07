@@ -12,6 +12,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const filters = ref({ search: '', status: '', category: '', brand: '', location: '', size: '', color: '', location_stock: '' })
   const loading = ref(false)
   const error = ref<string | null>(null)
+  let loadGeneration = 0
 
   const lowStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'low'))
   const outOfStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'out'))
@@ -22,6 +23,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
   async function loadItems(page = 1, append = false, ungroupedOnly = false) {
+    const generation = ++loadGeneration
     try {
       loading.value = true
       error.value = null
@@ -33,6 +35,7 @@ export const useInventoryStore = defineStore('inventory', () => {
       if (ungroupedOnly) params.ungrouped_only = true
       Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === false || params[k] === undefined) delete params[k] })
       const result = await inventoryAPI.getItems(params)
+      if (generation !== loadGeneration) return
       if (append) {
         items.value = [...items.value, ...result.items]
       } else {
@@ -40,9 +43,9 @@ export const useInventoryStore = defineStore('inventory', () => {
       }
       pagination.value = { total: result.total, page: result.page, page_size: result.page_size, total_pages: result.total_pages }
     } catch (e: any) {
-      error.value = e.response?.data?.detail || 'Error loading items'
+      if (generation === loadGeneration) error.value = e.response?.data?.detail || 'Error loading items'
     } finally {
-      loading.value = false
+      if (generation === loadGeneration) loading.value = false
     }
   }
 
@@ -64,6 +67,15 @@ export const useInventoryStore = defineStore('inventory', () => {
     await inventoryAPI.deleteItem(id)
     const idx = items.value.findIndex(i => i.id === id)
     if (idx !== -1) items.value[idx].is_active = false
+  }
+
+  function forgetDeletedItem(id: string) {
+    loadGeneration++
+    items.value = items.value.filter(item => item.id !== id)
+    if (currentItem.value?.id === id) currentItem.value = null
+    movements.value = movements.value.filter(movement => movement.item_id !== id)
+    loading.value = false
+    alerts.value = null
   }
 
   async function quickExit(id: string, location: string = 'loja') {
@@ -110,7 +122,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   return {
     items, currentItem, alerts, movements, pagination, filters, loading, error,
     lowStockItems, outOfStockItems,
-    loadItems, createItem, updateItem, deleteItem, quickExit,
+    loadItems, createItem, updateItem, deleteItem, forgetDeletedItem, quickExit,
     loadAlerts, createMovement, createBatchMovement,
   }
 })

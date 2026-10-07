@@ -36,7 +36,7 @@ O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.
 | SuperFrete | Cotação, serviço, pagamento confirmado, recuperação de PDF, rastreio e impressão | Cotação não compra; resultado incerto não autoriza pagar novamente |
 | BI | Total mensal/ano, comparação entre anos, ranking por vendedor/semana e moedas | Fechamento salvo prevalece; diferenças são destacadas para revisão |
 | Assistente | Linguagem natural, ferramentas autorizadas, memória confirmada e botões Telegram | Mensagem comum ou texto de terceiros não é autorização para executar |
-| Acesso/auditoria | Sessões revogáveis, contas individuais, troca de senha e atividade por usuário | Só Lucas administra usuários e consulta auditoria; vendas pessoais são filtradas no backend |
+| Acesso/auditoria | Sessões revogáveis, contas individuais, troca de senha e auditoria de alterações | Só Lucas administra usuários e consulta auditoria; vendas pessoais são filtradas no backend |
 
 Em **Vendedores**, falhas ao carregar a lista permitem tentar novamente; uma busca
 sem resultado oferece limpar os filtros. Ativar ou inativar informa o andamento e
@@ -99,8 +99,8 @@ mensal não são distribuídos artificialmente entre os lançamentos.
 
 Denis, Sol e Junior consultam suas vendas; Lucas e Wissam consultam o geral.
 O acesso operacional aos demais módulos continua disponível. Sessões antigas são
-revogadas ao mudar permissões ou senha. O registro de tempo é uma estimativa de
-atividade nas telas, não uma medida de jornada. Veja [Acesso](ACESSO_AUDITORIA.md).
+revogadas ao mudar permissões ou senha. A auditoria registra autenticação e alterações; consultas e tempo
+de navegação não são mais coletados. Veja [Acesso](ACESSO_AUDITORIA.md).
 
 A revisão manual autorizada dos arquivos históricos de setembro/2026 foi uma manutenção
 pontual da origem, não uma capacidade de escrita do conector OneDrive.

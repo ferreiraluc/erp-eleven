@@ -1350,5 +1350,93 @@
   "Na grade, o código de barras recebe o tamanho. Cada variação também terá seu próprio SKU.": [
     "En las variantes, el código de barras recibe la talla. Cada variante también tendrá su propio SKU.",
     "For size variants, the barcode includes the size. Each variant also has its own SKU."
+  ],
+  "Excluir produto definitivamente": [
+    "Eliminar producto definitivamente",
+    "Permanently delete product"
+  ],
+  "Excluir definitivamente": [
+    "Eliminar definitivamente",
+    "Permanently delete"
+  ],
+  "Conferindo vínculos do produto...": [
+    "Comprobando vínculos del producto...",
+    "Checking product links..."
+  ],
+  "Conferir novamente": [
+    "Comprobar de nuevo",
+    "Check again"
+  ],
+  "Esta ação apaga o produto, sua foto e as movimentações sem vínculo. Não é possível desfazer. As outras variações da grade permanecem.": [
+    "Esta acción elimina el producto, su foto y los movimientos sin vínculo. No se puede deshacer. Las otras variantes se conservan.",
+    "This deletes the product, its photo and unlinked movements. This cannot be undone. Other variants are kept."
+  ],
+  "Estoque da loja": [
+    "Stock de la tienda",
+    "Store stock"
+  ],
+  "Estoque do depósito": [
+    "Stock del depósito",
+    "Warehouse stock"
+  ],
+  "Movimentações a excluir": [
+    "Movimientos a eliminar",
+    "Movements to delete"
+  ],
+  "A exclusão ficará registrada na auditoria do Lucas.": [
+    "La eliminación quedará registrada en la auditoría de Lucas.",
+    "The deletion will be recorded in Lucas’s audit log."
+  ],
+  "Conferi este produto e quero excluí-lo definitivamente.": [
+    "Revisé este producto y quiero eliminarlo definitivamente.",
+    "I have checked this product and want to permanently delete it."
+  ],
+  "Este produto tem vínculos operacionais e não pode ser excluído definitivamente.": [
+    "Este producto tiene vínculos operativos y no se puede eliminar definitivamente.",
+    "This product has operational links and cannot be permanently deleted."
+  ],
+  "Vendas, inclusive canceladas": [
+    "Ventas, incluidas las canceladas",
+    "Sales, including cancelled sales"
+  ],
+  "Contagens de inventário": [
+    "Recuentos de inventario",
+    "Inventory counts"
+  ],
+  "Movimentações vinculadas a outras operações": [
+    "Movimientos vinculados a otras operaciones",
+    "Movements linked to other operations"
+  ],
+  "Excluindo...": [
+    "Eliminando...",
+    "Deleting..."
+  ],
+  "Não foi possível conferir os vínculos do produto.": [
+    "No se pudieron comprobar los vínculos del producto.",
+    "Could not check product links."
+  ],
+  "Não foi possível confirmar a exclusão. Confira novamente antes de tentar outra vez.": [
+    "No se pudo confirmar la eliminación. Compruebe de nuevo antes de volver a intentarlo.",
+    "Could not confirm deletion. Check again before trying again."
+  ],
+  "Somente Lucas pode excluir produtos definitivamente.": [
+    "Solo Lucas puede eliminar productos definitivamente.",
+    "Only Lucas can permanently delete products."
+  ],
+  "Produto não encontrado. Atualize a lista de estoque.": [
+    "Producto no encontrado. Actualice la lista de stock.",
+    "Product not found. Refresh the inventory list."
+  ],
+  "Produto com vínculos operacionais. A exclusão definitiva não é permitida.": [
+    "Producto con vínculos operativos. No se permite la eliminación definitiva.",
+    "Product has operational links. Permanent deletion is not allowed."
+  ],
+  "O produto mudou ou a confirmação não corresponde. Confira novamente antes de excluir.": [
+    "El producto cambió o la confirmación no coincide. Compruebe de nuevo antes de eliminar.",
+    "The product changed or the confirmation does not match. Check again before deleting."
+  ],
+  "Produto excluído definitivamente.": [
+    "Producto eliminado definitivamente.",
+    "Product permanently deleted."
   ]
 }

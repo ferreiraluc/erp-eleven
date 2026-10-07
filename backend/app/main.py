@@ -222,20 +222,7 @@ async def log_requests(request: Request, call_next):
         )
         response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-    actor = getattr(request.state, "audit_actor", None)
-    if actor and request.url.path not in ("/api/access/activity", "/api/auth/me"):
-        try:
-            with SessionLocal() as audit_db:
-                audit_db.info['audit_actor'] = actor
-                route = actor['route']
-                module = route.split('/')[2] if route.startswith('/api/') else 'system'
-                if route == '/api/access/audit':
-                    module = 'auditoria'
-                user_audit.record(audit_db, 'read' if request.method == 'GET' else 'request', module,
-                                  status_code=response.status_code)
-                audit_db.commit()
-        except Exception:
-            logger.exception('Failed to record request audit')
+    # Audit captures committed mutations and authentication events, not HTTP reads/requests.
     elapsed = time.time() - start_time
     status = response.status_code
 

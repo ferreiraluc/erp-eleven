@@ -29,7 +29,9 @@ from ...schemas.inventory import (
     BulkTransferRequest,
 )
 from ...schemas.inventory_diagnostics import InventoryDiagnostics, IssueFilter
-from ...dependencies import get_current_active_user, require_role
+from ...dependencies import get_current_active_user, require_role, require_owner
+from ...schemas.inventory_deletion import ItemDeletionConfirmation
+from ...services.inventory_deletion import deletion_preview, permanently_delete_item
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level, StockMovementError
 from ..validators import validate_uuid
 from datetime import datetime as dt
@@ -776,6 +778,19 @@ def bulk_transfer_items(
         db.rollback()
         raise HTTPException(404, str(error)) from None
     return {"message": f"Transferred {count} items", "count": count}
+
+
+@router.get('/items/{item_id}/deletion-preview')
+def preview_item_deletion(item_id: str, db: Session = Depends(get_db), owner: Usuario = Depends(require_owner)):
+    return deletion_preview(db, validate_uuid(item_id), owner)
+
+
+@router.delete('/items/{item_id}/permanent')
+def permanently_delete(item_id: str, body: ItemDeletionConfirmation,
+                       db: Session = Depends(get_db), owner: Usuario = Depends(require_owner)):
+    result = permanently_delete_item(db, validate_uuid(item_id), owner, body)
+    db.commit()
+    return result
 
 
 @router.delete("/items/{item_id}")

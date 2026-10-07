@@ -102,8 +102,9 @@ prévia com códigos/verificação → confirmação → rastreios e vínculos e
 compartilham locks por código normalizado; uma corrida não gera outro rastreio.
 
 **Auditoria:** identidade autenticada → contexto da sessão SQLAlchemy → eventos das
-mutações na mesma transação. Acessos HTTP são eventos separados. `AuthSession` controla
-revogação e crédito de atividade; `ActivitySpan` agrega intervalos por módulo.
+mutações na mesma transação, além dos eventos de autenticação. Consultas/requisições
+genéricas não geram eventos e o acompanhamento de navegação está desativado.
+`AuthSession` controla revogação; `ActivitySpan` conserva somente os dados históricos.
 
 ## Entidades que não são intercambiáveis
 

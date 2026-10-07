@@ -1,5 +1,6 @@
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
+  <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @deleted="emit('deleted', $event)" />
+  <div v-show="!showDeletion" class="modal-overlay" @click.self="emit('close')">
     <div class="modal-container" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
       <div class="modal-header">
         <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
@@ -500,6 +501,7 @@
 
       <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeItemCount || 1, quantity: gradeItemCount ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer">
+        <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
         <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
@@ -535,6 +537,7 @@ import { useI18n } from 'vue-i18n'
 import { ocrMessages } from './ocrMessages'
 const { t: ocrText } = useI18n({ useScope: 'local', messages: ocrMessages })
 import LabelTemplatesModal from './LabelTemplatesModal.vue'
+import ItemDeleteModal from './ItemDeleteModal.vue'
 
 // ── Text normalization ────────────────────────────────────────────────────────
 function toTitleCase(s: string | undefined | null): string {
@@ -547,13 +550,18 @@ const props = defineProps<{
   suppliers?: Array<{ id: string; name: string }>
   existingGroupKeys?: string[]
   existingBrands?: string[]
+  canDeletePermanently?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'saved', item: InventoryItem): void
   (e: 'partial', items: InventoryItem[]): void
   (e: 'close'): void
+  (e: 'deleted', id: string): void
 }>()
+
+const showDeletion = ref(false), deleteButton = ref<HTMLButtonElement>()
+async function closeDeletion() { showDeletion.value = false; await nextTick(); deleteButton.value?.focus() }
 
 const isEdit = computed(() => !!props.item)
 const activeTab = ref(props.item ? 'basic' : 'capture')
@@ -1213,7 +1221,9 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .inline-video { width: 100%; display: block; }
 .inline-camera-btns { display: flex; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; }
 .photo-hint { font-size: 0.72rem; color: #9ca3af; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; }
+.modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; }
+.delete-product { margin-right: auto; }
+@media(max-width: 480px) { .delete-product { flex-basis: 100%; } }
 .btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.25rem; border-radius: 6px; font-size: 0.9rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }

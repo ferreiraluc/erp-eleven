@@ -9,7 +9,6 @@ import router from './router'
 import i18n from './i18n'
 import { uiText } from './i18n/uiText'
 import { useAuthStore } from './stores/auth'
-import { startActivity } from './services/activity'
 import { resumeVerifiedSession } from './services/sessionResume'
 
 const app = createApp(App)
@@ -27,7 +26,6 @@ window.addEventListener('focus', resumeSession)
 document.addEventListener('visibilitychange', resumeSession)
 window.addEventListener('pageshow', resumeSession)
 app.use(router)
-startActivity(router, auth)
 app.use(i18n)
 
 // Wait for router to be ready before mounting

@@ -586,6 +586,8 @@
       :suppliers="suppliers"
       :existing-group-keys="existingGroupKeys"
       :existing-brands="existingBrands"
+      :can-delete-permanently="auth.isOwner"
+      @deleted="onItemDeleted"
       @saved="onItemSaved"
       @partial="onItemPartiallySaved"
       @close="showItemForm = false"
@@ -708,6 +710,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
+import { useAuthStore } from '@/stores/auth'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
@@ -733,6 +736,7 @@ watch(showDiagnostics, () => {
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
+const auth = useAuthStore()
 
 const searchQuery = ref('')
 const activeStatus = ref((route.query.status as string) || '')
@@ -768,6 +772,7 @@ const confirmRemoveChip = ref<string | null>(null)
 
 const backendGroups = ref<GroupResponse[]>([])
 const backendSuggestions = ref<SuggestionResponse[]>([])
+let groupLoadGeneration = 0, suggestionLoadGeneration = 0
 const hasGroups = computed(() => backendGroups.value.length > 0 || inventoryStore.items.some(i => i.group_key))
 
 // All items visible in the current view — combines ungrouped store items + items from expanded groups.
@@ -861,8 +866,10 @@ function toggleUngroupedFilter() {
 }
 
 async function loadGroups(params: Record<string, any> = {}) {
+  const generation = ++groupLoadGeneration
   try {
-    backendGroups.value = await inventoryAPI.getGroups(params)
+    const groups = await inventoryAPI.getGroups(params)
+    if (generation === groupLoadGeneration) backendGroups.value = groups
   } catch {}
 }
 
@@ -881,8 +888,10 @@ function loadGroupsFiltered() {
 }
 
 async function loadSuggestions() {
+  const generation = ++suggestionLoadGeneration
   try {
-    backendSuggestions.value = await inventoryAPI.getSuggestions()
+    const suggestions = await inventoryAPI.getSuggestions()
+    if (generation === suggestionLoadGeneration) backendSuggestions.value = suggestions
   } catch {}
 }
 
@@ -1359,6 +1368,22 @@ function exitLocations(item: InventoryItem): { loja: boolean; deposito: boolean 
 function onBarcodeDetected(code: string) {
   showScanner.value = false
   searchQuery.value = code
+}
+
+async function onItemDeleted(id: string) {
+  showItemForm.value = false
+  editingItem.value = null
+  selectedIds.value = selectedIds.value.filter(value => value !== id)
+  inventoryStore.forgetDeletedItem(id)
+  groupLoadGeneration++; suggestionLoadGeneration++
+  backendGroups.value = backendGroups.value.map(group => {
+    const items = group.items.filter(item => item.id !== id)
+    return { ...group, items, total_stock: items.some(item => item.current_stock == null) ? null : items.reduce((sum, item) => sum + item.current_stock!, 0) }
+  }).filter(group => group.items.length)
+  backendSuggestions.value = backendSuggestions.value.map(group => ({ ...group, items: group.items.filter(item => item.id !== id) })).filter(group => group.items.length > 1)
+  diagnosticsRevision.value++
+  showToast('Produto excluído definitivamente.', 'success')
+  await Promise.all([reloadItems(), loadGroupsFiltered(), inventoryStore.loadAlerts()])
 }
 
 function onItemSaved(item: InventoryItem) {

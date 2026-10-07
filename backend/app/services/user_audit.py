@@ -72,6 +72,10 @@ def audit_flush(db, context):
             table = state.mapper.local_table.name
             if table in INTERNAL:
                 continue
+            if table == 'usuarios' and action == 'update':
+                changed = {col.key for col in state.mapper.column_attrs if state.attrs[col.key].history.has_changes()}
+                if changed <= {'ultimo_login', 'updated_at'}:
+                    continue  # The explicit login event already records this access.
             changes = {}
             for col in state.mapper.column_attrs:
                 if col.key in SECRET_FIELDS or any(s in col.key.lower() for s in ('password','secret','token')):

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   listFilters: {} as Record<string, string>,
 }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: false }) }))
 vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { get: mocks.diagnostics } }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
   getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues }, ocrAPI: {} }))

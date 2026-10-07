@@ -91,26 +91,29 @@ Execute somente após a migração de acesso e na base intencionalmente escolhid
 A CLI reconhece as identidades legadas conhecidas, exige vendedor inequívoco e
 preserva senhas individuais nas reexecuções. Não contém senha padrão no código.
 
-## Eventos e tempo de atividade
+## Eventos de auditoria
 
 Somente Lucas acessa `/auditoria` e `/api/access/audit`. O painel combina:
 
 - Login, falhas, logout, mudanças de senha e permissões.
 - Operações confirmadas de criação/alteração/exclusão, vinculadas ao usuário e ao canal.
-- Acessos HTTP autenticados com rota, resultado e referência da requisição.
-- Tempo ativo estimado por usuário e módulo, filtros de período e exportação da página.
+- Filtros por período, usuário, módulo e ação, resumo de eventos por usuário e exportação da página.
+- Exclusão definitiva de produtos sem vínculo, exclusiva do Lucas, com identificação
+  da peça e quantidade de movimentações removidas.
 
 Mutações ORM são registradas na mesma transação; rollback não vira alteração
 concluída. Atualizações em lote registram quantidade afetada. Valores sensíveis,
 senha, conteúdo de mensagens, CPF, endereços e PDFs não são copiados ao log de
-auditoria; campos privados aparecem somente como alterados. Eventos de requisição
-podem aparecer ao lado de sua mutação: são evidências diferentes, não duas edições.
+auditoria; campos privados aparecem somente como alterados. Consultas HTTP e eventos
+genéricos de requisição (`read`/`request`) não são mais gravados na auditoria.
 
-O tempo usa pequenos intervalos enquanto a página está visível, com foco e interação
-recente. Intervalos longos sem conexão não geram crédito. Abas simultâneas compartilham
-um limite por sessão. É uma estimativa de uso, não comprovação de jornada de trabalho;
-navegadores/dispositivos com sessões diferentes podem se sobrepor. Não há captura de
-tela, teclas digitadas nem conteúdo do campo para esse cálculo.
+O acompanhamento de navegação e tempo por módulo foi desligado. O frontend não
+envia intervalos de atividade; `/api/access/activity` aceita chamadas de clientes
+antigos com `tracking_enabled=false`, sem gravar intervalos ou alterar sessões.
+Os eventos de consulta e tempos antigos são preservados no banco, mas não entram
+na listagem, totais ou exportação da auditoria. A última atividade mostrada é a
+data do último evento relevante, não uma estimativa de presença. Não há coleta de
+telas ou teclas digitadas. Logs técnicos do servidor seguem separados do painel.
 
 A auditoria começa a partir da ativação desta versão. Não reconstrói ações antigas
 sem evidência nem atribui rotinas automáticas a um funcionário. SQL administrativo

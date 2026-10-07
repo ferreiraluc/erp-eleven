@@ -7,6 +7,16 @@ const api = vi.hoisted(() => ({ getItems: vi.fn(), quickExit: vi.fn(), createMov
 vi.mock('@/services/api', () => ({ inventoryAPI: api }))
 const item = { id: 'missing', name: 'Fixture', current_stock: null, stock_loja: null, stock_deposito: 0, alert_level: 'out' } as InventoryItem
 beforeEach(() => { vi.resetAllMocks(); setActivePinia(createPinia()) })
+it('does not restore a permanently deleted item from an older list response', async () => {
+  const store = useInventoryStore()
+  let resolve!: (value: unknown) => void
+  api.getItems.mockReturnValue(new Promise(done => { resolve = done }))
+  store.items = [item]; store.currentItem = item
+  const loading = store.loadItems()
+  store.forgetDeletedItem(item.id)
+  resolve({ items: [item], total: 1, page: 1, page_size: 50, total_pages: 1 }); await loading
+  expect(store.items).toEqual([]); expect(store.currentItem).toBeNull()
+})
 describe('Inventory store with missing balances', () => {
   it('preserves nulls while loading the unknown-stock filter and excludes them from low/out lists', async () => {
     const store = useInventoryStore()

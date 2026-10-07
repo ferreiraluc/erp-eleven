@@ -46,6 +46,13 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); container?.remove(); vi.resetAllMocks() })
 
 describe('Inventory locale and movement contracts', () => {
+  it('shows permanent deletion only when editing with the owner permission', async () => {
+    await mount(ItemFormModal, { item })
+    expect(container.textContent).not.toContain('Excluir definitivamente')
+    app?.unmount(); container.remove()
+    await mount(ItemFormModal, { item, canDeletePermanently: true })
+    expect(button('Excluir definitivamente')).toBeDefined()
+  })
   it('translates an open movement modal and validation while retaining adjustment/location values', async () => {
     const i18n = await mount(MovementModal, { item })
     i18n.global.locale.value = 'es'; await nextTick()

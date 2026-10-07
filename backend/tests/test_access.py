@@ -188,20 +188,59 @@ def test_audit_only_committed_mutations_and_no_private_values(setup):
     assert 'senha_hash' not in json.dumps(data) and 'test-initial' not in json.dumps(data)
 
 
-def test_activity_is_idempotent_bounded_and_does_not_credit_hidden_offline_gaps(setup,monkeypatch):
-    client,factory,ids=setup;headers=login(client,'Junior');other=login(client,'Sol')
-    clock=[now()];monkeypatch.setattr(user_admin,'now',lambda:clock[0])
-    span=str(uuid.uuid4());body={'id':span,'module':'inventory','sequence':0,'seconds':30}
-    assert client.post('/api/access/activity',headers=headers,json=body).json()['active_seconds']==0
-    clock[0]+=timedelta(seconds=15);body['sequence']=1
-    assert client.post('/api/access/activity',headers=headers,json=body).json()['active_seconds']==15
-    assert client.post('/api/access/activity',headers=headers,json=body).json()['active_seconds']==15
-    assert client.post('/api/access/activity',headers=other,json=body).status_code==409
-    body['module']='usuarios';body['sequence']=2
-    assert client.post('/api/access/activity',headers=headers,json=body).status_code==409
-    body['module']='inventory';clock[0]+=timedelta(hours=1)
-    assert client.post('/api/access/activity',headers=headers,json=body).json()['active_seconds']==15
+def test_cached_clients_no_longer_record_navigation_activity(setup):
+    client,factory,ids=setup;headers=login(client,'Junior')
+    with factory() as db: before=db.query(AuditEvent).count()
+    body={'id':str(uuid.uuid4()),'module':'inventory','sequence':0,'seconds':30}
+    for sequence in range(3):
+        body['sequence']=sequence
+        assert client.post('/api/access/activity',headers=headers,json=body).json()=={'active_seconds':0,'tracking_enabled':False}
+    with factory() as db:
+        assert db.query(ActivitySpan).count()==0
+        assert db.query(AuditEvent).count()==before
+        assert 'login' in {row.action for row in db.query(AuditEvent)}
     body['seconds']=10000;assert client.post('/api/access/activity',headers=headers,json=body).status_code==422
+
+
+def test_login_is_one_event_without_a_duplicate_profile_timestamp_update(setup):
+    client,factory,_=setup
+    login(client)
+    with factory() as db: assert [row.action for row in db.query(AuditEvent)]==['login']
+
+
+def test_audit_hides_historical_reads_without_deleting_them(setup):
+    client,factory,ids=setup;headers=login(client)
+    with factory() as db:
+        before=db.query(AuditEvent).count()
+        for action in ('read','request','create','item_permanently_deleted'):
+            db.add(AuditEvent(user_id=ids['Lucas'][0],actor_name='Lucas',source='web',action=action,module='inventory',changes={}))
+        db.commit()
+    result=client.get('/api/access/audit',headers=headers).json()
+    assert {'login','create','item_permanently_deleted'} <= {row['action'] for row in result['events']}
+    assert not {'read','request'} & {row['action'] for row in result['events']}
+    assert result['total']==before+2 and result['modules']==[] and result['active_seconds']==0
+    assert not {'read','request'} & set(result['users'][0]['actions'])
+    assert client.get('/api/access/audit?action=read',headers=headers).json()['total']==0
+    with factory() as db: assert db.query(AuditEvent).count()==before+4
+
+
+def test_http_queries_do_not_add_audit_events_but_login_and_mutations_do(setup,monkeypatch):
+    from app.main import log_requests
+    client,factory,ids=setup
+    client.app.middleware('http')(log_requests)
+    headers=login(client)
+    with factory() as db: before=db.query(AuditEvent).count()
+    for _ in range(3):
+        assert client.get('/api/access/users',headers=headers).status_code==200
+        assert client.get('/api/access/audit',headers=headers).status_code==200
+    with factory() as db: assert db.query(AuditEvent).count()==before
+    changed=client.put('/api/access/users/'+str(ids['Denis'][0]),headers=headers,
+        json={'nome':'Denis Teste','ativo':True,'sales_scope':'own','sales_seller':'Denis','vendedor_id':str(ids['Denis'][1])})
+    assert changed.status_code==200,changed.text
+    with factory() as db:
+        actions={row.action for row in db.query(AuditEvent)}
+        assert 'access_changed' in actions and 'update' in actions and not {'read','request'} & actions
+
 
 
 def test_provisioning_preserves_user_ids_bot_links_and_personal_password_on_rerun(setup):
