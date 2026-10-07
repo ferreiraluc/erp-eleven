@@ -49,7 +49,8 @@ Se a impressora já imprime pelo Windows, não é necessário reinstalar seu dri
 
 O agente consulta a API por HTTPS; não precisa abrir porta de entrada no computador.
 Não é um serviço do Windows nem configura inicialização automática. Uma credencial
-permite buscar e concluir apenas trabalhos daquele dispositivo, não consultar o ERP inteiro.
+permite atualizar o nome do próprio dispositivo e buscar/concluir apenas seus trabalhos,
+não consultar o ERP inteiro.
 
 ## Documentos
 
@@ -110,3 +111,23 @@ Veja também [Gestor de endereços e SuperFrete](GESTOR_ENDERECOS_SUPERFRETE.md)
 O pacote é montado a partir de `tools/eleven-print-agent` no checkout completo do
 Render. Instalações Docker contendo apenas `backend/` não incluem esse diretório e
 retornam 503 no download; nesses ambientes distribua o ZIP a partir do repositório.
+
+### Validação da atualização Samsung — 07/10/2026
+
+- Testes locais: 693 backend passaram (32 ignorados por dependerem de condições
+  externas/ambientes específicos), 177 frontend passaram, tipagem e build aprovados.
+- API: trocar o nome preserva ID, hash da credencial e trabalhos; repetição não cria
+  dispositivo nem recolhe um trabalho. Credenciais revogadas e troca de ID são recusadas.
+- Pacote: lista fixa de cinco arquivos, acesso ADMIN, sem `.env`, token, configurações
+  locais ou diário. Download pela UI chegou à API com resposta 200; o navegador
+  integrado não reportou evento de download, portanto o salvamento pelo navegador
+  continua dependendo do suporte do navegador utilizado. O ZIP separado foi validado.
+- Painel conferido em 320/384/1280px sem overflow horizontal. Nenhum envio real.
+- CI agora executa `tools/eleven-print-agent/tests/Configuracao.Tests.ps1` no Windows
+  PowerShell: análise sintática, escolha de fila, DPAPI, backup e preservação do diário,
+  sem chamar Sumatra nem enviar trabalhos. Esse job passou para o commit `85ab59d`.
+- Pendente no computador da loja: executar o instalador atualizado, conectar o agente
+  e conferir uma impressão física solicitada pelo responsável.
+- Publicação confirmada Live: frontend `dep-db32gobl550s73cd7u50`, backend
+  `dep-db32gobl550s73cd7to0`, ambos no commit `85ab59d`. O [CI completo](https://github.com/ferreiraluc/erp-eleven/actions/runs/37612169262)
+  passou nos três jobs: backend, frontend e agente Windows.
