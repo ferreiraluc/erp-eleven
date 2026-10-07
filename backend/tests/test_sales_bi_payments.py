@@ -11,6 +11,7 @@ from app.services.sales_bi_entry_parser import extract_entries
 
 @pytest.mark.parametrize('raw,key', [(None, 'dinheiro'), ('', 'dinheiro'), ('   ', 'dinheiro'),
     ('Máquina', 'maquina'), ('MAQUINA', 'maquina'), (' máquina ', 'maquina'),
+    ('Maq', 'maquina'), ('MAQ', 'maquina'), (' maq ', 'maquina'), ('Maq Pix', 'maq pix'),
     ('Crédito', 'credito'), ('Cartão de Crédito', 'credito'), ('Débito', 'debito'),
     ('Thaís', 'thais'), ('Dinheiro', 'dinheiro'), ('Pix Banco A', 'pix banco a')])
 def test_payment_spelling_and_blank_cash_convention(raw, key):
@@ -23,7 +24,7 @@ def payment_book():
     records = []
     for index, (method, amount, currency, day) in enumerate([
         ('Máquina', '4500', 'BRL', '2026-09-23'),
-        ('MAQUINA', '500', 'BRL', '2026-09-24'),
+        ('Maq', '500', 'BRL', '2026-09-24'),
         ('Máquina', '30', 'USD', '2026-09-24'),
         ('Crédito', '100', 'BRL', '2026-09-24'),
         ('Débito', '200', 'BRL', '2026-09-25'),
@@ -39,9 +40,10 @@ def payment_book():
     return source
 
 
-def test_machine_filter_totals_all_rows_before_pagination_and_keeps_currencies_separate():
+@pytest.mark.parametrize('method', ['máquina', 'maquina', 'Maq'])
+def test_machine_filter_totals_all_rows_before_pagination_and_keeps_currencies_separate(method):
     source = payment_book(); before = deepcopy(source.snapshot)
-    result = build_entries([source], payment_method='máquina', seller='Lucas', limit=1)
+    result = build_entries([source], payment_method=method, seller='Lucas', limit=1)
     assert result['total'] == 3 and len(result['items']) == 1
     assert result['summary']['currencies'] == [
         {'currency': 'BRL', 'count': 2, 'gross': 5000, 'net': 4500, 'net_available': 1},
@@ -52,6 +54,8 @@ def test_machine_filter_totals_all_rows_before_pagination_and_keeps_currencies_s
     assert result['summary']['official_total_usd'] == full['summary']['official_total_usd']
     assert result['reconciliation'] == full['reconciliation']
     assert {'credito', 'debito', 'maquina', 'thais', 'dinheiro'} == {p['value'] for p in full['payment_methods']}
+    assert {'value': 'maquina', 'label': 'Máquina'} in full['payment_methods']
+    assert any(r['payment_method'] == 'Maq' and r['payment_type'] == 'maquina' for r in full['items'])
 
 
 def test_blank_and_explicit_cash_are_combined_without_modifying_originals():
@@ -86,13 +90,41 @@ def test_range_crosses_workbook_years_and_deduplicates_current_archive_sources()
     assert result['coverage']['source_count'] == 2 and result['summary']['official_total_usd'] == 100
 
 
-def test_parser_accepts_new_machine_type_and_keeps_blank_cells():
+@pytest.mark.parametrize('method', ['Maquina', 'Maq'])
+def test_parser_accepts_new_machine_type_and_keeps_blank_cells(method):
     data = detail_sheet()
-    data['rows'][12][1:6] = ['R$', 4500, 'Lucas', 'Maquina', 4400]
+    data['rows'][12][1:6] = ['R$', 4500, 'Lucas', method, 4400]
     data['rows'][13][4] = None
     records = extract_entries([('Planilha1', data)], [], year=2026, month=9)['rows']
-    assert records[0]['payment_method'] == 'Maquina' and records[0]['gross'] == '4500'
+    assert records[0]['payment_method'] == method and records[0]['gross'] == '4500'
     assert records[1]['payment_method'] is None
+
+
+def test_api_machine_filter_recognizes_existing_maq_snapshots_with_seller_scope(client):
+    from app.database import get_db
+    browser, user = client
+    session = browser.app.dependency_overrides[get_db]()
+    db = next(session)
+    try:
+        source = payment_book()
+        source.id = 'machine-payments'
+        source.month = 10
+        source.snapshot['entries']['rows'][1]['seller'] = 'Junior'
+        db.add(source)
+        db.commit()
+    finally:
+        session.close()
+    response = browser.get('/bi/entries?month=10&seller=Lucas&payment_method=maquina')
+    assert response.status_code == 200
+    body = response.json()
+    assert body['total'] == 1
+    assert body['items'][0]['payment_method'] == 'Maq'
+    assert body['items'][0]['payment_type'] == 'maquina'
+    assert body['items'][0]['seller'] == 'Junior'
+    assert body['summary']['currencies'][0]['gross'] == 500
+    assert body['payment_methods'] == [{'value': 'maquina', 'label': 'Máquina'}]
+    user.sales_scope = 'all'
+    assert browser.get('/bi/entries?month=10&payment_method=maquina').json()['total'] == 3
 
 
 def test_api_payment_filter_cannot_leak_other_sellers_through_totals_or_options(client):

@@ -96,11 +96,13 @@ líquido por moeda, considerando todos os resultados filtrados antes da paginaç
 Clicar no tipo também aplica o filtro. **Exportar página** exporta somente a página
 visível e autorizada; o total da consulta pode incluir outras páginas.
 
-- A coluna E (`Método Pgto`) continua sendo a origem. `Máquina`/`Maquina`,
+- A coluna E (`Método Pgto`) continua sendo a origem. `Máquina`/`Maquina`/`Maq`,
   crédito, débito, Thais, dinheiro e Pix são reconhecidos sem diferenciar caixa ou
   acentos. Máquina é uma categoria própria: crédito/débito antigos não são
   reclassificados como máquina. Outros textos preenchidos continuam como tipos
   próprios, sem perder o rótulo da planilha.
+  A abreviação `Maq` aparece como **Máquina** na tabela, no resumo e no filtro,
+  inclusive nos lançamentos já importados, preservando o texto original no snapshot.
 - **Célula vazia significa Dinheiro**, conforme a convenção da loja. Essa regra
   vale para históricos já sincronizados, tabela, filtros, resumo, exportação e
   apresentação dos lançamentos pelo bot. O texto original do snapshot é preservado.

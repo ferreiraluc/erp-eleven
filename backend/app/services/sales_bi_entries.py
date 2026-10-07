@@ -10,7 +10,7 @@ from .sales_bi_parser import normal
 PAYMENT_LABELS = {'maquina': 'Máquina', 'credito': 'Crédito', 'debito': 'Débito',
                   'thais': 'Thais', 'dinheiro': 'Dinheiro', 'pix': 'Pix'}
 PAYMENT_ALIASES = {'cartao de credito': 'credito', 'cartao credito': 'credito',
-                   'cartao de debito': 'debito', 'cartao debito': 'debito'}
+                   'cartao de debito': 'debito', 'cartao debito': 'debito', 'maq': 'maquina'}
 
 
 def payment_key(value):
