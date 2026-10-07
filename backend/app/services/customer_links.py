@@ -28,6 +28,8 @@ def validate_tracking_links(
             raise HTTPException(409, "O pedido e o rastreio pertencem a clientes diferentes. Confira os vínculos.")
         cliente_id = cliente_id or pedido.cliente_id
     cliente = db.get(Cliente, cliente_id) if cliente_id else None
+    if cliente and cliente.merged_into_id:
+        raise HTTPException(409, 'Este cliente foi unificado. Selecione o cadastro principal.')
     if cliente_id and (not cliente or (not cliente.ativo and not allow_inactive_customer)):
         raise HTTPException(404, "Cliente não encontrado ou inativo.")
     return pedido, cliente

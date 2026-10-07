@@ -137,3 +137,7 @@ rastreios desconhecidos não geram clientes. `address_usage.history_for_ids` ser
 agenda e a ficha do cliente com as mesmas operações originais. `vendor_activity` reúne
 BI e calendário por identidade persistida, aplicando a autorização financeira antes de
 agregar. A CLI `app.customer_reconciliation` é uma entrada operacional ativa.
+`customer_maintenance` permite consolidar um par de clientes explicitamente revisado,
+preservando a origem como alias e transferindo apenas vínculos. A CLI
+`app.customer_maintenance` exige simulação e token do plano antes de aplicar; não
+participa do deploy nem realiza fusão automática por nomes semelhantes.

@@ -47,15 +47,26 @@ def find_customer(db, data, *, customers=None):
     phone = phone_key(data.get('telefone'), data.get('pais'))
     doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
     customers = db.query(Cliente).all() if customers is None else customers
-    named = [c for c in customers if name and name_key(c.nome) == name]
-    same_person = lambda c: bool(name and (name_key(c.nome) == name or set(name.split()).issubset(name_key(c.nome).split())))
+    by_id = {c.id: c for c in customers}
+    names = {c.id: {name_key(c.nome)} for c in customers if not c.merged_into_id}
+    # Only explicitly consolidated aliases can supply another known name. Old
+    # contacts/documents do not override the identity chosen for the principal.
+    for alias in customers:
+        row, seen = alias, set()
+        while row and row.merged_into_id and row.id not in seen:
+            seen.add(row.id)
+            row = by_id.get(row.merged_into_id)
+        if row and row.id in names:
+            names[row.id].add(name_key(alias.nome))
+    customers = [c for c in customers if not c.merged_into_id]
+    named = [c for c in customers if name and name in names[c.id]]
+    same_person = lambda c: bool(name and any(set(name.split()).issubset(n.split()) for n in names[c.id]))
     documented = [c for c in customers if doc and document_key(c.cpf) == doc]
     if documented and not any(same_person(c) for c in documented):
         return None, 'document_name_conflict', documented
     strong = [c for c in customers if compatible_person(c, data) and (
         (doc and document_key(c.cpf) == doc and same_person(c)) or
-        (phone and phone_key(c.telefone) == phone and name and
-         (name_key(c.nome) == name or set(name.split()).issubset(name_key(c.nome).split()))))]
+        (phone and phone_key(c.telefone) == phone and same_person(c)))]
     if len(strong) == 1:
         return strong[0], 'document' if doc and document_key(strong[0].cpf) == doc else 'name_phone', []
     if len(strong) > 1: return None, 'ambiguous', strong

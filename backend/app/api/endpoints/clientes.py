@@ -13,10 +13,22 @@ from ...schemas.pedido import PedidoResponse
 from ...schemas.customer_links import CustomerLinkRequest, CustomerLogisticsResponse
 from ...schemas.rastreamento import RastreamentoComPedido
 from ...services.customer_links import customer_shipments, inherit_order_customer, validate_tracking_links, lock_tracking_row
+from ...services.customer_maintenance import resolve_customer
+from ...services.customer_identity import find_customer
+from ...services.address_book import lock_addresses
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
 
 router = APIRouter()
+
+
+def _customer(db, customer_id, *, write=False):
+    row = db.get(Cliente, customer_id) if write else resolve_customer(db, customer_id)
+    if not row:
+        raise HTTPException(404, 'Cliente não encontrado.')
+    if write and row.merged_into_id:
+        raise HTTPException(409, 'Este cadastro foi unificado. Atualize a lista e selecione o cliente principal.')
+    return row
 
 
 @router.get("/", response_model=List[ClienteResponse])
@@ -30,7 +42,7 @@ def listar_clientes(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Lista clientes; include_inactive inclui ambos os estados, ignorando ativo."""
-    query = db.query(Cliente)
+    query = db.query(Cliente).filter(Cliente.merged_into_id.is_(None))
     if not include_inactive and ativo is not None:
         query = query.filter(Cliente.ativo == ativo)
     if search:
@@ -53,7 +65,11 @@ def criar_cliente(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Cria um novo cliente."""
+    """Cria um cliente, evitando repetir uma identidade já reconhecida."""
+    lock_addresses(db)
+    existing, _, _ = find_customer(db, cliente.model_dump())
+    if existing:
+        raise HTTPException(409, 'Cliente já cadastrado. Localize-o na lista de clientes antes de criar outro cadastro.')
     db_cliente = Cliente(**cliente.model_dump())
     db.add(db_cliente)
     try:
@@ -81,6 +97,7 @@ def buscar_clientes(
         db.query(Cliente)
         .filter(
             Cliente.ativo == True,
+            Cliente.merged_into_id.is_(None),
             or_(
                 Cliente.nome.ilike(term),
                 Cliente.telefone.ilike(term),
@@ -102,10 +119,7 @@ def obter_cliente(
 ):
     """Retorna um cliente pelo ID."""
     uuid_ = validate_uuid(cliente_id)
-    cliente = db.query(Cliente).filter(Cliente.id == uuid_).first()
-    if not cliente:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
-    return cliente
+    return _customer(db, uuid_)
 
 
 @router.put("/{cliente_id}", response_model=ClienteResponse)
@@ -117,9 +131,8 @@ def atualizar_cliente(
 ):
     """Atualiza dados de um cliente."""
     uuid_ = validate_uuid(cliente_id)
-    db_cliente = db.query(Cliente).filter(Cliente.id == uuid_).first()
-    if not db_cliente:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+    lock_addresses(db)
+    db_cliente = _customer(db, uuid_, write=True)
 
     for field, value in update.model_dump(exclude_unset=True).items():
         setattr(db_cliente, field, value)
@@ -144,9 +157,8 @@ def excluir_cliente(
 ):
     """Soft-delete de cliente (marca ativo=False)."""
     uuid_ = validate_uuid(cliente_id)
-    db_cliente = db.query(Cliente).filter(Cliente.id == uuid_).first()
-    if not db_cliente:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+    lock_addresses(db)
+    db_cliente = _customer(db, uuid_, write=True)
     db_cliente.ativo = False
     db.commit()
     return {"message": "Cliente inativado com sucesso."}
@@ -162,8 +174,7 @@ def listar_pedidos_do_cliente(
 ):
     """Lista todos os pedidos vinculados a um cliente."""
     uuid_ = validate_uuid(cliente_id)
-    if not db.query(Cliente).filter(Cliente.id == uuid_).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+    uuid_ = _customer(db, uuid_).id
     return (
         db.query(Pedido)
         .filter(Pedido.cliente_id == uuid_)
@@ -184,8 +195,7 @@ def logistica_do_cliente(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     customer_id = validate_uuid(cliente_id)
-    if not db.get(Cliente, customer_id):
-        raise HTTPException(404, "Cliente não encontrado.")
+    customer_id = _customer(db, customer_id).id
     orders = db.query(Pedido).filter(Pedido.cliente_id == customer_id)
     shipments = customer_shipments(db, customer_id)
     result = []
@@ -211,8 +221,9 @@ def vincular_ao_cliente(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     customer_id = validate_uuid(cliente_id)
-    cliente = db.get(Cliente, customer_id)
-    if not cliente or not cliente.ativo:
+    lock_addresses(db)
+    cliente = _customer(db, customer_id, write=True)
+    if not cliente.ativo:
         raise HTTPException(404, "Cliente não encontrado ou inativo.")
     if link.kind == "pedido":
         order = db.query(Pedido).filter(Pedido.id == link.target_id).with_for_update().first()
@@ -244,8 +255,7 @@ def historico_enderecos_cliente(
     from ...services.address_book import address_family
     from ...services.address_usage import history_for_ids
     customer_id = validate_uuid(cliente_id)
-    if not db.get(Cliente, customer_id):
-        raise HTTPException(404, 'Cliente não encontrado.')
+    customer_id = _customer(db, customer_id).id
     addresses = db.query(SavedAddress).filter_by(cliente_id=customer_id, merged_into_id=None).order_by(SavedAddress.updated_at.desc()).all()
     ids = set()
     for address in addresses:

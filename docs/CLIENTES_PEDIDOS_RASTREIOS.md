@@ -32,7 +32,7 @@ homônimos, documento divergente ou cadastro inativo ficam sinalizados para revi
 Isso não impede a impressão PY dos dados disponíveis. A prévia de impressão sozinha
 não cria cliente nem trabalho na fila.
 
-Clientes existentes não são fundidos. Vínculos explícitos têm prioridade; documentos,
+Clientes existentes não são fundidos automaticamente. Vínculos explícitos têm prioridade; documentos,
 contatos e nomes existentes não são substituídos. Ao editar um endereço, selecionar
 expressamente o cliente confirma a revisão (`customer_link_confirmed`); salvar apenas
 uma alteração de rua não apaga o aviso. Cadastros PDV explícitos continuam separados.
@@ -76,6 +76,46 @@ API relevante (autenticação obrigatória):
 Serviços compartilhados: `services/customer_links.py`, `customer_identity.py` e
 `customer_reconciliation.py`. A validação não faz commits,
 não chama provedores e não dispensa a confirmação dos fluxos do assistente.
+
+## Consolidação de clientes duplicados
+
+A revisão `e1f2a3b4c5d6` permite conservar um cliente antigo como referência ao
+principal (`clientes.merged_into_id`). Não consolida pessoas durante o deploy.
+Uma manutenção explícita pode reunir pedidos, rastreios e endereços de um par
+revisado. Não altera nomes de destinatários, endereços das compras, valores, códigos,
+PDFs, snapshots de impressão, etiquetas nem os cadastros PDV. Cada operação registra
+o responsável e os vínculos movidos na auditoria.
+
+O cadastro de origem fica inativo, preservado para rastreabilidade, e não aparece
+nem na lista Todos. Consultar seu ID nas rotas de cliente e histórico resolve o
+principal; editar, reativar ou vincular por uma seleção antiga retorna `409` para
+atualizar a lista. O bot reconhece os nomes dos aliases explicitamente unidos,
+sem usar documentos antigos para sobrescrever os dados do principal. Divergências
+de identidade continuam exigindo revisão; nomes parecidos não provocam fusão.
+A criação manual também retorna `409` se a identidade já for reconhecida pela
+mesma regra usada nos endereços, indicando reutilizar o cadastro existente.
+
+No diretório `backend`, com o ambiente correto, simular um par autorizado:
+
+```sh
+venv/bin/python -m app.customer_maintenance merge --target UUID_PRINCIPAL --source UUID_DUPLICADO
+venv/bin/python -m app.customer_maintenance merge --target UUID_PRINCIPAL --source UUID_DUPLICADO --apply --expected-plan TOKEN_DA_SIMULACAO
+```
+
+O token vincula a confirmação ao conteúdo e aos vínculos revisados. Mudanças entre
+simulação e aplicação exigem nova simulação; reaplicar o mesmo par já consolidado
+não duplica efeitos. CPF, telefone ou e-mail divergentes impedem a aplicação até
+o proprietário confirmar a identidade e o cadastro correto. Somente então se usa
+`--reviewed-conflicts`, conservando os dados preenchidos do destino e os originais
+na origem. Se apenas um cadastro possui CPF, ele deve ser o principal para respeitar
+a unicidade do documento. Nunca aplicar o sinalizador apenas por semelhança de nome.
+
+Usar em uma janela sem edição dos cadastros envolvidos. A transação possui locks
+PostgreSQL e limite de espera; em falha, revisar o estado antes de repetir. A
+confirmação exige o administrador Lucas ativo para auditoria. O downgrade recusa
+remover aliases existentes. `test_customer_maintenance.py` e
+`test_customer_maintenance_postgres.py` cobrem histórico, conflitos, rollback,
+migração e concorrência entre aplicações da mesma consolidação.
 
 ## Validação e limites
 
