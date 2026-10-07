@@ -4,14 +4,14 @@
 
 O bot Telegram, o gestor de endereços e as etiquetas compartilham o mesmo agente
 Windows e a mesma fila. Em 07/10/2026 a loja informou a troca para **Samsung
-SL-M2035W**, já imprimindo pelo Windows. A configuração do agente e uma impressão
-física pelo ERP ainda precisam ser conferidas nesse computador após a atualização.
+SL-M2035W**, já imprimindo pelo Windows. O responsável confirmou a configuração do agente após a atualização.
 O laptop de desenvolvimento é outra máquina; não instalar nele um segundo agente.
 
 Pacote: `tools/eleven-print-agent/`, com `Instalar.cmd`, `Instalar.ps1`,
-`Configuracao.ps1`, `Agente.ps1` e `LEIA-ME.txt`. ADMIN pode baixá-lo em
-**Endereços → Configurar impressora da loja → Baixar agente Windows**. O download
-usa `/api/printing/agent-package`, inclui somente esses cinco arquivos e nunca
+`Configuracao.ps1`, `Agente.ps1` e `LEIA-ME.txt`. Após a configuração da Samsung,
+o painel de instalação/download foi retirado de Endereços a pedido do responsável.
+O pacote continua no repositório e no endpoint administrativo autenticado
+`/api/printing/agent-package`, que inclui somente esses cinco arquivos e nunca
 credenciais ou configurações locais. O driver e o SumatraPDF devem estar instalados;
 o instalador não baixa nem substitui drivers/programas de terceiros.
 
@@ -126,8 +126,8 @@ retornam 503 no download; nesses ambientes distribua o ZIP a partir do repositó
 - CI agora executa `tools/eleven-print-agent/tests/Configuracao.Tests.ps1` no Windows
   PowerShell: análise sintática, escolha de fila, DPAPI, backup e preservação do diário,
   sem chamar Sumatra nem enviar trabalhos. Esse job passou para o commit `85ab59d`.
-- Pendente no computador da loja: executar o instalador atualizado, conectar o agente
-  e conferir uma impressão física solicitada pelo responsável.
+- O responsável confirmou a configuração no computador da loja após a entrega.
+  Não foi feita impressão física durante os testes automatizados.
 - Publicação confirmada Live: frontend `dep-db32gobl550s73cd7u50`, backend
   `dep-db32gobl550s73cd7to0`, ambos no commit `85ab59d`. O [CI completo](https://github.com/ferreiraluc/erp-eleven/actions/runs/37612169262)
   passou nos três jobs: backend, frontend e agente Windows.

@@ -2,16 +2,6 @@ import { useI18n } from 'vue-i18n'
 
 // UI copy only. Customer names, addresses and operational values are never translated.
 const messages: Record<string, [string, string]> = {
-  "Configurar impressora da loja": ["Configurar impresora de la tienda", "Set up store printer"],
-  "Troca para Samsung SL-M2035W: use a impressora que já funciona no Windows da loja.": ["Cambio a Samsung SL-M2035W: use la impresora que ya funciona en el Windows de la tienda.", "Switching to Samsung SL-M2035W: use the printer already working on the store's Windows PC."],
-  "Feche o Eleven Impressao e extraia todos os arquivos do novo pacote no mesmo computador e usuário Windows.": ["Cierre Eleven Impressao y extraiga todos los archivos del nuevo paquete en el mismo equipo y usuario de Windows.", "Close Eleven Impressao and extract every file from the new package on the same PC and Windows account."],
-  "Execute Instalar.cmd, selecione a Samsung na lista e pressione Enter na credencial para manter a atual.": ["Ejecute Instalar.cmd, seleccione la Samsung y presione Enter en la credencial para conservar la actual.", "Run Instalar.cmd, select the Samsung printer and press Enter at the credential prompt to keep the existing one."],
-  "Abra Eleven Impressao novamente. O nome será atualizado aqui ao conectar; a fila e o histórico serão preservados.": ["Abra Eleven Impressao de nuevo. El nombre se actualizará al conectar; se conservarán la cola y el historial.", "Reopen Eleven Impressao. The name updates here when connected; the queue and history are preserved."],
-  "A instalação não imprime. Ao abrir o agente, os trabalhos pendentes voltam a ser processados.": ["La instalación no imprime. Al abrir el agente, se reanuda el procesamiento de trabajos pendientes.", "Installation does not print. Opening the agent resumes processing pending jobs."],
-  "Baixando…": ["Descargando…", "Downloading…"],
-  "Baixar agente Windows": ["Descargar agente Windows", "Download Windows agent"],
-  "Suporte oficial Samsung": ["Soporte oficial Samsung", "Official Samsung support"],
-  "Não foi possível baixar o agente. Tente novamente.": ["No se pudo descargar el agente. Intente de nuevo.", "Could not download the agent. Try again."],
   "Confira o vínculo do cliente: nome incompleto ou dados divergentes.": ["Revise el vínculo del cliente: nombre incompleto o datos diferentes.", "Review the customer link: incomplete name or conflicting details."],
   "Ao salvar, o endereço será associado a um cliente existente ou criará um novo cadastro.": ["Al guardar, la dirección se vinculará a un cliente existente o creará uno nuevo.", "Saving links this address to an existing customer or creates a new customer."],
   "Resposta incompleta da SuperFrete. A operação precisa de consulta.": ["Respuesta incompleta de SuperFrete. La operación necesita una consulta.", "Incomplete SuperFrete response. The operation needs to be checked."],

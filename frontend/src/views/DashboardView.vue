@@ -99,14 +99,14 @@
                 <h3 class="inv-title">{{ $tr("Estoque") }}</h3>
               </div>
               <div class="inv-header-actions" @click.stop>
-                <button class="inv-add-btn erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")' :aria-label='$tr("Novo produto")'>
+                <button class="inv-add-btn inv-header-action erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")' :aria-label='$tr("Novo produto")'>
                   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                   </svg>
                   <span class="inv-add-label">{{ $tr("Novo produto") }}</span>
                   <span class="inv-add-label-short" aria-hidden="true">{{ $tr("Novo") }}</span>
                 </button>
-                <router-link to="/inventory" class="inv-link-all" @click.stop>{{ $tr("Ver tudo →") }}</router-link>
+                <router-link to="/inventory" class="inv-link-all inv-header-action" @click.stop>{{ $tr("Ver tudo →") }}</router-link>
               </div>
             </div>
 
@@ -826,18 +826,23 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
-.inv-add-btn {
-  display: flex;
+:is(#app, body) .inv-header-action {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 0;
+  height: 28px;
   gap: 0.3rem;
-  font-size: 0.78rem;
-  color: #16a34a;
+  font-size: 0.75rem;
   font-weight: 600;
+  line-height: 1rem;
   white-space: nowrap;
-  padding: 0.25rem 0.625rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  padding: 0 0.625rem;
   border-radius: 0.375rem;
+}
+:is(#app, body) .inv-header-action > svg { width: 12px; height: 12px; }
+.inv-add-btn {
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -2812,16 +2817,11 @@ onUnmounted(() => {
     gap: 0.3rem;
     margin-left: auto;
   }
-  :is(#app, body) .inv-add-btn.erp-button--sm {
+  :is(#app, body) .inv-header-action {
+    height: 26px;
     font-size: 0.6875rem;
-    padding: 0.25rem 0.45rem;
+    padding: 0 0.45rem;
     gap: 0.2rem;
-    white-space: nowrap;
-  }
-  :is(#app, body) .inv-add-btn.erp-button--sm > svg { width: 12px; height: 12px; }
-  .inv-link-all {
-    font-size: 0.68rem;
-    padding: 0.2rem 0.45rem;
   }
   .inv-stats-row {
     grid-template-columns: repeat(4, 1fr);

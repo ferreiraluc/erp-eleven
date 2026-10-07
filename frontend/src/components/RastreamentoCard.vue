@@ -52,11 +52,11 @@
         </div>
       </div>
       
-      <div v-if="resumo?.rastreamentos_recentes?.length" class="rastreamentos-recentes">
-        <h4 class="recentes-title">{{ $tr("Últimos Rastreamentos") }}</h4>
+      <div v-if="rastreamentosPendentesRecentes.length" class="rastreamentos-recentes">
+        <h4 class="recentes-title">{{ $tr("Últimos envios pendentes") }}</h4>
         <div class="rastreamentos-list">
           <div
-            v-for="rastreamento in resumo.rastreamentos_recentes"
+            v-for="rastreamento in rastreamentosPendentesRecentes"
             :key="rastreamento.id"
             class="track-card"
             :class="`track-${getStatusClass(rastreamento.status)}`"
@@ -112,7 +112,7 @@
         <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v4m-6 0h6" />
         </svg>
-        <p class="empty-text">{{ $tr("Nenhum rastreamento") }}</p>
+        <p class="empty-text">{{ $tr("Nenhum envio pendente de entrega") }}</p>
       </div>
     </div>
   </div>
@@ -240,6 +240,12 @@ const showModal = ref(false)
 const isCreating = ref(false)
 const modalError = ref<string | null>(null)
 const resumo = ref<RastreamentoResumo | null>(null)
+// Guard the card while frontend/backend deployments roll out independently.
+const rastreamentosPendentesRecentes = computed(() =>
+  (resumo.value?.rastreamentos_recentes || [])
+    .filter(r => r.ativo && r.status !== 'ENTREGUE')
+    .slice(0, 3)
+)
 
 const novoRastreamento = ref<RastreamentoCreate>({
   codigo_rastreio: '',

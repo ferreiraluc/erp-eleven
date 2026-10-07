@@ -328,10 +328,12 @@ def obter_resumo_dashboard(
         Rastreamento.status.in_([RastreamentoStatus.ERRO, RastreamentoStatus.NAO_ENCONTRADO])
     ).count()
     
-    # Rastreamentos recentes (últimos 12)
+    # Pending delivery includes transit and unresolved queries. Filter before limit
+    # so delivered parcels cannot crowd the dashboard's three newest shipments out.
     recentes = db.query(Rastreamento).filter(
-        Rastreamento.ativo == True
-    ).order_by(desc(Rastreamento.updated_at)).limit(12).all()
+        Rastreamento.ativo == True,
+        Rastreamento.status != RastreamentoStatus.ENTREGUE
+    ).order_by(desc(Rastreamento.created_at), desc(Rastreamento.id)).limit(3).all()
     
     return RastreamentoResumo(
         total_rastreamentos=total,

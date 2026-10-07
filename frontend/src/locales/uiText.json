@@ -2049,6 +2049,16 @@
     "es": "Últimos 4 dígitos",
     "en": "Last 4 digits"
   },
+  "Últimos envios pendentes": {
+    "pt": "Últimos envios pendentes",
+    "es": "Últimos envíos pendientes",
+    "en": "Latest pending shipments"
+  },
+  "Nenhum envio pendente de entrega": {
+    "pt": "Nenhum envio pendente de entrega",
+    "es": "No hay envíos pendientes de entrega",
+    "en": "No shipments awaiting delivery"
+  },
   "Últimos Rastreamentos": {
     "pt": "Últimos Rastreamentos",
     "es": "Últimos seguimientos",
