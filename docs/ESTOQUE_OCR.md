@@ -13,7 +13,7 @@ Somente Lucas (`lucas@eleven.com`, ADMIN) vê **Excluir definitivamente** ao edi
 um produto. O backend aplica a mesma autorização nas rotas
 `GET /api/inventory/items/{id}/deletion-preview` e
 `DELETE /api/inventory/items/{id}/permanent`. A desativação existente continua
-separada; não há exclusão em lote nem ferramenta de exclusão no bot.
+separada; a seleção múltipla usa as mesmas rotas individuais. Não há ferramenta de exclusão no bot.
 
 A prévia mostra nome, tamanho, cor, SKU, saldos e quantidade de movimentações a
 remover. Após marcar a conferência e confirmar, apaga o item, a imagem armazenada
@@ -569,3 +569,27 @@ recuperação, não uma tabela de uso do aplicativo; uma restauração requer mi
 explícita para preservar edições feitas depois. Os filtros também consolidam
 valores antigos caso uma integração externa grave diretamente no banco; escritas
 SQL externas devem usar as mesmas regras, pois não passam pelo listener ORM.
+
+### Seleção múltipla e identificação visual de grades
+
+**Selecionar** ativa as ações da seleção; **Agrupar** continua disponível dentro
+da barra para criar uma grade. **Selecionar todos** inclui apenas os produtos da
+visualização atual (e os membros dos cards de grade exibidos), sem adicionar
+grupos ocultos.
+
+Somente Lucas vê **Excluir** na barra. O modal lista cada SKU/variante, saldos,
+movimentações e vínculos, distinguindo exclusão física de retirada com histórico.
+Uma conferência explícita autoriza as operações indicadas. Cada item usa seu
+próprio token e a autorização do backend, sem contornar vínculos ou auditoria.
+As operações são sequenciais e transacionais **por produto**, não por seleção
+inteira. Em falha ou resultado incerto, a sequência para: sucessos permanecem
+identificados; os pendentes exigem nova prévia e confirmação. Não há retentativa
+automática. Sair da página impede o início de novas exclusões da seleção, mas
+não cancela uma requisição já enviada.
+
+Fora de **Ver grades**, os cards mostram um identificador de grade e uma linha
+entre vizinhos com o mesmo `group_key`. A linha acompanha as quebras de linha e
+o redimensionamento em Quadrados, Compacto e Lista. A numeração é relativa à
+lista visível; o nome/código real aparece no tooltip. Cards não adjacentes seguem
+identificados, sem linhas atravessando outros produtos. Não se infere grade por
+marca, nome, cor ou código de barras, nem se alteram filtros ou ordem dos itens.

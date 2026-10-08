@@ -7,10 +7,10 @@ import type { InventoryItem } from '@/services/api'
 const mocks = vi.hoisted(() => ({
   diagnostics: vi.fn(), getItem: vi.fn(), getGroups: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn(),
   listItems: [] as InventoryItem[], loadItems: vi.fn(), loadAlerts: vi.fn(), listError: null as string | null,
-  listFilters: {} as Record<string, string>,
+  listFilters: {} as Record<string, string>, owner: false,
 }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
-vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: false }) }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: mocks.owner }) }))
 vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { get: mocks.diagnostics } }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
   getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues }, ocrAPI: {} }))
@@ -41,7 +41,7 @@ async function openPanel() {
 beforeEach(() => {
   vi.stubGlobal('IntersectionObserver', class { observe() {} disconnect() {} unobserve() {} })
   localStorage.clear()
-  mocks.listError = null; mocks.listItems = []; mocks.listFilters = {}
+  mocks.owner = false; mocks.listError = null; mocks.listItems = []; mocks.listFilters = {}
   mocks.getGroups.mockResolvedValue([]); mocks.getSuppliers.mockResolvedValue([])
   mocks.getDistinctValues.mockResolvedValue({ brands: [], categories: [] })
   mocks.loadItems.mockResolvedValue(undefined); mocks.loadAlerts.mockResolvedValue(undefined)
@@ -185,5 +185,24 @@ describe('Unknown stock list and group rendering', () => {
     expect(totals[0].getAttribute('title')).toBe('Não informado')
     expect(container.querySelector('.badge-unknown')?.textContent).toBe('Revisar estoque')
     expect(container.textContent).not.toContain('NaN')
+  })
+})
+
+
+describe('Inventory selection', () => {
+  const item = { id: 'visible', name: 'Produto visível', current_stock: 1, stock_loja: 1, stock_deposito: 0,
+    sale_price: 0, is_active: true, alert_level: 'ok', group_key: 'grade-real' } as InventoryItem
+  it.each([false, true])('exposes deletion only for owner=%s and selects only the visible catalog', async owner => {
+    mocks.owner = owner
+    mocks.listItems = [item]
+    mocks.getGroups.mockResolvedValue([{group_key:'hidden',total_stock:1,items:[{...item,id:'hidden'}]}])
+    await mount(); button('Selecionar').click(); await nextTick()
+    container.querySelector<HTMLElement>('[data-item-id="visible"]')!.click(); await nextTick()
+    Array.from(container.querySelectorAll<HTMLButtonElement>('.sel-actions button')).find(b => b.querySelector('.sel-label-full')?.textContent === 'Sel. todos')!.click(); await nextTick()
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+    const deletion = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Excluir')
+    expect(Boolean(deletion)).toBe(owner)
+    expect(container.querySelector('.card-grade-label')?.textContent).toContain('Grade 1')
+    expect(container.querySelector('[data-item-id="visible"]')?.getAttribute('data-grade-key')).toBe('grade-real')
   })
 })

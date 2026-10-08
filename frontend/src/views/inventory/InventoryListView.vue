@@ -214,8 +214,8 @@
           {{ tr('Quadrados') }}
         </button>
         <span class="view-sep">|</span>
-        <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar para agrupar')">
-          {{ tr('Agrupar') }}
+        <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar itens')" :aria-pressed="selectionMode">
+          {{ tr('Selecionar') }}
         </button>
       </div>
     </div>
@@ -255,7 +255,10 @@
     </div>
 
     <!-- Items list -->
-    <div v-else-if="flatList.length > 0" class="items-container" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
+    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
+      <svg v-if="!groupMode && gradeConnections.length" class="grade-connections" aria-hidden="true">
+        <path v-for="connection in gradeConnections" :key="connection.id" :d="connection.path" />
+      </svg>
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
@@ -401,17 +404,21 @@
           v-else
           class="item-card"
           :data-item-id="entry.item.id"
+          :data-grade-key="entry.item.group_key || undefined"
           :class="['alert-' + stockAlertLevel(entry.item), { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id), 'card-expanded': expandedCardIds.includes(entry.item.id) }]"
           @click="onCardClick(entry.item.id, $event)"
           @pointerdown="onItemPointerDown(entry.item.id, $event)"
         >
+          <div v-if="!groupMode && entry.item.group_key" class="card-grade-label" :title="entry.item.group_key">
+            <span aria-hidden="true">↔</span> {{ tr('Grade {number}', { number: visibleGradeNumbers.get(entry.item.group_key)! }) }}
+          </div>
           <!-- Checkbox de seleção -->
-          <div v-if="selectionMode" class="card-check" @click.stop="toggleSelection(entry.item.id)">
+          <button v-if="selectionMode" type="button" class="card-check" :aria-label="tr('Selecionar {name}', { name: entry.item.name })" :aria-pressed="selectedIds.includes(entry.item.id)" @click.stop="toggleSelection(entry.item.id)">
             <span :class="['check-box', { checked: selectedIds.includes(entry.item.id), 'check-grouped': !!entry.item.group_key }]">
               <svg v-if="selectedIds.includes(entry.item.id)" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </span>
-            <span v-if="entry.item.group_key" class="in-group-badge" :title="tr('Já pertence ao grupo: {group}', { group: entry.item.group_key })">{{ tr('grade') }}</span>
-          </div>
+            <span v-if="groupMode && entry.item.group_key" class="in-group-badge" :title="tr('Já pertence ao grupo: {group}', { group: entry.item.group_key })">{{ tr('grade') }}</span>
+          </button>
           <!-- Imagem topo (grid view) -->
           <div class="item-grid-image" @click.stop="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
             <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-grid-img" />
@@ -640,9 +647,12 @@
       @close="showLabelTemplates = false"
     />
 
+    <BulkDeleteModal v-if="showBulkDelete && auth.isOwner" :items="itemsForDeletion"
+      @close="closeBulkDelete" @deleted="forgetDeletedItem" @settled="refreshAfterDeletion" />
+
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
-      <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit" class="selection-bar">
+      <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit && !showBulkDelete" class="selection-bar">
         <span class="sel-count">{{ tr('Itens selecionados: {count}', { count: selectedIds.length }) }}</span>
         <div class="sel-actions">
           <button @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
@@ -654,6 +664,7 @@
             <span class="sel-label-full">{{ tr('Transferir') }}</span>
             <span class="sel-label-short">{{ tr('Transf.') }}</span>
           </button>
+          <button v-if="auth.isOwner" @click="openBulkDelete" class="sel-btn sel-btn-delete erp-button erp-button--danger erp-button--sm">{{ tr('Excluir') }}</button>
           <button @click="selectAll" class="sel-btn erp-button erp-button--secondary erp-button--sm">
             <span class="sel-label-full">{{ tr('Sel. todos') }}</span>
             <span class="sel-label-short">{{ tr('Todos') }}</span>
@@ -723,6 +734,8 @@ import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import DeletedProductsModal from '@/components/inventory/DeletedProductsModal.vue'
 import MovementModal from '@/components/inventory/MovementModal.vue'
 import ImportModal from '@/components/inventory/ImportModal.vue'
+import BulkDeleteModal from '@/components/inventory/BulkDeleteModal.vue'
+import { useInventoryGradeLinks } from '@/composables/useInventoryGradeLinks'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
@@ -959,14 +972,23 @@ function onItemPointerDown(itemId: string, e: PointerEvent) {
 
 function selectAll() {
   const all = new Set<string>()
-  for (const item of inventoryStore.items) all.add(item.id)
-  for (const g of backendGroups.value) {
-    for (const item of g.items) all.add(item.id)
+  for (const entry of flatList.value) {
+    if (entry.type === 'item') all.add(entry.item.id)
+    else for (const item of entry.group.items) all.add(item.id)
   }
   selectedIds.value = [...all]
 }
 
 const selectedItemsForBulkEdit = ref<InventoryItem[]>([])
+const showBulkDelete = ref(false), itemsForDeletion = ref<Array<{ id: string; name: string }>>([])
+function openBulkDelete() {
+  if (!auth.isOwner) return
+  itemsForDeletion.value = selectedIds.value.map(id => ({ id, name: allVisibleItems.value.get(id)?.name || id }))
+  if (itemsForDeletion.value.length) showBulkDelete.value = true
+}
+function closeBulkDelete() { showBulkDelete.value = false; refreshAfterDeletion() }
+function refreshAfterDeletion() { return Promise.all([reloadItems(), loadGroupsFiltered(), inventoryStore.loadAlerts()]) }
+
 
 function openBulkEdit() {
   // Capture items eagerly at click time to avoid reactivity timing issues.
@@ -1126,6 +1148,16 @@ const flatList = computed<FlatEntry[]>(() => {
 
   return result
 })
+
+const itemsContainer = ref<HTMLElement>()
+const visibleGradeNumbers = computed(() => {
+  const groups = new Map<string, number>()
+  for (const entry of flatList.value) {
+    if (entry.type === 'item' && entry.item.group_key && !groups.has(entry.item.group_key)) groups.set(entry.item.group_key, groups.size + 1)
+  }
+  return groups
+})
+const gradeConnections = useInventoryGradeLinks(itemsContainer, computed(() => [flatList.value, viewMode.value]), computed(() => !groupMode.value))
 
 function groupAlertLevel(items: InventoryItem[]): string {
   if (items.some(item => !hasKnownStock(item))) return 'unknown'
@@ -1378,9 +1410,7 @@ function onBarcodeDetected(code: string) {
   searchQuery.value = code
 }
 
-async function onItemDeleted(id: string) {
-  showItemForm.value = false
-  editingItem.value = null
+function forgetDeletedItem(id: string) {
   selectedIds.value = selectedIds.value.filter(value => value !== id)
   inventoryStore.forgetDeletedItem(id)
   groupLoadGeneration++; suggestionLoadGeneration++
@@ -1390,8 +1420,14 @@ async function onItemDeleted(id: string) {
   }).filter(group => group.items.length)
   backendSuggestions.value = backendSuggestions.value.map(group => ({ ...group, items: group.items.filter(item => item.id !== id) })).filter(group => group.items.length > 1)
   diagnosticsRevision.value++
+}
+
+async function onItemDeleted(id: string) {
+  showItemForm.value = false
+  editingItem.value = null
+  forgetDeletedItem(id)
   showToast('Produto excluído definitivamente.', 'success')
-  await Promise.all([reloadItems(), loadGroupsFiltered(), inventoryStore.loadAlerts()])
+  await refreshAfterDeletion()
 }
 
 async function onVariantsCreated(result: { created: unknown[] }) {
@@ -1570,6 +1606,7 @@ onMounted(async () => {
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 3rem 1rem; color: #6b7280; gap: 0.5rem; }
 /* ── View container ──────────────────────────────────────────────────────────── */
 .items-container {
+  position: relative;
   padding: 0 1rem 1rem;
 }
 
@@ -1985,7 +2022,7 @@ onMounted(async () => {
 /* ── Selection mode ──────────────────────────────────────────────────────────── */
 .btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .card-selected { outline: 2px solid #3b82f6; outline-offset: -2px; }
-.card-check { position: absolute; top: 0.35rem; left: 0.35rem; z-index: 2; }
+.card-check { padding:0; border:0; background:none; cursor:pointer; position: absolute; top: 0.35rem; left: 0.35rem; z-index: 2; }
 .item-card { position: relative; }
 .check-box {
   width: 20px; height: 20px; border-radius: 4px; border: 2px solid #d1d5db;
@@ -2140,4 +2177,13 @@ onMounted(async () => {
 .chip-remove-confirm button:first-of-type:hover { background: #dc2626; }
 .chip-remove-confirm button:last-of-type { background: #f3f4f6; color: #6b7280; }
 .chip-remove-confirm button:last-of-type:hover { background: #e5e7eb; }
+
+.grade-connections { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; z-index:1; }
+.grade-connections path { fill:none; stroke:#818cf8; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.card-grade-label { display:flex; align-items:center; gap:.25rem; font-size:.64rem; line-height:1.2; color:#4f46e5; padding:.2rem .35rem; background:#eef2ff; border-radius:4px; width:fit-content; margin-bottom:.3rem; }
+.item-card:has(.card-check) .card-grade-label { margin-left:2rem; }
+.view-grid .card-grade-label { margin:.35rem .5rem; }
+.view-list .card-grade-label { margin-bottom:.1rem; }
+.sel-btn-delete { background:#dc2626; } .sel-btn-delete:hover { background:#b91c1c; }
+.items-container:has(.grade-connections) { gap:.6rem; }
 </style>
