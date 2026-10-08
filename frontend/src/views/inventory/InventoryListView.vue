@@ -1590,8 +1590,15 @@ onMounted(async () => {
 .view-grid .item-color-tag { max-width: none; }
 .view-grid .item-sub { flex-wrap: wrap; }
 .view-grid .item-bottom-row { flex-direction: column; align-items: flex-start; gap: 0.35rem; margin-top: 0.25rem; }
-.view-grid .item-actions { flex-wrap: wrap; gap: 0.25rem; }
-.view-grid .action-btn { font-size: 0.68rem; padding: 0.25rem 0.45rem; }
+.view-grid .item-actions { width: 100%; gap: 0.25rem; }
+/* Keep both labels on one row even in the narrowest square cards. */
+:is(#app, body) .view-grid .item-actions > .action-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.25rem;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
 
 @media (max-width: 600px) {
   .view-compact { grid-template-columns: minmax(0, 1fr); }
@@ -1843,7 +1850,7 @@ onMounted(async () => {
 .badge-inactive { background: #f3f4f6; color: #6b7280; }
 
 /* Action buttons */
-.item-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.item-actions { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.3rem; flex-shrink: 0; }
 .action-btn { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; border: none; font-weight: 600; white-space: nowrap; }
 .move-btn  { background: #dbeafe; color: #1d4ed8; }
 .edit-btn  { background: #f3f4f6; color: #374151; }
