@@ -42,6 +42,8 @@ from ...services.inventory_duplicate import duplicate_item
 from ...schemas.inventory_variants import VariantContext, VariantCreateRequest, VariantCreateResponse
 from ...services.inventory_variants import variant_context, create_variants
 
+from ...services.inventory_taxonomy import canonical, vocabulary, facet_filters, search_text
+
 router = APIRouter()
 
 
@@ -84,7 +86,7 @@ def _normalize_item(data: dict) -> dict:
     """Apply Title Case to text fields before persisting."""
     for field in ('name', 'brand', 'color', 'category'):
         if field in data and data[field]:
-            data[field] = _title_case(data[field])
+            data[field] = _title_case(data[field]) if field == 'name' else canonical(data[field], field)
     return data
 
 # ── Size ordering ─────────────────────────────────────────────────────────────
@@ -175,8 +177,8 @@ def get_distinct_values(
     brands = db.query(Item.brand).filter(Item.deleted_at.is_(None), Item.brand.isnot(None), Item.brand != '').distinct().all()
     categories = db.query(Item.category).filter(Item.deleted_at.is_(None), Item.category.isnot(None), Item.category != '').distinct().all()
     return {
-        "brands": sorted([b[0] for b in brands]),
-        "categories": sorted([c[0] for c in categories]),
+        "brands": sorted(vocabulary([b[0] for b in brands], "brand").values()),
+        "categories": sorted(vocabulary([c[0] for c in categories], "category").values()),
     }
 
 
@@ -198,32 +200,33 @@ def list_items(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
+    taxonomy_filter = facet_filters(db)
     query = db.query(Item).filter(Item.deleted_at.is_(None))
 
     if search:
-        for token in search.strip().split():
+        for token in search_text(search).strip().split():
             like = f"%{token}%"
             query = query.filter(
                 or_(
                     Item.name.ilike(like),
                     Item.sku_internal.ilike(like),
                     Item.barcode.ilike(like),
-                    Item.category.ilike(like),
-                    Item.brand.ilike(like),
-                    Item.color.ilike(like),
+                    taxonomy_filter(Item.category, token, partial=True),
+                    taxonomy_filter(Item.brand, token, partial=True),
+                    taxonomy_filter(Item.color, token, partial=True),
                     Item.group_key.ilike(like),
                 )
             )
     if category:
-        query = query.filter(Item.category.ilike(f"%{category}%"))
+        query = query.filter(taxonomy_filter(Item.category, category))
     if brand:
-        query = query.filter(Item.brand.ilike(f"%{brand}%"))
+        query = query.filter(taxonomy_filter(Item.brand, brand))
     if location:
         query = query.filter(Item.location.ilike(f"%{location}%"))
     if size:
         query = query.filter(Item.size == size)
     if color:
-        query = query.filter(Item.color.ilike(f"%{color}%"))
+        query = query.filter(taxonomy_filter(Item.color, color))
     if supplier_id:
         sup_uuid = validate_uuid(supplier_id, "supplier_id")
         query = query.filter(Item.supplier_id == sup_uuid)
@@ -367,15 +370,16 @@ def get_groups(
     # Step 1: Find group_keys that pass extra filters (brand/category/status/location)
     # A group is included if ANY item matches — then ALL items of that group are shown.
     filter_keys: Optional[set] = None
+    taxonomy_filter = facet_filters(db)
     if brand or category or item_status or location_stock:
         kq = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
             Item.is_active == True,
         )
         if brand:
-            kq = kq.filter(Item.brand.ilike(f"%{brand}%"))
+            kq = kq.filter(taxonomy_filter(Item.brand, brand))
         if category:
-            kq = kq.filter(Item.category.ilike(f"%{category}%"))
+            kq = kq.filter(taxonomy_filter(Item.category, category))
         if item_status in ('low_stock', 'out_of_stock', 'overstocked'):
             kq = kq.filter(_known_stock_filter())
         if item_status == "low_stock":
@@ -397,7 +401,7 @@ def get_groups(
     # Step 2: Find group_keys that match search tokens
     search_keys: Optional[set] = None
     if search:
-        tokens = [t for t in search.strip().split() if t]
+        tokens = [t for t in search_text(search).strip().split() if t]
         for token in tokens:
             like = f"%{token}%"
             rows = (
@@ -409,10 +413,10 @@ def get_groups(
                         Item.group_key.ilike(like),
                         Item.name.ilike(like),
                         Item.barcode.ilike(like),
-                        Item.brand.ilike(like),
-                        Item.category.ilike(like),
+                        taxonomy_filter(Item.brand, token, partial=True),
+                        taxonomy_filter(Item.category, token, partial=True),
                         Item.sku_internal.ilike(like),
-                        Item.color.ilike(like),
+                        taxonomy_filter(Item.color, token, partial=True),
                     ),
                 )
                 .distinct()

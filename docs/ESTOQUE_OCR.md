@@ -546,3 +546,26 @@ quantidades, lotes, ambiguidade e rollback em SQLite sintético.
 concorrentes, aplicação única, movimentação enquanto se espera o lock e ordem
 estável entre sessões com produtos em comum. Esses testes usam apenas schemas
 locais descartáveis; não corrigem nem consultam o estoque de produção.
+
+### Vocabulário unificado de marcas, categorias e cores
+
+O estoque compara marcas, cores e categorias sem distinguir maiúsculas, minúsculas,
+acentos ou espaços repetidos. Hierarquias usam `Calçados > Tênis`. `PRADA`, `Prada`
+e `pRADA` pertencem à marca **Prada**; `EA7 Emporio Armani`, `Emporio Armani` e
+`Empório Armani` pertencem a **Emporio Armani**. Os aliases são explícitos:
+Armani Exchange, Giorgio Armani e EA7 isoladamente não são unidos automaticamente.
+Cores de significados diferentes, como Navy e Azul, também permanecem distintas.
+
+A regra de persistência se aplica a cadastros ORM: formulário, bot, CSV, edição em
+lote, duplicação e novas grades. Os filtros reconhecem também grafias antigas e
+acentos; a categoria principal inclui suas subcategorias. Não há aproximação por
+semelhança de nomes nem união automática de produtos, tamanhos ou grades. SKUs,
+códigos de barras e nomes de modelos mantêm suas identidades.
+
+A migração `d6e7f8a9b0c1` consolida somente marca/categoria/cor dos produtos não
+excluídos, guardando os valores anteriores em `inventory_taxonomy_snapshot_v1`.
+Não altera saldos, IDs, grupos, timestamps, vendas ou histórico. O snapshot é de
+recuperação, não uma tabela de uso do aplicativo; uma restauração requer migração
+explícita para preservar edições feitas depois. Os filtros também consolidam
+valores antigos caso uma integração externa grave diretamente no banco; escritas
+SQL externas devem usar as mesmas regras, pois não passam pelo listener ORM.

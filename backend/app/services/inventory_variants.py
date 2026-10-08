@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..models.inventory import Item
 from ..schemas.inventory_variants import VariantCreateRequest
 from .inventory_service import create_movement
+from .inventory_taxonomy import key as taxonomy_key
 
 COPY_FIELDS = ('description', 'category', 'color', 'brand', 'unit', 'location',
                'supplier_id', 'cost_price', 'sale_price', 'currency', 'cost_currency',
@@ -37,7 +38,7 @@ def source_item(db, item_id):
 
 def same_color_members(db, source):
     rows = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key == source.group_key).order_by(Item.id).all() if source.group_key else [source]
-    return [row for row in rows if normalized(row.color) == normalized(source.color)]
+    return [row for row in rows if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
 
 
 def variant_context(db, item_id):
@@ -66,7 +67,7 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
             raise HTTPException(409, 'O produto ou sua grade mudou. Reabra a prévia antes de continuar.')
         if request.source_version != source_version(source):
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
-        matching = [row for row in members if normalized(row.color) == normalized(source.color)]
+        matching = [row for row in members if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
         wanted = {normalized(s) for s in request.sizes}
         existing = [row for row in matching if normalized(row.size) in wanted]
         present = {normalized(row.size) for row in matching}

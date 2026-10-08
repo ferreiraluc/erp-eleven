@@ -10,6 +10,7 @@ from .assistant_schedule import may_schedule
 from .assistant_controls import normalized,preview_reply
 from .assistant_queries import StockArgs,query_stock
 from .inventory_service import create_movement
+from .inventory_taxonomy import key as taxonomy_key
 
 Currency=Literal['BRL','USD','PYG','EUR']
 
@@ -57,7 +58,8 @@ class EntryArgs(BaseModel):
 
 
 def identity(data):
-    return tuple(normalized(data.get(k) or '') for k in ('nome','marca','tamanho','cor'))
+    return (normalized(data.get('nome') or ''), taxonomy_key(data.get('marca'), 'brand'),
+            normalized(data.get('tamanho') or ''), taxonomy_key(data.get('cor'), 'color'))
 
 
 def duplicate_items(db,items):

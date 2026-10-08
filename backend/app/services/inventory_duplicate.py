@@ -7,6 +7,7 @@ from sqlalchemy import text
 from ..models.inventory import Item, Supplier
 from .inventory_variants import source_item, source_version, normalized
 from .inventory_service import create_movement
+from .inventory_taxonomy import key as taxonomy_key
 
 
 def lock(db, key):
@@ -45,7 +46,7 @@ def duplicate_item(db, item_id, request, user_id):
         if data['max_stock'] and data['min_stock'] > data['max_stock']:
             raise HTTPException(422, 'Mínimo não pode ser maior que máximo')
         if request.keep_group:
-            if any(normalized(row.size) == normalized(data['size']) and normalized(row.color) == normalized(data['color']) for row in members):
+            if any(normalized(row.size) == normalized(data['size']) and taxonomy_key(row.color, 'color') == taxonomy_key(data['color'], 'color') for row in members):
                 raise HTTPException(409, 'Este tamanho e cor já existem na grade. Escolha outra variação ou crie um produto independente.')
             source.group_key = group or f'grade-{uuid.uuid4()}'
             data['group_key'] = source.group_key
