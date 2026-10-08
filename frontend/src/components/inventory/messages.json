@@ -1890,5 +1890,41 @@
   "Os dados do produto mudaram. Reabra a prévia e confira novamente.": [
     "Los datos del producto cambiaron. Abre la vista previa y verifica de nuevo.",
     "The product details changed. Reopen the preview and check again."
+  ],
+  "Editar foto": [
+    "Editar foto",
+    "Edit photo"
+  ],
+  "Cópia editável: altere somente o tamanho ou revise todos os dados e a foto. O produto original não será editado.": [
+    "Copia editable: cambia solo la talla o revisa todos los datos y la foto. No se editará el producto original.",
+    "Editable copy: change only the size or review all details and the photo. The original product will not be edited."
+  ],
+  "Adicionar à grade do produto original": [
+    "Añadir a las variantes del producto original",
+    "Add to the original product variants"
+  ],
+  "Desmarque para criar um modelo independente. O código de barras foi copiado; confira se precisa alterá-lo.": [
+    "Desmarca para crear un modelo independiente. Se copió el código de barras; verifica si necesitas cambiarlo.",
+    "Uncheck to create an independent model. The barcode was copied; check whether it needs changing."
+  ],
+  "A resposta não chegou. Confira o resultado da mesma operação antes de continuar; o estoque não será lançado duas vezes.": [
+    "No llegó la respuesta. Comprueba el resultado de la misma operación antes de continuar; el stock no se registrará dos veces.",
+    "The response did not arrive. Check the same operation before continuing; stock will not be entered twice."
+  ],
+  "Conferir resultado do cadastro": [
+    "Consultar resultado del registro",
+    "Check creation result"
+  ],
+  "Esta confirmação já foi utilizada. Reabra o cadastro para continuar.": [
+    "Esta confirmación ya se utilizó. Abre el registro nuevamente para continuar.",
+    "This confirmation has already been used. Reopen the form to continue."
+  ],
+  "Este tamanho e cor já existem na grade. Escolha outra variação ou crie um produto independente.": [
+    "Esta talla y color ya existen. Elige otra variante o crea un producto independiente.",
+    "This size and color already exist in the group. Choose another variant or create an independent product."
+  ],
+  "Fornecedor não encontrado.": [
+    "Proveedor no encontrado.",
+    "Supplier not found."
   ]
 }

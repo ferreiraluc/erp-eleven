@@ -3,7 +3,9 @@ export type VariantSummary = Pick<InventoryItem, 'id' | 'name' | 'sku_internal' 
 export interface VariantContext { source: InventoryItem; source_version: string; model_name: string; existing: VariantSummary[] }
 export interface VariantRequest { sizes: string[]; model_name: string; base_barcode: string | null; source_version: string; initial_stock: number; stock_location: 'loja' | 'deposito'; confirm: true }
 export interface VariantResult { group_key: string | null; created: VariantSummary[]; existing: VariantSummary[] }
+export interface DuplicateRequest { request_id: string; source_version: string; item: Partial<InventoryItem>; keep_group: boolean; initial_stock: number; stock_location: 'loja' | 'deposito'; confirm: true }
 export const inventoryVariantsAPI = {
+  duplicate: async (id: string, body: DuplicateRequest) => (await api.post<InventoryItem>(`/api/inventory/items/${id}/duplicate`, body)).data,
   context: async (id: string) => (await api.get<VariantContext>(`/api/inventory/items/${id}/variants`)).data,
   create: async (id: string, body: VariantRequest) => (await api.post<VariantResult>(`/api/inventory/items/${id}/variants`, body)).data,
 }

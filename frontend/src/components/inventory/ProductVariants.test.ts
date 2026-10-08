@@ -63,14 +63,16 @@ it('opens both actions from an existing product and keeps unsaved edits when can
   root = document.createElement('div'); document.body.append(root)
   app = createApp(ItemFormModal, { item: { ...fixture().source, sku_internal: 'FIXTURE', is_active: true, current_stock: 7, stock_loja: 7, stock_deposito: 0 } as InventoryItem, canCreateVariants: true }).use(createI18n({ legacy: false, locale: 'pt', messages: { pt: {} } }))
   app.mount(root); await flush()
+  const originalOverlay = root.querySelector('.modal-overlay')
   const originalName = root.querySelector('.form-group input') as HTMLInputElement
   originalName.value = 'Edição ainda não salva'; originalName.dispatchEvent(new Event('input', { bubbles: true })); await flush()
   for (const title of ['Duplicar produto', 'Adicionar grade']) {
     Array.from(root.querySelectorAll('button')).find(b => b.textContent?.trim() === title)!.click(); await flush()
-    expect(root.querySelector('.modal-overlay')?.getAttribute('style')).toContain('display: none')
-    expect(root.querySelector('.variants-modal h2')?.textContent).toBe(title)
-    expect((root.querySelector('.variants-modal input') as HTMLInputElement).value).toBe('Tênis')
-    Array.from(root.querySelectorAll<HTMLButtonElement>('.variants-modal button')).find(b => b.textContent?.trim() === 'Cancelar')!.click(); await flush()
+    expect(originalOverlay?.getAttribute('style')).toContain('display: none')
+    const child = root.querySelector(title === 'Duplicar produto' ? '.intake-modal' : '.variants-modal')!
+    expect(child.querySelector('h2')?.textContent).toBe(title)
+    expect((child.querySelector(title === 'Duplicar produto' ? '.form-group input' : 'input') as HTMLInputElement).value).toBe(title === 'Duplicar produto' ? 'Tênis 9' : 'Tênis')
+    Array.from(child.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === 'Cancelar')!.click(); await flush()
     expect(root.querySelector('.variants-modal')).toBeNull()
     expect(originalName.value).toBe('Edição ainda não salva')
   }

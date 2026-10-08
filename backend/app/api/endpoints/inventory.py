@@ -37,10 +37,18 @@ from ...services.inventory_service import create_movement, apply_session, _compu
 from ..validators import validate_uuid
 from datetime import datetime as dt
 
+from ...schemas.inventory_duplicate import DuplicateItemRequest
+from ...services.inventory_duplicate import duplicate_item
 from ...schemas.inventory_variants import VariantContext, VariantCreateRequest, VariantCreateResponse
 from ...services.inventory_variants import variant_context, create_variants
 
 router = APIRouter()
+
+
+@router.post('/items/{item_id}/duplicate', response_model=ItemResponse, status_code=201)
+def copy_inventory_item(item_id: str, request: DuplicateItemRequest, db: Session = Depends(get_db),
+                        current_user: Usuario = Depends(require_role(['ADMIN', 'GERENTE']))):
+    return duplicate_item(db, validate_uuid(item_id, 'ID do item'), request, current_user.id)
 
 
 @router.get('/items/{item_id}/variants', response_model=VariantContext)
