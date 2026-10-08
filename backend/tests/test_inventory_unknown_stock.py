@@ -131,7 +131,7 @@ def test_metadata_save_returns_unknown_and_does_not_repair_balance(stock_app,fie
         row=add(db,missing=field);uid=str(row.id);expected=balances(row);db.commit()
     response=client.put('/api/inventory/items/'+uid,json={'name':'camisa revisada','brand':'marca', 'min_stock':None,'max_stock':None})
     assert response.status_code==200,response.text
-    assert response.json()['name']=='Camisa Revisada' and response.json()['alert_level']=='unknown'
+    assert response.json()['name']=='camisa revisada' and response.json()['alert_level']=='unknown'
     assert response.json()[field] is None and response.json()['min_stock'] is None
     batch=client.patch('/api/inventory/items/batch',json={'item_ids':[uid],'brand':'Nova marca'})
     assert batch.status_code==200,batch.text

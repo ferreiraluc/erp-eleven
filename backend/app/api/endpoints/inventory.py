@@ -42,7 +42,7 @@ from ...services.inventory_duplicate import duplicate_item
 from ...schemas.inventory_variants import VariantContext, VariantCreateRequest, VariantCreateResponse
 from ...services.inventory_variants import variant_context, create_variants
 
-from ...services.inventory_taxonomy import canonical, vocabulary, facet_filters
+from ...services.inventory_taxonomy import canonical, clean_product_name, vocabulary, facet_filters
 from ...services.inventory_search import build_search
 
 router = APIRouter()
@@ -77,17 +77,13 @@ def inventory_diagnostics(
 
 
 # ── Text normalization ────────────────────────────────────────────────────────
-def _title_case(value: Optional[str]) -> Optional[str]:
-    """Normalize to Title Case: 'PRADA' → 'Prada', 'branco' → 'Branco'."""
-    if not value:
-        return value
-    return ' '.join(word.capitalize() for word in value.strip().split())
-
 def _normalize_item(data: dict) -> dict:
-    """Apply Title Case to text fields before persisting."""
-    for field in ('name', 'brand', 'color', 'category'):
+    """Canonicalize filter facets, preserving the product name's chosen casing."""
+    if 'name' in data:
+        data['name'] = clean_product_name(data['name'])
+    for field in ('brand', 'color', 'category'):
         if field in data and data[field]:
-            data[field] = _title_case(data[field]) if field == 'name' else canonical(data[field], field)
+            data[field] = canonical(data[field], field)
     return data
 
 # ── Size ordering ─────────────────────────────────────────────────────────────
@@ -544,10 +540,10 @@ def create_grade(
         raise HTTPException(status_code=400, detail="Informe ao menos um tamanho para criar a grade")
 
     # Normalize text fields
-    norm_name     = _title_case(grade.name)     or grade.name
-    norm_color    = _title_case(grade.color)    if grade.color else None
-    norm_brand    = _title_case(grade.brand)    if grade.brand else None
-    norm_category = _title_case(grade.category) if grade.category else None
+    norm_name = clean_product_name(grade.name)
+    norm_color = canonical(grade.color, 'color') if grade.color else None
+    norm_brand = canonical(grade.brand, 'brand') if grade.brand else None
+    norm_category = canonical(grade.category, 'category') if grade.category else None
 
     # Auto-generate group_key from name + color
     group_key = (grade.group_key or "").strip()

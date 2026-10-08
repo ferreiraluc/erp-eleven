@@ -617,6 +617,20 @@ concorrentes, aplicação única, movimentação enquanto se espera o lock e ord
 estável entre sessões com produtos em comum. Esses testes usam apenas schemas
 locais descartáveis; não corrigem nem consultam o estoque de produção.
 
+### Nome do produto e códigos de modelo
+
+O nome/título preserva as maiúsculas e minúsculas escolhidas na conferência:
+`Tênis Givenchy DN0281`, `TÊNIS GIVENCHY DN0281` e `Tênis Givenchy dN0281`
+são salvos como digitados, sem capitalizar palavras automaticamente. O cadastro,
+a edição, a criação de grades e o bot removem apenas espaços redundantes; a grade
+continua acrescentando o tamanho ao nome. Duplicação e novos tamanhos também
+preservam a grafia revisada. Busca e verificação de duplicatas continuam ignorando
+diferenças de caixa, sem alterar o texto exibido.
+
+Marcas, cores e categorias seguem o vocabulário unificado abaixo. A correção não
+reescreve títulos antigos, pois a grafia original não pode ser deduzida com segurança.
+Um título antigo pode ser editado e salvo com o código desejado.
+
 ### Vocabulário unificado de marcas, categorias e cores
 
 O estoque compara marcas, cores e categorias sem distinguir maiúsculas, minúsculas,
