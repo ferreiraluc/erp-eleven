@@ -1,6 +1,7 @@
 """Catalog reads must not materialize originals; all fixtures are disposable."""
 import base64
 import io
+import uuid
 from datetime import datetime, timedelta
 
 import pytest
@@ -101,3 +102,44 @@ def test_thumbnail_cache_is_bounded_and_requires_authentication(stock_app, monke
     'data:image/png;base64,' + 'x' * images.MAX_ENCODED])
 def test_invalid_photos_are_safe_placeholders(value):
     assert images._thumbnail(value) is None
+
+
+def test_thumbnail_releases_auth_connection_before_wait_and_decode(stock_app, monkeypatch):
+    factory, _, _ = stock_app
+    with factory() as db:
+        ids, _ = seed(db)
+    images._thumbnails.clear()
+    with factory() as db:
+        db.execute(sa.text('SELECT 1'))  # Authentication has already opened a transaction.
+        assert db.in_transaction()
+
+        class CheckedLock:
+            def acquire(self, timeout):
+                assert not db.in_transaction(), 'Waiting image retained an authentication connection'
+                return True
+            def release(self):
+                assert not db.in_transaction()
+
+        def decode(data):
+            assert not db.in_transaction(), 'Image decoding retained a database connection'
+            return 'small-preview'
+
+        monkeypatch.setattr(images, '_thumbnail_lock', CheckedLock())
+        monkeypatch.setattr(images, '_thumbnail', decode)
+        assert images.product_thumbnail(db, uuid.UUID(ids[0])) == {'image_data': 'small-preview'}
+
+
+def test_busy_thumbnail_returns_bounded_retry_without_holding_connection(stock_app):
+    from fastapi import HTTPException
+    factory, _, _ = stock_app
+    images._thumbnail_lock.acquire()
+    try:
+        with factory() as db:
+            db.execute(sa.text('SELECT 1'))
+            with pytest.raises(HTTPException) as error:
+                images.product_thumbnail(db, uuid.uuid4())
+            assert error.value.status_code == 503
+            assert error.value.headers['Retry-After'] == '2'
+            assert not db.in_transaction()
+    finally:
+        images._thumbnail_lock.release()

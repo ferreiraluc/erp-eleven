@@ -28,7 +28,10 @@ não baixa todas as páginas em segundo plano: usa a rolagem ou **Carregar mais*
 O catálogo pede `include_images=false` nas rotas de itens, grades e sugestões.
 Essas respostas contêm `has_image` e omitem o conteúdo da foto original na consulta
 SQL. Miniaturas autenticadas em `GET /api/inventory/items/{id}/thumbnail` são
-carregadas quando entram na área visível. O servidor produz JPEG de até 256px,
+carregadas quando entram na área visível, com no máximo duas requisições simultâneas
+por página. Fotos de cards removidos não iniciam novas requisições da fila. A sessão
+de leitura é fechada antes de esperar pela conversão e antes de decodificar a foto,
+evitando reter conexões do banco durante processamento. O servidor produz JPEG de até 256px,
 serializa a leitura/conversão das fotos e mantém cache LRU de no máximo 64
 miniaturas de até 48 KiB, invalidado pela atualização do item. Fotos inválidas
 recebem um placeholder; não impedem acessar o cadastro.

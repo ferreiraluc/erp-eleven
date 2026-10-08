@@ -98,6 +98,29 @@ mesma instância de 512 MB aumenta o consumo e não é solução para esse incid
 Consultar [métricas do Render](https://render.com/docs/service-metrics) e
 [diagnóstico de crashes](https://render.com/tutorials/when-deploys-go-wrong/health-checks-and-crashes).
 
+## Saturação de conexões: 08/10/2026, 20h41–20h42
+
+Logs mostraram `TimeoutError` em miniaturas (6–27 s), fornecedores, folgas e
+health, acompanhados de falhas de iteração dos workers. O Render marcou timeout
+do health de 5 s às 20h42; a API respondeu 502 durante a investigação e voltou a
+200 com todos os workers online antes do deploy da correção. Não foi observado
+um novo OOM nesse evento nem comprovado encerramento do servidor PostgreSQL.
+
+A autenticação fazia consultas SQLAlchemy síncronas dentro de uma dependência
+`async`, bloqueando o event loop na espera por conexão. Miniaturas esperavam uma
+trava global mantendo a conexão aberta desde a autenticação, agravando a disputa
+pelo pool. A autenticação agora executa em thread, conforme o modelo de
+[dependências do FastAPI](https://fastapi.tiangolo.com/async/#dependencies).
+Miniaturas fecham sua sessão de leitura antes de esperar pela trava e antes de
+converter a imagem. Espera acima de 0,5 s retorna 503 com `Retry-After: 2`, sem
+reter conexão. O navegador limita miniaturas a duas requisições simultâneas e
+descarta entradas da fila de componentes desmontados ou substituídos.
+
+O pool e o plano continuam iguais. Testes isolados verificam que autenticação
+lenta não bloqueia outra rota, que espera/conversão devolvem a conexão e que a
+fila do frontend continua após falha. Acompanhar recorrência de timeout em uso
+real; não aumentar o pool ou reiniciar o banco como solução automática.
+
 ## Publicação de uma mudança
 
 1. Trabalhe em uma branch `codex/`, revise o diff e confirme que não há segredos/artefatos privados.
