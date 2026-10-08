@@ -11,6 +11,9 @@ O repositório é publicado pela branch `main`, com auto-deploy **After CI Check
 configurado no frontend e backend. Falhas de testes ou auditoria de dependências de
 execução bloqueiam novas publicações automáticas. Deploy manual continua sendo um bypass
 operacional: use apenas para uma revisão previamente validada.
+`main` exige PR e os checks `backend`, `frontend`, `print-agent` e `python-security`,
+inclusive para administradores; force-push e exclusão da branch estão bloqueados.
+Não exige aprovação de uma segunda pessoa enquanto houver apenas um mantenedor.
 `render.yaml` é a referência versionada; confira diferenças com os serviços existentes
 antes de reaplicar um Blueprint. Não use essa operação para substituir banco, segredos,
 plano ou configuração já ativa inadvertidamente.
@@ -66,10 +69,10 @@ cópia local conectada à produção para testes. Veja [Arquitetura](ARQUITETURA
 
 ## Publicação de uma mudança
 
-1. Revise o diff e confirme que não há segredos/artefatos privados.
+1. Trabalhe em uma branch `codex/`, revise o diff e confirme que não há segredos/artefatos privados.
 2. Execute testes relevantes, tipagem e build; para esquema/locks, inclua homologação PostgreSQL.
 3. Mantenha backup antes de alterações de banco. A API tenta `alembic upgrade head` ao iniciar.
-4. Publique a revisão na branch configurada e acompanhe **Live** no Render para o commit correto.
+4. Abra o PR, aguarde todos os checks e faça o merge em `main`. Acompanhe **Live** no Render para o commit correto.
 5. Confira `/health`, logs de migração, carregamento do frontend e os fluxos afetados.
 
 Falha de migração agora interrompe o startup; não há fallback silencioso de criação
@@ -130,6 +133,8 @@ saldo, documentos reais válidos nem disponibilidade contínua da transportadora
   pre-ping, reciclagem após 900 s e espera limitada. `DB_*` no `.env.example`
   permite ajustar os limites. Queries têm 30 s e espera por locks 10 s;
   tarefas excepcionais precisam de limite próprio, não desabilitar globalmente.
+  Produção exige TLS no PostgreSQL e conserva `verify-ca`/`verify-full` quando
+  configurados; o endpoint interno do Render usa `require` por seu certificado próprio.
 - O timeout de transações ociosas permanece opt-in: alguns fluxos de provedores
   ainda mantêm transações durante chamadas HTTP. Separá-los exige preservar
   idempotência, confirmação e locks específicos de cada operação.

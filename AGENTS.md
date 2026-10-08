@@ -15,3 +15,4 @@
 - SQLs e estudos em `docs/archive/` são históricos, não scripts de instalação.
 - Não fazer upgrades amplos de dependências ou reformatação global incidentalmente.
 - Atualize o guia correspondente quando mudar comportamento; registre limitações reais sem prometer suporte não implementado.
+- `main` é protegida: publique por branch `codex/` e PR, com backend/frontend/print-agent/python-security aprovados. Não contorne a proteção nem faça deploy manual de revisão sem validação.
