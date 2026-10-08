@@ -1926,5 +1926,73 @@
   "Fornecedor não encontrado.": [
     "Proveedor no encontrado.",
     "Supplier not found."
+  ],
+  "Selecionar itens": [
+    "Seleccionar artículos",
+    "Select items"
+  ],
+  "Selecionar": [
+    "Seleccionar",
+    "Select"
+  ],
+  "Grade {number}": [
+    "Grupo {number}",
+    "Variant group {number}"
+  ],
+  "Excluir itens selecionados": [
+    "Eliminar artículos seleccionados",
+    "Delete selected items"
+  ],
+  "Confira cada produto e o tipo de exclusão. Esta ação não pode ser desfeita.": [
+    "Revise cada producto y el tipo de eliminación. Esta acción no se puede deshacer.",
+    "Review each product and deletion type. This action cannot be undone."
+  ],
+  "Sem vínculos: apaga produto, foto e movimentações sem vínculo. Com histórico: retira do catálogo e mantém vendas e movimentações, sem estornar valores.": [
+    "Sin vínculos: elimina producto, foto y movimientos sin vínculo. Con historial: retira del catálogo y conserva ventas y movimientos, sin reembolsos.",
+    "Unlinked: deletes the product, photo and unlinked movements. With history: removes from the catalog and retains sales and movements, without refunds."
+  ],
+  "Conferindo os itens selecionados...": [
+    "Verificando los artículos seleccionados...",
+    "Checking selected items..."
+  ],
+  "Excluído": [
+    "Eliminado",
+    "Deleted"
+  ],
+  "Indisponível": [
+    "No disponible",
+    "Unavailable"
+  ],
+  "Movimentações: {count}": [
+    "Movimientos: {count}",
+    "Movements: {count}"
+  ],
+  "Itens excluídos: {count}": [
+    "Artículos eliminados: {count}",
+    "Deleted items: {count}"
+  ],
+  "Processando item {current} de {total}...": [
+    "Procesando artículo {current} de {total}...",
+    "Processing item {current} of {total}..."
+  ],
+  "A operação foi interrompida. Os itens concluídos não serão repetidos. Confira os pendentes antes de continuar.": [
+    "La operación se detuvo. Los artículos completados no se repetirán. Revise los pendientes antes de continuar.",
+    "The operation stopped. Completed items will not be repeated. Review pending items before continuing."
+  ],
+  "Conferi os produtos e autorizo as exclusões indicadas acima.": [
+    "Revisé los productos y autorizo las eliminaciones indicadas arriba.",
+    "I reviewed the products and authorize the deletions indicated above."
+  ],
+  "Conferir pendentes novamente": [
+    "Verificar pendientes nuevamente",
+    "Review pending items again"
+  ],
+  "Excluir {count} itens": [
+    "Eliminar {count} artículos",
+    "Delete {count} items"
+  ],
+  "Selecionar {name}": [
+    "Seleccionar {name}",
+    "Select {name}"
   ]
 }
