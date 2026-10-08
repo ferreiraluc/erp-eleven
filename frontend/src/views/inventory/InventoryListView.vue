@@ -69,7 +69,7 @@
           <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input v-model="searchQuery" type="text" :placeholder="tr('Buscar por nome, SKU, código...')" class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
+          <input v-model="searchQuery" type="text" :placeholder="tr('Produto, marca, tamanho ou código...')" class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
           <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Limpar busca')" type="button">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>

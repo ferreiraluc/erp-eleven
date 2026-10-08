@@ -10,6 +10,23 @@ cards, inclusive em Quadrados no celular e no desktop, com espaçamento compacto
 
 ## Busca no catálogo
 
+A busca combina nome/categoria, marca, cor e **tamanho** no mesmo produto:
+`Tênis tamanho 11`, `Armani 7`, `Boss 40`, `Tênis Boss 41`, `Camiseta tamanho S`
+e `T-shirt tamanho M`. Aceita maiúsculas/minúsculas, acentos, `tam.`, `tamanho`,
+`size` e `talle`. Camiseta e T-shirt são sinônimos na busca; tênis e sneakers também.
+Tamanhos numéricos curtos ou letras de tamanho, mesmo sem “tamanho”, consultam o
+campo tamanho por igualdade: `7` não encontra `17` nem um código que contenha 7.
+`7,5` e `7.5` são equivalentes. Não converte tamanhos US/BR/EU nem S/P automaticamente.
+SKU/código completo continuam encontráveis, inclusive identificadores curtos.
+Números que pertencem ao nome de um modelo podem ser ambíguos com tamanhos; nesse
+caso, use o SKU/código. Não há correção livre de erros de digitação nem IA paga.
+
+As rotas de itens e grades usam a mesma interpretação, aplicada antes da contagem
+ou paginação. **Ver grades** mostra a grade completa quando uma de suas peças
+satisfaz todos os termos e filtros, preservando o contexto dos outros tamanhos.
+O assistente usa a mesma busca na ferramenta de consulta de estoque. A consulta
+não modifica os cadastros, saldos ou grupos e não faz chamadas a provedores de IA.
+
 No celular (até 600px), o cabeçalho inicia recolhido em uma barra compacta com
 voltar, **Estoque** e **Filtros e ações**. O botão expande as ações do módulo,
 busca, filtros e modos de visualização; **Recolher** libera novamente o espaço

@@ -923,9 +923,9 @@
     "Nuevo artículo",
     "New item"
   ],
-  "Buscar por nome, SKU, código...": [
-    "Buscar por nombre, SKU, código...",
-    "Search by name, SKU, code..."
+  "Produto, marca, tamanho ou código...": [
+    "Producto, marca, talla o código...",
+    "Product, brand, size or code..."
   ],
   "Limpar busca": [
     "Limpiar búsqueda",
