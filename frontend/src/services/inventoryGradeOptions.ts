@@ -10,6 +10,8 @@ export const GRADE_PRESETS: GradePreset[] = [
 export const QUICK_COLORS = ['Navy', 'Branco', 'Preto', 'Red', 'Green']
 export const PRESETS_KEY = 'inv_grade_custom_presets'
 export const COLORS_KEY = 'inv_grade_custom_colors'
+export const HIDDEN_PRESETS_KEY = 'inv_grade_hidden_presets'
+export const HIDDEN_COLORS_KEY = 'inv_grade_hidden_colors'
 export const STORAGE_ERROR = 'Não foi possível salvar neste navegador. Verifique o armazenamento e tente novamente.'
 
 export function optionKey(value: string) {
@@ -35,9 +37,16 @@ function readOptions(key: string): unknown[] {
   } catch { return [] }
 }
 
+export function readHiddenOptions(key: string, defaults: string[]): string[] {
+  const available = new Set(defaults.map(optionKey))
+  return [...new Set(readOptions(key).filter((value): value is string => typeof value === 'string')
+    .map(optionKey).filter(value => available.has(value)))]
+}
+
 export function readCustomPresets(): GradePreset[] {
   const result: GradePreset[] = []
-  const names = new Set(GRADE_PRESETS.map(p => optionKey(p.label)))
+  const hidden = readHiddenOptions(HIDDEN_PRESETS_KEY, GRADE_PRESETS.map(p => p.label))
+  const names = new Set(GRADE_PRESETS.map(p => optionKey(p.label)).filter(name => !hidden.includes(name)))
   for (const value of readOptions(PRESETS_KEY)) {
     if (!value || typeof value !== 'object') continue
     const p = value as Record<string, unknown>
