@@ -37,7 +37,22 @@ from ...services.inventory_service import create_movement, apply_session, _compu
 from ..validators import validate_uuid
 from datetime import datetime as dt
 
+from ...schemas.inventory_variants import VariantContext, VariantCreateRequest, VariantCreateResponse
+from ...services.inventory_variants import variant_context, create_variants
+
 router = APIRouter()
+
+
+@router.get('/items/{item_id}/variants', response_model=VariantContext)
+def get_variant_context(item_id: str, db: Session = Depends(get_db),
+                        current_user: Usuario = Depends(require_role(['ADMIN', 'GERENTE']))):
+    return variant_context(db, validate_uuid(item_id, 'ID do item'))
+
+
+@router.post('/items/{item_id}/variants', response_model=VariantCreateResponse, status_code=201)
+def add_item_variants(item_id: str, request: VariantCreateRequest, db: Session = Depends(get_db),
+                      current_user: Usuario = Depends(require_role(['ADMIN', 'GERENTE']))):
+    return create_variants(db, validate_uuid(item_id, 'ID do item'), request, current_user.id)
 
 
 @router.get('/diagnostics', response_model=InventoryDiagnostics)

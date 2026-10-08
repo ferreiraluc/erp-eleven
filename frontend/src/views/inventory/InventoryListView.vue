@@ -589,6 +589,8 @@
       :existing-group-keys="existingGroupKeys"
       :existing-brands="existingBrands"
       :can-delete-permanently="auth.isOwner"
+      :can-create-variants="['ADMIN', 'GERENTE'].includes(auth.userRole)"
+      @variants-created="onVariantsCreated"
       @deleted="onItemDeleted"
       @saved="onItemSaved"
       @partial="onItemPartiallySaved"
@@ -1388,6 +1390,13 @@ async function onItemDeleted(id: string) {
   backendSuggestions.value = backendSuggestions.value.map(group => ({ ...group, items: group.items.filter(item => item.id !== id) })).filter(group => group.items.length > 1)
   diagnosticsRevision.value++
   showToast('Produto excluído definitivamente.', 'success')
+  await Promise.all([reloadItems(), loadGroupsFiltered(), inventoryStore.loadAlerts()])
+}
+
+async function onVariantsCreated(result: { created: unknown[] }) {
+  diagnosticsRevision.value++
+  showItemForm.value = false
+  showToast('Novos tamanhos: {count}', 'success', { count: result.created.length })
   await Promise.all([reloadItems(), loadGroupsFiltered(), inventoryStore.loadAlerts()])
 }
 
