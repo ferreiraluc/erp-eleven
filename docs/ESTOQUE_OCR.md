@@ -112,9 +112,22 @@ cadastro, em três etapas:
    unidades antes de criar. Quantidades não vêm da IA; zero cria somente o cadastro.
 
 **Criar grade deste modelo** habilita a grade apenas por escolha do operador.
-Em **Cores**, o botão **+** ao lado das opções abre um campo compacto na própria
-linha. Digite a nova cor e pressione **Enter** para adicioná-la; **Esc** cancela.
-As cores selecionadas continuam removíveis pelo **×**, sem campo grande abaixo.
+Em **Modelo de grade**, o **+** abre nome e tamanhos: por exemplo, nome **M ao 3XL**
+e tamanhos **M, L, XL, 2XL, 3XL**. A prévia normaliza e remove tamanhos repetidos;
+**Adicionar modelo** ou **Enter** salva todos os tamanhos digitados e aplica o
+modelo, incluindo a peça base. Não é necessário confirmar cada tamanho antes.
+O nome é apenas um rótulo: intervalos devem ser informados como lista de tamanhos.
+Nomes de modelos repetidos geram orientação, sem sobrescrever a opção anterior.
+Em **Cores**, o **+** abre um campo compacto na própria linha. Digite a nova cor e
+clique em **Adicionar** ou pressione **Enter**. A cor vira um botão reutilizável e
+é selecionada para a grade atual. **Esc** ou cancelar recolhe o editor; selecionar
+uma cor já existente a reaproveita, sem duplicação.
+Modelos e cores personalizados ficam salvos **neste navegador**, não no servidor:
+reabrir o cadastro conserva os botões, mas outro dispositivo ou limpeza do navegador
+não os conserva. Falha de armazenamento mantém o editor aberto com orientação.
+O **×** das cores selecionadas retira apenas a seleção atual; o botão salvo permanece.
+Salvar modelo/cor não cria produtos nem movimenta estoque: isso ocorre na confirmação
+final do cadastro, após a conferência obrigatória.
 Ao selecionar **P → 2XL**, por exemplo, a peça branca P origina P, M, L, XL e 2XL
 no mesmo grupo, com foto, marca, descrição e preços compartilhados. O tamanho da
 peça base é preservado se estiver fora do modelo escolhido. Sem outras cores

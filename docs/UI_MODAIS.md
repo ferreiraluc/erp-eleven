@@ -83,8 +83,11 @@ próximas aos dados, fora do rodapé de conclusão do formulário.
 
 - **Novo item:** descrição, localização, fornecedor e limites ficam em “Organização
   e limites (opcional)”. Erro de estoque mínimo abre essa seção para correção.
-- **Cores da grade:** o chip “+” abre o campo na mesma linha; Enter adiciona,
-  Escape recolhe e o foco retorna ao “+”. Cores repetidas são reaproveitadas.
+- **Modelos e cores da grade:** “+” abre o editor compacto, com botão explícito
+  para adicionar e suporte a Enter. Modelo recebe nome + lista de tamanhos com
+  prévia, sem precisar confirmar cada tamanho. Escape cancela somente o editor
+  e retorna foco ao “+”. Opções ficam salvas no navegador para novos cadastros;
+  falha de armazenamento é informada sem perder o texto. Cores repetidas são reaproveitadas.
 - **Paraguai:** nome, telefone, cidade e RUC/C.I ficam à vista. Os complementos
   opcionais ficam em uma seção expansível, aberta quando há dados preenchidos.
   Alternar o país ou recolher a seção conserva todos os valores.

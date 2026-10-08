@@ -1,4 +1,48 @@
 {
+  "Remover modelo {name}": [
+    "Eliminar modelo {name}",
+    "Remove preset {name}"
+  ],
+  "Nome do modelo": [
+    "Nombre del modelo",
+    "Preset name"
+  ],
+  "Ex: M ao 3XL": [
+    "Ej.: M a 3XL",
+    "E.g. M to 3XL"
+  ],
+  "Tamanhos do modelo": [
+    "Tallas del modelo",
+    "Preset sizes"
+  ],
+  "Separe os tamanhos por vírgula ou espaço. Confira a prévia antes de adicionar.": [
+    "Separa las tallas con comas o espacios. Revisa la vista previa antes de agregar.",
+    "Separate sizes with commas or spaces. Check the preview before adding."
+  ],
+  "Adicionar modelo": [
+    "Agregar modelo",
+    "Add preset"
+  ],
+  "Nova cor": [
+    "Nuevo color",
+    "New color"
+  ],
+  "Cancelar nova cor": [
+    "Cancelar nuevo color",
+    "Cancel new color"
+  ],
+  "Modelos e cores adicionados ficam salvos neste navegador para os próximos cadastros.": [
+    "Los modelos y colores agregados se guardan en este navegador para los próximos registros.",
+    "Added presets and colors are saved in this browser for future registrations."
+  ],
+  "Já existe um modelo com esse nome. Selecione o botão existente ou use outro nome.": [
+    "Ya existe un modelo con ese nombre. Selecciona el botón existente o usa otro nombre.",
+    "A preset with this name already exists. Select its button or use another name."
+  ],
+  "Não foi possível salvar neste navegador. Verifique o armazenamento e tente novamente.": [
+    "No se pudo guardar en este navegador. Revisa el almacenamiento e inténtalo de nuevo.",
+    "Could not save in this browser. Check storage and try again."
+  ],
   "Excluir do catálogo e preservar histórico": [
     "Eliminar del catálogo y conservar historial",
     "Remove from catalog and preserve history"
