@@ -1,6 +1,6 @@
 <template>
   <div v-show="open" class="ocr-overlay erp-dialog-backdrop" @click.self="emit('close')">
-    <div v-erp-dialog class="ocr-modal erp-dialog erp-dialog--media" role="dialog" aria-modal="true" :aria-label="t('title')">
+    <div v-erp-dialog="open" class="ocr-modal erp-dialog erp-dialog--media" role="dialog" aria-modal="true" :aria-label="t('title')">
       <div class="ocr-header erp-dialog__header"><h3>{{ t('title') }}</h3><button data-dialog-close class="close-btn erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" @click="emit('close')">×</button></div>
       <div class="brand-bar erp-dialog__tabs"><input v-model="selectedBrand" class="brand-input" :placeholder="t('brandHint')" :aria-label="t('brandHint')" list="brand-datalist" maxlength="100" :disabled="phase === 'processing'" /><datalist id="brand-datalist"><option v-for="brand in knownBrands" :key="brand.brand" :value="brand.brand" /></datalist><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
       <div class="ocr-body erp-dialog__body">

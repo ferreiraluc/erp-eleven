@@ -31,7 +31,7 @@ beforeEach(async () => {
   app = createApp(ItemFormModal).use(createI18n({ legacy: false, locale: 'pt', messages: { pt: {} } }))
   app.mount(root); await nextTick()
 })
-afterEach(() => { app?.unmount(); root?.remove(); vi.resetAllMocks() })
+afterEach(() => { app?.unmount(); root?.remove(); vi.resetAllMocks(); vi.restoreAllMocks() })
 
 describe('Hanger image in unified intake', () => {
   it('opens from capture, requests a photo then paid confirmation, and stores the chosen image after manual review', async () => {
@@ -79,4 +79,22 @@ describe('Hanger image in unified intake', () => {
     expect(document.body.textContent).toContain('A edição não está disponível')
     expect(mock.generateCatalog).not.toHaveBeenCalled()
   })
+})
+
+it('reopens the photo overlay above the product and restores focus and scroll on close', async () => {
+  vi.spyOn(HTMLElement.prototype, 'getClientRects').mockImplementation(function (this: HTMLElement) {
+    return (this.closest('[style*="display: none"],[hidden]') ? [] : [{}]) as unknown as DOMRectList
+  })
+  const opener = button('Adicionar foto', root)
+  for (let i = 0; i < 2; i++) {
+    opener.focus(); await click('Adicionar foto', root)
+    const dialog = document.querySelector<HTMLElement>('.photo-dialog')!
+    expect(document.activeElement).toBe(dialog)
+    expect(document.body.style.overflow).toBe('hidden')
+    dialog.querySelector<HTMLButtonElement>('[data-dialog-close]')!.click(); await nextTick(); await nextTick()
+    expect(document.activeElement).toBe(opener)
+    expect(document.querySelector<HTMLElement>('.photo-overlay')!.style.display).toBe('none')
+  }
+  app.unmount()
+  expect(document.body.style.overflow).toBe('')
 })

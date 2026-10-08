@@ -136,3 +136,25 @@ screenshot; testar também busca, dropdowns e formulários abertos. Emulação d
 largura no Chromium não comprova o zoom de foco/teclado no Safari físico; essa
 parte precisa de iPhone ou simulador iOS. Preferências de zoom salvas pelo usuário
 no navegador continuam sendo respeitadas.
+
+## Cadastro e grade: navegação e confirmação
+
+A confirmação da conferência do produto e a confirmação dos novos tamanhos ficam
+no rodapé, junto às ações, com caixa de seleção de 20px e rótulo clicável. O corpo
+continua rolável. Ir diretamente à etapa Estoque passa pela mesma revisão do botão
+Continuar: se faltar revisão, a Conferência abre com indicação e foco na confirmação,
+sem deixar o operador em uma etapa com um botão desabilitado sem saída. Ativar grade
+sem selecionar tamanhos ou cores não cria silenciosamente uma peça avulsa.
+
+A grade de um produto salvo explica quando faltam tamanhos/quantidade/confirmação
+ou quando todos já existem. Erros do servidor e recuperação de uma resposta incerta
+ficam no rodapé. A duplicação permite atualizar a referência após conflito 409,
+preservando as edições locais e exigindo nova conferência. Resposta incerta continua
+reutilizando o mesmo payload e identidade, sem relançar estoque. Durante gravação,
+as etapas e o corpo do cadastro ficam inertes.
+
+Foto e OCR mantidos com v-show passam `open` à diretiva. O assistente de foto usa
+somente o controle central de foco/teclado, evitando dois controles concorrentes.
+Fechar e reabrir devolve o foco ao botão de origem; fechar o último modal libera a
+rolagem da página. A câmera local é encerrada ao sair da aba e captura só com vídeo
+pronto, sem tentar converter uma imagem vazia.

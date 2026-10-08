@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
-    <div v-show="open" class="photo-overlay erp-dialog-backdrop" @keydown.esc.stop="close" @keydown.tab="trapFocus">
-      <section v-erp-dialog ref="dialog" class="photo-dialog erp-dialog erp-dialog--media" role="dialog" aria-modal="true" aria-labelledby="product-photo-title" tabindex="-1">
+    <div v-show="open" class="photo-overlay erp-dialog-backdrop">
+      <section v-erp-dialog="open" class="photo-dialog erp-dialog erp-dialog--media" role="dialog" aria-modal="true" aria-labelledby="product-photo-title" tabindex="-1">
         <header class="erp-dialog__header"><div><h2 id="product-photo-title">{{ t('title') }}</h2><p>{{ t('intro') }}</p></div>
           <button data-dialog-close type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" :disabled="busy === 'generating'" @click="close">✕</button>
         </header>
@@ -73,7 +73,7 @@ const emit = defineEmits<{ (event: 'close'): void; (event: 'result', value: Prod
 const fieldNames: (keyof ProductPhotoFields)[] = ['name', 'brand', 'category', 'color', 'size', 'description']
 const blank = (): ProductPhotoFields => ({ name: '', brand: '', category: '', color: '', size: '', description: '' })
 const fields = reactive(blank())
-const fileInput = ref<HTMLInputElement>(), cameraInput = ref<HTMLInputElement>(), dialog = ref<HTMLElement>()
+const fileInput = ref<HTMLInputElement>(), cameraInput = ref<HTMLInputElement>()
 const photoBody = ref<HTMLElement>()
 const original = ref(''), cutout = ref(''), hanger = ref('')
 const selected = ref<'original' | 'cutout' | 'hanger'>('original')
@@ -84,7 +84,6 @@ const busy = ref(''), error = ref(''), editingAvailable = ref(false), model = re
 const brandEvidence = ref(''), sizeEvidence = ref('')
 const controller = new AbortController()
 let alive = true
-let priorFocus: HTMLElement | null = null
 let appliedImage = ''
 let seededImage: string | undefined
 function seedImage() {
@@ -99,8 +98,7 @@ function seedImage() {
 }
 watch([() => props.open, () => props.initialImage], () => { if (props.open) seedImage() }, { immediate: true })
 watch(() => props.open, async open => {
-  if (open) { priorFocus = document.activeElement as HTMLElement; await nextTick(); if (photoBody.value) photoBody.value.scrollTop = 0; dialog.value?.focus() }
-  else priorFocus?.focus()
+  if (open) { await nextTick(); if (photoBody.value) photoBody.value.scrollTop = 0 }
 })
 watch([fields, selected], () => { reviewed.value = false }, { deep: true, flush: 'sync' })
 watch([() => props.open, () => props.startWithHanger, original, editingAvailable], () => {
@@ -108,19 +106,10 @@ watch([() => props.open, () => props.startWithHanger, original, editingAvailable
   if (props.open && props.startWithHanger && original.value && editingAvailable.value && !editAttempted.value) confirmPaid.value = true
 })
 onMounted(async () => {
-  priorFocus = document.activeElement as HTMLElement
-  dialog.value?.focus()
   try { const status = await photoStatus(); if (alive) { editingAvailable.value = status.editing_available; model.value = status.model } } catch { /* Original and free cutout remain available. */ }
 })
-onUnmounted(() => { alive = false; controller.abort(); priorFocus?.focus() })
+onUnmounted(() => { alive = false; controller.abort() })
 function close() { if (busy.value !== 'generating') emit('close') }
-function trapFocus(event: KeyboardEvent) {
-  const elements = dialog.value?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled):not([hidden]), a[href], [tabindex="0"]')
-  if (!elements?.length) return
-  const first = elements[0], last = elements[elements.length - 1]
-  if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.value)) { event.preventDefault(); last.focus() }
-  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
-}
 async function upload(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
   input.value = ''

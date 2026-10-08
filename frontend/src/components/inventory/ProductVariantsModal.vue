@@ -2,14 +2,14 @@
   <div class="erp-dialog-backdrop" @click.self="close">
     <section v-erp-dialog class="erp-dialog variants-modal" role="dialog" aria-modal="true" :aria-label="title">
       <header class="erp-dialog__header"><h2>{{ title }}</h2><button data-dialog-close class="erp-button erp-button--secondary erp-button--icon" :disabled="busy" :aria-label="tr('Fechar')" @click="close">×</button></header>
-      <form class="variants-form" @submit.prevent="submit">
+      <form class="variants-form erp-dialog__form" @submit.prevent="submit">
         <div class="erp-dialog__body variants-body">
           <p v-if="loading" role="status">{{ tr('Carregando...') }}</p>
-          <p v-if="error" role="alert" class="variant-error">{{ error }}</p>
+          <p v-if="error && !context" role="alert" class="variant-error">{{ error }}</p>
           <button v-if="!context && !loading" type="button" class="erp-button erp-button--secondary" @click="load">{{ tr('Tentar novamente') }}</button>
           <template v-if="context">
             <div class="variant-source"><img v-if="context.source.image_data" :src="context.source.image_data" :alt="tr('Foto do produto')" /><div><strong>{{ context.source.name }}</strong><p>{{ context.source.color || '—' }} · {{ context.source.size || '—' }}</p><small>{{ tr('A foto e os dados salvos serão reutilizados. O estoque original não será copiado.') }}</small></div></div>
-            <fieldset :disabled="busy || uncertain">
+            <fieldset :disabled="loading || busy || uncertain">
               <label>{{ tr('Nome do modelo') }}<input v-model="name" required minlength="2" maxlength="140" /></label>
               <label>{{ tr(mode === 'duplicate' ? 'Novo tamanho' : 'Tamanhos da grade') }}<input v-model="sizeText" required maxlength="500" :placeholder="mode === 'duplicate' ? '8' : '8; 9; 10; 11'" /></label>
               <small v-if="mode === 'grade'">{{ tr('Separe por ponto e vírgula. Para meio número, use 8.5.') }}</small>
@@ -20,12 +20,17 @@
               <div class="variant-fields"><label>{{ tr('Quantidade por novo tamanho') }}<input v-model.number="quantity" type="number" min="0" max="1000000" step="1" required /></label><label>{{ tr('Local do estoque') }}<select v-model="location"><option value="loja">{{ tr('Loja') }}</option><option value="deposito">{{ tr('Depósito') }}</option></select></label></div>
               <ul class="variant-preview"><li v-for="size in sizes" :key="size"><strong>{{ name }} {{ size }}</strong><span v-if="exists(size)">{{ tr(existingItem(size)?.is_active === false ? 'Já cadastrado e inativo: estoque preservado' : 'Já cadastrado: estoque preservado') }}</span><span v-else>{{ barcode.trim() ? barcode.trim() + size : '—' }} · {{ quantity }} {{ tr('unidades') }}</span></li></ul>
               <p>{{ tr('Novos tamanhos: {count}', { count: missing.length }) }}</p>
-              <label class="variant-confirm"><input v-model="confirmed" type="checkbox" />{{ tr('Conferi os tamanhos, os códigos e o estoque dos novos itens.') }}</label>
             </fieldset>
-            <button v-if="uncertain" type="button" class="erp-button erp-button--secondary" :disabled="loading" @click="load">{{ tr('Conferir tamanhos cadastrados') }}</button>
           </template>
         </div>
-        <footer class="erp-dialog__footer"><button type="button" class="erp-button erp-button--secondary" :disabled="busy" @click="close">{{ tr('Cancelar') }}</button><button type="submit" class="erp-button erp-button--primary" :disabled="!ready">{{ tr(busy ? 'Salvando...' : 'Criar tamanhos') }}</button></footer>
+        <footer class="erp-dialog__footer">
+          <label v-if="context" class="variant-confirm"><input v-model="confirmed" type="checkbox" :disabled="busy || loading || uncertain" />{{ tr('Conferi os tamanhos, os códigos e o estoque dos novos itens.') }}</label>
+          <p v-if="validationHint" class="variant-hint" role="status">{{ tr(validationHint) }}</p>
+          <p v-if="error && context" class="variant-error footer-error" role="alert">{{ error }}</p>
+          <button v-if="uncertain" type="button" class="erp-button erp-button--secondary" :disabled="loading" @click="load">{{ tr('Conferir tamanhos cadastrados') }}</button>
+          <button type="button" class="erp-button erp-button--secondary" :disabled="busy" @click="close">{{ tr('Cancelar') }}</button>
+          <button type="submit" class="erp-button erp-button--primary" :disabled="!ready">{{ tr(busy ? 'Salvando...' : 'Criar tamanhos') }}</button>
+        </footer>
       </form>
     </section>
   </div>
@@ -49,6 +54,16 @@ const sizes = computed(() => [...new Set((props.mode === 'duplicate' ? [sizeText
 const existingItem = (size: string) => context.value?.existing.find(row => optionKey(row.size || '') === optionKey(size))
 const exists = (size: string) => !!existingItem(size)
 const missing = computed(() => sizes.value.filter(s => !exists(s)))
+const validationHint = computed(() => {
+  if (!context.value || loading.value || busy.value || uncertain.value) return ''
+  if (name.value.trim().length < 2) return 'Nome deve ter ao menos 2 caracteres'
+  if (!sizes.value.length) return 'Informe os tamanhos que deseja criar.'
+  if (sizes.value.length > 50 || sizes.value.some(s => s.length > 50)) return 'Use até 50 tamanhos, com no máximo 50 caracteres cada.'
+  if (!missing.value.length) return 'Todos os tamanhos informados já estão cadastrados. Escolha novos tamanhos.'
+  if (!Number.isInteger(quantity.value) || quantity.value < 0 || quantity.value > 1000000) return 'Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.'
+  if (!confirmed.value) return 'Confira a prévia e marque a confirmação para criar os tamanhos.'
+  return ''
+})
 const ready = computed(() => !!context.value && !loading.value && !busy.value && !uncertain.value && confirmed.value && name.value.trim().length >= 2 && sizes.value.length <= 50 && sizes.value.every(s => s.length <= 50) && missing.value.length > 0 && Number.isInteger(quantity.value) && quantity.value >= 0 && quantity.value <= 1000000)
 watch([name, sizeText, barcode, quantity, location], () => { confirmed.value = false })
 let disposed = false
@@ -82,5 +97,6 @@ onMounted(load)
 </script>
 <style scoped>
 .erp-dialog-backdrop { position:fixed; inset:0; z-index:1100; display:flex; align-items:center; justify-content:center; }
-.variants-modal{width:min(640px,100%);max-height:90dvh;display:flex;flex-direction:column}.variants-form{display:flex;flex-direction:column;min-height:0}.variants-body{overflow:auto}.variant-source{display:flex;gap:12px;margin-bottom:18px}.variant-source img{width:76px;height:90px;object-fit:contain;border-radius:10px}.variant-source p{margin:5px 0}fieldset{border:0;padding:0;margin:0;display:grid;gap:12px;min-width:0}label{display:grid;gap:6px;font-size:.875rem;font-weight:600}input:not([type=checkbox]),select{width:100%;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}small{color:#64748b;display:block;line-height:1.4}.variant-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.variant-presets{display:flex;flex-wrap:wrap;gap:6px}.variant-preview{margin:0;padding:0;list-style:none;display:grid;gap:8px}.variant-preview li{display:grid;gap:4px;padding:10px;border-radius:8px;background:#f1f5f9;overflow-wrap:anywhere}.variant-preview span{font-size:.8rem;color:#475569}.variant-confirm{display:flex;align-items:flex-start;line-height:1.5}.variant-confirm input{margin-top:4px;flex-shrink:0}.variant-error{color:#b91c1c}.erp-dialog__header h2{font-size:1.15rem;margin:0}@media(max-width:480px){.variants-modal{max-height:94dvh}.variant-fields{grid-template-columns:1fr}.erp-dialog__footer{flex-wrap:wrap}}
+.variants-modal{width:min(640px,100%);max-height:90dvh;display:flex;flex-direction:column}.variants-form{display:flex;flex-direction:column;min-height:0}.variants-body{overflow:auto}.variant-source{display:flex;gap:12px;margin-bottom:18px}.variant-source img{width:76px;height:90px;object-fit:contain;border-radius:10px}.variant-source p{margin:5px 0}fieldset{border:0;padding:0;margin:0;display:grid;gap:12px;min-width:0}label{display:grid;gap:6px;font-size:.875rem;font-weight:600}input:not([type=checkbox]),select{width:100%;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}small{color:#64748b;display:block;line-height:1.4}.variant-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.variant-presets{display:flex;flex-wrap:wrap;gap:6px}.variant-preview{margin:0;padding:0;list-style:none;display:grid;gap:8px}.variant-preview li{display:grid;gap:4px;padding:10px;border-radius:8px;background:#f1f5f9;overflow-wrap:anywhere}.variant-preview span{font-size:.8rem;color:#475569}.variant-confirm{flex:1 0 100%;min-height:44px;display:flex;align-items:flex-start;line-height:1.5}.variant-confirm input{width:20px;height:20px;margin-top:4px;flex-shrink:0}.variant-error{color:#b91c1c}.erp-dialog__header h2{font-size:1.15rem;margin:0}@media(max-width:480px){.variants-modal{max-height:94dvh}.variant-fields{grid-template-columns:1fr}.erp-dialog__footer{flex-wrap:wrap}}
+.variant-hint,.footer-error{flex:1 0 100%;font-size:.8rem;margin:0;overflow-wrap:anywhere}.variant-hint{color:#64748b}
 </style>

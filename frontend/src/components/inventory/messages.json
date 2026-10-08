@@ -2006,5 +2006,29 @@
   "Voltar ao dashboard": [
     "Volver al panel",
     "Back to dashboard"
+  ],
+  "Revisar dados": [
+    "Revisar datos",
+    "Review details"
+  ],
+  "Atualizar referência do produto": [
+    "Actualizar referencia del producto",
+    "Refresh source product"
+  ],
+  "Informe os tamanhos que deseja criar.": [
+    "Indique las tallas que desea crear.",
+    "Enter the sizes you want to create."
+  ],
+  "Use até 50 tamanhos, com no máximo 50 caracteres cada.": [
+    "Use hasta 50 tallas, con un máximo de 50 caracteres cada una.",
+    "Use up to 50 sizes, with at most 50 characters each."
+  ],
+  "Todos os tamanhos informados já estão cadastrados. Escolha novos tamanhos.": [
+    "Todas las tallas indicadas ya están registradas. Elija nuevas tallas.",
+    "All entered sizes already exist. Choose new sizes."
+  ],
+  "Confira a prévia e marque a confirmação para criar os tamanhos.": [
+    "Revise la vista previa y marque la confirmación para crear las tallas.",
+    "Review the preview and check the confirmation to create sizes."
   ]
 }

@@ -3,8 +3,8 @@ import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import ItemFormModal from './ItemFormModal.vue'
 import type { VariantContext } from '@/services/inventoryVariants'
-const mock = vi.hoisted(() => ({ duplicate: vi.fn(), photoSeed: '', updateItem: vi.fn(), createItem: vi.fn() }))
-vi.mock('@/services/inventoryVariants', () => ({ inventoryVariantsAPI: { duplicate: mock.duplicate } }))
+const mock = vi.hoisted(() => ({ duplicate: vi.fn(), photoSeed: '', updateItem: vi.fn(), createItem: vi.fn(), context: vi.fn() }))
+vi.mock('@/services/inventoryVariants', () => ({ inventoryVariantsAPI: { duplicate: mock.duplicate, context: mock.context } }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { updateItem: mock.updateItem, createItem: mock.createItem, getByBarcode: vi.fn().mockResolvedValue([]) }, ocrAPI: {} }))
 vi.mock('./ProductPhotoAssistant.vue', async () => {
   const { defineComponent, h } = await import('vue')
@@ -54,4 +54,17 @@ it('retries the exact confirmed payload after a lost response instead of creatin
   const first = JSON.stringify(mock.duplicate.mock.calls[0][1]); await set('Nome *', 'Later edit')
   await click('Conferir resultado do cadastro')
   expect(JSON.stringify(mock.duplicate.mock.calls[1][1])).toBe(first); expect(saved).toHaveBeenCalledOnce()
+})
+
+it('refreshes an outdated source without discarding edits, and requires review again', async () => {
+  mock.duplicate.mockRejectedValueOnce({ response: { status: 409, data: { detail: 'Os dados do produto mudaram.' } } })
+  mock.context.mockResolvedValue({ source, source_version: 'b'.repeat(64), existing: [], model_name: 'Tênis' })
+  await mount(); await set('Tamanho', '8'); await review(); await click('Criar')
+  expect(root.querySelector('.modal-footer [role=alert]')?.textContent).toContain('Os dados do produto mudaram.')
+  await set('Nome *', 'Meu tênis corrigido'); await click('Atualizar referência do produto')
+  expect(field('Nome *').value).toBe('Meu tênis corrigido')
+  expect((root.querySelector('.intake-review-check input') as HTMLInputElement).checked).toBe(false)
+  await review(); await click('Criar')
+  expect(mock.duplicate.mock.calls[1][1]).toMatchObject({ source_version: 'b'.repeat(64), item: { name: 'Meu tênis corrigido', size: '8' } })
+  expect(mock.duplicate.mock.calls[1][1].request_id).not.toBe(mock.duplicate.mock.calls[0][1].request_id)
 })

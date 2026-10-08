@@ -21,7 +21,7 @@ async function field(label: string, value: string) {
   const input = Array.from(root.querySelectorAll('label')).find(l => l.textContent?.trim() === label)?.querySelector('input') as HTMLInputElement
   expect(input).toBeTruthy(); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); await flush()
 }
-async function confirm() { const input = root.querySelector('[type=checkbox]') as HTMLInputElement; input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); await flush() }
+async function confirm() { expect(root.querySelector('footer .variant-confirm')).not.toBeNull(); const input = root.querySelector('[type=checkbox]') as HTMLInputElement; input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); await flush() }
 async function submit() { root.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await flush() }
 beforeEach(() => { localStorage.clear(); api.context.mockResolvedValue(fixture()); api.create.mockResolvedValue({ created: [{ id: 'new', size: '8' }], existing: [], group_key: 'group' }) })
 afterEach(() => { app?.unmount(); root?.remove(); vi.resetAllMocks() })
@@ -36,6 +36,7 @@ describe('Existing product variants', () => {
   })
   it('shows existing sizes as preserved and blocks creating only an existing size', async () => {
     await mount(); await field('Novo tamanho', '9'); await confirm(); await submit()
+    expect(root.querySelector('.variant-hint')?.textContent).toContain('Todos os tamanhos informados já estão cadastrados');
     expect(root.textContent).toContain('Já cadastrado: estoque preservado'); expect(api.create).not.toHaveBeenCalled()
     await field('Novo tamanho', '8.5'); expect((root.querySelector('[type=checkbox]') as HTMLInputElement).checked).toBe(false)
     await confirm(); await submit(); expect(api.create.mock.calls[0][1].sizes).toEqual(['8.5'])
