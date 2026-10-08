@@ -67,6 +67,37 @@ cópia local conectada à produção para testes. Veja [Arquitetura](ARQUITETURA
 - Bot: recebimento por webhook, execução/entrega por fila.
 - Impressão: o Windows deve estar conectado, com sessão e agente abertos.
 
+## Memória: incidentes de 08/10/2026
+
+O Render registrou OOM na instância de 512 MB às 16:56 (`fxt9g`) e 19:08
+(`bxmhl`, horário Brasília). O gráfico indicava crescimento próximo do limite
+antes do reinício. Logs do minuto anterior ao segundo incidente mostram leituras
+do dashboard/estoque, incluindo `/alerts/summary` e `/items`; não há perfil de
+alocação que comprove uma única requisição como causa dos encerramentos.
+
+Foram corrigidos três fatores concretos de pressão de memória: resumo que carregava
+todos os produtos com suas fotos para contar saldos, grades/sugestões com fotos
+originais de todo o catálogo e download automático das páginas restantes na tela.
+O novo catálogo usa metadados, miniaturas sob demanda com cache limitado e
+agregação SQL para contadores. Não altera o plano, as fotos salvas ou o banco.
+
+Medição local isolada (macOS/Python 3.13, processos independentes, 120 produtos
+fictícios com fotos de 397.387 bytes): resposta de grades caiu de 47.768.542 para
+82.342 bytes sem originais; pico RSS caiu de 257,5 para 102,9 MiB. Resumo caiu de
+149,8 para 104,2 MiB. Os valores incluem o processo local e não representam o RSS
+esperado no Render; miniaturas são entregues em requisições separadas.
+
+Após publicar, conferir memória/CPU e eventos durante um ciclo real de uso,
+incluindo BI às 18h e rastreios às 19h. Memória sustentada acima de 85% (~435 MB),
+novos OOM ou reinícios pedem investigação adicional por rota/worker. A leitura
+simultânea de fotos individuais, OCR/edição e o BI ainda compartilham o processo.
+Se a demanda legítima continuar ultrapassando a capacidade, dimensionar RAM ou
+separar workers com medição e aprovação de custo; aumentar workers Uvicorn na
+mesma instância de 512 MB aumenta o consumo e não é solução para esse incidente.
+
+Consultar [métricas do Render](https://render.com/docs/service-metrics) e
+[diagnóstico de crashes](https://render.com/tutorials/when-deploys-go-wrong/health-checks-and-crashes).
+
 ## Publicação de uma mudança
 
 1. Trabalhe em uma branch `codex/`, revise o diff e confirme que não há segredos/artefatos privados.

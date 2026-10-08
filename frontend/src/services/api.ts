@@ -559,6 +559,7 @@ export interface InventoryItem {
   is_active: boolean
   alert_level?: string
   image_data?: string | null
+  has_image?: boolean | null
   brand?: string | null
   group_key?: string | null
   created_at: string
@@ -617,6 +618,7 @@ export interface GroupResponse {
   group_key: string
   items: InventoryItem[]
   total_stock: number | null
+  matching_count?: number
 }
 
 export interface SuggestionResponse {
@@ -638,6 +640,9 @@ export const inventoryAPI = {
 
   getItem: (id: string): Promise<InventoryItem> =>
     api.get(`/api/inventory/items/${id}`).then(res => res.data),
+
+  getThumbnail: (id: string): Promise<{ image_data: string | null }> =>
+    api.get(`/api/inventory/items/${id}/thumbnail`).then(res => res.data),
 
   updateItem: (id: string, item: Partial<InventoryItem>): Promise<InventoryItem> =>
     api.put(`/api/inventory/items/${id}`, item).then(res => res.data),
@@ -672,14 +677,14 @@ export const inventoryAPI = {
     api.patch('/api/inventory/groups', { old_key: oldKey, new_key: newKey }).then(res => res.data),
 
   getGroups: (params: Record<string, any> = {}): Promise<GroupResponse[]> => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams({ include_images: 'false' })
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.append(k, String(v)) })
     const q = qs.toString()
     return api.get(`/api/inventory/groups${q ? '?' + q : ''}`).then(res => res.data)
   },
 
   getSuggestions: (): Promise<SuggestionResponse[]> =>
-    api.get('/api/inventory/suggestions').then(res => res.data),
+    api.get('/api/inventory/suggestions?include_images=false').then(res => res.data),
 
   batchEdit: (data: {
     item_ids: string[]

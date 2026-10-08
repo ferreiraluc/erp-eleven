@@ -10,6 +10,37 @@ cards, inclusive em Quadrados no celular e no desktop, com espaçamento compacto
 
 ## Busca no catálogo
 
+Ao lado de **Selecionar**, a linha **Visualização** mostra o total de produtos
+que correspondem à busca e aos filtros, mesmo antes de terminar a paginação.
+**Ver grades** conta somente as peças correspondentes; os outros tamanhos
+exibidos para contexto não aumentam esse total. Cada SKU/variante conta como um
+item, independentemente da quantidade física disponível.
+
+Durante a busca aparece **Buscando...**; durante a rolagem, **Carregando mais
+itens...**, quantidade carregada/total e, ao terminar, **Fim dos resultados desta
+busca**. O celular mantém um resumo visível mesmo com os filtros recolhidos.
+Falha de uma página preserva os resultados já carregados e oferece nova tentativa,
+sem afirmar que a busca terminou nem disparar tentativas contínuas. A listagem
+não baixa todas as páginas em segundo plano: usa a rolagem ou **Carregar mais**.
+
+### Fotos e consumo de memória
+
+O catálogo pede `include_images=false` nas rotas de itens, grades e sugestões.
+Essas respostas contêm `has_image` e omitem o conteúdo da foto original na consulta
+SQL. Miniaturas autenticadas em `GET /api/inventory/items/{id}/thumbnail` são
+carregadas quando entram na área visível. O servidor produz JPEG de até 256px,
+serializa a leitura/conversão das fotos e mantém cache LRU de no máximo 64
+miniaturas de até 48 KiB, invalidado pela atualização do item. Fotos inválidas
+recebem um placeholder; não impedem acessar o cadastro.
+
+Ampliar ou editar busca a foto original pela ficha individual. O editor só abre
+depois dessa leitura, evitando apagar ou substituir a foto por uma miniatura ao
+salvar/duplicar. Nenhuma imagem armazenada é regravada e não há consumo de IA.
+As APIs preservam o modo completo por padrão para consumidores existentes;
+grades continuam retornando todos os metadados correspondentes, sem paginação.
+Os contadores do dashboard são agregações SQL, sem carregar fotos ou cadastros
+inteiros em memória.
+
 A busca combina nome/categoria, marca, cor e **tamanho** no mesmo produto:
 `Tênis tamanho 11`, `Armani 7`, `Boss 40`, `Tênis Boss 41`, `Camiseta tamanho S`
 e `T-shirt tamanho M`. Aceita maiúsculas/minúsculas, acentos, `tam.`, `tamanho`,

@@ -89,6 +89,10 @@ def test_pagination_facets_and_groups_require_one_matching_variant(stock_app):
     groups = client.get('/api/inventory/groups', params={'search': 'tenis boss 41'}).json()
     assert len(groups) == 1
     assert {item['size'] for item in groups[0]['items']} == {'40', '41'}
+    assert groups[0]['matching_count'] == 1  # The other size is context, not another match.
+    assert client.get('/api/inventory/groups').json()[0]['matching_count'] == 2
+    assert client.get('/api/inventory/groups', params={'brand': 'Boss'}).json()[0]['matching_count'] == 2
+    assert client.get('/api/inventory/groups', params={'search': 'calçados'}).json()[0]['matching_count'] == 2
     for path in ('items', 'groups'):
         assert client.get(f'/api/inventory/{path}', params={'search': 'a' * 257}).status_code == 422
 
@@ -114,5 +118,11 @@ def test_postgresql_search_matches_sqlite_semantics(pg):
             for term, expected in CASES:
                 rows = db.query(Item.sku_internal).filter(Item.deleted_at.is_(None), search_filter(db, term)).all()
                 assert {row[0] for row in rows} == expected, term
+            from app.api.endpoints.inventory import get_groups, get_alerts_summary
+            groups = get_groups(search='tenis boss 41', brand=None, category=None, item_status=None,
+                                location_stock=None, include_images=False, db=db, current_user=None)
+            assert len(groups) == 1 and groups[0].matching_count == 1 and len(groups[0].items) == 2
+            summary = get_alerts_summary(db=db, current_user=None)
+            assert summary.total_active_items == 13 and summary.grouped_items_count == 2
     finally:
         isolated.dispose()

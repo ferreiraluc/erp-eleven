@@ -49,3 +49,68 @@ describe('Inventory store with missing balances', () => {
     expect(api.updateItem).toHaveBeenCalledWith(item.id, { name: 'Renamed' })
   })
 })
+
+function deferred() {
+  let resolve!: (value: unknown) => void, reject!: (reason: unknown) => void
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+const page = (ids: string[], n = 1, total = 3) => ({ items: ids.map(id => ({ ...item, id })), total, page: n, page_size: 2, total_pages: Math.ceil(total / 2) })
+
+describe('Search and infinite-scroll progress', () => {
+  it('tracks the full result count and preserves loaded items/count on an append failure, then retries that same page', async () => {
+    const store = useInventoryStore()
+    api.getItems.mockResolvedValueOnce(page(['a', 'b']))
+    await store.loadItems()
+    expect(store.hasLoaded).toBe(true); expect(store.pagination.total).toBe(3)
+    expect(api.getItems).toHaveBeenCalledWith(expect.objectContaining({ include_images: false }))
+    const next = deferred(); api.getItems.mockReturnValueOnce(next.promise)
+    const loading = store.loadItems(2, true)
+    expect(store.loadingMore).toBe(true); expect(store.hasLoaded).toBe(true)
+    next.reject(new Error('offline')); await loading
+    expect(store.items.map(row => row.id)).toEqual(['a', 'b'])
+    expect(store.pagination.page).toBe(1); expect(store.pagination.total).toBe(3)
+    expect(store.error).toBeNull(); expect(store.loadMoreError).toBeTruthy(); expect(store.loadingMore).toBe(false)
+    api.getItems.mockResolvedValueOnce(page(['c'], 2))
+    await store.loadItems(2, true)
+    expect(store.items.map(row => row.id)).toEqual(['a', 'b', 'c']); expect(store.loadMoreError).toBeNull()
+    expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }))
+  })
+  it('prevents duplicate page requests and discards old scroll responses when a new query starts', async () => {
+    const store = useInventoryStore()
+    api.getItems.mockResolvedValueOnce(page(['old-a', 'old-b']))
+    await store.loadItems()
+    const old = deferred(); api.getItems.mockReturnValueOnce(old.promise)
+    const append = store.loadItems(2, true)
+    await store.loadItems(2, true)
+    expect(api.getItems).toHaveBeenCalledTimes(2)
+    store.filters.search = 'camiseta S'
+    const fresh = deferred(); api.getItems.mockReturnValueOnce(fresh.promise)
+    const searching = store.loadItems()
+    expect(store.hasLoaded).toBe(false); expect(store.loadingMore).toBe(false)
+    fresh.resolve(page(['new'], 1, 1)); await searching
+    old.resolve(page(['old-c'], 2)); await append
+    expect(store.items.map(row => row.id)).toEqual(['new'])
+    expect(store.pagination.total).toBe(1); expect(store.loading).toBe(false)
+  })
+  it('does not append after changing filters or beyond the last page', async () => {
+    const store = useInventoryStore()
+    api.getItems.mockResolvedValueOnce(page(['a', 'b']))
+    await store.loadItems()
+    store.filters.brand = 'Boss'
+    await store.loadItems(2, true)
+    store.filters.brand = ''
+    await store.loadItems(3, true)
+    expect(api.getItems).toHaveBeenCalledTimes(1)
+  })
+  it('does not present the previous query total as confirmed after a failed new search', async () => {
+    const store = useInventoryStore()
+    api.getItems.mockResolvedValueOnce(page(['a', 'b']))
+    await store.loadItems()
+    store.filters.search = 'calçados'
+    api.getItems.mockRejectedValueOnce(new Error('offline'))
+    await store.loadItems()
+    expect(store.hasLoaded).toBe(false); expect(store.error).toBeTruthy()
+    expect(store.items).toHaveLength(2)
+  })
+})

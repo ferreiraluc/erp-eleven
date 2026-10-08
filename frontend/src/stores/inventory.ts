@@ -11,8 +11,12 @@ export const useInventoryStore = defineStore('inventory', () => {
   const pagination = ref({ total: 0, page: 1, page_size: 50, total_pages: 1 })
   const filters = ref({ search: '', status: '', category: '', brand: '', location: '', size: '', color: '', location_stock: '' })
   const loading = ref(false)
+  const loadingMore = ref(false)
+  const hasLoaded = ref(false)
   const error = ref<string | null>(null)
+  const loadMoreError = ref<string | null>(null)
   let loadGeneration = 0
+  let loadedFilterKey = ''
 
   const lowStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'low'))
   const outOfStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'out'))
@@ -23,10 +27,16 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
   async function loadItems(page = 1, append = false, ungroupedOnly = false) {
+    const filterKey = JSON.stringify({ ...filters.value, ungroupedOnly })
+    if (append && (loading.value || !hasLoaded.value || filterKey !== loadedFilterKey ||
+        page !== pagination.value.page + 1 || page > pagination.value.total_pages)) return
     const generation = ++loadGeneration
     try {
       loading.value = true
+      loadingMore.value = append
+      if (!append) hasLoaded.value = false
       error.value = null
+      loadMoreError.value = null
       const params: Record<string, any> = {
         page,
         page_size: pagination.value.page_size,
@@ -34,18 +44,25 @@ export const useInventoryStore = defineStore('inventory', () => {
       }
       if (ungroupedOnly) params.ungrouped_only = true
       Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === false || params[k] === undefined) delete params[k] })
+      params.include_images = false
       const result = await inventoryAPI.getItems(params)
       if (generation !== loadGeneration) return
       if (append) {
-        items.value = [...items.value, ...result.items]
+        const loadedIds = new Set(items.value.map(item => item.id))
+        items.value = [...items.value, ...result.items.filter(item => !loadedIds.has(item.id))]
       } else {
         items.value = result.items
       }
       pagination.value = { total: result.total, page: result.page, page_size: result.page_size, total_pages: result.total_pages }
+      loadedFilterKey = filterKey
+      hasLoaded.value = true
     } catch (e: any) {
-      if (generation === loadGeneration) error.value = e.response?.data?.detail || 'Error loading items'
+      if (generation === loadGeneration) {
+        if (append) loadMoreError.value = 'Error loading more items'
+        else error.value = e.response?.data?.detail || 'Error loading items'
+      }
     } finally {
-      if (generation === loadGeneration) loading.value = false
+      if (generation === loadGeneration) { loading.value = false; loadingMore.value = false }
     }
   }
 
@@ -75,6 +92,9 @@ export const useInventoryStore = defineStore('inventory', () => {
     if (currentItem.value?.id === id) currentItem.value = null
     movements.value = movements.value.filter(movement => movement.item_id !== id)
     loading.value = false
+    loadingMore.value = false
+    hasLoaded.value = false
+    loadMoreError.value = null
     alerts.value = null
   }
 
@@ -120,7 +140,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
   return {
-    items, currentItem, alerts, movements, pagination, filters, loading, error,
+    items, currentItem, alerts, movements, pagination, filters, loading, loadingMore, hasLoaded, error, loadMoreError,
     lowStockItems, outOfStockItems,
     loadItems, createItem, updateItem, deleteItem, forgetDeletedItem, quickExit,
     loadAlerts, createMovement, createBatchMovement,

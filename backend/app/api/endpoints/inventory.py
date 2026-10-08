@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, or_, case
 from typing import List, Optional, Literal
 from datetime import datetime, date
 import uuid
@@ -44,6 +44,7 @@ from ...services.inventory_variants import variant_context, create_variants
 
 from ...services.inventory_taxonomy import canonical, clean_product_name, vocabulary, facet_filters
 from ...services.inventory_search import build_search
+from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail
 
 router = APIRouter()
 
@@ -194,6 +195,7 @@ def list_items(
     location_stock: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    include_images: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
@@ -243,6 +245,7 @@ def list_items(
 
     total = query.count()
     offset = (page - 1) * page_size
+    query = catalog_query(query, include_images)
     if sort_by == "updated_at":
         items = query.order_by(Item.updated_at.desc()).offset(offset).limit(page_size).all()
     elif sort_by == "created_at":
@@ -253,8 +256,8 @@ def list_items(
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
     item_responses = []
-    for item in items:
-        resp = ItemResponse.model_validate(item)
+    for item, has_image in items:
+        resp = catalog_response(item, has_image, include_images)
         resp.alert_level = _compute_alert_level(item)
         item_responses.append(resp)
 
@@ -312,31 +315,24 @@ def get_alerts_summary(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    from sqlalchemy import func as sqlfunc
-    active_items = db.query(Item).filter(Item.deleted_at.is_(None), Item.is_active == True).all()
-    known_items = [i for i in active_items if _compute_alert_level(i) != 'unknown']
-    low_stock = sum(1 for i in known_items if i.min_stock is not None and 0 < i.current_stock < i.min_stock)
-    out_of_stock = sum(1 for i in known_items if i.current_stock <= 0)
-    overstocked = sum(1 for i in known_items if i.max_stock is not None and i.max_stock > 0 and i.current_stock > i.max_stock)
-    inactive_count = db.query(Item).filter(Item.deleted_at.is_(None), Item.is_active == False).count()
-    grouped_items_count = sum(1 for i in active_items if i.group_key)
-    group_count = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
-        Item.group_key.isnot(None), Item.is_active == True
-    ).distinct().count()
-    loja_count = sum(1 for i in active_items if i.stock_loja is not None and i.stock_loja > 0)
-    deposito_count = sum(1 for i in active_items if i.stock_deposito is not None and i.stock_deposito > 0)
-    return AlertSummary(
-        low_stock_count=low_stock,
-        out_of_stock_count=out_of_stock,
-        overstocked_count=overstocked,
-        unknown_stock_count=len(active_items) - len(known_items),
-        total_active_items=len(active_items),
-        inactive_count=inactive_count,
-        group_count=group_count,
-        grouped_items_count=grouped_items_count,
-        loja_count=loja_count,
-        deposito_count=deposito_count,
-    )
+    active = Item.is_active.is_(True)
+    known = _known_stock_filter()
+    def count_where(condition):
+        return func.coalesce(func.sum(case((condition, 1), else_=0)), 0)
+    # Aggregate in SQL: never load catalog photos (or whole product rows) for counters.
+    counts = db.query(
+        count_where(active & known & (Item.current_stock > 0) & (Item.current_stock < Item.min_stock)).label('low_stock_count'),
+        count_where(active & known & (Item.current_stock <= 0)).label('out_of_stock_count'),
+        count_where(active & known & (Item.max_stock > 0) & (Item.current_stock > Item.max_stock)).label('overstocked_count'),
+        count_where(active & ~known).label('unknown_stock_count'),
+        count_where(active).label('total_active_items'),
+        count_where(Item.is_active.is_(False)).label('inactive_count'),
+        func.count(func.distinct(case((active, Item.group_key)))).label('group_count'),
+        count_where(active & Item.group_key.isnot(None) & (Item.group_key != '')).label('grouped_items_count'),
+        count_where(active & (Item.stock_loja > 0)).label('loja_count'),
+        count_where(active & (Item.stock_deposito > 0)).label('deposito_count'),
+    ).filter(Item.deleted_at.is_(None)).one()
+    return AlertSummary(**dict(counts._mapping))
 
 
 @router.get("/groups", response_model=List[GroupResponse])
@@ -346,6 +342,7 @@ def get_groups(
     category: Optional[str] = Query(None),
     item_status: Optional[str] = Query(None, alias="status"),
     location_stock: Optional[str] = Query(None),
+    include_images: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
@@ -356,10 +353,11 @@ def get_groups(
     # Match the entire search and filters on the SAME variant.
     # A group is included if ANY item matches — then ALL items of that group are shown.
     matching_keys: Optional[list] = None
+    matching_counts: dict = {}
     taxonomy_filter = facet_filters(db)
     searched = build_search(db, search, taxonomy_filter=taxonomy_filter, brand_context=brand or '') if search else None
     if search or brand or category or item_status or location_stock:
-        kq = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
+        kq = db.query(Item.group_key, func.count(Item.id)).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
             Item.is_active == True,
         )
@@ -383,11 +381,11 @@ def get_groups(
             kq = kq.filter(Item.stock_loja > 0)
         elif location_stock == "deposito":
             kq = kq.filter(Item.stock_deposito > 0)
+        kq = kq.group_by(Item.group_key)
         if searched:
-            kq = kq.group_by(Item.group_key).order_by(func.min(searched.rank), Item.group_key)
-        else:
-            kq = kq.distinct()
-        matching_keys = [r[0] for r in kq.all()]
+            kq = kq.order_by(func.min(searched.rank), Item.group_key)
+        matching_counts = dict(kq.all())
+        matching_keys = list(matching_counts)
         if not matching_keys:
             return []
 
@@ -395,15 +393,15 @@ def get_groups(
     item_query = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key.isnot(None), Item.is_active == True)
     if matching_keys is not None:
         item_query = item_query.filter(Item.group_key.in_(matching_keys))
-    items = item_query.order_by(Item.group_key, Item.name).all()
+    items = catalog_query(item_query, include_images).order_by(Item.group_key, Item.name).all()
 
     # Build GroupResponse objects
     groups_dict: dict = {}
-    for item in items:
+    for item, has_image in items:
         key = item.group_key
         if key not in groups_dict:
             groups_dict[key] = []
-        resp = ItemResponse.model_validate(item)
+        resp = catalog_response(item, has_image, include_images)
         resp.alert_level = _compute_alert_level(item)
         groups_dict[key].append(resp)
 
@@ -411,7 +409,8 @@ def get_groups(
     for key, item_list in groups_dict.items():
         sorted_items = sorted(item_list, key=lambda i: ((i.color or '').lower(), _size_sort_key(i.size)))
         total_stock = None if any(i.current_stock is None for i in sorted_items) else sum(i.current_stock for i in sorted_items)
-        result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock))
+        result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock,
+                                    matching_count=matching_counts.get(key, len(sorted_items))))
     if searched and matching_keys:
         order = {key: index for index, key in enumerate(matching_keys)}
         result.sort(key=lambda group: order[group.group_key])
@@ -442,19 +441,20 @@ def rename_group(
 
 @router.get("/suggestions", response_model=List[SuggestionResponse])
 def get_suggestions(
+    include_images: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Returns grouping suggestions based on ALL ungrouped active items in DB"""
     items = (
-        db.query(Item).filter(Item.deleted_at.is_(None))
+        catalog_query(db.query(Item), include_images).filter(Item.deleted_at.is_(None))
         .filter(Item.group_key == None, Item.is_active == True)
         .order_by(Item.name)
         .all()
     )
     # key = (base_name, normalized_color) so different colors stay as separate groups
     map_: dict = {}
-    for item in items:
+    for item, has_image in items:
         base = re.sub(r'\s+(PP|P|M|G|GG|XG|XGG|XXG|XXX|XXXG|\d+)\s*$', '', item.name, flags=re.IGNORECASE).strip()
         if len(base) < 4:
             continue
@@ -464,7 +464,7 @@ def get_suggestions(
         group_key = (base, color_key)
         if group_key not in map_:
             map_[group_key] = {'name': suggestion_name, 'items': []}
-        resp = ItemResponse.model_validate(item)
+        resp = catalog_response(item, has_image, include_images)
         resp.alert_level = _compute_alert_level(item)
         map_[group_key]['items'].append(resp)
 
@@ -473,6 +473,12 @@ def get_suggestions(
         for v in sorted(map_.values(), key=lambda x: len(x['items']), reverse=True)
         if len(v['items']) >= 2
     ]
+
+
+@router.get("/items/{item_id}/thumbnail")
+def get_product_thumbnail(item_id: str, db: Session = Depends(get_db),
+                          current_user: Usuario = Depends(get_current_active_user)):
+    return product_thumbnail(db, validate_uuid(item_id))
 
 
 @router.get("/items/{item_id}", response_model=ItemResponse)
