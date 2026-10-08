@@ -159,13 +159,34 @@ movimentações iniciais na mesma transação, com rollback se uma movimentaçã
 ### Duplicar produto e adicionar tamanhos a uma grade existente
 
 Em **Estoque → editar produto**, os perfis ADMIN/GERENTE podem escolher **Duplicar
-produto** (um tamanho) ou **Adicionar grade** (vários tamanhos e modelos salvos
+produto** (cadastro completo preenchido) ou **Adicionar grade** (vários tamanhos e modelos salvos
 no navegador). Exemplo: abrir o tênis 9 e criar o 8 sem reenviar a foto.
 A operação usa os **dados já salvos**; cancelar retorna ao formulário e preserva
 as edições locais. Foto, marca, cor, descrição, fornecedor, preços/moedas e limites
 são copiados; SKU, vendas, movimentos e saldos não são copiados.
 
-A prévia exige conferir nome, tamanhos, código base opcional e quantidade **por novo
+**Duplicar produto** abre o mesmo cadastro unificado, diretamente na conferência.
+Todos os campos cadastrais ficam editáveis, incluindo nome, marca, cor, categoria,
+preços/moedas, fornecedor, localização, limites, tamanho, código e foto. **Editar foto**
+abre a imagem copiada no assistente atual: é possível trocar o arquivo, remover o
+fundo localmente ou gerar no cabide com a confirmação de créditos já existente.
+A imagem original e seus dados não são sobrescritos. Ao trocar só o tamanho, um
+sufixo de tamanho no nome acompanha a alteração; o código é copiado exatamente e
+pode ser conferido/editado, sem tentar adivinhar quais dígitos pertencem ao tamanho.
+
+A opção **Adicionar à grade do produto original** conserva o vínculo explícito;
+desmarcada, cria um modelo independente. Na mesma grade, tamanho+cor já existentes
+são recusados. Quantidade inicial começa em zero. O novo endpoint
+`POST /api/inventory/items/{id}/duplicate` exige ADMIN/GERENTE, versão da origem e
+conferência, cria identidade própria e grava o item/grade/movimento atomicamente.
+A identidade da operação e a impressão digital dos dados confirmados permitem
+recuperar a mesma criação após perda da resposta, sem repetir estoque. Reutilizar
+essa identidade com outros dados é recusado. O botão **Conferir resultado do cadastro**
+reenvia exatamente a operação original. SKU, saldos e vínculos não são aceitos no
+objeto de dados editáveis. Para vários novos tamanhos de um produto salvo, continua
+existindo a ação separada **Adicionar grade**.
+
+Em **Adicionar grade**, a prévia exige conferir nome, tamanhos, código base opcional e quantidade **por novo
 tamanho** (inicialmente zero). O código base é informado explicitamente, sem tamanho:
 não tentamos retirar dígitos do código original, pois podem fazer parte do código real.
 Cada código novo recebe o tamanho ao final; campo vazio cria variantes sem código.

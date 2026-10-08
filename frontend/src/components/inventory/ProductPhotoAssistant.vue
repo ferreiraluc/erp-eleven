@@ -68,7 +68,7 @@ import { productPhotoMessages } from './productPhotoMessages'
 import { analyzePhoto, catalogForStorage, cutoutPhoto, generateCatalog, photoError, photoStatus, preparePhoto,
   type ProductPhotoFields, type ProductPhotoResult } from '@/services/productPhoto'
 const { t } = useI18n({ useScope: 'local', messages: productPhotoMessages })
-const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean; startWithHanger?: boolean }>(), { draft: false, open: true, startWithHanger: false })
+const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean; startWithHanger?: boolean; initialImage?: string }>(), { draft: false, open: true, startWithHanger: false })
 const emit = defineEmits<{ (event: 'close'): void; (event: 'result', value: ProductPhotoResult): void }>()
 const fieldNames: (keyof ProductPhotoFields)[] = ['name', 'brand', 'category', 'color', 'size', 'description']
 const blank = (): ProductPhotoFields => ({ name: '', brand: '', category: '', color: '', size: '', description: '' })
@@ -85,6 +85,19 @@ const brandEvidence = ref(''), sizeEvidence = ref('')
 const controller = new AbortController()
 let alive = true
 let priorFocus: HTMLElement | null = null
+let appliedImage = ''
+let seededImage: string | undefined
+function seedImage() {
+  const image = props.initialImage || ''
+  if (props.initialImage === undefined || image === seededImage || busy.value) return
+  seededImage = image
+  if (image && (image === appliedImage || image === original.value)) return
+  original.value = image; cutout.value = ''; hanger.value = ''; selected.value = 'original'
+  Object.assign(fields, blank()); analyzed.value = false; reviewed.value = false; noProduct.value = false
+  confirmPaid.value = false; editAttempted.value = false; cost.value = null; error.value = ''
+  brandEvidence.value = ''; sizeEvidence.value = ''
+}
+watch([() => props.open, () => props.initialImage], () => { if (props.open) seedImage() }, { immediate: true })
 watch(() => props.open, async open => {
   if (open) { priorFocus = document.activeElement as HTMLElement; await nextTick(); if (photoBody.value) photoBody.value.scrollTop = 0; dialog.value?.focus() }
   else priorFocus?.focus()
@@ -151,7 +164,7 @@ async function apply() {
   busy.value = 'preparing'; error.value = ''
   try {
     const image_data = await catalogForStorage(selectedImage.value)
-    if (alive) emit('result', { ...fields, name: fields.name.trim(), image_data, ...(props.draft && selected.value !== 'original' ? { original_image: original.value } : {}) })
+    if (alive) { appliedImage = image_data; emit('result', { ...fields, name: fields.name.trim(), image_data, ...(props.draft && selected.value !== 'original' ? { original_image: original.value } : {}) }) }
   } catch { if (alive) error.value = 'invalid_image' } finally { if (alive) busy.value = '' }
 }
 </script>

@@ -6,12 +6,13 @@ const mock = vi.hoisted(() => ({ analyzePhoto: vi.fn(), generateCatalog: vi.fn()
 vi.mock('@/services/productPhoto', () => mock)
 let app: App, root: HTMLDivElement
 const button = (text: string) => Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === text)!
-async function mount(props = {}) {
+async function mount(props = {}, upload = true) {
   root = document.createElement('div'); document.body.append(root)
   const result = vi.fn()
   const i18n = createI18n({ legacy: false, locale: 'pt', messages: { pt: {}, en: {}, es: {} } })
   app = createApp(ProductPhotoAssistant, { onResult: result, ...props }).use(i18n); app.mount(root)
   await nextTick(); await nextTick()
+  if (!upload) return { result, i18n }
   const file = document.querySelector('input[type=file]') as HTMLInputElement
   Object.defineProperty(file, 'files', { value: [new File(['test'], 'photo.jpg', { type: 'image/jpeg' })] })
   file.dispatchEvent(new Event('change', { bubbles: true }))
@@ -72,4 +73,16 @@ describe('Photo-assisted product form', () => {
     i18n.global.locale.value = 'es'; await nextTick(); expect(button('Usar en el registro')).toBeDefined()
     i18n.global.locale.value = 'en'; await nextTick(); expect(button('Use in form')).toBeDefined()
   })
+})
+
+it('edits an existing image without uploading and still requires explicit paid confirmation', async () => {
+  const image = 'data:image/jpeg;base64,existing'
+  await mount({ draft: true, initialImage: image, startWithHanger: true }, false)
+  expect(mock.preparePhoto).not.toHaveBeenCalled()
+  expect(mock.generateCatalog).not.toHaveBeenCalled()
+  expect((document.querySelector('.photo-comparison img') as HTMLImageElement).src).toBe(image)
+  button('Remover fundo · grátis').click(); await nextTick(); await nextTick()
+  expect(mock.cutoutPhoto).toHaveBeenCalledWith(image, expect.any(AbortSignal))
+  button('Gerar 1 imagem com créditos').click(); await nextTick(); await nextTick()
+  expect(mock.generateCatalog).toHaveBeenCalledWith(image, expect.any(AbortSignal))
 })

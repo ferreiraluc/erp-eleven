@@ -1,13 +1,14 @@
 <template>
+  <ItemFormModal v-if="duplicateDraft" :duplicate-context="duplicateDraft" :suppliers="suppliers" :existing-brands="existingBrands" @close="duplicateDraft = null" @saved="emit('variants-created', { created: [$event], existing: [], group_key: $event.group_key || null })" />
   <ProductVariantsModal v-if="variantMode && item" :item-id="item.id" :mode="variantMode" @close="variantMode = null" @saved="emit('variants-created', $event)" />
   <ProductHistoryModal v-if="showHistory && item" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
   <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
-  <div v-show="!showDeletion && !showHistory && !variantMode" class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
-    <div v-erp-dialog="!showDeletion && !showHistory && !variantMode" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
+  <div v-show="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-overlay erp-dialog-backdrop" @click.self="!saving && emit('close')">
+    <div v-erp-dialog="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : duplicateContext ? 'Duplicar produto' : 'Novo Item')">
       <div class="modal-header erp-dialog__header">
-        <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
+        <h2>{{ tr(isEdit ? 'Editar Item' : duplicateContext ? 'Duplicar produto' : 'Novo Item') }}</h2>
         <button v-if="isEdit" ref="historyButton" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
-        <button data-dialog-close @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :disabled="saving" @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -25,7 +26,7 @@
         <div v-if="isEdit && canCreateVariants" class="stock-readout variant-entry">
           <p>{{ tr('Use os dados já salvos para criar outros tamanhos com a mesma foto.') }}</p>
           <div class="variant-actions">
-            <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="variantMode = 'duplicate'">{{ tr('Duplicar produto') }}</button>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="loadingDuplicate" @click="openDuplicate">{{ tr('Duplicar produto') }}</button>
             <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="variantMode = 'grade'">{{ tr('Adicionar grade') }}</button>
           </div>
         </div>
@@ -40,12 +41,19 @@
             <p>{{ tr('Os dados do produto podem ser editados. Salvar não preenche nem altera os saldos não informados.') }}</p>
           </div>
         </div>
-        <div v-if="partialItems.length || uncertainSave" class="partial-save-warning" role="alert">
+        <div v-if="(partialItems.length || uncertainSave) && !duplicateContext" class="partial-save-warning" role="alert">
           <strong>{{ tr(partialItems.length ? 'Cadastro parcialmente concluído' : 'Não foi possível confirmar o cadastro') }}</strong>
           <p>{{ tr(partialItems.length ? 'Itens já criados: {count}. Uma etapa seguinte falhou; o estoque inicial pode estar incompleto.' : 'A conexão foi interrompida. Confira o inventário antes de tentar criar novamente.', { count: partialItems.length }) }}</p>
           <ul v-if="partialItems.length"><li v-for="created in partialItems" :key="created.id">{{ created.name }} · {{ created.sku_internal }}</li></ul>
           <p>{{ tr('Feche esta janela, confira os itens e use Movimentar para concluir apenas o estoque que faltar. O cadastro não será repetido aqui.') }}</p>
         </div>
+        <section v-if="duplicateContext" class="duplicate-notice">
+          <p>{{ tr('Cópia editável: altere somente o tamanho ou revise todos os dados e a foto. O produto original não será editado.') }}</p>
+          <label><input v-model="keepSourceGroup" type="checkbox" :disabled="saving || uncertainSave" /> {{ tr('Adicionar à grade do produto original') }}</label>
+          <small>{{ tr('Desmarque para criar um modelo independente. O código de barras foi copiado; confira se precisa alterá-lo.') }}</small>
+          <p v-if="uncertainSave" role="alert">{{ tr('A resposta não chegou. Confira o resultado da mesma operação antes de continuar; o estoque não será lançado duas vezes.') }}</p>
+          <button v-if="uncertainSave" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving" @click="retryDuplicate">{{ tr('Conferir resultado do cadastro') }}</button>
+        </section>
         <div v-if="activeTab === 'capture'" class="tab-content intake-capture">
           <p class="intake-hint">{{ tr('Use a foto da peça, a etiqueta ou as duas. Você também pode continuar sem imagens e preencher manualmente.') }}</p>
           <div class="intake-sources">
@@ -55,7 +63,7 @@
               <h3>{{ tr('Foto do produto') }} <small>{{ tr('Opcional') }}</small></h3>
               <p>{{ tr('Nome, categoria, cor e foto de catálogo. Marca e tamanho somente quando legíveis.') }}</p>
               <div class="intake-photo-actions">
-                <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto()">{{ tr(photoAdded ? 'Rever foto' : 'Adicionar foto') }}</button>
+                <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto()">{{ tr(photoAdded ? 'Rever foto' : form.image_data ? 'Editar foto' : 'Adicionar foto') }}</button>
                 <button type="button" class="erp-button erp-button--primary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
               </div>
             </section>
@@ -80,6 +88,7 @@
           <div v-if="form.image_data" class="intake-images">
             <figure v-if="reviewOriginal && reviewOriginal !== form.image_data"><img :src="reviewOriginal" :alt="tr('Original')" /><figcaption>{{ tr('Original') }}</figcaption></figure>
             <figure><img :src="form.image_data" :alt="tr('Foto do produto')" /><figcaption>{{ tr('Foto do produto') }}</figcaption></figure>
+            <button v-if="!isEdit" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto()">{{ tr('Editar foto') }}</button>
             <button v-if="!isEdit" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
             <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="form.image_data = ''; reviewOriginal = ''">{{ tr('Remover foto') }}</button>
           </div>
@@ -249,7 +258,7 @@
           </template>
         </div>
 
-        <div v-if="!isEdit && activeTab === 'stock'" class="intake-grade-toggle">
+        <div v-if="!isEdit && !duplicateContext && activeTab === 'stock'" class="intake-grade-toggle">
           <button v-if="!gradeEnabled" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="gradeEnabled = true">{{ tr('Criar grade deste modelo') }}</button>
           <button v-else type="button" class="erp-button erp-button--ghost erp-button--sm" @click="disableGrade">{{ tr('Cadastrar apenas esta peça') }}</button>
         </div>
@@ -537,7 +546,7 @@
       <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeItemCount || 1, quantity: gradeItemCount ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer erp-dialog__footer">
         <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
-        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
+        <button :disabled="saving" @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
         <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
         <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
@@ -549,7 +558,7 @@
       </div>
     </div>
 
-    <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" :start-with-hanger="startWithHanger" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
+    <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" :start-with-hanger="startWithHanger" :initial-image="photoSeed" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
     <OcrScanner v-if="labelOpened" :open="showOcr" draft @result="onOcrResult" @close="showOcr = false" />
     <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
@@ -559,7 +568,7 @@
 <script setup lang="ts">
 import { vErpDialog } from '@/directives/erpDialog'
 import ProductVariantsModal from './ProductVariantsModal.vue'
-import type { VariantResult } from '@/services/inventoryVariants'
+import { inventoryVariantsAPI, type VariantResult, type VariantContext, type DuplicateRequest } from '@/services/inventoryVariants'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
@@ -590,6 +599,7 @@ function toTitleCase(s: string | undefined | null): string {
 
 const props = defineProps<{
   item?: InventoryItem | null
+  duplicateContext?: VariantContext
   suppliers?: Array<{ id: string; name: string }>
   existingGroupKeys?: string[]
   existingBrands?: string[]
@@ -605,7 +615,20 @@ const emit = defineEmits<{
   (e: 'variants-created', result: VariantResult): void
 }>()
 
-const variantMode = ref<'duplicate' | 'grade' | null>(null)
+const variantMode = ref<'grade' | null>(null)
+const duplicateDraft = ref<VariantContext | null>(null), loadingDuplicate = ref(false)
+const keepSourceGroup = ref(true)
+let initializingCopy = true
+const duplicateRequestId = crypto.randomUUID()
+let duplicatePending: DuplicateRequest | null = null
+async function openDuplicate() {
+  if (!props.item || loadingDuplicate.value) return
+  loadingDuplicate.value = true
+  try { duplicateDraft.value = await inventoryVariantsAPI.context(props.item.id) }
+  catch { errors.name = 'Não foi possível carregar o produto. Tente novamente.' }
+  finally { loadingDuplicate.value = false }
+}
+
 const showDeletion = ref(false), deleteButton = ref<HTMLButtonElement>()
 const showHistory = ref(false), historySection = ref<HistorySection>('movements')
 const historyButton = ref<HTMLButtonElement>()
@@ -614,7 +637,7 @@ async function closeHistory() { showHistory.value = false; await nextTick(); his
 async function closeDeletion() { showDeletion.value = false; await nextTick(); deleteButton.value?.focus() }
 
 const isEdit = computed(() => !!props.item)
-const activeTab = ref(props.item ? 'basic' : 'capture')
+const activeTab = ref(props.item || props.duplicateContext ? 'basic' : 'capture')
 const modalBody = ref<HTMLElement>(), conflictsPanel = ref<HTMLElement>()
 const reviewInput = ref<HTMLInputElement>(), nameInput = ref<HTMLInputElement>()
 watch(activeTab, async () => { await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
@@ -622,7 +645,8 @@ const showScanner = ref(false)
 const showOcr = ref(false)
 const showProductPhoto = ref(false)
 const startWithHanger = ref(false)
-function openProductPhoto(hanger = false) { startWithHanger.value = hanger; showProductPhoto.value = true }
+const photoSeed = ref('')
+function openProductPhoto(hanger = false) { photoSeed.value = form.image_data; startWithHanger.value = hanger; showProductPhoto.value = true }
 const showLabelTemplates = ref(false)
 const photoOpened = ref(false), labelOpened = ref(false)
 watch(showProductPhoto, value => { if (value) photoOpened.value = true })
@@ -873,30 +897,32 @@ const form = reactive({
 const errors = reactive<Record<string, string>>({})
 
 onMounted(() => {
-  if (props.item) {
+  void nextTick(() => { initializingCopy = false })
+  const source = props.item || props.duplicateContext?.source
+  if (source) {
     Object.assign(form, {
-      name: props.item.name || '',
-      description: props.item.description || '',
-      category: props.item.category || '',
-      size: props.item.size || '',
-      color: props.item.color || '',
-      brand: props.item.brand || '',
-      unit: props.item.unit || 'un',
-      location: props.item.location || '',
-      barcode: props.item.barcode || '',
-      supplier_id: props.item.supplier_id || '',
-      cost_price: Number(props.item.cost_price) || 0,
-      sale_price: Number(props.item.sale_price) || 0,
-      currency: props.item.currency || 'PYG',
-      cost_currency: props.item.cost_currency || 'BRL',
-      sale_currency: props.item.sale_currency || 'USD',
-      min_stock: props.item.min_stock || 0,
-      max_stock: props.item.max_stock || 0,
-      image_data: props.item.image_data || '',
-      group_key: props.item.group_key || '',
+      name: source.name || '',
+      description: source.description || '',
+      category: source.category || '',
+      size: source.size || '',
+      color: source.color || '',
+      brand: source.brand || '',
+      unit: source.unit || 'un',
+      location: source.location || '',
+      barcode: source.barcode || '',
+      supplier_id: source.supplier_id || '',
+      cost_price: Number(source.cost_price) || 0,
+      sale_price: Number(source.sale_price) || 0,
+      currency: source.currency || 'PYG',
+      cost_currency: source.cost_currency || 'BRL',
+      sale_currency: source.sale_currency || 'USD',
+      min_stock: source.min_stock || 0,
+      max_stock: source.max_stock || 0,
+      image_data: source.image_data || '',
+      group_key: props.duplicateContext ? '' : source.group_key || '',
     })
     // Init hierarchical category
-    const cat = props.item.category || ''
+    const cat = source.category || ''
     const parts = cat.split('>')
     if (parentCategories.includes(parts[0])) {
       categoryParent.value = parts[0]
@@ -913,8 +939,16 @@ onUnmounted(() => {
   if (photoStream) photoStream.getTracks().forEach(t => t.stop())
 })
 
+watch(() => form.size, (size, previous) => {
+  if (!props.duplicateContext || !previous?.trim()) return
+  const suffix = ' ' + previous.trim()
+  if (form.name.toLowerCase().endsWith(suffix.toLowerCase())) form.name = form.name.slice(0, -suffix.length) + (size.trim() ? ' ' + size.trim() : '')
+})
+watch(keepSourceGroup, () => { intakeReviewed.value = false })
+
 // Auto category → unit
 watch(() => form.category, (cat) => {
+  if (props.duplicateContext && initializingCopy) return
   if (!cat) return
   const mapped = categoryUnitMap[cat]
   if (mapped && mapped !== form.unit) {
@@ -942,7 +976,7 @@ function validate() {
   Object.keys(errors).forEach(k => delete errors[k])
   if (form.name.trim().length < 2) errors.name = 'Nome deve ter ao menos 2 caracteres'
   const startingStock = (gradeSizes.value.length || gradeColors.value.length ? gradeInitialStock.value : initialStock.value) || 0
-  if (!isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > 2_147_483_647)) {
+  if (!isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > (props.duplicateContext ? 1_000_000 : 2_147_483_647))) {
     errors.name = 'Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.'
   }
   if (form.cost_price < 0) errors.cost_price = 'Custo não pode ser negativo'
@@ -965,6 +999,16 @@ async function handleSubmit() {
   const createdItems: InventoryItem[] = []
   let creating = false
   try {
+    if (props.duplicateContext) {
+      duplicatePending = JSON.parse(JSON.stringify({
+        request_id: duplicateRequestId, source_version: props.duplicateContext.source_version,
+        item: { ...form, supplier_id: form.supplier_id || null, image_data: form.image_data || null, group_key: null },
+        keep_group: keepSourceGroup.value, initial_stock: initialStock.value || 0,
+        stock_location: stockLocation.value, confirm: true,
+      }))
+      await submitDuplicate()
+      return
+    }
     // ── Grade / color creation ────────────────────────────────────────────────
     if (!isEdit.value && (gradeSizes.value.length > 0 || gradeColors.value.length > 0)) {
       const sharedGroupKey = form.group_key || `grade-${crypto.randomUUID()}`
@@ -1080,6 +1124,24 @@ async function handleSubmit() {
   } finally {
     saving.value = false
   }
+}
+
+async function submitDuplicate() {
+  if (!props.duplicateContext || !duplicatePending) return
+  try {
+    const result = await inventoryVariantsAPI.duplicate(props.duplicateContext.source.id, duplicatePending)
+    uncertainSave.value = false
+    emit('saved', result)
+  } catch (e: any) {
+    uncertainSave.value = !e.response || e.response.status >= 500
+    errors.name = typeof e.response?.data?.detail === 'string' ? e.response.data.detail : 'Erro ao salvar'
+    activeTab.value = 'basic'
+  }
+}
+async function retryDuplicate() {
+  if (saving.value || !uncertainSave.value) return
+  saving.value = true
+  try { await submitDuplicate() } finally { saving.value = false }
 }
 
 function onBarcodeDetected(code: string) {
@@ -1233,6 +1295,10 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.duplicate-notice { background:#eff6ff; border-radius:10px; padding:12px; margin-bottom:14px; font-size:.85rem; }
+.duplicate-notice p { margin:0 0 10px; }
+.duplicate-notice label { display:flex; align-items:center; gap:8px; }
+.duplicate-notice small { display:block; margin-top:8px; color:#475569; }
 .variant-entry { padding:12px; }
 .variant-entry p { margin:0 0 10px; font-size:.85rem; color:#64748b; }
 .variant-actions { display:flex; flex-wrap:wrap; gap:8px; }

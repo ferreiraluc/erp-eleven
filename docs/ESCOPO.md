@@ -27,7 +27,7 @@ O resumo de vendas usa o último mês disponível e identifica seu ano e moeda.
 
 | Domínio | Implementado | Regra importante |
 | --- | --- | --- |
-| Estoque | Produtos, duplicação por tamanho e inclusão de grade a partir de produto salvo com a mesma foto, variantes, fornecedores, código de barras, estoque por local, movimentações, importação e contagem | Cada entrada deve manter saldo e movimentação coerentes |
+| Estoque | Produtos, duplicação editável com reaproveitamento/tratamento de foto e inclusão de grade a partir de produto salvo, variantes, fornecedores, código de barras, estoque por local, movimentações, importação e contagem | Cada entrada deve manter saldo e movimentação coerentes |
 | Clientes/pedidos | Contatos, tags, anexos, valores e estado dos pedidos | Clientes de pedidos e clientes de PDV são entidades distintas |
 | Rastreamento | Busca por nome/código/período/status, atualização Wonca e associação com pedidos | Bot consulta o estado salvo, sem inventar eventos |
 | Folgas/equipe | Consulta de calendário e cadastro confirmado pelo bot | Um nome ou apelido que identifica um único vendedor basta |
