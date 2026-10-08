@@ -1994,5 +1994,17 @@
   "Selecionar {name}": [
     "Seleccionar {name}",
     "Select {name}"
+  ],
+  "Filtros ativos": [
+    "Filtros activos",
+    "Active filters"
+  ],
+  "Filtros e ações": [
+    "Filtros y acciones",
+    "Filters and actions"
+  ],
+  "Voltar ao dashboard": [
+    "Volver al panel",
+    "Back to dashboard"
   ]
 }

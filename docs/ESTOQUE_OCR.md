@@ -2,6 +2,15 @@
 
 ## Busca no catálogo
 
+No celular (até 600px), o cabeçalho inicia recolhido em uma barra compacta com
+voltar, **Estoque** e **Filtros e ações**. O botão expande as ações do módulo,
+busca, filtros e modos de visualização; **Recolher** libera novamente o espaço
+para os produtos. Recolher preserva a busca, os filtros, a seleção e o modo de
+visualização; **Filtros ativos** sinaliza filtros aplicados mesmo com o painel
+fechado. O painel aberto tem rolagem própria em telas baixas. Desktop e tablet
+acima de 600px mantêm todos os controles visíveis, independentemente do estado
+usado no celular. A cada entrada na página mobile, o painel inicia recolhido.
+
 Uma busca ou filtro sem correspondências oferece **Limpar Filtros**, removendo
 texto, status, marca, categoria, local e seleção de itens sem grade. O modo de
 visualização e agrupamento é preservado. Uma lista vazia sem filtros permite

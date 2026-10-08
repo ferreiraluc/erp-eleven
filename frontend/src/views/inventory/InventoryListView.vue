@@ -1,6 +1,16 @@
 <template>
   <div class="inventory-view">
     <div class="sticky-toolbar">
+      <div class="mobile-toolbar-bar">
+        <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Voltar ao dashboard')" @click="$router.replace('/dashboard')">←</button>
+        <div class="mobile-toolbar-title"><strong>{{ tr('Estoque') }}</strong><span v-if="hasActiveFilters">{{ tr('Filtros ativos') }}</span></div>
+        <button type="button" class="erp-button erp-button--secondary erp-button--sm mobile-toolbar-toggle"
+          :aria-expanded="mobileToolbarOpen" aria-controls="inventory-toolbar-panel" @click="toggleMobileToolbar">
+          {{ tr(mobileToolbarOpen ? 'Recolher' : 'Filtros e ações') }}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" :class="{ expanded: mobileToolbarOpen }"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+      </div>
+      <div id="inventory-toolbar-panel" class="inventory-toolbar-panel" :class="{ 'mobile-collapsed': !mobileToolbarOpen }">
     <ModuleHeader :title="tr('Estoque')">
       <button v-if="auth.isOwner" class="erp-button erp-button--secondary erp-button--sm" @click="showDeletedHistory = true">{{ tr('Histórico de excluídos') }}</button>
       <button
@@ -219,6 +229,7 @@
         </button>
       </div>
     </div>
+      </div><!-- /inventory-toolbar-panel -->
     </div><!-- /sticky-toolbar -->
 
     <InventoryDiagnosticsPanel
@@ -753,6 +764,12 @@ watch(showDiagnostics, () => {
   diagnosticsOpeningId.value = null
   diagnosticsOpenError.value = null
 })
+
+const mobileToolbarOpen = ref(false)
+function toggleMobileToolbar() {
+  mobileToolbarOpen.value = !mobileToolbarOpen.value
+  if (!mobileToolbarOpen.value) openFilter.value = null
+}
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
@@ -1573,11 +1590,24 @@ onMounted(async () => {
 .list-load-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem; padding: 1rem; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #991b1b; font-size: .85rem; }
 .list-load-error p { margin: .35rem 0 0; font-size: .8rem; }
 .list-load-error .btn:disabled { opacity: .5; cursor: not-allowed; }
+.mobile-toolbar-bar { display:none; }
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
 @media (max-width: 600px) {
+  .mobile-toolbar-bar { display:flex; align-items:center; gap:.5rem; min-height:52px; padding:.35rem .75rem; box-sizing:border-box; }
+  .mobile-toolbar-title { display:flex; flex-direction:column; flex:1; min-width:0; color:#111827; font-size:.95rem; }
+  .mobile-toolbar-title span { color:#2563eb; font-size:.65rem; line-height:1.2; }
+  .mobile-toolbar-toggle { flex-shrink:0; min-height:36px; }
+  .mobile-toolbar-toggle svg { transition:transform .15s; }
+  .mobile-toolbar-toggle svg.expanded { transform:rotate(180deg); }
+  .inventory-toolbar-panel.mobile-collapsed { display:none; }
+  .inventory-toolbar-panel { max-height:calc(100dvh - 112px); overflow-y:auto; overscroll-behavior:contain; }
+  .inventory-toolbar-panel :deep(.erp-module-header__heading) { display:none; }
+  .inventory-toolbar-panel :deep(.erp-module-header) { padding:.5rem .75rem; margin:0; }
+  .inventory-toolbar-panel :deep(.erp-module-header__actions) { width:100%; justify-content:flex-start; }
+  .inventory-toolbar-panel .chip-dropdown { position:static; width:min(260px, calc(100vw - 3rem)); max-height:220px; margin-top:.35rem; }
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
   .btn-modelos-ia-desktop { display: none; }
