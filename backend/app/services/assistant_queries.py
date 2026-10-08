@@ -86,7 +86,8 @@ class StockArgs(QueryArgs):
     situacao: Literal["todos", "disponivel", "zerado", "abaixo_minimo", "nao_informado"] = "todos"
     local: Literal["total", "loja", "deposito"] = "total"
     categoria: str | None = Field(default=None, min_length=1, max_length=100)
-    tamanho: str | None = Field(default=None, min_length=1, max_length=50)
+    tamanho: str | None = Field(default=None, min_length=1, max_length=50,
+        description="Tamanho procurado; preserve a escala informada, ex.: 11US, 43BR, 44BOSS, 45EU/IT. Calçados incluem equivalências da loja.")
     cor: str | None = Field(default=None, min_length=1, max_length=50)
 
 
@@ -271,13 +272,17 @@ def query_orders(db, args):
 
 def query_stock(db, args):
     from .inventory_taxonomy import facet_filter
-    from .inventory_search import search_filter
+    from .inventory_search import build_search
     i = Item
     qty = {"total": i.current_stock, "loja": i.stock_loja, "deposito": i.stock_deposito}[args.local]
     q = db.query(i).filter(i.is_active.is_(True), i.deleted_at.is_(None))
-    if args.termo:
-        q = q.filter(search_filter(db, args.termo))
-    for column, value in ((i.category, args.categoria), (i.size, args.tamanho), (i.color, args.cor)):
+    searched = build_search(db, args.termo) if args.termo else None
+    if searched:
+        q = q.filter(searched.condition)
+    size_search = build_search(db, '', size=args.tamanho, brand_context=args.termo or '') if args.tamanho else None
+    if size_search:
+        q = q.filter(size_search.condition)
+    for column, value in ((i.category, args.categoria), (i.color, args.cor)):
         if value:
             q = q.filter(facet_filter(db, column, value) if column.key in ('category', 'color') else func.lower(column) == value.lower())
     if args.situacao == "disponivel":
@@ -298,13 +303,16 @@ def query_stock(db, args):
     known = {key: aggregate[index + 1] or 0 for index, key in enumerate(locations)}
     # SQL SUM ignores NULL; a partial subtotal must not masquerade as the full balance.
     by_location = {key: None if missing[key] else known[key] for key in locations}
-    rows, info = page(q.order_by(i.name, i.size, i.id), args)
+    ranked = size_search or searched
+    rows, info = page(q.order_by(*([ranked.rank] if ranked else []), i.name, i.size, i.id), args)
     return {**info, "local": args.local, "unidades": by_location[args.local],
             "saldos_por_local": by_location,
             "subtotal_saldos_conhecidos": known, "itens_sem_saldo": missing,
             "escopo_dos_saldos": "Todos os produtos filtrados, não só a página exibida.",
             "instrucao": "Saldo nulo significa não informado, nunca zero. Se faltarem saldos, informe "
                          "a quantidade de cadastros incompletos; o subtotal conhecido não é o total. "
+                         "Calçados incluem equivalências e meios tamanhos da tabela da loja. "
+                         "Informe sempre o tamanho original cadastrado de cada resultado; não prometa ajuste idêntico. "
                          "Não confirme disponibilidade de um valor ausente. A conferência está em Estoque → Conferir estoque.",
             "resultados": [{"id":str(x.id),"produto": x.name, "sku": x.sku_internal, "categoria": x.category,
                             "tamanho": x.size, "cor": x.color, "marca": x.brand,

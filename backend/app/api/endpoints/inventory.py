@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 from typing import List, Optional, Literal
 from datetime import datetime, date
 import uuid
@@ -43,7 +43,7 @@ from ...schemas.inventory_variants import VariantContext, VariantCreateRequest, 
 from ...services.inventory_variants import variant_context, create_variants
 
 from ...services.inventory_taxonomy import canonical, vocabulary, facet_filters
-from ...services.inventory_search import search_filter
+from ...services.inventory_search import build_search
 
 router = APIRouter()
 
@@ -204,8 +204,9 @@ def list_items(
     taxonomy_filter = facet_filters(db)
     query = db.query(Item).filter(Item.deleted_at.is_(None))
 
-    if search:
-        query = query.filter(search_filter(db, search, taxonomy_filter=taxonomy_filter))
+    searched = build_search(db, search, taxonomy_filter=taxonomy_filter, brand_context=brand or '') if search else None
+    if searched:
+        query = query.filter(searched.condition)
     if category:
         query = query.filter(taxonomy_filter(Item.category, category))
     if brand:
@@ -251,7 +252,7 @@ def list_items(
     elif sort_by == "created_at":
         items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
     else:
-        items = query.order_by(Item.name, Item.color, Item.size).offset(offset).limit(page_size).all()
+        items = query.order_by(*([searched.rank] if searched else []), Item.name, Item.color, Item.size, Item.id).offset(offset).limit(page_size).all()
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
@@ -360,13 +361,14 @@ def get_groups(
     # A group is included if ANY item matches — then ALL items of that group are shown.
     matching_keys: Optional[list] = None
     taxonomy_filter = facet_filters(db)
+    searched = build_search(db, search, taxonomy_filter=taxonomy_filter, brand_context=brand or '') if search else None
     if search or brand or category or item_status or location_stock:
         kq = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
             Item.is_active == True,
         )
-        if search:
-            kq = kq.filter(search_filter(db, search, taxonomy_filter=taxonomy_filter))
+        if searched:
+            kq = kq.filter(searched.condition)
         if brand:
             kq = kq.filter(taxonomy_filter(Item.brand, brand))
         if category:
@@ -385,7 +387,11 @@ def get_groups(
             kq = kq.filter(Item.stock_loja > 0)
         elif location_stock == "deposito":
             kq = kq.filter(Item.stock_deposito > 0)
-        matching_keys = [r[0] for r in kq.distinct().all()]
+        if searched:
+            kq = kq.group_by(Item.group_key).order_by(func.min(searched.rank), Item.group_key)
+        else:
+            kq = kq.distinct()
+        matching_keys = [r[0] for r in kq.all()]
         if not matching_keys:
             return []
 
@@ -410,6 +416,9 @@ def get_groups(
         sorted_items = sorted(item_list, key=lambda i: ((i.color or '').lower(), _size_sort_key(i.size)))
         total_stock = None if any(i.current_stock is None for i in sorted_items) else sum(i.current_stock for i in sorted_items)
         result.append(GroupResponse(group_key=key, items=sorted_items, total_stock=total_stock))
+    if searched and matching_keys:
+        order = {key: index for index, key in enumerate(matching_keys)}
+        result.sort(key=lambda group: order[group.group_key])
     return result
 
 
