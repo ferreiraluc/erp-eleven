@@ -384,25 +384,6 @@
                 {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 0 }) }}
               </span>
               <div class="exp-actions">
-                <div class="exit-wrap">
-                  <button @click.stop="confirmExitId = item.id" class="exp-btn exp-exit erp-button erp-button--danger erp-button--sm" :title="tr('Consumir 1')" :disabled="!canWithdrawStock(item)">−1</button>
-                  <div v-if="confirmExitId === item.id" class="exit-confirm-popover">
-                    <template v-if="exitLocations(item).loja && exitLocations(item).deposito">
-                      <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-loc confirm-loja erp-button erp-button--secondary erp-button--sm">{{ tr('Loja (') }}{{ displayStock(item.stock_loja) }})</button>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-loc confirm-dep erp-button erp-button--secondary erp-button--sm">{{ tr('Dep. (') }}{{ displayStock(item.stock_deposito) }})</button>
-                    </template>
-                    <template v-else-if="exitLocations(item).deposito">
-                      <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'deposito')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
-                    </template>
-                    <template v-else>
-                      <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
-                      <button @click.stop="handleQuickExit(item, 'loja')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
-                    </template>
-                    <button @click.stop="confirmExitId = null" class="confirm-no erp-button erp-button--ghost erp-button--icon">×</button>
-                  </div>
-                </div>
                 <button @click.stop="openMovement(item)" :disabled="!hasKnownStock(item)" class="exp-btn exp-move erp-button erp-button--ghost erp-button--icon" :title="tr('Movimentar')">⇅</button>
                 <button @click.stop="openEdit(item)" class="exp-btn exp-edit erp-button erp-button--ghost erp-button--icon" :title="tr('Editar')">✏</button>
               </div>
@@ -469,25 +450,6 @@
               </template>
             </div>
             <div class="list-actions">
-              <div class="exit-wrap">
-                <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn list-btn erp-button erp-button--danger erp-button--sm" :disabled="!canWithdrawStock(entry.item)">−1</button>
-                <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
-                  <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
-                    <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja erp-button erp-button--secondary erp-button--sm">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep erp-button erp-button--secondary erp-button--sm">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
-                  </template>
-                  <template v-else-if="exitLocations(entry.item).deposito">
-                    <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
-                  </template>
-                  <template v-else>
-                    <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
-                    <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
-                  </template>
-                  <button @click.stop="confirmExitId = null" class="confirm-no erp-button erp-button--ghost erp-button--icon">×</button>
-                </div>
-              </div>
               <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn list-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Movimentar') }}</button>
               <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Editar') }}</button>
             </div>
@@ -530,25 +492,6 @@
                   <span v-if="stockAlertLevel(entry.item) !== 'ok'" class="alert-badge" :class="'badge-' + stockAlertLevel(entry.item)">{{ alertLabel(stockAlertLevel(entry.item)) }}</span>
                 </div>
                 <div class="item-actions">
-                  <div class="exit-wrap">
-                    <button @click.stop="confirmExitId = entry.item.id" class="action-btn exit-btn erp-button erp-button--danger erp-button--sm" :disabled="!canWithdrawStock(entry.item)">−1</button>
-                    <div v-if="confirmExitId === entry.item.id" class="exit-confirm-popover">
-                      <template v-if="exitLocations(entry.item).loja && exitLocations(entry.item).deposito">
-                        <span class="confirm-question">{{ tr('Retirar de:') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-loc confirm-loja erp-button erp-button--secondary erp-button--sm">{{ tr('Loja (') }}{{ displayStock(entry.item.stock_loja) }})</button>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-loc confirm-dep erp-button erp-button--secondary erp-button--sm">{{ tr('Dep. (') }}{{ displayStock(entry.item.stock_deposito) }})</button>
-                      </template>
-                      <template v-else-if="exitLocations(entry.item).deposito">
-                        <span class="confirm-question">{{ tr('Retirar do Depósito?') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'deposito')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
-                      </template>
-                      <template v-else>
-                        <span class="confirm-question">{{ tr('Retirar da Loja?') }}</span>
-                        <button @click.stop="handleQuickExit(entry.item, 'loja')" class="confirm-yes erp-button erp-button--danger erp-button--sm">{{ tr('Sim') }}</button>
-                      </template>
-                      <button @click.stop="confirmExitId = null" class="confirm-no erp-button erp-button--ghost erp-button--icon">×</button>
-                    </div>
-                  </div>
                   <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Movimentar') }}</button>
                   <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Editar') }}</button>
                 </div>
@@ -731,7 +674,7 @@
 import { taxonomyKey, uniqueLabels } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
-import { displayStock, hasKnownStock, canWithdrawStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
+import { displayStock, hasKnownStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -845,7 +788,6 @@ const showSuggestionModal = ref(false)
 const suggestionModalItems = ref<InventoryItem[]>([])
 const suggestionModalName = ref('')
 const scrollSentinel = ref<HTMLElement | null>(null)
-const confirmExitId = ref<string | null>(null)
 let scrollObserver: IntersectionObserver | null = null
 
 function setView(mode: 'list' | 'compact' | 'grid') {
@@ -1403,25 +1345,6 @@ function openMovement(item: InventoryItem) {
   showMovementModal.value = true
 }
 
-async function handleQuickExit(item: InventoryItem, location: string = 'loja') {
-  if (!hasKnownStock(item)) { showToast(UNKNOWN_STOCK_MESSAGE, 'warning'); return }
-  confirmExitId.value = null
-  try {
-    const result = await inventoryStore.quickExit(item.id, location)
-    diagnosticsRevision.value++
-    const loc = location === 'deposito' ? 'Depósito' : 'Loja'
-    showToast('Saída ({local}) registrada. Estoque: {stock}', 'success', { local: tr(loc), stock: result.new_stock })
-  } catch (e: any) {
-    showToast(e.response?.data?.detail || 'Erro ao registrar saída', 'error')
-  }
-}
-
-/** Retorna quais locais têm estoque disponível para saída rápida */
-function exitLocations(item: InventoryItem): { loja: boolean; deposito: boolean } {
-  if (!hasKnownStock(item)) return { loja: false, deposito: false }
-  return { loja: item.stock_loja > 0, deposito: item.stock_deposito > 0 }
-}
-
 function onBarcodeDetected(code: string) {
   showScanner.value = false
   searchQuery.value = code
@@ -1513,9 +1436,6 @@ function onDocClick(e: MouseEvent) {
     categorySearch.value = ''
   }
   const target = e.target as HTMLElement
-  if (!target.closest('.exit-wrap')) {
-    confirmExitId.value = null
-  }
   if (!target.closest('.chip-remove-wrap')) {
     confirmRemoveChip.value = null
   }
@@ -1833,7 +1753,6 @@ onMounted(async () => {
   transition: opacity 0.12s;
 }
 .exp-btn:hover { opacity: 0.8; }
-.exp-exit { background: #fef3c7; color: #b45309; }
 .exp-move { background: #e0f2fe; color: #0369a1; }
 .exp-edit { background: #eff6ff; color: #2563eb; }
 
@@ -1958,57 +1877,8 @@ onMounted(async () => {
 /* Action buttons */
 .item-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
 .action-btn { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; border: none; font-weight: 600; white-space: nowrap; }
-.exit-btn  { background: #fee2e2; color: #dc2626; }
-.exit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .move-btn  { background: #dbeafe; color: #1d4ed8; }
 .edit-btn  { background: #f3f4f6; color: #374151; }
-
-/* ── Quick exit confirm popover ──────────────────────────────────────────── */
-.exit-wrap { position: relative; display: inline-block; }
-.exit-confirm-popover {
-  position: absolute;
-  bottom: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 9px;
-  padding: 0.45rem 0.55rem;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.13);
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  white-space: nowrap;
-}
-.exit-confirm-popover::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #e5e7eb;
-}
-.exit-confirm-popover::after {
-  content: '';
-  position: absolute;
-  top: calc(100% - 1px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: white;
-}
-.confirm-question { font-size: 0.72rem; color: #374151; font-weight: 500; }
-.confirm-yes { background: #ef4444; color: white; border: none; border-radius: 5px; padding: 0.2rem 0.55rem; font-size: 0.7rem; cursor: pointer; font-weight: 700; }
-.confirm-yes:hover { background: #dc2626; }
-.confirm-no { background: #f3f4f6; color: #6b7280; border: none; border-radius: 5px; padding: 0.2rem 0.45rem; font-size: 0.72rem; cursor: pointer; font-weight: 700; line-height: 1; }
-.confirm-no:hover { background: #e5e7eb; }
-.confirm-loc { border: none; border-radius: 5px; padding: 0.22rem 0.55rem; font-size: 0.7rem; cursor: pointer; font-weight: 700; transition: opacity 0.12s; }
-.confirm-loja { background: #dcfce7; color: #15803d; }
-.confirm-loja:hover { background: #bbf7d0; }
-.confirm-dep { background: #ede9fe; color: #6d28d9; }
-.confirm-dep:hover { background: #ddd6fe; }
 
 /* ── Image modal ─────────────────────────────────────────────────────────────── */
 .image-modal-overlay {

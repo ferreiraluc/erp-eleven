@@ -163,7 +163,7 @@ describe('Unknown stock list and group rendering', () => {
     expect(rows[0].querySelector('.list-stock')?.textContent).toContain('Revisar estoque')
     expect(rows[1].querySelector('.list-stock')?.textContent).toContain('L:0 D:0')
     expect(rows[1].querySelector('.list-stock')?.textContent).not.toContain('Revisar estoque')
-    expect((rows[0].querySelector('.exit-btn') as HTMLButtonElement).disabled).toBe(true)
+    expect(container.querySelector('.exit-btn')).toBeNull()
     expect((rows[0].querySelector('.move-btn') as HTMLButtonElement).disabled).toBe(true)
     expect((rows[1].querySelector('.move-btn') as HTMLButtonElement).disabled).toBe(false)
     ;(rows[0].querySelector('.edit-btn') as HTMLButtonElement).click(); await nextTick()

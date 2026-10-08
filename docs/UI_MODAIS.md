@@ -116,3 +116,23 @@ fechamento seguro. Os testes dos módulos verificam seus fluxos e contratos. A r
 visual local usa dados sintéticos e bloqueia gravações. Isso não equivale a certificação
 WCAG nem a validação em cada aparelho físico; câmera, teclado virtual e leitores de
 tela ainda devem ser conferidos nos dispositivos usados pela loja.
+
+## Safari / iPhone: largura e zoom
+
+Referência: [Apple — ajuste automático de texto no Safari](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/AdjustingtheTextSize/AdjustingtheTextSize.html).
+
+O viewport continua `width=device-width, initial-scale=1.0`, sem bloquear o zoom
+manual. `main.css` fixa o ajuste automático de texto em 100% para evitar inflação
+de fontes ao mudar a orientação. `ios.css`, importado após os estilos dos modais,
+garante no mínimo 16px nos campos editáveis no WebKit com toque (inclusive login,
+busca, filtros e diálogos em `body`). A regra não altera a tipografia do Android
+e do desktop. Não usar `maximum-scale=1`, `user-scalable=no` ou esconder overflow
+global para disfarçar componentes largos. O login usa `100svh` com fallback
+`100vh`, permite quebrar as opções de acesso e reduz margens em telas pequenas.
+
+Na verificação visual, conferir 375, 390, 393, 402, 412, 414, 430 e 440px, além
+de paisagem e desktop. Verificar a largura real do documento, não apenas o
+screenshot; testar também busca, dropdowns e formulários abertos. Emulação de
+largura no Chromium não comprova o zoom de foco/teclado no Safari físico; essa
+parte precisa de iPhone ou simulador iOS. Preferências de zoom salvas pelo usuário
+no navegador continuam sendo respeitadas.

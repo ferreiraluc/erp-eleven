@@ -138,6 +138,7 @@ const handleLogin = async () => {
 <style scoped>
 .login-container {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,6 +238,8 @@ const handleLogin = async () => {
 
 .form-options {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   align-items: center;
   justify-content: space-between;
 }
@@ -308,6 +311,12 @@ const handleLogin = async () => {
   margin: 0;
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+@media (max-width: 600px) {
+  .login-container { padding: 1.5rem 1rem; }
+  .card-body { padding: 1.5rem; }
+  .login-box, .form-group { min-width: 0; }
 }
 
 @keyframes spin {

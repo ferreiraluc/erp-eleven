@@ -11,6 +11,10 @@
   
   html {
     font-family: Inter, system-ui, sans-serif;
+    /* Keep text metrics stable when Safari changes orientation or fits a page.
+       This does not disable the user’s pinch-to-zoom. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   
   body {
