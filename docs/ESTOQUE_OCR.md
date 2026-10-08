@@ -226,6 +226,17 @@ solicitação são normalizados e
 deduplicados no backend. Cada chamada de criação de grade confirma produtos e
 movimentações iniciais na mesma transação, com rollback se uma movimentação falhar.
 
+**Nome das grades automáticas:** a tela mostra o nome do modelo a partir do membro
+mais antigo disponível na grade, retirando somente o sufixo que corresponde ao seu
+tamanho. Por exemplo, `Tênis Givenchy DN0281 11` aparece como `Tênis Givenchy DN0281`.
+A grafia e os códigos do modelo são preservados; nomes personalizados continuam
+como definidos. Isso vale também para grades antigas com identificadores UUID,
+sem migração, alteração de produtos ou fusão por semelhança de nomes. O `group_key`
+continua sendo a identidade interna para vínculos, expansão, linhas e operações.
+Títulos, edição e avisos usam o nome legível. Ao agrupar produtos selecionados,
+o seletor **Grade de destino** lista as grades pelo nome e envia a chave da opção
+escolhida; **Criar uma nova grade** permite digitar um novo nome.
+
 ### Duplicar produto e adicionar tamanhos a uma grade existente
 
 Em **Estoque → editar produto**, os perfis ADMIN/GERENTE podem escolher **Duplicar

@@ -7,13 +7,14 @@ import type { InventoryItem } from '@/services/api'
 const mocks = vi.hoisted(() => ({
   diagnostics: vi.fn(), getItem: vi.fn(), getGroups: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn(),
   listItems: [] as InventoryItem[], loadItems: vi.fn(), loadAlerts: vi.fn(), listError: null as string | null,
-  listFilters: {} as Record<string, string>, owner: false,
+  listFilters: {} as Record<string, string>, owner: false, renameGroup: vi.fn(), ungroup: vi.fn(), groupItems: vi.fn(),
 }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: mocks.owner }) }))
 vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { get: mocks.diagnostics } }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
-  getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues }, ocrAPI: {} }))
+  getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues,
+  renameGroup: mocks.renameGroup, ungroup: mocks.ungroup, groupItems: mocks.groupItems }, ocrAPI: {} }))
 vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: mocks.listFilters, alerts: null, loading: false, error: mocks.listError,
   pagination: { page: 1, total_pages: 1 }, loadItems: mocks.loadItems, loadAlerts: mocks.loadAlerts }) }))
 vi.mock('@/components/inventory/ItemFormModal.vue', () => ({ default: {
@@ -204,5 +205,79 @@ describe('Inventory selection', () => {
     expect(Boolean(deletion)).toBe(owner)
     expect(container.querySelector('.card-grade-label')?.textContent).toContain('Grade 1')
     expect(container.querySelector('[data-item-id="visible"]')?.getAttribute('data-grade-key')).toBe('grade-real')
+  })
+})
+
+
+describe('Readable automatic grade names', () => {
+  const keyA = 'grade-40dd6437-f51a-4b54-9d8d-f543e8705c16'
+  const keyB = 'grade-3c340751-7041-4cab-a20d-296e3394c3f5'
+  const item = { id: 'original', name: 'Tênis Givenchy DN0281 11', size: '11', created_at: '2026-10-01T10:00:00Z',
+    current_stock: 1, stock_loja: 1, stock_deposito: 0, sale_price: 0, is_active: true, alert_level: 'ok' } as InventoryItem
+  function groups() {
+    mocks.getGroups.mockResolvedValue([
+      { group_key: keyA, total_stock: 1, items: [{ ...item, group_key: keyA }] },
+      { group_key: keyB, total_stock: 1, items: [{ ...item, id: 'other', group_key: keyB }] },
+    ])
+  }
+  it('shows model titles but keeps equally named grades separate and does not rename on unchanged Enter/blur', async () => {
+    localStorage.setItem('inv_group_mode', 'true'); groups(); await mount()
+    expect(Array.from(container.querySelectorAll('.group-name')).map(el => el.textContent?.trim())).toEqual([
+      'Tênis Givenchy DN0281', 'Tênis Givenchy DN0281',
+    ])
+    const cards = container.querySelectorAll<HTMLElement>('.group-card')
+    cards[0].click(); await nextTick()
+    expect(cards[0].querySelector('.group-exp-section')).not.toBeNull()
+    expect(cards[1].querySelector('.group-exp-section')).toBeNull()
+    cards[1].querySelector<HTMLElement>('.group-name')!.click(); await nextTick()
+    const input = cards[1].querySelector<HTMLInputElement>('.group-name-input')!
+    expect(input.value).toBe('Tênis Givenchy DN0281')
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    input.dispatchEvent(new FocusEvent('blur')); await nextTick()
+    expect(mocks.renameGroup).not.toHaveBeenCalled()
+    expect(container.textContent).not.toContain('grade-')
+  })
+  it('renames once using the exact internal key, and cancels Escape without a write', async () => {
+    localStorage.setItem('inv_group_mode', 'true'); groups(); await mount()
+    container.querySelector<HTMLElement>('.group-name')!.click(); await nextTick()
+    let input = container.querySelector<HTMLInputElement>('.group-name-input')!
+    input.value = 'Cancelado'; input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    input.dispatchEvent(new FocusEvent('blur')); await nextTick()
+    expect(mocks.renameGroup).not.toHaveBeenCalled()
+    container.querySelector<HTMLElement>('.group-name')!.click(); await nextTick()
+    input = container.querySelector<HTMLInputElement>('.group-name-input')!
+    input.value = 'Givenchy DN0281 Branco'; input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    input.dispatchEvent(new FocusEvent('blur')); await nextTick()
+    expect(mocks.renameGroup).toHaveBeenCalledExactlyOnceWith(keyA, 'Givenchy DN0281 Branco')
+  })
+  it('uses readable tooltips and lets users choose the exact existing grade by name', async () => {
+    groups()
+    mocks.listItems = [{ ...item, group_key: keyA }, { ...item, id: 'new-1' }, { ...item, id: 'new-2' }]
+    await mount()
+    expect(container.querySelector('.card-grade-label')?.getAttribute('title')).toBe('Tênis Givenchy DN0281')
+    button('Selecionar').click(); await nextTick()
+    for (const id of ['new-1', 'new-2']) {
+      container.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.click(); await nextTick()
+    }
+    button('Agrupar').click(); await nextTick()
+    const select = document.querySelector<HTMLSelectElement>('select[aria-label="Grade de destino"]')!
+    expect(Array.from(select.options).map(option => option.textContent)).toEqual([
+      'Criar uma nova grade', 'Tênis Givenchy DN0281', 'Tênis Givenchy DN0281',
+    ])
+    select.value = keyB; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    const confirm = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === 'Agrupar 2')!
+    confirm.click(); await nextTick()
+    expect(mocks.groupItems).toHaveBeenCalledExactlyOnceWith(['new-1', 'new-2'], keyB)
+    expect(document.body.textContent).not.toContain('grade-')
+  })
+  it('keeps manual group titles and sends the key when ungrouping', async () => {
+    localStorage.setItem('inv_group_mode', 'true')
+    mocks.getGroups.mockResolvedValue([{ group_key: 'Coleção DN0281', total_stock: 1, items: [item] }])
+    await mount()
+    expect(container.querySelector('.group-name')?.textContent?.trim()).toBe('Coleção DN0281')
+    container.querySelector<HTMLButtonElement>('.ungroup-btn')!.click(); await nextTick()
+    expect(mocks.ungroup).toHaveBeenCalledExactlyOnceWith('Coleção DN0281')
   })
 })
