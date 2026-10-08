@@ -37,7 +37,7 @@ def seed(db):
 
 CASES = [
     ('Tenis tamanho 11', {'ARMANI-11'}),
-    ('armani 7', {'ARMANI-7'}),
+    ('armani 7', {'ARMANI-7', 'ARMANI-75'}),
     ('Boss 40', {'BOSS-40'}),
     ('Tenis Boss 41', {'BOSS-41'}),
     ('Camiseta tamanho S', {'SHIRT-S'}),
@@ -45,22 +45,22 @@ CASES = [
     ('CAMISETAS tam. m', {'SHIRT-M', 'TSHIRT-M'}),
     ('t shirt M', {'SHIRT-M', 'TSHIRT-M'}),
     ('tenis da boss no tamanho: 40', {'BOSS-40'}),
-    ('EA7 Empório Armani tamanho 7', {'ARMANI-7'}),
+    ('EA7 Empório Armani tamanho 7', {'ARMANI-7', 'ARMANI-75'}),
     ('Tênis classico 7.5', {'ARMANI-75'}),
-    ('armani tamanho 7,50', {'ARMANI-75'}),
+    ('armani tamanho 7,50', {'ARMANI-7', 'ARMANI-75'}),
     ('boss tamanho 40.0', {'BOSS-40'}),
     ('camiseta size M', {'SHIRT-M', 'TSHIRT-M'}),
     ('sneakers boss talle 41', {'BOSS-41'}),
     ('S', {'SHIRT-S'}),
-    ('7', {'ARMANI-7'}),
-    ('41', {'BOSS-41', '41'}),
+    ('7', {'ARMANI-7', 'ARMANI-75', 'BOSS-40'}),
+    ('41', {'41'}),
     ('7777777777777', {'OTHER-17'}),
     ('BOSS-41', {'BOSS-41'}),
     ('EA7', {'EA7'}),  # Literal identity, not size 7.
     ('LITERAL_%', {'LITERAL_%'}),
     ('%', {'LITERAL_%'}),
     ('tenis tamanho 12', set()),
-    ('tenis boss 7', set()),
+    ('tenis boss 7', {'BOSS-40'}),
     ("' OR 1=1 --", set()),
 ]
 

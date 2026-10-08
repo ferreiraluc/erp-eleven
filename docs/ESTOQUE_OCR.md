@@ -14,18 +14,54 @@ A busca combina nome/categoria, marca, cor e **tamanho** no mesmo produto:
 `Tênis tamanho 11`, `Armani 7`, `Boss 40`, `Tênis Boss 41`, `Camiseta tamanho S`
 e `T-shirt tamanho M`. Aceita maiúsculas/minúsculas, acentos, `tam.`, `tamanho`,
 `size` e `talle`. Camiseta e T-shirt são sinônimos na busca; tênis e sneakers também.
-Tamanhos numéricos curtos ou letras de tamanho, mesmo sem “tamanho”, consultam o
-campo tamanho por igualdade: `7` não encontra `17` nem um código que contenha 7.
-`7,5` e `7.5` são equivalentes. Não converte tamanhos US/BR/EU nem S/P automaticamente.
+Tamanhos de roupas continuam exatos: `S` não vira `P` e `40` não inclui `40.5`.
 SKU/código completo continuam encontráveis, inclusive identificadores curtos.
 Números que pertencem ao nome de um modelo podem ser ambíguos com tamanhos; nesse
 caso, use o SKU/código. Não há correção livre de erros de digitação nem IA paga.
 
+### Equivalências de calçados
+
+A busca aplica a **tabela operacional definida pela loja**, sem substituir a
+numeração do produto ou afirmar que fabricantes têm modelagem idêntica:
+
+| US | BR | Boss | EU/IT (D&G) |
+| --- | --- | --- | --- |
+| 6 | 38 | 39 | 40 |
+| 7 | 39 | 40 | 41 |
+| 8 | 40 | 41 | 42 |
+| 9 | 41 | 42 | 43 |
+| 10 | 42 | 43 | 44 |
+| 11 | 43 | 44 | 45 |
+| 12 | 44 | 45 | 46 |
+| 13 | 45 | 46 | 47 |
+
+Cada linha inclui também os meios tamanhos: `chinelo 11` encontra 11/11.5 US,
+43/43.5 BR, 44/44.5 Boss e 45/45.5 EU/IT. O tamanho exato na escala buscada vem
+primeiro, seguido dos equivalentes, depois dos meios tamanhos. Buscar `11.5`
+prioriza os meios tamanhos da mesma linha e também permite conferir os inteiros.
+Aceita ponto/vírgula e escala antes/depois do número (`US 11`, `11US`, `43 BR`,
+`44BOSS`, `45 EU/IT`). A ordenação por relevância ocorre antes da paginação;
+se o consumidor pedir explicitamente ordenação por data, ela é respeitada.
+
+- Indicação de escala no campo tamanho prevalece sobre a marca.
+- Sem indicação: 6 a 13 (e seus meios tamanhos) são US. Números maiores usam BR;
+  produtos da marca Boss/Hugo Boss usam a coluna Boss, e D&G/DG/Dolce & Gabbana usam EU/IT.
+- Na consulta sem escala, aplicam-se as mesmas regras. `Tênis Boss 44` restringe
+  a marca e usa sua escala; `Tênis 44BOSS` procura equivalentes entre marcas.
+  O filtro separado de marca também orienta a interpretação.
+- Expansão apenas em produtos cujo nome ou categoria identifiquem calçados
+  (tênis, chinelos, sapatos, sandálias etc.). Roupas e itens sem essa identificação
+  mantêm comparação literal, sem conversões. Não extrapola outras tabelas/faixas.
+- A consulta preserva tamanho, SKU, código, grade e saldo originais. Não converte
+  os cadastros nem sugere que peças aproximadas tenham ajuste garantido.
+
 As rotas de itens e grades usam a mesma interpretação, aplicada antes da contagem
 ou paginação. **Ver grades** mostra a grade completa quando uma de suas peças
-satisfaz todos os termos e filtros, preservando o contexto dos outros tamanhos.
-O assistente usa a mesma busca na ferramenta de consulta de estoque. A consulta
-não modifica os cadastros, saldos ou grupos e não faz chamadas a provedores de IA.
+satisfaz todos os termos e filtros, preservando o contexto dos outros tamanhos;
+as grades correspondentes ao tamanho exato aparecem primeiro.
+O assistente usa a mesma busca, inclusive quando recebe tamanho como campo
+separado, e deve informar a numeração original de cada resultado. A consulta
+não faz chamadas a provedores de IA.
 
 No celular (até 600px), o cabeçalho inicia recolhido em uma barra compacta com
 voltar, **Estoque** e **Filtros e ações**. O botão expande as ações do módulo,
