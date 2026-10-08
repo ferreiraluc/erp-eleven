@@ -2066,7 +2066,8 @@ onMounted(async () => {
 .gmodal-footer .sel-btn-primary { background: #3b82f6; color: white; }
 
 /* ── Misc ────────────────────────────────────────────────────────────────────── */
-.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; z-index: 9999; white-space: nowrap; }
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; z-index: 9999; max-width: calc(100vw - 2rem); text-align: center; }
+.toast-info { background: #1d4ed8; color: white; }
 .toast-success { background: #065f46; color: white; }
 .toast-error   { background: #7f1d1d; color: white; }
 .toast-warning { background: #78350f; color: white; }
