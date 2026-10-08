@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, h, nextTick, type App } from 'vue'
+import { createApp, h, nextTick, reactive, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import InventoryListView from './InventoryListView.vue'
 import type { InventoryItem } from '@/services/api'
@@ -15,10 +15,10 @@ vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { g
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
   getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues,
   renameGroup: mocks.renameGroup, ungroup: mocks.ungroup, groupItems: mocks.groupItems }, ocrAPI: {} }))
-vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: mocks.listFilters, alerts: null, loading: false, error: mocks.listError,
-  pagination: { page: 1, total_pages: 1 }, loadItems: mocks.loadItems, loadAlerts: mocks.loadAlerts }) }))
+vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: reactive(mocks.listFilters), alerts: null, loading: false, loadingMore: false, loadMoreError: null, hasLoaded: true, error: mocks.listError,
+  pagination: { page: 1, total_pages: 1, total: mocks.listItems.length }, loadItems: mocks.loadItems, loadAlerts: mocks.loadAlerts }) }))
 vi.mock('@/components/inventory/ItemFormModal.vue', () => ({ default: {
-  props: ['item'], emits: ['close'], render(this: { item: { id: string } }) { return h('div', { 'data-editor-id': this.item?.id }, 'Existing product editor') },
+  props: ['item'], emits: ['close'], render(this: { item: { id: string; image_data?: string } }) { return h('div', { 'data-editor-id': this.item?.id, 'data-editor-photo': this.item?.image_data }, 'Existing product editor') },
 } }))
 
 let app: App | undefined, container: HTMLDivElement
@@ -83,7 +83,7 @@ describe('Inventory empty search recovery', () => {
     expect(mocks.loadItems).toHaveBeenLastCalledWith(1, false, true)
     expect(mocks.getGroups).toHaveBeenLastCalledWith({})
     expect(localStorage.getItem('inv_group_mode')).toBe('true')
-    expect(container.querySelector('.empty-state')?.textContent).not.toContain('Criar primeiro item')
+    await vi.waitFor(() => expect(container.querySelector('.empty-state')?.textContent).not.toContain('Criar primeiro item'))
   })
 })
 
@@ -279,5 +279,26 @@ describe('Readable automatic grade names', () => {
     expect(container.querySelector('.group-name')?.textContent?.trim()).toBe('Coleção DN0281')
     container.querySelector<HTMLButtonElement>('.ungroup-btn')!.click(); await nextTick()
     expect(mocks.ungroup).toHaveBeenCalledExactlyOnceWith('Coleção DN0281')
+  })
+})
+
+
+describe('Editing a lightweight catalog item', () => {
+  it('loads the original before opening the form so saving or duplicating cannot erase the photo', async () => {
+    mocks.listItems = [{ id: 'photo-item', name: 'Fixture', has_image: true, image_data: null, is_active: true } as InventoryItem]
+    let resolve!: (value: unknown) => void
+    mocks.getItem.mockReturnValueOnce(new Promise(yes => { resolve = yes }))
+    await mount(); button('Editar').click(); await nextTick()
+    expect(container.querySelector('[data-editor-id]')).toBeNull()
+    expect(mocks.getItem).toHaveBeenCalledWith('photo-item')
+    resolve({ ...mocks.listItems[0], image_data: 'data:image/jpeg;base64,original' })
+    await vi.waitFor(() => expect(container.querySelector('[data-editor-photo]')?.getAttribute('data-editor-photo')).toBe('data:image/jpeg;base64,original'))
+  })
+  it('keeps the form closed if the original cannot be loaded', async () => {
+    mocks.listItems = [{ id: 'photo-item', name: 'Fixture', has_image: true, is_active: true } as InventoryItem]
+    mocks.getItem.mockRejectedValueOnce(new Error('offline'))
+    await mount(); button('Editar').click()
+    await vi.waitFor(() => expect(container.textContent).toContain('Não foi possível abrir o produto'))
+    expect(container.querySelector('[data-editor-id]')).toBeNull()
   })
 })

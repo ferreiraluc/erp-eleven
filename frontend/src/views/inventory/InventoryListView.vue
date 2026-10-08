@@ -224,12 +224,22 @@
           {{ tr('Quadrados') }}
         </button>
         <span class="view-sep">|</span>
-        <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar itens')" :aria-pressed="selectionMode">
-          {{ tr('Selecionar') }}
-        </button>
+        <div class="selection-results">
+          <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar itens')" :aria-pressed="selectionMode">
+            {{ tr('Selecionar') }}
+          </button>
+          <span class="search-result-count" role="status" aria-live="polite" aria-atomic="true">
+            <span v-if="searchBusy" class="spinner-sm" aria-hidden="true"></span>
+            {{ searchBusy ? tr('Buscando...') : resultsReady ? resultCountText : tr('Total não confirmado') }}
+          </span>
+        </div>
       </div>
     </div>
       </div><!-- /inventory-toolbar-panel -->
+      <div class="mobile-search-progress" role="status" aria-live="polite" aria-atomic="true">
+        <span v-if="searchBusy || inventoryStore.loadingMore" class="spinner-sm" aria-hidden="true"></span>
+        <span>{{ searchProgressText }}</span>
+      </div>
     </div><!-- /sticky-toolbar -->
 
     <InventoryDiagnosticsPanel
@@ -241,22 +251,22 @@
       @open-item="openDiagnosticItem"
     />
 
-    <div v-if="inventoryStore.error" class="list-load-error" role="alert">
+    <div v-if="searchError" class="list-load-error" role="alert">
       <div>
         <strong>{{ tr('Não foi possível carregar a lista de produtos.') }}</strong>
         <p>{{ tr('Os dados do estoque não foram confirmados. Tente novamente ou abra a conferência de estoque.') }}</p>
       </div>
-      <button @click="reloadItems()" class="btn btn-secondary erp-button erp-button--secondary" :disabled="inventoryStore.loading">{{ tr('Tentar novamente') }}</button>
+      <button @click="retrySearch" class="btn btn-secondary erp-button erp-button--secondary" :disabled="searchBusy">{{ tr('Tentar novamente') }}</button>
     </div>
 
     <!-- Loading -->
-    <div v-if="inventoryStore.loading && flatList.length === 0" class="loading-state">
+    <div v-if="searchBusy && flatList.length === 0" class="loading-state">
       <div class="spinner"></div>
       <p>{{ tr('Carregando itens...') }}</p>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="!inventoryStore.loading && !inventoryStore.error && flatList.length === 0" class="empty-state">
+    <div v-else-if="resultsReady && flatList.length === 0" class="empty-state">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
@@ -266,7 +276,7 @@
     </div>
 
     <!-- Items list -->
-    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
+    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
       <svg v-if="!groupMode && gradeConnections.length" class="grade-connections" aria-hidden="true">
         <path v-for="connection in gradeConnections" :key="connection.id" :d="connection.path" />
       </svg>
@@ -278,12 +288,12 @@
             <!-- Imagem do grupo (primeira imagem disponível) -->
             <div
               class="group-thumb-wrap"
-              @click.stop="entry.group.items.find(i => i.image_data)?.image_data && (imageModalSrc = entry.group.items.find(i => i.image_data)!.image_data!)"
-              :class="{ 'thumb-clickable': entry.group.items.some(i => i.image_data) }"
+              @click.stop="openProductImage(entry.group.items.find(hasProductImage))"
+              :class="{ 'thumb-clickable': entry.group.items.some(hasProductImage) }"
             >
-              <img
-                v-if="entry.group.items.find(i => i.image_data)"
-                :src="entry.group.items.find(i => i.image_data)?.image_data || undefined"
+              <ProductThumbnail
+                v-if="entry.group.items.find(hasProductImage)"
+                :item="entry.group.items.find(hasProductImage)!"
                 alt=""
                 class="group-thumb"
               />
@@ -412,8 +422,8 @@
             <span v-if="groupMode && entry.item.group_key" class="in-group-badge" :title="tr('Já pertence ao grupo: {group}', { group: groupTitle(entry.item.group_key) })">{{ tr('grade') }}</span>
           </button>
           <!-- Imagem topo (grid view) -->
-          <div class="item-grid-image" @click.stop="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
-            <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-grid-img" />
+          <div class="item-grid-image" @click.stop="openProductImage(entry.item)" :class="{ 'thumb-clickable': hasProductImage(entry.item) }">
+            <ProductThumbnail v-if="hasProductImage(entry.item)" :item="entry.item" alt="" class="item-grid-img" />
             <div v-else class="item-grid-placeholder">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
             </div>
@@ -457,8 +467,8 @@
 
           <div class="item-row-main" v-show="viewMode !== 'list'">
             <!-- Thumb -->
-            <div class="item-thumb-wrap" @click="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
-              <img v-if="entry.item.image_data" :src="entry.item.image_data" alt="" class="item-thumb" />
+            <div class="item-thumb-wrap" @click="openProductImage(entry.item)" :class="{ 'thumb-clickable': hasProductImage(entry.item) }">
+              <ProductThumbnail v-if="hasProductImage(entry.item)" :item="entry.item" alt="" class="item-thumb" />
               <div v-else class="item-thumb-placeholder"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg></div>
             </div>
 
@@ -523,11 +533,24 @@
       </template>
     </div>
 
-    <!-- Sentinel para infinite scroll -->
+    <!-- Pagination feedback remains visible when the mobile toolbar is collapsed. -->
     <div ref="scrollSentinel" class="scroll-sentinel">
-      <div v-if="inventoryStore.loading && inventoryStore.items.length > 0" class="loading-more">
-        <div class="spinner-sm"></div>
+      <div v-if="searchBusy || inventoryStore.loadingMore" class="loading-more" role="status" aria-live="polite">
+        <div class="spinner-sm" aria-hidden="true"></div>
+        <span>{{ tr(inventoryStore.loadingMore ? 'Carregando mais itens...' : 'Buscando...') }}</span>
       </div>
+      <template v-else-if="resultsReady && resultTotal > 0">
+        <p class="loaded-result-count">{{ loadedCountText }}</p>
+        <div v-if="inventoryStore.loadMoreError" class="load-more-error" role="alert">
+          <span>{{ tr('Não foi possível carregar mais itens. Os resultados já carregados foram mantidos.') }}</span>
+          <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="loadMore">{{ tr('Tentar novamente') }}</button>
+        </div>
+        <div v-else-if="hasMoreResults" class="more-results">
+          <span>{{ tr('Role para ver mais resultados.') }}</span>
+          <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="loadMore">{{ tr('Carregar mais') }}</button>
+        </div>
+        <p v-else class="results-complete" role="status">{{ tr('Fim dos resultados desta busca.') }}</p>
+      </template>
     </div>
 
     <!-- Image modal -->
@@ -684,6 +707,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
+import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
@@ -721,7 +745,7 @@ const route = useRoute()
 const inventoryStore = useInventoryStore()
 const auth = useAuthStore()
 
-const searchQuery = ref('')
+const searchQuery = ref(inventoryStore.filters.search || '')
 const activeStatus = ref((route.query.status as string) || '')
 const showScanner = ref(false)
 const showItemForm = ref(false)
@@ -756,6 +780,7 @@ const confirmRemoveChip = ref<string | null>(null)
 
 const backendGroups = ref<GroupResponse[]>([])
 const backendSuggestions = ref<SuggestionResponse[]>([])
+const groupsLoading = ref(false), groupsLoaded = ref(false), groupsError = ref(false)
 let groupLoadGeneration = 0, suggestionLoadGeneration = 0
 const hasGroups = computed(() => backendGroups.value.length > 0 || inventoryStore.items.some(i => i.group_key))
 
@@ -793,6 +818,7 @@ const suggestionModalItems = ref<InventoryItem[]>([])
 const suggestionModalName = ref('')
 const scrollSentinel = ref<HTMLElement | null>(null)
 let scrollObserver: IntersectionObserver | null = null
+const sentinelVisible = ref(false)
 
 function setView(mode: 'list' | 'compact' | 'grid') {
   viewMode.value = mode
@@ -802,7 +828,7 @@ function setView(mode: 'list' | 'compact' | 'grid') {
 function toggleGroupMode() {
   groupMode.value = !groupMode.value
   localStorage.setItem('inv_group_mode', String(groupMode.value))
-  inventoryStore.loadItems(1, false, groupMode.value)
+  reloadItems()
   if (groupMode.value) loadGroupsFiltered()
 }
 
@@ -851,10 +877,15 @@ function toggleUngroupedFilter() {
 
 async function loadGroups(params: Record<string, any> = {}) {
   const generation = ++groupLoadGeneration
+  groupsLoading.value = true; groupsLoaded.value = false; groupsError.value = false
   try {
     const groups = await inventoryAPI.getGroups(params)
-    if (generation === groupLoadGeneration) backendGroups.value = groups
-  } catch {}
+    if (generation === groupLoadGeneration) { backendGroups.value = groups; groupsLoaded.value = true }
+  } catch {
+    if (generation === groupLoadGeneration) groupsError.value = true
+  } finally {
+    if (generation === groupLoadGeneration) groupsLoading.value = false
+  }
 }
 
 function groupFilterParams(): Record<string, any> {
@@ -1301,19 +1332,80 @@ async function onSuggestionGrouped(groupKey: string, count: number) {
   await Promise.all([reloadItems(), loadGroups()])
 }
 
+// Counts describe matching product records, not stock units or only this page.
+const searchPending = computed(() => searchQuery.value.trim() !== (inventoryStore.filters.search || ''))
+const searchBusy = computed(() => searchPending.value || (inventoryStore.loading && !inventoryStore.loadingMore) || (groupMode.value && groupsLoading.value))
+const searchError = computed(() => inventoryStore.error || (groupMode.value && groupsError.value))
+const resultsReady = computed(() => inventoryStore.hasLoaded && !searchBusy.value && !searchError.value && (!groupMode.value || groupsLoaded.value))
+const matchingGroupItems = computed(() => groupMode.value
+  ? backendGroups.value.reduce((total, group) => total + (group.matching_count ?? group.items.length), 0) : 0)
+const resultTotal = computed(() => inventoryStore.pagination.total + matchingGroupItems.value)
+const loadedResultCount = computed(() => inventoryStore.items.length + matchingGroupItems.value)
+const resultCountText = computed(() => resultTotal.value === 1 ? tr('1 item') : tr('{count} itens', { count: resultTotal.value.toLocaleString(numberLocale()) }))
+const loadedCountText = computed(() => tr('{loaded} de {total} itens carregados', {
+  loaded: loadedResultCount.value.toLocaleString(numberLocale()), total: resultTotal.value.toLocaleString(numberLocale()),
+}))
+const hasMoreResults = computed(() => resultsReady.value && inventoryStore.pagination.page < inventoryStore.pagination.total_pages)
+const searchProgressText = computed(() => {
+  if (searchBusy.value) return tr('Buscando...')
+  if (inventoryStore.loadingMore) return tr('Carregando mais itens...')
+  if (!resultsReady.value) return tr('Busca não concluída. Tente novamente.')
+  if (inventoryStore.loadMoreError) return tr('Carregamento interrompido. Tente novamente no fim da lista.')
+  if (hasMoreResults.value) return loadedCountText.value + ' · ' + tr('Mais resultados abaixo')
+  return resultCountText.value + ' · ' + tr('Busca concluída')
+})
+function retrySearch() {
+  reloadItems()
+  if (groupMode.value) loadGroupsFiltered()
+}
+// Continue if a short page leaves the sentinel visible; never retry an error in a loop.
+watch([hasMoreResults, () => inventoryStore.loadingMore, loadedResultCount], () => {
+  // The observer can still report the OLD position after a page is appended.
+  // Check the rendered position to avoid downloading every remaining page.
+  const sentinel = scrollSentinel.value
+  if (sentinelVisible.value && sentinel && sentinel.getBoundingClientRect().top <= window.innerHeight + 300 &&
+      !inventoryStore.loadMoreError) loadMore()
+}, { flush: 'post' })
+
 function loadMore() {
+  if (!hasMoreResults.value || inventoryStore.loading || searchBusy.value) return
   const nextPage = inventoryStore.pagination.page + 1
   reloadItems(nextPage, true)
 }
 
 function openCreate() {
+  editOpenGeneration++
   editingItem.value = null
   showItemForm.value = true
 }
 
-function openEdit(item: InventoryItem) {
-  editingItem.value = item
-  showItemForm.value = true
+let editOpenGeneration = 0
+let imageOpenGeneration = 0
+function hasProductImage(item: InventoryItem) { return !!(item.image_data || item.has_image) }
+async function openEdit(item: InventoryItem) {
+  const request = ++editOpenGeneration
+  try {
+    // Never open an editable form with an omitted original: saving would erase the photo.
+    if (item.has_image && !item.image_data) {
+      showToast('Carregando produto...', 'info')
+      item = await inventoryAPI.getItem(item.id)
+    }
+    if (request !== editOpenGeneration) return
+    editingItem.value = item
+    showItemForm.value = true
+  } catch {
+    if (request === editOpenGeneration) showToast('Não foi possível abrir o produto. Tente novamente.', 'error')
+  }
+}
+async function openProductImage(item?: InventoryItem) {
+  if (!item || !hasProductImage(item)) return
+  const request = ++imageOpenGeneration
+  try {
+    const full = item.image_data ? item : await inventoryAPI.getItem(item.id)
+    if (request === imageOpenGeneration) imageModalSrc.value = full.image_data || null
+  } catch {
+    if (request === imageOpenGeneration) showToast('Não foi possível abrir a foto. Tente novamente.', 'error')
+  }
 }
 
 async function openDiagnosticItem(id: string) {
@@ -1435,21 +1527,14 @@ function onDocClick(e: MouseEvent) {
 }
 
 onUnmounted(() => {
+  editOpenGeneration++
+  imageOpenGeneration++
   stopDragSelection()
   diagnosticOpenGeneration++
   if (searchTimer) clearTimeout(searchTimer)
   scrollObserver?.disconnect()
   document.removeEventListener('click', onDocClick)
 })
-
-async function autoLoadRemainingPages() {
-  const { total_pages } = inventoryStore.pagination
-  const isGrouped = groupMode.value
-  for (let p = 2; p <= total_pages; p++) {
-    if (inventoryStore.filters.search || inventoryStore.filters.status) return
-    await inventoryStore.loadItems(p, true, isGrouped)
-  }
-}
 
 onMounted(async () => {
   if (route.query.status) {
@@ -1459,13 +1544,11 @@ onMounted(async () => {
   await Promise.all([
     inventoryStore.loadItems(1, false, groupMode.value),
     inventoryStore.loadAlerts(),
-    loadGroups(),
+    loadGroupsFiltered(),
   ])
   if (route.query.new === '1') {
     showItemForm.value = true
   }
-  // Load remaining pages in background so full catalog is available immediately
-  autoLoadRemainingPages()
   try {
     const supplierList = await inventoryAPI.getSuppliers()
     suppliers.value = supplierList
@@ -1481,13 +1564,8 @@ onMounted(async () => {
   nextTick(() => {
     if (scrollSentinel.value) {
       scrollObserver = new IntersectionObserver(([entry]) => {
-        if (
-          entry.isIntersecting &&
-          !inventoryStore.loading &&
-          inventoryStore.pagination.page < inventoryStore.pagination.total_pages
-        ) {
-          loadMore()
-        }
+        sentinelVisible.value = entry.isIntersecting
+        if (entry.isIntersecting && !inventoryStore.loadMoreError) loadMore()
       }, { rootMargin: '300px' })
       scrollObserver.observe(scrollSentinel.value)
     }
@@ -1504,12 +1582,17 @@ onMounted(async () => {
 .list-load-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem; padding: 1rem; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #991b1b; font-size: .85rem; }
 .list-load-error p { margin: .35rem 0 0; font-size: .8rem; }
 .list-load-error .btn:disabled { opacity: .5; cursor: not-allowed; }
-.mobile-toolbar-bar { display:none; }
+.mobile-toolbar-bar, .mobile-search-progress { display:none; }
+.selection-results { display:flex; align-items:center; gap:.4rem; min-width:0; }
+.search-result-count { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .45rem; border-radius:6px; color:#1d4ed8; background:#eff6ff; font-size:.75rem; font-weight:600; }
+.search-result-count .spinner-sm, .mobile-search-progress .spinner-sm { width:12px; height:12px; flex-shrink:0; }
+@media (prefers-reduced-motion: reduce) { .spinner-sm { animation:none !important; } }
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
 @media (max-width: 600px) {
+  .mobile-search-progress { display:flex; align-items:center; gap:.4rem; padding:.3rem .75rem; min-height:26px; box-sizing:border-box; font-size:.72rem; line-height:1.3; color:#1d4ed8; background:#eff6ff; }
   .mobile-toolbar-bar { display:flex; align-items:center; gap:.5rem; min-height:52px; padding:.35rem .75rem; box-sizing:border-box; }
   .mobile-toolbar-title { display:flex; flex-direction:column; flex:1; min-width:0; color:#111827; font-size:.95rem; }
   .mobile-toolbar-title span { color:#2563eb; font-size:.65rem; line-height:1.2; }
@@ -1639,8 +1722,12 @@ onMounted(async () => {
 .item-grid-image.thumb-clickable { cursor: zoom-in; }
 
 /* ── Infinite scroll sentinel ──────────────────────────────────── */
-.scroll-sentinel { height: 40px; display: flex; align-items: center; justify-content: center; }
-.loading-more { display: flex; align-items: center; justify-content: center; padding: 0.5rem; }
+.scroll-sentinel { min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; padding: 1rem; text-align: center; color: #475569; font-size: .8rem; }
+.scroll-sentinel p { margin: 0; }
+.loading-more, .more-results, .load-more-error { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .65rem; }
+.load-more-error { color: #9a3412; }
+.results-complete { color: #15803d; }
+.loading-more { padding: .5rem; }
 .spinner-sm { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
 /* ── Filter chips ─────────────────────────────────────────────── */

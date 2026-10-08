@@ -2042,5 +2042,69 @@
   "Confira a prévia e marque a confirmação para criar os tamanhos.": [
     "Revise la vista previa y marque la confirmación para crear las tallas.",
     "Review the preview and check the confirmation to create sizes."
+  ],
+  "Buscando...": [
+    "Buscando...",
+    "Searching..."
+  ],
+  "Total não confirmado": [
+    "Total sin confirmar",
+    "Total not confirmed"
+  ],
+  "1 item": [
+    "1 artículo",
+    "1 item"
+  ],
+  "{count} itens": [
+    "{count} artículos",
+    "{count} items"
+  ],
+  "{loaded} de {total} itens carregados": [
+    "{loaded} de {total} artículos cargados",
+    "{loaded} of {total} items loaded"
+  ],
+  "Carregando mais itens...": [
+    "Cargando más artículos...",
+    "Loading more items..."
+  ],
+  "Mais resultados abaixo": [
+    "Más resultados abajo",
+    "More results below"
+  ],
+  "Busca concluída": [
+    "Búsqueda completada",
+    "Search complete"
+  ],
+  "Busca não concluída. Tente novamente.": [
+    "Búsqueda incompleta. Inténtelo de nuevo.",
+    "Search incomplete. Try again."
+  ],
+  "Carregamento interrompido. Tente novamente no fim da lista.": [
+    "Carga interrumpida. Inténtelo de nuevo al final de la lista.",
+    "Loading interrupted. Retry at the end of the list."
+  ],
+  "Não foi possível carregar mais itens. Os resultados já carregados foram mantidos.": [
+    "No se pudieron cargar más artículos. Se conservaron los resultados cargados.",
+    "Could not load more items. Previously loaded results were kept."
+  ],
+  "Role para ver mais resultados.": [
+    "Desplácese para ver más resultados.",
+    "Scroll to see more results."
+  ],
+  "Fim dos resultados desta busca.": [
+    "Fin de los resultados de esta búsqueda.",
+    "End of results for this search."
+  ],
+  "Carregando produto...": [
+    "Cargando producto...",
+    "Loading product..."
+  ],
+  "Não foi possível abrir o produto. Tente novamente.": [
+    "No se pudo abrir el producto. Intenta de nuevo.",
+    "Could not open the product. Try again."
+  ],
+  "Não foi possível abrir a foto. Tente novamente.": [
+    "No se pudo abrir la foto. Intenta de nuevo.",
+    "Could not open the photo. Try again."
   ]
 }

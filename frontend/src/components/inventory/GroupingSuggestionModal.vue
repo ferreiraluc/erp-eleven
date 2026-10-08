@@ -41,7 +41,7 @@
               class="item-row"
             >
               <div class="item-thumb-wrap">
-                <img v-if="item.image_data" :src="item.image_data" alt="" class="item-thumb" />
+                <ProductThumbnail v-if="item.image_data || item.has_image" :item="item" alt="" class="item-thumb" />
                 <div v-else class="item-thumb-placeholder">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -86,6 +86,7 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, nextTick, onMounted } from 'vue'
+import ProductThumbnail from './ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 

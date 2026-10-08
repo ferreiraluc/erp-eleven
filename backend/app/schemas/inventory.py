@@ -55,6 +55,7 @@ class ItemUpdate(ItemBase):
 
 
 class ItemResponse(ItemBase):
+    has_image: bool | None = None
     id: uuid.UUID
     sku_internal: str
     current_stock: int | None
@@ -123,6 +124,7 @@ class GroupResponse(BaseModel):
     group_key: str
     items: List[ItemResponse]
     total_stock: int | None
+    matching_count: int
 
 
 class SuggestionResponse(BaseModel):

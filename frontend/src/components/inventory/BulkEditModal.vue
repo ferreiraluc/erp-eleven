@@ -113,7 +113,8 @@
             <div v-for="item in items" :key="item.id" class="item-card">
               <!-- Item header -->
               <div class="item-card-header">
-                <img v-if="sharedImage || item.image_data" :src="sharedImage || item.image_data || undefined" class="card-thumb" alt="" />
+                <img v-if="sharedImage" :src="sharedImage" class="card-thumb" alt="" />
+                <ProductThumbnail v-else-if="item.image_data || item.has_image" :item="item" class="card-thumb" />
                 <div v-else class="card-thumb-placeholder"></div>
                 <div class="card-header-info">
                   <span class="card-original-name">{{ item.name }}</span>
@@ -233,6 +234,7 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
+import ProductThumbnail from './ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 
