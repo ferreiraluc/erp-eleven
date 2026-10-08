@@ -2027,6 +2027,18 @@
     "Todas las tallas indicadas ya están registradas. Elija nuevas tallas.",
     "All entered sizes already exist. Choose new sizes."
   ],
+  "Grade": [
+    "Grupo de variantes",
+    "Variant group"
+  ],
+  "Grade de destino": [
+    "Grupo de destino",
+    "Target variant group"
+  ],
+  "Criar uma nova grade": [
+    "Crear un nuevo grupo",
+    "Create a new variant group"
+  ],
   "Confira a prévia e marque a confirmação para criar os tamanhos.": [
     "Revise la vista previa y marque la confirmación para crear las tallas.",
     "Review the preview and check the confirmation to create sizes."

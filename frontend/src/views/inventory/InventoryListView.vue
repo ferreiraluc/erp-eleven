@@ -306,7 +306,7 @@
                 class="group-name group-name-editable"
                 @click.stop="startEditGroupName(entry.group.group_key)"
                 :title="tr('Clique para renomear o grupo')"
-              >{{ entry.group.group_key }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
+              >{{ groupTitle(entry.group.group_key) }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
               <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr('Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
               <span v-if="groupAlertLevel(entry.group.items) === 'unknown'" class="alert-badge badge-unknown">{{ tr('Revisar estoque') }}</span>
               <span
@@ -401,7 +401,7 @@
           @click="onCardClick(entry.item.id, $event)"
           @pointerdown="onItemPointerDown(entry.item.id, $event)"
         >
-          <div v-if="!groupMode && entry.item.group_key" class="card-grade-label" :title="entry.item.group_key">
+          <div v-if="!groupMode && entry.item.group_key" class="card-grade-label" :title="groupTitle(entry.item.group_key)">
             <span aria-hidden="true">↔</span> {{ tr('Grade {number}', { number: visibleGradeNumbers.get(entry.item.group_key)! }) }}
           </div>
           <!-- Checkbox de seleção -->
@@ -409,7 +409,7 @@
             <span :class="['check-box', { checked: selectedIds.includes(entry.item.id), 'check-grouped': !!entry.item.group_key }]">
               <svg v-if="selectedIds.includes(entry.item.id)" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </span>
-            <span v-if="groupMode && entry.item.group_key" class="in-group-badge" :title="tr('Já pertence ao grupo: {group}', { group: entry.item.group_key })">{{ tr('grade') }}</span>
+            <span v-if="groupMode && entry.item.group_key" class="in-group-badge" :title="tr('Já pertence ao grupo: {group}', { group: groupTitle(entry.item.group_key) })">{{ tr('grade') }}</span>
           </button>
           <!-- Imagem topo (grid view) -->
           <div class="item-grid-image" @click.stop="entry.item.image_data && (imageModalSrc = entry.item.image_data)" :class="{ 'thumb-clickable': entry.item.image_data }">
@@ -644,24 +644,25 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           {{ tr('Selecione pelo menos 2 itens sem grupo para poder agrupar.') }}
         </div>
-        <input
+        <select v-if="existingGroupKeys.length" v-model="selectedExistingGroup" class="gmodal-input"
+          :aria-label="tr('Grade de destino')" :disabled="grouping || selectedUngrouped.length < 2">
+          <option value="">{{ tr('Criar uma nova grade') }}</option>
+          <option v-for="gk in existingGroupKeys" :key="gk" :value="gk">{{ groupTitle(gk) }}</option>
+        </select>
+        <input v-if="!selectedExistingGroup"
           v-model="groupNameInput"
           type="text"
           class="gmodal-input"
           :placeholder="tr('Ex: DKR003, FLC009 LUTT/NAPA...')"
-          list="gname-list"
           ref="groupNameInputRef"
           @keydown.enter="confirmGroup"
           :disabled="selectedUngrouped.length < 2"
         />
-        <datalist id="gname-list">
-          <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
-        </datalist>
-        <p class="gmodal-hint">{{ tr('Sugestão baseada nos nomes:') }} <strong>{{ groupNameSuggestion }}</strong></p></div>
+        <p v-if="!selectedExistingGroup" class="gmodal-hint">{{ tr('Sugestão baseada nos nomes:') }} <strong>{{ groupNameSuggestion }}</strong></p></div>
         <div class="gmodal-footer erp-dialog__footer">
           <button @click="showGroupModal = false" class="sel-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
           <button @click="confirmGroup" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm"
-            :disabled="!groupNameInput.trim() || grouping || selectedUngrouped.length < 2">
+            :disabled="(!selectedExistingGroup && !groupNameInput.trim()) || grouping || selectedUngrouped.length < 2">
             {{ grouping ? tr('Agrupando...') : tr('Agrupar {count}', { count: selectedUngrouped.length }) }}
           </button>
         </div>
@@ -691,6 +692,7 @@ import MovementModal from '@/components/inventory/MovementModal.vue'
 import ImportModal from '@/components/inventory/ImportModal.vue'
 import BulkDeleteModal from '@/components/inventory/BulkDeleteModal.vue'
 import { useInventoryGradeLinks } from '@/composables/useInventoryGradeLinks'
+import { inventoryGroupName } from '@/services/inventoryGroupNames'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
@@ -777,6 +779,7 @@ const selectionMode = ref(false)
 const selectedIds = ref<string[]>([])
 const showGroupModal = ref(false)
 const groupNameInput = ref('')
+const selectedExistingGroup = ref('')
 const groupNameInputRef = ref<HTMLInputElement | null>(null)
 const editingGroupKey = ref<string | null>(null)
 const editingGroupName = ref('')
@@ -997,19 +1000,21 @@ const groupNameSuggestion = computed(() => {
 
 watch(showGroupModal, (val) => {
   if (val) {
+    selectedExistingGroup.value = ''
     groupNameInput.value = groupNameSuggestion.value
     nextTick(() => groupNameInputRef.value?.focus())
   }
 })
 
 async function confirmGroup() {
-  const name = groupNameInput.value.trim()
-  if (!name || grouping.value) return
+  const key = selectedExistingGroup.value || groupNameInput.value.trim()
+  const name = selectedExistingGroup.value ? groupTitle(key) : key
+  if (!key || grouping.value) return
   const idsToGroup = selectedUngrouped.value.map(i => i.id)
   if (idsToGroup.length < 2) return
   grouping.value = true
   try {
-    await inventoryAPI.groupItems(idsToGroup, name)
+    await inventoryAPI.groupItems(idsToGroup, key)
     showToast('{count} itens agrupados como "{name}"', 'success', { count: idsToGroup.length, name })
     showGroupModal.value = false
     selectionMode.value = false
@@ -1103,8 +1108,26 @@ function groupLocationBadge(items: InventoryItem[]): 'deposito' | 'loja' | 'mixe
   return 'mixed'
 }
 
+const groupDisplayNames = computed(() => {
+  const names = new Map<string, string>()
+  for (const group of backendGroups.value) {
+    names.set(group.group_key, inventoryGroupName(group.group_key, group.items, tr('Grade')))
+  }
+  // A filtered or not-yet-loaded group list may omit a visible card's grade.
+  const members = new Map<string, InventoryItem[]>()
+  for (const item of inventoryStore.items) {
+    if (!item.group_key || names.has(item.group_key)) continue
+    const rows = members.get(item.group_key) || []
+    rows.push(item); members.set(item.group_key, rows)
+  }
+  for (const [key, items] of members) names.set(key, inventoryGroupName(key, items, tr('Grade')))
+  return names
+})
+function groupTitle(key: string): string {
+  return groupDisplayNames.value.get(key) || inventoryGroupName(key, [], tr('Grade'))
+}
 const existingGroupKeys = computed<string[]>(() =>
-  backendGroups.value.map(g => g.group_key).sort()
+  backendGroups.value.map(g => g.group_key).sort((a, b) => groupTitle(a).localeCompare(groupTitle(b)))
 )
 
 const existingBrands = computed<string[]>(() => {
@@ -1150,7 +1173,7 @@ function sortedByColorThenSize<T extends { size?: string | null; color?: string 
 
 function startEditGroupName(groupKey: string) {
   editingGroupKey.value = groupKey
-  editingGroupName.value = groupKey
+  editingGroupName.value = groupTitle(groupKey)
   nextTick(() => {
     const input = document.querySelector<HTMLInputElement>('.group-name-input')
     input?.focus()
@@ -1159,9 +1182,10 @@ function startEditGroupName(groupKey: string) {
 }
 
 async function saveGroupName(oldKey: string) {
+  if (editingGroupKey.value !== oldKey) return
   const newKey = editingGroupName.value.trim()
   editingGroupKey.value = null
-  if (!newKey || newKey === oldKey) return
+  if (!newKey || newKey === groupTitle(oldKey)) return
   try {
     await inventoryAPI.renameGroup(oldKey, newKey)
     showToast('Grupo renomeado para "{name}"', 'success', { name: newKey })
@@ -1172,9 +1196,10 @@ async function saveGroupName(oldKey: string) {
 }
 
 async function handleUngroup(groupKey: string) {
+  const name = groupTitle(groupKey)
   try {
     await inventoryAPI.ungroup(groupKey)
-    showToast('Grupo "{name}" desagrupado', 'success', { name: groupKey })
+    showToast('Grupo "{name}" desagrupado', 'success', { name })
     await Promise.all([reloadItems(), loadGroups()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao desagrupar', 'error')
@@ -1182,9 +1207,10 @@ async function handleUngroup(groupKey: string) {
 }
 
 async function removeItemFromGroup(itemId: string, groupKey: string) {
+  const name = groupTitle(groupKey)
   try {
     await inventoryAPI.removeFromGroup(itemId)
-    showToast('Item removido do grupo "{name}"', 'success', { name: groupKey })
+    showToast('Item removido do grupo "{name}"', 'success', { name })
     await Promise.all([reloadItems(), loadGroupsFiltered()])
   } catch (e: any) {
     showToast(e.response?.data?.detail || 'Erro ao remover do grupo', 'error')
