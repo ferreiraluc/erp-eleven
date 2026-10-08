@@ -133,11 +133,15 @@ def process_label():
 
 
 def main(stop_event):
+    from .worker_health import beat
+    beat('labels')
     while not stop_event.is_set():
         try:
             from .freight_recovery import process_recovery
             recovered=process_recovery()
-            if not process_label() and not recovered:stop_event.wait(3)
+            processed=process_label()
+            beat('labels')
+            if not processed and not recovered:stop_event.wait(3)
         except Exception:
             logger.warning('label_worker_iteration_failed')
             stop_event.wait(10)

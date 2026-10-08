@@ -19,11 +19,6 @@
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
-    <script>
-      setTimeout(() => {
-        const error = document.getElementById('loading-error');
-        if (error) error.style.display = 'block';
-      }, 15000);
-    </script>
+    <script src="/loading-fallback.js" defer></script>
   </body>
 </html>

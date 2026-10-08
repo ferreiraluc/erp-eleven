@@ -10,6 +10,7 @@ from ..models.sales_bi import SalesBIConfig, SalesBIWorkbook
 from .sales_bi_onedrive import OneDriveReader, SourceError
 from .sales_bi_parser import parse_workbook, WorkbookError, PARSER_VERSION
 from .sales_bi_schedule import next_daily_sync
+from .worker_health import beat
 
 log = logging.getLogger(__name__)
 LEASE = timedelta(minutes=30)
@@ -46,6 +47,7 @@ def sync_once(session_factory=SessionLocal, reader_factory=OneDriveReader, stop=
         return c
 
     def ingest(key, kind, filename, version, download, year=None, month=None):
+        beat('sales_bi')
         now = utcnow()
         with session_factory() as db:
             owned(db)
@@ -124,9 +126,11 @@ def sync_once(session_factory=SessionLocal, reader_factory=OneDriveReader, stop=
 
 
 def main(stop):
+    beat('sales_bi')
     while not stop.is_set():
         try:
             sync_once(stop=stop)
+            beat('sales_bi')
         except Exception:
             # Never log source URLs or raw HTTP exceptions (share links are bearer access).
             log.error('Sales BI worker could not synchronize; will retry.')

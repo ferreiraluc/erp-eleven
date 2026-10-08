@@ -8,8 +8,8 @@
     <section class="access-card"><h2>{{ $t('access.changePassword') }}</h2><p>{{ $t('access.passwordHelp') }}</p>
       <form @submit.prevent="submit"><div class="password-fields">
         <label>{{ $t('access.currentPassword') }}<input v-model="current" type="password" autocomplete="current-password" required /></label>
-        <label>{{ $t('access.newPassword') }}<input v-model="password" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
-        <label>{{ $t('access.confirmPassword') }}<input v-model="confirm" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
+        <label>{{ $t('access.newPassword') }}<input v-model="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required /></label>
+        <label>{{ $t('access.confirmPassword') }}<input v-model="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="72" required /></label>
       </div><div class="actions"><button class="primary erp-button erp-button--primary" :disabled="saving">{{ saving ? $t('common.loading') : $t('access.savePassword') }}</button></div></form>
     </section>
     <p class="muted">{{ $t('access.activityNotice') }}</p>
@@ -38,7 +38,7 @@ async function submit() {
     // Only a still-owned account route should navigate after confirmation.
     if (router.currentRoute.value.path === '/conta' && auth.isAuthenticated && auth.token === session.access_token) await router.replace('/dashboard')
   }
-  catch(e) { if (active && !isAuthOperationSuperseded(e)) error.value = axios.isAxiosError(e) && e.response?.status === 400 ? t('access.passwordRejected') : t('access.connectionError') }
+  catch(e) { if (active && !isAuthOperationSuperseded(e)) error.value = axios.isAxiosError(e) && [400, 422].includes(e.response?.status ?? 0) ? t('access.passwordRejected') : t('access.connectionError') }
   finally { if (active) { saving.value = false; current.value=''; password.value=''; confirm.value='' } }
 }
 </script>

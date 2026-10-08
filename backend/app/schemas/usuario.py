@@ -11,12 +11,12 @@ class UsuarioBase(BaseModel):
     ativo: Optional[bool] = True
 
 class UsuarioCreate(UsuarioBase):
-    senha: str = Field(..., min_length=6, max_length=100, description="Senha do usuário (mínimo 6 caracteres)")
+    senha: str = Field(..., min_length=12, max_length=100, description="Senha do usuário (mínimo 12 caracteres)")
     
     @validator('senha')
     def validate_password(cls, v):
-        if len(v) < 6:
-            raise ValueError('Senha deve ter pelo menos 6 caracteres')
+        if len(v) < 12:
+            raise ValueError('Senha deve ter pelo menos 12 caracteres')
         return v
 
 class UsuarioUpdate(BaseModel):

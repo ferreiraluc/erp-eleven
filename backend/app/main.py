@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 import time
-import traceback
 import logging
 import sys
 import threading
@@ -28,20 +27,14 @@ setup_logging(level=log_level)
 logger = get_logger(__name__)
 
 def _job_atualizar_rastreamentos():
-    """Scheduled job: update all active (non-delivered) trackings via Wonca API."""
-    from .services.tracking_refresh import refresh_active
-    from .database import SessionLocal
-    with SessionLocal() as db:
-        try:
-            result = refresh_active(db)
-            db.commit()
-            logger.info('[SCHEDULER] Atualização diária: %s atualizados, %s erros, %s alterados durante consulta',
-                        result['updated'], len(result['errors']), len(result['skipped']))
-            if result['errors']:
-                logger.warning('[SCHEDULER] Erros: %s', result['errors'])
-        except Exception:
-            db.rollback()
-            logger.exception('[SCHEDULER] Falha na atualização diária')
+    from .services.scheduled_tracking import run_daily
+    try:
+        result = run_daily()
+        if result is not None:
+            logger.info('[SCHEDULER] tracking updated=%d errors=%d skipped=%d',
+                        result['updated'],len(result['errors']),len(result['skipped']))
+    except Exception as exc:
+        logger.error('[SCHEDULER] tracking failed type=%s',type(exc).__name__)
 
 
 scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
@@ -50,6 +43,7 @@ scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
+    settings.validate_runtime()
     logger.info("=" * 60)
     logger.info("[STARTUP] Starting ERP Eleven API")
     logger.info(f"[STARTUP] Python {sys.version}")
@@ -76,9 +70,10 @@ async def lifespan(app: FastAPI):
         alembic_cfg = AlembicConfig(os.path.join(backend_dir, "alembic.ini"))
         alembic_cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
         alembic_command.upgrade(alembic_cfg, "head")
+        setup_logging(level=log_level)
         logger.info("[DB] Alembic migrations applied successfully")
     except Exception as e:
-        logger.error(f"[DB_ERROR] Alembic migration failed: {e}")
+        logger.error("[DB_ERROR] Migration failed type=%s", type(e).__name__)
         raise RuntimeError('A migração do banco falhou; a API não iniciará com esquema incompleto.') from e
 
     # Start daily tracking update scheduler (19:00 BRT)
@@ -87,6 +82,7 @@ async def lifespan(app: FastAPI):
         CronTrigger(hour=19, minute=0, timezone="America/Sao_Paulo"),
         id="atualizar_rastreamentos_diario",
         replace_existing=True,
+        max_instances=1, coalesce=True, misfire_grace_time=3600,
     )
     scheduler.start()
     logger.info("[SCHEDULER] Job de atualização diária de rastreamentos agendado (19:00 BRT)")
@@ -201,38 +197,21 @@ async def security_headers_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all HTTP requests with timing, status and query params."""
-    start_time = time.time()
-    qs = f"?{request.url.query}" if request.url.query else ""
-    route = f"{request.method} {request.url.path}{qs}"
-
-    # Skip noisy health-check logging at INFO
-    is_health = request.url.path == "/health"
-
-    if not is_health:
-        logger.info(f"[REQ] {route}")
-
+    import uuid
+    request_id = str(uuid.uuid4())
+    request.state.request_id = request_id
+    start_time = time.monotonic()
     try:
         response = await call_next(request)
     except Exception as exc:
-        elapsed = time.time() - start_time
-        logger.critical(
-            f"[CRASH] {route} — unhandled exception after {elapsed:.3f}s: {exc}\n"
-            f"{traceback.format_exc()}"
-        )
+        logger.error('[CRASH] request_id=%s type=%s',request_id,type(exc).__name__)
         response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
-
-    # Audit captures committed mutations and authentication events, not HTTP reads/requests.
-    elapsed = time.time() - start_time
-    status = response.status_code
-
-    if status >= 500:
-        logger.error(f"[RES] {status} {route} ({elapsed:.3f}s)")
-    elif status >= 400:
-        logger.warning(f"[RES] {status} {route} ({elapsed:.3f}s)")
-    elif not is_health:
-        logger.info(f"[RES] {status} {route} ({elapsed:.3f}s)")
-
+    route = getattr(request.scope.get('route'),'path','unmatched')
+    response.headers['X-Request-ID'] = request_id
+    if route not in ('/health','/live'):
+        logger.log(logging.ERROR if response.status_code>=500 else logging.INFO,
+                   '[HTTP] request_id=%s method=%s route=%s status=%d duration_ms=%.1f',
+                   request_id,request.method,route,response.status_code,(time.monotonic()-start_time)*1000)
     return response
 
 @app.exception_handler(RequestValidationError)
@@ -245,36 +224,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Global HTTP exception handler"""
-    qs = f"?{request.url.query}" if request.url.query else ""
-    if exc.status_code >= 500:
-        logger.error(
-            f"[HTTP_ERROR] {exc.status_code}: {exc.detail} — "
-            f"{request.method} {request.url.path}{qs}\n{traceback.format_exc()}"
-        )
-    else:
-        logger.warning(
-            f"[HTTP_WARN] {exc.status_code}: {exc.detail} — "
-            f"{request.method} {request.url.path}{qs}"
-        )
-    return JSONResponse(
-        status_code=exc.status_code,
-        headers=exc.headers,
-        content={"detail": exc.detail, "status_code": exc.status_code}
-    )
+    return JSONResponse(status_code=exc.status_code,headers=exc.headers,
+                        content={"detail": exc.detail, "status_code": exc.status_code})
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Global exception handler — logs full traceback so crashes are diagnosable."""
-    qs = f"?{request.url.query}" if request.url.query else ""
-    logger.critical(
-        f"[UNHANDLED] {type(exc).__name__}: {exc} — "
-        f"{request.method} {request.url.path}{qs}\n{traceback.format_exc()}"
-    )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error", "status_code": 500}
-    )
+    logger.error('[UNHANDLED] request_id=%s type=%s',getattr(request.state,'request_id','unknown'),type(exc).__name__)
+    return JSONResponse(status_code=500,content={"detail":"Internal server error","status_code":500})
 
 @app.get("/", tags=["root"])
 async def root():
@@ -287,31 +243,28 @@ async def root():
         "docs": "/docs"
     }
 
+@app.get('/live', tags=['health'])
+def liveness():
+    return {'api':'online'}
+
 @app.get("/health", tags=["health"])
-async def health_check():
-    """Health check endpoint — reports API and database status."""
-    from .database import SessionLocal
-    from sqlalchemy import text as sql_text
-
-    db_status = "offline"
+def health_check():
+    """Bounded DB readiness and actual worker progress, outside the async event loop."""
+    from sqlalchemy import text
+    from .services.worker_health import state
+    database = 'offline'
     try:
-        db = SessionLocal()
-        db.execute(sql_text("SELECT 1"))
-        db.close()
-        db_status = "online"
-    except Exception as e:
-        logger.warning(f"[HEALTH] Database check failed: {e}")
-
-    worker_status = "disabled"
-    if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER:
-        worker = getattr(app.state, "assistant_worker", None)
-        worker_status = "online" if worker and worker.is_alive() else "offline"
-        if worker_status == "offline":
-            return JSONResponse(status_code=503, content={"api": "online", "database": db_status, "assistant_worker": worker_status})
-    return {
-        "api": "online",
-        "database": db_status,
-        "assistant_worker": worker_status,
-        "label_worker": "online" if getattr(app.state, "label_worker", None) and app.state.label_worker.is_alive() else "offline",
-        "timestamp": time.time(),
-    }
+        with SessionLocal() as db:
+            if db.bind.dialect.name == 'postgresql':
+                db.execute(text("SET LOCAL statement_timeout = '2000ms'"))
+            db.execute(text('SELECT 1'))
+            database = 'online'
+    except Exception as exc:
+        logger.warning('[HEALTH] database unavailable type=%s',type(exc).__name__)
+    assistant = state('assistant',getattr(app.state,'assistant_worker',None)) if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER else 'disabled'
+    labels = state('labels',getattr(app.state,'label_worker',None))
+    sales_bi = state('sales_bi',getattr(app.state,'sales_bi_worker',None))
+    healthy = database=='online' and assistant in ('disabled','online') and labels=='online' and sales_bi=='online'
+    return JSONResponse(status_code=200 if healthy else 503,headers={'Cache-Control':'no-store'},content={
+        'api':'online','database':database,'assistant_worker':assistant,'label_worker':labels,
+        'sales_bi_worker':sales_bi,'timestamp':time.time()})

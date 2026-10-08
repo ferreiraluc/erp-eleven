@@ -41,21 +41,25 @@ def test_missing_account_still_checks_a_hash_and_returns_same_error(setup, monke
     assert missing.json() == wrong.json()
 
 
-def test_rotating_ips_and_emails_do_not_reset_limits(monkeypatch):
-    auth._attempts.clear()
-    monkeypatch.setattr(auth.time, 'monotonic', lambda: 1000)
-    try:
-        for i in range(30): auth.login_limit('lucas@eleven.com', str(i))
+def test_rotating_ips_and_emails_do_not_reset_limits(setup):
+    from datetime import timedelta
+    from app.models.access import now
+    from app.models.operations import LoginThrottle
+    from app.services.login_throttle import login_limit
+    _,factory,_ = setup
+    at=now()
+    with factory() as db:
+        for i in range(30): login_limit(db,'lucas@eleven.com',str(i),at=at)
         with pytest.raises(HTTPException) as blocked:
-            auth.login_limit('LUCAS@eleven.com', 'another')
-        assert blocked.value.status_code == 429 and blocked.value.headers['Retry-After'] == '600'
-        auth._attempts.clear()
-        for i in range(60): auth.login_limit(f'user{i}@eleven.com', 'one-ip')
-        with pytest.raises(HTTPException): auth.login_limit('another@eleven.com', 'one-ip')
-        monkeypatch.setattr(auth.time, 'monotonic', lambda: 1601)
-        auth.login_limit('another@eleven.com', 'one-ip')
-    finally:
-        auth._attempts.clear()
+            login_limit(db,'LUCAS@eleven.com','another',at=at)
+        assert blocked.value.status_code==429 and blocked.value.headers['Retry-After']=='600'
+        db.query(LoginThrottle).delete();db.commit()
+        for i in range(60):login_limit(db,f'user{i}@eleven.com','one-ip',at=at)
+    # A different session/process sees the same counter, including failed requests.
+    with factory() as db:
+        with pytest.raises(HTTPException):login_limit(db,'another@eleven.com','one-ip',at=at)
+        login_limit(db,'another@eleven.com','one-ip',at=at+timedelta(seconds=601))
+        assert all('@' not in r.bucket and len(r.bucket)==64 for r in db.query(LoginThrottle))
 
 
 def test_password_length_is_bounded_without_truncating():

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+import jwt
 import bcrypt
 from ..config import settings
 from ..models.access import AuthSession, now
@@ -18,8 +18,10 @@ def verify_password(plain, hashed):
 
 
 def get_password_hash(password):
-    if not 6 <= len(password) or not password.strip() or len(password.encode('utf-8')) > 72:
-        raise ValueError('Use no mínimo 6 caracteres e no máximo 72 bytes.')
+    if not 12 <= len(password) or not password.strip() or len(password.encode('utf-8')) > 72:
+        raise ValueError('Use no mínimo 12 caracteres e no máximo 72 bytes.')
+    if len(set(password)) < 4 or password.lower() in ('123456789012','abcdefghijkl','password1234'):
+        raise ValueError('Escolha uma senha menos previsível, de preferência uma frase.')
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
@@ -29,7 +31,7 @@ def issue_session(db, user):
     session = AuthSession(id=uuid.uuid4(), user_id=user.id, expires_at=expires)
     db.add(session)
     token = jwt.encode({'sub': str(user.id), 'sid': str(session.id), 'ver': user.auth_version,
-                        'exp': expires, 'iat': now()}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+                        'exp': expires, 'iat': now()}, settings.SECRET_KEY, algorithm='HS256')
     return {'access_token': token, 'token_type': 'bearer', 'expires_in': int((expires-now()).total_seconds())}
 
 

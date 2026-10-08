@@ -2,7 +2,7 @@ import uuid
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from jose import JWTError, jwt
+import jwt
 from .database import get_db
 from .models.usuario import Usuario
 from .models.access import AuthSession, now
@@ -23,10 +23,11 @@ async def get_current_user(
     if not credentials:
         raise invalid
     try:
-        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=['HS256'],
+                             options={'require': ['exp', 'iat', 'sub', 'sid', 'ver']})
         user_id, session_id = uuid.UUID(payload['sub']), uuid.UUID(payload['sid'])
         version = payload['ver']
-    except (JWTError, ValueError, KeyError, TypeError):
+    except (jwt.InvalidTokenError, ValueError, KeyError, TypeError):
         raise invalid from None
     user = db.get(Usuario, user_id)
     session = db.get(AuthSession, session_id)
@@ -36,7 +37,7 @@ async def get_current_user(
     if user.role.value == 'ADMIN' and not is_owner(user):
         raise invalid
     route = getattr(request.scope.get('route'), 'path', request.url.path)
-    request.state.audit_actor = bind_actor(db, user, request_id=str(uuid.uuid4()), route=route, method=request.method)
+    request.state.audit_actor = bind_actor(db, user, request_id=getattr(request.state,'request_id',str(uuid.uuid4())), route=route, method=request.method)
     request.state.auth_session_id = session.id
     if user.must_change_password and request.url.path not in ('/api/auth/me', '/api/auth/password', '/api/auth/logout'):
         raise HTTPException(403, 'PASSWORD_CHANGE_REQUIRED')

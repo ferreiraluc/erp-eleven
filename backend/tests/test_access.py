@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jose import jwt
+import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -17,6 +17,7 @@ from app.config import settings
 from app.models import Usuario, Vendedor, Cliente, Venda, PdvSale, PdvSaleItem, PdvPayment, PdvCliente, Pedido
 from app.models.usuario import UsuarioRole
 from app.models.venda import MoedaTipo, PagamentoMetodo
+from app.models.operations import LoginThrottle
 from app.models.access import AuthSession, AuditEvent, ActivitySpan, now
 from app.models.sales_bi import SalesBIConfig, SalesBIWorkbook
 from app.api.endpoints import auth, user_admin, vendas, pdv, sales_bi, dashboard
@@ -30,7 +31,7 @@ from test_sales_bi import row
 def setup(monkeypatch):
     engine = create_engine('sqlite://', connect_args={'check_same_thread':False}, poolclass=StaticPool)
     models = (Usuario,Vendedor,Cliente,Venda,PdvSale,PdvSaleItem,PdvPayment,PdvCliente,Pedido,
-              AuthSession,AuditEvent,ActivitySpan,SalesBIWorkbook,SalesBIConfig)
+              AuthSession,AuditEvent,ActivitySpan,SalesBIWorkbook,SalesBIConfig,LoginThrottle)
     Base.metadata.create_all(engine, tables=[m.__table__ for m in models])
     factory = sessionmaker(bind=engine, autoflush=False, info={'audit_enabled':True})
     app = FastAPI()
@@ -39,7 +40,6 @@ def setup(monkeypatch):
     def db():
         with factory() as session: yield session
     app.dependency_overrides[get_db] = db
-    auth._attempts.clear()
     password_hash = get_password_hash('test-initial')
     ids = {}
     with factory() as session:
@@ -104,7 +104,7 @@ def test_admin_audit_and_accounts_are_exclusive_to_lucas(setup,name):
     client,factory,ids=setup;headers=login(client,name)
     for path in ['/api/access/audit','/api/access/users']:
         assert client.get(path,headers=headers).status_code==403
-    assert client.post('/api/access/users/'+str(ids['Lucas'][0])+'/reset-password',headers=headers,json={'password':'other-pass'}).status_code==403
+    assert client.post('/api/access/users/'+str(ids['Lucas'][0])+'/reset-password',headers=headers,json={'password':'other-password-long'}).status_code==403
     with factory() as db:
         db.get(Usuario,ids[name][0]).role=UsuarioRole.ADMIN;db.commit()
     assert client.get('/api/access/audit',headers=headers).status_code==401

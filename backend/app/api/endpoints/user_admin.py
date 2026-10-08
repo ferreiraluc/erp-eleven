@@ -40,7 +40,7 @@ def validate_binding(body: UserAccess, db: Session):
 
 class CreateUser(UserAccess):
     email: EmailStr
-    password: str = Field(min_length=6, max_length=72)
+    password: str = Field(min_length=12, max_length=72)
 
 
 @router.post('/users', response_model=UsuarioResponse, status_code=201)
@@ -81,7 +81,7 @@ def update_user(user_id: uuid.UUID, body: UserAccess, owner=Depends(require_owne
 
 
 class ResetPassword(BaseModel):
-    password: str = Field(min_length=6, max_length=72)
+    password: str = Field(min_length=12, max_length=72)
 
 
 @router.post('/users/{user_id}/reset-password')
