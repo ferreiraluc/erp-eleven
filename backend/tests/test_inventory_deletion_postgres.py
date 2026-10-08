@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from test_access_postgres import pg
 from app.database import Base
-from app.models import Usuario, Vendedor
+from app.models import Usuario, Vendedor, Cliente
 from app.models.usuario import UsuarioRole
 from app.models.inventory import Item, Supplier, StockMovement, InventorySession, InventorySessionItem
 from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem
@@ -19,7 +19,7 @@ def test_deletion_rolls_back_and_serializes_with_concurrent_sale_reference(pg):
     engine, schema = pg
     isolated = sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
     try:
-        Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Item,Supplier,StockMovement,
+        Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Item,Supplier,StockMovement,
             InventorySession,InventorySessionItem,PdvCliente,PdvSale,PdvSaleItem,AuditEvent)])
         factory = sessionmaker(bind=isolated,autoflush=False)
         with factory() as db:

@@ -9,6 +9,7 @@ from ..models.cliente import Cliente
 from ..models.pedido import Pedido
 from ..models.rastreamento import Rastreamento
 from ..models.address_book import SavedAddress
+from ..models.pdv import PdvCliente
 from .address_book import lock_addresses
 from .customer_identity import name_key, phone_key, document_key
 from .user_audit import record
@@ -38,7 +39,7 @@ def merge_customers(db, target_id, source_id, *, apply=False, expected_plan=None
     if db.bind.dialect.name == 'postgresql':
         # Short maintenance transaction. Readers continue; parallel writes cannot
         # change the reviewed relationships while the pair is consolidated.
-        db.execute(text('LOCK TABLE clientes, pedidos, rastreamentos, saved_addresses IN SHARE ROW EXCLUSIVE MODE'))
+        db.execute(text('LOCK TABLE clientes, pedidos, rastreamentos, saved_addresses, pdv_clientes IN SHARE ROW EXCLUSIVE MODE'))
     pair = db.query(Cliente).filter(Cliente.id.in_([target_id, source_id])).order_by(Cliente.id).with_for_update().populate_existing().all()
     by_id = {row.id: row for row in pair}
     target, source = by_id.get(target_id), by_id.get(source_id)
@@ -71,13 +72,16 @@ def merge_customers(db, target_id, source_id, *, apply=False, expected_plan=None
         if parent and parent.cliente_id and parent.cliente_id not in by_id:
             raise HTTPException(409, 'Um rastreio pertence a pedido de outro cliente fora do par.')
     addresses = db.query(SavedAddress).filter(SavedAddress.cliente_id.in_([target.id, source.id])).order_by(SavedAddress.id).with_for_update().all()
+    pdv_customers = db.query(PdvCliente).filter(PdvCliente.cadastro_cliente_id.in_([target.id, source.id])).order_by(PdvCliente.id).with_for_update().all()
     token = hashlib.sha256(json.dumps({'customers': [_snapshot(r) for r in pair],
         'orders': [_snapshot(r) for r in orders], 'shipments': [_snapshot(r) for r in shipments],
-        'addresses': [_snapshot(r) for r in addresses]}, sort_keys=True).encode()).hexdigest()
+        'addresses': [_snapshot(r) for r in addresses], 'pdv_customers': [_snapshot(r) for r in pdv_customers]}, sort_keys=True).encode()).hexdigest()
     added = [field for field in ('telefone', 'email', 'cpf', 'endereco') if not getattr(target, field) and getattr(source, field)]
     moved = {'orders': sum(r.cliente_id == source.id for r in orders),
              'tracking': sum(r.cliente_id != target.id for r in shipments),
              'addresses': sum(r.cliente_id == source.id for r in addresses)}
+    if pdv_customers:
+        moved['pdv_customers'] = sum(r.cadastro_cliente_id == source.id for r in pdv_customers)
     result = {'state': 'review_conflicts' if conflicts and not reviewed_conflicts else 'ready',
         'target_id': str(target.id), 'source_id': str(source.id), 'plan_token': token,
         'conflicting_fields': conflicts, 'fields_added': added, 'links_to_move': moved,
@@ -102,6 +106,10 @@ def merge_customers(db, target_id, source_id, *, apply=False, expected_plan=None
         if row.cliente_id != target.id:
             row.cliente_id = target.id
             row.version += 1
+    # Preserve distinct PDV accounts, sale snapshots and fiado balances. A
+    # directory consolidation only moves their explicit directory link.
+    for row in pdv_customers:
+        row.cadastro_cliente_id = target.id
     target.ativo = bool(target.ativo or source.ativo)
     source.ativo = False
     source.merged_into_id = target.id

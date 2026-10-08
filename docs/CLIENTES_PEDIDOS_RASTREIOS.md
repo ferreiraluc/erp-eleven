@@ -35,7 +35,10 @@ não cria cliente nem trabalho na fila.
 Clientes existentes não são fundidos automaticamente. Vínculos explícitos têm prioridade; documentos,
 contatos e nomes existentes não são substituídos. Ao editar um endereço, selecionar
 expressamente o cliente confirma a revisão (`customer_link_confirmed`); salvar apenas
-uma alteração de rua não apaga o aviso. Cadastros PDV explícitos continuam separados.
+uma alteração de rua não apaga o aviso. Cadastros PDV conservam sua identidade
+financeira, mas podem ser associados ao diretório por `cadastro_cliente_id` ao
+selecionar um cliente na nova venda (ver [Vendas PDV](VENDAS_PDV.md)). A consolidação
+move esse vínculo sem unir saldos ou alterar snapshots de vendas anteriores.
 O servidor valida a consistência cliente/pedido/pacote, inclusive fora da interface.
 
 ## Estado dos pedidos

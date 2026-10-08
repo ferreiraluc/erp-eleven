@@ -12,7 +12,8 @@ from sqlalchemy.pool import StaticPool
 from app.api.endpoints import pdv
 from app.database import Base, get_db
 from app.dependencies import get_current_active_user
-from app.models import Usuario, Vendedor, Cambista
+from app.models import Usuario, Vendedor, Cambista, Cliente
+from app.models.address_book import SavedAddress
 from app.models.usuario import UsuarioRole
 from app.models.access import AuditEvent
 from app.models.inventory import Item, Supplier, StockMovement
@@ -21,7 +22,7 @@ from app.schemas.pdv import PdvSaleItemCreate
 
 
 BALANCES = ("current_stock", "stock_loja", "stock_deposito")
-TABLES = (Usuario, Vendedor, Cambista, Supplier, Item, StockMovement,
+TABLES = (Usuario, Vendedor, Cambista, Cliente, SavedAddress, Supplier, Item, StockMovement,
           PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement, PdvSaleEvent, AuditEvent)
 
 

@@ -121,17 +121,15 @@
         <div class="pdv-cart-header">
           <span class="pdv-cart-title">{{ $tr("Carrinho") }}</span>
           <span class="pdv-cart-count">{{ pdv.cartCount }} {{ $tr("item") }}{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
-          <button v-if="pdv.cart.length" class="pdv-cart-clear erp-button erp-button--danger" @click="confirmClear">🗑</button>
+          <button v-if="pdv.cart.length" class="pdv-cart-clear erp-button erp-button--danger" :disabled="customerBusy" @click="confirmClear">🗑</button>
         </div>
 
         <!-- Scrollable body -->
         <div class="pdv-cart-scroll">
 
           <!-- Client -->
-          <div class="pdv-client-row">
-            <input v-model="clienteNomeInput" type="text" :placeholder='$tr("Cliente (opcional)")'
-              class="pdv-client-input" @input="pdv.clienteNome = clienteNomeInput" />
-          </div>
+          <PDVCustomerPicker v-model:customer-id="pdv.clienteId" v-model:customer-name="pdv.clienteNome"
+            :disabled="pdv.loading || pdv.checkoutUncertain" @busy="customerBusy = $event" />
 
           <p v-if="pdv.cart.some(item => !item.is_avulso)" class="pdv-stock-note">{{ cartText('snapshot') }}</p>
           <p v-if="pdv.checkoutUncertain" role="alert" class="pdv-checkout-error">{{ cartText('uncertain') }}</p>
@@ -294,7 +292,7 @@
 
     <!-- Modals -->
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
-    <PDVAvulsoModal v-if="showAvulso" :scanned-code="avulsoCode" @add="onAvulsoAdd" @close="showAvulso = false" />
+    <PDVAvulsoModal v-if="showAvulso" :scanned-code="avulsoCode" :rates="{ PYG: 1, USD: rateUsd, BRL: rateBrl, EUR: rateEur }" @add="onAvulsoAdd" @close="showAvulso = false" />
     <PDVReceiptModal v-if="showReceipt && pdv.lastSale" :sale="pdv.lastSale" @close="showReceipt = false" />
 
     <!-- Exchange Rate Modal (same as dashboard) -->
@@ -357,6 +355,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr: inventoryText } = useInventoryI18n()
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
+import PDVCustomerPicker from '@/components/pdv/PDVCustomerPicker.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
 import type { CartItem, CartPayment } from '@/stores/pdv'
 import { type StockLocation } from '@/services/pdvCart'
@@ -386,7 +385,7 @@ const showAvulso = ref(false)
 const showReceipt = ref(false)
 const avulsoCode = ref<string | null>(null)
 const searchInput = ref<HTMLInputElement>()
-const clienteNomeInput = ref('')
+const customerBusy = ref(false)
 
 // ── Exchange rates (from shared currency store) ───────────────────────────────
 // G$ per 1 USD
@@ -512,7 +511,7 @@ const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
 const remainingInCurrency = computed(() =>
   newCurrency.value === 'GS' ? payRemaining.value : payRemaining.value / (newRate.value || 1)
 )
-const canConfirmPayment = computed(() => payTotalPaid.value >= pdv.total && localPayments.value.length > 0)
+const canConfirmPayment = computed(() => !customerBusy.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0)
 
 function fillTotal() {
   newAmount.value = Math.ceil(remainingInCurrency.value * 100) / 100
@@ -800,9 +799,6 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 /* Scrollable body */
 .pdv-cart-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
 
-.pdv-client-row { padding: 0.5rem 0.875rem; border-bottom: 1px solid #f3f4f6; flex-shrink: 0; }
-.pdv-client-input { width: 100%; box-sizing: border-box; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem 0.6rem; font-size: 0.8rem; outline: none; color: #374151; }
-.pdv-client-input:focus { border-color: #f97316; }
 
 .pdv-cart-items { }
 .pdv-cart-item { display: flex; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; align-items: flex-start; }

@@ -9,7 +9,7 @@ import uuid
 from ...database import get_db
 from ...dependencies import get_current_active_user, require_owner
 from ...schemas.pdv_management import SaleCommand, SaleCommit
-from ...services import pdv_management
+from ...services import pdv_management, pdv_customers
 from ...models.usuario import Usuario
 from ...models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
 from ...models.inventory import Item
@@ -18,6 +18,7 @@ from ...schemas.pdv import (
     PdvSaleCreate, PdvSaleResponse, PdvSaleListItem,
     PdvFiadoPaymentCreate, PdvFiadoMovementResponse,
     validate_pdv_quantity,
+    PdvCustomerSearch, PdvCustomerSelection,
 )
 
 from ...services.access_policy import sales_query, require_sale_owner, own_sales, require_all_sales
@@ -162,6 +163,7 @@ def create_sale(
         raise HTTPException(status_code=400, detail="A venda deve ter pelo menos 1 item")
 
     stock_items = _lock_sale_stock(db, body.items)
+    customer = pdv_customers.select(db, PdvCustomerSelection(source='pdv', id=body.cliente_id), current_user) if body.cliente_id else None
 
     # Compute totals
     subtotal = sum(
@@ -175,7 +177,7 @@ def create_sale(
         id=uuid.uuid4(),
         vendedor_id=body.vendedor_id or current_user.id,
         cliente_id=body.cliente_id,
-        cliente_nome=body.cliente_nome,
+        cliente_nome=customer.nome if customer else body.cliente_nome,
         subtotal_gs=Decimal(str(round(subtotal, 2))),
         desconto_gs=Decimal(str(round(desconto, 2))),
         total_gs=Decimal(str(round(total, 2))),
@@ -303,6 +305,26 @@ def cancel_sale(
 
 
 # ── PDV Clientes / Fiado ──────────────────────────────────────────────────────
+
+@router.get('/clients/search', response_model=PdvCustomerSearch)
+def search_customers(
+    q: str = Query('', max_length=120),
+    limit: int = Query(20, ge=1, le=30),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    return pdv_customers.search(db, q, limit)
+
+
+@router.post('/clients/select', response_model=PdvClienteResponse)
+def select_customer(
+    body: PdvCustomerSelection,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    customer = pdv_customers.select(db, body, current_user)
+    db.commit()
+    return _client_response(customer, current_user)
 
 @router.get("/clients", response_model=List[PdvClienteResponse])
 def list_clients(

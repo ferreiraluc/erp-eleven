@@ -1,10 +1,10 @@
 <template>
   <div class="avulso-overlay" @click.self="$emit('close')">
-    <div class="avulso-modal">
+    <div class="avulso-modal" role="dialog" aria-modal="true" aria-labelledby="avulso-title">
       <div class="avulso-header">
         <div class="avulso-icon">⚠</div>
         <div>
-          <h3>{{ uiText(`Produto não encontrado`) }}</h3>
+          <h3 id="avulso-title">{{ uiText(`Produto não encontrado`) }}</h3>
           <p>{{ uiText(`Adicione manualmente ao carrinho`) }}</p>
         </div>
         <button class="avulso-close erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">×</button>
@@ -26,14 +26,26 @@
           />
         </div>
 
+        <div class="avulso-field">
+          <label for="avulso-currency">{{ text('currency') }}</label>
+          <select id="avulso-currency" v-model="form.currency" class="avulso-input">
+            <option value="PYG">🇵🇾 G$</option>
+            <option value="BRL">🇧🇷 R$</option>
+            <option value="USD">🇺🇸 U$</option>
+            <option value="EUR">🇪🇺 EUR (€)</option>
+          </select>
+        </div>
         <div class="avulso-row">
           <div class="avulso-field">
-            <label>{{ uiText(`Preço unitário (G$) *`) }}</label>
+            <label for="avulso-price">{{ text('price') }} ({{ currencySymbol }}) *</label>
             <input
+              id="avulso-price"
               ref="priceInput"
-              v-model.number="form.unit_price_gs"
+              v-model.number="form.price"
               type="number"
               min="0"
+              :step="form.currency === 'PYG' ? 1 : 0.01"
+              inputmode="decimal"
               placeholder="0"
               class="avulso-input"
               @keydown.enter="focusQty"
@@ -54,6 +66,12 @@
           </div>
         </div>
 
+        <div v-if="validRate && form.currency !== 'PYG'" class="avulso-conversion" aria-live="polite">
+          <strong>{{ text('conversion') }}: G$ {{ formatNumber(priceGs) }}</strong>
+          <small>{{ text('rate') }}: 1 {{ currencySymbol }} = G$ {{ formatNumber(rate) }}</small>
+        </div>
+        <div v-if="!validRate" class="avulso-error" role="alert">{{ text('invalidRate') }}</div>
+
         <div v-if="error" class="avulso-error">{{ error }}</div>
         <div v-if="quantityError" class="avulso-error" role="alert">{{ cartErrorText(quantityError) }}</div>
       </div>
@@ -67,15 +85,19 @@
 </template>
 
 <script setup lang="ts">
-import { uiText } from '@/i18n/uiText'
+import { uiText, uiLocale } from '@/i18n/uiText'
+import { usePdvEntryText } from './entryMessages'
 import { validateQuantity } from '@/services/pdvCart'
 import { usePdvCartText } from './cartMessages'
 const { cartErrorText } = usePdvCartText()
 import { ref, computed, nextTick, onMounted } from 'vue'
 
-defineProps<{
+type ItemCurrency = 'PYG' | 'BRL' | 'USD' | 'EUR'
+const props = withDefaults(defineProps<{
   scannedCode?: string | null
-}>()
+  rates?: Record<ItemCurrency, number>
+}>(), { rates: () => ({ PYG: 1, BRL: 0, USD: 0, EUR: 0 }) })
+const text = usePdvEntryText()
 
 const emit = defineEmits<{
   (e: 'add', item: {
@@ -104,14 +126,21 @@ const qtyInput = ref<HTMLInputElement>()
 
 const form = ref({
   item_name: '',
-  unit_price_gs: 0,
+  price: 0,
+  currency: 'PYG' as ItemCurrency,
   quantity: 1,
 })
 const error = ref('')
 const quantityError = ref<unknown>(null)
+const rate = computed(() => form.value.currency === 'PYG' ? 1 : props.rates[form.value.currency])
+const validRate = computed(() => Number.isFinite(rate.value) && rate.value > 0)
+const priceGs = computed(() => Math.round(form.value.price * rate.value))
+const currencySymbol = computed(() => ({ PYG: 'G$', BRL: 'R$', USD: 'U$', EUR: 'EUR' }[form.value.currency]))
+const formatNumber = (value: number) => Number.isFinite(value) ? value.toLocaleString(uiLocale(), { maximumFractionDigits: 2 }) : '—'
 
 const canSubmit = computed(() =>
-  form.value.item_name.trim().length >= 2 && form.value.unit_price_gs > 0
+  form.value.item_name.trim().length >= 2 && Number.isFinite(form.value.price) && form.value.price > 0 &&
+  validRate.value && Number.isFinite(priceGs.value) && priceGs.value > 0
 )
 
 onMounted(() => nextTick(() => nameInput.value?.focus()))
@@ -121,7 +150,8 @@ function focusQty() { qtyInput.value?.focus() }
 
 function submit() {
   if (!form.value.item_name.trim()) { error.value = uiText(`Informe a descrição`); return }
-  if (form.value.unit_price_gs <= 0) { error.value = uiText(`Informe o preço`); return }
+  if (!validRate.value) { error.value = text('invalidRate'); return }
+  if (!canSubmit.value) { error.value = uiText(`Informe o preço`); return }
   quantityError.value = null
   try { validateQuantity(form.value.quantity, false) } catch (error) { quantityError.value = error; return }
   error.value = ''
@@ -133,10 +163,10 @@ function submit() {
     item_size: null,
     item_color: null,
     quantity: form.value.quantity,
-    unit_price_gs: form.value.unit_price_gs,
+    unit_price_gs: priceGs.value,
     original_price_gs: null,
-    original_price: form.value.unit_price_gs,
-    sale_currency: 'PYG',
+    original_price: form.value.price,
+    sale_currency: form.value.currency,
     image_data: null,
     discount_gs: 0,
     is_avulso: true,
@@ -155,6 +185,7 @@ function submit() {
 .avulso-modal {
   background: white; border-radius: 1rem;
   width: 100%; max-width: 420px;
+  max-height: calc(100dvh - 2rem); overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
 .avulso-header {
@@ -175,15 +206,18 @@ function submit() {
   border-radius: 0.5rem; padding: 0.5rem 0.75rem;
   font-size: 0.8rem; color: #166534; margin-bottom: 1rem;
 }
-.avulso-field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+.avulso-field { display: flex; flex-direction: column; min-width: 0; gap: 0.3rem; margin-bottom: 0.75rem; }
 .avulso-field label { font-size: 0.78rem; font-weight: 600; color: #374151; }
-.avulso-row { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; }
+.avulso-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 0.75rem; }
 .avulso-field-sm { min-width: 80px; }
 .avulso-input {
+  width: 100%; min-width: 0; box-sizing: border-box;
   border: 1.5px solid #e5e7eb; border-radius: 0.5rem;
   padding: 0.6rem 0.75rem; font-size: 0.95rem;
   outline: none; transition: border-color 0.15s;
 }
+.avulso-conversion { display: flex; flex-direction: column; gap: .25rem; padding: .6rem .75rem; border-radius: .5rem; background: #eff6ff; color: #1e40af; font-size: .8rem; margin-bottom: .75rem; }
+.avulso-conversion small { font-size: .72rem; }
 .avulso-input:focus { border-color: #f97316; }
 .avulso-error { color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem; }
 .avulso-footer {

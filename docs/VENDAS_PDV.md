@@ -5,6 +5,37 @@ Nova Venda. Consulta exclusivamente `PdvSale`. `/vendas` conserva os lançamento
 operacionais antigos; `/bi-vendas` conserva as planilhas. Nenhuma destas operações
 altera Excel, cria conciliações automáticas ou soma receitas entre fontes.
 
+## Cliente e moeda na nova venda
+
+Em `/pdv`, busque o cliente por **nome, telefone, documento (CPF/RUC/C.I.) ou CEP**.
+A busca desconsidera acentos, espaços e pontuação. Retorna até 20 opções e pede
+refinamento quando há mais; CEP compartilhado não escolhe uma pessoa sozinho.
+São consultados cadastros ativos do PDV, do diretório Clientes (incluindo CEP de
+8 dígitos no endereço textual antigo) e endereços ativos com vínculo confirmado.
+Endereços sinalizados para revisão não atribuem dados
+a um cliente. A busca não cria registros e não retorna saldos financeiros.
+
+Selecione o resultado para associá-lo à venda. Um cliente do diretório recebe um
+vínculo explícito em `pdv_clientes.cadastro_cliente_id` (migração `c5d6e7f8a9b0`).
+Se já existir cadastro PDV único com documento/telefone e nome completo compatíveis,
+ele é reaproveitado; conflitos pedem seleção do cadastro PDV existente. Seleções
+simultâneas do mesmo cliente são serializadas. Nenhum saldo ou venda anterior é
+fundido. A consolidação de clientes move apenas esse vínculo, preservando contas
+PDV distintas; nesse caso o operador escolhe qual conta utilizar.
+
+O cliente pode ser removido/trocado antes de concluir. **Usar somente o nome, sem
+cadastro** é uma opção explícita para visitantes; digitar uma busca não grava esse
+texto como nome. Ao concluir, o backend valida novamente o cliente e salva seu
+nome cadastrado como snapshot da venda. Checkout fica bloqueado durante a seleção.
+
+No modal de **produto avulso**, escolha **G$, R$, U$ ou EUR** e informe o preço
+nessa moeda. A prévia mostra o câmbio do PDV e o equivalente unitário em G$;
+cotação inválida bloqueia a inclusão. O carrinho conserva moeda/preço digitados e
+calcula o total em guaranis com a mesma conversão dos produtos de catálogo. Como
+nos demais itens do PDV, as linhas da venda persistem em G$; os pagamentos têm
+seu próprio registro de moeda e cotação. Incluir um avulso não cadastra produto
+nem movimenta estoque.
+
 ## Consulta e acesso
 
 Filtros por período inclusivo em Brasília, vendedor, pagamento, situação e busca
