@@ -4,7 +4,8 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
-import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { type InventoryItem } from '@/services/api'
+import { loadThumbnail } from '@/services/thumbnailQueue'
 
 const props = withDefaults(defineProps<{
   item: Pick<InventoryItem, 'id' | 'image_data' | 'has_image' | 'updated_at'>
@@ -27,8 +28,8 @@ watch(() => [image.value, props.item.id, props.item.updated_at, props.item.image
     started = true
     observer?.disconnect()
     try {
-      const result = await inventoryAPI.getThumbnail(id)
-      if (request === generation) src.value = result.image_data
+      const result = await loadThumbnail(id, () => request === generation)
+      if (result && request === generation) src.value = result.image_data
     } catch { /* Keep the placeholder; the product and its actions remain usable. */ }
   }
   if (typeof IntersectionObserver === 'undefined') { void load(); return }

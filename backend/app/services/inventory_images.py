@@ -55,17 +55,27 @@ def _thumbnail(data):
 
 
 def product_thumbnail(db, item_id):
-    # Lock before fetching the original: simultaneous scrolling must not decode
-    # many photos at once on the 512 MB instance. Authorization is on the route.
-    with _thumbnail_lock:
-        row = db.query(Item.id, Item.updated_at).filter(Item.id == item_id, Item.deleted_at.is_(None)).first()
-        if row is None:
-            raise HTTPException(404, 'Produto não encontrado')
-        key = (row.id, row.updated_at)
-        if key not in _thumbnails:
-            data = db.query(Item.image_data).filter(Item.id == item_id, Item.deleted_at.is_(None)).scalar()
+    # Read-only endpoint: release the authentication transaction before waiting.
+    # Otherwise every waiting thumbnail holds a connection needed by API/workers.
+    db.close()
+    if not _thumbnail_lock.acquire(timeout=0.5):
+        raise HTTPException(503, 'Miniatura ocupada. Tente novamente.', headers={'Retry-After': '2'})
+    try:
+        try:
+            row = db.query(Item.id, Item.updated_at).filter(Item.id == item_id, Item.deleted_at.is_(None)).first()
+            if row is None:
+                raise HTTPException(404, 'Produto não encontrado')
+            key = (row.id, row.updated_at)
+            cached = key in _thumbnails
+            data = None if cached else db.query(Item.image_data).filter(Item.id == item_id, Item.deleted_at.is_(None)).scalar()
+        finally:
+            # Decoding can be slow; it must not keep a database connection open.
+            db.close()
+        if not cached:
             _thumbnails[key] = _thumbnail(data)
             while len(_thumbnails) > MAX_CACHE:
                 _thumbnails.popitem(last=False)
         _thumbnails.move_to_end(key)
         return {'image_data': _thumbnails[key]}
+    finally:
+        _thumbnail_lock.release()

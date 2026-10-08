@@ -14,7 +14,8 @@ from .services.access_policy import is_owner
 security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
+# Synchronous SQLAlchemy must run in FastAPI's worker pool, never on the event loop.
+def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
