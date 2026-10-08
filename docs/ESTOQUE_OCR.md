@@ -126,6 +126,14 @@ Modelos e cores personalizados ficam salvos **neste navegador**, não no servido
 reabrir o cadastro conserva os botões, mas outro dispositivo ou limpeza do navegador
 não os conserva. Falha de armazenamento mantém o editor aberto com orientação.
 O **×** das cores selecionadas retira apenas a seleção atual; o botão salvo permanece.
+Para apagar os botões personalizados, use **Editar opções**, ao lado do título da
+grade. Aparece um **×** nos modelos e cores criados pelo usuário; **Concluir edição**
+recolhe os controles. Remover uma cor também retira sua seleção da grade em edição,
+mas não altera a cor da peça base nem tamanhos. Remover um modelo apaga o atalho,
+preservando os tamanhos já escolhidos no formulário. Opções padrão não são removidas.
+A remoção é salva no mesmo navegador e pode ser revertida cadastrando a opção
+novamente. Se o armazenamento falhar, o botão e a seleção permanecem, com aviso.
+Nenhum produto salvo ou histórico é alterado por essa organização de atalhos.
 Salvar modelo/cor não cria produtos nem movimenta estoque: isso ocorre na confirmação
 final do cadastro, após a conferência obrigatória.
 Ao selecionar **P → 2XL**, por exemplo, a peça branca P origina P, M, L, XL e 2XL

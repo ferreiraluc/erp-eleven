@@ -246,7 +246,17 @@
           <button v-else type="button" class="erp-button erp-button--ghost erp-button--sm" @click="disableGrade">{{ tr('Cadastrar apenas esta peça') }}</button>
         </div>
         <!-- Grade creation is explicitly enabled; presets create the selected variants together. -->
-        <section v-if="!isEdit && activeTab === 'stock' && gradeEnabled" class="intake-grade"><h3>{{ tr('Grade de tamanhos e cores (opcional)') }}</h3><div class="tab-content">
+        <section v-if="!isEdit && activeTab === 'stock' && gradeEnabled" class="intake-grade">
+          <div class="grade-options-heading">
+            <h3>{{ tr('Grade de tamanhos e cores (opcional)') }}</h3>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm"
+              :aria-pressed="editingGradeOptions" @click="editingGradeOptions = !editingGradeOptions">
+              {{ tr(editingGradeOptions ? 'Concluir edição' : 'Editar opções') }}
+            </button>
+          </div>
+          <p v-if="editingGradeOptions" class="form-hint">{{ tr('Remova os botões personalizados pelo ×. Produtos cadastrados não são alterados.') }}</p>
+          <p v-if="optionRemovalNotice" class="form-hint" role="status">{{ optionRemovalNotice }}</p>
+          <div class="tab-content">
           <p class="intake-hint">{{ tr('Escolha um modelo de tamanhos. Cada variação recebe a foto, marca, descrição e preços desta peça. Sem selecionar outras cores, será usada a cor {color}.', { color: form.color || '—' }) }}</p>
           <div class="grade-banner">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="flex-shrink:0">
@@ -268,7 +278,7 @@
                 >
                   {{ preset.custom ? preset.label : tr(preset.label) }}
                 </button>
-                <button v-if="preset.custom" type="button" class="preset-remove erp-control"
+                <button v-if="editingGradeOptions && preset.custom" type="button" class="option-remove erp-control"
                   @click="removeCustomPreset(preset.label)"
                   :aria-label="tr('Remover modelo {name}', { name: preset.label })"
                   :title="tr('Remover modelo')">×</button>
@@ -345,18 +355,21 @@
           <div class="form-group">
             <label>{{ tr('Cores') }} <span class="size-count">({{ gradeColors.length }}{{ gradeColors.length > 0 && gradeSizes.length > 0 ? tr(' × {count} tam.', { count: gradeSizes.length }) : '' }})</span></label>
             <div class="quick-colors">
-              <button class="erp-control"
-                v-for="c in allColors"
-                :key="c"
-                @click="toggleQuickColor(c)"
-                :class="['quick-color-btn', { active: gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) }]"
-                :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? tr('Já adicionada (remova pelo ×)') : tr('Adicionar')"
-                :aria-pressed="gradeColors.some(x => x.toLowerCase() === c.toLowerCase())"
-                type="button"
-              >
-                <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
-                {{ tr(c) }}
-              </button>
+              <span v-for="c in allColors" :key="c" class="color-option">
+                <button class="erp-control"
+                  @click="toggleQuickColor(c)"
+                  :class="['quick-color-btn', { active: gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) }]"
+                  :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? tr('Já adicionada (remova pelo ×)') : tr('Adicionar')"
+                  :aria-pressed="gradeColors.some(x => x.toLowerCase() === c.toLowerCase())"
+                  type="button"
+                >
+                  <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
+                  {{ tr(c) }}
+                </button>
+                <button v-if="editingGradeOptions && customColors.includes(c)" type="button" class="option-remove erp-control"
+                  @click="removeCustomColor(c)" :aria-label="tr('Remover cor {name}', { name: c })"
+                  :title="tr('Remover cor {name}', { name: c })">×</button>
+              </span>
               <div v-if="showColorInput" class="choice-editor quick-color-entry"
                 @keydown.esc.stop.prevent="closeColorInput">
                 <input
@@ -620,9 +633,15 @@ let photoStream: MediaStream | null = null
 // ── Grade state ──────────────────────────────────────────────────────────────
 const gradeSizes = ref<string[]>([])
 const gradeEnabled = ref(false)
+const editingGradeOptions = ref(false)
+const removedOption = ref<{ kind: 'color' | 'preset'; name: string } | null>(null)
+const optionRemovalNotice = computed(() => removedOption.value
+  ? tr(removedOption.value.kind === 'color' ? 'Cor {name} removida dos botões salvos.' : 'Modelo {name} removido dos botões salvos.', { name: removedOption.value.name })
+  : '')
 function disableGrade() {
   gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0
   colorInput.value = ''; showColorInput.value = false
+  editingGradeOptions.value = false; removedOption.value = null
 }
 const activePreset = ref('')
 const customSizeInput = ref('')
@@ -654,7 +673,17 @@ function addGradeColor() {
     customColors.value = colors
   }
   toggleQuickColor(existing || c)
+  removedOption.value = null
   closeColorInput()
+}
+function removeCustomColor(color: string) {
+  if (!customColors.value.includes(color)) return
+  const colors = customColors.value.filter(c => c !== color)
+  if (!savePreference(COLORS_KEY, JSON.stringify(colors))) { colorStorageError.value = STORAGE_ERROR; return }
+  customColors.value = colors; colorStorageError.value = ''
+  gradeColors.value = gradeColors.value.filter(c => optionKey(c) !== optionKey(color))
+  removedOption.value = { kind: 'color', name: color }
+  nextTick(() => (colorAddButtonRef.value || colorInputRef.value)?.focus())
 }
 function toggleQuickColor(c: string) {
   if (!gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) {
@@ -717,15 +746,19 @@ function saveCustomPreset() {
   const presets = [...customPresets.value, p]
   if (!savePreference(PRESETS_KEY, JSON.stringify(presets))) { presetStorageError.value = STORAGE_ERROR; return }
   customPresets.value = presets
+  removedOption.value = null
   applyPreset(p)
   closePresetInput()
 }
 
 function removeCustomPreset(label: string) {
+  if (!customPresets.value.some(p => p.label === label)) return
   const presets = customPresets.value.filter(p => p.label !== label)
   if (!savePreference(PRESETS_KEY, JSON.stringify(presets))) { presetStorageError.value = STORAGE_ERROR; return }
   customPresets.value = presets; presetStorageError.value = ''
   if (activePreset.value === label) activePreset.value = ''
+  removedOption.value = { kind: 'preset', name: label }
+  nextTick(() => presetAddButtonRef.value?.focus())
 }
 
 function removeGradeSize(index: number) {
@@ -1292,6 +1325,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .grade-presets {
   display: flex; flex-wrap: wrap; gap: 0.4rem;
 }
+.grade-options-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
+.grade-options-heading h3 { margin: 0; }
 .preset-btn {
   padding: 0.3rem 0.7rem; border: 1px solid #d1d5db; border-radius: 99px;
   background: white; color: #374151; font-size: 0.78rem; font-weight: 500;
@@ -1303,11 +1338,12 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .preset-add-btn { padding: 0.3rem 0.6rem; font-size: 1rem; font-weight: 700; line-height: 1; border-style: dashed; color: #6b7280; }
 .preset-add-btn:hover { border-color: #10b981; color: #10b981; background: #ecfdf5; }
 .preset-add-btn.active { background: #ecfdf5; border-color: #10b981; color: #059669; border-style: solid; }
-.preset-option { display: inline-flex; max-width: 100%; }
+.preset-option, .color-option { display: inline-flex; max-width: 100%; }
 .preset-option .preset-btn { white-space: normal; overflow-wrap: anywhere; }
-.preset-option:has(.preset-remove) .preset-btn { border-radius: 99px 0 0 99px; }
-.preset-remove { border: 1px solid #d1d5db; border-left: 0; border-radius: 0 99px 99px 0; background: white; color: #64748b; padding: 0 .55rem; cursor: pointer; }
-.preset-remove:hover { color: #dc2626; background: #fef2f2; }
+.color-option .quick-color-btn { overflow-wrap: anywhere; }
+.preset-option:has(.option-remove) .preset-btn, .color-option:has(.option-remove) .quick-color-btn { border-radius: 99px 0 0 99px; }
+.option-remove { border: 1px solid #d1d5db; border-left: 0; border-radius: 0 99px 99px 0; background: white; color: #64748b; padding: 0 .55rem; min-width: 32px; cursor: pointer; }
+.option-remove:hover { color: #dc2626; background: #fef2f2; }
 .choice-editor { border: 1px solid #c7d2fe; border-radius: 8px; background: #f8fafc; padding: .5rem; }
 .new-preset-form { margin-top: .6rem; display: flex; flex-direction: column; gap: .5rem; }
 .new-preset-form label { display: flex; flex-direction: column; align-items: stretch; }
