@@ -46,7 +46,7 @@ def test_health_reports_failure_closes_connection_and_detects_stalled_worker(mon
     assert client.get('/live').status_code==200
     monkeypatch.setattr(DB,'execute',lambda *args:1)
     assert client.get('/health').status_code==200
-    monkeypatch.setitem(worker_health._progress,'labels',0)
+    monkeypatch.setitem(worker_health._progress,'labels',worker_health.time.monotonic()-601)
     r=client.get('/health');assert r.status_code==503 and r.json()['label_worker']=='stalled'
 
 
