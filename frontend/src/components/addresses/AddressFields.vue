@@ -2,9 +2,17 @@
   <div class="fields">
     <label>{{ tr('País') }}<select :value="modelValue.pais" @change="update('pais',($event.target as HTMLSelectElement).value)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></select></label>
     <label>{{tr(nameLabel || 'Nome do destinatário')}}<input :value="modelValue.nome" @input="update('nome',($event.target as HTMLInputElement).value)" maxlength="120"/></label>
-    <label v-for="f in fields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.key==='cpf' && modelValue.pais==='PY' ? 'RUC/C.I (opcional na impressão)' : f.label)}}
+    <label v-for="f in primaryFields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.key==='cpf' && modelValue.pais==='PY' ? 'RUC/C.I (opcional na impressão)' : f.label)}}
       <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
     </label>
+    <details v-if="extraFields.length" class="wide extra-fields erp-dialog__section" :open="hasExtraData">
+      <summary>{{ tr('Mais dados do endereço (opcional)') }}</summary>
+      <div class="fields">
+        <label v-for="f in extraFields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.label)}}
+          <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
+        </label>
+      </div>
+    </details>
     <div v-if="modelValue.pais==='BR'" class="postal wide" aria-live="polite">
       <button class="erp-button erp-button--secondary" type="button" @click="lookup" :disabled="busy || !validCep">{{busy ? tr('Consultando CEP…') : tr('Conferir e completar pelo CEP')}}</button>
       <p v-if="message">{{tr(message)}}</p>
@@ -52,6 +60,9 @@ async function lookup(){
   finally{if(current===sequence || !busy.value)busy.value=false}
 }
 const fields:{key:keyof AddressData;label:string;max:number}[]=[{key:'cep',label:'CEP (Brasil)',max:15},{key:'telefone',label:'Telefone',max:40},{key:'cpf',label:'CPF / documento (opcional na impressão)',max:20},{key:'endereco',label:'Rua / endereço (opcional para PY)',max:250},{key:'numero',label:'Número',max:10},{key:'bairro',label:'Bairro',max:60},{key:'complemento',label:'Complemento',max:60},{key:'cidade',label:'Cidade',max:100},{key:'estado',label:'UF / departamento',max:60},{key:'email',label:'E-mail',max:100}]
+const primaryFields=computed(()=>props.modelValue.pais==='PY' ? fields.filter(f=>['telefone','cpf','cidade'].includes(f.key)) : fields)
+const extraFields=computed(()=>props.modelValue.pais==='PY' ? fields.filter(f=>!['telefone','cpf','cidade'].includes(f.key)) : [])
+const hasExtraData=computed(()=>extraFields.value.some(f=>!!props.modelValue[f.key]))
 </script>
 <style scoped>
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:#475569;margin:12px 0}.wide{grid-column:1/-1}input,select{border:1px solid #cbd5e1;border-radius:8px;padding:10px;background:white;color:#172033;min-width:0;font:inherit;font-weight:400}input:focus,select:focus{outline:2px solid #93c5fd}.postal{border:1px solid #dbeafe;background:#f8fafc;border-radius:8px;padding:12px;font-size:12px;color:#475569}.postal button{background:#eff6ff;border:1px solid #93c5fd;color:#1d4ed8;border-radius:6px;padding:8px 12px;cursor:pointer}.postal button:disabled{opacity:.5;cursor:default}.postal p{margin:9px 0}.postal small{display:block;margin-top:8px}.warning{color:#92400e}.postal ul{margin:8px 0;padding-left:18px}@media(max-width:420px){.fields{grid-template-columns:1fr}.wide{grid-column:auto}}

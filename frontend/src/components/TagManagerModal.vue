@@ -1,16 +1,16 @@
 <template>
-  <div class="modal-overlay" @click="handleOverlayClick">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">
+  <div class="modal-overlay erp-dialog-backdrop" @click="handleOverlayClick">
+    <div v-erp-dialog class="modal-container erp-dialog" @click.stop>
+      <div class="modal-header erp-dialog__header">
         <h2 class="modal-title">{{ uiText(`Gerenciar Tags`) }}</h2>
-        <button @click="$emit('close')" class="modal-close erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :aria-label="uiText('Fechar')" @click="$emit('close')" class="modal-close erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body erp-dialog__body">
         <p v-if="errorKey" role="alert" class="tag-error">{{ uiText(errorKey) }}</p>
         <!-- Create New Tag Form -->
         <div class="create-tag-section">
@@ -178,25 +178,25 @@
         </div>
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <button @click="createDefaultTags" class="btn-secondary erp-button erp-button--secondary"> {{ uiText(`Criar Tags Padrão`) }} </button>
         <button @click="$emit('close')" class="btn-primary erp-button erp-button--primary"> {{ uiText(`Fechar`) }} </button>
       </div>
     </div>
 
     <!-- Edit Tag Modal -->
-    <div v-if="editingTag" class="modal-overlay edit-overlay" @click="cancelEdit">
-      <div class="modal-container edit-modal" @click.stop>
-        <div class="modal-header">
+    <div v-if="editingTag" class="modal-overlay edit-overlay erp-dialog-backdrop" @click="cancelEdit">
+      <div v-erp-dialog class="modal-container edit-modal erp-dialog" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h3 class="modal-title">{{ uiText(`Editar Tag`) }}</h3>
-          <button @click="cancelEdit" class="modal-close erp-button erp-button--ghost erp-button--icon">
+          <button :aria-label="uiText('Fechar')" @click="cancelEdit" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body erp-dialog__body">
           <form @submit.prevent="updateTag" class="tag-form">
             <div class="form-row">
               <div class="form-group">
@@ -267,7 +267,7 @@
           </form>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer erp-dialog__footer">
           <button @click="cancelEdit" class="btn-secondary erp-button erp-button--secondary"> {{ uiText(`Cancelar`) }} </button>
           <button
             @click="updateTag"
@@ -287,6 +287,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText } from '@/i18n/uiText'
 import { ref, onMounted } from 'vue'
 import { tagsAPI, type Tag, type TagCreate } from '@/services/api'

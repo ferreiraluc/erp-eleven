@@ -32,6 +32,24 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); app = undefined; container.remove(); vi.resetAllMocks() })
 
 describe('country-specific optional recipient document', () => {
+  it('keeps PY essentials visible and preserves optional address data when changing country', async () => {
+    const data = ref<AddressData>({ ...blankAddress('PY'), nome: 'Cliente fixture', cidade: 'Asunción', telefone: '00000000' })
+    app = createApp({ setup: () => () => h(AddressFields, { modelValue: data.value, 'onUpdate:modelValue': value => { data.value = value } }) }).use(translation())
+    app.mount(container); await nextTick()
+    expect(container.querySelector('details')?.open).toBe(false)
+    const directLabels = Array.from(container.querySelectorAll('.fields > label')).filter(el => !el.closest('details')).map(el => el.textContent?.trim())
+    expect(directLabels).toEqual(expect.arrayContaining(['Nome do destinatário', 'Telefone', 'Cidade', 'RUC/C.I (opcional na impressão)']))
+    data.value.endereco = 'Rua informada'; await nextTick()
+    expect(container.querySelector('details')?.open).toBe(true)
+    data.value.pais = 'BR'; await nextTick()
+    expect(container.querySelector('details')).toBeNull()
+    expect(data.value.endereco).toBe('Rua informada')
+    data.value.pais = 'PY'; await nextTick()
+    expect(container.querySelector('details')?.open).toBe(true)
+    expect(data.value.endereco).toBe('Rua informada')
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
   it('reacts to country and PT/ES/EN without changing the stored cpf key or document text', async () => {
     const data = ref<AddressData>({ ...blankAddress('PY'), nome: 'Cliente fixture', cpf: 'A-4.567.890' })
     const i18n = translation()

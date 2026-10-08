@@ -1,16 +1,16 @@
 <template>
-  <div class="avulso-overlay" @click.self="$emit('close')">
-    <div class="avulso-modal" role="dialog" aria-modal="true" aria-labelledby="avulso-title">
-      <div class="avulso-header">
+  <div class="avulso-overlay erp-dialog-backdrop" @click.self="$emit('close')">
+    <div v-erp-dialog class="avulso-modal erp-dialog erp-dialog--sm" role="dialog" aria-modal="true" aria-labelledby="avulso-title">
+      <div class="avulso-header erp-dialog__header">
         <div class="avulso-icon">⚠</div>
         <div>
           <h3 id="avulso-title">{{ uiText(`Produto não encontrado`) }}</h3>
           <p>{{ uiText(`Adicione manualmente ao carrinho`) }}</p>
         </div>
-        <button class="avulso-close erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">×</button>
+        <button data-dialog-close :aria-label="uiText('Fechar')" class="avulso-close erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">×</button>
       </div>
 
-      <div class="avulso-body">
+      <div class="avulso-body erp-dialog__body">
         <div v-if="scannedCode" class="avulso-code-hint"> {{ uiText(`Código escaneado:`) }} <strong>{{ scannedCode }}</strong>
         </div>
 
@@ -76,7 +76,7 @@
         <div v-if="quantityError" class="avulso-error" role="alert">{{ cartErrorText(quantityError) }}</div>
       </div>
 
-      <div class="avulso-footer">
+      <div class="avulso-footer erp-dialog__footer">
         <button class="avulso-btn-cancel erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
         <button class="avulso-btn-add erp-button erp-button--primary" @click="submit" :disabled="!canSubmit"> {{ uiText(`+ Adicionar ao carrinho`) }} </button>
       </div>
@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { usePdvEntryText } from './entryMessages'
 import { validateQuantity } from '@/services/pdvCart'

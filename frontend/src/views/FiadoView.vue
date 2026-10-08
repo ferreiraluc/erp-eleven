@@ -64,18 +64,18 @@
     </div>
 
     <!-- Client detail modal -->
-    <div v-if="selectedClient" class="fiado-overlay" @click.self="selectedClient = null">
-      <div class="fiado-detail-modal">
-        <div class="fiado-detail-header">
+    <div v-if="selectedClient" class="fiado-overlay erp-dialog-backdrop" @click.self="selectedClient = null">
+      <div v-erp-dialog class="fiado-detail-modal erp-dialog">
+        <div class="fiado-detail-header erp-dialog__header">
           <div>
             <h2 class="fiado-detail-name">{{ selectedClient.nome }}</h2>
             <p v-if="selectedClient.doc" class="fiado-detail-meta">{{ selectedClient.doc }}</p>
             <p v-if="selectedClient.telefone" class="fiado-detail-meta">{{ selectedClient.telefone }}</p>
           </div>
-          <button class="fiado-detail-close erp-button erp-button--ghost erp-button--icon" @click="selectedClient = null">×</button>
+          <button :aria-label="uiText('Fechar')" class="fiado-detail-close erp-button erp-button--ghost erp-button--icon" @click="selectedClient = null">×</button>
         </div>
 
-        <div class="fiado-detail-balance">
+        <div class="erp-dialog__body"><div class="fiado-detail-balance">
           <span class="fiado-balance-label">{{ (selectedClient.saldo_fiado_gs ?? 0) < 0 ? salesText('Crédito a favor do cliente') : $tr("Saldo devedor") }}</span>
           <span class="fiado-balance-value" :class="(selectedClient.saldo_fiado_gs ?? 0) > 0 ? 'saldo-debt' : 'saldo-zero'">
             {{ fmtGs((selectedClient.saldo_fiado_gs ?? 0)) }}
@@ -133,18 +133,18 @@
               </div>
             </div>
           </div>
-        </div>
+        </div></div>
       </div>
     </div>
 
     <!-- New client modal -->
-    <div v-if="showNewClient" class="fiado-overlay" @click.self="showNewClient = false">
-      <div class="fiado-new-modal">
-        <div class="fiado-new-header">
+    <div v-if="showNewClient" class="fiado-overlay erp-dialog-backdrop" @click.self="showNewClient = false">
+      <div v-erp-dialog class="fiado-new-modal erp-dialog erp-dialog--sm">
+        <div class="fiado-new-header erp-dialog__header">
           <h3>{{ $tr("Novo cliente") }}</h3>
           <button class="erp-button erp-button--ghost erp-button--icon" @click="showNewClient = false">×</button>
         </div>
-        <div class="fiado-new-body">
+        <div class="fiado-new-body erp-dialog__body">
           <div class="fiado-field">
             <label>{{ $tr("Nome *") }}</label>
             <input v-model="newClient.nome" type="text" class="fiado-input" :placeholder='$tr("Nome do cliente")' />
@@ -178,7 +178,7 @@
           </div>
           <div v-if="newClientError" class="fiado-error">{{ newClientError }}</div>
         </div>
-        <div class="fiado-new-footer">
+        <div class="fiado-new-footer erp-dialog__footer">
           <button class="fiado-btn-cancel erp-button erp-button--secondary" @click="showNewClient = false">{{ $tr("Cancelar") }}</button>
           <button class="fiado-btn-save erp-button erp-button--primary" @click="saveNewClient" :disabled="!newClient.nome || savingClient">
             {{ savingClient ? uiText(`Salvando…`) : uiText(`Cadastrar`) }}
@@ -194,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { tr as salesText } from '@/components/pdv/management/i18n'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'

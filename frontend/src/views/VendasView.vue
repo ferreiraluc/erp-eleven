@@ -241,10 +241,10 @@
     </div>
 
     <!-- Import Modal -->
-    <div v-if="showImportModal && !auth.ownSales" class="modal-overlay" @click="showImportModal = false">
-      <div class="modal" @click.stop>
-        <VendasImportCard />
-        <div class="modal-actions">
+    <div v-if="showImportModal && !auth.ownSales" class="modal-overlay erp-dialog-backdrop" @click="showImportModal = false">
+      <div v-erp-dialog class="modal erp-dialog erp-dialog--lg" @click.stop>
+        <div class="erp-dialog__body"><VendasImportCard /></div>
+        <div class="modal-actions erp-dialog__footer">
           <button @click="showImportModal = false" class="btn-secondary erp-button erp-button--secondary">{{ $tr("Fechar") }}</button>
         </div>
       </div>
@@ -253,6 +253,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'

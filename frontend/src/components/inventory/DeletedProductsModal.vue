@@ -1,9 +1,9 @@
 <template>
   <ProductHistoryModal v-if="selected" :item-id="selected" @close="selected = ''" />
-  <Teleport to="body"><div v-show="!selected" class="deleted-history-overlay" @keydown.esc.stop="emit('close')">
-    <section ref="dialog" role="dialog" aria-modal="true" :aria-label="tr('Histórico de excluídos')" tabindex="-1" @keydown.tab="trapFocus">
-      <header><h2>{{ tr('Histórico de excluídos') }}</h2><button class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" @click="emit('close')">✕</button></header>
-      <main>
+  <Teleport to="body"><div v-show="!selected" class="deleted-history-overlay erp-dialog-backdrop" @keydown.esc.stop="emit('close')">
+    <section v-erp-dialog="!selected" class="erp-dialog erp-dialog--lg" ref="dialog" role="dialog" aria-modal="true" :aria-label="tr('Histórico de excluídos')" tabindex="-1" @keydown.tab="trapFocus">
+      <header class="erp-dialog__header"><h2>{{ tr('Histórico de excluídos') }}</h2><button data-dialog-close class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" @click="emit('close')">✕</button></header>
+      <main class="erp-dialog__body">
         <p>{{ tr('Produtos retirados do catálogo com registros preservados. Abra um produto para consultar seu histórico.') }}</p>
         <form @submit.prevent="page = 1; load()"><input v-model="search" :placeholder="tr('Buscar por nome ou SKU')" :aria-label="tr('Buscar por nome ou SKU')" maxlength="150" /><button class="erp-button erp-button--secondary erp-button--sm">{{ tr('Buscar') }}</button></form>
         <p v-if="loading" role="status">{{ tr('Carregando histórico...') }}</p>
@@ -17,6 +17,7 @@
   </div></Teleport>
 </template>
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ProductHistoryModal from './ProductHistoryModal.vue'
 import { inventoryHistoryAPI } from '@/services/inventoryHistory'

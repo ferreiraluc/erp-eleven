@@ -121,17 +121,17 @@
     </div>
 
     <!-- Modal do calendário completo -->
-    <div v-if="showFullCalendar" class="calendar-modal-overlay" @click="closeFullCalendar">
-      <div class="calendar-modal" @click.stop>
-        <div class="modal-header">
+    <div v-if="showFullCalendar" class="calendar-modal-overlay erp-dialog-backdrop" @click="closeFullCalendar">
+      <div v-erp-dialog class="calendar-modal erp-dialog erp-dialog--xl" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h2>{{ $tr("Calendário de Folgas") }}</h2>
-          <button @click="closeFullCalendar" class="modal-close erp-button erp-button--ghost erp-button--icon">
+          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeFullCalendar" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
-        <div class="modal-content">
+        <div class="modal-content erp-dialog__body">
           <FolgasCalendarAdvanced />
         </div>
       </div>
@@ -140,6 +140,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted, watch } from 'vue'
 import { vendorsAPI } from '@/services/api'

@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
-    <div v-show="open" class="photo-overlay" @keydown.esc.stop="close" @keydown.tab="trapFocus">
-      <section ref="dialog" class="photo-dialog" role="dialog" aria-modal="true" aria-labelledby="product-photo-title" tabindex="-1">
-        <header><div><h2 id="product-photo-title">{{ t('title') }}</h2><p>{{ t('intro') }}</p></div>
-          <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" :disabled="busy === 'generating'" @click="close">✕</button>
+    <div v-show="open" class="photo-overlay erp-dialog-backdrop" @keydown.esc.stop="close" @keydown.tab="trapFocus">
+      <section v-erp-dialog ref="dialog" class="photo-dialog erp-dialog erp-dialog--media" role="dialog" aria-modal="true" aria-labelledby="product-photo-title" tabindex="-1">
+        <header class="erp-dialog__header"><div><h2 id="product-photo-title">{{ t('title') }}</h2><p>{{ t('intro') }}</p></div>
+          <button data-dialog-close type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" :disabled="busy === 'generating'" @click="close">✕</button>
         </header>
-        <div ref="photoBody" class="photo-body">
+        <div ref="photoBody" class="photo-body erp-dialog__body">
           <div class="photo-actions">
             <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!!busy" @click="fileInput?.click()">{{ t('choose') }}</button>
             <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!!busy" @click="cameraInput?.click()">{{ t('camera') }}</button>
@@ -53,7 +53,7 @@
             </div>
           </div>
         </div>
-        <footer v-if="original"><label v-if="!draft" class="photo-reviewed"><input v-model="reviewed" type="checkbox" :disabled="!!busy" />{{ t('reviewed') }}</label>
+        <footer class="erp-dialog__footer" v-if="original"><label v-if="!draft" class="photo-reviewed"><input v-model="reviewed" type="checkbox" :disabled="!!busy" />{{ t('reviewed') }}</label>
           <p>{{ t(draft ? 'draftNext' : 'next') }}</p><button type="button" class="erp-button erp-button--primary" :disabled="(!draft && (!reviewed || !fields.name.trim())) || !!busy" @click="apply">{{ t(draft ? 'draftUse' : 'use') }}</button></footer>
       </section>
     </div>
@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { productPhotoMessages } from './productPhotoMessages'

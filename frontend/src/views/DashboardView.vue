@@ -396,18 +396,18 @@
 
 
     <!-- Exchange Rate Modal -->
-    <div v-if="showExchangeRateModal || showExchangeRateHeaderModal" class="modal-overlay" @click="closeExchangeRateModals">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
+    <div v-if="showExchangeRateModal || showExchangeRateHeaderModal" class="modal-overlay erp-dialog-backdrop" @click="closeExchangeRateModals">
+      <div v-erp-dialog class="modal-content erp-dialog" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h2>{{ $tr("Editar Taxas de Câmbio") }}</h2>
-          <button @click="closeExchangeRateModals" class="modal-close erp-button erp-button--secondary erp-button--icon">
+          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeExchangeRateModals" class="modal-close erp-button erp-button--secondary erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body erp-dialog__body">
           <div v-if="exchangeRateError" class="alert alert-error">
             {{ exchangeRateError }}
           </div>
@@ -463,7 +463,7 @@
           </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer erp-dialog__footer">
           <button @click="closeExchangeRateModals" class="btn btn-secondary erp-button erp-button--secondary">
             {{ $tr("Cancelar") }}
           </button>
@@ -478,6 +478,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'

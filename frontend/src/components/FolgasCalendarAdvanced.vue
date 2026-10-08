@@ -173,18 +173,18 @@
     </div>
 
     <!-- Modal de detalhes do dia -->
-    <div v-if="selectedDay" class="day-modal-overlay" @click="closeDayModal">
-      <div class="day-modal" @click.stop>
-        <div class="day-modal-header">
+    <div v-if="selectedDay" class="day-modal-overlay erp-dialog-backdrop" @click="closeDayModal">
+      <div v-erp-dialog class="day-modal erp-dialog erp-dialog--sm" @click.stop>
+        <div class="day-modal-header erp-dialog__header">
           <h4>{{ formatDate(selectedDay.date) }}</h4>
-          <button @click="closeDayModal" class="close-button erp-button erp-button--ghost erp-button--icon">
+          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeDayModal" class="close-button erp-button erp-button--ghost erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
-        <div class="day-modal-content">
+        <div class="day-modal-content erp-dialog__body">
           <div v-if="selectedDay.folgas && selectedDay.folgas.length > 0" class="folgas-list">
             <h5>{{ $tr("Folgas do dia (") }}{{ selectedDay.folgas.length }}):</h5>
             <div
@@ -230,7 +230,8 @@
             <p>{{ $tr("Nenhuma folga registrada para este dia.") }}</p>
           </div>
 
-          <div class="day-modal-actions">
+        </div>
+          <div class="day-modal-actions erp-dialog__footer">
             <button @click="addFolga(selectedDay.date)" class="btn btn-primary erp-button erp-button--primary">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
@@ -238,24 +239,23 @@
               {{ $tr("Adicionar Folga") }}
             </button>
           </div>
-        </div>
       </div>
     </div>
 
     <!-- Modal de criar/editar folga -->
-    <div v-if="showFolgaModal" class="day-modal-overlay" @click="closeFolgaModal">
-      <div class="day-modal" @click.stop>
-        <div class="day-modal-header">
+    <div v-if="showFolgaModal" class="day-modal-overlay erp-dialog-backdrop" @click="closeFolgaModal">
+      <div v-erp-dialog class="day-modal erp-dialog erp-dialog--sm" @click.stop>
+        <div class="day-modal-header erp-dialog__header">
           <h4>{{ editingFolga ? uiText(`Editar Folga`) : uiText(`Adicionar Folga`) }}</h4>
-          <button @click="closeFolgaModal" class="close-button erp-button erp-button--secondary erp-button--icon">
+          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeFolgaModal" class="close-button erp-button erp-button--secondary erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
-        <div class="day-modal-content">
-          <form @submit.prevent="submitFolga" class="folga-form">
+          <form @submit.prevent="submitFolga" class="folga-form erp-dialog__form">
+          <div class="day-modal-content erp-dialog__body">
             <div class="form-row">
               <div class="form-group">
                 <label for="vendedor">{{ $tr("Vendedor:") }}</label>
@@ -310,7 +310,8 @@
               </div>
             </div>
 
-            <div class="form-actions">
+          </div>
+            <div class="form-actions erp-dialog__footer">
               <button type="button" @click="closeFolgaModal" class="btn btn-secondary erp-button erp-button--secondary">
                 {{ $tr("Cancelar") }}
               </button>
@@ -319,14 +320,13 @@
               </button>
             </div>
           </form>
-        </div>
       </div>
     </div>
 
     <!-- Modal de confirmação de exclusão -->
-    <div v-if="showDeleteModal" class="day-modal-overlay" @click="cancelDelete">
-      <div class="delete-modal" @click.stop>
-        <div class="delete-modal-header">
+    <div v-if="showDeleteModal" class="day-modal-overlay erp-dialog-backdrop" @click="cancelDelete">
+      <div v-erp-dialog class="delete-modal erp-dialog erp-dialog--sm" @click.stop>
+        <div class="delete-modal-header erp-dialog__header">
           <div class="warning-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
@@ -335,7 +335,7 @@
           <h4>{{ $tr("Confirmar Exclusão") }}</h4>
         </div>
 
-        <div class="delete-modal-content">
+        <div class="delete-modal-content erp-dialog__body">
           <p v-if="folgaToDelete">
             {{ $tr("Tem certeza que deseja excluir a folga de") }}
             <strong>{{ folgaToDelete.vendedor_nome }}</strong>
@@ -346,7 +346,7 @@
           </p>
         </div>
 
-        <div class="delete-modal-actions">
+        <div class="delete-modal-actions erp-dialog__footer">
           <button @click="cancelDelete" class="btn btn-secondary erp-button erp-button--secondary">
             {{ $tr("Cancelar") }}
           </button>
@@ -360,6 +360,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'

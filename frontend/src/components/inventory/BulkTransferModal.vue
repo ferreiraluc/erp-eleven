@@ -1,16 +1,16 @@
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-container">
-      <div class="modal-header">
+  <div class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
+    <div v-erp-dialog class="modal-container erp-dialog">
+      <div class="modal-header erp-dialog__header">
         <h2>{{ tr('Transferência em Lote') }}</h2>
-        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body erp-dialog__body">
         <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Há itens com saldo não informado nesta seleção. Revise o estoque antes de transferir.') }}</p>
         <!-- Direction -->
         <div class="form-group">
@@ -65,7 +65,7 @@
         <div v-if="errorMsg" class="error-banner">{{ tr(errorMsg) }}</div>
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <div class="footer-summary">
           {{ tr('Unidades a transferir: {count}', { count: totalQty }) }}
         </div>
@@ -79,6 +79,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, computed } from 'vue'

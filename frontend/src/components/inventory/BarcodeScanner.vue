@@ -1,16 +1,16 @@
 <template>
-  <div class="barcode-scanner-overlay" @click.self="emit('close')">
-    <div class="barcode-scanner-modal">
-      <div class="scanner-header">
+  <div class="barcode-scanner-overlay erp-dialog-backdrop" @click.self="emit('close')">
+    <div v-erp-dialog class="barcode-scanner-modal erp-dialog erp-dialog--media">
+      <div class="scanner-header erp-dialog__header">
         <h3>{{ tr('Escanear Código') }}</h3>
-        <button @click="emit('close')" class="close-btn erp-button erp-button--ghost erp-button--icon">
+        <button data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--ghost erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="scanner-body">
+      <div class="scanner-body erp-dialog__body">
         <div v-if="!cameraError" class="camera-container">
           <div id="qr-reader" class="qr-reader"></div>
           <div class="scan-line"></div>
@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, onMounted, onUnmounted } from 'vue'

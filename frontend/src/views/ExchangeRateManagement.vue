@@ -200,17 +200,17 @@
     </div>
 
     <!-- Quick Update Modal -->
-    <div v-if="showQuickUpdateModal" class="modal-overlay" @click="showQuickUpdateModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
+    <div v-if="showQuickUpdateModal" class="modal-overlay erp-dialog-backdrop" @click="showQuickUpdateModal = false">
+      <div v-erp-dialog class="modal-content erp-dialog" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h3>{{ $t('exchangeManagement.quickUpdateTitle') }}</h3>
-          <button @click="showQuickUpdateModal = false" class="modal-close erp-button erp-button--ghost erp-button--icon">
+          <button :aria-label="uiText('Fechar')" @click="showQuickUpdateModal = false" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body erp-dialog__body">
           <div class="update-form">
             <div class="form-row">
               <div class="form-group">
@@ -243,7 +243,7 @@
           </div>
           <div v-if="updateError" class="error-message">{{ updateError }}</div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer erp-dialog__footer">
           <button @click="showQuickUpdateModal = false" class="btn btn-secondary erp-button erp-button--secondary">{{ $t('common.cancel') }}</button>
           <button @click="performQuickUpdate" :disabled="isUpdating" class="btn btn-primary erp-button erp-button--primary">
             <span v-if="isUpdating">{{ $t('exchangeManagement.updating') }}</span>
@@ -254,12 +254,12 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
-      <div class="modal-content delete-modal" @click.stop>
-        <div class="modal-header">
+    <div v-if="showDeleteModal" class="modal-overlay erp-dialog-backdrop" @click="showDeleteModal = false">
+      <div v-erp-dialog class="modal-content delete-modal erp-dialog" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h3>{{ $t('exchangeManagement.confirmDeletion') }}</h3>
         </div>
-        <div class="modal-body">
+        <div class="modal-body erp-dialog__body">
           <p>{{ $t('exchangeManagement.deleteConfirmation') }}</p>
           <div class="delete-details">
             <p><strong>{{ $t('exchangeManagement.currency') }}:</strong> {{ formatCurrencyPair(rateToDelete?.currency_pair) }}</p>
@@ -268,7 +268,7 @@
           </div>
           <p class="warning-text">{{ $t('exchangeManagement.warning') }}</p>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer erp-dialog__footer">
           <button @click="showDeleteModal = false" class="btn btn-secondary erp-button erp-button--secondary">{{ $t('common.cancel') }}</button>
           <button @click="deleteRate" :disabled="isDeleting" class="btn btn-danger erp-button erp-button--danger">
             <span v-if="isDeleting">{{ $t('exchangeManagement.deleting') }}</span>
@@ -281,6 +281,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'

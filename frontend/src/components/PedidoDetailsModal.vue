@@ -1,7 +1,7 @@
 <template>
-  <div class="modal-overlay" @click="$emit('close')">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">
+  <div class="modal-overlay erp-dialog-backdrop" @click="$emit('close')">
+    <div v-erp-dialog class="modal-container erp-dialog erp-dialog--lg" @click.stop>
+      <div class="modal-header erp-dialog__header">
         <div class="header-info">
           <h2 class="modal-title">{{ $tr("Detalhes do Pedido") }}</h2>
           <span class="pedido-number">{{ pedido.numero_pedido }}</span>
@@ -13,7 +13,7 @@
             </svg>
             {{ $tr("Editar") }}
           </button>
-          <button @click="$emit('close')" class="modal-close erp-button erp-button--ghost erp-button--icon">
+          <button data-dialog-close @click="$emit('close')" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -21,7 +21,7 @@
         </div>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body erp-dialog__body">
         <!-- Status and Tags -->
         <div class="status-section">
           <div class="status-info">
@@ -103,7 +103,7 @@
         <OrderParcelsPanel :order="pedido" @linked="refreshOrder" />
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <button @click="createRastreamento" class="btn-secondary erp-button erp-button--secondary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -123,6 +123,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { useRouter } from 'vue-router'
 import { ref, watch, onMounted } from 'vue'

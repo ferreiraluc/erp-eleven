@@ -1,0 +1,168 @@
+/* Explicit, opt-in dialog layout. Paper receipts keep their print stylesheet. */
+@media screen {
+  :is(#app, body) .erp-dialog-backdrop {
+    box-sizing: border-box;
+    padding: 24px;
+    background: rgb(15 23 42 / 48%);
+    overscroll-behavior: contain;
+  }
+  :is(#app, body) .erp-dialog {
+    --dialog-width: 680px;
+    --dialog-space: 20px;
+    width: min(var(--dialog-width), 100%);
+    max-width: 100%;
+    max-height: calc(100dvh - 48px);
+    min-width: 0;
+    min-height: 0;
+    margin: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 24px 80px rgb(15 23 42 / 24%);
+    text-align: left;
+    line-height: 1.5;
+    outline: none;
+  }
+  :is(#app, body) .erp-dialog--sm { --dialog-width: 480px; }
+  :is(#app, body) .erp-dialog--lg { --dialog-width: 840px; }
+  :is(#app, body) .erp-dialog--xl { --dialog-width: 1040px; }
+  :is(#app, body) .erp-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+    gap: 12px;
+    margin: 0;
+    padding: 14px var(--dialog-space);
+    border: 0;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+    color: #0f172a;
+  }
+  :is(#app, body) .erp-dialog__header :is(h1,h2,h3,h4),
+  :is(#app, body) :is(h2,h3).erp-dialog__header {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.35;
+    font-weight: 650;
+    letter-spacing: -.02em;
+    overflow-wrap: anywhere;
+  }
+  :is(#app, body) .erp-dialog__body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 16px var(--dialog-space);
+    margin: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  :is(#app, body) .erp-dialog__form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  :is(#app, body) .erp-dialog__footer {
+    display: flex;
+    flex-direction: row;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px var(--dialog-space);
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  :is(#app, body) .erp-dialog__tabs {
+    flex: 0 0 auto;
+    display: flex;
+    overflow-x: auto;
+    padding: 0 var(--dialog-space);
+    margin: 0;
+    gap: 4px;
+    border-bottom: 1px solid #e2e8f0;
+    scrollbar-width: thin;
+  }
+  :is(#app, body) .erp-dialog__tabs > button { flex: 1 0 auto; min-height: 40px; }
+  :is(#app, body) .erp-dialog :where(.form-group, .form-section) { min-width: 0; }
+  :is(#app, body) .erp-dialog .form-group { margin-bottom: 12px; }
+  :is(#app, body) .erp-dialog :is(.form-row,.form-grid) { gap: 12px; margin-bottom: 0; }
+  :is(#app, body) .erp-dialog .pedido-form { gap: 16px; }
+  :is(#app, body) .erp-dialog .pedido-form .form-section { margin: 0; padding: 0; gap: 12px; }
+  :is(#app, body) .erp-dialog .pedido-form .section-title { margin-bottom: 0; }
+  :is(#app, body) .erp-dialog .pedido-form .form-input { width: 100%; }
+  :is(#app, body) .erp-dialog .form-section { margin-bottom: 16px; padding-bottom: 16px; }
+  :is(#app, body) .erp-dialog .section-title { margin-bottom: 12px; font-size: 13px; }
+  :is(#app, body) .erp-dialog :is(input,select,textarea):not([type=checkbox],[type=radio],[type=file],[type=range],[type=color],[type=hidden]) {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    border-radius: 8px;
+    font-family: inherit;
+  }
+  :is(#app, body) .erp-dialog :is(.form-input,.form-select,.form-control) {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  :is(#app, body) .erp-dialog :is(input,select,textarea,summary):focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-color: #2563eb;
+    box-shadow: none;
+  }
+  :is(#app, body) .erp-dialog__footer > .erp-button { width: auto; min-height: 38px; padding: 8px 12px; }
+  :is(#app, body) .erp-dialog__section {
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+  }
+  :is(#app, body) .erp-dialog__section > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  :is(#app, body) .erp-dialog__section[open] > summary { margin-bottom: 14px; }
+  /* Flat, read-only media viewers retain their aspect ratio and their controls. */
+  :is(#app, body) .erp-dialog--media { --dialog-width: 1040px; }
+
+  @media (min-width: 601px) and (max-width: 900px) {
+    :is(#app, body) .erp-dialog .pedido-form .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    :is(#app, body) .erp-dialog .pedido-form .form-group:is(.full-width,.flex-2) { grid-column: 1 / -1; }
+  }
+
+  @media (max-width: 600px) {
+    :is(#app, body) .erp-dialog-backdrop { padding: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    :is(#app, body) .erp-dialog {
+      --dialog-space: 14px;
+      width: 100%;
+      max-height: calc(100dvh - 16px - env(safe-area-inset-bottom));
+      border-radius: 12px;
+    }
+    :is(#app, body) .erp-dialog__header { padding-block: 10px; gap: 8px; }
+    :is(#app, body) .erp-dialog__header :is(h1,h2,h3,h4) { font-size: 17px; }
+    :is(#app, body) .erp-dialog__body { padding-block: 12px; scrollbar-gutter: auto; }
+    :is(#app, body) .erp-dialog__footer { padding-block: 10px; gap: 8px; }
+    :is(#app, body) .erp-dialog__footer > .erp-button { flex: 1 1 auto; min-height: 44px; }
+    :is(#app, body) .erp-dialog__tabs { padding-inline: 8px; }
+    :is(#app, body) .erp-dialog__tabs > button { font-size: 12px; padding-inline: 10px; min-height: 44px; }
+    :is(#app, body) .erp-dialog :is(input,select,textarea):not([type=checkbox],[type=radio],[type=file],[type=range],[type=color],[type=hidden]) {
+      font-size: 16px; /* avoid iOS zoom when a field receives focus */
+    }
+    :is(#app, body) .erp-dialog :is(.form-input,.form-select,.form-control) { min-height: 44px; }
+    :is(#app, body) .erp-dialog .form-section { margin-bottom: 12px; padding-bottom: 12px; }
+  }
+}

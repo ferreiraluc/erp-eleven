@@ -14,6 +14,7 @@ O [README principal](../README.md) apresenta o sistema e os comandos essenciais.
 | [Remetentes gerados](REMETENTES_GERADOS.md) | Gerar/importar pessoa, revisar e aprovar cadastro |
 | [Estoque e OCR](ESTOQUE_OCR.md) | Conferência visual, saldos por local e movimentações |
 | [Idiomas](IDIOMAS.md) | Catálogos PT/ES/EN e manutenção das traduções |
+| [Modais e formulários](UI_MODAIS.md) | Padrão compacto, teclado, rolagem, tamanhos e inventário das janelas |
 | [Ativação do assistente](ASSISTENTE_ATIVACAO.md) | Habilitar canais e vincular usuários |
 | [Fluxos do assistente](ASSISTENTE_FLUXOS_OPERACIONAIS.md) | Rastreios, contexto, estoque e impressão de PDFs |
 | [Endereços e SuperFrete](GESTOR_ENDERECOS_SUPERFRETE.md) | Cadastro único, impressão A4, CEP e emissão de etiquetas |
