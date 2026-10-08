@@ -42,7 +42,8 @@ from ...services.inventory_duplicate import duplicate_item
 from ...schemas.inventory_variants import VariantContext, VariantCreateRequest, VariantCreateResponse
 from ...services.inventory_variants import variant_context, create_variants
 
-from ...services.inventory_taxonomy import canonical, vocabulary, facet_filters, search_text
+from ...services.inventory_taxonomy import canonical, vocabulary, facet_filters
+from ...services.inventory_search import search_filter
 
 router = APIRouter()
 
@@ -184,7 +185,7 @@ def get_distinct_values(
 
 @router.get("/items", response_model=ItemListResponse)
 def list_items(
-    search: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=256),
     category: Optional[str] = Query(None),
     brand: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
@@ -204,19 +205,7 @@ def list_items(
     query = db.query(Item).filter(Item.deleted_at.is_(None))
 
     if search:
-        for token in search_text(search).strip().split():
-            like = f"%{token}%"
-            query = query.filter(
-                or_(
-                    Item.name.ilike(like),
-                    Item.sku_internal.ilike(like),
-                    Item.barcode.ilike(like),
-                    taxonomy_filter(Item.category, token, partial=True),
-                    taxonomy_filter(Item.brand, token, partial=True),
-                    taxonomy_filter(Item.color, token, partial=True),
-                    Item.group_key.ilike(like),
-                )
-            )
+        query = query.filter(search_filter(db, search, taxonomy_filter=taxonomy_filter))
     if category:
         query = query.filter(taxonomy_filter(Item.category, category))
     if brand:
@@ -355,7 +344,7 @@ def get_alerts_summary(
 
 @router.get("/groups", response_model=List[GroupResponse])
 def get_groups(
-    search: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=256),
     brand: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     item_status: Optional[str] = Query(None, alias="status"),
@@ -367,15 +356,17 @@ def get_groups(
     Filters are applied at the group level: a group is included if at least
     one of its items matches the filter criteria."""
 
-    # Step 1: Find group_keys that pass extra filters (brand/category/status/location)
+    # Match the entire search and filters on the SAME variant.
     # A group is included if ANY item matches — then ALL items of that group are shown.
-    filter_keys: Optional[set] = None
+    matching_keys: Optional[list] = None
     taxonomy_filter = facet_filters(db)
-    if brand or category or item_status or location_stock:
+    if search or brand or category or item_status or location_stock:
         kq = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
             Item.is_active == True,
         )
+        if search:
+            kq = kq.filter(search_filter(db, search, taxonomy_filter=taxonomy_filter))
         if brand:
             kq = kq.filter(taxonomy_filter(Item.brand, brand))
         if category:
@@ -394,59 +385,17 @@ def get_groups(
             kq = kq.filter(Item.stock_loja > 0)
         elif location_stock == "deposito":
             kq = kq.filter(Item.stock_deposito > 0)
-        filter_keys = {r[0] for r in kq.distinct().all()}
-        if not filter_keys:
+        matching_keys = [r[0] for r in kq.distinct().all()]
+        if not matching_keys:
             return []
 
-    # Step 2: Find group_keys that match search tokens
-    search_keys: Optional[set] = None
-    if search:
-        tokens = [t for t in search_text(search).strip().split() if t]
-        for token in tokens:
-            like = f"%{token}%"
-            rows = (
-                db.query(Item.group_key).filter(Item.deleted_at.is_(None))
-                .filter(
-                    Item.group_key.isnot(None),
-                    Item.is_active == True,
-                    or_(
-                        Item.group_key.ilike(like),
-                        Item.name.ilike(like),
-                        Item.barcode.ilike(like),
-                        taxonomy_filter(Item.brand, token, partial=True),
-                        taxonomy_filter(Item.category, token, partial=True),
-                        Item.sku_internal.ilike(like),
-                        taxonomy_filter(Item.color, token, partial=True),
-                    ),
-                )
-                .distinct()
-                .all()
-            )
-            token_keys = {r[0] for r in rows}
-            search_keys = token_keys if search_keys is None else search_keys & token_keys
-        if not search_keys:
-            return []
-
-    # Step 3: Intersect filter_keys and search_keys
-    if filter_keys is not None and search_keys is not None:
-        matching_keys: Optional[list] = list(filter_keys & search_keys)
-    elif filter_keys is not None:
-        matching_keys = list(filter_keys)
-    elif search_keys is not None:
-        matching_keys = list(search_keys)
-    else:
-        matching_keys = None  # no filter → all groups
-
-    if matching_keys is not None and not matching_keys:
-        return []
-
-    # Step 4: Load all items from matching groups
+    # Preserve the full grade as context for the matching variant.
     item_query = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key.isnot(None), Item.is_active == True)
     if matching_keys is not None:
         item_query = item_query.filter(Item.group_key.in_(matching_keys))
     items = item_query.order_by(Item.group_key, Item.name).all()
 
-    # Step 5: Build GroupResponse objects
+    # Build GroupResponse objects
     groups_dict: dict = {}
     for item in items:
         key = item.group_key
