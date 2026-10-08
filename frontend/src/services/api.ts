@@ -908,6 +908,7 @@ export interface PdvSaleListItem {
 
 export interface PdvClienteResponse {
   id: string
+  cadastro_cliente_id?: string | null
   nome: string
   doc: string | null
   telefone: string | null
@@ -918,6 +919,19 @@ export interface PdvClienteResponse {
   notas: string | null
   ativo: boolean
   created_at: string
+}
+
+export interface PdvCustomerOption {
+  id: string
+  source: 'pdv' | 'cadastro'
+  nome: string
+  doc: string | null
+  telefone: string | null
+  ceps: string[]
+}
+export interface PdvCustomerSearch {
+  items: PdvCustomerOption[]
+  has_more: boolean
 }
 
 export interface PdvFiadoMovementResponse {
@@ -944,6 +958,10 @@ export const pdvAPI = {
     api.post(`/api/pdv/sales/${id}/cancel`).then(r => r.data),
 
   // Clients / Fiado
+  searchCustomers: (q: string): Promise<PdvCustomerSearch> =>
+    api.get('/api/pdv/clients/search', { params: { q } }).then(r => r.data),
+  selectCustomer: (data: Pick<PdvCustomerOption, 'id' | 'source'>): Promise<PdvClienteResponse> =>
+    api.post('/api/pdv/clients/select', data).then(r => r.data),
   getClients: (params?: Record<string, any>): Promise<PdvClienteResponse[]> =>
     api.get('/api/pdv/clients', { params }).then(r => r.data),
   createClient: (data: Partial<PdvClienteResponse>): Promise<PdvClienteResponse> =>

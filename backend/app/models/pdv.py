@@ -12,6 +12,7 @@ class PdvCliente(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nome = Column(String(200), nullable=False)
+    cadastro_cliente_id = Column(UUID(as_uuid=True), ForeignKey('clientes.id'), nullable=True, index=True)
     doc = Column(String(30), nullable=True)          # CPF, RUC, CI
     telefone = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)

@@ -14,6 +14,7 @@ from app.models import Cliente, Pedido, Rastreamento, Usuario
 from app.models.access import AuditEvent
 from app.models.address_book import SavedAddress, FreightOrder
 from app.models.printing import PrintJob
+from app.models.pdv import PdvCliente
 from app.models.assistant import utcnow
 from app.models.pedido_tag import TagStatus, pedido_tags_association
 from app.models.pedido_anexo import PedidoAnexo
@@ -85,6 +86,20 @@ def test_changed_plan_and_external_order_conflict_are_rejected(env):
         with pytest.raises(HTTPException, match='fora do par'):
             merge_customers(db, target.id, source.id)
         assert not source.merged_into_id and source.ativo
+
+
+def test_merge_moves_pdv_links_without_merging_financial_accounts(env):
+    factory, _, uid, _ = env
+    with factory() as db:
+        target, source, *_ = pair(db, uid)
+        first = PdvCliente(nome=target.nome, cadastro_cliente_id=target.id, saldo_fiado_gs=100)
+        second = PdvCliente(nome=source.nome, cadastro_cliente_id=source.id, saldo_fiado_gs=200)
+        db.add_all([first,second]); db.flush()
+        result = apply(db, target, source)
+        assert result['links_to_move']['pdv_customers'] == 1
+        assert first.cadastro_cliente_id == second.cadastro_cliente_id == target.id
+        assert first.saldo_fiado_gs == 100 and second.saldo_fiado_gs == 200
+        assert first.id != second.id
 
 
 def test_documents_require_explicit_review_and_keep_chosen_principal(env):

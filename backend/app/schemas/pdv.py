@@ -30,6 +30,7 @@ class PdvClienteUpdate(BaseModel):
 
 class PdvClienteResponse(BaseModel):
     id: uuid.UUID
+    cadastro_cliente_id: Optional[uuid.UUID] = None
     nome: str
     doc: Optional[str]
     telefone: Optional[str]
@@ -43,6 +44,23 @@ class PdvClienteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PdvCustomerSelection(BaseModel):
+    source: Literal['pdv', 'cadastro']
+    id: uuid.UUID
+
+
+class PdvCustomerOption(PdvCustomerSelection):
+    nome: str
+    doc: Optional[str] = None
+    telefone: Optional[str] = None
+    ceps: List[str] = []
+
+
+class PdvCustomerSearch(BaseModel):
+    items: List[PdvCustomerOption]
+    has_more: bool
 
 
 # ── PDV Sale Items ────────────────────────────────────────────────────────────
