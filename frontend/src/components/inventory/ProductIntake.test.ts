@@ -35,10 +35,10 @@ async function setField(label: string, value: string) {
   const el = input(label); el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
 }
 async function click(text: string) { button(text).click(); await nextTick(); await nextTick() }
-async function mount() {
+async function mount(onClose = () => {}) {
   root = document.createElement('div'); document.body.append(root)
   const i18n = createI18n({ legacy: false, locale: 'pt', messages: { pt: {}, es: {}, en: {} } })
-  app = createApp(ItemFormModal).use(i18n); app.mount(root); await nextTick()
+  app = createApp(ItemFormModal, { onClose }).use(i18n); app.mount(root); await nextTick()
   return i18n
 }
 async function review() {
@@ -55,7 +55,7 @@ beforeEach(() => {
   mock.createMovement.mockResolvedValue({})
   mock.createGrade.mockResolvedValue({ items: [{ id: 'grade-1' }], total_created: 5 })
 })
-afterEach(() => { app?.unmount(); root?.remove(); vi.resetAllMocks() })
+afterEach(() => { app?.unmount(); root?.remove(); vi.restoreAllMocks(); vi.resetAllMocks() })
 
 describe('Unified optional photo and label intake', () => {
   it.each(['photo-first', 'label-first'])('combines complementary evidence in either order: %s', async order => {
@@ -138,5 +138,116 @@ describe('Unified optional photo and label intake', () => {
   it('only merges permitted suggestions, never a stock balance, SKU or identity from an AI payload', () => {
     const result = mergeIntake({ name: 'Polo' }, { name: 'Polo', brand: 'Marca', quantity: 20, sku_internal: 'unsafe' } as any, 'photo')
     expect(result.additions).toEqual({ brand: 'Marca' }); expect(result.conflicts).toEqual([])
+  })
+})
+
+describe('Reusable grade and color editors', () => {
+  async function openGrade() { await click('3 · Estoque'); await click('Criar grade deste modelo') }
+  async function select(selector: string) {
+    const el = root.querySelector<HTMLButtonElement>(selector)
+    if (!el) throw Error(`Missing control: ${selector}`)
+    el.click(); await nextTick(); await nextTick()
+  }
+  async function type(selector: string, text: string) {
+    const el = root.querySelector<HTMLInputElement>(selector)!
+    el.value = text; el.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+    return el
+  }
+  async function preset(name = 'M ao 3XL', sizes = 'M, L, XL, 2XL, 3XL') {
+    await select('[aria-label="Novo modelo de grade"]')
+    await type('.new-preset-form input', name)
+    return type('.new-preset-form input[placeholder="M, L, XL, 2XL, 3XL"]', sizes)
+  }
+  async function color(text: string) {
+    await select('button[aria-label="Adicionar cor"]')
+    return type('input[aria-label="Adicionar cor"]', text)
+  }
+  function noInventoryWrites() {
+    expect(mock.createItem).not.toHaveBeenCalled()
+    expect(mock.createGrade).not.toHaveBeenCalled()
+    expect(mock.createMovement).not.toHaveBeenCalled()
+  }
+  it('saves all typed sizes by clicking, without confirming each one, and reuses the preset after reopening', async () => {
+    await mount(); await openGrade(); await preset('M ao 3XL', 'm, l XL; 2XL 3XL m')
+    expect(button('Adicionar modelo').disabled).toBe(false)
+    expect(root.querySelectorAll('.preset-size-preview .grade-chip')).toHaveLength(5)
+    await click('Adicionar modelo')
+    expect(root.querySelector('.new-preset-form')).toBeNull()
+    expect(button('M ao 3XL').getAttribute('aria-pressed')).toBe('true')
+    expect(JSON.parse(localStorage.getItem('inv_grade_custom_presets')!)[0].sizes).toEqual(['M', 'L', 'XL', '2XL', '3XL'])
+    expect(document.activeElement).toBe(root.querySelector('[aria-label="Novo modelo de grade"]'))
+    app.unmount(); root.remove(); await mount(); await openGrade(); await click('M ao 3XL')
+    expect(button('Criar grade (5 itens)')).toBeDefined(); noInventoryWrites()
+  })
+  it('saves a preset with Enter and rejects duplicate names without overwriting saved sizes', async () => {
+    await mount(); await openGrade()
+    const el = await preset()
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await nextTick()
+    expect(button('M ao 3XL')).toBeDefined()
+    await preset('  m AO 3XL  ', 'M L'); await click('Adicionar modelo')
+    expect(root.textContent).toContain('Já existe um modelo com esse nome.')
+    expect(JSON.parse(localStorage.getItem('inv_grade_custom_presets')!)).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('inv_grade_custom_presets')!)[0].sizes).toHaveLength(5)
+    noInventoryWrites()
+  })
+  it('adds a color with the visible button after blur, saves its option and preserves it when deselected', async () => {
+    await mount(); await openGrade()
+    const el = await color('  azul   MARINHO  ')
+    el.dispatchEvent(new Event('blur')); await nextTick(); await click('Adicionar')
+    expect(root.querySelector('.quick-color-entry')).toBeNull()
+    expect(root.querySelectorAll('.quick-colors button.active')).toHaveLength(1)
+    expect(root.querySelector('.selected-colors')?.textContent).toContain('Azul Marinho')
+    await select('.selected-colors button')
+    expect(button('Azul Marinho').getAttribute('aria-pressed')).toBe('false')
+    app.unmount(); root.remove(); await mount(); await openGrade(); await click('Azul Marinho')
+    expect(root.querySelector('.selected-colors')?.textContent).toContain('Azul Marinho')
+    expect(JSON.parse(localStorage.getItem('inv_grade_custom_colors')!)).toEqual(['Azul Marinho'])
+    noInventoryWrites()
+  })
+  it('adds colors with Enter and reuses existing/default colors without duplicate buttons', async () => {
+    await mount(); await openGrade()
+    for (const text of ['Lilás', ' lilás ', 'preto']) {
+      const el = await color(text)
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await nextTick()
+    }
+    expect(JSON.parse(localStorage.getItem('inv_grade_custom_colors')!)).toEqual(['Lilás'])
+    expect(root.querySelectorAll('.quick-colors button.active')).toHaveLength(2)
+    expect(root.querySelectorAll('.selected-colors .grade-chip')).toHaveLength(2)
+    noInventoryWrites()
+  })
+  it('cancels each editor with Escape without closing the product or saving a draft', async () => {
+    const close = vi.fn(); await mount(close); await openGrade()
+    const sizeInput = await preset()
+    sizeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await nextTick()
+    expect(root.querySelector('.new-preset-form')).toBeNull()
+    const colorInput = await color('Roxo')
+    colorInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await nextTick()
+    expect(root.querySelector('.quick-color-entry')).toBeNull()
+    expect(document.activeElement).toBe(root.querySelector('button[aria-label="Adicionar cor"]'))
+    expect(close).not.toHaveBeenCalled()
+    expect(localStorage.getItem('inv_grade_custom_presets')).toBeNull()
+    expect(localStorage.getItem('inv_grade_custom_colors')).toBeNull(); noInventoryWrites()
+  })
+  it('recovers from malformed local options and keeps existing valid presets', async () => {
+    localStorage.setItem('inv_grade_custom_presets', JSON.stringify([null, { label: 'broken' }, { label: 'Antigo', sizes: ['p', 'M'] }]))
+    localStorage.setItem('inv_grade_custom_colors', '{invalid')
+    await mount(); await openGrade(); await click('Antigo')
+    expect(button('Criar grade (2 itens)')).toBeDefined()
+    await color('Lilás'); await click('Adicionar')
+    expect(JSON.parse(localStorage.getItem('inv_grade_custom_colors')!)).toEqual(['Lilás']); noInventoryWrites()
+  })
+  it('keeps both editors and their text on storage failure, allowing retry without false success', async () => {
+    await mount(); await openGrade(); await preset()
+    const save = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new DOMException('Full', 'QuotaExceededError') })
+    await click('Adicionar modelo')
+    expect(root.querySelector<HTMLInputElement>('.new-preset-form input')?.value).toBe('M ao 3XL')
+    expect(root.textContent).toContain('Não foi possível salvar neste navegador.')
+    expect(root.querySelectorAll('.preset-option')).toHaveLength(5)
+    await color('Lilás'); await click('Adicionar')
+    expect(root.querySelector<HTMLInputElement>('input[aria-label="Adicionar cor"]')?.value).toBe('Lilás')
+    expect(root.querySelector('.selected-colors')).toBeNull()
+    save.mockRestore(); await click('Adicionar'); await click('Adicionar modelo')
+    expect(localStorage.getItem('inv_grade_custom_colors')).toContain('Lilás')
+    expect(button('M ao 3XL')).toBeDefined(); noInventoryWrites()
   })
 })

@@ -259,61 +259,53 @@
           <div class="form-group">
             <label>{{ tr('Modelo de grade') }}</label>
             <div class="grade-presets">
-              <button class="erp-control"
-                v-for="preset in allPresets"
-                :key="preset.label"
-                @click="applyPreset(preset)"
-                :class="['preset-btn', { active: activePreset === preset.label }]"
-                type="button"
-              >
-                {{ preset.custom ? preset.label : tr(preset.label) }}
-                <span
-                  v-if="preset.custom"
-                  class="preset-remove"
-                  @click.stop="removeCustomPreset(preset.label)"
-                  :title="tr('Remover modelo')"
-                >×</span>
-              </button>
-              <button class="erp-button erp-button--ghost erp-button--icon"
-                @click="showNewPreset = !showNewPreset"
+              <span v-for="preset in allPresets" :key="preset.label" class="preset-option">
+                <button class="erp-control"
+                  @click="applyPreset(preset)"
+                  :class="['preset-btn', { active: activePreset === preset.label }]"
+                  :aria-pressed="activePreset === preset.label"
+                  type="button"
+                >
+                  {{ preset.custom ? preset.label : tr(preset.label) }}
+                </button>
+                <button v-if="preset.custom" type="button" class="preset-remove erp-control"
+                  @click="removeCustomPreset(preset.label)"
+                  :aria-label="tr('Remover modelo {name}', { name: preset.label })"
+                  :title="tr('Remover modelo')">×</button>
+              </span>
+              <button ref="presetAddButtonRef" class="erp-button erp-button--ghost erp-button--icon"
+                @click="showNewPreset ? closePresetInput() : openPresetInput()"
                 :class="['preset-btn', 'preset-add-btn', { active: showNewPreset }]"
                 type="button"
+                :aria-label="tr('Novo modelo de grade')"
+                :aria-expanded="showNewPreset"
                 :title="tr('Novo modelo de grade')"
               >+</button>
             </div>
+            <p v-if="presetStorageError" class="error-msg" role="alert">{{ tr(presetStorageError) }}</p>
 
             <!-- Inline new-preset form -->
-            <div v-if="showNewPreset" class="new-preset-form">
-              <input
-                v-model="newPresetName"
-                class="form-input"
-                :placeholder="tr('Nome do modelo (ex: Numeração EU)')"
-                @keydown.enter.prevent="addNewPresetSize"
-              />
-              <div class="grade-chips" @click="newPresetInputRef?.focus()">
-                <span v-for="(s, i) in newPresetSizes" :key="i" class="grade-chip">
-                  {{ s }}
-                  <button @click.stop="newPresetSizes.splice(i, 1)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
-                </span>
-                <input
-                  ref="newPresetInputRef"
-                  v-model="newPresetInput"
-                  @keydown.enter.prevent="addNewPresetSize"
-                  @keydown="handleComma($event, addNewPresetSize)"
-                  @keydown.space.prevent="addNewPresetSize"
-                  type="text"
-                  class="chip-input"
-                  :placeholder="tr('Ex: XS ↵')"
-                />
+            <div v-if="showNewPreset" class="new-preset-form choice-editor"
+              @keydown.esc.stop.prevent="closePresetInput">
+              <label>{{ tr('Nome do modelo') }}
+                <input ref="presetNameInputRef" v-model="newPresetName" class="form-input" maxlength="60"
+                  :placeholder="tr('Ex: M ao 3XL')" @keydown.enter.stop.prevent="saveCustomPreset"
+                  @keydown.esc.stop.prevent="closePresetInput" />
+              </label>
+              <label>{{ tr('Tamanhos do modelo') }}
+                <input v-model="newPresetInput" type="text" class="form-input" maxlength="200"
+                  placeholder="M, L, XL, 2XL, 3XL" @keydown.enter.stop.prevent="saveCustomPreset"
+                  @keydown.esc.stop.prevent="closePresetInput" />
+              </label>
+              <span class="form-hint">{{ tr('Separe os tamanhos por vírgula ou espaço. Confira a prévia antes de adicionar.') }}</span>
+              <div v-if="newPresetSizes.length" class="preset-size-preview" :aria-label="tr('Tamanhos do modelo')">
+                <span v-for="size in newPresetSizes" :key="size" class="grade-chip">{{ size }}</span>
               </div>
-              <div class="new-preset-actions">
-                <button
-                  @click="saveCustomPreset"
-                  type="button"
-                  class="preset-btn preset-save-btn erp-button erp-button--primary erp-button--sm"
-                  :disabled="!newPresetName.trim() || newPresetSizes.length === 0"
-                >{{ tr('Salvar modelo') }}</button>
-                <button @click="showNewPreset = false" type="button" class="preset-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
+              <p v-if="presetError" class="error-msg" role="alert">{{ tr(presetError) }}</p>
+              <div class="choice-editor-actions">
+                <button @click="saveCustomPreset" type="button" class="erp-button erp-button--primary erp-button--sm"
+                  :disabled="!newPresetName.trim() || !newPresetSizes.length">{{ tr('Adicionar modelo') }}</button>
+                <button @click="closePresetInput" type="button" class="erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
               </div>
             </div>
           </div>
@@ -354,18 +346,19 @@
             <label>{{ tr('Cores') }} <span class="size-count">({{ gradeColors.length }}{{ gradeColors.length > 0 && gradeSizes.length > 0 ? tr(' × {count} tam.', { count: gradeSizes.length }) : '' }})</span></label>
             <div class="quick-colors">
               <button class="erp-control"
-                v-for="c in QUICK_COLORS"
+                v-for="c in allColors"
                 :key="c"
                 @click="toggleQuickColor(c)"
                 :class="['quick-color-btn', { active: gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) }]"
                 :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? tr('Já adicionada (remova pelo ×)') : tr('Adicionar')"
+                :aria-pressed="gradeColors.some(x => x.toLowerCase() === c.toLowerCase())"
                 type="button"
               >
                 <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
                 {{ tr(c) }}
               </button>
-              <span v-if="showColorInput" class="quick-color-btn quick-color-entry">
-                <span aria-hidden="true">+</span>
+              <div v-if="showColorInput" class="choice-editor quick-color-entry"
+                @keydown.esc.stop.prevent="closeColorInput">
                 <input
                   ref="colorInputRef"
                   v-model="colorInput"
@@ -373,15 +366,22 @@
                   maxlength="50"
                   :size="Math.min(18, Math.max(8, colorInput.length + 1))"
                   :aria-label="tr('Adicionar cor')"
-                  :placeholder="tr('Outra cor ↵')"
+                  :placeholder="tr('Nova cor')"
                   @keydown.enter.stop.prevent="addGradeColor"
                   @keydown.esc.stop.prevent="closeColorInput"
-                  @blur="closeEmptyColorInput"
                 />
-              </span>
+                <div class="choice-editor-actions">
+                  <button type="button" class="erp-button erp-button--primary erp-button--sm"
+                    :disabled="!colorInput.trim()" @click="addGradeColor">{{ tr('Adicionar') }}</button>
+                  <button type="button" class="erp-button erp-button--ghost erp-button--icon"
+                    :aria-label="tr('Cancelar nova cor')" :title="tr('Cancelar')" @click="closeColorInput">×</button>
+                </div>
+              </div>
               <button v-else ref="colorAddButtonRef" type="button" class="erp-control quick-color-btn quick-color-add"
                 :aria-label="tr('Adicionar cor')" :title="tr('Adicionar cor')" @click="openColorInput">+</button>
             </div>
+            <p v-if="colorStorageError" class="error-msg" role="alert">{{ tr(colorStorageError) }}</p>
+            <span class="form-hint">{{ tr('Modelos e cores adicionados ficam salvos neste navegador para os próximos cadastros.') }}</span>
             <div v-if="gradeColors.length" class="selected-colors">
               <span v-for="(color, i) in gradeColors" :key="i" class="grade-chip grade-chip-color">
                 {{ color }}
@@ -542,6 +542,8 @@ const { tr } = useInventoryI18n()
 import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
+import { GRADE_PRESETS, QUICK_COLORS, PRESETS_KEY, COLORS_KEY, STORAGE_ERROR, optionKey, parseGradeSizes,
+  readCustomPresets, readCustomColors, readPreference, savePreference, type GradePreset } from '@/services/inventoryGradeOptions'
 import BarcodeScanner from './BarcodeScanner.vue'
 import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
 import ProductHistoryModal from './ProductHistoryModal.vue'
@@ -628,22 +630,30 @@ const gradeInitialStock = ref(0)
 const initialStock = ref(0)
 
 // ── Color grade state ─────────────────────────────────────────────────────────
-const QUICK_COLORS = ['Navy', 'Branco', 'Preto', 'Red', 'Green']
+const customColors = ref(readCustomColors())
+const allColors = computed(() => [...QUICK_COLORS, ...customColors.value])
+const colorStorageError = ref('')
 const gradeColors = ref<string[]>([])
 const colorInput = ref('')
 const colorInputRef = ref<HTMLInputElement>()
 const colorAddButtonRef = ref<HTMLButtonElement>()
 const showColorInput = ref(false)
 
-function openColorInput() { showColorInput.value = true; nextTick(() => colorInputRef.value?.focus()) }
+function openColorInput() { colorStorageError.value = ''; showColorInput.value = true; nextTick(() => colorInputRef.value?.focus()) }
 function closeColorInput() {
-  colorInput.value = ''; showColorInput.value = false
+  colorInput.value = ''; showColorInput.value = false; colorStorageError.value = ''
   nextTick(() => colorAddButtonRef.value?.focus())
 }
-function closeEmptyColorInput() { if (!colorInput.value.trim()) showColorInput.value = false }
 function addGradeColor() {
   const c = toTitleCase(colorInput.value)
-  if (c && !gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) gradeColors.value.push(c)
+  if (!c) return
+  const existing = allColors.value.find(x => optionKey(x) === optionKey(c))
+  if (!existing) {
+    const colors = [...customColors.value, c]
+    if (!savePreference(COLORS_KEY, JSON.stringify(colors))) { colorStorageError.value = STORAGE_ERROR; return }
+    customColors.value = colors
+  }
+  toggleQuickColor(existing || c)
   closeColorInput()
 }
 function toggleQuickColor(c: string) {
@@ -660,35 +670,35 @@ const gradeItemCount = computed(() => {
   return c
 })
 const stockLocation = ref<'loja' | 'deposito'>(
-  (localStorage.getItem('inv_stock_location') as 'loja' | 'deposito') || 'loja'
+  readPreference('inv_stock_location') === 'deposito' ? 'deposito' : 'loja'
 )
 
 watch(stockLocation, (val) => {
-  localStorage.setItem('inv_stock_location', val)
+  savePreference('inv_stock_location', val)
 })
 
-type GradePreset = { label: string; sizes: string[]; custom?: true }
-
-const gradePresets: GradePreset[] = [
-  { label: 'P → 2XL',        sizes: ['P', 'M', 'L', 'XL', '2XL'] },
-  { label: '46 → 54',        sizes: ['46', '48', '50', '52', '54'] },
-  { label: 'Calçados 38–42', sizes: ['38', '39', '40', '41', '42'] },
-  { label: 'Calçados 38–44', sizes: ['38', '39', '40', '41', '42', '43', '44'] },
-  { label: 'Calças 30–40',   sizes: ['30', '31', '32', '33', '34', '36', '38', '40'] },
-]
-
-const customPresets = ref<GradePreset[]>(
-  JSON.parse(localStorage.getItem('inv_grade_custom_presets') || '[]').map((p: GradePreset) => ({ ...p, custom: true as const }))
-)
-
-const allPresets = computed<GradePreset[]>(() => [...gradePresets, ...customPresets.value])
+const customPresets = ref<GradePreset[]>(readCustomPresets())
+const allPresets = computed<GradePreset[]>(() => [...GRADE_PRESETS, ...customPresets.value])
+const presetStorageError = ref('')
 
 // New-preset inline form state
-const newPresetInputRef = ref<HTMLInputElement | null>(null)
+const presetNameInputRef = ref<HTMLInputElement>()
+const presetAddButtonRef = ref<HTMLButtonElement>()
 const showNewPreset = ref(false)
 const newPresetName = ref('')
-const newPresetSizes = ref<string[]>([])
 const newPresetInput = ref('')
+const newPresetSizes = computed(() => parseGradeSizes(newPresetInput.value))
+const presetError = ref('')
+watch([newPresetName, newPresetInput], () => { presetError.value = ''; presetStorageError.value = '' })
+
+function openPresetInput() {
+  presetStorageError.value = ''; showNewPreset.value = true
+  nextTick(() => presetNameInputRef.value?.focus())
+}
+function closePresetInput() {
+  showNewPreset.value = false; newPresetName.value = ''; newPresetInput.value = ''; presetError.value = ''
+  nextTick(() => presetAddButtonRef.value?.focus())
+}
 
 function applyPreset(preset: GradePreset) {
   // The photographed variant must not disappear when applying a preset.
@@ -696,28 +706,25 @@ function applyPreset(preset: GradePreset) {
   activePreset.value = preset.label
 }
 
-function addNewPresetSize() {
-  const s = newPresetInput.value.trim().toUpperCase()
-  if (s && !newPresetSizes.value.includes(s)) newPresetSizes.value.push(s)
-  newPresetInput.value = ''
-}
-
 function saveCustomPreset() {
-  const name = newPresetName.value.trim()
+  const name = newPresetName.value.trim().replace(/\s+/g, ' ')
   if (!name || newPresetSizes.value.length === 0) return
+  if (allPresets.value.some(p => optionKey(p.label) === optionKey(name))) {
+    presetError.value = 'Já existe um modelo com esse nome. Selecione o botão existente ou use outro nome.'
+    return
+  }
   const p: GradePreset = { label: name, sizes: [...newPresetSizes.value], custom: true }
-  customPresets.value.push(p)
-  localStorage.setItem('inv_grade_custom_presets', JSON.stringify(customPresets.value))
+  const presets = [...customPresets.value, p]
+  if (!savePreference(PRESETS_KEY, JSON.stringify(presets))) { presetStorageError.value = STORAGE_ERROR; return }
+  customPresets.value = presets
   applyPreset(p)
-  showNewPreset.value = false
-  newPresetName.value = ''
-  newPresetSizes.value = []
-  newPresetInput.value = ''
+  closePresetInput()
 }
 
 function removeCustomPreset(label: string) {
-  customPresets.value = customPresets.value.filter(p => p.label !== label)
-  localStorage.setItem('inv_grade_custom_presets', JSON.stringify(customPresets.value))
+  const presets = customPresets.value.filter(p => p.label !== label)
+  if (!savePreference(PRESETS_KEY, JSON.stringify(presets))) { presetStorageError.value = STORAGE_ERROR; return }
+  customPresets.value = presets; presetStorageError.value = ''
   if (activePreset.value === label) activePreset.value = ''
 }
 
@@ -1296,12 +1303,16 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .preset-add-btn { padding: 0.3rem 0.6rem; font-size: 1rem; font-weight: 700; line-height: 1; border-style: dashed; color: #6b7280; }
 .preset-add-btn:hover { border-color: #10b981; color: #10b981; background: #ecfdf5; }
 .preset-add-btn.active { background: #ecfdf5; border-color: #10b981; color: #059669; border-style: solid; }
-.preset-save-btn { background: #10b981; border-color: #10b981; color: white; }
-.preset-save-btn:hover { background: #059669; border-color: #059669; color: white; }
-.preset-remove { margin-left: 0.25rem; opacity: 0.55; font-size: 0.85rem; font-weight: 700; line-height: 1; }
-.preset-remove:hover { opacity: 1; }
-.new-preset-form { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
-.new-preset-actions { display: flex; gap: 0.5rem; }
+.preset-option { display: inline-flex; max-width: 100%; }
+.preset-option .preset-btn { white-space: normal; overflow-wrap: anywhere; }
+.preset-option:has(.preset-remove) .preset-btn { border-radius: 99px 0 0 99px; }
+.preset-remove { border: 1px solid #d1d5db; border-left: 0; border-radius: 0 99px 99px 0; background: white; color: #64748b; padding: 0 .55rem; cursor: pointer; }
+.preset-remove:hover { color: #dc2626; background: #fef2f2; }
+.choice-editor { border: 1px solid #c7d2fe; border-radius: 8px; background: #f8fafc; padding: .5rem; }
+.new-preset-form { margin-top: .6rem; display: flex; flex-direction: column; gap: .5rem; }
+.new-preset-form label { display: flex; flex-direction: column; align-items: stretch; }
+.choice-editor-actions, .preset-size-preview { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.choice-editor-actions { flex-shrink: 0; }
 
 .size-count { font-size: 0.72rem; color: #6b7280; font-weight: 400; }
 
@@ -1382,9 +1393,9 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .quick-color-btn.active { background: #e0e7ff; border-color: #6366f1; color: #4338ca; font-weight: 700; cursor: default; }
 .quick-check { font-size: 0.7rem; margin-right: 1px; }
 .quick-color-add { min-width: 32px; font-weight: 700; }
-.quick-color-entry { display: inline-flex; align-items: center; gap: .3rem; max-width: 100%; min-height: 32px; border-color: #6366f1; cursor: text; }
+.quick-color-entry { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3rem; max-width: 100%; box-sizing: border-box; }
 .quick-color-entry:focus-within { outline: 2px solid #c7d2fe; outline-offset: 1px; }
-.quick-color-entry input { min-width: 0; max-width: 100%; border: 0; padding: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
+.quick-color-entry input { flex: 1 1 auto; min-width: 100px; max-width: 100%; border: 0; padding: .3rem; outline: 0; background: transparent; color: #374151; font: inherit; font-size: .85rem; }
 .selected-colors { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .4rem; }
 
 /* Color chips (slightly different from size chips) */
