@@ -22,7 +22,7 @@
       </div>
 
       <div ref="modalBody" class="modal-body erp-dialog__body">
-        <div v-if="isEdit && canCreateVariants" class="stock-readout">
+        <div v-if="isEdit && canCreateVariants" class="stock-readout variant-entry">
           <p>{{ tr('Use os dados já salvos para criar outros tamanhos com a mesma foto.') }}</p>
           <div class="variant-actions">
             <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="variantMode = 'duplicate'">{{ tr('Duplicar produto') }}</button>
@@ -1233,6 +1233,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.variant-entry { padding:12px; }
+.variant-entry p { margin:0 0 10px; font-size:.85rem; color:#64748b; }
 .variant-actions { display:flex; flex-wrap:wrap; gap:8px; }
 
 .modal-container.intake-modal { max-width: 680px; }

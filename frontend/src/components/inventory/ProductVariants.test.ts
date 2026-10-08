@@ -2,8 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import ProductVariantsModal from './ProductVariantsModal.vue'
+import ItemFormModal from './ItemFormModal.vue'
+import type { InventoryItem } from '@/services/api'
 
 const api = vi.hoisted(() => ({ context: vi.fn(), create: vi.fn() }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { getByBarcode: vi.fn().mockResolvedValue([]) }, ocrAPI: {} }))
 vi.mock('@/services/inventoryVariants', () => ({ inventoryVariantsAPI: api }))
 let app: App, root: HTMLDivElement
 const saved = vi.fn()
@@ -54,4 +57,22 @@ describe('Existing product variants', () => {
     button.click(); await flush(); await confirm(); await submit()
     expect(api.create).toHaveBeenCalledTimes(1); expect(root.textContent).toContain('Novos tamanhos: 0')
   })
+})
+
+it('opens both actions from an existing product and keeps unsaved edits when cancelled', async () => {
+  root = document.createElement('div'); document.body.append(root)
+  app = createApp(ItemFormModal, { item: { ...fixture().source, sku_internal: 'FIXTURE', is_active: true, current_stock: 7, stock_loja: 7, stock_deposito: 0 } as InventoryItem, canCreateVariants: true }).use(createI18n({ legacy: false, locale: 'pt', messages: { pt: {} } }))
+  app.mount(root); await flush()
+  const originalName = root.querySelector('.form-group input') as HTMLInputElement
+  originalName.value = 'Edição ainda não salva'; originalName.dispatchEvent(new Event('input', { bubbles: true })); await flush()
+  for (const title of ['Duplicar produto', 'Adicionar grade']) {
+    Array.from(root.querySelectorAll('button')).find(b => b.textContent?.trim() === title)!.click(); await flush()
+    expect(root.querySelector('.modal-overlay')?.getAttribute('style')).toContain('display: none')
+    expect(root.querySelector('.variants-modal h2')?.textContent).toBe(title)
+    expect((root.querySelector('.variants-modal input') as HTMLInputElement).value).toBe('Tênis')
+    Array.from(root.querySelectorAll<HTMLButtonElement>('.variants-modal button')).find(b => b.textContent?.trim() === 'Cancelar')!.click(); await flush()
+    expect(root.querySelector('.variants-modal')).toBeNull()
+    expect(originalName.value).toBe('Edição ainda não salva')
+  }
+  expect(api.create).not.toHaveBeenCalled()
 })
