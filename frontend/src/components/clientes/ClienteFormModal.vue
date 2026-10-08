@@ -1,19 +1,19 @@
 <template>
-  <div v-if="isVisible" class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal-box">
-      <div class="modal-header">
+  <div v-if="isVisible" class="modal-overlay erp-dialog-backdrop" @click.self="$emit('close')">
+    <div v-erp-dialog class="modal-box erp-dialog">
+      <div class="modal-header erp-dialog__header">
         <h2 class="modal-title">{{ isEditing ? uiText(`Editar Cliente`) : uiText(`Novo Cliente`) }}</h2>
-        <button class="close-btn erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">
+        <button data-dialog-close :aria-label="uiText('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="modal-body">
+      <form @submit.prevent="handleSubmit" class="modal-body erp-dialog__form">
 
         <!-- Dados básicos -->
-        <div class="form-section">
+        <div class="erp-dialog__body"><div class="form-section">
           <h3 class="section-title">{{ uiText(`Dados do Cliente`) }}</h3>
           <div class="form-grid">
             <div class="form-group span-2">
@@ -50,9 +50,9 @@
           </div>
         </div>
 
-        <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+        <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p></div>
 
-        <div class="modal-footer">
+        <div class="modal-footer erp-dialog__footer">
           <button type="button" class="btn btn-secondary erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
           <button type="submit" class="btn btn-primary erp-button erp-button--primary" :disabled="submitting || !form.nome.trim()">
             {{ submitting ? uiText(`Salvando...`) : (isEditing ? uiText(`Salvar alterações`) : uiText(`Criar cliente`)) }}
@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText } from '@/i18n/uiText'
 import { ref, watch, computed } from 'vue'
 import { clientesAPI, type Cliente, type ClienteCreate } from '@/services/api'

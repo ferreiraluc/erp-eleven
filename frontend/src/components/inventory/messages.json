@@ -547,9 +547,13 @@
     "Básico",
     "Basic"
   ],
-  "Grade": [
-    "Variantes",
-    "Variants"
+  "Quadrados": [
+    "Cuadrados",
+    "Tiles"
+  ],
+  "Organização e limites (opcional)": [
+    "Organización y límites (opcional)",
+    "Organization and stock limits (optional)"
   ],
   "Foto": [
     "Foto",
@@ -710,6 +714,10 @@
   "Outra cor ↵": [
     "Otro color ↵",
     "Another color ↵"
+  ],
+  "Adicionar cor": [
+    "Agregar color",
+    "Add color"
   ],
   "Cores opcionais — deixe vazio para criar apenas os tamanhos.": [
     "Colores opcionales; deje vacío para crear solo las tallas.",

@@ -207,11 +207,11 @@
           </svg>
           {{ tr('Compacto') }}
         </button>
-        <button class="erp-control" :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" :title="tr('Grade')">
+        <button class="erp-control" :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" :title="tr('Quadrados')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
           </svg>
-          {{ tr('Grade') }}
+          {{ tr('Quadrados') }}
         </button>
         <span class="view-sep">|</span>
         <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar para agrupar')">
@@ -662,10 +662,10 @@
     </transition>
 
     <!-- Modal de nome do grupo -->
-    <div v-if="showGroupModal" class="gmodal-overlay" @click.self="showGroupModal = false">
-      <div class="gmodal">
-        <h3 class="gmodal-title">{{ tr('Definir nome do grupo') }}</h3>
-        <p class="gmodal-sub">
+    <div v-if="showGroupModal" class="gmodal-overlay erp-dialog-backdrop" @click.self="showGroupModal = false">
+      <div v-erp-dialog class="gmodal erp-dialog erp-dialog--sm">
+        <h3 class="gmodal-title erp-dialog__header">{{ tr('Definir nome do grupo') }}</h3>
+        <div class="erp-dialog__body"><p class="gmodal-sub">
           {{ tr('Itens a agrupar: {count}. Defina um código ou nome de modelo:', { count: selectedUngrouped.length }) }}
         </p>
         <!-- Warning: some selected items are already in a group -->
@@ -690,8 +690,8 @@
         <datalist id="gname-list">
           <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
         </datalist>
-        <p class="gmodal-hint">{{ tr('Sugestão baseada nos nomes:') }} <strong>{{ groupNameSuggestion }}</strong></p>
-        <div class="gmodal-footer">
+        <p class="gmodal-hint">{{ tr('Sugestão baseada nos nomes:') }} <strong>{{ groupNameSuggestion }}</strong></p></div>
+        <div class="gmodal-footer erp-dialog__footer">
           <button @click="showGroupModal = false" class="sel-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
           <button @click="confirmGroup" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm"
             :disabled="!groupNameInput.trim() || grouping || selectedUngrouped.length < 2">
@@ -704,6 +704,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { displayStock, hasKnownStock, canWithdrawStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'

@@ -1,14 +1,14 @@
 <template>
-  <div class="receipt-overlay" @click.self="$emit('close')">
-    <div class="receipt-modal">
-      <div class="receipt-actions no-print">
+  <div class="receipt-overlay erp-dialog-backdrop" @click.self="$emit('close')">
+    <div v-erp-dialog class="receipt-modal erp-dialog erp-dialog--sm" :aria-label="uiText('Recibo')">
+      <div class="receipt-actions no-print erp-dialog__header">
         <button class="receipt-btn-print erp-button erp-button--primary" @click="printReceipt">{{ uiText(`🖨 Imprimir`) }}</button>
         <button class="receipt-btn-pdf erp-button erp-button--secondary" @click="savePDF">{{ uiText(`📄 Salvar PDF`) }}</button>
-        <button class="receipt-btn-close erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Fechar`) }}</button>
+        <button data-dialog-close :aria-label="uiText('Fechar')" class="receipt-btn-close erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Fechar`) }}</button>
       </div>
 
       <!-- Receipt body (printable) -->
-      <div class="receipt-paper" ref="receiptRef" id="receipt-print-area">
+      <div class="receipt-paper erp-dialog__body" ref="receiptRef" id="receipt-print-area">
         <!-- Header -->
         <div class="receipt-store">
           <div class="receipt-logo">ELEVEN</div>
@@ -93,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed } from 'vue'
 import type { PdvSaleResponse } from '@/services/api'

@@ -296,15 +296,15 @@
     <PDVReceiptModal v-if="showReceipt && pdv.lastSale" :sale="pdv.lastSale" @close="showReceipt = false" />
 
     <!-- Exchange Rate Modal (same as dashboard) -->
-    <div v-if="showRateModal" class="er-overlay" @click.self="showRateModal = false">
-      <div class="er-modal">
-        <div class="er-header">
+    <div v-if="showRateModal" class="er-overlay erp-dialog-backdrop" @click.self="showRateModal = false">
+      <div v-erp-dialog class="er-modal erp-dialog erp-dialog--sm">
+        <div class="er-header erp-dialog__header">
           <h2>{{ $tr("Taxas de Câmbio") }}</h2>
-          <button class="er-close erp-button erp-button--ghost erp-button--icon" @click="showRateModal = false">
+          <button data-dialog-close :aria-label="uiText('Fechar')" class="er-close erp-button erp-button--ghost erp-button--icon" @click="showRateModal = false">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="er-body">
+        <div class="er-body erp-dialog__body">
           <div v-if="rateError" class="er-error">{{ rateError }}</div>
           <div class="er-form">
             <div class="er-group">
@@ -325,7 +325,7 @@
             </div>
           </div>
         </div>
-        <div class="er-footer">
+        <div class="er-footer erp-dialog__footer">
           <button class="er-btn-cancel erp-button erp-button--secondary" @click="showRateModal = false">{{ $tr("Cancelar") }}</button>
           <button v-if="canEditRates" class="er-btn-save erp-button erp-button--primary" @click="saveRates" :disabled="savingRates">
             <span v-if="savingRates">{{ $tr("Salvando…") }}</span>
@@ -343,6 +343,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'

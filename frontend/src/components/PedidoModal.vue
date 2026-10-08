@@ -1,18 +1,18 @@
 <template>
-  <div v-if="isVisible" class="modal-overlay" @click="handleOverlayClick">
-    <div class="modal-container" @click.stop>
-      <div class="modal-header">
+  <div v-if="isVisible" class="modal-overlay erp-dialog-backdrop" @click="handleOverlayClick">
+    <div v-erp-dialog class="modal-container erp-dialog erp-dialog--lg" @click.stop>
+      <div class="modal-header erp-dialog__header">
         <h2 class="modal-title">
           {{ isEditing ? uiText(`Editar Pedido`) : uiText(`Novo Pedido`) }}
         </h2>
-        <button @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body erp-dialog__body">
         <form @submit.prevent="handleSubmit" class="pedido-form">
           <!-- Pedido Section -->
           <div class="form-section">
@@ -295,7 +295,7 @@
         </form>
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <button type="button" @click="closeModal" class="btn-secondary erp-button erp-button--secondary">
           {{ $tr("Cancelar") }}
         </button>
@@ -324,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

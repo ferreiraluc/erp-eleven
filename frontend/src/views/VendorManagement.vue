@@ -189,19 +189,19 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="modal-overlay" @click="closeModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
+    <div v-if="showModal" class="modal-overlay erp-dialog-backdrop" @click="closeModal">
+      <div v-erp-dialog class="modal-content erp-dialog" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h2>{{ isEditing ? uiText(`Editar Vendedor`) : uiText(`Novo Vendedor`) }}</h2>
-          <button @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
+          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <form @submit.prevent="submitForm" class="modal-body">
-          <div v-if="formError" class="form-error">
+        <form @submit.prevent="submitForm" class="modal-body erp-dialog__form">
+          <div class="erp-dialog__body"><div v-if="formError" class="form-error">
             {{ formError }}
           </div>
 
@@ -281,9 +281,9 @@
               <span class="checkmark"></span>
               {{ $tr("Vendedor ativo") }}
             </label>
-          </div>
+          </div></div>
 
-          <div class="modal-footer">
+          <div class="modal-footer erp-dialog__footer">
             <button type="button" @click="closeModal" class="button secondary erp-button erp-button--secondary">
               {{ $tr("Cancelar") }}
             </button>
@@ -299,6 +299,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'

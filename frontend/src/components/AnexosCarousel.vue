@@ -98,23 +98,23 @@
 
     <!-- Camera capture modal -->
     <teleport to="body">
-      <div v-if="showCamera" class="camera-overlay" @click.self="closeCamera">
-        <div class="camera-modal">
-          <div class="camera-header">
+      <div v-if="showCamera" class="camera-overlay erp-dialog-backdrop" @click.self="closeCamera">
+        <div v-erp-dialog class="camera-modal erp-dialog erp-dialog--media">
+          <div class="camera-header erp-dialog__header">
             <span>{{ uiText(`Tirar foto`) }}</span>
-            <button type="button" @click="closeCamera" class="camera-close erp-button erp-button--ghost erp-button--icon">
+            <button data-dialog-close :aria-label="uiText('Fechar')" type="button" @click="closeCamera" class="camera-close erp-button erp-button--ghost erp-button--icon">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
 
-          <div class="camera-body">
+          <div class="camera-body erp-dialog__body">
             <video v-if="!capturedDataUrl" ref="videoEl" autoplay playsinline class="camera-video"></video>
             <img v-else :src="capturedDataUrl" class="camera-preview" :alt="uiText(`Foto capturada`)" />
             <canvas ref="canvasEl" class="hidden-input"></canvas>
             <p v-if="cameraError" class="camera-error">{{ cameraError }}</p>
           </div>
 
-          <div class="camera-footer">
+          <div class="camera-footer erp-dialog__footer">
             <template v-if="!capturedDataUrl">
               <button type="button" class="btn-capture erp-button erp-button--primary" @click="capturePhoto" :disabled="!cameraReady">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg> {{ uiText(`Capturar`) }} </button>
@@ -153,6 +153,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiNumber } from '@/i18n/uiText'
 import { ref, watch, nextTick } from 'vue'
 import type { PedidoAnexo } from '@/services/api'

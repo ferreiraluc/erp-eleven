@@ -1,26 +1,26 @@
 <template>
   <ProductHistoryModal v-if="showHistory && item" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
   <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
-  <div v-show="!showDeletion && !showHistory" class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-container" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
-      <div class="modal-header">
+  <div v-show="!showDeletion && !showHistory" class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
+    <div v-erp-dialog="!showDeletion && !showHistory" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
+      <div class="modal-header erp-dialog__header">
         <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
         <button v-if="isEdit" ref="historyButton" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
-        <button @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="tabs" :aria-label="tr('Etapas do cadastro')">
+      <div class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
         <button v-if="!isEdit" class="erp-control tab" :class="{ active: activeTab === 'capture' }" :aria-current="activeTab === 'capture' ? 'step' : undefined" @click="activeTab = 'capture'">1 · {{ tr('Foto e etiqueta') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'basic' }" :aria-current="activeTab === 'basic' ? 'step' : undefined" @click="activeTab = 'basic'">{{ isEdit ? tr('Básico') : '2 · ' + tr('Conferência') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'stock' }" :aria-current="activeTab === 'stock' ? 'step' : undefined" @click="activeTab = 'stock'">{{ isEdit ? tr('Estoque') : '3 · ' + tr('Estoque') }}</button>
         <button v-if="isEdit" class="erp-control tab" :class="{ active: activeTab === 'photo' }" @click="activeTab = 'photo'">{{ tr('Foto') }}<span v-if="form.image_data" class="tab-dot"></span></button>
       </div>
 
-      <div ref="modalBody" class="modal-body">
+      <div ref="modalBody" class="modal-body erp-dialog__body">
         <div v-if="isEdit && item" class="stock-readout">
           <div class="stock-readout-values">
             <span>{{ tr('Total salvo') }}: <strong>{{ displayStock(item.current_stock) }}</strong></span>
@@ -90,11 +90,6 @@
             <span v-if="errors.name" class="error-msg">{{ tr(errors.name) }}</span>
           </div>
 
-          <div class="form-group">
-            <label>{{ tr('Descrição') }}</label>
-            <textarea v-model="form.description" class="form-input" rows="2" :placeholder="tr('Descrição opcional')"></textarea>
-          </div>
-
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Marca') }}</label>
@@ -151,11 +146,6 @@
         <!-- ── Stock Tab ── -->
         <div v-if="isEdit ? activeTab === 'stock' : activeTab === 'basic'" class="tab-content intake-details">
           <div class="form-group">
-            <label>{{ tr('Localização') }}</label>
-            <input v-model="form.location" type="text" class="form-input" :placeholder="tr('Ex: A-12, Prateleira 3...')" />
-          </div>
-
-          <div class="form-group">
             <label>{{ tr('Código de Barras') }}</label>
             <div class="barcode-row">
               <input v-model="form.barcode" type="text" class="form-input" :placeholder="tr('EAN, QR, etc.')" />
@@ -196,6 +186,16 @@
             </div>
           </div>
 
+          <details class="erp-dialog__section" :open="!!errors.min_stock">
+          <summary>{{ tr('Organização e limites (opcional)') }}</summary>
+          <div class="form-group">
+            <label>{{ tr('Descrição') }}</label>
+            <textarea v-model="form.description" class="form-input" rows="2" :placeholder="tr('Descrição opcional')"></textarea>
+          </div>
+          <div class="form-group">
+            <label>{{ tr('Localização') }}</label>
+            <input v-model="form.location" type="text" class="form-input" :placeholder="tr('Ex: A-12, Prateleira 3...')" />
+          </div>
           <div class="form-group">
             <label>{{ tr('Fornecedor') }}</label>
             <select v-model="form.supplier_id" class="form-input">
@@ -215,7 +215,7 @@
               <input v-model.number="form.max_stock" type="number" min="0" class="form-input" />
             </div>
           </div>
-
+          </details>
         </div>
         <div v-if="!isEdit && activeTab === 'stock'" class="tab-content">
           <p v-if="errors.name" class="error-msg" role="alert">{{ tr(errors.name) }}</p>
@@ -364,21 +364,29 @@
                 <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
                 {{ tr(c) }}
               </button>
+              <span v-if="showColorInput" class="quick-color-btn quick-color-entry">
+                <span aria-hidden="true">+</span>
+                <input
+                  ref="colorInputRef"
+                  v-model="colorInput"
+                  type="text"
+                  maxlength="50"
+                  :size="Math.min(18, Math.max(8, colorInput.length + 1))"
+                  :aria-label="tr('Adicionar cor')"
+                  :placeholder="tr('Outra cor ↵')"
+                  @keydown.enter.stop.prevent="addGradeColor"
+                  @keydown.esc.stop.prevent="closeColorInput"
+                  @blur="closeEmptyColorInput"
+                />
+              </span>
+              <button v-else ref="colorAddButtonRef" type="button" class="erp-control quick-color-btn quick-color-add"
+                :aria-label="tr('Adicionar cor')" :title="tr('Adicionar cor')" @click="openColorInput">+</button>
             </div>
-            <div class="grade-chips" @click="focusColorInput">
+            <div v-if="gradeColors.length" class="selected-colors">
               <span v-for="(color, i) in gradeColors" :key="i" class="grade-chip grade-chip-color">
                 {{ color }}
                 <button @click.stop="gradeColors.splice(i, 1)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
               </span>
-              <input
-                ref="colorInputRef"
-                v-model="colorInput"
-                @keydown.enter.prevent="addGradeColor"
-                @keydown="handleComma($event, addGradeColor)"
-                type="text"
-                class="chip-input"
-                :placeholder="tr('Outra cor ↵')"
-              />
             </div>
             <span class="form-hint">
               <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">{{ tr('Criará {colors} × {sizes} = {count} itens (cor × tamanho).', { colors: gradeColors.length, sizes: gradeSizes.length, count: gradeItemCount }) }}</template>
@@ -506,7 +514,7 @@
       </div>
 
       <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeItemCount || 1, quantity: gradeItemCount ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
@@ -528,6 +536,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
@@ -611,6 +620,7 @@ const gradeSizes = ref<string[]>([])
 const gradeEnabled = ref(false)
 function disableGrade() {
   gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0
+  colorInput.value = ''; showColorInput.value = false
 }
 const activePreset = ref('')
 const customSizeInput = ref('')
@@ -622,12 +632,19 @@ const QUICK_COLORS = ['Navy', 'Branco', 'Preto', 'Red', 'Green']
 const gradeColors = ref<string[]>([])
 const colorInput = ref('')
 const colorInputRef = ref<HTMLInputElement>()
+const colorAddButtonRef = ref<HTMLButtonElement>()
+const showColorInput = ref(false)
 
-function focusColorInput() { colorInputRef.value?.focus() }
+function openColorInput() { showColorInput.value = true; nextTick(() => colorInputRef.value?.focus()) }
+function closeColorInput() {
+  colorInput.value = ''; showColorInput.value = false
+  nextTick(() => colorAddButtonRef.value?.focus())
+}
+function closeEmptyColorInput() { if (!colorInput.value.trim()) showColorInput.value = false }
 function addGradeColor() {
   const c = toTitleCase(colorInput.value)
   if (c && !gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) gradeColors.value.push(c)
-  colorInput.value = ''
+  closeColorInput()
 }
 function toggleQuickColor(c: string) {
   if (!gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) {
@@ -1354,7 +1371,7 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 
 /* Quick color buttons */
 .quick-colors {
-  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem;
 }
 .quick-color-btn {
   padding: 0.25rem 0.7rem; border: 1.5px solid #d1d5db; border-radius: 99px;
@@ -1364,6 +1381,11 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .quick-color-btn:hover { border-color: #6366f1; color: #4f46e5; }
 .quick-color-btn.active { background: #e0e7ff; border-color: #6366f1; color: #4338ca; font-weight: 700; cursor: default; }
 .quick-check { font-size: 0.7rem; margin-right: 1px; }
+.quick-color-add { min-width: 32px; font-weight: 700; }
+.quick-color-entry { display: inline-flex; align-items: center; gap: .3rem; max-width: 100%; min-height: 32px; border-color: #6366f1; cursor: text; }
+.quick-color-entry:focus-within { outline: 2px solid #c7d2fe; outline-offset: 1px; }
+.quick-color-entry input { min-width: 0; max-width: 100%; border: 0; padding: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
+.selected-colors { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .4rem; }
 
 /* Color chips (slightly different from size chips) */
 .grade-chip-color {

@@ -12,6 +12,12 @@ A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDF
 
 ## Frontend
 
+As janelas usam o [padrão compacto de modais](UI_MODAIS.md), com ações de salvar,
+cotar e imprimir fora da área rolável. Para PY, nome, telefone, cidade e RUC/C.I
+ficam visíveis; rua e outros complementos ficam em **Mais dados do endereço
+(opcional)**, aberto se já houver valores. Recolher a seção ou mudar o país não
+apaga dados, e os campos do Brasil continuam disponíveis para a conferência de frete.
+
 O cabeçalho usa o padrão compartilhado dos módulos: voltar, **Endereços e envios**
 e **Novo endereço**, com ação compacta e sem subtítulo. O botão continua abrindo o
 mesmo formulário de cadastro e vínculo com cliente.

@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-container">
-      <div class="modal-header">
+  <div class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
+    <div v-erp-dialog class="modal-container erp-dialog erp-dialog--lg">
+      <div class="modal-header erp-dialog__header">
         <h2>{{ tr('Importar Estoque') }}</h2>
-        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -11,7 +11,7 @@
       </div>
 
       <!-- Type selector -->
-      <div class="type-tabs">
+      <div class="type-tabs erp-dialog__tabs">
         <button class="erp-control" @click="importType = 'csv'" :class="['type-tab', { active: importType === 'csv' }]">
           {{ tr('CSV / Planilha') }}
         </button>
@@ -20,7 +20,7 @@
         </button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body erp-dialog__body">
         <!-- CSV info -->
         <template v-if="importType === 'csv'">
           <div class="info-box">
@@ -134,7 +134,7 @@
         </div>
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ result ? tr('Fechar') : tr('Cancelar') }}</button>
         <button
           v-if="!result"
@@ -153,6 +153,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive } from 'vue'

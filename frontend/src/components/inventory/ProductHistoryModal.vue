@@ -1,9 +1,9 @@
 <template>
   <Teleport to="body">
-    <div class="history-overlay" @keydown.esc.stop.prevent="emit('close')" @keydown.tab="trapFocus">
-      <section ref="dialog" class="history-dialog" role="dialog" aria-modal="true" :aria-label="tr('Histórico do produto')" tabindex="-1">
-        <header><h2>{{ tr('Histórico do produto') }}</h2><button class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" @click="emit('close')">✕</button></header>
-        <main ref="body">
+    <div class="history-overlay erp-dialog-backdrop" @keydown.esc.stop.prevent="emit('close')" @keydown.tab="trapFocus">
+      <section v-erp-dialog ref="dialog" class="history-dialog erp-dialog erp-dialog--lg" role="dialog" aria-modal="true" :aria-label="tr('Histórico do produto')" tabindex="-1">
+        <header class="erp-dialog__header"><h2>{{ tr('Histórico do produto') }}</h2><button data-dialog-close class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" @click="emit('close')">✕</button></header>
+        <main class="erp-dialog__body" ref="body">
           <section v-if="data" class="history-product">
             <h3>{{ data.product.name }}</h3><p>{{ [data.product.brand, data.product.size, data.product.color].filter(Boolean).join(' · ') }}</p>
             <code>{{ data.product.sku_internal }}</code><p v-if="data.product.barcode">{{ tr('Código de barras') }}: {{ data.product.barcode }}</p>
@@ -62,13 +62,14 @@
             <div v-if="data.total > data.page_size" class="history-pagination"><button class="erp-button erp-button--secondary erp-button--sm" :disabled="page <= 1" @click="paginate(-1)">{{ tr('Anterior') }}</button><span>{{ page }} / {{ Math.ceil(data.total / data.page_size) }}</span><button class="erp-button erp-button--secondary erp-button--sm" :disabled="page * data.page_size >= data.total" @click="paginate(1)">{{ tr('Próxima') }}</button></div>
           </template>
         </main>
-        <footer><button class="erp-button erp-button--secondary erp-button--sm" :disabled="loading" @click="load">{{ tr('Atualizar') }}</button><button class="erp-button erp-button--primary erp-button--sm" @click="emit('close')">{{ tr('Fechar') }}</button></footer>
+        <footer class="erp-dialog__footer"><button class="erp-button erp-button--secondary erp-button--sm" :disabled="loading" @click="load">{{ tr('Atualizar') }}</button><button class="erp-button erp-button--primary erp-button--sm" @click="emit('close')">{{ tr('Fechar') }}</button></footer>
       </section>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { inventoryHistoryAPI, type HistorySection, type ProductHistory } from '@/services/inventoryHistory'
 import { useInventoryI18n } from './i18n'

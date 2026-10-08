@@ -1,16 +1,16 @@
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-container">
-      <div class="modal-header">
+  <div class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
+    <div v-erp-dialog class="modal-container erp-dialog erp-dialog--lg">
+      <div class="modal-header erp-dialog__header">
         <h2>{{ tr('Agrupar sugestão') }} <span class="item-count">({{ localItems.length }} {{ tr('itens)') }}</span></h2>
-        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body erp-dialog__body">
         <!-- Nome do grupo -->
         <div class="form-group">
           <label>{{ tr('Nome do grupo') }}</label>
@@ -66,7 +66,7 @@
         </div>
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer erp-dialog__footer">
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary" :disabled="grouping">{{ tr('Cancelar') }}</button>
         <button
           @click="confirm"
@@ -82,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, nextTick, onMounted } from 'vue'

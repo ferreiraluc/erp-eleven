@@ -69,18 +69,18 @@
     </div>
 
     <!-- Modal de Importação -->
-    <div v-if="showImportModal" class="import-modal-overlay" @click="closeImportModal">
-      <div class="import-modal" @click.stop>
-        <div class="modal-header">
+    <div v-if="showImportModal" class="import-modal-overlay erp-dialog-backdrop" @click="closeImportModal">
+      <div v-erp-dialog class="import-modal erp-dialog erp-dialog--lg" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h2>{{ uiText(`Importar Vendas - VENDASgeral.xlsx`) }}</h2>
-          <button @click="closeImportModal" class="close-button erp-button erp-button--secondary erp-button--icon">
+          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeImportModal" class="close-button erp-button erp-button--secondary erp-button--icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
-        <div class="modal-content">
+        <div class="modal-content erp-dialog__body">
           <!-- Info sobre o formato -->
           <div class="custom-format-info">
             <div class="info-box">
@@ -260,6 +260,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted } from 'vue'
 import { excelImportAPI, type ImportPreviewResponse, type ImportResultResponse } from '@/services/api'

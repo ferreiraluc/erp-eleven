@@ -92,6 +92,10 @@ bloqueada após a retirada do catálogo. Nenhum produto real é removido no depl
 
 ## Cadastro unificado: foto, etiqueta e estoque
 
+O cadastro segue o [padrão compacto de modais](UI_MODAIS.md), com ações persistentes
+e organização/limites opcionais em seção expansível. Na listagem, a visualização
+em cards se chama **Quadrados**; **Ver grades** continua sendo o agrupamento de variantes.
+
 **Estoque → Novo item** e o atalho **Novo produto** do dashboard abrem o mesmo
 cadastro, em três etapas:
 
@@ -108,6 +112,9 @@ cadastro, em três etapas:
    unidades antes de criar. Quantidades não vêm da IA; zero cria somente o cadastro.
 
 **Criar grade deste modelo** habilita a grade apenas por escolha do operador.
+Em **Cores**, o botão **+** ao lado das opções abre um campo compacto na própria
+linha. Digite a nova cor e pressione **Enter** para adicioná-la; **Esc** cancela.
+As cores selecionadas continuam removíveis pelo **×**, sem campo grande abaixo.
 Ao selecionar **P → 2XL**, por exemplo, a peça branca P origina P, M, L, XL e 2XL
 no mesmo grupo, com foto, marca, descrição e preços compartilhados. O tamanho da
 peça base é preservado se estiver fora do modelo escolhido. Sem outras cores

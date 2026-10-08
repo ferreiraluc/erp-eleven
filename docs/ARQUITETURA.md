@@ -18,6 +18,9 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
   Abas, opções, filtros e cards clicáveis usam `erp-control`, conservando indicação
   de seleção e formato próprios. A navegação de conta e os dropdowns têm estilo próprio.
 - `frontend/src/router/index.ts` declara rotas, autenticação e restrições de ADMIN/GERENTE na navegação.
+- `frontend/src/assets/dialogs.css` e `directives/erpDialog.ts` padronizam as janelas:
+  tamanhos, cabeçalho/rodapé, corpo rolável, foco e empilhamento. Os handlers de negócio
+  pertencem ao módulo; ver [Modais e formulários](UI_MODAIS.md).
 - `frontend/src/services/api.ts` centraliza Axios e os contratos dos módulos; `salesBi.ts` isola o BI.
 - `backend/app/main.py` registra routers, CORS, tratamento de erros, migrações e processos de fundo.
 - `backend/app/config.py` lê ambiente/`.env`; `database.py` configura engine, Base e sessões.

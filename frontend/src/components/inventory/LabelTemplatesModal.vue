@@ -1,14 +1,14 @@
 <template>
-  <div class="lt-overlay">
-    <div class="lt-modal">
-      <div class="lt-header">
+  <div class="lt-overlay erp-dialog-backdrop">
+    <div v-erp-dialog class="lt-modal erp-dialog erp-dialog--lg">
+      <div class="lt-header erp-dialog__header">
         <div class="lt-header-left">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" class="lt-header-icon">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
           <h3>{{ ocrText('savedExamples') }}</h3>
         </div>
-        <button @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -16,7 +16,7 @@
       </div>
 
       <!-- Brand filter tabs -->
-      <div class="lt-brand-bar" v-if="brands.length > 0">
+      <div class="lt-brand-bar erp-dialog__tabs" v-if="brands.length > 0">
         <button class="erp-control"
           @click="activeBrand = null"
           :class="['brand-tab', { active: activeBrand === null }]"
@@ -35,7 +35,7 @@
         </button>
       </div>
 
-      <div class="lt-body">
+      <div class="lt-body erp-dialog__body">
         <!-- Loading -->
         <div v-if="loading" class="lt-loading">
           <div class="lt-spinner"></div>
@@ -130,7 +130,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="lt-footer">
+      <div class="lt-footer erp-dialog__footer">
         <span class="lt-footer-hint">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -153,11 +153,12 @@
   </div>
 
   <!-- Delete confirmation dialog -->
-  <div v-if="deleteTarget" class="lt-confirm-overlay" @click.self="deleteTarget = null">
-    <div class="lt-confirm-box">
-      <p>{{ tr('Excluir exemplo de {brand}?', { brand: deleteTarget.brand }) }}</p>
-      <p class="lt-confirm-sub">{{ tr('Esta ação não pode ser desfeita. O exemplo deixará de ser usado como referência.') }}</p>
-      <div class="lt-confirm-actions">
+  <div v-if="deleteTarget" class="lt-confirm-overlay erp-dialog-backdrop" @click.self="deleteTarget = null">
+    <div v-erp-dialog class="lt-confirm-box erp-dialog erp-dialog--sm" role="alertdialog">
+      <h3 class="erp-dialog__header">{{ tr('Excluir exemplo de {brand}?', { brand: deleteTarget.brand }) }}</h3>
+      <div class="erp-dialog__body">
+      <p class="lt-confirm-sub">{{ tr('Esta ação não pode ser desfeita. O exemplo deixará de ser usado como referência.') }}</p></div>
+      <div class="lt-confirm-actions erp-dialog__footer">
         <button @click="deleteTarget = null" class="btn-ghost-sm erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
         <button @click="doDelete" class="btn-danger-sm erp-button erp-button--danger erp-button--sm" :disabled="deletingId !== null">
           {{ deletingId ? tr('Excluindo...') : tr('Excluir') }}
@@ -168,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, computed, onMounted } from 'vue'

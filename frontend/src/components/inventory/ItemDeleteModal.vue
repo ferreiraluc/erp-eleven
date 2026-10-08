@@ -1,8 +1,8 @@
 <template>
-  <div class="delete-overlay" @keydown.esc.stop.prevent="close" @keydown.tab="trapFocus">
-    <section ref="dialog" class="delete-dialog" role="alertdialog" aria-modal="true" :aria-label="tr('Excluir produto definitivamente')" tabindex="-1">
-      <header><h2>{{ tr('Excluir produto definitivamente') }}</h2></header>
-      <main>
+  <div class="delete-overlay erp-dialog-backdrop" @keydown.esc.stop.prevent="close" @keydown.tab="trapFocus">
+    <section v-erp-dialog ref="dialog" class="delete-dialog erp-dialog" role="alertdialog" aria-modal="true" :aria-label="tr('Excluir produto definitivamente')" tabindex="-1">
+      <header class="erp-dialog__header"><h2>{{ tr('Excluir produto definitivamente') }}</h2></header>
+      <main class="erp-dialog__body">
         <p v-if="loading" role="status">{{ tr('Conferindo vínculos do produto...') }}</p>
         <div v-else-if="error" role="alert"><p>{{ tr(error) }}</p><button class="erp-button erp-button--secondary" @click="load">{{ tr('Conferir novamente') }}</button></div>
         <template v-else-if="preview">
@@ -30,7 +30,7 @@
           </template>
         </template>
       </main>
-      <footer>
+      <footer class="erp-dialog__footer">
         <button class="erp-button erp-button--secondary" :disabled="busy" @click="close">{{ tr('Voltar') }}</button>
         <button v-if="preview?.allowed && !error" class="erp-button erp-button--danger" :disabled="!confirmed || busy || loading" @click="remove()">{{ tr(busy ? 'Excluindo...' : 'Excluir definitivamente') }}</button>
         <button v-else-if="preview?.preserve_history_token && !error" class="erp-button erp-button--danger" :disabled="!confirmed || busy || loading" @click="remove(true)">{{ tr(busy ? 'Excluindo...' : 'Excluir e manter histórico') }}</button>
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { inventoryDeletionAPI, type ItemDeletionPreview } from '@/services/inventoryDeletion'
 import { useInventoryI18n } from './i18n'

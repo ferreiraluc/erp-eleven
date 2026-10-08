@@ -1,8 +1,8 @@
 <template>
-  <div class="generator-overlay" @click.self="close">
-    <section ref="dialog" class="generator-dialog" role="dialog" aria-modal="true" :aria-label="t('title')" tabindex="-1" @keydown.esc.prevent="close" @keydown.tab="trapFocus">
-      <header><div><span class="eyebrow">4DEVS · {{ t('synthetic') }}</span><h2>{{ t('title') }}</h2></div><button class="erp-button erp-button--secondary erp-button--icon" type="button" :disabled="busy || saving" :aria-label="t('close')" @click="close"><X :size="20"/></button></header>
-      <p class="intro">{{ t('intro') }}</p>
+  <div class="generator-overlay erp-dialog-backdrop" @click.self="close">
+    <section v-erp-dialog ref="dialog" class="generator-dialog erp-dialog erp-dialog--lg" role="dialog" aria-modal="true" :aria-label="t('title')" tabindex="-1" @keydown.esc.prevent="close" @keydown.tab="trapFocus">
+      <header class="erp-dialog__header"><div><span class="eyebrow">4DEVS · {{ t('synthetic') }}</span><h2>{{ t('title') }}</h2></div><button data-dialog-close class="erp-button erp-button--secondary erp-button--icon" type="button" :disabled="busy || saving" :aria-label="t('close')" @click="close"><X :size="20"/></button></header>
+      <div class="erp-dialog__body"><p class="intro">{{ t('intro') }}</p>
       <div class="origin-note"><Sparkles :size="17"/><p>{{ t('origin') }}</p></div>
       <p v-if="error" class="error" role="alert">{{ t('errors.' + error) }}</p>
       <div class="generate-controls">
@@ -18,7 +18,7 @@
         <label>{{ t('pasteJson') }}<textarea v-model="jsonInput" maxlength="30000" rows="5" placeholder='[{"nome":"...","cpf":"...","endereco":"..."}]' spellcheck="false" :disabled="busy || saving"/></label>
         <button class="erp-button erp-button--secondary" type="button" :disabled="busy || saving || !jsonInput.trim()" @click="importJson">{{ t('importJson') }}</button>
       </details>
-      <form v-if="preview" class="review" @submit.prevent="save">
+      <form id="sender-review-form" v-if="preview" class="review" @submit.prevent="save">
         <div class="review-heading"><div><h3>{{ t('reviewTitle') }}</h3><p>{{ t('reviewHelp') }}</p></div><span class="badge">{{ t('notSaved') }}</span></div>
         <label>{{ t('label') }}<input v-model="name" required maxlength="100" :disabled="saving"/></label>
         <div class="person-grid">
@@ -32,14 +32,16 @@
         <div class="print-preview"><span>{{ t('senderPreview') }}</span><p>{{ printedLines.join('\n') }}</p></div>
         <label class="check"><input v-model="active" type="checkbox" :disabled="saving"/>{{ t('active') }}</label>
         <label class="check approval"><input v-model="approved" type="checkbox" required :disabled="saving"/>{{ t('approval') }}</label>
-        <footer><button class="erp-button erp-button--secondary" type="button" :disabled="saving" @click="close">{{ t('discard') }}</button><button class="primary erp-button erp-button--primary" :disabled="!approved || saving || busy"><CheckCircle2 :size="17"/>{{ saving ? t('saving') : t('save') }}</button></footer>
+
       </form>
-      <div v-else class="empty"><UserRound :size="35"/><h3>{{ t('emptyTitle') }}</h3><p>{{ t('emptyHelp') }}</p></div>
+      <div v-else class="empty"><UserRound :size="35"/><h3>{{ t('emptyTitle') }}</h3><p>{{ t('emptyHelp') }}</p></div></div>
+        <footer v-if="preview" class="erp-dialog__footer"><button class="erp-button erp-button--secondary" type="button" :disabled="saving" @click="close">{{ t('discard') }}</button><button form="sender-review-form" type="submit" class="primary erp-button erp-button--primary" :disabled="!approved || saving || busy"><CheckCircle2 :size="17"/>{{ saving ? t('saving') : t('save') }}</button></footer>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CheckCircle2, ExternalLink, RefreshCw, Sparkles, UserRound, X } from 'lucide-vue-next'

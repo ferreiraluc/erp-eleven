@@ -440,18 +440,18 @@
     </div>
 
     <!-- Modal de Criação/Edição -->
-    <div v-if="showModal" class="modal-overlay" @click="fecharModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
+    <div v-if="showModal" class="modal-overlay erp-dialog-backdrop" @click="fecharModal">
+      <div v-erp-dialog class="modal-content erp-dialog" @click.stop>
+        <div class="modal-header erp-dialog__header">
           <h2>{{ editandoRastreamento ? uiText(`Editar`) : uiText(`Novo`) }} {{ $tr("Rastreamento") }}</h2>
-          <button @click="fecharModal" class="modal-close erp-button erp-button--ghost erp-button--icon">
+          <button :aria-label="uiText('Fechar')" @click="fecharModal" class="modal-close erp-button erp-button--ghost erp-button--icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body erp-dialog__body">
           <div v-if="modalError" class="alert alert-error">
             {{ modalError }}
           </div>
@@ -572,7 +572,7 @@
           </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer erp-dialog__footer">
           <button @click="fecharModal" class="btn btn-secondary erp-button erp-button--secondary">
             {{ $tr("Cancelar") }}
           </button>
@@ -602,6 +602,7 @@
 </template>
 
 <script setup lang="ts">
+import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted, nextTick } from 'vue'
