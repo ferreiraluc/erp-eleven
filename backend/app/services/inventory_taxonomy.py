@@ -3,6 +3,11 @@ from sqlalchemy import inspect
 from .inventory_taxonomy_v1 import FIELDS, canonical, key, text_key, vocabulary
 
 
+def clean_product_name(value):
+    """Trim redundant whitespace without changing model codes or chosen casing."""
+    return ' '.join(value.split()) if value else value
+
+
 def normalize_pending_items(session, flush_context, instances):
     from ..models.inventory import Item
     pending = [obj for obj in session.new | session.dirty

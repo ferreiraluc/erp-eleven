@@ -10,7 +10,7 @@ from .assistant_schedule import may_schedule
 from .assistant_controls import normalized,preview_reply
 from .assistant_queries import StockArgs,query_stock
 from .inventory_service import create_movement
-from .inventory_taxonomy import key as taxonomy_key
+from .inventory_taxonomy import canonical, clean_product_name, key as taxonomy_key
 
 Currency=Literal['BRL','USD','PYG','EUR']
 
@@ -136,8 +136,8 @@ def confirm_inventory(db,message,action):
         created=[]
         for data in p['itens']:
             i=ItemDraft.model_validate(data)
-            title=lambda s:' '.join(word.capitalize() for word in s.strip().split()) if s else None
-            item=Item(name=title(i.nome),brand=title(i.marca),category=title(i.categoria),color=title(i.cor),size=i.tamanho or None,
+            item=Item(name=clean_product_name(i.nome),brand=canonical(i.marca, 'brand') or None,
+                category=canonical(i.categoria, 'category') or None,color=canonical(i.cor, 'color') or None,size=i.tamanho or None,
                 barcode=i.codigo_barras or None,sku_internal='INV-'+utcnow().strftime('%Y%m%d')+'-'+uuid.uuid4().hex[:12].upper(),
                 sale_price=i.preco_venda or 0,sale_currency=i.moeda_venda or 'USD',cost_price=i.custo or 0,cost_currency=i.moeda_custo or 'BRL',
                 created_by=message.user_id,current_stock=0,stock_loja=0,stock_deposito=0)
