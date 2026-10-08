@@ -142,7 +142,7 @@
           :class="['mobile-rastreamento-row-status-' + rastreamento.status.toLowerCase().replace('_', '-'), { 'card-flash': flashedIds.has(rastreamento.id) }]"
         >
           <!-- Layout Mobile: Card Dropdown -->
-          <div class="mobile-dropdown-card">
+          <div class="mobile-dropdown-card tracking-surface" :data-tracking-status="rastreamento.status">
               <!-- Cabeçalho sempre visível -->
               <div
                 class="mobile-card-header"
@@ -306,7 +306,7 @@
           </div>
             
           <!-- Desktop layout -->
-          <div class="rastreamento-row" @click="toggleCard(rastreamento.id)" style="cursor:pointer;">
+          <div class="rastreamento-row tracking-surface" :data-tracking-status="rastreamento.status" @click="toggleCard(rastreamento.id)" style="cursor:pointer;">
           <div class="row-codigo desktop-only">
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
@@ -602,6 +602,7 @@
 </template>
 
 <script setup lang="ts">
+import '@/assets/trackingCards.css'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
@@ -1044,7 +1045,7 @@ function hideOrderSuggestions() {
 <style scoped>
 .rastreamento-page {
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: #f1f5f9;
 }
 
 /* Header */
@@ -1668,20 +1669,11 @@ function hideOrderSuggestions() {
 
   /* Mobile — cards com borda esquerda de acento por status */
   .mobile-dropdown-card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-left-width: 3px;
-    border-left-color: #d1d5db;
     border-radius: 0.5rem;
-    margin: 0 0 3px 0;
+    margin: 0 0 10px;
     overflow: hidden;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    transition: border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
     width: 100%;
-  }
-
-  .mobile-dropdown-card:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }
 
   /* Cabeçalho compacto */
@@ -1773,7 +1765,7 @@ function hideOrderSuggestions() {
   .mch-desc {
     margin: 0;
     font-size: 9px;
-    color: #94a3b8;
+    color: #475569;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1908,7 +1900,7 @@ function hideOrderSuggestions() {
   .mobile-card-inner {
     padding: 8px 10px;
     background: white;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #cbd5e1;
   }
 
   .mobile-content-row {
@@ -1926,7 +1918,7 @@ function hideOrderSuggestions() {
   .mobile-content-label {
     font-size: 10px;
     font-weight: 500;
-    color: #94a3b8;
+    color: #475569;
     min-width: 64px;
     flex-shrink: 0;
   }
@@ -1941,7 +1933,7 @@ function hideOrderSuggestions() {
   }
 
   .mobile-date-value {
-    color: #94a3b8;
+    color: #475569;
     font-size: 9px;
     font-weight: 400;
   }
@@ -1972,7 +1964,7 @@ function hideOrderSuggestions() {
     gap: 5px;
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #cbd5e1;
   }
 
   .mobile-action-btn-expanded {
@@ -2168,23 +2160,15 @@ function hideOrderSuggestions() {
   justify-content: center;
 }
 
-/* Desktop: mostrar apenas rastreamento-row, ocultar dropdown - SEM CORES */
+/* Desktop: linha compacta com a mesma superfície dos cards mobile. */
 .rastreamento-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1.5fr 120px 120px 100px 120px;
   gap: 1rem;
   padding: 1rem;
-  background-color: white !important; /* Sempre branco no desktop */
-  border: 1px solid #e5e7eb !important; /* Sempre borda cinza no desktop */
   border-radius: 0.5rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.625rem;
   align-items: center;
-  transition: all 0.2s;
-}
-
-.rastreamento-row:hover {
-  border-color: #cbd5e1 !important; /* Hover cinza no desktop */
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 /* Desktop: Forçar selects sem cores de status */
@@ -2209,8 +2193,6 @@ function hideOrderSuggestions() {
 /* Ocultar dropdown cards no desktop */
 .mobile-dropdown-card {
   display: none;
-  background-color: transparent;
-  border: none;
 }
 
 /* Acento lateral colorido por status — apenas no mobile */
@@ -2227,27 +2209,6 @@ function hideOrderSuggestions() {
     margin-bottom: 0;
   }
 
-  /* A cor aparece como acento lateral no card filho */
-  .mobile-rastreamento-row-status-entregue .mobile-dropdown-card {
-    border-left-color: #10b981;
-    background: #f5fdf8;
-  }
-
-  .mobile-rastreamento-row-status-em-transito .mobile-dropdown-card {
-    border-left-color: #3b82f6;
-    background: #f8fbff;
-  }
-
-  .mobile-rastreamento-row-status-pendente .mobile-dropdown-card {
-    border-left-color: #f59e0b;
-    background: #fffdf5;
-  }
-
-  .mobile-rastreamento-row-status-erro .mobile-dropdown-card,
-  .mobile-rastreamento-row-status-nao-encontrado .mobile-dropdown-card {
-    border-left-color: #ef4444;
-    background: #fff8f8;
-  }
 }
 
 /* Mobile pequeno: leve compactação adicional */

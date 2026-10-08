@@ -7,6 +7,14 @@ no módulo de vendas operacionais ou no PDV.
 
 ## No ERP
 
+Os cards de rastreamento no dashboard e na página de encomendas compartilham
+fundo opaco levemente tonalizado, contorno completo, acento lateral por status e
+sombra curta, definidos em `frontend/src/assets/trackingCards.css`. Amarelo indica
+pendente, azul trânsito, verde entregue e vermelho falha/não encontrado; o texto
+do status continua presente. A borda permanece no celular, sem depender de hover.
+Descrições e previsões usam texto mais escuro. A alteração é visual: preserva
+filtros, expansão, ações e as listas distintas de mobile e desktop.
+
 - Em **Clientes**, Ativos é a seleção inicial; Inativos mostra apenas os cadastros
   desativados e Todos inclui os dois estados. A busca respeita a seleção. A API
   mantém ativos como padrão e aceita `include_inactive=true` para consultar ambos.
