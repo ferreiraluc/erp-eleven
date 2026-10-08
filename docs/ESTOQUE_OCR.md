@@ -126,11 +126,14 @@ Modelos e cores personalizados ficam salvos **neste navegador**, não no servido
 reabrir o cadastro conserva os botões, mas outro dispositivo ou limpeza do navegador
 não os conserva. Falha de armazenamento mantém o editor aberto com orientação.
 O **×** das cores selecionadas retira apenas a seleção atual; o botão salvo permanece.
-Para apagar os botões personalizados, use **Editar opções**, ao lado do título da
-grade. Aparece um **×** nos modelos e cores criados pelo usuário; **Concluir edição**
+Para apagar qualquer botão, use **Editar opções**, ao lado do título da
+grade. Aparece um **×** em todos os modelos e cores, inclusive os padrões; **Concluir edição**
 recolhe os controles. Remover uma cor também retira sua seleção da grade em edição,
 mas não altera a cor da peça base nem tamanhos. Remover um modelo apaga o atalho,
-preservando os tamanhos já escolhidos no formulário. Opções padrão não são removidas.
+preservando os tamanhos já escolhidos no formulário. Padrões removidos ficam ocultos
+por uma preferência local e não reaparecem ao reabrir o cadastro. Opções personalizadas
+anteriores são preservadas. Pelo **+**, é possível adicionar a cor padrão novamente
+ou cadastrar um novo modelo com o mesmo nome e os tamanhos desejados.
 A remoção é salva no mesmo navegador e pode ser revertida cadastrando a opção
 novamente. Se o armazenamento falhar, o botão e a seleção permanecem, com aviso.
 Nenhum produto salvo ou histórico é alterado por essa organização de atalhos.

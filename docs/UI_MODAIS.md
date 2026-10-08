@@ -88,8 +88,8 @@ próximas aos dados, fora do rodapé de conclusão do formulário.
   prévia, sem precisar confirmar cada tamanho. Escape cancela somente o editor
   e retorna foco ao “+”. Opções ficam salvas no navegador para novos cadastros;
   falha de armazenamento é informada sem perder o texto. Cores repetidas são reaproveitadas.
-  **Editar opções** revela os controles de remover botões personalizados de modelos
-  e cores; **Concluir edição** os recolhe. Excluir uma cor salva também a retira da
+  **Editar opções** revela os controles de remover todos os botões de modelos
+  e cores, inclusive os padrões; **Concluir edição** os recolhe. Excluir uma cor salva também a retira da
   seleção atual; excluir um modelo conserva os tamanhos da grade em edição.
 - **Paraguai:** nome, telefone, cidade e RUC/C.I ficam à vista. Os complementos
   opcionais ficam em uma seção expansível, aberta quando há dados preenchidos.

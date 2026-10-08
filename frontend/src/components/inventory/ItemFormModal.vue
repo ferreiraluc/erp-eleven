@@ -254,7 +254,7 @@
               {{ tr(editingGradeOptions ? 'Concluir edição' : 'Editar opções') }}
             </button>
           </div>
-          <p v-if="editingGradeOptions" class="form-hint">{{ tr('Remova os botões personalizados pelo ×. Produtos cadastrados não são alterados.') }}</p>
+          <p v-if="editingGradeOptions" class="form-hint">{{ tr('Remova qualquer botão pelo ×, inclusive os padrões. Produtos cadastrados não são alterados.') }}</p>
           <p v-if="optionRemovalNotice" class="form-hint" role="status">{{ optionRemovalNotice }}</p>
           <div class="tab-content">
           <p class="intake-hint">{{ tr('Escolha um modelo de tamanhos. Cada variação recebe a foto, marca, descrição e preços desta peça. Sem selecionar outras cores, será usada a cor {color}.', { color: form.color || '—' }) }}</p>
@@ -278,8 +278,8 @@
                 >
                   {{ preset.custom ? preset.label : tr(preset.label) }}
                 </button>
-                <button v-if="editingGradeOptions && preset.custom" type="button" class="option-remove erp-control"
-                  @click="removeCustomPreset(preset.label)"
+                <button v-if="editingGradeOptions" type="button" class="option-remove erp-control"
+                  @click="removePreset(preset.label)"
                   :aria-label="tr('Remover modelo {name}', { name: preset.label })"
                   :title="tr('Remover modelo')">×</button>
               </span>
@@ -366,8 +366,8 @@
                   <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
                   {{ tr(c) }}
                 </button>
-                <button v-if="editingGradeOptions && customColors.includes(c)" type="button" class="option-remove erp-control"
-                  @click="removeCustomColor(c)" :aria-label="tr('Remover cor {name}', { name: c })"
+                <button v-if="editingGradeOptions" type="button" class="option-remove erp-control"
+                  @click="removeColor(c)" :aria-label="tr('Remover cor {name}', { name: c })"
                   :title="tr('Remover cor {name}', { name: c })">×</button>
               </span>
               <div v-if="showColorInput" class="choice-editor quick-color-entry"
@@ -556,7 +556,8 @@ import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 import { GRADE_PRESETS, QUICK_COLORS, PRESETS_KEY, COLORS_KEY, STORAGE_ERROR, optionKey, parseGradeSizes,
-  readCustomPresets, readCustomColors, readPreference, savePreference, type GradePreset } from '@/services/inventoryGradeOptions'
+  HIDDEN_PRESETS_KEY, HIDDEN_COLORS_KEY, readHiddenOptions, readCustomPresets, readCustomColors,
+  readPreference, savePreference, type GradePreset } from '@/services/inventoryGradeOptions'
 import BarcodeScanner from './BarcodeScanner.vue'
 import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
 import ProductHistoryModal from './ProductHistoryModal.vue'
@@ -650,7 +651,8 @@ const initialStock = ref(0)
 
 // ── Color grade state ─────────────────────────────────────────────────────────
 const customColors = ref(readCustomColors())
-const allColors = computed(() => [...QUICK_COLORS, ...customColors.value])
+const hiddenColors = ref(readHiddenOptions(HIDDEN_COLORS_KEY, QUICK_COLORS))
+const allColors = computed(() => [...QUICK_COLORS.filter(c => !hiddenColors.value.includes(optionKey(c))), ...customColors.value])
 const colorStorageError = ref('')
 const gradeColors = ref<string[]>([])
 const colorInput = ref('')
@@ -666,8 +668,12 @@ function closeColorInput() {
 function addGradeColor() {
   const c = toTitleCase(colorInput.value)
   if (!c) return
-  const existing = allColors.value.find(x => optionKey(x) === optionKey(c))
-  if (!existing) {
+  const existing = [...QUICK_COLORS, ...customColors.value].find(x => optionKey(x) === optionKey(c))
+  if (existing && hiddenColors.value.includes(optionKey(existing))) {
+    const hidden = hiddenColors.value.filter(key => key !== optionKey(existing))
+    if (!savePreference(HIDDEN_COLORS_KEY, JSON.stringify(hidden))) { colorStorageError.value = STORAGE_ERROR; return }
+    hiddenColors.value = hidden
+  } else if (!existing) {
     const colors = [...customColors.value, c]
     if (!savePreference(COLORS_KEY, JSON.stringify(colors))) { colorStorageError.value = STORAGE_ERROR; return }
     customColors.value = colors
@@ -676,11 +682,18 @@ function addGradeColor() {
   removedOption.value = null
   closeColorInput()
 }
-function removeCustomColor(color: string) {
-  if (!customColors.value.includes(color)) return
-  const colors = customColors.value.filter(c => c !== color)
-  if (!savePreference(COLORS_KEY, JSON.stringify(colors))) { colorStorageError.value = STORAGE_ERROR; return }
-  customColors.value = colors; colorStorageError.value = ''
+function removeColor(color: string) {
+  if (!allColors.value.includes(color)) return
+  if (QUICK_COLORS.includes(color)) {
+    const hidden = [...hiddenColors.value, optionKey(color)]
+    if (!savePreference(HIDDEN_COLORS_KEY, JSON.stringify(hidden))) { colorStorageError.value = STORAGE_ERROR; return }
+    hiddenColors.value = hidden
+  } else {
+    const colors = customColors.value.filter(c => c !== color)
+    if (!savePreference(COLORS_KEY, JSON.stringify(colors))) { colorStorageError.value = STORAGE_ERROR; return }
+    customColors.value = colors
+  }
+  colorStorageError.value = ''
   gradeColors.value = gradeColors.value.filter(c => optionKey(c) !== optionKey(color))
   removedOption.value = { kind: 'color', name: color }
   nextTick(() => (colorAddButtonRef.value || colorInputRef.value)?.focus())
@@ -707,7 +720,8 @@ watch(stockLocation, (val) => {
 })
 
 const customPresets = ref<GradePreset[]>(readCustomPresets())
-const allPresets = computed<GradePreset[]>(() => [...GRADE_PRESETS, ...customPresets.value])
+const hiddenPresets = ref(readHiddenOptions(HIDDEN_PRESETS_KEY, GRADE_PRESETS.map(p => p.label)))
+const allPresets = computed<GradePreset[]>(() => [...GRADE_PRESETS.filter(p => !hiddenPresets.value.includes(optionKey(p.label))), ...customPresets.value])
 const presetStorageError = ref('')
 
 // New-preset inline form state
@@ -751,11 +765,19 @@ function saveCustomPreset() {
   closePresetInput()
 }
 
-function removeCustomPreset(label: string) {
-  if (!customPresets.value.some(p => p.label === label)) return
-  const presets = customPresets.value.filter(p => p.label !== label)
-  if (!savePreference(PRESETS_KEY, JSON.stringify(presets))) { presetStorageError.value = STORAGE_ERROR; return }
-  customPresets.value = presets; presetStorageError.value = ''
+function removePreset(label: string) {
+  const preset = allPresets.value.find(p => p.label === label)
+  if (!preset) return
+  if (preset.custom) {
+    const presets = customPresets.value.filter(p => p.label !== label)
+    if (!savePreference(PRESETS_KEY, JSON.stringify(presets))) { presetStorageError.value = STORAGE_ERROR; return }
+    customPresets.value = presets
+  } else {
+    const hidden = [...hiddenPresets.value, optionKey(label)]
+    if (!savePreference(HIDDEN_PRESETS_KEY, JSON.stringify(hidden))) { presetStorageError.value = STORAGE_ERROR; return }
+    hiddenPresets.value = hidden
+  }
+  presetStorageError.value = ''
   if (activePreset.value === label) activePreset.value = ''
   removedOption.value = { kind: 'preset', name: label }
   nextTick(() => presetAddButtonRef.value?.focus())

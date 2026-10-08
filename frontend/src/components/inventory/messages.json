@@ -7,9 +7,9 @@
     "Finalizar edición",
     "Done editing"
   ],
-  "Remova os botões personalizados pelo ×. Produtos cadastrados não são alterados.": [
-    "Elimina los botones personalizados con ×. Los productos registrados no se modifican.",
-    "Remove custom buttons with ×. Existing products are not changed."
+  "Remova qualquer botão pelo ×, inclusive os padrões. Produtos cadastrados não são alterados.": [
+    "Elimina cualquier botón con ×, incluidos los predeterminados. Los productos registrados no se modifican.",
+    "Remove any button with ×, including defaults. Existing products are not changed."
   ],
   "Remover cor {name}": [
     "Eliminar color {name}",
