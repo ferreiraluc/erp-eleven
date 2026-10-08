@@ -58,8 +58,8 @@
           <div
             v-for="rastreamento in rastreamentosVisiveis"
             :key="rastreamento.id"
-            class="track-card"
-            :class="`track-${getStatusClass(rastreamento.status)}`"
+            class="track-card tracking-surface"
+            :data-tracking-status="rastreamento.status"
           >
             <!-- Accent strip (left border via class) -->
 
@@ -224,6 +224,7 @@
 </template>
 
 <script setup lang="ts">
+import '@/assets/trackingCards.css'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -535,15 +536,15 @@ onUnmounted(() => mobileQuery.removeEventListener('change', updateViewport))
 
 .rstat-transito { background: #dbeafe; }
 .rstat-transito .rstat-num { color: #1d4ed8; }
-.rstat-transito .rstat-lbl { color: #3b82f6; }
+.rstat-transito .rstat-lbl { color: #1d4ed8; }
 
 .rstat-entregue { background: #d1fae5; }
 .rstat-entregue .rstat-num { color: #065f46; }
-.rstat-entregue .rstat-lbl { color: #10b981; }
+.rstat-entregue .rstat-lbl { color: #065f46; }
 
 .rstat-pendente { background: #fef3c7; }
 .rstat-pendente .rstat-num { color: #b45309; }
-.rstat-pendente .rstat-lbl { color: #d97706; }
+.rstat-pendente .rstat-lbl { color: #92400e; }
 
 .tracking-loading {
   display: flex;
@@ -577,7 +578,7 @@ onUnmounted(() => mobileQuery.removeEventListener('change', updateViewport))
 .recentes-title {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #9ca3af;
+  color: #64748b;
   margin: 0 0 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -586,10 +587,10 @@ onUnmounted(() => mobileQuery.removeEventListener('change', updateViewport))
 .rastreamentos-list {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.625rem;
   overflow-y: auto;
   max-height: 420px;
-  padding-right: 0.25rem;
+  padding: 0.125rem 0.375rem 0.625rem 0.125rem;
 }
 
 .rastreamentos-list::-webkit-scrollbar { width: 3px; }
@@ -600,26 +601,12 @@ onUnmounted(() => mobileQuery.removeEventListener('change', updateViewport))
 /* ── Track card ──────────────────────────────────────────── */
 .track-card {
   position: relative;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-left-width: 3px;
   border-radius: 0.5rem;
   padding: 0.5rem 0.625rem 0.45rem;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  transition: box-shadow 0.15s, transform 0.15s;
 }
-.track-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transform: translateY(-1px);
-}
-
-/* Status accent colors */
-.track-card.status-pendente    { border-left-color: #f59e0b; background: #fffdf5; }
-.track-card.status-em-transito { border-left-color: #3b82f6; background: #f8fbff; }
-.track-card.status-entregue    { border-left-color: #10b981; background: #f5fdf8; }
-.track-card.status-erro        { border-left-color: #ef4444; background: #fff8f8; }
 
 /* Top row */
 .track-top {
@@ -734,12 +721,12 @@ onUnmounted(() => mobileQuery.removeEventListener('change', updateViewport))
 .track-estimate-icon {
   width: 0.65rem;
   height: 0.65rem;
-  color: #9ca3af;
+  color: #475569;
   flex-shrink: 0;
 }
 .track-estimate {
   font-size: 0.65rem;
-  color: #9ca3af;
+  color: #475569;
 }
 
 /* Status badge (old — kept for backwards compat, unused in new card) */
