@@ -274,3 +274,29 @@ def test_owner_can_list_historical_internal_bot_accounts_without_serialization_e
     response=client.get('/api/access/users',headers=login(client))
     assert response.status_code==200,response.text
     assert any(u['email']=='legacy@assistant.invalid' and not u['ativo'] for u in response.json())
+
+
+def test_six_character_passwords_work_for_creation_owner_reset_and_self_change(setup):
+    client, factory, ids = setup
+    owner = login(client)
+    old_session = login(client, 'Wissam')
+    reset_url = '/api/access/users/' + str(ids['Wissam'][0]) + '/reset-password'
+    assert client.post(reset_url, headers=owner, json={'password': '12345'}).status_code == 422
+    result = client.post(reset_url, headers=owner, json={'password': '123456'})
+    assert result.status_code == 200, result.text
+    assert client.get('/api/auth/me', headers=old_session).status_code == 401
+    temporary = login(client, 'Wissam', '123456')
+    assert client.get('/api/auth/me', headers=temporary).json()['must_change_password'] is True
+    changed = client.post('/api/auth/password', headers=temporary,
+                          json={'current_password': '123456', 'new_password': 'Ab12xy'})
+    assert changed.status_code == 200, changed.text
+    final = login(client, 'Wissam', 'Ab12xy')
+    assert client.get('/api/auth/me', headers=final).json()['must_change_password'] is False
+    assert client.get('/api/auth/me', headers=temporary).status_code == 401
+    assert client.post(reset_url, headers=final, json={'password': 'Cd34zw'}).status_code == 403
+    created = client.post('/api/access/users', headers=owner, json={
+        'nome': 'Conta Teste', 'email': 'fixture@eleven.com', 'password': 'Cd34zw',
+        'ativo': True, 'sales_scope': 'all',
+    })
+    assert created.status_code == 201, created.text
+    assert 'senha_hash' not in created.json()

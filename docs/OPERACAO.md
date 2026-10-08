@@ -138,7 +138,7 @@ saldo, documentos reais válidos nem disponibilidade contínua da transportadora
 - O timeout de transações ociosas permanece opt-in: alguns fluxos de provedores
   ainda mantêm transações durante chamadas HTTP. Separá-los exige preservar
   idempotência, confirmação e locks específicos de cada operação.
-- Limitação de login persistida, validação estrita de JWT e mínimo de 12 caracteres
+- Limitação de login persistida, validação estrita de JWT e mínimo de 6 caracteres
   nas novas senhas. Senhas existentes não são redefinidas pelo deploy.
 - Produção recusa segredo padrão/curto, algoritmo inesperado, banco não PostgreSQL
   e Telegram ativo sem segredo de webhook. **Não trocar `SECRET_KEY` às cegas**:

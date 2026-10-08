@@ -47,7 +47,7 @@ def me(user: Usuario = Depends(get_current_active_user)):
 
 class PasswordChange(BaseModel):
     current_password: str = Field(min_length=1, max_length=100)
-    new_password: str = Field(min_length=12, max_length=72)
+    new_password: str = Field(min_length=6, max_length=72)
 
     @field_validator('new_password')
     @classmethod
