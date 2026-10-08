@@ -1,3 +1,4 @@
+import { taxonomyKey } from './inventoryTaxonomy'
 export type GradePreset = { label: string; sizes: string[]; custom?: true }
 
 export const GRADE_PRESETS: GradePreset[] = [
@@ -15,7 +16,7 @@ export const HIDDEN_COLORS_KEY = 'inv_grade_hidden_colors'
 export const STORAGE_ERROR = 'Não foi possível salvar neste navegador. Verifique o armazenamento e tente novamente.'
 
 export function optionKey(value: string) {
-  return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+  return taxonomyKey(value)
 }
 
 export function parseGradeSizes(value: string): string[] {

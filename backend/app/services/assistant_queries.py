@@ -270,14 +270,18 @@ def query_orders(db, args):
 
 
 def query_stock(db, args):
+    from .inventory_taxonomy import facet_filter, search_text
     i = Item
     qty = {"total": i.current_stock, "loja": i.stock_loja, "deposito": i.stock_deposito}[args.local]
     q = db.query(i).filter(i.is_active.is_(True), i.deleted_at.is_(None))
     if args.termo:
-        q = q.filter(contains([i.name, i.sku_internal, i.barcode, i.brand, i.category], args.termo))
+        q = q.filter(or_(contains([i.name, i.sku_internal, i.barcode], args.termo),
+            facet_filter(db, i.brand, search_text(args.termo), partial=True),
+            facet_filter(db, i.category, args.termo, partial=True),
+            facet_filter(db, i.color, args.termo, partial=True)))
     for column, value in ((i.category, args.categoria), (i.size, args.tamanho), (i.color, args.cor)):
         if value:
-            q = q.filter(func.lower(column) == value.lower())
+            q = q.filter(facet_filter(db, column, value) if column.key in ('category', 'color') else func.lower(column) == value.lower())
     if args.situacao == "disponivel":
         q = q.filter(qty > 0)
     elif args.situacao == "zerado":

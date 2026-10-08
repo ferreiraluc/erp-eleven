@@ -706,6 +706,7 @@
 </template>
 
 <script setup lang="ts">
+import { taxonomyKey, uniqueLabels } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { displayStock, hasKnownStock, canWithdrawStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
@@ -766,12 +767,12 @@ const brandSearch = ref('')
 const categorySearch = ref('')
 const filteredBrands = computed(() =>
   brandSearch.value.trim()
-    ? distinctBrands.value.filter(b => b.toLowerCase().includes(brandSearch.value.toLowerCase()))
+    ? distinctBrands.value.filter(b => taxonomyKey(b).includes(taxonomyKey(brandSearch.value)))
     : distinctBrands.value
 )
 const filteredCategories = computed(() =>
   categorySearch.value.trim()
-    ? distinctCategories.value.filter(c => c.toLowerCase().includes(categorySearch.value.toLowerCase()))
+    ? distinctCategories.value.filter(c => taxonomyKey(c).includes(taxonomyKey(categorySearch.value)))
     : distinctCategories.value
 )
 const expandedCardIds = ref<string[]>([])
@@ -1153,7 +1154,7 @@ const existingBrands = computed<string[]>(() => {
   for (const item of inventoryStore.items) {
     if (item.brand) s.add(item.brand)
   }
-  return Array.from(s).sort()
+  return uniqueLabels([...distinctBrands.value, ...s])
 })
 
 // ── Size ordering ────────────────────────────────────────────────────────────
@@ -1504,8 +1505,8 @@ onMounted(async () => {
   } catch {}
   try {
     const dv = await inventoryAPI.getDistinctValues()
-    distinctBrands.value = dv.brands
-    distinctCategories.value = dv.categories
+    distinctBrands.value = uniqueLabels(dv.brands)
+    distinctCategories.value = uniqueLabels(dv.categories)
   } catch {}
 
   document.addEventListener('click', onDocClick)

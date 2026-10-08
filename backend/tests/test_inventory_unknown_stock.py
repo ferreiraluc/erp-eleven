@@ -137,7 +137,7 @@ def test_metadata_save_returns_unknown_and_does_not_repair_balance(stock_app,fie
     assert batch.status_code==200,batch.text
     with factory() as db:
         row=db.get(Item,uuid.UUID(uid))
-        assert balances(row)==expected and row.brand=='Nova marca'
+        assert balances(row)==expected and row.brand=='Nova Marca'
         assert db.query(StockMovement).count()==0
 
 

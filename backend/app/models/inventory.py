@@ -136,3 +136,10 @@ class InventorySessionItem(Base):
 
     session = relationship("InventorySession", back_populates="session_items")
     item = relationship("Item")
+
+# All ORM entry points (CSV, bot, batch editing, duplication and UI) share taxonomy.
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+from ..services.inventory_taxonomy import normalize_pending_items
+
+event.listen(Session, 'before_flush', normalize_pending_items)
