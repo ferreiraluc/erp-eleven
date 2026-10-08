@@ -1,5 +1,3 @@
-from threading import Lock
-import time
 import secrets
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field, field_validator
@@ -11,12 +9,11 @@ from ...models.access import AuthSession, now
 from ...schemas.usuario import UsuarioLogin, Token, UsuarioResponse, UsuarioCreate
 from ...dependencies import get_current_active_user, require_owner
 from ...services.access_policy import OWNER_EMAIL
+from ...services.login_throttle import login_limit
 from ...services.user_sessions import verify_password, get_password_hash, issue_session, revoke_all
 from ...services.user_audit import bind_actor, record
 
 router = APIRouter()
-_attempts = {}
-_attempts_lock = Lock()
 _dummy_hash = get_password_hash(secrets.token_urlsafe(32))
 
 
@@ -27,36 +24,14 @@ def authenticate_user(db, email, password):
     return user if user and valid else None
 
 
-def login_limit(email, address):
-    key = ('pair', email.strip().lower(), address)
-    buckets = [(key, 12), (('account', email.strip().lower()), 30), (('ip', address), 60)]
-    current = time.monotonic()
-    with _attempts_lock:
-        expired = [k for k, (_, since) in _attempts.items() if current - since > 600]
-        for k in expired: _attempts.pop(k, None)
-        for bucket, limit in buckets:
-            count, since = _attempts.get(bucket, (0, current))
-            if count >= limit:
-                raise HTTPException(429, 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.',
-                                    headers={'Retry-After': str(max(1, int(600 - (current - since))))})
-        if len(_attempts) + len(buckets) > 10000:
-            # Do not evict active counters: rotating usernames must not reset limits.
-            raise HTTPException(429, 'Muitas tentativas. Tente novamente em alguns minutos.', headers={'Retry-After': '600'})
-        for bucket, _ in buckets:
-            count, since = _attempts.get(bucket, (0, current))
-            _attempts[bucket] = (count + 1, since)
-    return key
-
-
 @router.post('/login', response_model=Token)
 def login(body: UsuarioLogin, request: Request, db: Session = Depends(get_db)):
-    key = login_limit(str(body.email), request.client.host if request.client else '')
+    login_limit(db, str(body.email), request.client.host if request.client else '')
     user = authenticate_user(db, str(body.email), body.senha)
     if not user or not user.ativo:
         record(db, 'login_failed', 'auth', status_code=401)
         db.commit()
         raise HTTPException(401, 'E-mail ou senha incorretos.')
-    with _attempts_lock: _attempts.pop(key, None)
     bind_actor(db, user)
     user.ultimo_login = now()
     result = issue_session(db, user)
@@ -72,7 +47,7 @@ def me(user: Usuario = Depends(get_current_active_user)):
 
 class PasswordChange(BaseModel):
     current_password: str = Field(min_length=1, max_length=100)
-    new_password: str = Field(min_length=6, max_length=72)
+    new_password: str = Field(min_length=12, max_length=72)
 
     @field_validator('new_password')
     @classmethod
@@ -89,7 +64,8 @@ def change_password(body: PasswordChange, user=Depends(get_current_active_user),
         raise HTTPException(400, 'A senha atual está incorreta.')
     if body.current_password == body.new_password:
         raise HTTPException(400, 'Escolha uma senha diferente da senha atual.')
-    user.senha_hash = get_password_hash(body.new_password)
+    try: user.senha_hash = get_password_hash(body.new_password)
+    except ValueError as exc: raise HTTPException(422,str(exc)) from None
     user.must_change_password = False
     revoke_all(db, user)
     result = issue_session(db, user)
@@ -105,7 +81,9 @@ def register_user(body: UsuarioCreate, user=Depends(require_owner), db: Session 
         raise HTTPException(400, 'Somente Lucas pode ter perfil administrador.')
     if db.query(Usuario).filter(func.lower(Usuario.email) == email).first():
         raise HTTPException(409, 'E-mail já cadastrado.')
-    created = Usuario(nome=body.nome, email=email, senha_hash=get_password_hash(body.senha),
+    try: password_hash = get_password_hash(body.senha)
+    except ValueError as exc: raise HTTPException(422,str(exc)) from None
+    created = Usuario(nome=body.nome, email=email, senha_hash=password_hash,
                       role=body.role, ativo=body.ativo, must_change_password=True,
                       sales_scope='own' if body.role != UsuarioRole.ADMIN else 'all')
     db.add(created)

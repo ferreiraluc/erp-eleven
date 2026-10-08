@@ -167,8 +167,11 @@ def process_outbox():
 
 
 def main(stop_event=None):
+    from .services.worker_health import beat
+    from .logging_config import setup_logging
     stop_event = stop_event or threading.Event()
-    logging.basicConfig(level=logging.INFO)
+    setup_logging()
+    beat('assistant')
     logger.info("Assistant worker started; enabled=%s", settings.ASSISTANT_ENABLED)
     cleaned_at=time.monotonic()
     while not stop_event.is_set():
@@ -180,6 +183,7 @@ def main(stop_event=None):
                 cleaned_at=time.monotonic()
             incoming = process_inbox()
             outgoing = process_outbox()
+            beat('assistant')
             if not incoming and not outgoing:
                 stop_event.wait(2)
         except KeyboardInterrupt:

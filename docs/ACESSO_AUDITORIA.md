@@ -39,10 +39,15 @@ validação. A consulta usa parâmetros SQLAlchemy e o bcrypt também é executa
 quando a conta não existe, reduzindo diferenças de tempo que revelam cadastros.
 Erros de credenciais são genéricos. Tentativas são limitadas por par conta/IP,
 conta e IP durante dez minutos, com resposta 429 e `Retry-After`.
-Esses contadores são locais ao processo e reiniciam com o deploy; antes de escalar
-a API para várias instâncias é necessário um limitador compartilhado/no gateway.
+Os contadores ficam no PostgreSQL e sobrevivem aos deploys: 12 tentativas por par
+conta/IP, 30 por conta e 60 por IP em dez minutos. Chaves HMAC ocultam os identificadores;
+contadores vencidos há mais de um dia são removidos no próximo login. A cota é
+consumida antes do bcrypt, inclusive em logins bem-sucedidos, e não é reiniciada
+por sucesso. Isso evita que outra instância ou um deploy zere a proteção.
+Um bloqueio afeta temporariamente usuários da mesma rede; não é um bloqueio permanente.
 
-O frontend publica CSP (`frame-ancestors`, `form-action`, `base-uri`, `object-src`),
+O frontend publica CSP (`frame-ancestors`, `form-action`, `base-uri`, `object-src`,
+`script-src` e `worker-src`) e HSTS por um ano, além de
 `X-Frame-Options: DENY`, `nosniff` e `Referrer-Policy: no-referrer`, configurados no
 Render e em `render.yaml`. O servidor Node opcional aplica as mesmas regras.
 Isso impede enquadrar o ERP em sites terceiros e limita formulários/navegação base,
@@ -57,7 +62,8 @@ de abrir telas privadas e novamente ao retomar a janela. Token antigo, expirado,
 revogado ou de conta desativada leva ao login; falha de rede permite tentar de novo.
 Respostas privadas usam `Cache-Control: no-store, private`.
 
-O JWT identifica usuário, sessão e versão de autenticação. `auth_sessions` permite
+O JWT usa PyJWT com HS256 fixo e exige `exp`, `iat`, `sub`, `sid` e `ver`.
+Identifica usuário, sessão e versão de autenticação. `auth_sessions` permite
 revogar sessões sem esperar a expiração do token. Logout revoga a sessão atual;
 troca/redefinição de senha e alteração de acesso revogam as sessões anteriores.
 Ao entrar com outra conta, o frontend reinicia para descartar estados em memória.
@@ -75,7 +81,9 @@ validar novamente ou sair. Após uma troca de senha já confirmada pelo servidor
 essa nova tentativa consulta a sessão; não repete a alteração de senha.
 
 Senhas temporárias exigem troca na tela **Minha conta** antes de usar os módulos.
-A troca pede a senha atual, confirmação da nova e aplica limite de 6–72 bytes.
+A troca pede a senha atual e confirmação da nova: mínimo de 12 caracteres e máximo
+de 72 bytes UTF-8, recusando repetições triviais e alguns padrões óbvios. Senhas
+antigas continuam funcionando até a troca; a atualização não redefine contas.
 O sistema não armazena senhas em texto; usa bcrypt. Não há envio de recuperação
 por e-mail: Lucas fornece outra senha temporária pelo painel.
 

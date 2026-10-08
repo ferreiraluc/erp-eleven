@@ -2,6 +2,7 @@ import logging
 import sys
 from datetime import datetime
 from typing import Optional
+from .services.safe_logging import RedactionFilter
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter with colors for different log levels"""
@@ -46,6 +47,7 @@ def setup_logging(level: str = "INFO", log_file: Optional[str] = None):
     
     # Console handler with colors
     console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.addFilter(RedactionFilter())
     console_handler.setLevel(numeric_level)
     console_handler.setFormatter(colored_formatter)
     root_logger.addHandler(console_handler)
@@ -53,13 +55,16 @@ def setup_logging(level: str = "INFO", log_file: Optional[str] = None):
     # File handler if specified
     if log_file:
         file_handler = logging.FileHandler(log_file)
+        file_handler.addFilter(RedactionFilter())
         file_handler.setLevel(numeric_level)
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
     
     # Configure specific loggers
     loggers_config = {
-        'uvicorn.access': logging.INFO,     # show HTTP access log from uvicorn itself
+        'uvicorn.access': logging.WARNING, # application logs sanitized route templates once
+        'httpx': logging.WARNING,
+        'httpcore': logging.WARNING,
         'uvicorn.error': logging.INFO,
         'sqlalchemy.engine': logging.WARNING,  # set to INFO to see all SQL queries
         'alembic': logging.INFO,

@@ -4,7 +4,7 @@ Sistema interno da Loja Eleven: estoque, clientes, pedidos, rastreamentos, folga
 endereços, impressão, etiquetas SuperFrete e análise das vendas lançadas no Excel.
 O assistente DeepSeek opera sobre as mesmas regras e dados do ERP pelo Telegram.
 
-Documentação revisada em **30/09/2026**. O código e as permissões do backend são a
+Documentação revisada em **07/10/2026**. O código e as permissões do backend são a
 referência do comportamento implementado; materiais em `docs/archive/` são históricos.
 
 ## O que está em uso
@@ -68,7 +68,7 @@ servidor de impressão.
 - [Escopo e regras do produto](docs/ESCOPO.md): funcionalidades, limites e decisões da loja.
 - [Arquitetura e mapa do código](docs/ARQUITETURA.md): onde alterar cada módulo, dados e processos.
 - [Desenvolvimento e validação](docs/DESENVOLVIMENTO.md): ambiente local, banco, testes e build.
-- [Deploy e operação](docs/OPERACAO.md): Render, variáveis, workers, horários e diagnóstico.
+- [Deploy e operação](docs/OPERACAO.md): Render, variáveis, workers, horários, diagnóstico, proteções SRE e recuperação por backup cifrado.
 - [Índice completo dos guias](docs/README.md): bot, impressão, endereços e BI.
 - [Acesso individual e auditoria](docs/ACESSO_AUDITORIA.md): sessões, permissões, senhas e uso das telas.
 - [Clientes, pedidos e pacotes](docs/CLIENTES_PEDIDOS_RASTREIOS.md): vínculos explícitos e entregas parciais.

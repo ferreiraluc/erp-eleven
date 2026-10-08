@@ -46,7 +46,7 @@ export interface HealthStatus {
 
 export const healthAPI = {
   check: (): Promise<HealthStatus> =>
-    api.get('/health', { timeout: 5000 }).then(r => r.data),
+    api.get('/health', { timeout: 5000, validateStatus: status => status === 200 || status === 503 }).then(r => r.data),
 }
 
 export interface LoginRequest {

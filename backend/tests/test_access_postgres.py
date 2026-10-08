@@ -160,7 +160,7 @@ def test_manual_and_receipt_registration_serialize_the_same_code(pg, monkeypatch
 
 
 def test_scheduler_preserves_newer_manual_results_and_updates_order_atomically(pg,monkeypatch):
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from sqlalchemy.orm import sessionmaker
     from app.config import settings
     from app import database, main
@@ -168,12 +168,13 @@ def test_scheduler_preserves_newer_manual_results_and_updates_order_atomically(p
     from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
     from app.models.pedido import PedidoStatus
     from app.models.rastreamento import RastreamentoStatus as Status
+    from app.models.operations import ScheduledRun
     from app.services import wonca_service
 
     monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
     engine,schema=pg
     isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
-    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento)])
+    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento,ScheduledRun)])
     factory=sessionmaker(bind=isolated,autoflush=False)
     monkeypatch.setattr(database,'SessionLocal',factory)
     order_id=uuid.uuid4()
@@ -199,6 +200,10 @@ def test_scheduler_preserves_newer_manual_results_and_updates_order_atomically(p
             assert second.status==Status.ENTREGUE
             assert db.get(Pedido,order_id).status==PedidoStatus.ENVIADO
         monkeypatch.setattr(wonca_service,'parse_tracking',lambda _: ([],{},Status.ENTREGUE))
+        main._job_atualizar_rastreamentos()
+        with factory() as db:assert db.get(Pedido,order_id).status==PedidoStatus.ENVIADO
+        tomorrow = settings.now() + timedelta(days=1)
+        monkeypatch.setattr(settings,'now',lambda:tomorrow)
         main._job_atualizar_rastreamentos()
         with factory() as db:assert db.get(Pedido,order_id).status==PedidoStatus.ENTREGUE
     finally:

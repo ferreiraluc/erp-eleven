@@ -47,6 +47,9 @@ export default defineConfig(async ({ mode }) => {
   define: {
     __VUE_OPTIONS_API__: false,
     __VUE_PROD_DEVTOOLS__: false,
+    // vue-i18n 9 defaults to generated functions, which violate script-src self.
+    __INTLIFY_JIT_COMPILATION__: true,
+    __INTLIFY_DROP_MESSAGE_COMPILER__: false,
   },
   esbuild: {
     drop: mode === 'production' ? ['console', 'debugger'] : [],

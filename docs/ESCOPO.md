@@ -149,3 +149,10 @@ e fiado são ajustados na mesma transação após revisão explícita; reembolso
 Pix/cartão/dinheiro continuam externos. Demais usuários lançam novas vendas e
 consultam o escopo permitido. Registros excluídos permanecem na auditoria.
 Regras e limitações: [Gestor de Vendas](VENDAS_PDV.md).
+
+## Confiabilidade operacional
+
+A aplicação tem verificação real de saúde, limites de banco, limitação compartilhada
+de login e proteção de publicações por CI. O procedimento de backup cifrado e
+restauração isolada está em [Operação](OPERACAO.md). Isso não elimina os pontos únicos
+de falha do plano atual e da impressora Windows, nem substitui MFA e custódia de segredos.

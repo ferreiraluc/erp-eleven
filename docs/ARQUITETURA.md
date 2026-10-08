@@ -60,8 +60,12 @@ não houver uma migração explícita de seus consumidores.
 | Impressão | `tools/eleven-print-agent/Agente.ps1` | PowerShell na sessão do Windows da loja |
 
 Use uma instância/processo Uvicorn no arranjo atual. As filas do assistente/frete/BI
-têm mecanismos de concorrência no PostgreSQL, mas o agendamento de rastreio é local
-a cada processo da API. Escalar múltiplas instâncias requer revisar esse agendador.
+têm mecanismos de concorrência no PostgreSQL. O agendamento local de rastreios
+usa uma trava consultiva no PostgreSQL e registra o dia concluído em `scheduled_runs`,
+evitando uma segunda execução durante deploys sobrepostos. Falha antes de registrar
+a conclusão pode repetir consultas ao provedor, sem autorizar pagamentos ou impressões.
+Isso não torna toda a aplicação pronta para escala horizontal: arquivos temporários,
+capacidade do banco, migrações e processos embutidos ainda precisam ser avaliados.
 O ciclo de desligamento sinaliza as threads e aguarda sua conclusão por prazo limitado.
 
 ## Caminhos de dados

@@ -7,7 +7,10 @@
 - Banco: PostgreSQL compartilhado entre API e workers.
 - Impressora: agente PowerShell na máquina Windows da loja, fora do Render.
 
-O repositório é publicado pela branch `main` com auto-deploy configurado nos serviços.
+O repositório é publicado pela branch `main`, com auto-deploy **After CI Checks Pass**
+configurado no frontend e backend. Falhas de testes ou auditoria de dependências de
+execução bloqueiam novas publicações automáticas. Deploy manual continua sendo um bypass
+operacional: use apenas para uma revisão previamente validada.
 `render.yaml` é a referência versionada; confira diferenças com os serviços existentes
 antes de reaplicar um Blueprint. Não use essa operação para substituir banco, segredos,
 plano ou configuração já ativa inadvertidamente.
@@ -94,10 +97,13 @@ Não executar downgrade destrutivo como reação automática a uma falha.
 | “—” nas vendas | Ausência de resultado/detalhamento; não substituir por zero nem redistribuir diferença |
 | Endereço repetido | Número/complemento/documento/vínculo e normalização; não apagar usos históricos |
 
-`/health` informa API, banco, assistente embutido e worker de etiquetas. Não atesta impressão
-física, entrega de mensagens, saldo de provedor nem sucesso de sincronização BI. Banco offline
-pode aparecer no JSON mesmo com HTTP 200; monitorar o conteúdo também. O estado de leitura
-BI está em `/api/sales-bi/sources`, autenticado.
+`/live` informa apenas que a API responde. `/health` verifica o banco e o progresso
+dos workers de assistente embutido, etiquetas e BI; devolve **503** se o banco está
+indisponível, uma thread parou ou ficou dez minutos sem progresso. A consulta ao banco
+é feita fora do event loop e fecha a sessão mesmo em erro. O Render usa `/health`
+para admissão de deploy e recuperação de instâncias. Não atesta impressão física,
+entrega de mensagens, saldo de provedor nem resultado correto da sincronização BI.
+O estado de leitura BI está em `/api/sales-bi/sources`, autenticado.
 
 O agente tem credencial própria, limitada à impressora. Para substituir/revogar, use o fluxo
 administrativo e reinstale a credencial no Windows; não copie token para URLs ou documentação.
@@ -115,3 +121,119 @@ Consulte os guias específicos antes de registrar novamente webhooks ativos.
 A validação automatizada usa provedores simulados. A manutenção não emitiu etiquetas
 nem enviou impressões ou mensagens de teste à operação. A aprovação do CI não atesta
 saldo, documentos reais válidos nem disponibilidade contínua da transportadora.
+
+## Confiabilidade e segurança — manutenção de 07/10/2026
+
+### Proteções de aplicação
+
+- Pool PostgreSQL: cinco conexões persistentes e até cinco extras por processo,
+  pre-ping, reciclagem após 900 s e espera limitada. `DB_*` no `.env.example`
+  permite ajustar os limites. Queries têm 30 s e espera por locks 10 s;
+  tarefas excepcionais precisam de limite próprio, não desabilitar globalmente.
+- O timeout de transações ociosas permanece opt-in: alguns fluxos de provedores
+  ainda mantêm transações durante chamadas HTTP. Separá-los exige preservar
+  idempotência, confirmação e locks específicos de cada operação.
+- Limitação de login persistida, validação estrita de JWT e mínimo de 12 caracteres
+  nas novas senhas. Senhas existentes não são redefinidas pelo deploy.
+- Produção recusa segredo padrão/curto, algoritmo inesperado, banco não PostgreSQL
+  e Telegram ativo sem segredo de webhook. **Não trocar `SECRET_KEY` às cegas**:
+  dados de configuração cifrados também dependem dela; rotação exige migração.
+- Logs técnicos registram método, rota-modelo, status, duração e ID gerado por
+  requisição. Não registram query strings nem corpos. Há redação de segredos
+  configurados, URLs, JWT, e-mail e CPF formatado e supressão de valores de exceções.
+  A redação é defesa adicional, não garantia para texto livre arbitrário.
+- A auditoria do produto continua registrando login e alterações; consultas e
+  contadores operacionais não voltam a gerar eventos no painel de auditoria.
+- FastAPI/Starlette/PyJWT e dependências Node afetadas receberam correções dirigidas.
+  CI verifica `pip-audit` e dependências Node de execução, além dos testes existentes.
+- A política de scripts permite apenas a própria origem e WebAssembly necessário
+  ao OCR; bloqueia scripts inline e eval JavaScript. O vue-i18n 9 usa o modo JIT
+  compatível com CSP, preservando traduções. A mensagem de carregamento foi movida
+  para um arquivo estático.
+- O Docker opcional usa usuário sem root. Produção permanece no runtime Python
+  gerenciado pelo Render: não há Kubernetes, VPC AWS ou Redis para configurar aqui.
+
+### Rede e recuperação no Render
+
+Verificação no painel: backend Starter e banco Basic-256mb em Oregon, PostgreSQL 16,
+sem réplica. A conexão do backend usa o hostname **interno** do Render. A regra
+externa do banco foi reduzida de `0.0.0.0/0` ao IPv4 administrativo atual `/32`;
+a rede interna continua permitida. O validador do Render rejeitou uma origem fora
+da lista. O IP exato fica no painel, não no repositório público.
+
+**Se mudar a conexão de internet do administrador**, atualize a regra `/32` em
+PostgreSQL → Info → Networking antes de usar ferramentas externas. Site, Telegram
+e agente Windows continuam usando HTTPS da API, sem conexão direta ao PostgreSQL.
+Não restaurar `0.0.0.0/0` para contornar um IP administrativo desatualizado.
+
+Recovery informa PITR dos últimos **três dias** no plano atual. Uma janela maior,
+réplica/HA e capacidade adicional dependem de plano e orçamento. Nenhum plano foi
+comprado ou aumentado nesta manutenção.
+
+### Backup cifrado e teste de restauração
+
+Ferramenta: `tools/operations/recovery.py`, executada pelo Python do backend.
+Requisitos locais: `pg_dump`/`pg_restore` de versão compatível e `age`/`age-keygen`.
+A ferramenta não importa a aplicação nem inicia workers. O backup passa diretamente
+para a cifra age, sem dump em texto claro no disco. A conexão remota exige TLS
+com validação do certificado e hostname. A restauração autentica o arquivo inteiro
+antes de criar uma base local descartável, valida tabelas/constraints e remove
+essa base ao terminar. Não aceita destino remoto nem sobrescreve banco existente.
+
+```sh
+# Preparação única; guardar a identidade privada em cofre separado também.
+umask 077
+mkdir -p "$HOME/.config/erp-eleven/recovery" "$HOME/.local/share/erp-eleven/recovery"
+age-keygen -o "$HOME/.config/erp-eleven/recovery/identity.agekey"
+
+# A chave privada nunca vai para o Render, Git ou argumentos de comandos.
+backup_recipient=$(age-keygen -y "$HOME/.config/erp-eleven/recovery/identity.agekey")
+backend/venv/bin/python tools/operations/recovery.py backup \
+  --env-file backend/.env --recipient "$backup_recipient" \
+  --output-dir "$HOME/.local/share/erp-eleven/recovery"
+
+# Usar PostgreSQL local vazio para o exercício, nunca a URL de produção.
+# Substituir USUARIO_LOCAL, porta e ARQUIVO pelos valores deste computador.
+SRE_LOCAL_DATABASE_URL=postgresql://USUARIO_LOCAL@127.0.0.1:55439/postgres \
+  backend/venv/bin/python tools/operations/recovery.py verify-restore \
+  --archive "$HOME/.local/share/erp-eleven/recovery/ARQUIVO.dump.age" \
+  --identity "$HOME/.config/erp-eleven/recovery/identity.agekey"
+```
+
+O manifesto `.dump.json` tem checksum, duração, versão Alembic, contagens e resultado;
+não contém nomes de clientes ou credenciais. Mantê-lo junto do backup. Dumps podem
+conter credenciais cifradas da aplicação: a identidade age **e** a chave original
+`SECRET_KEY` precisam de custódia para uma recuperação completa. Não registrar
+seus valores em tickets, relatórios ou logs.
+
+Exercício de 07/10: backup de aproximadamente 10 MB criado em 50 s, restaurado em
+PostgreSQL local em menos de 1 s, **50 tabelas**, revisão `a3b4c5d6e7f8`, nenhuma
+constraint pendente de validação. Estes tempos medem somente exportação e restore
+local, **não** o RTO do serviço completo. Um ensaio com dados artificiais comprovou
+também a preservação de linhas e a exclusão apenas do banco temporário criado.
+
+O arquivo cifrado está na pasta privada acima; a chave está na pasta de configuração.
+Isto complementa o PITR, mas ambos os arquivos no mesmo laptop não constituem cópia
+independente contra perda do equipamento. Pendente: cofre externo para a chave,
+cópia off-site aprovada, retenção definida e automação dessa cópia. Não há rotina
+nova apagando backups antigos. Meta sugerida a validar com a loja: RPO até 24 h da
+cópia externa e RTO até 2 h, com ensaio mensal completo e sem disparar integrações.
+
+### Pendências e critérios de acompanhamento
+
+| Área | Evidência / limite atual | Próxima ação e sinal de alerta |
+| --- | --- | --- |
+| Rede/TLS | Banco acessível pela rede interna; acesso público restrito; HTTPS válido | Monitorar expiração com 30 dias de antecedência e testar conectividade após mudança de rede |
+| CPU/RAM/IOPS | Banco 256 MB, uso de disco 0,81% de 15 GB no painel; amostra SQL sem locks, deadlocks ou transação ociosa | Observar pelo menos um ciclo de pico; atenção a memória >85%, OOM, CPU >80% por 15 min ou disco >80%. A amostra não comprova ausência de gargalos |
+| Banco | 6 conexões na amostra incluindo auditoria, limite 103; TLS ativo nas conexões observadas; `pg_stat_statements` ausente | Medir p95 e queries lentas antes de índices; não habilitar extensões/reinícios ou rodar `EXPLAIN ANALYZE` de escrita indiscriminadamente |
+| Alta disponibilidade | Uma API, um banco e um computador/impressora; sem réplica | Dimensionar plano/HA, backup de internet e nobreak; não há failover físico implementado |
+| Acesso | Sessões revogáveis, escopo por vendedor e limite compartilhado | Trocar senhas iniciais, habilitar MFA nas contas de infraestrutura; MFA/passkeys no ERP e sessão HttpOnly ainda pendentes |
+| Segredos | Scan do histórico Git sem achados; não certifica ausência de vazamentos fora do Git | Revogar/rotacionar tokens já compartilhados em conversa, coordenando Telegram/Twilio/Render e agente. Preservar capacidade de decifrar configurações |
+| Dependências | Auditoria de execução integrada ao CI | Restam 4 avisos altos de desenvolvimento (`braces`/`micromatch`/`fast-glob` e configuração ESLint); acompanhar correção upstream sem `npm audit fix --force` ou downgrade incidental |
+| Alertas/APM | Health real e notificações de falha do Render; logs técnicos sanitizados | Falta monitor independente, destino de alertas, APM/SIEM e retenção central. Definir responsáveis antes de configurar integrações externas |
+| Conformidade | Dados de clientes, endereços, documentos e funcionários; histórico preservado | Definir finalidade, retenção, contratos e localização internacional dos dados com responsáveis. Esta manutenção não certifica conformidade legal |
+
+Referências operacionais: [health checks](https://render.com/docs/health-checks),
+[deploy após CI](https://render.com/docs/deploys#integrating-with-ci),
+[rede do PostgreSQL](https://render.com/docs/postgresql-creating-connecting#restricting-external-access)
+e [recuperação](https://render.com/docs/postgresql-backups).

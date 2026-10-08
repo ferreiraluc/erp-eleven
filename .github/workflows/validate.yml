@@ -49,9 +49,21 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --include=dev
+      - name: Audit production Node dependencies
+        run: npm audit --omit=dev --audit-level=high
       - run: npm test
       - run: npm run type-check
       - run: npm run build
+  python-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit==2.10.1
+      - name: Audit backend dependencies
+        run: pip-audit -r backend/requirements.txt --progress-spinner off
   print-agent:
     runs-on: windows-latest
     steps:

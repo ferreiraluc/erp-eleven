@@ -9,9 +9,19 @@ load_dotenv("/etc/secrets/superfrete.env")
 load_dotenv("/etc/secrets/openai.env")
 
 class Settings:
+    PRODUCTION: bool = os.getenv('RENDER', '').lower() == 'true' or os.getenv('APP_ENV', '').lower() == 'production'
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/eleven")
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-this")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    DB_POOL_SIZE: int = int(os.getenv('DB_POOL_SIZE', '5'))
+    DB_MAX_OVERFLOW: int = int(os.getenv('DB_MAX_OVERFLOW', '5'))
+    DB_POOL_TIMEOUT: int = int(os.getenv('DB_POOL_TIMEOUT', '3'))
+    DB_CONNECT_TIMEOUT: int = int(os.getenv('DB_CONNECT_TIMEOUT', '3'))
+    DB_STATEMENT_TIMEOUT_MS: int = int(os.getenv('DB_STATEMENT_TIMEOUT_MS', '30000'))
+    DB_LOCK_TIMEOUT_MS: int = int(os.getenv('DB_LOCK_TIMEOUT_MS', '10000'))
+    # Leave idle transaction timeout opt-in: some existing provider workflows hold
+    # transactions across network calls and must be separated before enforcing it.
+    DB_IDLE_TRANSACTION_TIMEOUT_MS: int = int(os.getenv('DB_IDLE_TRANSACTION_TIMEOUT_MS', '0'))
     WONCA_API_KEY: str = os.getenv("WONCA_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
@@ -41,6 +51,17 @@ class Settings:
 
     # Timezone configuration
     TIMEZONE: str = os.getenv("TIMEZONE", "America/Sao_Paulo")  # GMT-3
+
+    def validate_runtime(self):
+        if self.ALGORITHM != 'HS256':
+            raise RuntimeError('ALGORITHM deve ser HS256 para as sessões do ERP.')
+        if self.PRODUCTION:
+            if len(self.SECRET_KEY.encode()) < 32 or any(v in self.SECRET_KEY.lower() for v in ('change-this','replace-with','development-only')):
+                raise RuntimeError('SECRET_KEY forte é obrigatória em produção; preserve a chave existente e seus dados cifrados.')
+            if not self.DATABASE_URL.startswith(('postgresql://','postgresql+psycopg2://')):
+                raise RuntimeError('PostgreSQL é obrigatório em produção.')
+            if self.ASSISTANT_ENABLED and self.ASSISTANT_TELEGRAM_ENABLED and (not self.TELEGRAM_BOT_TOKEN or not self.TELEGRAM_WEBHOOK_SECRET):
+                raise RuntimeError('Telegram ativo exige token e segredo de webhook.')
     
     @property
     def tz(self):
