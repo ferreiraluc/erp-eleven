@@ -1,5 +1,12 @@
 # Estoque e leitura de etiquetas
 
+## Movimentações nos cards
+
+Os cards, a lista e as peças de uma grade não oferecem mais a saída rápida
+**−1**. Use **Movimentar** para registrar entrada, saída ou ajuste, com as
+validações e o histórico existentes. A remoção do atalho não altera saldos nem
+apaga movimentos anteriores.
+
 ## Busca no catálogo
 
 No celular (até 600px), o cabeçalho inicia recolhido em uma barra compacta com

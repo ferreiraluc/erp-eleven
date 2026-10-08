@@ -1,0 +1,15 @@
+/* iOS WebKit zooms focused small-font controls, including fields outside dialogs.
+   Keep Android/desktop typography intact; cover iPhone landscape and iPad too.
+   The selector also covers dialogs teleported to body. Never disable page zoom. */
+@supports (-webkit-touch-callout: none) {
+  @media screen and (hover: none) and (pointer: coarse) {
+    :is(#app, body) :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"]),
+      select,
+      textarea
+    ) {
+      /* Some compact component controls declare font-size !important. */
+      font-size: max(16px, 1rem) !important;
+    }
+  }
+}
