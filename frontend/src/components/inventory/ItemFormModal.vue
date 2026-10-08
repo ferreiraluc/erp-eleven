@@ -1,8 +1,9 @@
 <template>
+  <ProductVariantsModal v-if="variantMode && item" :item-id="item.id" :mode="variantMode" @close="variantMode = null" @saved="emit('variants-created', $event)" />
   <ProductHistoryModal v-if="showHistory && item" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
   <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
-  <div v-show="!showDeletion && !showHistory" class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
-    <div v-erp-dialog="!showDeletion && !showHistory" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
+  <div v-show="!showDeletion && !showHistory && !variantMode" class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
+    <div v-erp-dialog="!showDeletion && !showHistory && !variantMode" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : 'Novo Item')">
       <div class="modal-header erp-dialog__header">
         <h2>{{ isEdit ? tr('Editar Item') : tr('Novo Item') }}</h2>
         <button v-if="isEdit" ref="historyButton" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
@@ -21,6 +22,13 @@
       </div>
 
       <div ref="modalBody" class="modal-body erp-dialog__body">
+        <div v-if="isEdit && canCreateVariants" class="stock-readout variant-entry">
+          <p>{{ tr('Use os dados já salvos para criar outros tamanhos com a mesma foto.') }}</p>
+          <div class="variant-actions">
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="variantMode = 'duplicate'">{{ tr('Duplicar produto') }}</button>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="variantMode = 'grade'">{{ tr('Adicionar grade') }}</button>
+          </div>
+        </div>
         <div v-if="isEdit && item" class="stock-readout">
           <div class="stock-readout-values">
             <span>{{ tr('Total salvo') }}: <strong>{{ displayStock(item.current_stock) }}</strong></span>
@@ -550,6 +558,8 @@
 
 <script setup lang="ts">
 import { vErpDialog } from '@/directives/erpDialog'
+import ProductVariantsModal from './ProductVariantsModal.vue'
+import type { VariantResult } from '@/services/inventoryVariants'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
@@ -584,6 +594,7 @@ const props = defineProps<{
   existingGroupKeys?: string[]
   existingBrands?: string[]
   canDeletePermanently?: boolean
+  canCreateVariants?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -591,8 +602,10 @@ const emit = defineEmits<{
   (e: 'partial', items: InventoryItem[]): void
   (e: 'close'): void
   (e: 'deleted', id: string): void
+  (e: 'variants-created', result: VariantResult): void
 }>()
 
+const variantMode = ref<'duplicate' | 'grade' | null>(null)
 const showDeletion = ref(false), deleteButton = ref<HTMLButtonElement>()
 const showHistory = ref(false), historySection = ref<HistorySection>('movements')
 const historyButton = ref<HTMLButtonElement>()
@@ -1220,6 +1233,9 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.variant-entry { padding:12px; }
+.variant-entry p { margin:0 0 10px; font-size:.85rem; color:#64748b; }
+.variant-actions { display:flex; flex-wrap:wrap; gap:8px; }
 
 .modal-container.intake-modal { max-width: 680px; }
 .intake-modal .tabs .tab { min-width: 0; padding: .8rem .45rem; font-size: .82rem; }

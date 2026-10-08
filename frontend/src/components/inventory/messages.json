@@ -29,7 +29,7 @@
   ],
   "Nome do modelo": [
     "Nombre del modelo",
-    "Preset name"
+    "Model name"
   ],
   "Ex: M ao 3XL": [
     "Ej.: M a 3XL",
@@ -1768,7 +1768,7 @@
     "Only Lucas can permanently delete products."
   ],
   "Produto não encontrado. Atualize a lista de estoque.": [
-    "Producto no encontrado. Actualice la lista de stock.",
+    "Producto no encontrado. Actualiza la lista de stock.",
     "Product not found. Refresh the inventory list."
   ],
   "Produto com vínculos operacionais. A exclusão definitiva não é permitida.": [
@@ -1794,5 +1794,101 @@
   "Estornada": [
     "Reembolsada",
     "Refunded"
+  ],
+  "Duplicar produto": [
+    "Duplicar producto",
+    "Duplicate product"
+  ],
+  "Adicionar grade": [
+    "Añadir tallas",
+    "Add size variants"
+  ],
+  "A foto e os dados salvos serão reutilizados. O estoque original não será copiado.": [
+    "Se reutilizarán la foto y los datos guardados. No se copiará el stock original.",
+    "The saved photo and details will be reused. Original stock will not be copied."
+  ],
+  "Use os dados já salvos para criar outros tamanhos com a mesma foto.": [
+    "Usa los datos ya guardados para crear otras tallas con la misma foto.",
+    "Use saved details to create other sizes with the same photo."
+  ],
+  "Novo tamanho": [
+    "Nueva talla",
+    "New size"
+  ],
+  "Tamanhos da grade": [
+    "Tallas del conjunto",
+    "Variant sizes"
+  ],
+  "Separe por ponto e vírgula. Para meio número, use 8.5.": [
+    "Separa con punto y coma. Para media talla, usa 8.5.",
+    "Separate with semicolons. For half sizes, use 8.5."
+  ],
+  "Código base (opcional)": [
+    "Código base (opcional)",
+    "Base barcode (optional)"
+  ],
+  "Informe o código sem tamanho; ele receberá o tamanho ao final. Vazio: novos itens sem código de barras.": [
+    "Introduce el código sin talla; se añadirá la talla al final. Vacío: artículos nuevos sin código de barras.",
+    "Enter the code without size; the size will be appended. Leave blank for new items without a barcode."
+  ],
+  "Código do produto original": [
+    "Código del producto original",
+    "Original product barcode"
+  ],
+  "Quantidade por novo tamanho": [
+    "Cantidad por nueva talla",
+    "Quantity per new size"
+  ],
+  "Local do estoque": [
+    "Ubicación del stock",
+    "Stock location"
+  ],
+  "Já cadastrado: estoque preservado": [
+    "Ya registrado: stock conservado",
+    "Already registered: stock unchanged"
+  ],
+  "unidades": [
+    "unidades",
+    "units"
+  ],
+  "Novos tamanhos: {count}": [
+    "Nuevas tallas: {count}",
+    "New sizes: {count}"
+  ],
+  "Conferi os tamanhos, os códigos e o estoque dos novos itens.": [
+    "Revisé las tallas, los códigos y el stock de los nuevos artículos.",
+    "I checked the sizes, barcodes and stock for the new items."
+  ],
+  "Conferir tamanhos cadastrados": [
+    "Verificar tallas registradas",
+    "Check registered sizes"
+  ],
+  "Criar tamanhos": [
+    "Crear tallas",
+    "Create sizes"
+  ],
+  "Não foi possível carregar o produto. Tente novamente.": [
+    "No se pudo cargar el producto. Inténtalo de nuevo.",
+    "Could not load the product. Try again."
+  ],
+  "Não foi possível confirmar a operação. Confira os tamanhos cadastrados antes de continuar; os existentes não receberão estoque novamente.": [
+    "No se pudo confirmar la operación. Verifica las tallas registradas antes de continuar; las existentes no recibirán stock nuevamente.",
+    "Could not confirm the operation. Check registered sizes before continuing; existing sizes will not receive stock again."
+  ],
+  "Já cadastrado e inativo: estoque preservado": [
+    "Ya registrado e inactivo: stock conservado",
+    "Already registered and inactive: stock unchanged"
+  ],
+  "Ative o produto antes de criar outros tamanhos.": [
+    "Activa el producto antes de crear otras tallas.",
+    "Activate the product before creating other sizes."
+  ],
+  "O produto ou sua grade mudou. Reabra a prévia antes de continuar.": [
+    "El producto o sus tallas cambiaron. Abre la vista previa de nuevo antes de continuar.",
+    "The product or its variants changed. Reopen the preview before continuing."
+  ],
+  "Os dados do produto mudaram. Reabra a prévia e confira novamente.": [
+    "Los datos del producto cambiaron. Abre la vista previa y verifica de nuevo.",
+    "The product details changed. Reopen the preview and check again."
   ]
 }

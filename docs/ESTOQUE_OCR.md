@@ -146,8 +146,8 @@ selecionadas, todas as variações usam a cor da peça. É possível cancelar a 
 sem perder os dados e cadastrar somente a peça. O estoque informado na grade é
 **por variação**, com total visível antes da confirmação.
 
-Essa opção monta uma grade no novo cadastro; não procura nem completa grades de
-produtos já salvos. Códigos de barras iguais não provam identidade. O cadastro
+Essa opção monta uma grade no novo cadastro. Para produtos já salvos, use as ações
+descritas abaixo. Códigos de barras iguais não provam identidade. O cadastro
 unificado mantém a regra de negócio da grade: **código de barras base + tamanho**
 (por exemplo, `789123P`, `789123M`, `789123XL`), além de um SKU independente por
 variação. A prévia mostra cada código resultante, inclusive na matriz de cores e
@@ -155,6 +155,34 @@ tamanhos. No produto avulso o código permanece como informado. Os tamanhos de u
 solicitação são normalizados e
 deduplicados no backend. Cada chamada de criação de grade confirma produtos e
 movimentações iniciais na mesma transação, com rollback se uma movimentação falhar.
+
+### Duplicar produto e adicionar tamanhos a uma grade existente
+
+Em **Estoque → editar produto**, os perfis ADMIN/GERENTE podem escolher **Duplicar
+produto** (um tamanho) ou **Adicionar grade** (vários tamanhos e modelos salvos
+no navegador). Exemplo: abrir o tênis 9 e criar o 8 sem reenviar a foto.
+A operação usa os **dados já salvos**; cancelar retorna ao formulário e preserva
+as edições locais. Foto, marca, cor, descrição, fornecedor, preços/moedas e limites
+são copiados; SKU, vendas, movimentos e saldos não são copiados.
+
+A prévia exige conferir nome, tamanhos, código base opcional e quantidade **por novo
+tamanho** (inicialmente zero). O código base é informado explicitamente, sem tamanho:
+não tentamos retirar dígitos do código original, pois podem fazer parte do código real.
+Cada código novo recebe o tamanho ao final; campo vazio cria variantes sem código.
+O código original permanece intacto. Para meios números use ponto (por exemplo `8.5`).
+
+`GET/POST /api/inventory/items/{id}/variants` trabalha somente com o produto escolhido
+e sua grade explícita, na mesma cor. Tamanhos já existentes, inclusive inativos, são
+preservados e não recebem estoque adicional. Um produto avulso é agrupado com as
+novas variantes. Não há associação automática por nome ou código repetido.
+
+No PostgreSQL, lock transacional por grade e locks dos itens serializam criações
+concorrentes. Produtos, agrupamento e estoque inicial são uma transação; falhas
+revertem tudo. Repetir tamanhos já criados não repete movimentações. Mudança dos dados
+salvos desde a prévia retorna 409 e exige nova conferência. Se a conexão falhar, a
+interface bloqueia o envio até reler os tamanhos cadastrados. Auditoria e histórico
+usam os listeners normais de produtos e movimentações. As operações não fazem
+alterações em vendas ou no histórico do produto de origem.
 
 As prévias e leituras ficam em memória enquanto o cadastro está aberto. Reabrir
 **Rever foto/etiqueta** conserva a leitura e a edição já feitas, sem disparar IA.
