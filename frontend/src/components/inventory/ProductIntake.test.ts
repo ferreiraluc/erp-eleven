@@ -90,10 +90,10 @@ describe('Unified optional photo and label intake', () => {
     await click('Foto e etiqueta'); await click('Rever etiqueta'); await click('fixture label'); await click('Conferir dados')
     expect(input('Marca').value).toBe('Correção final'); expect(root.querySelector('.intake-conflicts')).toBeNull()
     await review(); await click('2 · Conferência'); await setField('Nome *', 'Alterado depois')
-    await click('3 · Estoque'); expect(button('Criar').disabled).toBe(true)
+    await click('3 · Estoque'); expect(root.querySelector('.intake-review-check')).not.toBeNull(); expect(root.textContent).toContain('Confira os dados e resolva as diferenças')
   })
   it('allows manual-only registration and refuses to skip review', async () => {
-    await mount(); await click('3 · Estoque'); expect(button('Criar').disabled).toBe(true)
+    await mount(); await click('3 · Estoque'); expect(root.querySelector('.intake-review-check')).not.toBeNull(); expect(root.textContent).toContain('Confira os dados e resolva as diferenças')
     await click('2 · Conferência'); await setField('Nome *', 'Peça manual'); await review(); await click('Criar')
     expect(mock.createItem).toHaveBeenCalledWith(expect.objectContaining({ name: 'Peça manual', image_data: null }))
     expect(mock.createMovement).not.toHaveBeenCalled()
@@ -141,8 +141,20 @@ describe('Unified optional photo and label intake', () => {
   })
 })
 
+it('makes review visible in the footer and returns to it when stock is requested directly', async () => {
+  await mount(); await click('3 · Estoque')
+  expect(root.querySelector('.modal-footer .intake-review-check')).not.toBeNull()
+  expect(root.querySelector('.intake-stock-summary')).toBeNull()
+  await setField('Nome *', 'Grade teste'); await review(); await click('Criar grade deste modelo')
+  await click('Criar')
+  expect(mock.createItem).not.toHaveBeenCalled()
+  expect(root.querySelector('.submit-error')?.textContent).toContain('Selecione um modelo')
+  await click('P → 2XL'); await click('Criar grade (5 itens)')
+  expect(mock.createGrade).toHaveBeenCalledOnce()
+})
+
 describe('Reusable grade and color editors', () => {
-  async function openGrade() { await click('3 · Estoque'); await click('Criar grade deste modelo') }
+  async function openGrade() { await click('Conferir dados'); await setField('Nome *', 'Produto de teste'); await review(); await click('Criar grade deste modelo') }
   async function select(selector: string) {
     const el = root.querySelector<HTMLButtonElement>(selector)
     if (!el) throw Error(`Missing control: ${selector}`)

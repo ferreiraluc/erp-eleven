@@ -674,6 +674,7 @@
 import { taxonomyKey, uniqueLabels } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
+import { startInventoryDrag } from '@/services/inventoryDragSelection'
 import { displayStock, hasKnownStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
@@ -885,49 +886,15 @@ function toggleSelectionMode() {
   }
 }
 
-function onItemPointerDown(itemId: string, e: PointerEvent) {
-  if (!selectionMode.value) return
-  // Don't trigger from buttons/links inside the card
-  if ((e.target as HTMLElement).closest('button, a')) return
-  if (e.pointerType === 'mouse' && e.button !== 0) return
-
-  const startX = e.clientX
-  const startY = e.clientY
-  let dragged = false
-
-  const onMove = (ev: PointerEvent) => {
-    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 10) return
-    ev.preventDefault() // prevent scroll on touch while drag-selecting
-
-    if (!dragged) {
-      dragged = true
-      isDragSelecting.value = true
-      // Ensure the starting item is selected
-      if (!selectedIds.value.includes(itemId)) selectedIds.value.push(itemId)
-    }
-
-    const el = document.elementFromPoint(ev.clientX, ev.clientY)
-    const card = el?.closest('[data-item-id]') as HTMLElement | null
-    const id = card?.dataset.itemId
-    if (id && !selectedIds.value.includes(id)) selectedIds.value.push(id)
-  }
-
-  const onUp = () => {
-    document.removeEventListener('pointermove', onMove)
-    document.removeEventListener('pointerup', onUp)
-    isDragSelecting.value = false
-    if (dragged) {
-      // Suppress the click that fires right after pointerup so it doesn't toggle off
-      document.addEventListener('click', (ev) => {
-        ev.stopPropagation()
-        ev.preventDefault()
-      }, { capture: true, once: true })
-    }
-  }
-
-  document.addEventListener('pointermove', onMove, { passive: false })
-  document.addEventListener('pointerup', onUp)
+let stopDragSelection = () => {}
+function onItemPointerDown(itemId: string, event: PointerEvent) {
+  stopDragSelection()
+  if (!selectionMode.value || !itemsContainer.value) return
+  stopDragSelection = startInventoryDrag(event, itemsContainer.value, itemId,
+    id => { if (!selectedIds.value.includes(id)) selectedIds.value.push(id) },
+    active => { isDragSelecting.value = active })
 }
+watch(selectionMode, () => stopDragSelection())
 
 function selectAll() {
   const all = new Set<string>()
@@ -1442,6 +1409,7 @@ function onDocClick(e: MouseEvent) {
 }
 
 onUnmounted(() => {
+  stopDragSelection()
   diagnosticOpenGeneration++
   if (searchTimer) clearTimeout(searchTimer)
   scrollObserver?.disconnect()

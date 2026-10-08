@@ -609,3 +609,12 @@ o redimensionamento em Quadrados, Compacto e Lista. A numeração é relativa à
 lista visível; o nome/código real aparece no tooltip. Cards não adjacentes seguem
 identificados, sem linhas atravessando outros produtos. Não se infere grade por
 marca, nome, cor ou código de barras, nem se alteram filtros ou ordem dos itens.
+
+### Seleção por toque e janelas de cadastro
+
+No touchscreen, deslizar sobre os cards mantém a rolagem nativa; a seleção é feita
+por toque. Arrastar para selecionar continua disponível com mouse. Os listeners
+pertencem a um único gesto e são removidos em cancelamento, perda de foco, saída da
+seleção e desmontagem. A supressão do clique pós-arraste vale apenas para um card
+na mesma lista e expira imediatamente; não captura uma confirmação posterior em
+um modal. Ver [navegação e confirmações do cadastro](UI_MODAIS.md#cadastro-e-grade-navegação-e-confirmação).

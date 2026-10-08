@@ -15,14 +15,14 @@
         </button>
       </div>
 
-      <div class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
+      <div :inert="saving || undefined" class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
         <button v-if="!isEdit" class="erp-control tab" :class="{ active: activeTab === 'capture' }" :aria-current="activeTab === 'capture' ? 'step' : undefined" @click="activeTab = 'capture'">1 · {{ tr('Foto e etiqueta') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'basic' }" :aria-current="activeTab === 'basic' ? 'step' : undefined" @click="activeTab = 'basic'">{{ isEdit ? tr('Básico') : '2 · ' + tr('Conferência') }}</button>
-        <button class="erp-control tab" :class="{ active: activeTab === 'stock' }" :aria-current="activeTab === 'stock' ? 'step' : undefined" @click="activeTab = 'stock'">{{ isEdit ? tr('Estoque') : '3 · ' + tr('Estoque') }}</button>
+        <button class="erp-control tab" :class="{ active: activeTab === 'stock' }" :aria-current="activeTab === 'stock' ? 'step' : undefined" @click="isEdit ? activeTab = 'stock' : continueToStock()">{{ isEdit ? tr('Estoque') : '3 · ' + tr('Estoque') }}</button>
         <button v-if="isEdit" class="erp-control tab" :class="{ active: activeTab === 'photo' }" @click="activeTab = 'photo'">{{ tr('Foto') }}<span v-if="form.image_data" class="tab-dot"></span></button>
       </div>
 
-      <div ref="modalBody" class="modal-body erp-dialog__body">
+      <div ref="modalBody" :inert="saving || undefined" class="modal-body erp-dialog__body">
         <div v-if="isEdit && canCreateVariants" class="stock-readout variant-entry">
           <p>{{ tr('Use os dados já salvos para criar outros tamanhos com a mesma foto.') }}</p>
           <div class="variant-actions">
@@ -53,6 +53,7 @@
           <small>{{ tr('Desmarque para criar um modelo independente. O código de barras foi copiado; confira se precisa alterá-lo.') }}</small>
           <p v-if="uncertainSave" role="alert">{{ tr('A resposta não chegou. Confira o resultado da mesma operação antes de continuar; o estoque não será lançado duas vezes.') }}</p>
           <button v-if="uncertainSave" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving" @click="retryDuplicate">{{ tr('Conferir resultado do cadastro') }}</button>
+          <button v-if="duplicateNeedsRefresh" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="loadingDuplicate || saving" @click="refreshDuplicate">{{ tr('Atualizar referência do produto') }}</button>
         </section>
         <div v-if="activeTab === 'capture'" class="tab-content intake-capture">
           <p class="intake-hint">{{ tr('Use a foto da peça, a etiqueta ou as duas. Você também pode continuar sem imagens e preencher manualmente.') }}</p>
@@ -537,19 +538,22 @@
 
           <p class="photo-hint">{{ tr('A imagem é redimensionada para 400×400px e armazenada no banco de dados.') }}</p>
         </div>
-        <template v-if="activeTab === 'basic' && needsIntakeReview">
-          <label class="intake-review-check"><input ref="reviewInput" v-model="intakeReviewed" type="checkbox" :disabled="conflicts.length > 0" />{{ tr('Conferi os dados e a foto escolhida para este produto.') }}</label>
-          <p v-if="reviewError" class="error-msg" role="alert">{{ tr(reviewError) }}</p>
-        </template>
+
       </div>
 
       <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeItemCount || 1, quantity: gradeItemCount ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer erp-dialog__footer">
+        <template v-if="activeTab === 'basic' && needsIntakeReview">
+          <label class="intake-review-check footer-review"><input ref="reviewInput" v-model="intakeReviewed" type="checkbox" :disabled="saving || conflicts.length > 0" />{{ tr('Conferi os dados e a foto escolhida para este produto.') }}</label>
+          <p v-if="reviewError" class="error-msg" role="alert">{{ tr(reviewError) }}</p>
+        </template>
+        <p v-if="submitError" class="submit-error" role="alert">{{ tr(submitError) }}</p>
+        <button v-if="!isEdit && activeTab === 'stock' && !intakeReviewed" type="button" class="erp-button erp-button--secondary" :disabled="saving" @click="showReview">{{ tr('Revisar dados') }}</button>
         <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
         <button :disabled="saving" @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
         <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
-        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
+        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || loadingDuplicate || duplicateNeedsRefresh || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
           <template v-if="saving">{{ tr('Salvando...') }}</template>
           <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
           <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>
@@ -619,13 +623,16 @@ const variantMode = ref<'grade' | null>(null)
 const duplicateDraft = ref<VariantContext | null>(null), loadingDuplicate = ref(false)
 const keepSourceGroup = ref(true)
 let initializingCopy = true
-const duplicateRequestId = crypto.randomUUID()
+let duplicateRequestId = crypto.randomUUID()
+const duplicateSourceVersion = ref(props.duplicateContext?.source_version)
+const duplicateNeedsRefresh = ref(false)
 let duplicatePending: DuplicateRequest | null = null
+let disposed = false
 async function openDuplicate() {
-  if (!props.item || loadingDuplicate.value) return
+  if (!props.item || loadingDuplicate.value || saving.value) return
   loadingDuplicate.value = true
-  try { duplicateDraft.value = await inventoryVariantsAPI.context(props.item.id) }
-  catch { errors.name = 'Não foi possível carregar o produto. Tente novamente.' }
+  try { const context = await inventoryVariantsAPI.context(props.item.id); if (!disposed) duplicateDraft.value = context }
+  catch { submitError.value = 'Não foi possível carregar o produto. Tente novamente.' }
   finally { loadingDuplicate.value = false }
 }
 
@@ -640,7 +647,7 @@ const isEdit = computed(() => !!props.item)
 const activeTab = ref(props.item || props.duplicateContext ? 'basic' : 'capture')
 const modalBody = ref<HTMLElement>(), conflictsPanel = ref<HTMLElement>()
 const reviewInput = ref<HTMLInputElement>(), nameInput = ref<HTMLInputElement>()
-watch(activeTab, async () => { await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
+watch(activeTab, async tab => { if (tab !== 'photo') stopCameraPhoto(); await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
 const showScanner = ref(false)
 const showOcr = ref(false)
 const showProductPhoto = ref(false)
@@ -895,6 +902,7 @@ const form = reactive({
 })
 
 const errors = reactive<Record<string, string>>({})
+const submitError = ref('')
 
 onMounted(() => {
   void nextTick(() => { initializingCopy = false })
@@ -935,6 +943,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  disposed = true
   if (barcodeTimer) clearTimeout(barcodeTimer)
   if (photoStream) photoStream.getTracks().forEach(t => t.stop())
 })
@@ -972,11 +981,11 @@ watch(() => form.barcode, (val) => {
   }, 500)
 })
 
-function validate() {
+function validate(includeStock = true) {
   Object.keys(errors).forEach(k => delete errors[k])
   if (form.name.trim().length < 2) errors.name = 'Nome deve ter ao menos 2 caracteres'
   const startingStock = (gradeSizes.value.length || gradeColors.value.length ? gradeInitialStock.value : initialStock.value) || 0
-  if (!isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > (props.duplicateContext ? 1_000_000 : 2_147_483_647))) {
+  if (includeStock && !isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > (props.duplicateContext ? 1_000_000 : 2_147_483_647))) {
     errors.name = 'Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.'
   }
   if (form.cost_price < 0) errors.cost_price = 'Custo não pode ser negativo'
@@ -992,16 +1001,19 @@ async function handleSubmit() {
     return
   }
   if (!validate()) {
-    activeTab.value = errors.name?.startsWith('Estoque inicial') ? 'stock' : 'basic'
+    activeTab.value = errors.name?.startsWith('Estoque inicial') || (isEdit.value && !errors.name) ? 'stock' : 'basic'
     return
   }
+  if (gradeEnabled.value && !gradeItemCount.value) { submitError.value = 'Selecione um modelo acima ou adicione tamanhos e/ou cores.'; return }
+  if (duplicateNeedsRefresh.value) return
+  submitError.value = ''
   saving.value = true
   const createdItems: InventoryItem[] = []
   let creating = false
   try {
     if (props.duplicateContext) {
       duplicatePending = JSON.parse(JSON.stringify({
-        request_id: duplicateRequestId, source_version: props.duplicateContext.source_version,
+        request_id: duplicateRequestId, source_version: duplicateSourceVersion.value,
         item: { ...form, supplier_id: form.supplier_id || null, image_data: form.image_data || null, group_key: null },
         keep_group: keepSourceGroup.value, initial_stock: initialStock.value || 0,
         stock_location: stockLocation.value, confirm: true,
@@ -1116,7 +1128,7 @@ async function handleSubmit() {
     emit('saved', result)
   } catch (e: any) {
     const detail = e.response?.data?.detail
-    errors.name = typeof detail === 'string' ? detail : 'Erro ao salvar'
+    submitError.value = typeof detail === 'string' ? detail : 'Erro ao salvar'
     partialItems.value = createdItems
     uncertainSave.value = creating && !e.response
     if (createdItems.length || uncertainSave.value) emit('partial', createdItems)
@@ -1134,9 +1146,25 @@ async function submitDuplicate() {
     emit('saved', result)
   } catch (e: any) {
     uncertainSave.value = !e.response || e.response.status >= 500
-    errors.name = typeof e.response?.data?.detail === 'string' ? e.response.data.detail : 'Erro ao salvar'
+    submitError.value = typeof e.response?.data?.detail === 'string' ? e.response.data.detail : 'Erro ao salvar'
+    duplicateNeedsRefresh.value = e.response?.status === 409
+    intakeReviewed.value = false
     activeTab.value = 'basic'
   }
+}
+async function refreshDuplicate() {
+  if (!props.duplicateContext || saving.value || loadingDuplicate.value) return
+  loadingDuplicate.value = true
+  try {
+    const context = await inventoryVariantsAPI.context(props.duplicateContext.source.id)
+    if (disposed) return
+    duplicateSourceVersion.value = context.source_version
+    duplicateRequestId = crypto.randomUUID()
+    duplicatePending = null; duplicateNeedsRefresh.value = false
+    submitError.value = ''; intakeReviewed.value = false
+    await showReview()
+  } catch { submitError.value = 'Não foi possível carregar o produto. Tente novamente.' }
+  finally { loadingDuplicate.value = false }
 }
 async function retryDuplicate() {
   if (saving.value || !uncertainSave.value) return
@@ -1206,14 +1234,21 @@ function onOcrResult(data: OcrAppliedFields) {
   showOcr.value = false
   activeTab.value = 'capture'
 }
-function continueToStock() {
+async function showReview() {
+  activeTab.value = 'basic'
+  await nextTick()
+  if (conflicts.value.length) conflictsPanel.value?.querySelector('button')?.focus()
+  else reviewInput.value?.focus({ preventScroll: true })
+}
+async function continueToStock() {
+  if (saving.value) return
   if (conflicts.value.length || !intakeReviewed.value) {
     reviewError.value = 'Confira os dados e resolva as diferenças antes de continuar.'
-    if (conflicts.value.length) conflictsPanel.value?.querySelector('button')?.focus()
-    else reviewInput.value?.focus()
+    await showReview()
     return
   }
-  if (!validate()) { nameInput.value?.focus(); return }
+  if (!validate(false)) { activeTab.value = 'basic'; await nextTick(); nameInput.value?.focus(); return }
+  reviewError.value = ''
   activeTab.value = 'stock'
 }
 
@@ -1260,8 +1295,11 @@ async function stopCameraPhoto() {
 watch(showCameraPhoto, async (val) => {
   if (!val) return
   try {
-    photoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    if (photoVideoRef.value) photoVideoRef.value.srcObject = photoStream
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    if (disposed || !showCameraPhoto.value) { stream.getTracks().forEach(track => track.stop()); return }
+    photoStream = stream
+    await nextTick()
+    if (photoVideoRef.value) photoVideoRef.value.srcObject = stream
   } catch {
     showCameraPhoto.value = false
   }
@@ -1269,12 +1307,11 @@ watch(showCameraPhoto, async (val) => {
 
 function capturePhoto() {
   const video = photoVideoRef.value
-  if (!video) return
+  if (!video?.videoWidth || !video.videoHeight) return
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth; canvas.height = video.videoHeight
   canvas.getContext('2d')!.drawImage(video, 0, 0)
   stopCameraPhoto()
-  storeResized(new Image())
   // Use canvas directly
   const MAX = 400
   const scale = Math.min(MAX / canvas.width, MAX / canvas.height, 1)
@@ -1295,6 +1332,9 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.footer-review { flex:1 0 100%; width:100%; margin:0; }
+.submit-error { flex:1 0 100%; margin:0; color:#b91c1c; font-size:.85rem; overflow-wrap:anywhere; }
+.intake-review-check input { width:20px; height:20px; }
 .duplicate-notice { background:#eff6ff; border-radius:10px; padding:12px; margin-bottom:14px; font-size:.85rem; }
 .duplicate-notice p { margin:0 0 10px; }
 .duplicate-notice label { display:flex; align-items:center; gap:8px; }
@@ -1553,4 +1593,5 @@ function handleComma(event: KeyboardEvent, add: () => void) {
   text-align: center; color: #9ca3af; font-size: 0.85rem; padding: 1.5rem;
   border: 2px dashed #e5e7eb; border-radius: 8px;
 }
+.modal-footer .footer-review { margin:0; padding:.65rem; min-height:44px; }
 </style>
