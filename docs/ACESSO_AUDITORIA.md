@@ -81,7 +81,7 @@ validar novamente ou sair. Após uma troca de senha já confirmada pelo servidor
 essa nova tentativa consulta a sessão; não repete a alteração de senha.
 
 Senhas temporárias exigem troca na tela **Minha conta** antes de usar os módulos.
-A troca pede a senha atual e confirmação da nova: mínimo de 12 caracteres e máximo
+A troca pede a senha atual e confirmação da nova: mínimo de 6 caracteres e máximo
 de 72 bytes UTF-8, recusando repetições triviais e alguns padrões óbvios. Senhas
 antigas continuam funcionando até a troca; a atualização não redefine contas.
 O sistema não armazena senhas em texto; usa bcrypt. Não há envio de recuperação

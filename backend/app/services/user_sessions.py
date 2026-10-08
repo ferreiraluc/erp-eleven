@@ -18,8 +18,8 @@ def verify_password(plain, hashed):
 
 
 def get_password_hash(password):
-    if not 12 <= len(password) or not password.strip() or len(password.encode('utf-8')) > 72:
-        raise ValueError('Use no mínimo 12 caracteres e no máximo 72 bytes.')
+    if not 6 <= len(password) or not password.strip() or len(password.encode('utf-8')) > 72:
+        raise ValueError('Use no mínimo 6 caracteres e no máximo 72 bytes.')
     if len(set(password)) < 4 or password.lower() in ('123456789012','abcdefghijkl','password1234'):
         raise ValueError('Escolha uma senha menos previsível, de preferência uma frase.')
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
