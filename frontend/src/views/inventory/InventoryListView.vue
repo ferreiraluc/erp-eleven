@@ -11,56 +11,15 @@
         </button>
       </div>
       <div id="inventory-toolbar-panel" class="inventory-toolbar-panel" :class="{ 'mobile-collapsed': !mobileToolbarOpen }">
-    <ModuleHeader :title="tr('Estoque')">
-      <button v-if="auth.isOwner" class="erp-button erp-button--secondary erp-button--sm" @click="showDeletedHistory = true">{{ tr('Histórico de excluídos') }}</button>
-      <button
-        @click="showDiagnostics = !showDiagnostics"
-        class="btn btn-secondary diagnostics-toggle erp-button erp-button--secondary erp-button--sm"
-        :aria-expanded="showDiagnostics"
-        aria-controls="inventory-diagnostics"
-      >
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" aria-hidden="true">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12l2 2 4-4M9 4H5v16h14V4h-4M9 3h6v4H9z"
-          />
-        </svg>
-        {{ diagnosticsText("open") }}
-      </button>
-      <button
-        @click="showLabelTemplates = true"
-        class="btn btn-secondary btn-modelos-ia-desktop erp-button erp-button--secondary erp-button--sm"
-      >
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-          />
-        </svg>
-        {{ tr("Exemplos de etiquetas") }}
-      </button>
-      <button @click="showImport = true" class="btn btn-secondary erp-button erp-button--secondary erp-button--sm">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-          />
-        </svg>
-        {{ tr("Importar") }}
-      </button>
-      <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary erp-button--sm">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        {{ tr("Novo item") }}
-      </button>
-    </ModuleHeader>
+    <InventoryHeaderActions
+      :is-owner="auth.isOwner"
+      :diagnostics-open="showDiagnostics"
+      @create="openCreate"
+      @open-deleted="showDeletedHistory = true"
+      @toggle-diagnostics="showDiagnostics = !showDiagnostics"
+      @open-labels="showLabelTemplates = true"
+      @open-import="showImport = true"
+    />
 
     <!-- Search + Camera -->
     <div class="search-section">
@@ -70,12 +29,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input v-model="searchQuery" type="text" :placeholder="tr('Produto, marca, tamanho ou código...')" class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
-          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Limpar busca')" type="button">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Limpar busca')" :aria-label="tr('Limpar busca')" type="button">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <button @click="showScanner = true" class="camera-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Escanear código')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
+        <button type="button" @click="showScanner = true" class="camera-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Escanear código')" :aria-label="tr('Escanear código')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
@@ -83,63 +42,23 @@
       </div>
 
       <!-- Filter chips (status + marca + categoria + ver grupos) -->
-      <div class="filter-chips" ref="filterChipsRef">
-        <!-- Status -->
-        <button class="erp-control"
-          v-for="chip in statusChips"
-          :key="chip.value"
-          @click="setStatusFilter(chip.value)"
-          :class="['chip', { active: activeStatus === chip.value, 'chip-inactive': chip.value === 'inactive' }]"
-        >
-          {{ tr(chip.label) }}
-          <span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
-        </button>
-
-        <!-- Marca dropdown chip -->
-        <div class="chip-dd-wrap" v-if="distinctBrands.length > 0">
-          <button class="erp-control" @click="toggleFilter('brand')" :class="['chip', { active: !!filterBrand }]">
-            {{ filterBrand || tr('Marca') }} <span class="chip-caret">▾</span>
-          </button>
-          <div v-if="openFilter === 'brand'" class="chip-dropdown">
-            <div class="chip-dd-search-wrap">
-              <input v-model="brandSearch" class="chip-dd-search" :placeholder="tr('Buscar marca...')" @click.stop type="text" autocomplete="off" />
-            </div>
-            <button class="erp-control" @click="setFilter('brand', '')" :class="['chip-dd-opt', { active: !filterBrand }]">{{ tr('Todas as marcas') }}</button>
-            <button class="erp-control" v-for="b in filteredBrands" :key="b" @click="setFilter('brand', b)" :class="['chip-dd-opt', { active: filterBrand === b }]">{{ b }}</button>
-          </div>
-        </div>
-
-        <!-- Categoria dropdown chip -->
-        <div class="chip-dd-wrap" v-if="distinctCategories.length > 0">
-          <button class="erp-control" @click="toggleFilter('category')" :class="['chip', { active: !!filterCategory }]">
-            {{ filterCategory ? formatCategory(filterCategory) : tr('Categoria') }} <span class="chip-caret">▾</span>
-          </button>
-          <div v-if="openFilter === 'category'" class="chip-dropdown">
-            <div class="chip-dd-search-wrap">
-              <input v-model="categorySearch" class="chip-dd-search" :placeholder="tr('Buscar categoria...')" @click.stop type="text" autocomplete="off" />
-            </div>
-            <button class="erp-control" @click="setFilter('category', '')" :class="['chip-dd-opt', { active: !filterCategory }]">{{ tr('Todas as categorias') }}</button>
-            <button class="erp-control" v-for="c in filteredCategories" :key="c" @click="setFilter('category', c)" :class="['chip-dd-opt', { active: filterCategory === c }]">{{ formatCategory(c) }}</button>
-          </div>
-        </div>
-
-        <!-- Location chips -->
-        <button class="erp-control" @click="setLocationFilter('loja')" :class="['chip', 'chip-loc', { active: filterLocation === 'loja' }]">
-          {{ tr('Loja') }}
-          <span v-if="inventoryStore.alerts?.loja_count !== undefined" class="chip-count">{{ inventoryStore.alerts.loja_count }}</span>
-        </button>
-        <button class="erp-control" @click="setLocationFilter('deposito')" :class="['chip', 'chip-loc', { active: filterLocation === 'deposito' }]">
-          {{ tr('Depósito') }}
-          <span v-if="inventoryStore.alerts?.deposito_count !== undefined" class="chip-count">{{ inventoryStore.alerts.deposito_count }}</span>
-        </button>
-
-        <!-- Ver grades (só aparece se existem grupos) -->
-        <button class="erp-control" v-if="hasGroups" @click="toggleGroupMode" :class="['chip', { active: groupMode }]">
-          {{ tr('Ver grades') }}
-          <span v-if="inventoryStore.alerts?.group_count" class="chip-count">{{ inventoryStore.alerts.group_count }}</span>
-          <span v-if="groupMode" class="chip-check">✓</span>
-        </button>
-      </div>
+      <InventoryFilters
+        :status-chips="statusChips"
+        :status="activeStatus"
+        :brands="distinctBrands"
+        :brand="filterBrand"
+        :categories="distinctCategories"
+        :category="filterCategory"
+        :location="filterLocation"
+        :has-groups="hasGroups"
+        :group-mode="groupMode"
+        :counts="inventoryStore.alerts"
+        @status="setStatusFilter"
+        @brand="setFilter('brand', $event)"
+        @category="setFilter('category', $event)"
+        @location="setLocationFilter"
+        @toggle-groups="toggleGroupMode"
+      />
 
       <!-- Sugestões de agrupamento (visível no modo seleção) -->
       <div v-if="selectionMode && suggestedGroups.length > 0" class="suggestions-bar">
@@ -695,15 +614,13 @@
 </template>
 
 <script setup lang="ts">
-import { taxonomyKey, uniqueLabels } from '@/services/inventoryTaxonomy'
+import { uniqueLabels } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
-import ModuleHeader from '@/components/ModuleHeader.vue'
 import { startInventoryDrag } from '@/services/inventoryDragSelection'
 import { displayStock, hasKnownStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
@@ -722,9 +639,9 @@ import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
 import InventoryDiagnosticsPanel from '@/components/inventory/InventoryDiagnosticsPanel.vue'
-import { diagnosticsMessages } from '@/components/inventory/diagnosticsMessages'
+import InventoryFilters from '@/components/inventory/InventoryFilters.vue'
+import InventoryHeaderActions from '@/components/inventory/InventoryHeaderActions.vue'
 
-const { t: diagnosticsText } = useI18n({ useScope: 'local', messages: diagnosticsMessages })
 const showDiagnostics = ref(false), diagnosticsRevision = ref(0)
 const diagnosticsOpeningId = ref<string | null>(null)
 const diagnosticsOpenError = ref<'openError' | 'inactive' | null>(null)
@@ -738,7 +655,6 @@ watch(showDiagnostics, () => {
 const mobileToolbarOpen = ref(false)
 function toggleMobileToolbar() {
   mobileToolbarOpen.value = !mobileToolbarOpen.value
-  if (!mobileToolbarOpen.value) openFilter.value = null
 }
 
 const route = useRoute()
@@ -761,20 +677,6 @@ const distinctBrands = ref<string[]>([])
 const distinctCategories = ref<string[]>([])
 const filterBrand = ref('')
 const filterCategory = ref('')
-const openFilter = ref<string | null>(null)
-const filterChipsRef = ref<HTMLElement | null>(null)
-const brandSearch = ref('')
-const categorySearch = ref('')
-const filteredBrands = computed(() =>
-  brandSearch.value.trim()
-    ? distinctBrands.value.filter(b => taxonomyKey(b).includes(taxonomyKey(brandSearch.value)))
-    : distinctBrands.value
-)
-const filteredCategories = computed(() =>
-  categorySearch.value.trim()
-    ? distinctCategories.value.filter(c => taxonomyKey(c).includes(taxonomyKey(categorySearch.value)))
-    : distinctCategories.value
-)
 const expandedCardIds = ref<string[]>([])
 const confirmRemoveChip = ref<string | null>(null)
 
@@ -849,9 +751,6 @@ function clearItemFilters() {
   filterCategory.value = ''
   filterLocation.value = ''
   filterUngroupedOnly.value = false
-  brandSearch.value = ''
-  categorySearch.value = ''
-  openFilter.value = null
   Object.assign(inventoryStore.filters, {
     search: '', status: '', category: '', brand: '', location: '', size: '', color: '', location_stock: '',
   })
@@ -1291,24 +1190,9 @@ function setStatusFilter(status: string) {
   if (groupMode.value) loadGroupsFiltered()
 }
 
-function toggleFilter(key: string) {
-  if (openFilter.value === key) {
-    openFilter.value = null
-    brandSearch.value = ''
-    categorySearch.value = ''
-  } else {
-    openFilter.value = key
-    brandSearch.value = ''
-    categorySearch.value = ''
-  }
-}
-
 function setFilter(key: 'brand' | 'category', value: string) {
   if (key === 'brand') filterBrand.value = value
   else filterCategory.value = value
-  openFilter.value = null
-  brandSearch.value = ''
-  categorySearch.value = ''
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
   inventoryStore.loadItems(1, false, groupMode.value)
@@ -1515,11 +1399,6 @@ function showToast(message: string, type: string, params?: Record<string, string
 }
 
 function onDocClick(e: MouseEvent) {
-  if (filterChipsRef.value && !filterChipsRef.value.contains(e.target as Node)) {
-    openFilter.value = null
-    brandSearch.value = ''
-    categorySearch.value = ''
-  }
   const target = e.target as HTMLElement
   if (!target.closest('.chip-remove-wrap')) {
     confirmRemoveChip.value = null
@@ -1604,10 +1483,8 @@ onMounted(async () => {
   .inventory-toolbar-panel :deep(.erp-module-header__heading) { display:none; }
   .inventory-toolbar-panel :deep(.erp-module-header) { padding:.5rem .75rem; margin:0; }
   .inventory-toolbar-panel :deep(.erp-module-header__actions) { width:100%; justify-content:flex-start; }
-  .inventory-toolbar-panel .chip-dropdown { position:static; width:min(260px, calc(100vw - 3rem)); max-height:220px; margin-top:.35rem; }
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
-  .btn-modelos-ia-desktop { display: none; }
 }
 .search-section { padding: 0.6rem 1rem 0.75rem; position: relative; border-bottom: 1px solid #f3f4f6; }
 .search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
@@ -1619,14 +1496,6 @@ onMounted(async () => {
 .search-clear-btn { position: absolute; right: 0.55rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; padding: 0.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .search-clear-btn:hover { color: #374151; background: #f3f4f6; }
 .camera-btn { padding: 0.625rem; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; color: #374151; }
-.chip { padding: 0.375rem 0.75rem; border-radius: 20px; background: #f3f4f6; border: 1px solid #e5e7eb; font-size: 0.8rem; cursor: pointer; color: #374151; display: flex; align-items: center; gap: 0.25rem; }
-.chip.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
-.chip-loc { }
-.chip-loc.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
-.chip-inactive.active { background: #fee2e2; border-color: #ef4444; color: #dc2626; }
-.chip-inactive.active .chip-count { background: #dc2626; color: white; }
-.chip-count { background: #bfdbfe; color: #1e40af; border-radius: 10px; padding: 0 5px; font-size: 0.7rem; min-width: 16px; text-align: center; }
-.chip.active .chip-count { background: #2563eb; color: white; }
 .loading-state { display: flex; flex-direction: column; align-items: center; padding: 3rem; color: #6b7280; gap: 1rem; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1729,29 +1598,6 @@ onMounted(async () => {
 .results-complete { color: #15803d; }
 .loading-more { padding: .5rem; }
 .spinner-sm { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
-
-/* ── Filter chips ─────────────────────────────────────────────── */
-.filter-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
-
-/* ── Chip dropdown filters ────────────────────────────────────── */
-.chip-dd-wrap { position: relative; }
-.chip-caret { font-size: 0.6rem; margin-left: 0.2rem; }
-.chip-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
-  background: white; border: 1px solid #e5e7eb; border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 160px; overflow: hidden;
-  max-height: 240px; overflow-y: auto;
-}
-.chip-dd-search-wrap { padding: 0.35rem 0.5rem; border-bottom: 1px solid #f3f4f6; position: sticky; top: 0; background: white; z-index: 1; }
-.chip-dd-search { width: 100%; font-size: 0.78rem; border: 1px solid #e5e7eb; border-radius: 5px; padding: 0.25rem 0.5rem; outline: none; box-sizing: border-box; color: #374151; }
-.chip-dd-search:focus { border-color: #93c5fd; }
-.chip-dd-opt {
-  display: block; width: 100%; text-align: left;
-  padding: 0.45rem 0.85rem; font-size: 0.82rem; color: #374151;
-  background: none; border: none; cursor: pointer;
-}
-.chip-dd-opt:hover { background: #f9fafb; }
-.chip-dd-opt.active { background: #dbeafe; color: #1d4ed8; font-weight: 600; }
 
 /* ── Suggestions bar ──────────────────────────────────────────── */
 .suggestions-bar { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; }

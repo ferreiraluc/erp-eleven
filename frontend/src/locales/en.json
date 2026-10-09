@@ -130,6 +130,7 @@
     "na": "N/A"
   },
   "access": {
+    "skipToContent": "Skip to main content",
     "account": "My account",
     "users": "Users",
     "audit": "Audit",

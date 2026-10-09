@@ -36,3 +36,17 @@ O router usa history no desenvolvimento e hash em produção.
 
 O mapa dos módulos e os critérios de mudança estão em
 [Arquitetura](../docs/ARQUITETURA.md) e [Desenvolvimento](../docs/DESENVOLVIMENTO.md).
+
+## Fundação visual e acessibilidade
+
+Os tokens globais de cor, espaçamento, raio, sombra e movimento ficam em
+`src/assets/main.css`. Componentes novos devem consumir esses tokens e os controles
+`erp-button`/`erp-control`, evitando novas cores literais e variantes locais de botão.
+Todas as rotas são carregadas sob demanda; bibliotecas pesadas também devem permanecer
+atrás da ação ou da tela que as utiliza. O shell oferece atalho de teclado para o
+conteúdo principal, foco visível global e respeito a `prefers-reduced-motion`.
+
+No Estoque, `InventoryHeaderActions.vue` concentra as ações e permissões visuais do
+cabeçalho, enquanto `InventoryFilters.vue` encapsula chips, menus pesquisáveis, estados
+ARIA e fechamento ao clicar fora. A tela continua responsável por carregar dados e
+aplicar os filtros no store; componentes visuais apenas emitem a intenção do usuário.
