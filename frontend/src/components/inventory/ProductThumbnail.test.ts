@@ -6,6 +6,7 @@ vi.mock('@/services/api', () => ({ inventoryAPI: { getThumbnails: async (ids: st
 let app: App | undefined, root: HTMLDivElement
 let visible: (entries: { isIntersecting: boolean }[]) => void
 beforeEach(() => {
+  vi.useFakeTimers()
   vi.resetAllMocks()
   vi.stubGlobal('IntersectionObserver', class {
     constructor(callback: typeof visible) { visible = callback }
@@ -13,7 +14,11 @@ beforeEach(() => {
   })
   root = document.createElement('div'); document.body.append(root)
 })
-afterEach(() => { app?.unmount(); root.remove(); vi.unstubAllGlobals() })
+afterEach(async () => {
+  app?.unmount(); root.remove()
+  await vi.runAllTimersAsync()
+  vi.useRealTimers(); vi.unstubAllGlobals()
+})
 async function mount(item: {id:string; has_image:boolean; image_data:string|null; updated_at:string}) {
   app = createApp({ render: () => h(ProductThumbnail, { item }) }); app.mount(root); await nextTick()
 }
@@ -43,5 +48,7 @@ it('discards stale responses when a photo is replaced and keeps a placeholder on
   expect(root.querySelector('img')?.getAttribute('src')).toContain('replacement')
   item.image_data=null; item.updated_at='3'; await nextTick()
   getThumbnail.mockRejectedValueOnce(new Error('offline')); visible([{isIntersecting:true}]); await nextTick()
+  await vi.waitFor(() => expect(getThumbnail).toHaveBeenCalledTimes(2))
+  await vi.runAllTimersAsync()
   expect(root.querySelector('img')?.getAttribute('src')).toContain('image/svg+xml')
 })
