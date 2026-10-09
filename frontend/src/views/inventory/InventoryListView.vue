@@ -23,23 +23,7 @@
 
     <!-- Search + Camera -->
     <div class="search-section">
-      <div class="search-row">
-        <div class="search-box">
-          <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input v-model="searchQuery" type="text" :placeholder="tr('Produto, marca, tamanho ou código...')" class="search-input" :class="{ 'search-input-clearable': searchQuery }" />
-          <button v-if="searchQuery" @click="clearSearch()" class="search-clear-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Limpar busca')" :aria-label="tr('Limpar busca')" type="button">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <button type="button" @click="showScanner = true" class="camera-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Escanear código')" :aria-label="tr('Escanear código')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-      </div>
+      <InventorySearchBar v-model="searchQuery" @clear="clearSearch" @scan="showScanner = true" />
 
       <!-- Filter chips (status + marca + categoria + ver grupos) -->
       <InventoryFilters
@@ -61,98 +45,32 @@
       />
 
       <!-- Sugestões de agrupamento (visível no modo seleção) -->
-      <div v-if="selectionMode && suggestedGroups.length > 0" class="suggestions-bar">
-        <span class="sug-label">{{ tr('Similares detectados:') }}</span>
-        <button
-          v-for="sg in suggestedGroups.slice(0, 4)"
-          :key="sg.name"
-          @click="selectSuggestedGroup(sg)"
-          class="sug-chip erp-control"
-          :title="tr('{count} itens com nome similar', { count: sg.items.length })"
-        >
-          {{ sg.name }} ({{ sg.items.length }})
-        </button>
-      </div>
+      <InventoryGroupingSuggestions
+        v-if="selectionMode && suggestedGroups.length"
+        :suggestions="suggestedGroups"
+        @select="selectSuggestedGroup"
+      />
 
       <!-- Inventory summary stats -->
-      <div v-if="inventoryStore.alerts" class="inv-stats">
-        <span class="inv-stat">
-          <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items }}</span>
-          <span class="inv-stat-label">{{ tr('itens') }}</span>
-        </span>
-        <span class="inv-stat-sep">·</span>
-        <span class="inv-stat">
-          <span class="inv-stat-num">{{ inventoryStore.alerts.group_count }}</span>
-          <span class="inv-stat-label">{{ tr('grades') }}</span>
-        </span>
-        <span class="inv-stat-sep">·</span>
-        <button
-          class="inv-stat inv-stat-btn erp-control"
-          :class="{ 'inv-stat-btn-active': filterUngroupedOnly }"
-          @click="toggleUngroupedFilter"
-          :title="tr('Filtrar itens sem grade')"
-        >
-          <span class="inv-stat-num">{{ inventoryStore.alerts.total_active_items - inventoryStore.alerts.grouped_items_count }}</span>
-          <span class="inv-stat-label">{{ tr('sem grade') }}</span>
-        </button>
-        <template v-if="inventoryStore.alerts.low_stock_count > 0">
-          <span class="inv-stat-sep">·</span>
-          <button
-            class="inv-stat inv-stat-btn inv-stat-warn erp-control"
-            :class="{ 'inv-stat-btn-active inv-stat-warn-active': activeStatus === 'low_stock' }"
-            @click="setStatusFilter(activeStatus === 'low_stock' ? '' : 'low_stock')"
-            :title="tr('Filtrar estoque baixo')"
-          >
-            <span class="inv-stat-num">{{ inventoryStore.alerts.low_stock_count }}</span>
-            <span class="inv-stat-label">{{ tr('baixo') }}</span>
-          </button>
-        </template>
-        <template v-if="inventoryStore.alerts.out_of_stock_count > 0">
-          <span class="inv-stat-sep">·</span>
-          <button
-            class="inv-stat inv-stat-btn inv-stat-danger erp-control"
-            :class="{ 'inv-stat-btn-active inv-stat-danger-active': activeStatus === 'out_of_stock' }"
-            @click="setStatusFilter(activeStatus === 'out_of_stock' ? '' : 'out_of_stock')"
-            :title="tr('Filtrar sem estoque')"
-          >
-            <span class="inv-stat-num">{{ inventoryStore.alerts.out_of_stock_count }}</span>
-            <span class="inv-stat-label">{{ tr('sem estoque') }}</span>
-          </button>
-        </template>
-      </div>
+      <InventorySummaryStats
+        v-if="inventoryStore.alerts"
+        :summary="inventoryStore.alerts"
+        :status="activeStatus"
+        :ungrouped-only="filterUngroupedOnly"
+        @status="setStatusFilter"
+        @toggle-ungrouped="toggleUngroupedFilter"
+      />
 
       <!-- View mode switcher -->
-      <div class="view-switcher">
-        <span class="view-label">{{ tr('Visualização:') }}</span>
-        <button class="erp-control" :class="['view-btn', { active: viewMode === 'list' }]" @click="setView('list')" :title="tr('Lista')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-          </svg>
-          {{ tr('Lista') }}
-        </button>
-        <button class="erp-control" :class="['view-btn', { active: viewMode === 'compact' }]" @click="setView('compact')" :title="tr('Compacto')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h7M4 12h7M4 19h7M14 5h6M14 12h6M14 19h6" />
-          </svg>
-          {{ tr('Compacto') }}
-        </button>
-        <button class="erp-control" :class="['view-btn', { active: viewMode === 'grid' }]" @click="setView('grid')" :title="tr('Quadrados')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-          </svg>
-          {{ tr('Quadrados') }}
-        </button>
-        <span class="view-sep">|</span>
-        <div class="selection-results">
-          <button class="erp-control" :class="['view-btn', { active: selectionMode }]" @click="toggleSelectionMode" :title="tr('Selecionar itens')" :aria-pressed="selectionMode">
-            {{ tr('Selecionar') }}
-          </button>
-          <span class="search-result-count" role="status" aria-live="polite" aria-atomic="true">
-            <span v-if="searchBusy" class="spinner-sm" aria-hidden="true"></span>
-            {{ searchBusy ? tr('Buscando...') : resultsReady ? resultCountText : tr('Total não confirmado') }}
-          </span>
-        </div>
-      </div>
+      <InventoryViewControls
+        :mode="viewMode"
+        :selection-mode="selectionMode"
+        :busy="searchBusy"
+        :ready="resultsReady"
+        :result-text="resultCountText"
+        @mode="setView"
+        @toggle-selection="toggleSelectionMode"
+      />
     </div>
       </div><!-- /inventory-toolbar-panel -->
       <div class="mobile-search-progress" role="status" aria-live="polite" aria-atomic="true">
@@ -641,6 +559,10 @@ import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
 import InventoryDiagnosticsPanel from '@/components/inventory/InventoryDiagnosticsPanel.vue'
 import InventoryFilters from '@/components/inventory/InventoryFilters.vue'
 import InventoryHeaderActions from '@/components/inventory/InventoryHeaderActions.vue'
+import InventorySearchBar from '@/components/inventory/InventorySearchBar.vue'
+import InventoryViewControls from '@/components/inventory/InventoryViewControls.vue'
+import InventoryGroupingSuggestions from '@/components/inventory/InventoryGroupingSuggestions.vue'
+import InventorySummaryStats from '@/components/inventory/InventorySummaryStats.vue'
 
 const showDiagnostics = ref(false), diagnosticsRevision = ref(0)
 const diagnosticsOpeningId = ref<string | null>(null)
@@ -1462,9 +1384,7 @@ onMounted(async () => {
 .list-load-error p { margin: .35rem 0 0; font-size: .8rem; }
 .list-load-error .btn:disabled { opacity: .5; cursor: not-allowed; }
 .mobile-toolbar-bar, .mobile-search-progress { display:none; }
-.selection-results { display:flex; align-items:center; gap:.4rem; min-width:0; }
-.search-result-count { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .45rem; border-radius:6px; color:#1d4ed8; background:#eff6ff; font-size:.75rem; font-weight:600; }
-.search-result-count .spinner-sm, .mobile-search-progress .spinner-sm { width:12px; height:12px; flex-shrink:0; }
+.mobile-search-progress .spinner-sm { width:12px; height:12px; flex-shrink:0; }
 @media (prefers-reduced-motion: reduce) { .spinner-sm { animation:none !important; } }
 .sticky-toolbar { position: sticky; top: 0; z-index: 30; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; cursor: pointer; border: none; font-weight: 500; }
@@ -1487,15 +1407,6 @@ onMounted(async () => {
   .btn svg { width: 13px !important; height: 13px !important; }
 }
 .search-section { padding: 0.6rem 1rem 0.75rem; position: relative; border-bottom: 1px solid #f3f4f6; }
-.search-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
-.search-box { flex: 1; position: relative; }
-.search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: #9ca3af; }
-.search-input { width: 100%; padding: 0.625rem 0.75rem 0.625rem 2.25rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none; box-sizing: border-box; }
-.search-input:focus { border-color: #3b82f6; }
-.search-input-clearable { padding-right: 2rem; }
-.search-clear-btn { position: absolute; right: 0.55rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; padding: 0.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.search-clear-btn:hover { color: #374151; background: #f3f4f6; }
-.camera-btn { padding: 0.625rem; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; color: #374151; }
 .loading-state { display: flex; flex-direction: column; align-items: center; padding: 3rem; color: #6b7280; gap: 1rem; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1598,12 +1509,6 @@ onMounted(async () => {
 .results-complete { color: #15803d; }
 .loading-more { padding: .5rem; }
 .spinner-sm { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
-
-/* ── Suggestions bar ──────────────────────────────────────────── */
-.suggestions-bar { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; }
-.sug-label { font-size: 0.72rem; color: #92400e; font-weight: 600; white-space: nowrap; }
-.sug-chip { font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 20px; border: 1px solid #fbbf24; background: #fef3c7; color: #92400e; cursor: pointer; white-space: nowrap; }
-.sug-chip:hover { background: #fde68a; }
 
 /* ── Group card ───────────────────────────────────────────────── */
 .group-card {
@@ -1724,20 +1629,6 @@ onMounted(async () => {
 
 /* ── Brand ─────────────────────────────────────────────────────── */
 .item-brand { font-weight: 600; color: #374151; }
-
-/* ── View switcher ────────────────────────────────────────────── */
-.view-switcher { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
-.view-label { font-size: 0.75rem; color: #9ca3af; margin-right: 0.1rem; }
-.view-btn { display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #6b7280; cursor: pointer; font-size: 0.75rem; transition: all 0.15s; white-space: nowrap; }
-.view-btn:hover { border-color: #9ca3af; color: #374151; }
-.view-btn.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
-.view-sep { color: #d1d5db; padding: 0 0.1rem; }
-@media (max-width: 600px) {
-  .view-label { display: none; }
-  .view-sep { display: none; }
-  .view-switcher { gap: 0.25rem; }
-  .view-btn { padding: 0.3rem 0.5rem; }
-}
 
 .item-card {
   min-width: 0;
@@ -1939,33 +1830,6 @@ onMounted(async () => {
   padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #991b1b; margin-bottom: 0.5rem;
 }
 
-/* ── Inventory stats bar ─────────────────────────────────────────────────────── */
-.inv-stats {
-  display: flex; align-items: center; gap: 0.35rem;
-  padding: 0.3rem 0.1rem 0.15rem;
-  font-size: 0.75rem; flex-wrap: wrap;
-}
-.inv-stat { display: flex; align-items: baseline; gap: 0.2rem; }
-.inv-stat-num { font-weight: 700; color: #374151; }
-.inv-stat-label { color: #9ca3af; }
-.inv-stat-sep { color: #d1d5db; }
-.inv-stat-warn .inv-stat-num { color: #d97706; }
-.inv-stat-warn .inv-stat-label { color: #d97706; opacity: 0.8; }
-.inv-stat-danger .inv-stat-num { color: #dc2626; }
-.inv-stat-danger .inv-stat-label { color: #dc2626; opacity: 0.8; }
-.inv-stat-btn {
-  background: none; border: none; padding: 0.1rem 0.3rem;
-  border-radius: 0.3rem; cursor: pointer;
-  transition: background 0.15s;
-}
-.inv-stat-btn:hover { background: #f3f4f6; }
-.inv-stat-btn-active { background: #e5e7eb !important; }
-.inv-stat-btn-active .inv-stat-num { color: #111827; }
-.inv-stat-btn-active .inv-stat-label { color: #374151; opacity: 1; }
-.inv-stat-warn.inv-stat-btn:hover { background: #fef3c7; }
-.inv-stat-warn-active { background: #fef3c7 !important; }
-.inv-stat-danger.inv-stat-btn:hover { background: #fee2e2; }
-.inv-stat-danger-active { background: #fee2e2 !important; }
 .chip-check { margin-left: 0.2rem; font-size: 0.7rem; }
 
 /* ── Drag-to-select ──────────────────────────────────────────────────────────── */

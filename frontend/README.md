@@ -50,3 +50,8 @@ No Estoque, `InventoryHeaderActions.vue` concentra as ações e permissões visu
 cabeçalho, enquanto `InventoryFilters.vue` encapsula chips, menus pesquisáveis, estados
 ARIA e fechamento ao clicar fora. A tela continua responsável por carregar dados e
 aplicar os filtros no store; componentes visuais apenas emitem a intenção do usuário.
+`InventorySearchBar.vue` e `InventoryViewControls.vue` seguem a mesma separação para
+busca/scanner, modos de visualização, seleção e anúncio da quantidade de resultados.
+`InventorySummaryStats.vue` oferece filtros rápidos a partir dos contadores e
+`InventoryGroupingSuggestions.vue` limita e apresenta sugestões de grades; ambos
+recebem dados prontos e apenas emitem ações para a tela aplicar.
