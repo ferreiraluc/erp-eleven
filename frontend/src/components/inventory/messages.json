@@ -1,4 +1,10 @@
 {
+  "Mais ações": ["Más acciones", "More actions"],
+  "Status do estoque": ["Estado del inventario", "Stock status"],
+  "Local do estoque": ["Ubicación del inventario", "Stock location"],
+  "Filtros": ["Filtros", "Filters"],
+  "Novo": ["Nuevo", "New"],
+  "Sem grade": ["Sin grupo", "Ungrouped"],
   "Editar opções": [
     "Editar opciones",
     "Edit options"

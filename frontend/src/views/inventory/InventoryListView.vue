@@ -1,12 +1,16 @@
 <template>
   <div class="inventory-view">
-    <div class="sticky-toolbar">
+    <div class="sticky-toolbar" :class="{ 'toolbar-open': mobileToolbarOpen }">
       <div class="mobile-toolbar-bar">
         <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Voltar ao dashboard')" @click="$router.replace('/dashboard')">←</button>
         <div class="mobile-toolbar-title"><strong>{{ tr('Estoque') }}</strong><span v-if="hasActiveFilters">{{ tr('Filtros ativos') }}</span></div>
+        <button type="button" class="erp-button erp-button--primary erp-button--sm mobile-new-item" @click="openCreate" :aria-label="tr('Novo item')">+ {{ tr('Novo') }}</button>
+        <InventoryActionsMenu compact :is-owner="auth.isOwner" :diagnostics-open="showDiagnostics"
+          @open-deleted="showDeletedHistory = true" @toggle-diagnostics="showDiagnostics = !showDiagnostics"
+          @open-labels="showLabelTemplates = true" @open-import="showImport = true" />
         <button type="button" class="erp-button erp-button--secondary erp-button--sm mobile-toolbar-toggle"
           :aria-expanded="mobileToolbarOpen" aria-controls="inventory-toolbar-panel" @click="toggleMobileToolbar">
-          {{ tr(mobileToolbarOpen ? 'Recolher' : 'Filtros e ações') }}
+          {{ tr(mobileToolbarOpen ? 'Recolher' : 'Filtros') }}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" :class="{ expanded: mobileToolbarOpen }"><path d="m6 9 6 6 6-6" /></svg>
         </button>
       </div>
@@ -36,12 +40,14 @@
         :location="filterLocation"
         :has-groups="hasGroups"
         :group-mode="groupMode"
+        :ungrouped-only="filterUngroupedOnly"
         :counts="inventoryStore.alerts"
         @status="setStatusFilter"
         @brand="setFilter('brand', $event)"
         @category="setFilter('category', $event)"
         @location="setLocationFilter"
         @toggle-groups="toggleGroupMode"
+        @toggle-ungrouped="toggleUngroupedFilter"
       />
 
       <!-- Sugestões de agrupamento (visível no modo seleção) -->
@@ -558,6 +564,7 @@ import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionMo
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
 import InventoryDiagnosticsPanel from '@/components/inventory/InventoryDiagnosticsPanel.vue'
 import InventoryFilters from '@/components/inventory/InventoryFilters.vue'
+import InventoryActionsMenu from '@/components/inventory/InventoryActionsMenu.vue'
 import InventoryHeaderActions from '@/components/inventory/InventoryHeaderActions.vue'
 import InventorySearchBar from '@/components/inventory/InventorySearchBar.vue'
 import InventoryViewControls from '@/components/inventory/InventoryViewControls.vue'
@@ -606,7 +613,7 @@ const backendGroups = ref<GroupResponse[]>([])
 const backendSuggestions = ref<SuggestionResponse[]>([])
 const groupsLoading = ref(false), groupsLoaded = ref(false), groupsError = ref(false)
 let groupLoadGeneration = 0, suggestionLoadGeneration = 0
-const hasGroups = computed(() => backendGroups.value.length > 0 || inventoryStore.items.some(i => i.group_key))
+const hasGroups = computed(() => (inventoryStore.alerts?.group_count || 0) > 0 || backendGroups.value.length > 0 || inventoryStore.items.some(i => i.group_key))
 
 // All items visible in the current view — combines ungrouped store items + items from expanded groups.
 // Needed so BulkEditModal can find grouped items (which are NOT in inventoryStore.items in group mode).
@@ -737,6 +744,7 @@ function toggleSelectionMode() {
     selectedIds.value = []
     showGroupModal.value = false
   } else {
+    if (!groupsLoaded.value) void loadGroups()
     loadSuggestions()
   }
 }
@@ -848,6 +856,10 @@ const groupNameSuggestion = computed(() => {
     prefix = prefix.slice(0, i)
   }
   return prefix.trim().replace(/[-_\s]+$/, '')
+})
+
+watch(showItemForm, (open) => {
+  if (open && !groupsLoaded.value) void loadGroups()
 })
 
 watch(showGroupModal, (val) => {
@@ -1345,7 +1357,7 @@ onMounted(async () => {
   await Promise.all([
     inventoryStore.loadItems(1, false, groupMode.value),
     inventoryStore.loadAlerts(),
-    loadGroupsFiltered(),
+    groupMode.value ? loadGroupsFiltered() : Promise.resolve(),
   ])
   if (route.query.new === '1') {
     showItemForm.value = true
@@ -1392,17 +1404,21 @@ onMounted(async () => {
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
 @media (max-width: 600px) {
   .mobile-search-progress { display:flex; align-items:center; gap:.4rem; padding:.3rem .75rem; min-height:26px; box-sizing:border-box; font-size:.72rem; line-height:1.3; color:#1d4ed8; background:#eff6ff; }
-  .mobile-toolbar-bar { display:flex; align-items:center; gap:.5rem; min-height:52px; padding:.35rem .75rem; box-sizing:border-box; }
+  .mobile-toolbar-bar { display:flex; align-items:center; gap:6px; min-height:44px; padding:.25rem .75rem; box-sizing:border-box; }
   .mobile-toolbar-title { display:flex; flex-direction:column; flex:1; min-width:0; color:#111827; font-size:.95rem; }
   .mobile-toolbar-title span { color:#2563eb; font-size:.65rem; line-height:1.2; }
-  .mobile-toolbar-toggle { flex-shrink:0; min-height:36px; }
+  .mobile-toolbar-toggle,.mobile-new-item { flex-shrink:0; min-height:32px!important; height:32px; padding:5px 9px!important; border-radius:999px!important; font-size:.72rem!important; gap:4px!important; }
   .mobile-toolbar-toggle svg { transition:transform .15s; }
   .mobile-toolbar-toggle svg.expanded { transform:rotate(180deg); }
   .inventory-toolbar-panel.mobile-collapsed { display:none; }
-  .inventory-toolbar-panel { max-height:calc(100dvh - 112px); overflow-y:auto; overscroll-behavior:contain; }
+  .inventory-toolbar-panel { overflow:visible; }
   .inventory-toolbar-panel :deep(.erp-module-header__heading) { display:none; }
-  .inventory-toolbar-panel :deep(.erp-module-header) { padding:.5rem .75rem; margin:0; }
-  .inventory-toolbar-panel :deep(.erp-module-header__actions) { width:100%; justify-content:flex-start; }
+  .inventory-toolbar-panel :deep(.erp-module-header) { padding:2px 10px 4px; margin:0; }
+  .inventory-toolbar-panel :deep(.erp-module-header__actions) { width:100%; justify-content:flex-start; gap:6px; }
+  .toolbar-open .mobile-search-progress { display:none; }
+  .inventory-toolbar-panel :deep(.inventory-stats) { display:none; }
+  .inventory-toolbar-panel .search-section { padding:4px 10px 8px; }
+  .inventory-toolbar-panel :deep(.inventory-search) { margin-bottom:6px; }
   .btn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.25rem; }
   .btn svg { width: 13px !important; height: 13px !important; }
 }

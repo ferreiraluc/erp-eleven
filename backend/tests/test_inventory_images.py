@@ -97,6 +97,19 @@ def test_thumbnail_cache_is_bounded_and_requires_authentication(stock_app, monke
     assert client.get('/api/inventory/items/' + ids[-1] + '/thumbnail').status_code == 401
 
 
+def test_invalidated_preview_ignores_memory_cache_even_without_date_change(stock_app):
+    factory, client, _ = stock_app
+    with factory() as db: ids, _ = seed(db)
+    path = '/api/inventory/items/' + ids[0] + '/thumbnail'
+    assert client.get(path).json()['image_data']
+    with factory() as db:
+        # Mimic the PostgreSQL trigger when a bulk photo update preserves the date.
+        db.connection().execute(Item.__table__.update().where(Item.id == uuid.UUID(ids[0])).values(
+            image_data=None, thumbnail_data=None, thumbnail_ready=False, updated_at=Item.updated_at))
+        db.commit()
+    assert client.get(path).json()['image_data'] is None
+
+
 @pytest.mark.parametrize('value', [None, '', 'https://example.com/not-fetched.jpg',
     'data:image/png;base64,!!', 'data:image/png;base64,YWJj',
     'data:image/png;base64,' + 'x' * images.MAX_ENCODED])
@@ -143,3 +156,30 @@ def test_busy_thumbnail_returns_bounded_retry_without_holding_connection(stock_a
             assert not db.in_transaction()
     finally:
         images._thumbnail_lock.release()
+
+
+def test_batch_thumbnails_persist_and_survive_memory_cache_eviction(stock_app, monkeypatch):
+    factory, client, _ = stock_app
+    with factory() as db:
+        ids, photo = seed(db)
+        row = db.get(Item, uuid.UUID(ids[0])); original_date = row.updated_at
+    images._thumbnails.clear()
+    first = client.get('/api/inventory/items/thumbnails', params=[('ids', id) for id in ids])
+    assert first.status_code == 200
+    assert len(first.json()['thumbnails']) == 4 and not first.json()['retry_ids']
+    images._thumbnails.clear()
+    def no_decode(data): raise AssertionError('A prepared preview must not decode its original again')
+    monkeypatch.setattr(images, '_thumbnail', no_decode)
+    assert client.get('/api/inventory/items/thumbnails', params=[('ids', id) for id in ids]).json() == first.json()
+    with factory() as db:
+        row = db.get(Item, uuid.UUID(ids[0]))
+        assert row.image_data == photo and row.updated_at == original_date
+        assert row.thumbnail_ready and row.thumbnail_data
+        row.name = 'Renamed'; db.commit()
+        assert row.thumbnail_ready
+        row.image_data = None; db.commit()
+        assert not row.thumbnail_ready and row.thumbnail_data is None
+    assert client.get('/api/inventory/items/thumbnails', params=[('ids', id) for id in ids]*4).status_code == 422
+    from app.dependencies import get_current_active_user
+    del client.app.dependency_overrides[get_current_active_user]
+    assert client.get('/api/inventory/items/thumbnails', params={'ids':ids[0]}).status_code == 401

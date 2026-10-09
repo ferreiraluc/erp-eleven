@@ -629,10 +629,10 @@ export interface SuggestionResponse {
 // ─── Inventory API ────────────────────────────────────────────────────────────
 
 export const inventoryAPI = {
-  getItems: (params: Record<string, any> = {}): Promise<InventoryItemList> => {
+  getItems: (params: Record<string, any> = {}, signal?: AbortSignal): Promise<InventoryItemList> => {
     const qs = new URLSearchParams()
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') qs.append(k, String(v)) })
-    return api.get(`/api/inventory/items?${qs}`).then(res => res.data)
+    return api.get(`/api/inventory/items?${qs}`, { signal }).then(res => res.data)
   },
 
   createItem: (item: Partial<InventoryItem>): Promise<InventoryItem> =>
@@ -643,6 +643,9 @@ export const inventoryAPI = {
 
   getThumbnail: (id: string): Promise<{ image_data: string | null }> =>
     api.get(`/api/inventory/items/${id}/thumbnail`).then(res => res.data),
+
+  getThumbnails: (ids: string[]): Promise<{ thumbnails: Record<string, { image_data: string | null }>; retry_ids: string[] }> =>
+    api.get('/api/inventory/items/thumbnails', { params: { ids }, paramsSerializer: { indexes: null } }).then(res => res.data),
 
   updateItem: (id: string, item: Partial<InventoryItem>): Promise<InventoryItem> =>
     api.put(`/api/inventory/items/${id}`, item).then(res => res.data),

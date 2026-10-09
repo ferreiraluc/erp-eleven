@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, DECIMAL, Integer, Text, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.sql import func
 import uuid
 import enum
@@ -66,6 +66,8 @@ class Item(Base):
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
     image_data = Column(Text, nullable=True)
+    thumbnail_data = deferred(Column(Text, nullable=True))
+    thumbnail_ready = deferred(Column(Boolean, nullable=False, default=False, server_default="false"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     deleted_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
 
@@ -138,8 +140,17 @@ class InventorySessionItem(Base):
     item = relationship("Item")
 
 # All ORM entry points (CSV, bot, batch editing, duplication and UI) share taxonomy.
-from sqlalchemy import event
+from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from ..services.inventory_taxonomy import normalize_pending_items
 
 event.listen(Session, 'before_flush', normalize_pending_items)
+
+
+# SQLite/local writes also invalidate previews; PostgreSQL additionally has a
+# trigger for direct SQL and bulk changes. Originals remain authoritative.
+@event.listens_for(Item, 'before_update')
+def invalidate_item_thumbnail(mapper, connection, item):
+    if inspect(item).attrs.image_data.history.has_changes():
+        item.thumbnail_data = None
+        item.thumbnail_ready = False
