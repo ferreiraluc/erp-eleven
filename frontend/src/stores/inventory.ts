@@ -17,6 +17,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   const loadMoreError = ref<string | null>(null)
   let loadGeneration = 0
   let loadedFilterKey = ''
+  let loadController: AbortController | undefined
 
   const lowStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'low'))
   const outOfStockItems = computed(() => items.value.filter(i => hasKnownStock(i) && i.alert_level === 'out'))
@@ -31,6 +32,8 @@ export const useInventoryStore = defineStore('inventory', () => {
     if (append && (loading.value || !hasLoaded.value || filterKey !== loadedFilterKey ||
         page !== pagination.value.page + 1 || page > pagination.value.total_pages)) return
     const generation = ++loadGeneration
+    loadController?.abort()
+    loadController = new AbortController()
     try {
       loading.value = true
       loadingMore.value = append
@@ -45,7 +48,7 @@ export const useInventoryStore = defineStore('inventory', () => {
       if (ungroupedOnly) params.ungrouped_only = true
       Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === false || params[k] === undefined) delete params[k] })
       params.include_images = false
-      const result = await inventoryAPI.getItems(params)
+      const result = await inventoryAPI.getItems(params, loadController.signal)
       if (generation !== loadGeneration) return
       if (append) {
         const loadedIds = new Set(items.value.map(item => item.id))

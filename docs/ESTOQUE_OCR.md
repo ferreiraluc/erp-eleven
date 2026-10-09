@@ -27,14 +27,31 @@ não baixa todas as páginas em segundo plano: usa a rolagem ou **Carregar mais*
 
 O catálogo pede `include_images=false` nas rotas de itens, grades e sugestões.
 Essas respostas contêm `has_image` e omitem o conteúdo da foto original na consulta
-SQL. Miniaturas autenticadas em `GET /api/inventory/items/{id}/thumbnail` são
-carregadas quando entram na área visível, com no máximo duas requisições simultâneas
-por página. Fotos de cards removidos não iniciam novas requisições da fila. A sessão
-de leitura é fechada antes de esperar pela conversão e antes de decodificar a foto,
-evitando reter conexões do banco durante processamento. O servidor produz JPEG de até 256px,
-serializa a leitura/conversão das fotos e mantém cache LRU de no máximo 64
-miniaturas de até 48 KiB, invalidado pela atualização do item. Fotos inválidas
-recebem um placeholder; não impedem acessar o cadastro.
+SQL. Miniaturas autenticadas são pedidas em lotes de até 12 IDs em
+`GET /api/inventory/items/thumbnails`, com no máximo dois lotes simultâneos.
+A rota individual continua disponível. Só entram na fila fotos próximas da área
+visível; componentes removidos são descartados e IDs repetidos compartilham a
+mesma consulta. O navegador mantém no máximo 128 prévias por cinco minutos,
+separadas por sessão e versão do item (até ~6 MiB); trocar visualização reutiliza
+esse cache. Uma miniatura ocupada pode ser tentada novamente uma vez após 2 s.
+
+O servidor produz JPEG de até 256px/48 KiB, serializa a conversão dos originais e
+mantém um cache em memória limitado a 64 prévias. As miniaturas prontas também
+ficam persistidas em `thumbnail_data`/`thumbnail_ready`: um lote já preparado usa
+uma única consulta leve, sem reabrir as fotos originais, inclusive após deploy.
+A primeira abertura de uma foto antiga ainda precisa prepará-la. A sessão de
+leitura é fechada antes de esperar/converter. Mudanças na foto invalidam a prévia
+por listener ORM e trigger PostgreSQL; alterações de nome/saldo não exigem nova
+conversão. A escrita técnica da prévia não muda a data do produto nem gera auditoria
+de alteração do cadastro. Fotos inválidas recebem placeholder.
+
+A migração `e7f8a9b0c1d2` cria índices GIN com `pg_trgm` nas expressões usadas
+pela busca e índices parciais para facetas/ordenação, somente nos itens não
+excluídos. Os índices são construídos de forma concorrente; construções inválidas
+interrompidas são recuperadas ao repetir a migração. Buscas antigas são canceladas
+no navegador quando substituídas por outra; isso não garante cancelar uma query
+que o PostgreSQL já começou. Grades completas deixam de ser buscadas na abertura
+do modo comum; são carregadas ao usar grades, seleção ou cadastro.
 
 Ampliar ou editar busca a foto original pela ficha individual. O editor só abre
 depois dessa leitura, evitando apagar ou substituir a foto por uma miniatura ao
@@ -97,14 +114,14 @@ O assistente usa a mesma busca, inclusive quando recebe tamanho como campo
 separado, e deve informar a numeração original de cada resultado. A consulta
 não faz chamadas a provedores de IA.
 
-No celular (até 600px), o cabeçalho inicia recolhido em uma barra compacta com
-voltar, **Estoque** e **Filtros e ações**. O botão expande as ações do módulo,
-busca, filtros e modos de visualização; **Recolher** libera novamente o espaço
-para os produtos. Recolher preserva a busca, os filtros, a seleção e o modo de
-visualização; **Filtros ativos** sinaliza filtros aplicados mesmo com o painel
-fechado. O painel aberto tem rolagem própria em telas baixas. Desktop e tablet
-acima de 600px mantêm todos os controles visíveis, independentemente do estado
-usado no celular. A cada entrada na página mobile, o painel inicia recolhido.
+No celular (até 600px), a barra reúne voltar, **Estoque**, **Novo**, menu **Mais
+ações** e **Filtros**. O painel inicia recolhido e conserva busca/filtros/seleção
+ao fechar. Aberto, organiza tags arredondadas em duas linhas: status, marca,
+categoria, local, sem grade e ver grades. A seleção recebe destaque azul; textos
+longos cabem na tag e o nome completo aparece nas opções. Os modos de visualização
+usam ícones com nomes acessíveis, ao lado de seleção e quantidade de resultados.
+Ações de importação, etiquetas, conferência e histórico continuam disponíveis no
+menu, respeitando o perfil. Desktop preserva filtros visíveis e as mesmas tags.
 
 Uma busca ou filtro sem correspondências oferece **Limpar Filtros**, removendo
 texto, status, marca, categoria, local e seleção de itens sem grade. O modo de

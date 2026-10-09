@@ -28,7 +28,7 @@ watch(() => [image.value, props.item.id, props.item.updated_at, props.item.image
     started = true
     observer?.disconnect()
     try {
-      const result = await loadThumbnail(id, () => request === generation)
+      const result = await loadThumbnail(id, () => request === generation, props.item.updated_at)
       if (result && request === generation) src.value = result.image_data
     } catch { /* Keep the placeholder; the product and its actions remain usable. */ }
   }

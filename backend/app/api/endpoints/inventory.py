@@ -44,7 +44,7 @@ from ...services.inventory_variants import variant_context, create_variants
 
 from ...services.inventory_taxonomy import canonical, clean_product_name, vocabulary, facet_filters
 from ...services.inventory_search import build_search
-from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail
+from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail, product_thumbnails
 
 router = APIRouter()
 
@@ -473,6 +473,13 @@ def get_suggestions(
         for v in sorted(map_.values(), key=lambda x: len(x['items']), reverse=True)
         if len(v['items']) >= 2
     ]
+
+
+@router.get('/items/thumbnails')
+def get_product_thumbnails(ids: List[uuid.UUID] = Query(..., min_length=1, max_length=12),
+                           db: Session = Depends(get_db),
+                           current_user: Usuario = Depends(get_current_active_user)):
+    return product_thumbnails(db, list(dict.fromkeys(ids)))
 
 
 @router.get("/items/{item_id}/thumbnail")

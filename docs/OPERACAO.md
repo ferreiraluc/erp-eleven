@@ -121,6 +121,27 @@ lenta não bloqueia outra rota, que espera/conversão devolvem a conexão e que 
 fila do frontend continua após falha. Acompanhar recorrência de timeout em uso
 real; não aumentar o pool ou reiniciar o banco como solução automática.
 
+## Otimização de estoque: 08/10/2026
+
+A migração `e7f8a9b0c1d2` adiciona apenas cache de miniaturas e índices de busca;
+não substitui fotos nem dados operacionais. Requer `pg_trgm` (extensão PostgreSQL).
+Índices GIN/parciais são construídos com `CONCURRENTLY`, sem bloquear gravações
+por todo o tempo de construção. A migração tolera repetição após autocommit e
+recria somente seus índices inválidos. Conferir os logs de startup/Alembic.
+
+Benchmark local isolado PostgreSQL 17, 10.000 itens fictícios: consulta seletiva
+por código `DN0281` passou de 26,403 ms para 0,043 ms, com Bitmap Heap Scan usando
+`ix_inventory_search_trgm`. Não inclui rede, autenticação ou montagem da resposta;
+termos muito curtos/comuns podem continuar usando varredura por decisão do planner.
+O teste garante equivalência do resultado e uso do índice, sem limiar de tempo
+frágil. Testes também validam persistência/invalidação das miniaturas e os limites
+de lote, autenticação e cache. O plano do Render não foi alterado.
+
+A primeira leitura de cada foto antiga prepara uma miniatura uma vez. Consultas
+seguintes leem o cache persistido e trocas de visualização podem usar cache local.
+O cache persistido ocupa disco no PostgreSQL; a memória continua limitada, sem
+carregar originais de todo o catálogo ou converter várias fotos simultaneamente.
+
 ## Publicação de uma mudança
 
 1. Trabalhe em uma branch `codex/`, revise o diff e confirme que não há segredos/artefatos privados.

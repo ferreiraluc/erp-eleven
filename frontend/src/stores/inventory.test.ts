@@ -23,7 +23,7 @@ describe('Inventory store with missing balances', () => {
     store.filters.status = 'unknown_stock'
     api.getItems.mockResolvedValue({ items: [item, { ...item, id: 'low', alert_level: 'low' }], total: 2, page: 1, page_size: 50, total_pages: 1 })
     await store.loadItems()
-    expect(api.getItems).toHaveBeenCalledWith(expect.objectContaining({ status: 'unknown_stock' }))
+    expect(api.getItems).toHaveBeenCalledWith(expect.objectContaining({ status: 'unknown_stock' }), expect.any(AbortSignal))
     expect(store.items[0].current_stock).toBeNull()
     expect(store.items[0].stock_deposito).toBe(0)
     expect(store.lowStockItems).toEqual([])
@@ -63,7 +63,7 @@ describe('Search and infinite-scroll progress', () => {
     api.getItems.mockResolvedValueOnce(page(['a', 'b']))
     await store.loadItems()
     expect(store.hasLoaded).toBe(true); expect(store.pagination.total).toBe(3)
-    expect(api.getItems).toHaveBeenCalledWith(expect.objectContaining({ include_images: false }))
+    expect(api.getItems).toHaveBeenCalledWith(expect.objectContaining({ include_images: false }), expect.any(AbortSignal))
     const next = deferred(); api.getItems.mockReturnValueOnce(next.promise)
     const loading = store.loadItems(2, true)
     expect(store.loadingMore).toBe(true); expect(store.hasLoaded).toBe(true)
@@ -74,7 +74,7 @@ describe('Search and infinite-scroll progress', () => {
     api.getItems.mockResolvedValueOnce(page(['c'], 2))
     await store.loadItems(2, true)
     expect(store.items.map(row => row.id)).toEqual(['a', 'b', 'c']); expect(store.loadMoreError).toBeNull()
-    expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }))
+    expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }), expect.any(AbortSignal))
   })
   it('prevents duplicate page requests and discards old scroll responses when a new query starts', async () => {
     const store = useInventoryStore()

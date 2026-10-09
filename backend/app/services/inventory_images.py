@@ -62,20 +62,52 @@ def product_thumbnail(db, item_id):
         raise HTTPException(503, 'Miniatura ocupada. Tente novamente.', headers={'Retry-After': '2'})
     try:
         try:
-            row = db.query(Item.id, Item.updated_at).filter(Item.id == item_id, Item.deleted_at.is_(None)).first()
+            row = db.query(Item.id, Item.updated_at, Item.thumbnail_ready, Item.thumbnail_data).filter(Item.id == item_id, Item.deleted_at.is_(None)).first()
             if row is None:
                 raise HTTPException(404, 'Produto não encontrado')
             key = (row.id, row.updated_at)
-            cached = key in _thumbnails
-            data = None if cached else db.query(Item.image_data).filter(Item.id == item_id, Item.deleted_at.is_(None)).scalar()
+            cached = row.thumbnail_ready and key in _thumbnails
+            data = None if cached or row.thumbnail_ready else db.query(Item.image_data).filter(Item.id == item_id, Item.deleted_at.is_(None)).scalar()
         finally:
             # Decoding can be slow; it must not keep a database connection open.
             db.close()
         if not cached:
-            _thumbnails[key] = _thumbnail(data)
+            preview = row.thumbnail_data if row.thumbnail_ready else _thumbnail(data)
+            if not row.thumbnail_ready:
+                # Cache-only write, no product edit/audit. Guard against a photo
+                # changed while decoding, and preserve its modification date.
+                try:
+                    db.connection().execute(Item.__table__.update().where(
+                        Item.id == row.id, Item.updated_at == row.updated_at,
+                        Item.deleted_at.is_(None)).values(thumbnail_data=preview,
+                            thumbnail_ready=True, updated_at=Item.updated_at))
+                    db.commit()
+                finally:
+                    db.close()
+            _thumbnails[key] = preview
             while len(_thumbnails) > MAX_CACHE:
                 _thumbnails.popitem(last=False)
         _thumbnails.move_to_end(key)
         return {'image_data': _thumbnails[key]}
     finally:
         _thumbnail_lock.release()
+
+
+def product_thumbnails(db, ids):
+    """One bounded read for warm previews; cold originals are decoded one at a time."""
+    rows = db.query(Item.id, Item.thumbnail_ready, Item.thumbnail_data).filter(
+        Item.id.in_(ids), Item.deleted_at.is_(None)).all()
+    db.close()
+    previews, retry_ids = {}, []
+    for row in rows:
+        if row.thumbnail_ready:
+            previews[str(row.id)] = {'image_data': row.thumbnail_data}
+            continue
+        try:
+            previews[str(row.id)] = product_thumbnail(db, row.id)
+        except HTTPException as exc:
+            if exc.status_code == 503:
+                retry_ids.append(str(row.id))
+            elif exc.status_code != 404:
+                raise
+    return {'thumbnails': previews, 'retry_ids': retry_ids}
