@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <a class="skip-link" href="#main-content">{{ $t('access.skipToContent') }}</a>
     <AccountNavigation
       v-if="!route.matched.some(record => record.path === '/dashboard') || !auth.isAuthenticated"
       :class="{ 'operational-account-bar': route.meta.requiresAuth }"
@@ -9,7 +10,9 @@
       <p>{{ $t('access.connectionError') }}</p>
       <div><button class="erp-button erp-button--secondary" @click="retrySession">{{ $t('common.refresh') }}</button><button class="erp-button erp-button--secondary" @click="logout">{{ $t('common.logout') }}</button></div>
     </section>
-    <RouterView v-else-if="!route.meta.requiresAuth || auth.isAuthenticated" :key="auth.user?.id || 'guest'" />
+    <main v-else-if="!route.meta.requiresAuth || auth.isAuthenticated" id="main-content" tabindex="-1">
+      <RouterView :key="auth.user?.id || 'guest'" />
+    </main>
     <NotificationToast />
   </div>
 </template>
@@ -37,4 +40,20 @@ function logout() { return logoutToLogin(auth, router) }
 .session-error p { max-width: 36rem; margin: 0; }
 .session-error button { margin: 0 .4rem; padding: .55rem .9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: #1d4ed8; cursor: pointer; }
 .session-state{min-height:70vh;display:grid;place-items:center;color:#64748b;font-size:16px}
+.skip-link {
+  position: fixed;
+  z-index: 10000;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-700);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-4)));
+  transition: transform var(--motion-fast);
+}
+.skip-link:focus { transform: translateY(0); }
+#main-content:focus { outline: none; }
 </style>

@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div class="notification-container">
+    <div class="notification-container" aria-live="polite" aria-relevant="additions text">
       <Transition
         v-for="notification in notifications"
         :key="notification.id"
@@ -35,8 +35,8 @@
             </p>
           </div>
           
-          <button @click="removeNotification(notification.id)" class="notification-close erp-button erp-button--ghost erp-button--icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button type="button" :aria-label="uiText('Fechar')" @click="removeNotification(notification.id)" class="notification-close erp-button erp-button--ghost erp-button--icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { uiText } from '@/i18n/uiText'
 
 export interface NotificationOptions {
   message: string
@@ -209,7 +210,7 @@ defineExpose({
   color: #9ca3af;
   cursor: pointer;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition: color var(--motion-fast), background-color var(--motion-fast);
   flex-shrink: 0;
 }
 
@@ -226,7 +227,7 @@ defineExpose({
 /* Animações */
 .notification-enter-active,
 .notification-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity .3s cubic-bezier(0.4, 0, 0.2, 1), transform .3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .notification-enter-from {

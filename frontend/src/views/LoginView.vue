@@ -4,7 +4,7 @@
       <div class="login-header">
         <!-- Logo and title -->
         <div class="logo">
-          <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
         </div>
@@ -14,8 +14,8 @@
       
       <div class="card">
         <div class="card-body">
-          <form @submit.prevent="handleLogin" class="login-form">
-            <div v-if="authStore.error" class="error-message">
+          <form @submit.prevent="handleLogin" class="login-form" :aria-busy="authStore.isLoading">
+            <div v-if="authStore.error" class="error-message" role="alert" aria-live="assertive">
               <div class="error-content">
                 <svg class="error-icon" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />

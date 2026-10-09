@@ -1,17 +1,20 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { createAuthGuard } from './authGuard'
-import LoginView from '@/views/LoginView.vue'
-import DashboardView from '@/views/DashboardView.vue'
-import ExchangeRateManagement from '@/views/ExchangeRateManagement.vue'
-import RastreamentoView from '@/views/RastreamentoView.vue'
-import VendorManagement from '@/views/VendorManagement.vue'
-import VendasView from '@/views/VendasView.vue'
-import PedidosView from '@/views/PedidosView.vue'
-import InventoryListView from '@/views/inventory/InventoryListView.vue'
-import ClientesView from '@/views/ClientesView.vue'
-import PDVView from '@/views/PDVView.vue'
-import FiadoView from '@/views/FiadoView.vue'
+
+// Every routed screen is loaded on demand. This keeps operational modules and
+// their heavier dependencies out of the login bundle.
+const LoginView = () => import('@/views/LoginView.vue')
+const DashboardView = () => import('@/views/DashboardView.vue')
+const ExchangeRateManagement = () => import('@/views/ExchangeRateManagement.vue')
+const RastreamentoView = () => import('@/views/RastreamentoView.vue')
+const VendorManagement = () => import('@/views/VendorManagement.vue')
+const VendasView = () => import('@/views/VendasView.vue')
+const PedidosView = () => import('@/views/PedidosView.vue')
+const InventoryListView = () => import('@/views/inventory/InventoryListView.vue')
+const ClientesView = () => import('@/views/ClientesView.vue')
+const PDVView = () => import('@/views/PDVView.vue')
+const FiadoView = () => import('@/views/FiadoView.vue')
 
 const router = createRouter({
   history: import.meta.env.PROD ? createWebHashHistory() : createWebHistory(import.meta.env.BASE_URL),
