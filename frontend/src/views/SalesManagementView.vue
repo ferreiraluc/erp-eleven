@@ -19,7 +19,7 @@
         <label>{{ tr('Até') }}<input v-model="filters.date_to" type="date" /></label>
         <label>{{ tr('Situação') }}<select v-model="filters.status"><option value="">{{ tr('Todas') }}</option><option v-for="status in statuses" :key="status" :value="status">{{ statusText(status) }}</option></select></label>
         <label v-if="!auth.ownSales">{{ tr('Vendedor') }}<select v-model="filters.seller_id"><option value="">{{ tr('Todos') }}</option><option v-for="s in sellers" :key="s.id" :value="s.id">{{ s.name }}</option></select></label>
-        <label>{{ tr('Pagamento') }}<select v-model="filters.payment"><option value="">{{ tr('Todos') }}</option><option v-for="method in paymentMethods" :key="method" :value="method">{{ paymentText(method) }}</option></select></label>
+        <label>{{ tr('Pagamento') }}<select v-model="filters.payment"><option value="">{{ tr('Todos') }}</option><option v-for="method in allPaymentFilters" :key="method" :value="method">{{ paymentText(method) }}</option></select></label>
         <label v-if="auth.isOwner">{{ tr('Listagem') }}<select v-model="filters.deleted"><option :value="false">{{ tr('Vendas visíveis') }}</option><option :value="true">{{ tr('Histórico de excluídas') }}</option></select></label>
         <div class="filter-actions"><button class="erp-button erp-button--primary" :disabled="loading">{{ tr('Filtrar') }}</button><button type="button" class="erp-button erp-button--secondary" @click="clear">{{ tr('Limpar') }}</button></div>
       </form>
@@ -51,7 +51,8 @@ import { useAuthStore } from '@/stores/auth'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import SaleManagerModal from '@/components/pdv/management/SaleManagerModal.vue'
 import { pdvManagementAPI, saleError, type SaleListing } from '@/services/pdvManagement'
-import { tr, gs, saleDate, statusText, paymentMethods, paymentText } from '@/components/pdv/management/i18n'
+import { allPaymentFilters } from '@/services/pdvPayments'
+import { tr, gs, saleDate, statusText, paymentText } from '@/components/pdv/management/i18n'
 const auth = useAuthStore(), router = useRouter()
 const blank = () => ({ q: '', date_from: '', date_to: '', status: '', seller_id: '', payment: '', deleted: false })
 const filters = ref(blank()), page = ref(1), loading = ref(false), error = ref(''), selected = ref('')

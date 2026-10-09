@@ -85,13 +85,8 @@
                 </select>
               </label>
               <div class="pdv-result-price">
-                <template v-if="isNativeCurrency(item.sale_currency)">
-                  <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(item.sale_price) }}</span>
-                  <span class="pdv-price-gs">≈ G$ {{ fmtNum(convertKnownPrice(item.sale_price, getRate(item.sale_currency))) }}</span>
-                </template>
-                <template v-else>
-                  <span class="pdv-price-orig">{{ fmtGs(item.sale_price) }}</span>
-                </template>
+                <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(item.sale_price) }}</span>
+                <span v-for="price in productEquivalents(item.sale_price, item.sale_currency)" :key="price.currency" class="pdv-price-gs">≈ {{ currencyLabel(price.currency) }} {{ fmtNum(price.amount) }}</span>
               </div>
               <button class="pdv-result-add erp-button erp-button--primary erp-button--icon" :disabled="!canAddProduct(item)">+</button>
             </div>
@@ -152,7 +147,7 @@
                   </div>
                   <div class="pdv-ci-meta">
                     <span v-if="item.item_size || item.item_color">{{ [item.item_size, item.item_color].filter(Boolean).join(' · ') }}</span>
-                    <span v-if="isNativeCurrency(item.sale_currency)" class="ci-gs-equiv">≈ {{ fmtGs(item.unit_price_gs) }}</span>
+                    <span class="ci-gs-equiv">{{ fmtGs(item.unit_price_gs) }} · U$ {{ fmtNum(item.unit_price_gs / rateUsd) }} · R$ {{ fmtNum(item.unit_price_gs / rateBrl) }}</span>
                   </div>
                 </div>
                 <div class="pdv-ci-controls">
@@ -190,7 +185,7 @@
             <div class="pdv-total-row pdv-grand-total">
               <span>{{ $tr("TOTAL") }}</span><span>{{ fmtGs(pdv.total) }}</span>
             </div>
-            <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / rateUsd) }}</div>
+            <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / rateUsd) }} · R$ {{ fmtNum(pdv.total / rateBrl) }}</div>
           </div>
 
           <!-- ── Payment section ── -->
@@ -215,8 +210,8 @@
                   <span v-if="p.reference" class="pay-entry-ref">{{ p.reference }}</span>
                 </div>
                 <div class="pay-entry-amounts">
-                  <span v-if="p.currency !== 'GS'" class="pay-orig-amount">{{ p.currency }} {{ fmtNum(p.amount_original) }}</span>
-                  <span class="pay-gs-amount">{{ fmtGs(p.amount_gs) }}</span>
+                  <span class="pay-gs-amount">{{ paymentSymbol(p.currency) }} {{ fmtNum(p.amount_original) }}</span>
+                  <span v-if="p.currency !== 'GS'" class="pay-orig-amount">≈ {{ fmtGs(p.amount_gs) }}</span>
                 </div>
                 <button class="pay-entry-remove erp-button erp-button--danger erp-button--icon" @click="removePayment(p.id)">×</button>
               </div>
@@ -226,35 +221,32 @@
             <!-- Add payment form -->
             <div class="pay-add-section">
               <div class="pay-add-row">
-                <select v-model="newMethod" class="pay-select">
+                <select v-model="newMethod" class="pay-select" :aria-label="uiText('Método de pagamento')">
                   <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
                 </select>
-                <select v-model="newCurrency" class="pay-select pay-select-sm">
-                  <option value="USD">U$</option>
-                  <option value="GS">G$</option>
-                  <option value="BRL">R$</option>
-                  <option value="EUR">€</option>
-                </select>
+                <span class="pay-fixed-currency" :aria-label="uiText('Moeda do pagamento')">{{ currencySymbol }}</span>
               </div>
               <div class="pay-add-row">
                 <div class="pay-input-wrap">
                   <span class="pay-currency-prefix">{{ currencySymbol }}</span>
-                  <input v-model.number="newAmount" ref="amountInput" type="number" min="0"
+                  <input v-model.number="newAmount" ref="amountInput" type="number" min="0" step="0.01" :aria-label="uiText('Valor em {0}', {0: currencySymbol})"
                     class="pay-amount-input"
                     :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
                     @keydown.enter="addPayment" />
                 </div>
-                <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
+                <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" :disabled="!validRate" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
-                <button class="pay-btn-add erp-button erp-button--primary erp-button--sm" @click="addPayment" :disabled="!newAmount">{{ $tr("+ Add") }}</button>
+                <button class="pay-btn-add erp-button erp-button--primary erp-button--sm" @click="addPayment" :disabled="!canAddPayment">{{ $tr("+ Add") }}</button>
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
                 <span>{{ $tr("Taxa:") }}</span>
-                <input v-model.number="newRate" type="number" min="0" step="0.01" class="pay-rate-input" />
-                <span>{{ newCurrency }}/G$</span>
+                <input v-model.number="newRate" type="number" min="0.000001" step="0.000001" class="pay-rate-input" :aria-label="uiText('Câmbio para G$')" />
+                <span>G$ / {{ currencySymbol }}</span>
                 <span class="pay-converted">= {{ fmtGs(newAmount * newRate) }}</span>
               </div>
             </div>
+            <p v-if="!validRate" class="pay-validation" role="alert">{{ uiText('Informe um câmbio válido para este pagamento.') }}</p>
+            <p v-if="newMethod === 'fiado' && !pdv.clienteId" class="pay-validation" role="status">{{ uiText('Selecione o cliente para lançar fiado.') }}</p>
 
             <!-- Payment summary -->
             <div class="pay-summary-inline">
@@ -352,6 +344,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
+import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, validPaymentAmount } from '@/services/pdvPayments'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr: inventoryText } = useInventoryI18n()
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
@@ -392,17 +385,9 @@ const customerBusy = ref(false)
 // G$ per 1 USD
 const rateUsd = computed(() => currencyStore.exchangeRates['G$'])
 // G$ per 1 BRL
-const rateBrl = computed(() =>
-  currencyStore.exchangeRates['R$'] > 0
-    ? Math.round(currencyStore.exchangeRates['G$'] / currencyStore.exchangeRates['R$'])
-    : 1150
-)
+const rateBrl = computed(() => paymentRate('BRL', currencyStore.exchangeRates))
 // G$ per 1 EUR  (store['EUR'] = EUR per USD, so G$/EUR = G$/USD / EUR/USD)
-const rateEur = computed(() =>
-  currencyStore.exchangeRates['EUR'] > 0
-    ? Math.round(currencyStore.exchangeRates['G$'] / currencyStore.exchangeRates['EUR'])
-    : 7900
-)
+const rateEur = computed(() => paymentRate('EUR', currencyStore.exchangeRates))
 
 // ── Exchange rate modal ───────────────────────────────────────────────────────
 const showRateModal = ref(false)
@@ -452,76 +437,59 @@ async function saveRates() {
 // ── Payment state ────────────────────────────────────────────────────────────
 const localPayments = ref<CartPayment[]>(pdv.payments.map(payment => ({ ...payment })))
 const newMethod = ref('cash_usd')
-const newCurrency = ref('USD')
+const newCurrency = computed(() => paymentCurrency(newMethod.value) || 'USD')
 const newAmount = ref<number>(0)
 const newRate = ref(0)
 const newReference = ref('')
 const amountInput = ref<HTMLInputElement>()
 
-const PAYMENT_METHODS = computed(() => [
-  { value: 'cash_usd',     label: uiText(`💵 Dinheiro U$`) },
-  { value: 'cash_gs',      label: uiText(`💵 Dinheiro G$`) },
-  { value: 'cash_brl',     label: uiText(`💵 Dinheiro R$`) },
-  { value: 'cash_eur',     label: uiText(`💵 Dinheiro €`) },
-  { value: 'card',         label: uiText(`💳 Cartão`) },
-  { value: 'pix',          label: '📱 PIX' },
-  { value: 'mercadopago',  label: '🛒 MercadoPago' },
-  { value: 'transfer_br',  label: uiText(`🏦 Transf. Brasil`) },
-  { value: 'transfer_py',  label: uiText(`🏦 Transf. Paraguai`) },
-  { value: 'pix_cambista', label: uiText(`🔄 PIX Cambista`) },
-  { value: 'qr_py',        label: uiText(`📲 QR Paraguai`) },
-  { value: 'tigo_money',   label: '📲 Tigo Money' },
-  { value: 'fiado',        label: uiText(`📒 Fiado`) },
-])
+const PAYMENT_METHODS = computed(() => paymentMethods.map(m => ({ ...m, label: paymentLabel(m.value) })))
+const defaultRate = (currency: string) => paymentRate(currency, currencyStore.exchangeRates)
+const methodLabel = paymentLabel
 
-function methodCurrency(m: string) {
-  if (['cash_brl', 'pix', 'transfer_br', 'pix_cambista', 'mercadopago'].includes(m)) return 'BRL'
-  if (m === 'cash_gs' || m === 'transfer_py' || m === 'qr_py' || m === 'tigo_money') return 'GS'
-  if (m === 'cash_eur') return 'EUR'
-  return 'USD' // cash_usd, card default to USD
-}
-function defaultRate(c: string) {
-  if (c === 'BRL') return rateBrl.value
-  if (c === 'USD') return rateUsd.value
-  if (c === 'EUR') return rateEur.value
-  return 1
-}
-function methodLabel(m: string) {
-  return PAYMENT_METHODS.value.find(x => x.value === m)?.label.replace(/^\S+\s/, '') || m
-}
-
-watch(newMethod, (m) => {
-  newCurrency.value = methodCurrency(m)
+watch(newMethod, () => {
   newRate.value = defaultRate(newCurrency.value)
+  newAmount.value = 0
   newReference.value = ''
 })
-watch(newCurrency, (c) => { newRate.value = defaultRate(c) })
+watch([rateUsd, rateBrl, rateEur], () => {
+  newRate.value = defaultRate(newCurrency.value)
+  // Reprice the open cart using its original amounts; saved payments keep their agreed rate.
+  if (!pdv.loading && !pdv.checkoutUncertain) {
+    for (const item of pdv.cart) {
+      const rate = getRate(item.sale_currency)
+      if (rate > 0) pdv.updateItemOriginalPrice(item.id, item.original_price, rate)
+    }
+  }
+})
 watch(() => pdv.cart.length, (len) => { if (len === 0) { resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
 
-const currencySymbol = computed(() => ({ GS: 'G$', BRL: 'R$', USD: 'U$', EUR: '€' }[newCurrency.value] ?? newCurrency.value))
-const showReference = computed(() => ['card', 'pix', 'transfer_br', 'transfer_py', 'pix_cambista', 'mercadopago'].includes(newMethod.value))
-const referencePlaceholder = computed(() => {
-  if (newMethod.value === 'card') return uiText(`Últimos 4 dígitos`)
-  if (['pix', 'pix_cambista', 'mercadopago'].includes(newMethod.value)) return uiText(`Chave / ref.`)
-  return uiText(`Referência`)
-})
+const currencySymbol = computed(() => paymentSymbol(newCurrency.value))
+const showReference = computed(() => !newMethod.value.startsWith('cash_') && newMethod.value !== 'fiado')
+const referencePlaceholder = computed(() => newMethod.value.startsWith('card_') ? uiText('Últimos 4 dígitos') : uiText('Referência'))
+const validRate = computed(() => Number.isFinite(newRate.value) && newRate.value > 0 && newRate.value <= 999999999)
+const canAddPayment = computed(() => validPaymentAmount(newAmount.value, newRate.value) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
 
 const payTotalPaid = computed(() => localPayments.value.reduce((s, p) => s + p.amount_gs, 0))
 const payRemaining = computed(() => Math.max(0, pdv.total - payTotalPaid.value))
 const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
 const remainingInCurrency = computed(() =>
-  newCurrency.value === 'GS' ? payRemaining.value : payRemaining.value / (newRate.value || 1)
+  validRate.value ? payRemaining.value / newRate.value : 0
 )
-const canConfirmPayment = computed(() => !customerBusy.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0)
+const canConfirmPayment = computed(() => !customerBusy.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
 
 function fillTotal() {
-  newAmount.value = Math.ceil(remainingInCurrency.value * 100) / 100
+  if (!validRate.value) return
+  const rounded = Math.round(remainingInCurrency.value * 100) / 100
+  // Avoid adding a cent solely because a six-decimal rate has a tiny fraction.
+  const covers = Math.round(rounded * newRate.value * 100) / 100 >= payRemaining.value - 1e-7
+  newAmount.value = covers ? rounded : Math.ceil(remainingInCurrency.value * 100) / 100
   nextTick(() => amountInput.value?.focus())
 }
 
 function addPayment() {
-  if (!newAmount.value || newAmount.value <= 0) return
-  const rate = newCurrency.value === 'GS' ? 1 : newRate.value
+  if (!canAddPayment.value) return
+  const rate = newCurrency.value === 'GS' ? 1 : Math.round(newRate.value * 1e6) / 1e6
   const amountGs = newCurrency.value === 'GS' ? newAmount.value : newAmount.value * rate
   localPayments.value.push({
     id: crypto.randomUUID(),
@@ -529,7 +497,7 @@ function addPayment() {
     currency: newCurrency.value,
     amount_original: newAmount.value,
     exchange_rate: rate,
-    amount_gs: Math.round(amountGs),
+    amount_gs: Math.round(amountGs * 100) / 100,
     cambista_id: null,
     reference: newReference.value || null,
     label: methodLabel(newMethod.value),
@@ -563,14 +531,13 @@ function getRate(currency: string): number {
   if (c === 'EUR') return rateEur.value
   return 1
 }
-function isNativeCurrency(currency: string): boolean {
-  const c = (currency || 'PYG').toUpperCase()
-  return c !== 'PYG' && c !== 'GS' && c !== 'G$' && c !== ''
-}
-function currencyLabel(currency: string): string {
-  const c = (currency || 'PYG').toUpperCase()
-  const map: Record<string, string> = { USD: 'U$', BRL: 'R$', EUR: '€', PYG: 'G$', GS: 'G$' }
-  return map[c] || c
+function currencyLabel(currency: string): string { return paymentSymbol((currency || 'PYG').toUpperCase()) }
+function productEquivalents(value: number | null | undefined, currency: string) {
+  const native = (currency || 'PYG').toUpperCase()
+  const gs = convertKnownPrice(value, getRate(native))
+  return ['GS', 'USD', 'BRL'].filter(c => c !== (native === 'PYG' ? 'GS' : native)).map(c => ({
+    currency: c, amount: gs !== null && defaultRate(c) > 0 ? gs / defaultRate(c) : null,
+  }))
 }
 function fmtGs(v: number | null | undefined) { return typeof v === 'number' && Number.isFinite(v) ? 'G$ ' + Math.round(v).toLocaleString(uiLocale()) : '—' }
 function fmtNum(v: number | null | undefined) { return typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString(uiLocale(), { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '—' }
@@ -714,7 +681,7 @@ onMounted(() => {
   // Initialise newRate from the shared currency store (no API call needed)
   newRate.value = defaultRate(newCurrency.value)
 })
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+onUnmounted(() => { document.removeEventListener('keydown', onKeydown); clearTimeout(toastTimer); clearTimeout(searchTimer) })
 </script>
 
 <style scoped>
@@ -842,6 +809,8 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pay-discount-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.875rem; border-bottom: 1px solid #f3f4f6; background: #fff7ed; }
 .pay-discount-label { font-size: 0.72rem; font-weight: 600; color: #92400e; white-space: nowrap; }
 .pay-discount-input-wrap { display: flex; align-items: center; border: 1.5px solid #fed7aa; border-radius: 0.35rem; overflow: hidden; background: white; }
+.pay-fixed-currency { flex-shrink:0; border-radius:999px; padding:6px 10px; font-size:.78rem; font-weight:700; color:#1d4ed8; background:#eff6ff; align-self:center; }
+.pay-validation { margin:4px 14px 8px; color:#b45309; font-size:.75rem; }
 .pay-currency-prefix { padding: 0.2rem 0.3rem; font-size: 0.7rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; }
 .pay-discount-input { border: none; outline: none; width: 80px; padding: 0.2rem 0.35rem; font-size: 0.85rem; }
 

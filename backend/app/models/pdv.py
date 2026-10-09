@@ -109,7 +109,7 @@ class PdvPayment(Base):
     cambista_id = Column(UUID(as_uuid=True), ForeignKey("cambistas.id"), nullable=True)
 
     method = Column(String(30), nullable=False)
-    currency = Column(String(3), default="GS")       # GS, BRL, USD, EUR
+    currency = Column(String(4), default="GS")       # GS, BRL, USD, EUR, USDT
     amount_original = Column(Numeric(15, 2), nullable=False)
     exchange_rate = Column(Numeric(15, 6), default=1)
     amount_gs = Column(Numeric(15, 2), nullable=False)
