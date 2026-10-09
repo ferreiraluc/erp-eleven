@@ -31,13 +31,14 @@
     <h3>{{ tr('Pagamentos aplicados à venda') }}</h3><p class="hint">{{ tr('Informe os valores aplicados, sem incluir troco. A soma deve coincidir com o total corrigido.') }}</p>
     <article v-for="(p,index) in model.payments" :key="index" class="edit-line">
       <div class="form-grid quantities">
-        <label>{{ tr('Pagamento') }}<select v-model="p.method"><option v-for="method in [...new Set([...paymentMethods,p.method])]" :key="method" :value="method">{{ paymentText(method) }}</option></select></label>
-        <label>{{ tr('Moeda') }}<select v-model="p.currency"><option v-for="currency in ['GS','BRL','USD','EUR']" :key="currency">{{ currency }}</option></select></label>
-        <label>{{ tr('Valor na moeda') }}<input v-model.number="p.amount_original" type="number" step=".01" min="0" @input="recalculate(p)" /></label>
-        <label>{{ tr('Câmbio para G$') }}<input v-model.number="p.exchange_rate" type="number" step=".000001" min=".000001" @input="recalculate(p)" /></label>
+        <label>{{ tr('Pagamento') }}<select v-model="p.method" @change="changePaymentMethod(p)"><option v-for="method in [...new Set([...paymentMethods,p.method])]" :key="method" :value="method">{{ paymentText(method) }}</option></select></label>
+        <label>{{ tr('Moeda') }}<input :value="paymentSymbol(p.currency)" readonly /></label>
+        <label>{{ tr('Valor na moeda') }}<input v-model.number="p.amount_original" :disabled="!paymentCurrency(p.method)" type="number" step=".01" min="0" @input="recalculate(p)" /></label>
+        <label>{{ tr('Câmbio para G$') }}<input v-model.number="p.exchange_rate" :disabled="!paymentCurrency(p.method) || p.currency === 'GS'" type="number" step=".000001" min=".000001" @input="recalculate(p)" /></label>
       </div>
+      <p v-if="!paymentCurrency(p.method)" class="hint">{{ tr('Para alterar este pagamento antigo, selecione um método atual.') }}</p>
       <div class="line-heading"><strong>{{ gs(p.amount_gs) }}</strong><button type="button" class="erp-button erp-button--danger erp-button--sm" @click="model.payments.splice(index,1)">{{ tr('Remover pagamento') }}</button></div>
-      <label>{{ tr('Referência do pagamento') }}<input v-model="p.reference" maxlength="200" /></label>
+      <label>{{ tr('Referência do pagamento') }}<input v-model="p.reference" :disabled="!paymentCurrency(p.method)" maxlength="200" /></label>
     </article>
     <button type="button" class="erp-button erp-button--secondary" @click="model.payments.push({method:'cash_gs',currency:'GS',amount_original:0,exchange_rate:1,amount_gs:0})">+ {{ tr('Adicionar pagamento') }}</button>
     <div class="totals"><p>{{ tr('Total corrigido') }} <strong>{{ gs(total) }}</strong></p><p>{{ tr('Pagamentos') }} <strong>{{ gs(paid) }}</strong></p><p :class="{ mismatch: Math.abs(total - paid) > .001 }">{{ tr('Diferença') }} <strong>{{ gs(total - paid) }}</strong></p></div>
@@ -46,10 +47,13 @@
   </div>
 </template>
 <script setup lang="ts">
+import { useCurrencyStore } from '@/stores/currency'
+import { paymentCurrency, paymentSymbol, paymentRate } from '@/services/pdvPayments'
 import { computed, onUnmounted, ref } from 'vue'
 import { inventoryAPI, pdvAPI, type InventoryItem, type PdvClienteResponse, type PdvSaleCreate, type PdvPaymentCreate } from '@/services/api'
 import { saleError } from '@/services/pdvManagement'
 import { tr, gs, paymentMethods, paymentText } from './i18n'
+const currencyStore = useCurrencyStore()
 const model = defineModel<PdvSaleCreate>({ required: true })
 defineProps<{ sellers: Array<{ id: string; name: string }> }>()
 const productIndex = ref<number | null>(null), productSearch = ref(''), products = ref<InventoryItem[]>([]), searching = ref(false)
@@ -70,6 +74,12 @@ async function searchClients() { const current = ++clientRequest; if (customerSe
   catch(e) { if (current === clientRequest) error.value=saleError(e) }
 }
 function chooseClient(c: PdvClienteResponse) { model.value.cliente_id=c.id;model.value.cliente_nome=c.nome;clients.value=[];customerSearch.value='' }
+function changePaymentMethod(p: PdvPaymentCreate) {
+  const currency = paymentCurrency(p.method)
+  if (!currency) return
+  p.currency = currency; p.exchange_rate = paymentRate(currency, currencyStore.exchangeRates)
+  p.amount_original = 0; p.amount_gs = 0
+}
 function recalculate(p: PdvPaymentCreate) { p.amount_gs=Math.round(Number(p.amount_original)*Number(p.exchange_rate)*100)/100 }
 onUnmounted(()=>{productRequest++;clientRequest++})
 </script>

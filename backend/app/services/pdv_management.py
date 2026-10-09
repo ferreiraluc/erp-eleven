@@ -17,6 +17,7 @@ from ..schemas.pdv import validate_pdv_quantity
 from .access_policy import is_owner, own_sales, sales_query
 from .inventory_service import create_movement, StockMovementError
 from .user_audit import bind_actor, record
+from .pdv_payments import validate_payment, unchanged_payment
 
 CENT = Decimal('.01')
 MAX_MONEY = Decimal('9999999999999.99')
@@ -114,7 +115,7 @@ def _debt(db,sale):
     return money(sum((r.valor_gs if r.tipo=='debit' else -r.valor_gs if r.tipo=='credit' else 0)
                      for r in db.query(PdvFiadoMovement).filter_by(sale_id=sale.id).all()))
 
-def _validated_edit(db,body):
+def _validated_edit(db,body,original_payments=()):
     if not body.items or len(body.items)>200 or not body.payments or len(body.payments)>30:raise HTTPException(422,'Informe de 1 a 200 itens e de 1 a 30 pagamentos.')
     data=body.model_dump()
     subtotal=Decimal(0)
@@ -130,14 +131,12 @@ def _validated_edit(db,body):
     data['total_gs']=money(subtotal-data['desconto_gs'])
     if data['total_gs']<0:raise HTTPException(422,'O desconto da venda supera seu valor.')
     paid=Decimal(0)
+    legacy_candidates = list(original_payments)
     for p in data['payments']:
-        if not p['method'].strip() or len(p['method'])>30 or p['currency'] not in ('GS','PYG','BRL','USD','EUR'):raise HTTPException(422,'Confira o método e a moeda do pagamento.')
-        p['amount_original']=positive(p['amount_original']);p['amount_gs']=positive(p['amount_gs'])
-        rate=Decimal(str(p['exchange_rate']))
-        if not rate.is_finite() or rate<=0 or rate>999999999:raise HTTPException(422,'Câmbio inválido.')
-        p['exchange_rate']=rate.quantize(Decimal('.000001'))
-        if p['exchange_rate']<=0:raise HTTPException(422,'Câmbio inválido.')
-        if abs(money(p['amount_original']*rate)-p['amount_gs'])>Decimal('1'):raise HTTPException(422,'O valor convertido do pagamento não confere com a moeda e o câmbio.')
+        original = next((old for old in legacy_candidates if unchanged_payment(p, old)), None)
+        if original is not None:
+            legacy_candidates.remove(original)
+        p.update(validate_payment(p, preserve_legacy=original is not None))
         paid+=p['amount_gs']
     # For a correction, payments represent the amount applied, excluding change.
     if money(paid)!=data['total_gs']:raise HTTPException(422,'Os pagamentos corrigidos devem somar o total da venda, sem incluir troco.')
@@ -153,7 +152,7 @@ def plan(db,sid,user,command):
     if old_debt<0:raise HTTPException(409,'O histórico de fiado desta venda precisa de conferência antes de alterar.')
     if command.operation=='edit':
         if sale.status!='completed' or sale.refunded_gs or any(r.returned_quantity for r in sale.items):raise HTTPException(409,'Venda com devolução ou cancelamento não pode ser reescrita. Consulte o histórico e registre uma nova venda.')
-        new=_validated_edit(db,command.edit)
+        new=_validated_edit(db,command.edit,sale.payments)
         new['vendedor_id']=new['vendedor_id'] or sale.vendedor_id
         for r in sale.items:
             if not r.is_avulso and sale.stock_applied:

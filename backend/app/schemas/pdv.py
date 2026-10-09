@@ -133,8 +133,8 @@ class PdvSaleItemResponse(BaseModel):
 # ── PDV Payments ──────────────────────────────────────────────────────────────
 
 class PdvPaymentCreate(BaseModel):
-    method: str                   # cash_gs, cash_brl, pix, card, fiado, etc.
-    currency: str = "GS"          # GS, BRL, USD, EUR
+    method: str                   # Current methods validated by pdv_payments; history remains readable.
+    currency: str = "GS"          # GS, BRL, USD, EUR, USDT
     amount_original: float
     exchange_rate: float = 1.0
     amount_gs: float

@@ -3519,5 +3519,100 @@
     "pt": "Erro ao atualizar rastreamentos",
     "es": "Error al actualizar los seguimientos",
     "en": "Could not update shipments"
+  },
+  "Dinheiro EUR": {
+    "pt": "Dinheiro EUR",
+    "es": "Efectivo EUR",
+    "en": "Cash EUR"
+  },
+  "Cartão Crédito PY": {
+    "pt": "Cartão Crédito PY",
+    "es": "Tarjeta de crédito PY",
+    "en": "PY credit card"
+  },
+  "Cartão Débito PY": {
+    "pt": "Cartão Débito PY",
+    "es": "Tarjeta de débito PY",
+    "en": "PY debit card"
+  },
+  "QR Máquina PY Débito": {
+    "pt": "QR Máquina PY Débito",
+    "es": "QR terminal PY débito",
+    "en": "PY terminal QR debit"
+  },
+  "PIX (pessoal)": {
+    "pt": "PIX (pessoal)",
+    "es": "PIX (personal)",
+    "en": "PIX (personal)"
+  },
+  "PIX (Thais)": {
+    "pt": "PIX (Thais)",
+    "es": "PIX (Thais)",
+    "en": "PIX (Thais)"
+  },
+  "MaquinaThais": {
+    "pt": "MaquinaThais",
+    "es": "MaquinaThais",
+    "en": "MaquinaThais"
+  },
+  "TransferenciaPY": {
+    "pt": "TransferenciaPY",
+    "es": "TransferenciaPY",
+    "en": "TransferenciaPY"
+  },
+  "MercadoPago (link)": {
+    "pt": "MercadoPago (link)",
+    "es": "MercadoPago (enlace)",
+    "en": "MercadoPago (link)"
+  },
+  "Anotar (fiado)": {
+    "pt": "Anotar (fiado)",
+    "es": "Anotar (fiado)",
+    "en": "On account (credit)"
+  },
+  "Cartão (antigo)": {
+    "pt": "Cartão (antigo)",
+    "es": "Tarjeta (anterior)",
+    "en": "Card (legacy)"
+  },
+  "PIX (antigo)": {
+    "pt": "PIX (antigo)",
+    "es": "PIX (anterior)",
+    "en": "PIX (legacy)"
+  },
+  "Moeda do pagamento": {
+    "pt": "Moeda do pagamento",
+    "es": "Moneda del pago",
+    "en": "Payment currency"
+  },
+  "Valor em {0}": {
+    "pt": "Valor em {0}",
+    "es": "Importe en {0}",
+    "en": "Amount in {0}"
+  },
+  "Informe um câmbio válido para este pagamento.": {
+    "pt": "Informe um câmbio válido para este pagamento.",
+    "es": "Ingrese un tipo de cambio válido para este pago.",
+    "en": "Enter a valid exchange rate for this payment."
+  },
+  "Selecione o cliente para lançar fiado.": {
+    "pt": "Selecione o cliente para lançar fiado.",
+    "es": "Seleccione el cliente para anotar fiado.",
+    "en": "Select the customer to record credit."
+  },
+  "Para alterar este pagamento antigo, selecione um método atual.": {
+    "pt": "Para alterar este pagamento antigo, selecione um método atual.",
+    "es": "Para modificar este pago anterior, seleccione un método actual.",
+    "en": "To change this legacy payment, select a current method."
+  },
+  "Método de pagamento": {
+    "pt": "Método de pagamento",
+    "es": "Método de pago",
+    "en": "Payment method"
+  },
+  "Câmbio para G$": {
+    "pt": "Câmbio para G$",
+    "es": "Cambio a G$",
+    "en": "Exchange rate to G$"
   }
 }

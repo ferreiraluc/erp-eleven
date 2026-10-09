@@ -10,6 +10,7 @@ from ...database import get_db
 from ...dependencies import get_current_active_user, require_owner
 from ...schemas.pdv_management import SaleCommand, SaleCommit
 from ...services import pdv_management, pdv_customers
+from ...services.pdv_payments import validate_payment
 from ...models.usuario import Usuario
 from ...models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement
 from ...models.inventory import Item
@@ -162,6 +163,10 @@ def create_sale(
     if not body.items:
         raise HTTPException(status_code=400, detail="A venda deve ter pelo menos 1 item")
 
+    payments = [validate_payment(p.model_dump()) for p in body.payments]
+    if any(p['method'] == 'fiado' and p['amount_gs'] > 0 for p in payments) and not body.cliente_id:
+        raise HTTPException(422, 'Selecione o cliente para lançar fiado.')
+
     stock_items = _lock_sale_stock(db, body.items)
     customer = pdv_customers.select(db, PdvCustomerSelection(source='pdv', id=body.cliente_id), current_user) if body.cliente_id else None
 
@@ -208,18 +213,8 @@ def create_sale(
             location=i.location,
         ))
 
-    for p in body.payments:
-        db.add(PdvPayment(
-            id=uuid.uuid4(),
-            sale_id=sale.id,
-            method=p.method,
-            currency=p.currency,
-            amount_original=Decimal(str(p.amount_original)),
-            exchange_rate=Decimal(str(p.exchange_rate)),
-            amount_gs=Decimal(str(p.amount_gs)),
-            cambista_id=p.cambista_id,
-            reference=p.reference,
-        ))
+    for payment in payments:
+        db.add(PdvPayment(id=uuid.uuid4(), sale_id=sale.id, **payment))
 
     db.flush()
     _apply_stock(db, sale, current_user.id, stock_items)

@@ -36,6 +36,47 @@ nos demais itens do PDV, as linhas da venda persistem em G$; os pagamentos têm
 seu próprio registro de moeda e cotação. Incluir um avulso não cadastra produto
 nem movimenta estoque.
 
+## Métodos e moeda do pagamento
+
+Novos pagamentos possuem moeda obrigatória, conferida na tela e na API:
+
+| Método | Moeda de lançamento |
+| --- | --- |
+| Dinheiro U$ | USD |
+| Dinheiro R$ | BRL |
+| Dinheiro G$ | GS |
+| Dinheiro EUR | EUR |
+| Cartão Crédito PY, Cartão Débito PY, QR Máquina PY Débito | GS |
+| PIX (pessoal), PIX (Thais), MaquinaThais, MercadoPago (link) | BRL |
+| TransferenciaPY | GS |
+| USDT | USDT |
+| Anotar (fiado) | GS, com cliente cadastrado selecionado |
+
+O botão **Total** preenche o restante na moeda do método. Trocar o método limpa
+o valor ainda não adicionado, para não reinterpretar dólares como reais/guaranis.
+O operador pode alterar o câmbio para G$ de um pagamento em moeda estrangeira;
+guaranis usam sempre taxa 1. USDT começa com a mesma cotação de USD (1 USDT = 1 U$),
+por convenção confirmada pela loja, podendo ser ajustado. Não há cotação de cripto
+nem cobrança/transferência automática em provedores.
+
+Busca de produtos, itens do carrinho e total mostram G$, U$ e R$ pelo câmbio vigente;
+produtos em EUR conservam também o valor original. O modal de câmbio continua
+disponível aos perfis autorizados. Uma alteração recalcula os itens do carrinho
+aberto a partir do preço original. Pagamentos já adicionados mantêm a taxa acordada;
+remova e adicione novamente para renegociá-los. A razão BRL/EUR usa seis casas de
+precisão, sem arredondar previamente a cotação para guaranis inteiros.
+
+O livro financeiro interno e os saldos de fiado permanecem em G$. Cada pagamento
+guarda unidade, valor original, taxa para G$ e equivalente convertido. São validados
+moeda/método, valores finitos, até duas casas no valor e consistência da conversão
+(tolerância de 1 G$ para arredondamentos históricos). A migração `f8a9b0c1d2e3`
+amplia `pdv_payments.currency` para quatro caracteres, preservando todos os registros.
+
+Recibos, filtros e gestor compartilham os nomes atuais. Métodos genéricos antigos
+(como Cartão/PIX) continuam legíveis e filtráveis, sem supor se eram crédito/débito
+ou Pix pessoal/Thais. Uma correção do Lucas pode conservar o pagamento antigo
+integralmente; para alterá-lo, selecione um método atual e confira valor e moeda.
+
 ## Consulta e acesso
 
 Filtros por período inclusivo em Brasília, vendedor, pagamento, situação e busca

@@ -67,7 +67,7 @@
             <span>{{ methodLabel(p.method) }}</span>
             <span>
               <template v-if="p.currency !== 'GS'">
-                {{ p.currency }} {{ fmtNum(p.amount_original) }} →
+                {{ paymentSymbol(p.currency) }} {{ fmtNum(p.amount_original) }} →
               </template>
               {{ fmtGs(p.amount_gs) }}
             </span>
@@ -96,6 +96,7 @@
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed } from 'vue'
+import { paymentLabel, paymentSymbol } from '@/services/pdvPayments'
 import type { PdvSaleResponse } from '@/services/api'
 
 const props = defineProps<{ sale: PdvSaleResponse }>()
@@ -103,14 +104,7 @@ defineEmits<{ (e: 'close'): void }>()
 
 const receiptRef = ref<HTMLElement>()
 
-const PAYMENT_LABELS = computed<Record<string, string>>(() => ({
-  cash_gs: uiText(`Dinheiro G$`), cash_brl: uiText(`Dinheiro R$`), cash_usd: uiText(`Dinheiro U$`),
-  cash_eur: uiText(`Dinheiro €`), card: uiText(`Cartão`), pix: 'PIX',
-  mercadopago: 'MercadoPago', transfer_br: uiText(`Transf. Brasil`),
-  transfer_py: uiText(`Transf. Paraguai`), pix_cambista: uiText(`PIX Cambista`),
-  qr_py: uiText(`QR Paraguai`), tigo_money: 'Tigo Money', fiado: uiText(`Fiado`),
-}))
-function methodLabel(m: string) { return PAYMENT_LABELS.value[m] || m }
+const methodLabel = paymentLabel
 
 const troco = computed(() => {
   const paid = props.sale.payments.reduce((s, p) => s + p.amount_gs, 0)
