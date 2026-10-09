@@ -9,6 +9,9 @@ O cabeçalho segue o padrão dos módulos, sem o título decorativo e o subtítu
 sincronização continua abaixo do cabeçalho; consultar a tela não inicia uma leitura
 do OneDrive. O título **Minhas vendas** e a visibilidade de **Fontes** continuam
 respeitando o perfil do usuário.
+Os valores principais usam uma escala compacta e os cards se tornam uma coluna em
+celulares estreitos, evitando que totais mensais ou anuais ultrapassem o painel.
+O resumo do dashboard aplica a mesma regra responsiva.
 
 - O leitor usa `openpyxl` com `data_only=True`, `read_only=True` e `keep_links=False`. Consome os resultados calculados e salvos pelo Excel, incluindo correções já incorporadas. Não executa fórmulas, não remove constantes das fórmulas e não as envia à API do frontend.
 - Na planilha **atual**, soma os resultados salvos de semanas únicas e da aba corrente. Isso acompanha novos lançamentos mesmo quando o resumo mensal lateral, preenchido manualmente, ainda não foi atualizado. A identidade dos lançamentos evita contar a aba corrente novamente quando já foi copiada para uma semana.

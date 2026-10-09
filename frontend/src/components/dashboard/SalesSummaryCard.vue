@@ -251,8 +251,9 @@ onMounted(load)
   gap: 8px;
 }
 .sales-metrics .summary-metric strong {
-  font-size: clamp(19px, 2vw, 27px);
-  letter-spacing: -0.8px;
+  font-size: clamp(18px, 1.7vw, 23px);
+  letter-spacing: -0.55px;
+  line-height: 1.2;
 }
 .sales-metrics .featured {
   background: #ecfdf5;
@@ -354,6 +355,9 @@ onMounted(load)
   border-radius: 3px;
 }
 @media (max-width: 480px) {
+  .sales-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .sales-metrics .summary-metric {
     padding: 12px 9px;
   }

@@ -79,6 +79,9 @@ describe('BI translations and personal sales rendering', () => {
 
   it('never presents the only authorized seller as the global number one', async () => {
     const { node } = await mount(SalesBiView, 'en')
+    const metrics = node.querySelector('.metrics') as HTMLElement
+    expect(metrics.classList.contains('own-sales')).toBe(true)
+    expect(metrics.getAttribute('style')).toBeNull()
     expect(node.querySelector('.ranking-panel h2')?.textContent).toBe('Your results')
     expect(node.querySelector('.ranking-panel .rank-index')).toBeNull()
     expect(node.querySelector('.tabs')?.textContent).not.toContain('Sources')
