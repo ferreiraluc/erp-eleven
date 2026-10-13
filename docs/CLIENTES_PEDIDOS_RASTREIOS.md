@@ -15,6 +15,12 @@ do status continua presente. A borda permanece no celular, sem depender de hover
 Descrições e previsões usam texto mais escuro. A alteração é visual: preserva
 filtros, expansão, ações e as listas distintas de mobile e desktop.
 
+Na página de encomendas, telas abaixo de 1200px e tablets de toque até 1366px
+usam apenas o card expansível; a linha e o painel de desktop ficam ocultos juntos,
+sem barras vazias ou detalhes repetidos. Busca e status ficam lado a lado no tablet;
+no celular, empilhados. Copiar/expandir e as três ações têm áreas de toque uniformes.
+O histórico expandido acompanha o conteúdo, sem limite de altura que corte eventos.
+
 - Em **Clientes**, Ativos é a seleção inicial; Inativos mostra apenas os cadastros
   desativados e Todos inclui os dois estados. A busca respeita a seleção. A API
   mantém ativos como padrão e aceita `include_inactive=true` para consultar ambos.

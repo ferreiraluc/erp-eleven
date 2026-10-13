@@ -80,7 +80,8 @@
           </svg>
           <input 
             v-model="filtros.busca"
-            type="text" 
+            type="search"
+            :aria-label="$tr('Buscar por código ou destinatário...')"
             :placeholder='$tr("Buscar por código ou destinatário...")'
             class="search-input"
             @input="aplicarFiltros"
@@ -88,7 +89,7 @@
         </div>
 
         <div class="filter-select">
-          <select v-model="filtros.status" @change="aplicarFiltros" class="status-select">
+          <select v-model="filtros.status" :aria-label="$tr('Status')" @change="aplicarFiltros" class="status-select">
             <option value="">{{ $tr("Todos os Status") }}</option>
             <option value="PENDENTE">{{ $tr("Pendente") }}</option>
             <option value="EM_TRANSITO">{{ $tr("Em Trânsito") }}</option>
@@ -155,11 +156,18 @@
                     <button v-if="rastreamento.pedido_id" class="mch-pedido-badge mch-pedido-btn erp-button erp-button--secondary erp-button--sm" @click.stop="goToPedido(rastreamento)">#{{ rastreamento.numero_pedido || rastreamento.pedido_id.slice(0, 8) }}</button>
                   </div>
                   <span class="status-badge-inline mch-badge" :class="getStatusBadgeClass(rastreamento.status)">{{ getStatusText(rastreamento.status) }}</span>
-                  <div class="mobile-expand-icon">
+                  <button
+                    type="button"
+                    class="mobile-expand-icon erp-button erp-button--ghost erp-button--icon"
+                    :aria-label="$tr('Ver detalhes') + ': ' + rastreamento.codigo_rastreio"
+                    :aria-expanded="isCardExpanded(rastreamento.id)"
+                    :aria-controls="'tracking-details-' + rastreamento.id"
+                    @click.stop="toggleCard(rastreamento.id)"
+                  >
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': isCardExpanded(rastreamento.id) }">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
                 <!-- Linha 2: Código + Serviço + Copiar -->
                 <div class="mch-code-row">
@@ -184,9 +192,10 @@
               </div>
               
               <!-- Conteúdo expansível -->
-              <div 
+              <div
+                v-show="isCardExpanded(rastreamento.id)"
+                :id="'tracking-details-' + rastreamento.id"
                 class="mobile-card-content"
-                :class="{ 'expanded': isCardExpanded(rastreamento.id) }"
               >
                 <div class="mobile-card-inner">
                   <!-- Status -->
@@ -246,7 +255,7 @@
                   <!-- Ações -->
                   <div class="mobile-content-actions">
                     <button
-                      @click="editarRastreamento(rastreamento)"
+                      @click.stop="editarRastreamento(rastreamento)"
                       class="mobile-action-btn-expanded edit erp-button erp-button--secondary erp-button--sm"
                       :title='$tr("Editar")'
                     >
@@ -256,7 +265,7 @@
                       {{ $tr("Editar") }}
                     </button>
                     <button
-                      @click="removerRastreamento(rastreamento)"
+                      @click.stop="removerRastreamento(rastreamento)"
                       class="mobile-action-btn-expanded delete erp-button erp-button--danger erp-button--sm"
                       :title='$tr("Excluir")'
                     >
@@ -310,7 +319,7 @@
           <div class="row-codigo desktop-only">
             <span class="codigo-text">{{ rastreamento.codigo_rastreio }}</span>
             <button 
-              @click="copiarCodigo(rastreamento)"
+              @click.stop="copiarCodigo(rastreamento)"
               class="copy-btn erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Copiar Código")'
             >
@@ -357,7 +366,7 @@
           <!-- Ações -->
           <div class="row-actions">
             <button
-              @click="atualizarOnline(rastreamento)"
+              @click.stop="atualizarOnline(rastreamento)"
               :disabled="isRefreshing(rastreamento.id)"
               class="action-btn refresh erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Atualizar via API")'
@@ -367,7 +376,7 @@
               </svg>
             </button>
             <button
-              @click="editarRastreamento(rastreamento)"
+              @click.stop="editarRastreamento(rastreamento)"
               class="action-btn erp-button erp-button--ghost erp-button--icon"
               :title='$tr("Editar")'
             >
@@ -376,7 +385,7 @@
               </svg>
             </button>
             <button
-              @click="removerRastreamento(rastreamento)"
+              @click.stop="removerRastreamento(rastreamento)"
               class="action-btn delete erp-button erp-button--danger erp-button--icon"
               :title='$tr("Excluir")'
             >
@@ -1137,11 +1146,12 @@ function hideOrderSuggestions() {
 
 .filters-content {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: center;
 }
 
 .search-box {
+  min-width: 0;
   flex: 1;
   position: relative;
 }
@@ -1656,12 +1666,14 @@ function hideOrderSuggestions() {
 }
 
 /* Responsive */
-@media (max-width: 1100px) {
+@media (max-width: 1199px), (max-width: 1366px) and (hover: none) and (pointer: coarse) {
   .mobile-dropdown-card {
     display: block !important;
   }
 
   .desktop-header,
+  .rastreamento-row,
+  .desktop-detail-panel,
   .desktop-only {
     display: none !important;
   }
@@ -1882,19 +1894,6 @@ function hideOrderSuggestions() {
 
   .mobile-expand-icon svg.rotate-180 {
     transform: rotate(180deg);
-  }
-
-  /* Conteúdo expansível */
-  .mobile-card-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.2s ease;
-    opacity: 0;
-  }
-
-  .mobile-card-content.expanded {
-    max-height: 900px;
-    opacity: 1;
   }
 
   .mobile-card-inner {
@@ -2121,7 +2120,7 @@ function hideOrderSuggestions() {
 
 /* Estilos da Lista */
 .rastreamentos-list {
-  padding: 0rem 2rem;
+  padding: 0;
 }
 
 .list-header {
@@ -2196,7 +2195,7 @@ function hideOrderSuggestions() {
 }
 
 /* Acento lateral colorido por status — apenas no mobile */
-@media (max-width: 1100px) {
+@media (max-width: 1199px), (max-width: 1366px) and (hover: none) and (pointer: coarse) {
   /* Outer row: sem fundo/borda própria */
   .mobile-rastreamento-row-status-entregue,
   .mobile-rastreamento-row-status-em-transito,
@@ -2211,16 +2210,6 @@ function hideOrderSuggestions() {
 
 }
 
-/* Mobile pequeno: leve compactação adicional */
-@media (max-width: 768px) {
-  .mobile-card-header { padding: 5px 8px 4px; }
-  .mch-name { font-size: 10.5px; }
-  .mobile-code { font-size: 9px; max-width: 130px; padding: 2px 5px; }
-  .mobile-card-inner { padding: 7px 9px; }
-  .mobile-content-label { font-size: 9.5px; }
-  .mobile-content-value { font-size: 9.5px; }
-  .mobile-copy-btn { width: 18px; height: 18px; }
-}
 
 .row-codigo {
   display: flex;
@@ -2396,7 +2385,7 @@ function hideOrderSuggestions() {
 }
 
 /* Quebra a linha da listagem para 1 coluna e empilha os campos */
-@media (max-width: 1100px) {
+@media (max-width: 1199px), (max-width: 1366px) and (hover: none) and (pointer: coarse) {
   .rastreamentos-list .list-header {
     display: none !important; /* some o cabeçalho em telas menores */
   }
@@ -2479,70 +2468,6 @@ function hideOrderSuggestions() {
   }
   .header-actions .btn.btn-primary .btn-icon {
     width: 0.8rem; height: 0.8rem;
-  }
-
-  /* Cards de estatísticas compactos 1×4 */
-  .stats-section { padding: 0.5rem 0.125rem 0.25rem; }
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.2rem;
-    max-width: none;
-    width: 100%;
-  }
-  .stat-card {
-    padding: 0.4rem 0.25rem;
-    border-radius: 0.4rem;
-    gap: 0.15rem;
-    margin: 0;
-    width: 100%;
-    box-sizing: border-box;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-  .stat-icon {
-    width: 1rem; height: 1rem; border-radius: 0.25rem;
-  }
-  .stat-icon svg { width: 0.5rem; height: 0.5rem; }
-  .stat-label { font-size: 0.5rem; margin-bottom: 0; font-weight: 500; white-space: nowrap; }
-  .stat-value { font-size: 0.8rem; font-weight: 700; line-height: 1; }
-
-  /* Filtros/Busca com exata largura dos cards */
-  .filters-section { padding: 0 0.125rem 0.75rem; }
-  .search-input {
-    padding: 0.6rem 0.6rem 0.6rem 2.1rem;
-    font-size: 0.85rem;
-    border-radius: 0.5rem;
-    width: 100%;
-    margin: 0;
-  }
-  .search-icon { left: 0.6rem; }
-
-  .status-select {
-    padding: 0.6rem;
-    font-size: 0.85rem;
-    min-width: 0;
-    width: 100%;
-    margin: 0;
-  }
-  
-  .search-box {
-    width: 100%;
-    margin: 0;
-  }
-  
-  .filter-select {
-    width: 100%;
-    margin: 0;
-  }
-
-  /* Mobile: ocultar rastreamento-row, mostrar dropdown */
-  .rastreamento-row {
-    display: none !important;
-  }
-  
-  .mobile-dropdown-card {
-    display: block !important;
   }
 
   /* Lista: largura total, sem padding lateral — cards colam nas bordas */
@@ -3017,7 +2942,7 @@ function hideOrderSuggestions() {
 
 /* ── Desktop expanded detail panel ─────────────────────────────────────────── */
 .desktop-detail-panel {
-  display: none;
+  display: block;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
   padding: 1rem 1.5rem;
@@ -3041,14 +2966,6 @@ function hideOrderSuggestions() {
 .desktop-timeline .timeline-list::-webkit-scrollbar { width: 3px; }
 .desktop-timeline .timeline-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 
-@media (min-width: 769px) {
-  .desktop-detail-panel { display: block; }
-}
-@media (max-width: 768px) {
-  .desktop-detail-panel { display: none !important; }
-  .desktop-service-badge { display: none; }
-  .desktop-previsao { display: none; }
-}
 
 /* ── Pedido link badge ────────────────────────────────────────────────────────── */
 .pedido-link-badge {
@@ -3106,4 +3023,76 @@ function hideOrderSuggestions() {
 .sug-num { font-size: .82rem; font-weight: 700; color: #2563eb; }
 .sug-info { font-size: .73rem; color: #6b7280; }
 
+/* One compact surface per shipment on phones and touch tablets. */
+@media (max-width: 1199px), (max-width: 1366px) and (hover: none) and (pointer: coarse) {
+  .stats-section { padding: 0.25rem 1.5rem 0.75rem; }
+  .filters-section { padding: 0 1.5rem 1rem; }
+  .rastreamentos-section { padding: 0 1.5rem 1.5rem; }
+  .stats-grid { gap: 0.625rem; }
+  .stat-card {
+    flex-direction: row;
+    text-align: left;
+    gap: 0.625rem;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    min-width: 0;
+  }
+  .stat-icon { width: 2rem; height: 2rem; border-radius: 0.5rem; }
+  .stat-icon svg { width: 1rem; height: 1rem; }
+  .stat-label { font-size: 0.75rem; margin-bottom: 0.25rem; }
+  .stat-value { font-size: 1.25rem; }
+  .filters-content { flex-direction: row; gap: 0.75rem; }
+  .filter-select { flex: 0 0 190px; }
+  .search-input, .status-select {
+    height: 44px;
+    font-size: 16px;
+    border-radius: 0.625rem;
+    box-sizing: border-box;
+  }
+  .status-select { width: 100%; min-width: 0; }
+  .rastreamentos-list { padding: 0; }
+  .mobile-dropdown-card { border-radius: 0.75rem; margin-bottom: 0.75rem; }
+  .mobile-card-header { padding: 0.625rem 0.875rem; gap: 0.375rem; }
+  .mch-top { gap: 0.5rem; }
+  .mch-name { font-size: 0.9375rem; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+  .mch-badge { font-size: 0.6875rem !important; padding: 0.2rem 0.5rem !important; }
+  .mch-code-row { gap: 0.5rem; flex-wrap: wrap; }
+  .mobile-code { font-size: 0.8125rem; max-width: 100%; padding: 0.25rem 0.5rem; }
+  .mch-service { font-size: 0.625rem; padding: 0.125rem 0.375rem; }
+  .mch-desc { font-size: 0.75rem; line-height: 1.4; }
+  .mch-progress { height: 3px; margin-top: 0.375rem; }
+  .mobile-card-inner { padding: 0.75rem 0.875rem; }
+  .mobile-content-row { gap: 0.75rem; padding: 0.375rem 0; }
+  .mobile-content-label, .mobile-content-value { font-size: 0.8125rem; }
+  .mobile-content-actions { gap: 0.5rem; }
+  :is(#app, body) .mobile-content-actions .erp-button {
+    min-height: 40px;
+    flex: 1 1 0;
+    padding: 0.5rem;
+  }
+  :is(#app, body) .mobile-card-header .erp-button--icon {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-section { padding: 0.125rem 0.75rem 0.625rem; }
+  .filters-section { padding: 0 0.75rem 0.75rem; }
+  .rastreamentos-section { padding: 0 0.75rem 1rem; }
+  .stats-grid { gap: 0.375rem; }
+  .stat-card { flex-direction: column; text-align: center; padding: 0.5rem 0.25rem; gap: 0.25rem; }
+  .stat-icon { width: 1.5rem; height: 1.5rem; }
+  .stat-icon svg { width: 0.875rem; height: 0.875rem; }
+  .stat-label { font-size: 0.6875rem; }
+  .stat-value { font-size: 1.125rem; }
+  .filters-content { flex-direction: column; gap: 0.5rem; }
+  .search-box, .filter-select { width: 100%; flex: auto; }
+  .mobile-card-header { padding: 0.5rem 0.625rem; }
+  .mch-top { gap: 0.25rem; }
+  .mch-name { font-size: 0.875rem; }
+  .mch-badge { font-size: 0.625rem !important; }
+}
 </style>
