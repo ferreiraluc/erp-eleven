@@ -3,6 +3,7 @@ import { PdvCartError } from '@/services/pdvCart'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 
 const messages: Record<string, [string, string, string]> = {
+  invalidPrice: ['Confira o preço do produto antes de adicionar ao carrinho.', 'Revise el precio del producto antes de agregarlo al carrito.', 'Check the product price before adding it to the cart.'],
   catalogQuantity: ['Informe uma quantidade inteira de 1 a 9.999.999 para produtos do estoque.', 'Indique una cantidad entera de 1 a 9.999.999 para productos del stock.', 'Enter a whole quantity from 1 to 9,999,999 for inventory products.'],
   manualQuantity: ['Informe uma quantidade positiva, até 9.999.999,999 e com no máximo 3 casas decimais.', 'Indique una cantidad positiva, hasta 9.999.999,999 y con un máximo de 3 decimales.', 'Enter a positive quantity up to 9,999,999.999 with at most 3 decimal places.'],
   invalidLocation: ['Selecione Loja ou Depósito para a baixa.', 'Seleccione Tienda o Depósito para la salida.', 'Select Store or Warehouse for the stock withdrawal.'],

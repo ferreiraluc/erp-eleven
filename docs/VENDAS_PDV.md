@@ -48,6 +48,20 @@ A aba Produtos começa com os **8 produtos ativos mais recentes por criação**.
 Busca retorna até 20 resultados, cancela a consulta anterior e descarta respostas
 atrasadas. Usa listagem sem imagens originais e a fila/cache de miniaturas sob demanda.
 O ícone de câmera continua abrindo o leitor de código de barras.
+Limpar um carrinho ainda não enviado libera as reservas locais e conserva os saldos
+consultados, permitindo iniciar outro carrinho sem recarregar a página. Após uma
+venda concluída, ou ao descartar um checkout de resultado incerto, a lista é
+reconsultada: saldos antigos não são oferecidos durante essa atualização.
+Preços Decimal enviados como texto pela API são interpretados como números;
+preço ausente/inválido continua desconhecido e bloqueia a inclusão, sem virar zero.
+
+A lista se adapta à largura do painel de produtos, inclusive no iPad com carrinho
+lado a lado. Nome e SKU têm espaço próprio; avisos de estoque podem quebrar linha
+sem comprimir o nome nem deslocar o botão de adicionar.
+**Total**, **Adicionar**, **Concluir** e as demais ações não focam campos de texto.
+Ao tocar em um botão, um teclado aberto é dispensado. Campos continuam editáveis
+ao toque, e os atalhos explícitos F2/F5 e Enter permanecem disponíveis. Abrir um
+produto avulso ou remover o cliente também não abre o teclado automaticamente.
 
 Quantidade, preço e remoção ficam na mesma linha. O símbolo do preço abre um seletor
 **U$, R$, G$ ou EUR**: troca a moeda da linha, convertendo o valor pelo câmbio vigente

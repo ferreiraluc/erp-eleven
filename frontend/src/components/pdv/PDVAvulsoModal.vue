@@ -1,5 +1,5 @@
 <template>
-  <div class="avulso-overlay erp-dialog-backdrop" @click.self="$emit('close')">
+  <div class="avulso-overlay erp-dialog-backdrop" @click.self="$emit('close')" v-pdv-action-keyboard>
     <div v-erp-dialog class="avulso-modal erp-dialog erp-dialog--sm" role="dialog" aria-modal="true" aria-labelledby="avulso-title">
       <div class="avulso-header erp-dialog__header">
         <div class="avulso-icon">⚠</div>
@@ -91,7 +91,8 @@ import { usePdvEntryText } from './entryMessages'
 import { validateQuantity } from '@/services/pdvCart'
 import { usePdvCartText } from './cartMessages'
 const { cartErrorText } = usePdvCartText()
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { vPdvActionKeyboard } from '@/directives/pdvKeyboard'
 
 type ItemCurrency = 'PYG' | 'BRL' | 'USD' | 'EUR'
 const props = withDefaults(defineProps<{
@@ -144,7 +145,6 @@ const canSubmit = computed(() =>
   validRate.value && Number.isFinite(priceGs.value) && priceGs.value > 0
 )
 
-onMounted(() => nextTick(() => nameInput.value?.focus()))
 
 function focusPrice() { priceInput.value?.focus() }
 function focusQty() { qtyInput.value?.focus() }

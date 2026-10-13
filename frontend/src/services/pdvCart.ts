@@ -3,9 +3,14 @@ import { hasKnownStock } from './inventoryStock'
 
 export type StockLocation = 'loja' | 'deposito'
 export type CatalogStockSnapshot = Pick<InventoryItem, 'id' | 'current_stock' | 'stock_loja' | 'stock_deposito' | 'is_active'>
-export type CartIssue = 'catalogQuantity' | 'manualQuantity' | 'invalidLocation' | 'missingProduct' | 'unknownStock' | 'invalidStock' | 'inactiveProduct' | 'insufficientStock' | 'busy' | 'emptyCart' | 'uncertain'
+export type CartIssue = 'catalogQuantity' | 'manualQuantity' | 'invalidLocation' | 'missingProduct' | 'unknownStock' | 'invalidStock' | 'invalidPrice' | 'inactiveProduct' | 'insufficientStock' | 'busy' | 'emptyCart' | 'uncertain'
 export class PdvCartError extends Error {
   constructor(public code: CartIssue, public params: Record<string, string | number> = {}) { super(code); this.name = 'PdvCartError' }
+}
+/** Pydantic Decimal prices arrive as strings; missing prices must never become zero. */
+export function catalogPrice(value: unknown): number | null {
+  if (typeof value === 'string' && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim())) value = Number(value)
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 }
 export function validateQuantity(quantity: number, catalog: boolean): void {
   const valid = typeof quantity === 'number' && Number.isFinite(quantity) && quantity > 0 &&

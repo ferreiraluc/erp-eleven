@@ -156,12 +156,14 @@ export const usePdvStore = defineStore('pdv', () => {
 
   function clearCart() {
     ensureEditable()
-    resetCart()
+    // Discarding a draft releases reservations, but does not change catalog stock.
+    // An uncertain checkout may already have committed: its snapshot must expire.
+    resetCart({ preserveStock: !checkoutUncertain.value })
   }
 
-  function resetCart() {
+  function resetCart({ preserveStock = false } = {}) {
     checkoutUncertain.value = false
-    stockSnapshots.value = {}
+    if (!preserveStock) stockSnapshots.value = {}
     cart.value = []
     payments.value = []
     discountGs.value = 0

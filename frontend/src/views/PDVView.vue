@@ -1,5 +1,5 @@
 <template>
-  <div class="pdv-root">
+  <div class="pdv-root" v-pdv-action-keyboard>
 
     <!-- PDV Header -->
     <ModuleHeader title="PDV">
@@ -92,8 +92,8 @@
                 </select>
               </label>
               <div class="pdv-result-price">
-                <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(item.sale_price) }}</span>
-                <span v-for="price in productEquivalents(item.sale_price, item.sale_currency)" :key="price.currency" class="pdv-price-gs">≈ {{ currencyLabel(price.currency) }} {{ fmtNum(price.amount) }}</span>
+                <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(catalogPrice(item.sale_price)) }}</span>
+                <span v-for="price in productEquivalents(catalogPrice(item.sale_price), item.sale_currency)" :key="price.currency" class="pdv-price-gs">≈ {{ currencyLabel(price.currency) }} {{ fmtNum(price.amount) }}</span>
               </div>
               <button class="pdv-result-add erp-button erp-button--primary erp-button--icon" :disabled="!canAddProduct(item)">+</button>
             </div>
@@ -327,7 +327,8 @@ import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
 import PDVCustomerPicker from '@/components/pdv/PDVCustomerPicker.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
 import type { CartItem, CartPayment } from '@/stores/pdv'
-import { type StockLocation } from '@/services/pdvCart'
+import { catalogPrice, PdvCartError, type StockLocation } from '@/services/pdvCart'
+import { vPdvActionKeyboard } from '@/directives/pdvKeyboard'
 import { usePdvCartText } from '@/components/pdv/cartMessages'
 const { cartText, cartErrorText } = usePdvCartText()
 
@@ -427,7 +428,6 @@ function fillTotal() {
   // Avoid adding a cent solely because a six-decimal rate has a tiny fraction.
   const covers = Math.round(rounded * Number(newRate.value) * 100) / 100 >= payRemaining.value - 1e-7
   newAmount.value = covers ? rounded : Math.ceil(remainingInCurrency.value * 100) / 100
-  nextTick(() => amountInput.value?.focus())
 }
 
 function addPayment() {
@@ -447,7 +447,6 @@ function addPayment() {
   })
   newAmount.value = null
   newReference.value = ''
-  nextTick(() => amountInput.value?.focus())
 }
 
 function removePayment(id: string) {
@@ -523,7 +522,7 @@ function productLocation(item: InventoryItem): StockLocation {
   return selectedLocations[item.id] || (item.stock_loja !== null && item.stock_loja > 0 ? 'loja' : 'deposito')
 }
 function productAvailable(item: InventoryItem) { return pdv.availableStock(item.id, productLocation(item)) }
-function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && available !== null && available >= 1 }
+function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return catalogPrice(item.sale_price) !== null && ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && available !== null && available >= 1 }
 function canIncrease(item: CartItem) {
   if (item.is_avulso) return item.quantity + 1 <= 9_999_999.999
   const available = item.item_id ? pdv.availableStock(item.item_id, item.location, item.id) : null
@@ -555,9 +554,11 @@ function removeCartItem(id: string) {
 function addToCart(item: InventoryItem) {
   if (!ratesReady.value) return
   try {
+    const price = catalogPrice(item.sale_price)
+    if (price === null) throw new PdvCartError('invalidPrice')
     const saleCurrency = item.sale_currency || 'PYG'
     const rate = getRate(saleCurrency)
-    const priceGs = Math.round((item.sale_price || 0) * rate)
+    const priceGs = Math.round(price * rate)
     pdv.addItem({
       item_id: item.id,
       item_name: item.name,
@@ -568,7 +569,7 @@ function addToCart(item: InventoryItem) {
       quantity: 1,
       unit_price_gs: priceGs,
       original_price_gs: priceGs,
-      original_price: item.sale_price || 0,
+      original_price: price,
       sale_currency: saleCurrency,
       image_data: item.image_data || null,
       has_image: item.has_image, updated_at: item.updated_at,
@@ -588,7 +589,18 @@ function onAvulsoAdd(item: any) {
   showToast(uiText(`{0} adicionado`,{0:item.item_name}))
   mobileTab.value = 'cart'
 }
-function confirmClear() { if (confirm(uiText(`Limpar o carrinho?`))) pdv.clearCart() }
+function refreshProductsAfterCheckout() {
+  // A sale may have changed stock: never reuse the visible list's old snapshots.
+  clearSearch()
+  recentProducts.value = []
+  void doSearch()
+}
+function confirmClear() {
+  if (!confirm(uiText(`Limpar o carrinho?`))) return
+  const uncertain = pdv.checkoutUncertain
+  pdv.clearCart()
+  if (uncertain) refreshProductsAfterCheckout()
+}
 
 // ── Barcode ───────────────────────────────────────────────────────────────────
 async function onBarcodeDetected(code: string) {
@@ -617,7 +629,9 @@ async function confirmPayment() {
   checkoutError.value = null
   pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
   try {
-    await pdv.completeSale()
+    const sale = await pdv.completeSale()
+    if (disposed || pdv.lastSale?.id !== sale.id) return
+    refreshProductsAfterCheckout()
     resetPayment()
     showReceipt.value = true
     showToast(uiText(`Venda concluída!`), 'success')
@@ -649,8 +663,8 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 
 <style scoped>
 .pdv-checkout-lock { display: contents; }
-.pdv-stock-location { display: flex; flex-direction: column; gap: .15rem; font-size: .65rem; color: #6b7280; }
-.pdv-stock-location select { max-width: 140px; padding: .2rem; border: 1px solid #d1d5db; border-radius: 4px; background: white; color: #374151; cursor: pointer; }
+.pdv-stock-location { min-width: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .65rem; color: #6b7280; }
+.pdv-stock-location select { width: 100%; min-width: 0; max-width: 140px; padding: .2rem; border: 1px solid #d1d5db; border-radius: 4px; background: white; color: #374151; cursor: pointer; }
 .pdv-stock-note, .pdv-ci-stock { font-size: .72rem; color: #6b7280; padding: .3rem 0; }
 .pdv-checkout-error, .pdv-search-error { margin: .5rem; padding: .75rem; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: .8rem; }
 .pdv-quantity-error { color: #b91c1c; font-size: .7rem; }
@@ -687,17 +701,17 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 .pdv-scan-btn:hover { border-color: #f97316; color: #f97316; }
 
 .pdv-results { flex: 1; overflow-y: auto; }
-.pdv-result-row { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.1s; }
+.pdv-result-row { display: grid; grid-template-columns: 46px minmax(0, 1fr); align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.1s; }
 .pdv-result-row:hover { background: #fff7ed; }
 .pdv-result-thumb { width: 46px; height: 46px; border-radius: 0.375rem; overflow: hidden; flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb; }
 .pdv-result-img { width: 100%; height: 100%; object-fit: cover; }
 .pdv-result-no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; color: #9ca3af; }
 .pdv-result-left { flex: 1; min-width: 0; }
 .pdv-result-name { font-weight: 600; font-size: 0.85rem; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pdv-result-meta { font-size: 0.72rem; color: #9ca3af; }
-.pdv-result-sku { font-size: 0.65rem; color: #d1d5db; font-family: monospace; }
-.pdv-result-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-.pdv-result-stock { font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.375rem; border-radius: 0.3rem; }
+.pdv-result-meta { overflow-wrap: anywhere; font-size: 0.72rem; color: #9ca3af; }
+.pdv-result-sku { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.65rem; color: #d1d5db; font-family: monospace; }
+.pdv-result-right { grid-column: 1 / -1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto 36px; align-items: center; gap: 0.5rem; }
+.pdv-result-stock { min-width: 0; overflow-wrap: anywhere; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.375rem; border-radius: 0.3rem; }
 .stock-ok  { background: #d1fae5; color: #065f46; }
 .stock-low { background: #fef3c7; color: #92400e; }
 .stock-unknown { background: #fffbeb; color: #92400e; }
@@ -719,6 +733,19 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pdv-no-results { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 1rem; }
 .pdv-no-results p { color: #9ca3af; font-size: 0.88rem; margin: 0; }
 .pdv-btn-avulso { padding: 0.5rem 1.25rem; background: #fef3c7; color: #92400e; border: 1.5px solid #fcd34d; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+
+/* Keep a full-width identity row on phones and split-screen tablets. */
+@media (max-width: 420px) {
+  .pdv-result-right { grid-template-columns: minmax(0, 1fr) auto 36px; gap: .375rem .5rem; }
+  .pdv-result-stock { grid-column: 1; grid-row: 1; justify-self: start; }
+  .pdv-stock-location { grid-column: 1; grid-row: 2; }
+  .pdv-result-price { grid-column: 2; grid-row: 1 / 3; }
+  .pdv-result-add { grid-column: 3; grid-row: 1 / 3; }
+}
+@media (min-width: 1240px) {
+  .pdv-result-row { grid-template-columns: 46px minmax(0, 1fr) auto; }
+  .pdv-result-right { grid-column: auto; grid-template-columns: minmax(0, 140px) 110px auto 36px; }
+}
 
 /* ── Cart panel (unified) ─────────────────────────────────────────────────── */
 .pdv-panel-cart { display: flex; flex-direction: column; overflow: hidden; background: white; }
@@ -839,8 +866,6 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
   .pdv-panel-products, .pdv-panel-cart { min-height: 0; }
   .mobile-hidden { display: none !important; }
   .pdv-panel-products, .pdv-panel-cart { border-right: none; }
-  .pdv-result-row { flex-wrap: wrap; }
-  .pdv-result-right { flex: 0 0 100%; flex-wrap: wrap; justify-content: space-between; gap: .375rem; }
   .pdv-result-stock { white-space: normal; }
   .pdv-stock-location { cursor: pointer; }
   .pdv-rate-btn { padding: 0.25rem 0.4rem; }
