@@ -66,7 +66,8 @@ Não é necessário instalar outro framework de frontend.
 ## Ícone do navegador e tela inicial
 
 `frontend/index.html` declara o ícone Eleven dourado/azul midnight, os tamanhos
-Apple touch (152/167/180px) e `public/site.webmanifest` com ícones Android 192/512px.
+Apple touch (152/167/180px) e `public/manifest.json` com ícones Android 192/512px.
+A extensão `.json` garante resposta `application/json` no site estático Render.
 O atalho tem nome Eleven e inicia em `/#/dashboard`, passando pela autenticação
 normal. O manifesto permite apresentação standalone nos navegadores compatíveis.
 Isso não adiciona service worker, armazenamento offline ou cache de dados do ERP.
