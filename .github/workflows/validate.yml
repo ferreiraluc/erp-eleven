@@ -78,4 +78,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate Windows agent configuration without printing
         shell: powershell
-        run: ./tools/eleven-print-agent/tests/Configuracao.Tests.ps1
+        run: |
+          ./tools/eleven-print-agent/tests/Configuracao.Tests.ps1
+          ./tools/eleven-print-agent/tests/Impressao.Tests.ps1

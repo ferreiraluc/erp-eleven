@@ -1,0 +1,33 @@
+"""Bounded technical outcomes; never accept arbitrary logs or document contents."""
+from typing import Literal
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class PrintDiagnostic(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    code: Literal['download_failed', 'invalid_pdf', 'printer_unavailable',
+                  'renderer_start_failed', 'renderer_accepted', 'renderer_exit_error',
+                  'renderer_timeout', 'renderer_interrupted', 'agent_restarted']
+    agent_version: str = Field(pattern=r'^\d{4}\.\d{2}\.\d{2}\.\d{1,3}$')
+    duration_ms: int = Field(default=0, ge=0, le=86400000)
+    exit_code: int | None = Field(default=None, ge=-2147483648, le=2147483647)
+
+
+MESSAGES = {
+    'download_failed': 'O PDF não pôde ser baixado após três tentativas. Nada foi enviado à impressora.',
+    'invalid_pdf': 'O PDF recebido não passou na verificação de integridade. Nada foi enviado à impressora.',
+    'printer_unavailable': 'Confira a fila configurada, o serviço de impressão do Windows e o Sumatra. Nada foi enviado.',
+    'renderer_start_failed': 'O Sumatra não iniciou. Nada foi enviado à impressora.',
+    'renderer_accepted': 'O Sumatra aceitou o envio; isso não confirma a saída física do papel.',
+    'renderer_exit_error': 'O Sumatra terminou com erro. Confira a fila do Windows antes de solicitar outra cópia.',
+    'renderer_timeout': 'O Sumatra excedeu dois minutos. Confira a fila do Windows antes de solicitar outra cópia.',
+    'renderer_interrupted': 'Houve uma interrupção após iniciar o envio. Confira a fila do Windows antes de solicitar outra cópia.',
+    'agent_restarted': 'O agente reiniciou após iniciar o envio. Confira a fila do Windows antes de solicitar outra cópia.',
+}
+
+
+def diagnostic_message(job):
+    diagnostic = job.diagnostic or {}
+    return MESSAGES.get(diagnostic.get('code')) or (
+        'O agente antigo não registrou o motivo. Confira a fila do Windows e atualize o agente.'
+        if job.status in ('uncertain', 'failed') else None)

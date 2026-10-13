@@ -47,3 +47,13 @@ describe('address module language and safe errors', () => {
     expect(ui.tr(ui.errorKey({ response: { status: 422, data: { detail: [{ msg: 'private' }] } } }))).toBe('Revise los campos y complete los datos necesarios.')
   })
 })
+
+
+it('translates the new print layout controls and bounded agent diagnostics', () => {
+  const en = createAddressI18n(() => 'en')
+  const es = createAddressI18n(() => 'es')
+  expect(en.tr('Modelo de impressão')).toBe('Print layout')
+  expect(es.tr('Clássico')).toBe('Clásico')
+  expect(en.tr('O Sumatra excedeu dois minutos. Confira a fila do Windows antes de solicitar outra cópia.')).toContain('two minutes')
+  expect(es.tr('A prévia mantém o modelo e o remetente escolhido até a impressão.')).toContain('remitente')
+})

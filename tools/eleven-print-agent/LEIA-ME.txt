@@ -1,15 +1,15 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - ATUALIZACAO SAMSUNG SL-M2035W
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.13.1
 
-Instale no computador Windows da loja onde a Samsung ja imprime.
+Instale no computador Windows da loja onde a impressora ja imprime.
 Nao instale no laptop usado para desenvolver o ERP.
-Driver Samsung e SumatraPDF devem funcionar no Windows. Este pacote nao os substitui.
+Driver da impressora e SumatraPDF devem funcionar no Windows. Este pacote nao os substitui.
 Suporte oficial: https://www.samsung.com/sec/support/model/SL-M2035W/
 
-ATUALIZAR A IMPRESSORA
+ATUALIZAR O AGENTE / IMPRESSORA
 1. Aguarde o trabalho atual terminar e feche a janela Eleven Impressao.
 2. Extraia TODOS os arquivos do ZIP para uma pasta. Use a mesma conta Windows.
 3. Abra Instalar.cmd. Nao e necessario executar como administrador.
-4. Selecione o numero da Samsung na lista. O nome da fila pode diferir do modelo.
+4. Selecione o numero da fila que ja imprime no Windows. O nome da fila pode diferir do modelo.
    Se houver exatamente uma SL-M2035W, Enter aceita a sugestao; confira antes.
 5. Na credencial, pressione Enter para MANTER a credencial existente.
    A primeira instalacao precisa da credencial exclusiva do dispositivo ERP.
@@ -39,9 +39,15 @@ DOCUMENTOS
 - Confirmacoes e protecao contra duplicacao permanecem ativas.
 
 ESTADOS
+failed: falha ANTES do envio. Confira conexao, Sumatra e servico de impressao.
 submitted: Sumatra aceitou o envio ao Windows; nao comprova saida fisica do papel.
 uncertain: envio interrompido/inconclusivo; confira a fila do Windows e a impressora.
+O download pode ser repetido ate 3 vezes antes do envio.
 O agente nunca reimprime automaticamente um trabalho ja despachado.
+Apos 2 minutos, tenta parar somente o Sumatra aberto para aquele trabalho.
+Confira a fila do Windows antes de pedir outra copia.
+O motivo tecnico agora aparece no log local, no historico do ERP e na consulta do bot.
+O programa antigo continua funcionando ate voce instalar esta atualizacao.
 
 SEGURANCA
 Token protegido pelo Windows (DPAPI), ligado ao usuario que instalou.

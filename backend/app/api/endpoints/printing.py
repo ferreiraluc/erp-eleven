@@ -15,6 +15,7 @@ from ...database import get_db
 from ...dependencies import require_role
 from ...models.printing import PrintDevice, PrintJob
 from ...models.assistant import utcnow
+from ...services.print_diagnostics import PrintDiagnostic, diagnostic_message
 
 router = APIRouter()
 administrator = require_role(["ADMIN"])
@@ -47,7 +48,7 @@ class DeviceInput(BaseModel):
 @router.get('/agent-package')
 def agent_package(user=Depends(administrator)):
     root = Path(__file__).resolve().parents[4] / 'tools' / 'eleven-print-agent'
-    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'LEIA-ME.txt')
+    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'LEIA-ME.txt')
     if not all((root / name).is_file() for name in files):
         raise HTTPException(503, 'Pacote do agente indisponível nesta instalação')
     data = io.BytesIO()
@@ -124,6 +125,7 @@ async def enqueue(device_id: UUID = Form(...), request_key: UUID = Form(...),
 @router.get("/jobs")
 def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
     return [{"id": str(j.id), "device_id": str(j.device_id), "status": j.status,
+             "diagnostic": j.diagnostic, "diagnostic_message": diagnostic_message(j),
              "created_at": j.created_at, "claimed_at": j.claimed_at, "finished_at": j.finished_at}
             for j in db.query(PrintJob).order_by(PrintJob.created_at.desc()).limit(100).all()]
 
@@ -162,6 +164,7 @@ def document(job_id: UUID, device=Depends(printer), db: Session = Depends(get_db
 
 class ResultInput(BaseModel):
     status: Literal["submitted", "failed", "uncertain"]
+    diagnostic: PrintDiagnostic | None = None
 
 
 @router.post("/agent/jobs/{job_id}/result")
@@ -174,6 +177,7 @@ def result(job_id: UUID, body: ResultInput, device=Depends(printer), db: Session
     if job.status != "claimed":
         raise HTTPException(409, "Trabalho já finalizado")
     job.status, job.finished_at = body.status, utcnow()
+    job.diagnostic = body.diagnostic.model_dump() if body.diagnostic else None
     # Erase recipient data once the local agent no longer needs the document.
     job.pdf = b""
     if job.source=='bot_pdf_ephemeral':job.snapshot=None
