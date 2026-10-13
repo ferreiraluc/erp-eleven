@@ -8,10 +8,10 @@ SL-M2035W**, já imprimindo pelo Windows. O responsável confirmou a configuraç
 O laptop de desenvolvimento é outra máquina; não instalar nele um segundo agente.
 
 Pacote: `tools/eleven-print-agent/`, com `Instalar.cmd`, `Instalar.ps1`,
-`Configuracao.ps1`, `Agente.ps1` e `LEIA-ME.txt`. Após a configuração da Samsung,
+`Configuracao.ps1`, `Agente.ps1`, `Impressao.ps1` e `LEIA-ME.txt`. Após a configuração da Samsung,
 o painel de instalação/download foi retirado de Endereços a pedido do responsável.
 O pacote continua no repositório e no endpoint administrativo autenticado
-`/api/printing/agent-package`, que inclui somente esses cinco arquivos e nunca
+`/api/printing/agent-package`, que inclui somente esses seis arquivos e nunca
 credenciais ou configurações locais. O driver e o SumatraPDF devem estar instalados;
 o instalador não baixa nem substitui drivers/programas de terceiros.
 
@@ -131,3 +131,60 @@ retornam 503 no download; nesses ambientes distribua o ZIP a partir do repositó
 - Publicação confirmada Live: frontend `dep-db32gobl550s73cd7u50`, backend
   `dep-db32gobl550s73cd7to0`, ambos no commit `85ab59d`. O [CI completo](https://github.com/ferreiraluc/erp-eleven/actions/runs/37612169262)
   passou nos três jobs: backend, frontend e agente Windows.
+
+## Recuperação e diagnóstico — 13/10/2026
+
+Versão do agente: **2026.10.13.1**. A atualização do servidor é compatível com o
+agente anterior, mas não substitui os arquivos instalados na loja. O responsável
+informou que fará a instalação depois. Entregar o ZIP completo e seguir os passos
+acima, mantendo a credencial com Enter e preservando `journal` e `config.json`.
+Não alterar a fila/driver que já imprime no Windows apenas porque o nome difere
+do modelo comercial.
+
+- `preparing`: diário salvo antes do download. Até três tentativas de download,
+  tamanho máximo 5 MB, assinatura PDF e SHA-256 conferidos. Pode retomar após
+  reinício, pois o Sumatra ainda não foi chamado.
+- `started`: diário persistido imediatamente antes de chamar o renderizador.
+  Reinício nessa fase vira `uncertain`; nunca repete o envio automaticamente.
+- `failed`: erro conhecido antes do envio (download, integridade, configuração,
+  spooler parado ou impossibilidade de iniciar Sumatra). Corrigir e solicitar
+  nova cópia explicitamente; não reenfileirar antigos automaticamente.
+- `submitted`: processo terminou com código 0, usando handle preservado até
+  consultar `ExitCode`. Não comprova impressão física.
+- `uncertain`: timeout de 120 segundos, erro do renderizador ou interrupção depois
+  de iniciar. O timeout tenta encerrar somente o processo aberto para aquele
+  trabalho; não limpa a fila nem fecha outras janelas Sumatra. PID e horário de
+  criação evitam confundir um processo posterior. Enquanto esse processo ainda
+  estiver ativo, o agente pausa novos trabalhos; confira o Windows.
+
+O agente envia apenas código de diagnóstico, versão, duração e código de saída,
+sem logs livres, caminhos, credenciais ou conteúdo do documento. ERP (Impressões)
+e bot (`consultar_impressoes`/consulta de endereços) mostram a explicação. A migração
+`g9b0c1d2e3f4` adiciona JSON opcional e não reescreve históricos. Resultados do agente
+antigo seguem aceitos, mas não permitem descobrir retrospectivamente a causa.
+
+Os registros consultados para o incidente mostraram nove A4 incertos na semana e
+nove etiquetas aceitas; um A4 demorou aproximadamente 121 segundos e a nova cópia
+posterior levou quatro segundos. O primeiro intervalo é compatível com timeout,
+mas os logs antigos não comprovam a causa dos demais. O código anterior também
+classificava falhas de download como incertas e descartava o motivo técnico.
+
+A CI Windows testa download intermitente, PDF inválido, reinício, falha do spooler,
+processos de teste com saída 0/erro e timeout, sem executar Sumatra ou imprimir.
+A validação física continua pendente da instalação e de uma impressão solicitada
+pelo responsável no computador da loja.
+
+### Cinco apresentações A4
+
+Em **Endereços e envios → Padrões**, escolha alternância automática (padrão) ou
+um modelo fixo: Clássico, Tabela, Blocos, Colunas ou Ficha compacta. A escolha usa
+uma distribuição determinística pela chave aleatória da solicitação: novas
+solicitações podem variar, mas uma prévia/repetição técnica mantém o mesmo modelo.
+O sorteio pode repetir um modelo em solicitações consecutivas. Não usa IA paga.
+
+O bot informa o modelo na prévia com os botões de confirmação existentes. ERP e
+bot guardam a escolha no snapshot; PDF histórico sem modelo mantém o Clássico.
+A alternância altera apenas a apresentação, preservando o remetente escolhido e
+todos os campos habilitados. PY continua sem remetente, CPF/RUC ausente é omitido.
+Os formatos em duas colunas limitam a fonte a 15 pontos (remetente: 14) para caber
+na folha; os demais respeitam a configuração. SuperFrete e PDFs avulsos não mudam.

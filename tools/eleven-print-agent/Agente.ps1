@@ -8,14 +8,7 @@ try {
     $lockStream = [IO.File]::Open((Join-Path $root 'agent.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
 } catch { Write-Host 'O agente ja esta aberto. Feche esta janela.'; Read-Host; exit 1 }
 
-function Save-Journal($path, $item) {
-    $tmp = "$path.tmp"
-    $json = $item | ConvertTo-Json -Compress
-    $bytes = [Text.Encoding]::UTF8.GetBytes($json)
-    $stream = [IO.File]::Open($tmp, 'Create', 'Write', 'None')
-    try { $stream.Write($bytes, 0, $bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }
-    Move-Item -LiteralPath $tmp -Destination $path -Force
-}
+. (Join-Path $root 'Impressao.ps1')
 
 function Api($method, $path, $body = $null) {
     $options = @{
@@ -31,9 +24,32 @@ function Api($method, $path, $body = $null) {
 }
 
 function Acknowledge($path, $record) {
-    Api 'POST' ("jobs/$($record.id)/result") @{ status = $record.status } | Out-Null
+    Api 'POST' ("jobs/$($record.id)/result") @{ status = $record.status; diagnostic = $record.diagnostic } | Out-Null
     $record.acked = $true
     Save-Journal $path $record
+}
+
+function Process-Job($record, $recordPath, $pdf) {
+    $download = {
+        param($destination)
+        Invoke-WebRequest -Uri ($config.server + "/api/printing/agent/jobs/$($record.id)/pdf") -Headers @{ Authorization = 'Bearer ' + $token } -OutFile $destination -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
+    }
+    $preflight = {
+        if ((Get-Service -Name Spooler).Status -ne 'Running') { throw 'Spooler parado' }
+        if (@([Drawing.Printing.PrinterSettings]::InstalledPrinters) -notcontains $config.printer) { throw 'Fila ausente' }
+        if (-not (Test-Path -LiteralPath $config.sumatra)) { throw 'Sumatra ausente' }
+        if ($config.printer.Contains('"') -or $pdf.Contains('"')) { throw 'Configuracao invalida' }
+    }
+    $dispatch = {
+        param($entry, $path, $document)
+        $arguments = '-print-to "' + $config.printer + '" -print-settings "paper=A4,shrink,simplex,monochrome,1x" -silent "' + $document + '"'
+        Invoke-Renderer $entry $path $config.sumatra $arguments
+    }
+    Invoke-PreparedPrint $record $recordPath $pdf $download $preflight $dispatch
+    $reason = if ($record.diagnostic) { $record.diagnostic.code } else { 'agente_anterior' }
+    Write-Host "$(Get-Date -Format 'HH:mm:ss') Trabalho $($record.id): $($record.status) | $reason"
+    if ($record.status -eq 'uncertain') { Write-Host 'Confira a fila do Windows antes de pedir outra copia. O envio nao sera repetido.' }
+    if ($record.status -eq 'failed') { Write-Host 'Falha antes do envio. Corrija a conexao/configuracao e solicite uma nova copia no ERP ou bot.' }
 }
 
 try {
@@ -41,7 +57,7 @@ try {
     if ($config.server -ne 'https://erp-eleven-backend.onrender.com') { throw 'Servidor nao autorizado.' }
     if (-not $config.token) { throw 'Instalado sem credencial. Execute Instalar.cmd quando receber a credencial exclusiva.' }
     if (-not (Test-Path -LiteralPath $config.sumatra)) { throw 'SumatraPDF nao encontrado. Execute Instalar.cmd novamente.' }
-    if (@([Drawing.Printing.PrinterSettings]::InstalledPrinters) -notcontains $config.printer) { throw 'A impressora configurada nao esta instalada. Execute o novo Instalar.cmd para selecionar a Samsung.' }
+    if (@([Drawing.Printing.PrinterSettings]::InstalledPrinters) -notcontains $config.printer) { throw 'A impressora configurada nao esta instalada. Execute Instalar.cmd para selecionar a fila correta.' }
     $secure = ConvertTo-SecureString $config.token
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try { $script:token = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
@@ -60,14 +76,17 @@ try {
                 $connected = $true
                 Write-Host 'Conectado. Destino atualizado no ERP e no bot.'
             }
-            # Finish acknowledgements before accepting another job. Never repeat a print.
+            # Resume only preparation/download. Dispatch is never repeated after a restart.
             foreach ($file in Get-ChildItem -LiteralPath $journal -Filter '*.json') {
-                $record = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+                $loaded = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+                $record = @{}; foreach ($property in $loaded.PSObject.Properties) { $record[$property.Name] = $property.Value }
+                if (Test-OwnedRendererRunning $record) { throw 'Um processo anterior do Sumatra ainda esta ativo. Confira o Windows.' }
+                $pdf = Join-Path $journal "$($record.id).pdf"
                 if (-not $record.acked) {
-                    if ($record.status -eq 'started') { $record.status = 'uncertain'; Save-Journal $file.FullName $record }
+                    Process-Job $record $file.FullName $pdf
                     Acknowledge $file.FullName $record
-                    Remove-Item -LiteralPath (Join-Path $journal "$($record.id).pdf") -Force -ErrorAction SilentlyContinue
                 }
+                Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
             }
             $job = Api 'POST' 'claim'
             if ($job) {
@@ -75,33 +94,17 @@ try {
                 $recordPath = Join-Path $journal "$id.json"
                 if (Test-Path -LiteralPath $recordPath) { throw 'Trabalho repetido recusado.' }
                 $pdf = Join-Path $journal "$id.pdf"
-                $record = @{ id = $id; status = 'started'; acked = $false }
-                # Persist before ANY interaction with the print renderer.
+                $record = @{ id = $id; status = 'preparing'; sha256 = $job.sha256; acked = $false }
                 Save-Journal $recordPath $record
-                try {
-                    Invoke-WebRequest -Uri ($config.server + "/api/printing/agent/jobs/$id/pdf") -Headers @{ Authorization = 'Bearer ' + $token } -OutFile $pdf -UseBasicParsing -TimeoutSec 30 -MaximumRedirection 0
-                    if ((Get-Item -LiteralPath $pdf).Length -gt 5242880) { throw 'PDF muito grande.' }
-                    if ((Get-FileHash -LiteralPath $pdf -Algorithm SHA256).Hash.ToLowerInvariant() -ne $job.sha256) { throw 'PDF corrompido.' }
-                    if ($config.printer.Contains('"') -or $pdf.Contains('"')) { throw 'Configuracao invalida.' }
-                    $arguments = '-print-to "' + $config.printer + '" -print-settings "paper=A4,shrink,simplex,monochrome,1x" -silent "' + $pdf + '"'
-                    $process = Start-Process -FilePath $config.sumatra -ArgumentList $arguments -PassThru
-                    if (-not $process.WaitForExit(120000)) {
-                        $record.status = 'uncertain'
-                    } elseif ($process.ExitCode -eq 0) {
-                        $record.status = 'submitted'
-                    } else { $record.status = 'uncertain' }
-                } catch { $record.status = 'uncertain' }
-                Save-Journal $recordPath $record
+                Process-Job $record $recordPath $pdf
                 Acknowledge $recordPath $record
-                Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
-                Write-Host "$(Get-Date -Format 'HH:mm:ss') Trabalho $id : $($record.status)"
-                if ($record.status -eq 'uncertain') {
-                    Write-Host 'Confira a fila do Windows antes de pedir outra copia. O envio nao sera repetido.'
+                if (-not (Test-OwnedRendererRunning $record)) {
+                    Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
                 }
             }
             Start-Sleep -Seconds 10
         } catch {
-            Write-Host "$(Get-Date -Format 'HH:mm:ss') Sem conexao ou acesso ao ERP. Nova tentativa em 30 segundos."
+            Write-Host "$(Get-Date -Format 'HH:mm:ss') Fila pausada: confira a conexao com o ERP e se ha um Sumatra anterior travado. Nova verificacao em 30 segundos."
             Start-Sleep -Seconds 30
         }
     }

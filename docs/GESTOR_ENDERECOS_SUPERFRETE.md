@@ -5,7 +5,7 @@ Acesso: Dashboard → **Endereços e envios** (`/enderecos`), para ADMIN e GEREN
 - **Endereços:** cadastros Brasil/Paraguai, com vínculo opcional a clientes de pedidos ou PDV, sem sobrescrever o cadastro original do cliente.
 - **Impressões:** histórico do bot e do ERP, PDF, edição como nova cópia e cancelamento de trabalhos ainda não retirados pelo agente.
 - **Remetentes:** endereço compartilhado entre impressão e frete. Blocos antigos são lidos automaticamente quando os campos são reconhecíveis. Confira os campos recuperados e complete apenas os ausentes; o bot também aceita complementos na conversa.
-- **Padrões:** fonte, margens, título, campos e ordem dos modelos A4. Alterações afetam apenas novas solicitações; o histórico preserva os dados originais.
+- **Padrões:** cinco apresentações A4 (Clássico, Tabela, Blocos, Colunas e Ficha compacta), alternância automática ou modelo fixo, fonte, margens, título, campos e ordem. Alterações afetam apenas novas solicitações; o histórico preserva os dados originais.
 - **SuperFrete:** cotação, confirmação do pagamento, PDF recuperado automaticamente e impressão automática opcional no frontend (ativada no bot). Rastreios recebidos são registrados no ERP durante a consulta da etiqueta.
 
 A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDFs externos. Arquivos avulsos antigos podem deixar de estar disponíveis após a limpeza da fila. PDFs SuperFrete são validados e guardados no banco assim que o provedor os disponibiliza.
@@ -224,3 +224,11 @@ vínculo; selecionar o cliente no editor confirma a revisão. A impressão mant�
 mesmas confirmações e não ganha exigências de rua/CPF para PY. O histórico de Clientes
 reúne A4 e etiquetas de todos os seus endereços, preservando os registros originais.
 Regras e conciliação: [Clientes, pedidos e pacotes](CLIENTES_PEDIDOS_RASTREIOS.md).
+
+### Diagnóstico da impressão local
+
+O histórico de Impressões mostra o motivo técnico quando informado pelo agente
+2026.10.13.1 ou posterior: falha antes do envio, timeout ou erro do Sumatra. Agentes
+antigos continuam compatíveis, mas não registram a causa. Não reimprimir trabalhos
+incertos sem conferir a fila do Windows. Atualização local e detalhes em
+[Impressão Windows](IMPRESSAO_WINDOWS.md#recuperação-e-diagnóstico--13102026).

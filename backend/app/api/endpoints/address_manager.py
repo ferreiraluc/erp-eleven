@@ -143,7 +143,7 @@ def layouts(user=Depends(manager),db:Session=Depends(get_db)):
     result=[]
     for key,name in [('br','Endereço Brasil'),('py','Endereço Paraguai')]:
         row=db.get(PrintLayout,key)
-        result.append({'id':key,'name':row.name if row else name,'config':row.config if row else LayoutConfig().model_dump(),'version':row.version if row else 0})
+        result.append({'id':key,'name':row.name if row else name,'config':LayoutConfig.model_validate(row.config if row else {}).model_dump(),'version':row.version if row else 0})
     return result
 
 
@@ -170,9 +170,10 @@ def overview(user=Depends(manager),db:Session=Depends(get_db)):
 
 
 def job_info(j,name=None):
+    from ...services.print_diagnostics import diagnostic_message
     snapshot=j.snapshot or {}
     return {'id':str(j.id),'status':j.status,'source':j.source,'created_at':j.created_at,'finished_at':j.finished_at,
-            'user':name,'recipient':snapshot.get('filename') or snapshot.get('endereco',{}).get('nome','Arquivo PDF'),
+            'diagnostic':j.diagnostic,'diagnostic_message':diagnostic_message(j),'user':name,'recipient':snapshot.get('filename') or snapshot.get('endereco',{}).get('nome','Arquivo PDF'),
             'country':snapshot.get('endereco',{}).get('pais',''),'editable':bool(snapshot.get('endereco')) and j.source in ('erp','bot'),'pdf_available':bool(j.snapshot or j.pdf),
             'address_id':str(j.address_id) if j.address_id else None,'parent_id':str(j.parent_id) if j.parent_id else None}
 

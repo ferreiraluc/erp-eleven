@@ -153,6 +153,7 @@ def execute_tool(db, message, identity, name, arguments):
         from ..models.address_book import SavedAddress,FreightOrder
         from ..models.printing import PrintSender,PrintJob
         from .sender_addresses import sender_address
+        from .print_diagnostics import diagnostic_message
         from sqlalchemy import cast,String,or_
         if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
         term=SearchArgs.model_validate(arguments).termo
@@ -164,7 +165,7 @@ def execute_tool(db, message, identity, name, arguments):
             jobs=jobs.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(term),escape="\\"))
         printed=[] if term=='remetentes' else [
             {'print_job_id':str(j.id),'data':(j.snapshot or {}).get('editor') or (j.snapshot or {}).get('endereco'),
-             'remetente':(j.snapshot or {}).get('remetente'),'created_at':j.created_at.isoformat()}
+             'remetente':(j.snapshot or {}).get('remetente'),'status':j.status,'diagnostico':diagnostic_message(j),'created_at':j.created_at.isoformat()}
             for j in jobs.order_by(PrintJob.created_at.desc()).limit(10)]
         return {"enderecos_impressos":printed,"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
                 "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":sender_address(s),"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in db.query(PrintSender).filter_by(active=True)],

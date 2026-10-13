@@ -107,6 +107,9 @@ def render_address(payload):
     if p['pais'] == 'BR':
         story += [Spacer(1, layout.sender_gap), Paragraph('REMETENTE', title)]
         story.extend(paragraph(row, sender_style) for row in payload['remetente']['linhas'])
+    if layout.template != 'classic':
+        from .address_layouts import presentation
+        story = presentation(layout, fields, payload.get('remetente') if p['pais'] == 'BR' else None, doc.width - 12)
     doc.build(story)
     if doc.page != 1:
         raise ValueError('Endereço excede uma página A4. Reduza os complementos.')
@@ -122,9 +125,11 @@ def print_preview(action):
         lines.append(document)
     sender = action.payload.get('remetente')
     from .assistant_controls import preview_reply
+    from .address_layouts import TEMPLATES
     return preview_reply(action, ('Imprimir endereço em A4, uma cópia:\n' + '\n'.join(x for x in lines if x) +
             '\nPaís: ' + ('Brasil' if p['pais'] == 'BR' else 'Paraguai') +
             '\nRemetente: ' + (sender['nome'] if sender else 'sem remetente') +
+            '\nModelo: ' + TEMPLATES.get(action.payload.get('layout', {}).get('template', 'classic'), 'Clássico') +
             '\nImpressora: ' + action.payload.get('device_name', 'da loja') +
             '\nDiga “confirmo” para enviar à impressora da loja ou “cancela”.\n' +
             'Ainda não foi enviado. Prévia válida por 24 horas.\nIdentificador da prévia: ' + str(action.id)))
@@ -152,10 +157,11 @@ def prepare_print(db, message, identity, args, postal_check=None):
             return {'erro': 'Remetente ainda não configurado no ERP. Nenhuma impressão enviada.'}
         sender = {'nome': profile.name, 'linhas': sender_lines(profile)}
     from .address_manager import get_layout
-    payload = {'layout': get_layout(db, args.pais), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id), 'device_name': devices[0].name}
+    action_id = uuid.uuid4()
+    payload = {'layout': get_layout(db, args.pais, action_id), 'endereco': args.model_dump(), 'remetente': sender, 'device_id': str(devices[0].id), 'device_name': devices[0].name}
     if postal_check:
         payload['postal_warnings'] = postal_check['warnings']
-    action = AssistantAction(source_message_id=message.id, user_id=message.user_id, kind='impressao', payload=payload)
+    action = AssistantAction(id=action_id, source_message_id=message.id, user_id=message.user_id, kind='impressao', payload=payload)
     db.add(action)
     db.flush()
     return {'confirmacao': print_preview(action)}

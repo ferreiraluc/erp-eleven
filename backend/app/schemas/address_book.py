@@ -49,6 +49,8 @@ class SenderInput(BaseModel):
 
 class LayoutConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    template: Literal['classic','table','cards','columns','compact'] = 'classic'
+    rotate_templates: bool = True
     font_size: int = Field(default=17,ge=10,le=24)
     margin: int = Field(default=42,ge=20,le=80)
     sender_font_size: int = Field(default=12,ge=9,le=20)

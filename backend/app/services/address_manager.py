@@ -8,9 +8,13 @@ from ..models.assistant import utcnow
 from ..schemas.address_book import LayoutConfig
 
 
-def get_layout(db, country):
+def get_layout(db, country, request_key=None):
     row = db.get(PrintLayout, country.lower())
-    return LayoutConfig.model_validate(row.config).model_dump() if row else LayoutConfig().model_dump()
+    config = LayoutConfig.model_validate(row.config).model_dump() if row else LayoutConfig().model_dump()
+    if request_key is not None:
+        from .address_layouts import select_layout
+        return select_layout(config, request_key)
+    return config
 
 
 def compose(db, body):
@@ -24,7 +28,7 @@ def compose(db, body):
         row = db.get(PrintSender,body.sender_id)
         if not row or not row.active: raise HTTPException(400,'Escolha um remetente ativo.')
         sender = {'nome':row.name,'linhas':sender_lines(row)}
-    return {'endereco':args.model_dump(),'address_data':data,'postal_warnings':check['warnings'],'remetente':sender,'layout':get_layout(db,args.pais),'editor':body.data.model_dump(),'sender_id':body.sender_id}
+    return {'endereco':args.model_dump(),'address_data':data,'postal_warnings':check['warnings'],'remetente':sender,'layout':get_layout(db,args.pais,body.request_key),'editor':body.data.model_dump(),'sender_id':body.sender_id}
 
 
 def enqueue_address(db, body, user_id):

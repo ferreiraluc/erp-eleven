@@ -243,7 +243,7 @@ def test_agent_package_has_only_distributable_files(print_env):
     assert response.headers['cache-control'] == 'no-store'
     with ZipFile(io.BytesIO(response.content)) as archive:
         assert set(archive.namelist()) == {'Eleven-Impressao/' + name for name in (
-            'Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'LEIA-ME.txt')}
+            'Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'LEIA-ME.txt')}
         assert b'Samsung SL-M2035W' in archive.read('Eleven-Impressao/Instalar.ps1')
     app = FastAPI()
     app.include_router(printing.router, prefix='/api/printing')
@@ -273,3 +273,27 @@ def test_bot_print_uses_replacement_name_without_new_device(print_env):
         assert action.payload['device_id'] == old['id']
         assert db.query(PrintJob).count() == 0
         assert query_prints(db, msg, identity, QueryArgs())['impressoras'][0]['nome'] == 'Samsung SL-M2035W'
+
+
+def test_safe_diagnostics_and_old_agent_compatibility(print_env):
+    from app.services.print_diagnostics import diagnostic_message
+    factory, client = print_env
+    d, headers = device(client)
+    job = enqueue(client, d).json()
+    client.post('/api/printing/agent/claim', headers=headers)
+    url = f"/api/printing/agent/jobs/{job['id']}/result"
+    diagnostic = dict(code='renderer_timeout', agent_version='2026.10.13.1', duration_ms=120020)
+    assert client.post(url, headers=headers, json={'status':'uncertain', 'diagnostic':diagnostic | {'log':'arbitrary secret'}}).status_code == 422
+    for _ in range(2):
+        assert client.post(url, headers=headers, json={'status':'uncertain','diagnostic':diagnostic}).status_code == 200
+    with factory() as db:
+        saved = db.get(PrintJob, uuid.UUID(job['id']))
+        assert saved.diagnostic['code'] == 'renderer_timeout'
+        assert saved.pdf == b''
+        assert 'dois minutos' in diagnostic_message(saved)
+        # Legacy result still accepted without diagnostic; fallback does not invent a cause.
+    job = enqueue(client, d).json()
+    client.post('/api/printing/agent/claim', headers=headers)
+    assert client.post(f"/api/printing/agent/jobs/{job['id']}/result", headers=headers, json={'status':'uncertain'}).status_code == 200
+    rows = client.get('/api/printing/jobs').json()
+    assert 'agente antigo' in next(j for j in rows if j['id'] == job['id'])['diagnostic_message']

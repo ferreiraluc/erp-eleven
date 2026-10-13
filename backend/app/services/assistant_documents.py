@@ -136,11 +136,13 @@ def cleanup_documents(db):
 
 
 def query_prints(db,message,identity,args):
+    from .print_diagnostics import diagnostic_message
     if not may_schedule(db,message,identity):return {'erro':'Histórico de impressões exige gestor habilitado.'}
     q=db.query(PrintJob).filter(PrintJob.source!='bot_pdf_ephemeral')
     if args.termo:q=q.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(args.termo),escape='\\'))
     total=q.count();rows=q.order_by(PrintJob.created_at.desc()).offset((args.pagina-1)*args.limite).limit(args.limite).all()
     return {'impressoras':[{'nome':d.name,'ultimo_contato':d.last_seen_at.isoformat() if d.last_seen_at else None} for d in db.query(PrintDevice).filter_by(active=True)],
         'total':total,'resultados':[{'id':str(j.id),'status':j.status,'origem':j.source,'data':j.created_at.isoformat(),
+        'diagnostico':diagnostic_message(j),'detalhes_tecnicos':j.diagnostic,
         'arquivo':(j.snapshot or {}).get('filename'),'destinatario':(j.snapshot or {}).get('endereco',{}).get('nome')} for j in rows],
         'aviso':'submitted significa enviado pelo agente à impressora, não comprova saída física do papel. Nunca reimprima sem pedido explícito.'}

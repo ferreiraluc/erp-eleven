@@ -55,7 +55,9 @@ try {
         token = Get-AgentToken $existing $secret
     }
     # Preserve the device identity and journal; upgrading must not replay jobs.
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Agente.ps1') -Destination $root -Force
+    foreach ($file in @('Agente.ps1', 'Impressao.ps1')) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $root -Force
+    }
     Save-AgentConfig $configPath $config
 
     $shell = New-Object -ComObject WScript.Shell
