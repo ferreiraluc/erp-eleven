@@ -98,7 +98,7 @@ describe('operational interface translations', () => {
   it('localizes currency names and display values while keeping codes and conversions stable', () => {
     setActivePinia(createPinia())
     const currency = useCurrencyStore()
-    currency.updateExchangeRates({'G$':7500})
+    Object.assign(currency.exchangeRates, {'G$':7500})
     setLocale('en');expect(currency.availableCurrencies.find(c=>c.code==='G$')?.name).toBe('Paraguayan guaraní')
     expect(currency.formatCurrency(1234.5,'USD')).toBe('$ 1,234.50')
     setLocale('pt');expect(currency.availableCurrencies.find(c=>c.code==='G$')?.name).toBe('Guarani paraguaio')

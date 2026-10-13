@@ -1,9 +1,10 @@
 <template>
-  <div v-if="isVisible" class="modal-overlay erp-dialog-backdrop" @click.self="$emit('close')">
-    <div v-erp-dialog class="modal-box erp-dialog">
+  <Teleport to="body" :disabled="!quick">
+  <div v-if="isVisible" class="modal-overlay erp-dialog-backdrop" @click.self="close">
+    <div v-erp-dialog class="modal-box erp-dialog" :class="{ 'erp-dialog--sm': quick }">
       <div class="modal-header erp-dialog__header">
         <h2 class="modal-title">{{ isEditing ? uiText(`Editar Cliente`) : uiText(`Novo Cliente`) }}</h2>
-        <button data-dialog-close :aria-label="uiText('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">
+        <button data-dialog-close :aria-label="uiText('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon" @click="close" :disabled="submitting">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -15,29 +16,29 @@
         <!-- Dados básicos -->
         <div class="erp-dialog__body"><div class="form-section">
           <h3 class="section-title">{{ uiText(`Dados do Cliente`) }}</h3>
-          <div class="form-grid">
+          <fieldset :disabled="submitting" class="form-grid">
             <div class="form-group span-2">
-              <label>{{ uiText(`Nome *`) }}</label>
-              <input v-model="form.nome" type="text" :placeholder="uiText(`Nome completo`)" class="form-input" required />
+              <label for="customer-form-name">{{ uiText(`Nome *`) }}</label>
+              <input id="customer-form-name" v-model="form.nome" type="text" :placeholder="uiText(`Nome completo`)" class="form-input" required />
             </div>
             <div class="form-group">
-              <label>{{ uiText(`Telefone`) }}</label>
-              <input v-model="form.telefone" type="tel" placeholder="(11) 99999-9999" class="form-input" />
+              <label for="customer-form-phone">{{ uiText(`Telefone`) }}</label>
+              <input id="customer-form-phone" v-model="form.telefone" type="tel" placeholder="(11) 99999-9999" class="form-input" />
             </div>
-            <div class="form-group">
+            <div v-if="!quick" class="form-group">
               <label>{{ uiText(`E-mail`) }}</label>
               <input v-model="form.email" type="email" placeholder="cliente@email.com" class="form-input" />
             </div>
             <div class="form-group">
-              <label>CPF</label>
-              <input v-model="form.cpf" type="text" placeholder="000.000.000-00" class="form-input" maxlength="14" />
+              <label for="customer-form-document">{{ uiText('CPF / RUC / C.I.') }}</label>
+              <input id="customer-form-document" v-model="form.cpf" type="text" class="form-input" maxlength="14" />
             </div>
-          </div>
+          </fieldset>
         </div>
 
         <!-- Endereço livre -->
-        <div class="form-section">
-          <h3 class="section-title">{{ uiText(`Endereço`) }}</h3>
+        <details class="form-section" :open="!quick">
+          <summary class="section-title">{{ uiText(`Endereço`) }}</summary>
           <div class="form-group">
             <label>{{ uiText(`Endereço completo`) }}</label>
             <textarea
@@ -48,12 +49,12 @@
             ></textarea>
             <span class="field-hint">{{ uiText(`Campo livre — cole o endereço como preferir.`) }}</span>
           </div>
-        </div>
+        </details>
 
         <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p></div>
 
         <div class="modal-footer erp-dialog__footer">
-          <button type="button" class="btn btn-secondary erp-button erp-button--secondary" @click="$emit('close')">{{ uiText(`Cancelar`) }}</button>
+          <button type="button" class="btn btn-secondary erp-button erp-button--secondary" @click="close" :disabled="submitting">{{ uiText(`Cancelar`) }}</button>
           <button type="submit" class="btn btn-primary erp-button erp-button--primary" :disabled="submitting || !form.nome.trim()">
             {{ submitting ? uiText(`Salvando...`) : (isEditing ? uiText(`Salvar alterações`) : uiText(`Criar cliente`)) }}
           </button>
@@ -61,6 +62,7 @@
       </form>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -72,8 +74,10 @@ import { clientesAPI, type Cliente, type ClienteCreate } from '@/services/api'
 interface Props {
   isVisible: boolean
   cliente?: Cliente | null
+  quick?: boolean
+  initialName?: string
 }
-const props = withDefaults(defineProps<Props>(), { cliente: null })
+const props = withDefaults(defineProps<Props>(), { cliente: null, quick: false, initialName: '' })
 const emit = defineEmits<{ close: []; saved: [c: Cliente] }>()
 
 const isEditing = computed(() => !!props.cliente)
@@ -96,9 +100,11 @@ watch(() => props.isVisible, (v) => {
       cpf: props.cliente.cpf || '',
       endereco: props.cliente.endereco || '',
       ativo: props.cliente.ativo,
-    } : emptyForm()
+    } : { ...emptyForm(), nome: props.initialName }
   }
-})
+}, { immediate: true })
+
+function close() { if (!submitting.value) emit('close') }
 
 async function handleSubmit() {
   if (submitting.value) return
@@ -142,7 +148,7 @@ async function handleSubmit() {
 .form-section { margin-bottom: 1.25rem; }
 .section-title { font-size: .75rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 .75rem; }
 
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.form-grid { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
 .form-group { display: flex; flex-direction: column; gap: .28rem; }
 .form-group.span-2 { grid-column: 1 / -1; }
 

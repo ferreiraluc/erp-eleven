@@ -8,7 +8,7 @@ import type { PdvSaleCreate } from '@/services/api'
 let app: App, root: HTMLDivElement, model: PdvSaleCreate
 beforeEach(async () => {
   const pinia = createPinia(); setActivePinia(pinia)
-  useCurrencyStore().updateExchangeRates({'G$':6500,'R$':5,EUR:.9})
+  Object.assign(useCurrencyStore().exchangeRates, {'G$':6500,'R$':5,EUR:.9})
   model = reactive({items:[],desconto_gs:0,payments:[{method:'card',currency:'USD',amount_original:100,exchange_rate:6500,amount_gs:650000}]})
   root=document.createElement('div'); document.body.append(root)
   app=createApp(SaleEditForm,{modelValue:model,sellers:[]}).use(pinia).use(i18n); app.mount(root); await nextTick()

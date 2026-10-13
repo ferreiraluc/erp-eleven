@@ -18,6 +18,8 @@ export interface CartItem {
   original_price: number        // price in native currency (e.g. 259 USD)
   sale_currency: string         // native currency: 'USD', 'BRL', 'PYG', etc.
   image_data: string | null     // base64 thumbnail for display
+  has_image?: boolean | null
+  updated_at?: string
   discount_gs: number
   is_avulso: boolean
   location: string

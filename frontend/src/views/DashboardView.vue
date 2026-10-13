@@ -396,89 +396,13 @@
 
 
     <!-- Exchange Rate Modal -->
-    <div v-if="showExchangeRateModal || showExchangeRateHeaderModal" class="modal-overlay erp-dialog-backdrop" @click="closeExchangeRateModals">
-      <div v-erp-dialog class="modal-content erp-dialog" @click.stop>
-        <div class="modal-header erp-dialog__header">
-          <h2>{{ $tr("Editar Taxas de Câmbio") }}</h2>
-          <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeExchangeRateModals" class="modal-close erp-button erp-button--secondary erp-button--icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="modal-body erp-dialog__body">
-          <div v-if="exchangeRateError" class="alert alert-error">
-            {{ exchangeRateError }}
-          </div>
-
-          <div class="rate-form">
-            <div class="form-group">
-              <label for="usd_to_pyg">{{ $tr("USD → Guarani (G$)") }}</label>
-              <input
-                id="usd_to_pyg"
-                type="number"
-                step="0.01"
-                v-model.number="editingRates.usd_to_pyg"
-                placeholder="7500.0000"
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="usd_to_brl">{{ $tr("USD → Real (R$)") }}</label>
-              <input
-                id="usd_to_brl"
-                type="number"
-                step="0.01"
-                v-model.number="editingRates.usd_to_brl"
-                placeholder="5.85"
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="eur_to_usd">EUR → USD ($)</label>
-              <input
-                id="eur_to_usd"
-                type="number"
-                step="0.0001"
-                v-model.number="editingRates.eur_to_usd"
-                placeholder="1.0850"
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="eur_to_brl">{{ $tr("EUR → Real (R$)") }}</label>
-              <input
-                id="eur_to_brl"
-                type="number"
-                step="0.01"
-                v-model.number="editingRates.eur_to_brl"
-                placeholder="6.20"
-                class="form-input"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer erp-dialog__footer">
-          <button @click="closeExchangeRateModals" class="btn btn-secondary erp-button erp-button--secondary">
-            {{ $tr("Cancelar") }}
-          </button>
-          <button @click="saveExchangeRates" :disabled="isLoadingRates" class="btn btn-primary erp-button erp-button--primary">
-            <span v-if="isLoadingRates">{{ $tr("Salvando...") }}</span>
-            <span v-else>{{ $tr("Salvar Taxas") }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <ExchangeRateModal v-if="showExchangeRateModal || showExchangeRateHeaderModal" @close="closeExchangeRateModals" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { vErpDialog } from '@/directives/erpDialog'
+import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
+import { storeToRefs } from 'pinia'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -510,7 +434,6 @@ const timeUpdateTrigger = ref(0) // Para forçar atualizações do getLastUpdate
 const showCurrencyDropdown = ref(false)
 const showExchangeRateModal = ref(false)
 const showExchangeRateHeaderModal = ref(false)
-const exchangeRateError = ref<string | null>(null)
 
 // Exchange rate state (local to avoid dependency issues)
 const stockAlerts = ref<AlertSummary | null>(null)
@@ -536,28 +459,7 @@ async function checkHealth() {
   }
 }
 
-// Exchange rate state (local to avoid dependency issues)
-const isLoadingRates = ref(false)
-const ratesError = ref<string | null>(null)
-const lastUpdated = ref<string | null>(null)
-const _cachedRates = (() => {
-  try { return JSON.parse(localStorage.getItem('erp_exchange_rates') || 'null') } catch { return null }
-})()
-const exchangeRates = ref<Record<string, number>>(_cachedRates ?? {
-  'G$': 7500.0,
-  'R$': 5.85,
-  'USD': 1.0,
-  'EUR': 0.92
-})
-
-// Exchange rate editing
-const editingRates = ref({
-  usd_to_pyg: 0,
-  usd_to_brl: 0,
-  eur_to_usd: 0,
-  eur_to_brl: 0
-})
-
+const { exchangeRates, lastUpdate: lastUpdated } = storeToRefs(currencyStore)
 
 // Check if user can edit rates
 const canEditRates = computed(() => {
@@ -601,20 +503,17 @@ const handleCurrencyChange = (currencyCode: CurrencyCode) => {
 const openCardModal = () => {
   if (!canEditRates.value) return
   showExchangeRateModal.value = true
-  loadCurrentRatesToEdit()
 }
 
 const handleHeaderClick = () => {
   if (!canEditRates.value) return
   showExchangeRateHeaderModal.value = true
-  loadCurrentRatesToEdit()
 }
 
 
 const closeExchangeRateModals = () => {
   showExchangeRateModal.value = false
   showExchangeRateHeaderModal.value = false
-  exchangeRateError.value = null
 }
 
 const getLastUpdateTime = computed(() => {
@@ -674,81 +573,7 @@ const navigateToRastreamento = () => {
   router.push('/rastreamento')
 }
 
-// Load exchange rates from API
-const loadExchangeRates = async () => {
-  if (!isActive()) return
-  try {
-    isLoadingRates.value = true
-    ratesError.value = null
-
-    // Import exchangeRateAPI dynamically to avoid circular dependency
-    const { exchangeRateAPI } = await import('@/services/api')
-    if (!isActive()) return
-    const response = await exchangeRateAPI.getCurrentRates()
-    if (!isActive()) return
-
-    // Update local state with API data
-    if (response.usd_to_pyg) exchangeRates.value['G$'] = Number(response.usd_to_pyg)
-    if (response.usd_to_brl) exchangeRates.value['R$'] = Number(response.usd_to_brl)
-    if (response.last_updated) lastUpdated.value = response.last_updated
-
-    // Persist so next page load shows real values immediately
-    try { localStorage.setItem('erp_exchange_rates', JSON.stringify(exchangeRates.value)) } catch { /* ignore */ }
-
-  } catch (error: any) {
-    if (!isActive()) return
-    ratesError.value = error.message || uiText(`Erro ao carregar taxas de câmbio`)
-  } finally {
-    if (isActive()) isLoadingRates.value = false
-  }
-}
-
-
-const loadCurrentRatesToEdit = () => {
-  editingRates.value = {
-    usd_to_pyg: exchangeRates.value['G$'],
-    usd_to_brl: exchangeRates.value['R$'],
-    eur_to_usd: 1.0850, // Default values
-    eur_to_brl: 6.20
-  }
-}
-
-const saveExchangeRates = async () => {
-  if (!isActive()) return
-  try {
-    exchangeRateError.value = null
-    isLoadingRates.value = true
-
-    // Import exchangeRateAPI directly
-    const { exchangeRateAPI } = await import('@/services/api')
-    if (!isActive()) return
-
-    if (!authStore.user) {
-      throw new Error(uiText(`User not authenticated`))
-    }
-
-    await exchangeRateAPI.quickUpdate({
-      usd_to_pyg: editingRates.value.usd_to_pyg || undefined,
-      usd_to_brl: editingRates.value.usd_to_brl || undefined,
-      eur_to_usd: editingRates.value.eur_to_usd || undefined,
-      eur_to_brl: editingRates.value.eur_to_brl || undefined,
-      source: 'Dashboard',
-      updated_by: authStore.user.nome,
-      notes: 'Updated from dashboard'
-    })
-
-    // Do not resume a request chain after logout or navigation.
-    if (!isActive()) return
-    await loadExchangeRates()
-    if (isActive()) closeExchangeRateModals()
-
-  } catch (error: any) {
-    if (!isActive()) return
-    exchangeRateError.value = error.message || uiText(`Erro ao salvar as taxas de câmbio`)
-  } finally {
-    if (isActive()) isLoadingRates.value = false
-  }
-}
+const loadExchangeRates = () => currencyStore.loadCurrentRates()
 
 // Close dropdowns when clicking outside
 const handleClickOutside = (event: Event) => {

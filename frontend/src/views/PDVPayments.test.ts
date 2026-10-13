@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ rates: {} as Record<string, number>, getItems:
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItems: mocks.getItems }, pdvAPI: { createSale: mocks.createSale } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: 'test', role: 'ADMIN' } }) }))
-vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ exchangeRates: mocks.rates }) }))
+vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ currentRates: {}, loadCurrentRates: vi.fn().mockResolvedValue(true), exchangeRates: mocks.rates }) }))
 let app: App | undefined, root: HTMLDivElement
 async function tick() { await nextTick(); await Promise.resolve(); await nextTick() }
 const input = (selector: string) => root.querySelector(selector) as HTMLInputElement
@@ -32,24 +32,24 @@ it('offers exactly the requested methods and locks each amount to its currency',
   expect(Array.from(root.querySelectorAll('.pay-select option')).map(el => (el as HTMLOptionElement).value)).toEqual(paymentMethods.map(m => m.value))
   for (const m of paymentMethods) {
     await method(m.value)
-    expect(root.querySelector('.pay-fixed-currency')?.textContent).toBe(paymentSymbol(m.currency))
+    expect(m.value.startsWith('cash_') ? input('.pay-cash-currency').value : root.querySelector('.pay-fixed-currency')?.textContent).toBe(m.value.startsWith('cash_') ? m.currency : paymentSymbol(m.currency))
     expect(input('.pay-amount-input').getAttribute('aria-label')).toContain(paymentSymbol(m.currency))
     expect(root.querySelector('.pay-select-sm')).toBeNull()
   }
   await method('pix_personal'); await set('.pay-amount-input','50'); await method('card_debit_py')
-  expect(input('.pay-amount-input').value).toBe('0')
+  expect(input('.pay-amount-input').value).toBe('')
   expect(root.querySelector('.pay-rate-input')).toBeNull()
   expect(mocks.createSale).not.toHaveBeenCalled()
 })
 
 it('fills the remaining amount in reais, permits negotiated rates and keeps mixed payment snapshots', async () => {
   await method('pix_thais'); button('.pay-btn-total').click(); await tick()
-  expect(Number(input('.pay-amount-input').value)).toBe(500)
+  expect(Number(input('.pay-amount-input').value.replace(',', '.'))).toBe(500)
   await set('.pay-rate-input','1250'); await set('.pay-amount-input','100'); button('.pay-btn-add').click(); await tick()
   expect(root.querySelector('.pay-entry')?.textContent).toContain('R$ 100')
   expect(root.querySelector('.pay-entry')?.textContent).toContain('125.000')
   await method('cash_usd'); button('.pay-btn-total').click(); await tick()
-  expect(Number(input('.pay-amount-input').value)).toBe(80.77)
+  expect(Number(input('.pay-amount-input').value.replace(',', '.'))).toBe(80.77)
   mocks.rates['G$']=7000; await tick()
   expect(usePdvStore().total).toBe(700000)
   expect(root.querySelector('.pay-entry')?.textContent).toContain('125.000')
@@ -77,4 +77,36 @@ it('shows product search and cart prices in G$, U$ and R$ and uses current excha
   mocks.rates['R$']=5.5; await tick()
   expect(root.querySelector('.pdv-result-price')?.textContent).toContain('R$ 550')
   expect(root.querySelector('.pdv-total-usd')?.textContent).toContain('R$ 550')
+})
+
+
+it('updates prices while typing comma decimals, changes currency and keeps removal beside the inputs', async () => {
+  const price=input('.pdv-ci-price');price.focus()
+  await set('.pdv-ci-price','80,50')
+  expect(price.value).toBe('80,50')
+  expect(usePdvStore().total).toBe(523250)
+  await set('.pdv-ci-currency','BRL','change')
+  expect(usePdvStore().cart[0].sale_currency).toBe('BRL')
+  expect(usePdvStore().cart[0].original_price).toBe(402.5)
+  await set('.pdv-ci-price','')
+  expect(button('.pay-confirm-btn').disabled).toBe(true)
+  await set('.pdv-ci-price','10,25')
+  expect(usePdvStore().total).toBe(13325)
+  expect(root.querySelector('.pdv-ci-controls .pdv-ci-remove')).not.toBeNull()
+  await set('.pay-cash-currency','BRL','change')
+  expect(input('.pay-select').value).toBe('cash_brl')
+  await set('.pay-amount-input','10,25')
+  expect(root.querySelector('.pay-converted')?.textContent).toContain('13.325')
+  expect(mocks.createSale).not.toHaveBeenCalled()
+})
+
+it('shows a bounded recent list without original photos and ignores late search responses', async () => {
+  expect(mocks.getItems).toHaveBeenCalledWith(expect.objectContaining({page_size:8,sort_by:'created_at',include_images:false}),expect.any(AbortSignal))
+  expect(root.textContent).toContain('Produtos recentes')
+  let finish!: (value:unknown)=>void
+  mocks.getItems.mockReturnValueOnce(new Promise(resolve=>{finish=resolve}))
+  await set('.pdv-search-input','old');await vi.advanceTimersByTimeAsync(300)
+  await set('.pdv-search-input','new');await vi.advanceTimersByTimeAsync(300)
+  finish({items:[{id:'old',name:'Stale result'}]});await tick()
+  expect(root.textContent).not.toContain('Stale result')
 })

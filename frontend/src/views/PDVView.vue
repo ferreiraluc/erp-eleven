@@ -4,11 +4,12 @@
     <!-- PDV Header -->
     <ModuleHeader title="PDV">
       <button
-        class="pdv-rate-btn erp-button erp-button--secondary"
+        :disabled="pdv.loading || pdv.checkoutUncertain"
+        class="pdv-rate-btn erp-button erp-button--secondary erp-button--sm"
         @click="openRateModal"
         :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)"
       >
-        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ rateUsd.toLocaleString(uiLocale()) }}</span>
+        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ uiNumber(rateUsd, 0) }}</span>
         <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ uiNumber(currencyStore.exchangeRates["R$"], 2) }}</span>
         <svg
           v-if="canEditRates"
@@ -28,6 +29,10 @@
         </svg>
       </button>
     </ModuleHeader>
+    <div v-if="!ratesReady" class="pdv-rates-status" role="status">
+      {{ uiText(currencyStore.error ? 'Erro ao carregar taxas de câmbio' : currencyStore.currentRates ? 'Câmbio incompleto. Confira as taxas.' : 'Carregando taxas…') }}
+      <button v-if="currencyStore.error" class="erp-button erp-button--sm" @click="currencyStore.loadCurrentRates()">{{ uiText('Tentar novamente') }}</button>
+    </div>
 
     <!-- Mobile tab bar -->
     <div class="pdv-tab-bar mobile-only">
@@ -56,15 +61,17 @@
               class="pdv-search-input" @keydown.enter="onSearchEnter" @input="onSearchInput" />
             <button v-if="searchQuery" class="pdv-search-clear erp-button erp-button--ghost erp-button--icon" @click="clearSearch">×</button>
           </div>
-          <button class="pdv-scan-btn erp-button erp-button--primary erp-button--icon" @click="showScanner = true" :title='$tr("Escanear código")'>
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12v.01M12 8h.01M4 8h.01M20 8h.01M4 4h4M20 4h-4M4 20h4M20 20h-4"/></svg>
+          <button class="pdv-scan-btn erp-button erp-button--primary erp-button--icon" @click="showScanner = true" :title='$tr("Escanear código")' :aria-label='$tr("Escanear código com a câmera")'>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h4l2-3h6l2 3h4v13H3V7zm13 6a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           </button>
         </div>
 
-        <div v-if="searchResults.length" class="pdv-results">
-          <div v-for="item in searchResults" :key="item.id" class="pdv-result-row" :class="{ 'is-unavailable': !canAddProduct(item) }" @click="addToCart(item)">
+        <p v-if="!searchQuery.trim() && !loadingSearch && !searchError" class="pdv-results-label">{{ uiText('Produtos recentes') }}</p>
+        <p v-if="loadingSearch" class="pdv-search-loading" role="status">{{ uiText('Carregando produtos…') }}</p>
+        <div v-if="visibleProducts.length" class="pdv-results" :aria-busy="loadingSearch">
+          <div v-for="item in visibleProducts" :key="item.id" class="pdv-result-row" :class="{ 'is-unavailable': !canAddProduct(item) }" @click="addToCart(item)">
             <div class="pdv-result-thumb">
-              <img v-if="item.image_data" class="pdv-result-img" :src="imgSrc(item.image_data)" />
+              <ProductThumbnail v-if="item.image_data || item.has_image" :item="item" :alt="item.name" class="pdv-result-img" />
               <div v-else class="pdv-result-no-img">{{ item.name.charAt(0).toUpperCase() }}</div>
             </div>
             <div class="pdv-result-left">
@@ -96,13 +103,13 @@
           </div>
         </div>
 
-        <div v-else-if="!searchQuery" class="pdv-search-hint">
+        <div v-else-if="!searchQuery && !loadingSearch && !searchError" class="pdv-search-hint">
           <div class="pdv-search-hint-icon">🔍</div>
           <p>{{ $tr("Digite o nome, SKU ou escaneie o código de barras para adicionar produtos") }}</p>
           <p class="pdv-shortcut-hint">{{ $tr("Atalho:") }} <kbd>F2</kbd> {{ $tr("busca ·") }} <kbd>F5</kbd> {{ $tr("pagar ·") }} <kbd>Esc</kbd> {{ $tr("voltar") }}</p>
         </div>
-        <div v-else-if="loadingSearch" class="pdv-search-loading">{{ $tr("Buscando…") }}</div>
-        <div v-else-if="searchError" class="pdv-search-error" role="alert">{{ cartText('searchFailed') }}</div>
+        <div v-else-if="loadingSearch"></div>
+        <div v-else-if="searchError" class="pdv-search-error" role="alert">{{ cartText('searchFailed') }} <button class="erp-button erp-button--sm" @click="doSearch">{{ uiText('Tentar novamente') }}</button></div>
         <div v-else class="pdv-no-results">
           <p>{{ $tr("Nenhum produto encontrado para \"") }}{{ searchQuery }}"</p>
           <button class="pdv-btn-avulso erp-button erp-button--primary" @click="openAvulso(searchQuery)">{{ $tr("+ Adicionar como item avulso") }}</button>
@@ -116,7 +123,7 @@
         <div class="pdv-cart-header">
           <span class="pdv-cart-title">{{ $tr("Carrinho") }}</span>
           <span class="pdv-cart-count">{{ pdv.cartCount }} {{ $tr("item") }}{{ pdv.cartCount !== 1 ? 's' : '' }}</span>
-          <button v-if="pdv.cart.length" class="pdv-cart-clear erp-button erp-button--danger" :disabled="customerBusy" @click="confirmClear">🗑</button>
+          <button v-if="pdv.cart.length" class="pdv-cart-clear erp-button erp-button--danger erp-button--icon" :aria-label="uiText('Limpar carrinho')" :disabled="customerBusy" @click="confirmClear">🗑</button>
         </div>
 
         <!-- Scrollable body -->
@@ -126,14 +133,13 @@
           <PDVCustomerPicker v-model:customer-id="pdv.clienteId" v-model:customer-name="pdv.clienteNome"
             :disabled="pdv.loading || pdv.checkoutUncertain" @busy="customerBusy = $event" />
 
-          <p v-if="pdv.cart.some(item => !item.is_avulso)" class="pdv-stock-note">{{ cartText('snapshot') }}</p>
           <p v-if="pdv.checkoutUncertain" role="alert" class="pdv-checkout-error">{{ cartText('uncertain') }}</p>
           <p v-else-if="checkoutError" role="alert" class="pdv-checkout-error">{{ cartErrorText(checkoutError) }}</p>
           <!-- Cart items -->
           <div v-if="pdv.cart.length" class="pdv-cart-items">
             <div v-for="item in pdv.cart" :key="item.id" class="pdv-cart-item" :class="{ 'item-avulso': item.is_avulso }">
               <div class="pdv-ci-thumb">
-                <img v-if="item.image_data" class="pdv-ci-img" :src="imgSrc(item.image_data)" />
+                <ProductThumbnail v-if="item.image_data || item.has_image" :item="{ id: item.item_id || item.id, image_data: item.image_data, has_image: item.has_image, updated_at: item.updated_at || '' }" :alt="item.item_name" class="pdv-ci-img" />
                 <div v-else class="pdv-ci-no-img">{{ item.item_name.charAt(0).toUpperCase() }}</div>
               </div>
               <div class="pdv-ci-body">
@@ -152,21 +158,26 @@
                 </div>
                 <div class="pdv-ci-controls">
                   <div class="pdv-qty-stepper">
-                    <button class="qty-btn erp-button erp-button--ghost erp-button--icon" @click="changeQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1">−</button>
-                    <input type="number" :value="quantityDrafts[item.id] ?? item.quantity" :min="item.is_avulso ? 0.001 : 1" :step="item.is_avulso ? 0.001 : 1" class="qty-input"
+                    <button class="qty-btn erp-control" :aria-label="uiText('Diminuir quantidade')" @click="changeQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1">−</button>
+                    <input type="number" :value="quantityDrafts[item.id] ?? item.quantity" :min="item.is_avulso ? 0.001 : 1" :step="item.is_avulso ? 0.001 : 1" class="qty-input" :aria-label="uiText('Quantidade')" inputmode="numeric" @focus="($event.target as HTMLInputElement).select()"
                       :aria-invalid="!!quantityErrors[item.id]"
                       @input="quantityDrafts[item.id] = ($event.target as HTMLInputElement).value"
                       @change="changeQuantity(item, Number(($event.target as HTMLInputElement).value))" />
-                    <button class="qty-btn erp-button erp-button--ghost erp-button--icon" @click="changeQuantity(item, item.quantity + 1)" :disabled="!canIncrease(item)">+</button>
+                    <button class="qty-btn erp-control" :aria-label="uiText('Aumentar quantidade')" @click="changeQuantity(item, item.quantity + 1)" :disabled="!canIncrease(item)">+</button>
                   </div>
-                  <span v-if="quantityErrors[item.id]" class="pdv-quantity-error" role="alert">{{ cartErrorText(quantityErrors[item.id]) }}</span>
                   <div class="pdv-ci-price-wrap">
-                    <span class="pdv-ci-currency">{{ currencyLabel(item.sale_currency) }}</span>
-                    <input type="number" :value="item.original_price" min="0" class="pdv-ci-price"
-                      @change="pdv.updateItemOriginalPrice(item.id, Number(($event.target as HTMLInputElement).value), getRate(item.sale_currency))" />
+                    <select class="pdv-ci-currency" :value="item.sale_currency === 'GS' ? 'PYG' : item.sale_currency" :aria-label="uiText('Moeda do item')" @change="changeItemCurrency(item, ($event.target as HTMLSelectElement).value)">
+                      <option v-for="currency in itemCurrencies" :key="currency" :value="currency">{{ currencyLabel(currency) }}</option>
+                    </select>
+                    <DecimalInput :model-value="item.original_price" class="pdv-ci-price" :aria-label="uiText('Preço unitário')" :aria-invalid="!!priceErrors[item.id]"
+                      @update:model-value="changeItemPrice(item, $event)" />
                   </div>
-                  <span class="pdv-ci-total">{{ fmtGs(item.quantity * item.unit_price_gs - item.discount_gs) }}</span>
-                  <button class="pdv-ci-remove erp-button erp-button--danger erp-button--icon" @click="removeCartItem(item.id)">×</button>
+                  <button class="pdv-ci-remove erp-button erp-button--danger erp-button--icon" :aria-label="uiText('Remover item')" @click="removeCartItem(item.id)">×</button>
+                </div>
+                <div class="pdv-ci-line-summary">
+                  <span v-if="quantityErrors[item.id]" class="pdv-quantity-error" role="alert">{{ cartErrorText(quantityErrors[item.id]) }}</span>
+                  <span v-if="priceErrors[item.id]" class="pdv-quantity-error" role="alert">{{ uiText('Informe um preço válido.') }}</span>
+                  <span class="pdv-ci-total" aria-live="polite">{{ fmtGs(item.quantity * item.unit_price_gs - item.discount_gs) }}</span>
                 </div>
               </div>
             </div>
@@ -198,7 +209,7 @@
               <span class="pay-discount-label">{{ $tr("Desconto (G$)") }}</span>
               <div class="pay-discount-input-wrap">
                 <span class="pay-currency-prefix">G$</span>
-                <input v-model.number="pdv.discountGs" type="number" min="0" class="pay-discount-input" placeholder="0" />
+                <DecimalInput :model-value="pdv.discountGs" @update:model-value="pdv.discountGs = $event ?? 0" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
               </div>
             </div>
 
@@ -224,15 +235,16 @@
                 <select v-model="newMethod" class="pay-select" :aria-label="uiText('Método de pagamento')">
                   <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
                 </select>
-                <span class="pay-fixed-currency" :aria-label="uiText('Moeda do pagamento')">{{ currencySymbol }}</span>
+                <select v-if="newMethod.startsWith('cash_')" class="pay-cash-currency" :value="newCurrency" :aria-label="uiText('Moeda do pagamento')" @change="changeCashCurrency(($event.target as HTMLSelectElement).value)">
+                  <option v-for="method in cashMethods" :key="method.value" :value="method.currency">{{ paymentSymbol(method.currency) }}</option>
+                </select>
+                <span v-else class="pay-fixed-currency" :aria-label="uiText('Moeda do pagamento')">{{ currencySymbol }}</span>
               </div>
               <div class="pay-add-row">
                 <div class="pay-input-wrap">
                   <span class="pay-currency-prefix">{{ currencySymbol }}</span>
-                  <input v-model.number="newAmount" ref="amountInput" type="number" min="0" step="0.01" :aria-label="uiText('Valor em {0}', {0: currencySymbol})"
-                    class="pay-amount-input"
-                    :placeholder="payRemaining > 0 ? fmtNum(remainingInCurrency) : '0'"
-                    @keydown.enter="addPayment" />
+                  <DecimalInput v-model="newAmount" ref="amountInput" :aria-label="uiText('Valor em {0}', {0: currencySymbol})"
+                    class="pay-amount-input" @keydown.enter="addPayment" />
                 </div>
                 <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" :disabled="!validRate" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
@@ -240,9 +252,9 @@
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
                 <span>{{ $tr("Taxa:") }}</span>
-                <input v-model.number="newRate" type="number" min="0.000001" step="0.000001" class="pay-rate-input" :aria-label="uiText('Câmbio para G$')" />
+                <DecimalInput v-model="newRate" class="pay-rate-input" :aria-label="uiText('Câmbio para G$')" />
                 <span>G$ / {{ currencySymbol }}</span>
-                <span class="pay-converted">= {{ fmtGs(newAmount * newRate) }}</span>
+                <span class="pay-converted" aria-live="polite">= {{ fmtGs(Number(newAmount) * Number(newRate)) }}</span>
               </div>
             </div>
             <p v-if="!validRate" class="pay-validation" role="alert">{{ uiText('Informe um câmbio válido para este pagamento.') }}</p>
@@ -269,7 +281,7 @@
         <!-- Sticky confirm button -->
         <div class="pdv-pay-area">
           <button class="pay-confirm-btn erp-button erp-button--primary"
-            :disabled="!canConfirmPayment || pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft || !pdv.cart.length"
+            :disabled="!canConfirmPayment || pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft || invalidPriceDraft || !ratesReady || !pdv.cart.length"
             @click="confirmPayment">
             <span v-if="pdv.loading">{{ $tr("Processando…") }}</span>
             <span v-else-if="!pdv.cart.length">{{ $tr("Carrinho vazio") }}</span>
@@ -287,45 +299,7 @@
     <PDVAvulsoModal v-if="showAvulso" :scanned-code="avulsoCode" :rates="{ PYG: 1, USD: rateUsd, BRL: rateBrl, EUR: rateEur }" @add="onAvulsoAdd" @close="showAvulso = false" />
     <PDVReceiptModal v-if="showReceipt && pdv.lastSale" :sale="pdv.lastSale" @close="showReceipt = false" />
 
-    <!-- Exchange Rate Modal (same as dashboard) -->
-    <div v-if="showRateModal" class="er-overlay erp-dialog-backdrop" @click.self="showRateModal = false">
-      <div v-erp-dialog class="er-modal erp-dialog erp-dialog--sm">
-        <div class="er-header erp-dialog__header">
-          <h2>{{ $tr("Taxas de Câmbio") }}</h2>
-          <button data-dialog-close :aria-label="uiText('Fechar')" class="er-close erp-button erp-button--ghost erp-button--icon" @click="showRateModal = false">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <div class="er-body erp-dialog__body">
-          <div v-if="rateError" class="er-error">{{ rateError }}</div>
-          <div class="er-form">
-            <div class="er-group">
-              <label>{{ $tr("USD → Guarani (G$)") }}</label>
-              <input type="number" step="1" v-model.number="editingRates.usd_to_pyg" placeholder="6400" class="er-input" :disabled="!canEditRates" />
-            </div>
-            <div class="er-group">
-              <label>{{ $tr("USD → Real (R$)") }}</label>
-              <input type="number" step="0.01" v-model.number="editingRates.usd_to_brl" placeholder="5.85" class="er-input" :disabled="!canEditRates" />
-            </div>
-            <div class="er-group">
-              <label>EUR → USD ($)</label>
-              <input type="number" step="0.001" v-model.number="editingRates.eur_to_usd" placeholder="1.085" class="er-input" :disabled="!canEditRates" />
-            </div>
-            <div class="er-group">
-              <label>{{ $tr("EUR → Real (R$)") }}</label>
-              <input type="number" step="0.01" v-model.number="editingRates.eur_to_brl" placeholder="6.20" class="er-input" :disabled="!canEditRates" />
-            </div>
-          </div>
-        </div>
-        <div class="er-footer erp-dialog__footer">
-          <button class="er-btn-cancel erp-button erp-button--secondary" @click="showRateModal = false">{{ $tr("Cancelar") }}</button>
-          <button v-if="canEditRates" class="er-btn-save erp-button erp-button--primary" @click="saveRates" :disabled="savingRates">
-            <span v-if="savingRates">{{ $tr("Salvando…") }}</span>
-            <span v-else>{{ $tr("Salvar Taxas") }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <ExchangeRateModal v-if="showRateModal" @close="showRateModal = false" @saved="showToast(uiText('Taxas atualizadas'))" />
 
     <!-- Toast -->
     <transition name="toast-fade">
@@ -335,12 +309,13 @@
 </template>
 
 <script setup lang="ts">
-import { vErpDialog } from '@/directives/erpDialog'
+import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
+import DecimalInput from '@/components/forms/DecimalInput.vue'
+import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { usePdvStore } from '@/stores/pdv'
-import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
@@ -357,7 +332,6 @@ import { usePdvCartText } from '@/components/pdv/cartMessages'
 const { cartText, cartErrorText } = usePdvCartText()
 
 const pdv = usePdvStore()
-const authStore = useAuthStore()
 const currencyStore = useCurrencyStore()
 
 // ── Panel / tab state ─────────────────────────────────────────────────────────
@@ -366,10 +340,16 @@ const mobileTab = ref<'products' | 'cart'>('products')
 // ── Search ────────────────────────────────────────────────────────────────────
 const searchQuery = ref('')
 const searchResults = ref<InventoryItem[]>([])
+const recentProducts = ref<InventoryItem[]>([])
+const visibleProducts = computed(() => searchQuery.value.trim() ? searchResults.value : recentProducts.value)
+let searchGeneration = 0, disposed = false
+let searchController: AbortController | undefined
 const loadingSearch = ref(false)
 const searchError = ref(false)
 const selectedLocations = reactive<Record<string, StockLocation>>({})
 const quantityDrafts = reactive<Record<string, string>>({})
+const priceErrors = reactive<Record<string, boolean>>({})
+const invalidPriceDraft = computed(() => pdv.cart.some(item => priceErrors[item.id]))
 const quantityErrors = reactive<Record<string, unknown>>({})
 const checkoutError = ref<unknown>(null)
 const invalidQuantityDraft = computed(() => pdv.cart.some(item => quantityErrors[item.id] ||
@@ -391,65 +371,28 @@ const rateEur = computed(() => paymentRate('EUR', currencyStore.exchangeRates))
 
 // ── Exchange rate modal ───────────────────────────────────────────────────────
 const showRateModal = ref(false)
-const savingRates = ref(false)
-const rateError = ref<string | null>(null)
-const editingRates = ref({ usd_to_pyg: 0, usd_to_brl: 0, eur_to_usd: 0, eur_to_brl: 0 })
-
-const canEditRates = computed(() =>
-  !!authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
-)
-
-function openRateModal() {
-  const rates = currencyStore.exchangeRates
-  // rates['EUR'] = EUR per USD (e.g. 0.92), so eur_to_usd = 1 / rates['EUR']
-  const eurPerUsd = rates['EUR'] > 0 ? rates['EUR'] : 0.92
-  const eurToUsd = 1 / eurPerUsd
-  editingRates.value = {
-    usd_to_pyg: rates['G$'],
-    usd_to_brl: rates['R$'],
-    eur_to_usd: Math.round(eurToUsd * 10000) / 10000,
-    eur_to_brl: Math.round(rates['R$'] / eurPerUsd * 100) / 100,
-  }
-  rateError.value = null
-  showRateModal.value = true
-}
-
-async function saveRates() {
-  if (!canEditRates.value) return
-  try {
-    savingRates.value = true
-    rateError.value = null
-    await currencyStore.updateRatesAPI({
-      usd_to_pyg: editingRates.value.usd_to_pyg || undefined,
-      usd_to_brl: editingRates.value.usd_to_brl || undefined,
-      eur_to_usd: editingRates.value.eur_to_usd || undefined,
-      eur_to_brl: editingRates.value.eur_to_brl || undefined,
-    })
-    showRateModal.value = false
-    showToast(uiText(`Taxas atualizadas`), 'success')
-  } catch (e: any) {
-    rateError.value = e?.response?.data?.detail || e?.message || uiText(`Erro ao salvar taxas`)
-  } finally {
-    savingRates.value = false
-  }
-}
+const canEditRates = computed(() => currencyStore.canEdit)
+const ratesReady = computed(() => !!currencyStore.currentRates && !currencyStore.error && rateUsd.value > 0 && rateBrl.value > 0)
+function openRateModal() { showRateModal.value = true }
 
 // ── Payment state ────────────────────────────────────────────────────────────
 const localPayments = ref<CartPayment[]>(pdv.payments.map(payment => ({ ...payment })))
 const newMethod = ref('cash_usd')
 const newCurrency = computed(() => paymentCurrency(newMethod.value) || 'USD')
-const newAmount = ref<number>(0)
-const newRate = ref(0)
+const newAmount = ref<number | null>(null)
+const newRate = ref<number | null>(0)
 const newReference = ref('')
-const amountInput = ref<HTMLInputElement>()
+const amountInput = ref<InstanceType<typeof DecimalInput>>()
 
 const PAYMENT_METHODS = computed(() => paymentMethods.map(m => ({ ...m, label: paymentLabel(m.value) })))
 const defaultRate = (currency: string) => paymentRate(currency, currencyStore.exchangeRates)
 const methodLabel = paymentLabel
+const cashMethods = paymentMethods.filter(m => m.value.startsWith('cash_'))
+function changeCashCurrency(currency: string) { const method = cashMethods.find(m => m.currency === currency); if (method) newMethod.value = method.value }
 
 watch(newMethod, () => {
   newRate.value = defaultRate(newCurrency.value)
-  newAmount.value = 0
+  newAmount.value = null
   newReference.value = ''
 })
 watch([rateUsd, rateBrl, rateEur], () => {
@@ -467,14 +410,14 @@ watch(() => pdv.cart.length, (len) => { if (len === 0) { resetPayment(); checkou
 const currencySymbol = computed(() => paymentSymbol(newCurrency.value))
 const showReference = computed(() => !newMethod.value.startsWith('cash_') && newMethod.value !== 'fiado')
 const referencePlaceholder = computed(() => newMethod.value.startsWith('card_') ? uiText('Últimos 4 dígitos') : uiText('Referência'))
-const validRate = computed(() => Number.isFinite(newRate.value) && newRate.value > 0 && newRate.value <= 999999999)
-const canAddPayment = computed(() => validPaymentAmount(newAmount.value, newRate.value) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
+const validRate = computed(() => Number.isFinite(newRate.value) && Number(newRate.value) > 0 && Number(newRate.value) <= 999999999)
+const canAddPayment = computed(() => validPaymentAmount(Number(newAmount.value), Number(newRate.value)) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
 
 const payTotalPaid = computed(() => localPayments.value.reduce((s, p) => s + p.amount_gs, 0))
 const payRemaining = computed(() => Math.max(0, pdv.total - payTotalPaid.value))
 const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
 const remainingInCurrency = computed(() =>
-  validRate.value ? payRemaining.value / newRate.value : 0
+  validRate.value ? payRemaining.value / Number(newRate.value) : 0
 )
 const canConfirmPayment = computed(() => !customerBusy.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
 
@@ -482,27 +425,27 @@ function fillTotal() {
   if (!validRate.value) return
   const rounded = Math.round(remainingInCurrency.value * 100) / 100
   // Avoid adding a cent solely because a six-decimal rate has a tiny fraction.
-  const covers = Math.round(rounded * newRate.value * 100) / 100 >= payRemaining.value - 1e-7
+  const covers = Math.round(rounded * Number(newRate.value) * 100) / 100 >= payRemaining.value - 1e-7
   newAmount.value = covers ? rounded : Math.ceil(remainingInCurrency.value * 100) / 100
   nextTick(() => amountInput.value?.focus())
 }
 
 function addPayment() {
   if (!canAddPayment.value) return
-  const rate = newCurrency.value === 'GS' ? 1 : Math.round(newRate.value * 1e6) / 1e6
-  const amountGs = newCurrency.value === 'GS' ? newAmount.value : newAmount.value * rate
+  const rate = newCurrency.value === 'GS' ? 1 : Math.round(Number(newRate.value) * 1e6) / 1e6
+  const amountGs = newCurrency.value === 'GS' ? Number(newAmount.value) : Number(newAmount.value) * rate
   localPayments.value.push({
     id: crypto.randomUUID(),
     method: newMethod.value,
     currency: newCurrency.value,
-    amount_original: newAmount.value,
+    amount_original: Number(newAmount.value),
     exchange_rate: rate,
     amount_gs: Math.round(amountGs * 100) / 100,
     cambista_id: null,
     reference: newReference.value || null,
     label: methodLabel(newMethod.value),
   })
-  newAmount.value = 0
+  newAmount.value = null
   newReference.value = ''
   nextTick(() => amountInput.value?.focus())
 }
@@ -544,35 +487,35 @@ function fmtNum(v: number | null | undefined) { return typeof v === 'number' && 
 function convertKnownPrice(value: number | null | undefined, rate: number): number | null {
   return typeof value === 'number' && Number.isFinite(value) && Number.isFinite(rate) ? Math.round(value * rate) : null
 }
-function imgSrc(data: string): string {
-  return data.startsWith('data:') ? data : `data:image/jpeg;base64,${data}`
-}
 
 // ── Search ────────────────────────────────────────────────────────────────────
 function onSearchInput() {
-  clearTimeout(searchTimer)
-  if (!searchQuery.value.trim()) { searchResults.value = []; return }
-  searchError.value = false
+  clearTimeout(searchTimer); searchController?.abort(); searchGeneration++
+  searchResults.value = []; searchError.value = false
+  if (!searchQuery.value.trim()) { loadingSearch.value = false; if (!recentProducts.value.length) void doSearch(); return }
   loadingSearch.value = true
   searchTimer = setTimeout(doSearch, 280)
 }
 async function doSearch() {
+  const request = ++searchGeneration, query = searchQuery.value.trim()
+  searchController?.abort(); searchController = new AbortController()
+  loadingSearch.value = true; searchError.value = false
   try {
-    const res = await inventoryAPI.getItems({ search: searchQuery.value, page_size: 20 })
+    const res = await inventoryAPI.getItems({ search: query || undefined, page_size: query ? 20 : 8, status: 'active', sort_by: query ? undefined : 'created_at', include_images: false }, searchController.signal)
+    if (disposed || request !== searchGeneration) return
     pdv.rememberStock(res.items)
-    searchResults.value = res.items
-    searchError.value = false
-  } catch { searchResults.value = []; searchError.value = true }
-  finally { loadingSearch.value = false }
+    if (query) searchResults.value = res.items
+    else recentProducts.value = res.items
+  } catch {
+    if (!disposed && request === searchGeneration) { searchResults.value = []; searchError.value = true }
+  } finally { if (!disposed && request === searchGeneration) loadingSearch.value = false }
 }
 function onSearchEnter() {
-  if (searchResults.value.length === 1) addToCart(searchResults.value[0])
+  if (!loadingSearch.value && searchQuery.value.trim() && searchResults.value.length === 1) addToCart(searchResults.value[0])
 }
 function clearSearch() {
-  searchQuery.value = ''
-  searchResults.value = []
-  searchError.value = false
-  searchInput.value?.focus()
+  searchGeneration++; searchController?.abort(); clearTimeout(searchTimer)
+  searchQuery.value = ''; searchResults.value = []; searchError.value = false; loadingSearch.value = false
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
@@ -580,7 +523,7 @@ function productLocation(item: InventoryItem): StockLocation {
   return selectedLocations[item.id] || (item.stock_loja !== null && item.stock_loja > 0 ? 'loja' : 'deposito')
 }
 function productAvailable(item: InventoryItem) { return pdv.availableStock(item.id, productLocation(item)) }
-function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return !pdv.loading && available !== null && available >= 1 }
+function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && available !== null && available >= 1 }
 function canIncrease(item: CartItem) {
   if (item.is_avulso) return item.quantity + 1 <= 9_999_999.999
   const available = item.item_id ? pdv.availableStock(item.item_id, item.location, item.id) : null
@@ -592,10 +535,25 @@ function changeQuantity(item: CartItem, quantity: number) {
     delete quantityDrafts[item.id]; delete quantityErrors[item.id]
   } catch (error) { quantityErrors[item.id] = error }
 }
+const itemCurrencies = ['USD', 'BRL', 'PYG', 'EUR']
+function changeItemPrice(item: CartItem, value: number | null) {
+  const valid = value !== null && Number.isFinite(value) && value >= 0 && value <= 999999999 && Number.isFinite(getRate(item.sale_currency)) && getRate(item.sale_currency) > 0
+  priceErrors[item.id] = !valid
+  if (valid) pdv.updateItemOriginalPrice(item.id, value!, getRate(item.sale_currency))
+}
+function changeItemCurrency(item: CartItem, currency: string) {
+  if (!itemCurrencies.includes(currency) || pdv.loading || pdv.checkoutUncertain || getRate(currency) <= 0) return
+  // Preserve the negotiated total when changing its display unit; do not edit the catalog.
+  const price = Math.round(item.unit_price_gs / getRate(currency) * 100) / 100
+  item.sale_currency = currency
+  changeItemPrice(item, price)
+}
 function removeCartItem(id: string) {
+  delete priceErrors[id]
   pdv.removeItem(id); delete quantityDrafts[id]; delete quantityErrors[id]
 }
 function addToCart(item: InventoryItem) {
+  if (!ratesReady.value) return
   try {
     const saleCurrency = item.sale_currency || 'PYG'
     const rate = getRate(saleCurrency)
@@ -613,6 +571,7 @@ function addToCart(item: InventoryItem) {
       original_price: item.sale_price || 0,
       sale_currency: saleCurrency,
       image_data: item.image_data || null,
+      has_image: item.has_image, updated_at: item.updated_at,
       discount_gs: 0,
       is_avulso: false,
       location: productLocation(item),
@@ -634,25 +593,27 @@ function confirmClear() { if (confirm(uiText(`Limpar o carrinho?`))) pdv.clearCa
 // ── Barcode ───────────────────────────────────────────────────────────────────
 async function onBarcodeDetected(code: string) {
   showScanner.value = false
+  const request = ++searchGeneration; searchController?.abort(); clearTimeout(searchTimer); loadingSearch.value = false
   try {
     const results = await inventoryAPI.getByBarcode(code)
+    if (disposed || request !== searchGeneration) return
     pdv.rememberStock(results)
     searchError.value = false
     if (results.length === 1) addToCart(results[0])
     else if (results.length > 1) { searchQuery.value = code; searchResults.value = results }
     else openAvulso(code)
-  } catch { searchQuery.value = code; searchResults.value = []; searchError.value = true; showToast(cartText('searchFailed'), 'error') }
+  } catch { if (disposed || request !== searchGeneration) return; searchQuery.value = code; searchResults.value = []; searchError.value = true; showToast(cartText('searchFailed'), 'error') }
 }
 
 // ── Payment ───────────────────────────────────────────────────────────────────
 function resetPayment() {
   localPayments.value = []
-  newAmount.value = 0
+  newAmount.value = null
   newReference.value = ''
 }
 
 async function confirmPayment() {
-  if (pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft.value || !canConfirmPayment.value) return
+  if (pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft.value || invalidPriceDraft.value || !ratesReady.value || !canConfirmPayment.value) return
   checkoutError.value = null
   pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
   try {
@@ -667,6 +628,7 @@ async function confirmPayment() {
 
 // ── Keyboard ──────────────────────────────────────────────────────────────────
 function onKeydown(e: KeyboardEvent) {
+  if (document.querySelector('[aria-modal="true"]')) return
   if (e.key === 'F2' || (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as Element).tagName))) {
     e.preventDefault(); searchInput.value?.focus(); mobileTab.value = 'products'
   }
@@ -677,11 +639,12 @@ function onKeydown(e: KeyboardEvent) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
-  searchInput.value?.focus()
-  // Initialise newRate from the shared currency store (no API call needed)
+  void currencyStore.loadCurrentRates()
+  void doSearch()
+  // Read the shared rates; network completion updates the reactive defaults.
   newRate.value = defaultRate(newCurrency.value)
 })
-onUnmounted(() => { document.removeEventListener('keydown', onKeydown); clearTimeout(toastTimer); clearTimeout(searchTimer) })
+onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort(); document.removeEventListener('keydown', onKeydown); clearTimeout(toastTimer); clearTimeout(searchTimer) })
 </script>
 
 <style scoped>
@@ -694,7 +657,7 @@ onUnmounted(() => { document.removeEventListener('keydown', onKeydown); clearTim
 .qty-input[aria-invalid="true"] { border-color: #b91c1c; }
 
 /* ── Root ─────────────────────────────────────────────────────────────────── */
-.pdv-root { display: flex; flex-direction: column; height: 100dvh; height: 100vh; background: #f3f4f6; overflow: hidden; }
+.pdv-root { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: #f3f4f6; overflow: hidden; }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 
@@ -710,15 +673,15 @@ onUnmounted(() => { document.removeEventListener('keydown', onKeydown); clearTim
 .mobile-only { display: none; }
 
 /* ── Layout ───────────────────────────────────────────────────────────────── */
-.pdv-layout { display: grid; grid-template-columns: 60fr 40fr; flex: 1; overflow: hidden; }
+.pdv-layout { display: grid; grid-template-columns: minmax(0, 60fr) minmax(0, 40fr); flex: 1; min-height: 0; overflow: hidden; }
 
 /* ── Products panel ───────────────────────────────────────────────────────── */
 .pdv-panel-products { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid #e5e7eb; background: white; }
 .pdv-search-bar { display: flex; gap: 0.5rem; padding: 0.75rem; border-bottom: 1px solid #f3f4f6; background: white; flex-shrink: 0; }
-.pdv-search-input-wrap { flex: 1; display: flex; align-items: center; border: 2px solid #e5e7eb; border-radius: 0.625rem; overflow: hidden; transition: border-color 0.15s; background: #f9fafb; }
+.pdv-search-input-wrap { flex: 1; min-width: 0; display: flex; align-items: center; border: 2px solid #e5e7eb; border-radius: 0.625rem; overflow: hidden; transition: border-color 0.15s; background: #f9fafb; }
 .pdv-search-input-wrap:focus-within { border-color: #f97316; background: white; }
 .pdv-search-icon { width: 18px; height: 18px; color: #9ca3af; margin: 0 0.5rem; flex-shrink: 0; }
-.pdv-search-input { flex: 1; border: none; outline: none; padding: 0.625rem 0.5rem 0.625rem 0; font-size: 0.9rem; background: transparent; }
+.pdv-search-input { flex: 1; min-width: 0; border: none; outline: none; padding: 0.625rem 0.5rem 0.625rem 0; font-size: 0.9rem; background: transparent; }
 .pdv-search-clear { background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0 0.5rem; font-size: 1.2rem; }
 .pdv-scan-btn { width: 44px; height: 44px; border-radius: 0.625rem; border: 2px solid #e5e7eb; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #374151; flex-shrink: 0; }
 .pdv-scan-btn:hover { border-color: #f97316; color: #f97316; }
@@ -780,14 +743,14 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .ci-avulso-badge { background: #fef3c7; color: #92400e; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.3rem; border-radius: 0.2rem; }
 .pdv-ci-meta { font-size: 0.68rem; color: #9ca3af; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
 .ci-gs-equiv { color: #6b7280; font-style: italic; }
-.pdv-ci-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.pdv-ci-controls { display: grid; grid-template-columns: 94px minmax(0,1fr) 32px; align-items: center; gap: 6px; }
 .pdv-qty-stepper { display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; }
-.qty-btn { width: 26px; height: 26px; border: none; background: #f9fafb; cursor: pointer; font-size: 1rem; color: #374151; }
+.qty-btn { width: 30px; min-width: 30px; height: 36px; padding: 0; border: none; background: #f9fafb; cursor: pointer; font-size: 1rem; color: #374151; }
 .qty-btn:hover:not(:disabled) { background: #f3f4f6; }
 .qty-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.qty-input { width: 34px; border: none; outline: none; text-align: center; font-size: 0.85rem; font-weight: 600; padding: 0; height: 26px; }
-.pdv-ci-price-wrap { display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; flex: 1; min-width: 90px; }
-.pdv-ci-currency { padding: 0 0.3rem; font-size: 0.68rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; white-space: nowrap; }
+.qty-input { width: 32px; min-width: 0; border: none; outline: none; text-align: center; font-size: 0.85rem; font-weight: 600; padding: 0; height: 36px; }
+.pdv-ci-price-wrap { display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; min-width: 0; height: 36px; }
+.pdv-ci-currency { padding: 0 0.3rem; font-size: 0.68rem; color: #9ca3af; background: #f9fafb; border: 0; border-right: 1px solid #e5e7eb; white-space: nowrap; width: 62px; min-width: 0; height: 36px; font-size: 13px; }
 .pdv-ci-price { border: none; outline: none; flex: 1; padding: 0.25rem 0.3rem; font-size: 0.83rem; min-width: 0; }
 .pdv-ci-price:focus { background: #fff7ed; }
 .pdv-ci-total { font-size: 0.85rem; font-weight: 700; color: #111827; white-space: nowrap; margin-left: auto; }
@@ -834,17 +797,17 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 
 .pay-add-section { padding: 0.5rem 0.875rem; background: #f9fafb; border-top: 1px solid #f3f4f6; }
 .pay-add-row { display: flex; gap: 0.3rem; margin-bottom: 0.3rem; align-items: center; }
-.pay-select { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; background: white; outline: none; }
+.pay-select { flex: 1; min-width: 0; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; background: white; outline: none; }
 .pay-select-sm { flex: 0 0 54px; }
-.pay-input-wrap { flex: 1; display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; background: white; }
+.pay-input-wrap { flex: 1; min-width: 0; display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; background: white; }
 .pay-amount-input { flex: 1; border: none; outline: none; padding: 0.35rem; font-size: 0.85rem; min-width: 0; }
 .pay-btn-total { background: #1d4ed8; color: white; border: none; border-radius: 0.4rem; padding: 0.35rem 0.45rem; font-weight: 700; cursor: pointer; font-size: 0.72rem; white-space: nowrap; flex-shrink: 0; }
 .pay-btn-total:hover { background: #1e40af; }
 .pay-ref-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; outline: none; min-width: 0; }
 .pay-btn-add { background: #111827; color: white; border: none; border-radius: 0.4rem; padding: 0.35rem 0.55rem; font-weight: 700; cursor: pointer; font-size: 0.78rem; white-space: nowrap; }
 .pay-btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
-.pay-rate-row { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: #6b7280; margin-top: 0.2rem; }
-.pay-rate-input { width: 65px; border: 1px solid #e5e7eb; border-radius: 0.3rem; padding: 0.15rem 0.3rem; font-size: 0.75rem; outline: none; }
+.pay-rate-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: #6b7280; margin-top: 0.2rem; }
+.pay-rate-input { width: 95px; min-width: 0; border: 1px solid #e5e7eb; border-radius: 0.3rem; padding: 0.15rem 0.3rem; font-size: 0.75rem; outline: none; }
 .pay-converted { font-weight: 700; color: #059669; }
 
 .pay-summary-inline { padding: 0.375rem 0.875rem 0.5rem; border-top: 1px solid #f3f4f6; }
@@ -862,26 +825,6 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pay-confirm-btn:hover:not(:disabled) { opacity: 0.9; }
 .pay-confirm-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #6b7280; }
 
-/* ── Exchange Rate Modal ───────────────────────────────────────────────────── */
-.er-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 1rem; box-sizing: border-box; }
-.er-modal { background: white; border-radius: 0.75rem; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.er-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; }
-.er-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #111827; }
-.er-close { background: none; border: none; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.25rem; border-radius: 0.375rem; }
-.er-close:hover { background: #f3f4f6; color: #374151; }
-.er-body { padding: 1.25rem; }
-.er-error { background: #fee2e2; color: #991b1b; padding: 0.625rem 0.875rem; border-radius: 0.5rem; font-size: 0.85rem; margin-bottom: 1rem; }
-.er-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
-.er-group { display: flex; flex-direction: column; gap: 0.35rem; }
-.er-group label { font-size: 0.78rem; font-weight: 600; color: #374151; }
-.er-input { border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.5rem 0.625rem; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
-.er-input:focus { border-color: #f97316; }
-.er-input:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
-.er-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.875rem 1.25rem; border-top: 1px solid #e5e7eb; }
-.er-btn-cancel { padding: 0.5rem 1rem; border: 1.5px solid #e5e7eb; border-radius: 0.5rem; background: white; color: #6b7280; font-weight: 600; cursor: pointer; }
-.er-btn-save { padding: 0.5rem 1.25rem; border: none; border-radius: 0.5rem; background: #f97316; color: white; font-weight: 700; cursor: pointer; }
-.er-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .pdv-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: 0.6rem 1.25rem; border-radius: 2rem; font-size: 0.85rem; font-weight: 600; z-index: 9999; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
 .toast-success { background: #111827; color: white; }
@@ -892,8 +835,8 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .mobile-only { display: flex; }
-  .pdv-layout { grid-template-columns: 1fr; }
-  .pdv-panel-products, .pdv-panel-cart { height: calc(100dvh - 100px); height: calc(100vh - 100px); }
+  .pdv-layout { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
+  .pdv-panel-products, .pdv-panel-cart { min-height: 0; }
   .mobile-hidden { display: none !important; }
   .pdv-panel-products, .pdv-panel-cart { border-right: none; }
   .pdv-result-row { flex-wrap: wrap; }
@@ -903,4 +846,23 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
   .pdv-rate-btn { padding: 0.25rem 0.4rem; }
   .pdv-rate-pill { font-size: 0.65rem; }
 }
+.pdv-ci-line-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pdv-ci-line-summary .pdv-ci-total { font-size: .78rem; }
+.pdv-ci-price { width: 100%; height: 36px; box-sizing: border-box; }
+.pdv-qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.pdv-qty-stepper input { appearance: textfield; -moz-appearance: textfield; }
+.pdv-results-label { font-size: .75rem; color: #64748b; margin: 0; padding: 10px 12px 4px; }
+.pay-cash-currency { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px; background: #fff; color: #1d4ed8; max-width: 90px; }
+.pay-add-row { flex-wrap: wrap; }
+.pay-ref-input { flex-basis: 100%; order: 2; }
+.pdv-ci-controls .pdv-ci-remove { align-self: center; }
+@media (max-width: 380px) {
+  .pdv-ci-thumb { width: 30px; height: 30px; }
+  .pdv-cart-item { padding-inline: 8px; gap: 6px; }
+  .pdv-ci-controls { grid-template-columns: 86px minmax(0,1fr) 32px; gap: 4px; }
+  .qty-btn { width: 28px; min-width: 28px; }
+  .qty-input { width: 28px; }
+  .pdv-ci-currency { width: 57px; }
+}
+.pdv-rates-status { padding: 6px 12px; font-size: 12px; color: #92400e; background: #fffbeb; display: flex; align-items: center; gap: 8px; }
 </style>

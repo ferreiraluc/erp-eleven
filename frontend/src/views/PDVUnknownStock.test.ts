@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ getItems: vi.fn(), createSale: vi.fn() }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItems: mocks.getItems }, pdvAPI: { createSale: mocks.createSale } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { role: 'USER' } }) }))
-vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ exchangeRates: { 'G$': 7500, 'R$': 5.5, EUR: 0.9 } }) }))
+vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ currentRates: {}, loadCurrentRates: vi.fn().mockResolvedValue(true), exchangeRates: { 'G$': 7500, 'R$': 5.5, EUR: 0.9 } }) }))
 let app: App | undefined, container: HTMLDivElement
 const item = { id: 'test', name: 'Fixture', sku_internal: 'SKU-1', sale_price: 100, current_stock: null, stock_loja: null, stock_deposito: 0 }
 async function mountAndSearch() {
@@ -41,11 +41,11 @@ describe('PDV with missing stock', () => {
     expect(container.querySelector('.pdv-result-stock')?.textContent).toContain('Review stock')
   })
   it('blocks a positive total with an unknown location but preserves the normal known-stock path', async () => {
-    mocks.getItems.mockResolvedValueOnce({ items: [{ ...item, current_stock: 5, stock_loja: 5, stock_deposito: null }] })
+    mocks.getItems.mockResolvedValue({ items: [{ ...item, current_stock: 5, stock_loja: 5, stock_deposito: null }] })
     const { input } = await mountAndSearch()
     expect(container.querySelector('.pdv-result-stock')?.textContent).toContain('—')
     expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(true)
-    mocks.getItems.mockResolvedValueOnce({ items: [{ ...item, current_stock: 5, stock_loja: 5, stock_deposito: 0 }] })
+    mocks.getItems.mockResolvedValue({ items: [{ ...item, current_stock: 5, stock_loja: 5, stock_deposito: 0 }] })
     input.dispatchEvent(new Event('input', { bubbles: true })); await vi.advanceTimersByTimeAsync(300); await nextTick()
     expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(false)
     ;(container.querySelector('.pdv-result-row') as HTMLElement).click(); await nextTick()
@@ -58,7 +58,7 @@ describe('PDV quantity and checkout UI', () => {
   const known = { ...item, current_stock: 3, stock_loja: 1, stock_deposito: 2, is_active: true }
   function click(selector: string) { (container.querySelector(selector) as HTMLElement).click() }
   async function addKnown() {
-    mocks.getItems.mockResolvedValueOnce({ items: [known] })
+    mocks.getItems.mockResolvedValue({ items: [known] })
     const result = await mountAndSearch(); click('.pdv-result-row'); await nextTick(); return result
   }
   async function pay() {
@@ -115,7 +115,7 @@ describe('PDV quantity and checkout UI', () => {
     expect(usePdvStore().cart).toHaveLength(1); expect(usePdvStore().payments).toHaveLength(1)
   })
   it('reports a failed search without offering a not-found manual product flow', async () => {
-    mocks.getItems.mockRejectedValueOnce(new Error('offline'))
+    mocks.getItems.mockRejectedValue(new Error('offline'))
     await mountAndSearch()
     expect(container.querySelector('.pdv-search-error')?.textContent).toContain('Não foi possível consultar')
     expect(container.querySelector('.pdv-btn-avulso')).toBeNull()
@@ -126,7 +126,7 @@ describe('PDV quantity and checkout UI', () => {
 
 describe('PDV incomplete prices', () => {
   it('renders a missing USD price and its conversion as unknown instead of crashing or showing zero', async () => {
-    mocks.getItems.mockResolvedValueOnce({ items: [{ ...item, current_stock: 2, stock_loja: 2, stock_deposito: 0, sale_price: null, sale_currency: 'USD' }] })
+    mocks.getItems.mockResolvedValue({ items: [{ ...item, current_stock: 2, stock_loja: 2, stock_deposito: 0, sale_price: null, sale_currency: 'USD' }] })
     await mountAndSearch()
     expect(container.querySelector('.pdv-price-orig')?.textContent).toBe('U$ —')
     expect(container.querySelector('.pdv-price-gs')?.textContent).toBe('≈ G$ —')

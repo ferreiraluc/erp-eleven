@@ -7,16 +7,20 @@
         :disabled="disabled || selecting" @click="clear">×</button>
     </div>
     <template v-else>
+      <div class="customer-search-row">
       <input id="pdv-customer-search" ref="input" v-model="query" type="search" autocomplete="off"
         maxlength="120" :placeholder="text('search')" :disabled="disabled || selecting"
         role="combobox" aria-autocomplete="list" aria-controls="pdv-customer-results"
         :aria-expanded="options.length > 0" :aria-activedescendant="active >= 0 ? `pdv-customer-${active}` : undefined"
         @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
         @keydown.enter.prevent="chooseActive" @keydown.esc="invalidate" />
+      <button type="button" class="erp-button erp-button--secondary erp-button--icon" :aria-label="uiText('Novo Cliente')" :disabled="disabled || selecting" @click="openCreate">+</button>
+      </div>
       <p v-if="selecting || loading" role="status">{{ text(selecting ? 'linking' : 'loading') }}</p>
       <p v-else-if="error" class="customer-error" role="alert">{{ error }}</p>
       <p v-else-if="searched && !options.length">{{ text('empty') }}</p>
       <p v-else-if="!searched">{{ text('hint') }}</p>
+      <button v-if="createdCustomer && error" type="button" class="erp-button erp-button--sm" :disabled="disabled || selecting" @click="choose(createdCustomer)">{{ uiText('Associar cliente cadastrado') }}</button>
       <ul v-if="options.length" id="pdv-customer-results" role="listbox" :aria-label="text('customer')">
         <li v-for="(option, index) in options" :id="`pdv-customer-${index}`" :key="`${option.source}:${option.id}`"
           role="option" :aria-selected="active === index">
@@ -31,13 +35,17 @@
       <button v-if="canUseName" type="button" class="customer-name-only erp-button erp-button--ghost"
         :disabled="disabled || selecting" @click="useName">{{ text('nameOnly') }}</button>
     </template>
+    <ClienteFormModal v-if="showCreate" :is-visible="true" quick :initial-name="canUseName ? query.trim() : ''"
+      @close="showCreate = false" @saved="onCustomerCreated" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { pdvAPI, type PdvCustomerOption } from '@/services/api'
+import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
+import { uiText } from '@/i18n/uiText'
+import { pdvAPI, type Cliente, type PdvCustomerOption } from '@/services/api'
 import { usePdvEntryText } from './entryMessages'
 
 const props = defineProps<{ customerId: string | null; customerName: string | null; disabled?: boolean }>()
@@ -51,6 +59,14 @@ const query = ref(''), selectedDetails = ref(''), error = ref('')
 const options = ref<PdvCustomerOption[]>([])
 const loading = ref(false), selecting = ref(false), searched = ref(false), hasMore = ref(false), active = ref(-1)
 const input = ref<HTMLInputElement>()
+const showCreate = ref(false), createdCustomer = ref<PdvCustomerOption | null>(null)
+watch([showCreate, selecting], () => emit('busy', showCreate.value || selecting.value), { flush: 'sync' })
+function openCreate() { if (!props.disabled && !selecting.value) { invalidate(); showCreate.value = true } }
+async function onCustomerCreated(customer: Cliente) {
+  showCreate.value = false
+  createdCustomer.value = { id: customer.id, source: 'cadastro', nome: customer.nome, doc: customer.cpf || null, telefone: customer.telefone || null, ceps: [] }
+  await choose(createdCustomer.value)
+}
 let request = 0, selectionRequest = 0, timer: ReturnType<typeof setTimeout> | undefined
 const canUseName = computed(() => query.value.trim().length >= 2 && /\p{L}/u.test(query.value) && !/\d/.test(query.value))
 function details(option: PdvCustomerOption) { return [option.doc, option.telefone, ...option.ceps.map(cep => `CEP ${cep}`)].filter(Boolean).join(' · ') }
@@ -74,7 +90,7 @@ watch(query, value => {
 })
 watch(() => props.customerName, () => { if (!props.customerName) { query.value = ''; selectedDetails.value = ''; invalidate() } })
 watch([() => auth.user?.id, () => auth.token], () => {
-  selectionRequest++
+  selectionRequest++; showCreate.value = false; createdCustomer.value = null
   invalidate(); selecting.value = false; emit('busy', false); query.value = ''; selectedDetails.value = ''
 }, { flush: 'sync' })
 function clear() {
@@ -93,6 +109,7 @@ async function choose(option: PdvCustomerOption) {
     const customer = await pdvAPI.selectCustomer({ id: option.id, source: option.source })
     if (request !== current) return
     selectedDetails.value = details(option)
+    createdCustomer.value = null
     emit('update:customerId', customer.id); emit('update:customerName', customer.nome)
     query.value = ''; options.value = []
   } catch (e: any) {
@@ -122,4 +139,6 @@ onUnmounted(() => { selectionRequest++; invalidate(); emit('busy', false) })
 .customer-selected { display: flex; align-items: center; justify-content: space-between; gap: .5rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .5rem; padding: .45rem .65rem; }
 .customer-selected div { min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; font-size: .85rem; }
 .customer-name-only { margin-top: .35rem; font-size: .75rem; white-space: normal; text-align: left; }
+.customer-search-row { display: flex; align-items: center; gap: 6px; }
+.customer-search-row input { flex: 1; min-width: 0; }
 </style>

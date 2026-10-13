@@ -21,6 +21,9 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 - `frontend/src/assets/dialogs.css` e `directives/erpDialog.ts` padronizam as janelas:
   tamanhos, cabeçalho/rodapé, corpo rolável, foco e empilhamento. Os handlers de negócio
   pertencem ao módulo; ver [Modais e formulários](UI_MODAIS.md).
+- `frontend/src/stores/currency.ts` centraliza as taxas atuais e normaliza decimais
+  da API. Dashboard/PDV compartilham `components/currency/ExchangeRateModal.vue`;
+  o gestor de câmbio atualiza o mesmo estado. Taxas negociadas em pagamentos são snapshots.
 - `frontend/src/services/api.ts` centraliza Axios e os contratos dos módulos; `salesBi.ts` isola o BI.
 - `backend/app/main.py` registra routers, CORS, tratamento de erros, migrações e processos de fundo.
 - `backend/app/config.py` lê ambiente/`.env`; `database.py` configura engine, Base e sessões.
