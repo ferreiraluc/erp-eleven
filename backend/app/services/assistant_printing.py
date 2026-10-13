@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator, field_valida
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus.doctemplate import LayoutError
 
 from ..models.assistant import AssistantAction, utcnow
 from ..models.printing import PrintDevice, PrintJob, PrintSender
@@ -110,7 +111,10 @@ def render_address(payload):
     if layout.template != 'classic':
         from .address_layouts import presentation
         story = presentation(layout, fields, payload.get('remetente') if p['pais'] == 'BR' else None, doc.width - 12)
-    doc.build(story)
+    try:
+        doc.build(story)
+    except LayoutError:
+        raise ValueError('Endereço excede uma página A4. Reduza os complementos.') from None
     if doc.page != 1:
         raise ValueError('Endereço excede uma página A4. Reduza os complementos.')
     return data.getvalue()

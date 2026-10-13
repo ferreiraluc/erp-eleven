@@ -57,3 +57,13 @@ def test_historical_snapshots_keep_classic_without_template():
     old['layout'] = {'template':'classic','rotate_templates':True}
     b = PdfReader(io.BytesIO(render_address(old))).pages[0].extract_text()
     assert a == b
+
+
+@pytest.mark.parametrize('template', TEMPLATES)
+def test_oversized_blocks_fail_as_validation_errors(template):
+    args = AddressArgs(pais='BR',nome='Destinatário '*8,endereco='Rua Exemplo '*20,
+                       cidade='Cidade '*12,estado='PR',cep='85855000',remetente='test')
+    payload = dict(endereco=args.model_dump(),remetente={'nome':'Teste','linhas':['Informações do remetente ' * 6] * 10},
+                   layout=LayoutConfig(template=template,font_size=24,sender_font_size=20,margin=80).model_dump())
+    with pytest.raises(ValueError, match='página A4'):
+        render_address(payload)
