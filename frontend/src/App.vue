@@ -17,12 +17,16 @@
   </div>
 </template>
 <script setup lang="ts">
+import { watch } from 'vue'
+import { useCurrencyStore } from '@/stores/currency'
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import NotificationToast from '@/components/NotificationToast.vue'
 import AccountNavigation from '@/components/AccountNavigation.vue'
 import { logoutToLogin } from '@/services/logoutNavigation'
 const auth = useAuthStore(), router = useRouter(), route = useRoute()
+const currency = useCurrencyStore()
+watch(() => auth.isAuthenticated && auth.user?.id, id => { if (id) void currency.loadCurrentRates() }, { immediate: true })
 async function retrySession() {
   const ownerToken = auth.token
   const valid = await auth.ensureSession(true)

@@ -287,13 +287,15 @@ import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useCurrencyStore } from '@/stores/currency'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
 
 const authStore = useAuthStore()
 const { t } = useI18n()
 
 // Reactive data
-const currentRates = ref<any>(null)
+const currencyStore = useCurrencyStore()
+const currentRates = computed(() => currencyStore.currentRates)
 const historicalRates = ref<any[]>([])
 const salesAverage = ref<any>(null)
 const isLoadingHistory = ref(false)
@@ -420,7 +422,7 @@ const currentRatesDisplay = computed(() => {
 
 const loadCurrentRates = async () => {
   try {
-    currentRates.value = await exchangeRateAPI.getCurrentRates()
+    await currencyStore.loadCurrentRates()
   } catch (error) {
     console.error('Error loading current rates:', error)
   }
@@ -452,13 +454,9 @@ const performQuickUpdate = async () => {
     isUpdating.value = true
     updateError.value = null
 
-    await exchangeRateAPI.quickUpdate(quickUpdateRates.value)
+    await currencyStore.updateRatesAPI(quickUpdateRates.value)
     showQuickUpdateModal.value = false
 
-    // Small delay to ensure backend update is complete
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    await loadCurrentRates()
     await loadHistory()
     await loadSalesAverage()
 
@@ -499,6 +497,7 @@ const saveEditedRate = async () => {
     await exchangeRateAPI.editHistoricalRate(editingRate.value.id, updateData)
 
     editingRate.value = null
+    await loadCurrentRates()
     await loadHistory()
   } catch (error: any) {
     console.error('Error saving edited rate:', error)
@@ -540,12 +539,12 @@ const resetQuickUpdateForm = () => {
 }
 
 // Helper functions
-const formatDateLocal = (dateString: string) => {
+const formatDateLocal = (dateString: string | null) => {
   if (!dateString) return t('exchangeManagement.na')
   return new Date(dateString).toLocaleDateString(uiLocale(),{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'America/Sao_Paulo'})
 }
 
-const formatTime = (dateString: string) => {
+const formatTime = (dateString: string | null) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleTimeString(uiLocale(), {
     timeZone: 'America/Sao_Paulo',

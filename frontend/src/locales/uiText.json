@@ -1,5 +1,9 @@
 {
-  "Recibo": { "pt": "Recibo", "es": "Recibo", "en": "Receipt" },
+  "Recibo": {
+    "pt": "Recibo",
+    "es": "Recibo",
+    "en": "Receipt"
+  },
   "Voltar ao dashboard": {
     "pt": "Voltar ao dashboard",
     "es": "Volver al panel",
@@ -3614,5 +3618,90 @@
     "pt": "Câmbio para G$",
     "es": "Cambio a G$",
     "en": "Exchange rate to G$"
+  },
+  "Escanear código com a câmera": {
+    "pt": "Escanear código com a câmera",
+    "es": "Escanear código con la cámara",
+    "en": "Scan code with camera"
+  },
+  "Produtos recentes": {
+    "pt": "Produtos recentes",
+    "es": "Productos recientes",
+    "en": "Recent products"
+  },
+  "Carregando produtos…": {
+    "pt": "Carregando produtos…",
+    "es": "Cargando productos…",
+    "en": "Loading products…"
+  },
+  "Limpar carrinho": {
+    "pt": "Limpar carrinho",
+    "es": "Vaciar carrito",
+    "en": "Clear cart"
+  },
+  "Carregando taxas…": {
+    "pt": "Carregando taxas…",
+    "es": "Cargando tipos de cambio…",
+    "en": "Loading exchange rates…"
+  },
+  "Diminuir quantidade": {
+    "pt": "Diminuir quantidade",
+    "es": "Reducir cantidad",
+    "en": "Decrease quantity"
+  },
+  "Aumentar quantidade": {
+    "pt": "Aumentar quantidade",
+    "es": "Aumentar cantidad",
+    "en": "Increase quantity"
+  },
+  "Moeda do item": {
+    "pt": "Moeda do item",
+    "es": "Moneda del artículo",
+    "en": "Item currency"
+  },
+  "Preço unitário": {
+    "pt": "Preço unitário",
+    "es": "Precio unitario",
+    "en": "Unit price"
+  },
+  "Remover item": {
+    "pt": "Remover item",
+    "es": "Quitar artículo",
+    "en": "Remove item"
+  },
+  "Informe um preço válido.": {
+    "pt": "Informe um preço válido.",
+    "es": "Indique un precio válido.",
+    "en": "Enter a valid price."
+  },
+  "Associar cliente cadastrado": {
+    "pt": "Associar cliente cadastrado",
+    "es": "Vincular cliente registrado",
+    "en": "Link registered customer"
+  },
+  "Câmbio compartilhado em todo o ERP.": {
+    "pt": "Câmbio compartilhado em todo o ERP.",
+    "es": "Tipos de cambio compartidos en todo el ERP.",
+    "en": "Exchange rates shared throughout the ERP."
+  },
+  "Taxas salvas. Não foi possível recarregar; tente atualizar.": {
+    "pt": "Taxas salvas. Não foi possível recarregar; tente atualizar.",
+    "es": "Tipos guardados. No se pudo recargar; intente actualizar.",
+    "en": "Rates saved. Could not reload; try refreshing."
+  },
+  "CPF / RUC / C.I.": {
+    "pt": "CPF / RUC / C.I.",
+    "es": "CPF / RUC / C.I.",
+    "en": "CPF / RUC / C.I."
+  },
+  "Quantidade": {
+    "pt": "Quantidade",
+    "es": "Cantidad",
+    "en": "Quantity"
+  },
+  "Câmbio incompleto. Confira as taxas.": {
+    "pt": "Câmbio incompleto. Confira as taxas.",
+    "es": "Tipos de cambio incompletos. Revise las tasas.",
+    "en": "Exchange rates are incomplete. Review the rates."
   }
 }

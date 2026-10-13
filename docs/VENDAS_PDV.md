@@ -36,6 +36,40 @@ nos demais itens do PDV, as linhas da venda persistem em G$; os pagamentos têm
 seu próprio registro de moeda e cotação. Incluir um avulso não cadastra produto
 nem movimenta estoque.
 
+## Uso rápido no celular
+
+O botão **+** junto à busca abre o cadastro compacto de cliente: nome, telefone e
+CPF/RUC/C.I.; endereço fica em uma seção opcional. Usa o diretório Clientes e a
+mesma validação de duplicidade. Após salvar, o vínculo PDV existente é selecionado
+ou criado pelo fluxo de associação. Se a seleção falhar depois do cadastro, o botão
+**Associar cliente cadastrado** repete só o vínculo, sem cadastrar outra pessoa.
+
+A aba Produtos começa com os **8 produtos ativos mais recentes por criação**.
+Busca retorna até 20 resultados, cancela a consulta anterior e descarta respostas
+atrasadas. Usa listagem sem imagens originais e a fila/cache de miniaturas sob demanda.
+O ícone de câmera continua abrindo o leitor de código de barras.
+
+Quantidade, preço e remoção ficam na mesma linha. O símbolo do preço abre um seletor
+**U$, R$, G$ ou EUR**: troca a moeda da linha, convertendo o valor pelo câmbio vigente
+com arredondamento a centavos. Não altera o preço/moeda do catálogo. O preço continua
+editável; conversões e total respondem a cada digitação, aceitando ponto ou vírgula
+decimal. Campos vazios/inválidos não confirmam uma venda com o preço anterior.
+
+### Uma fonte de câmbio
+
+Dashboard, PDV e gestão de câmbio usam `stores/currency` e
+`GET /api/exchange-rates/current`, com os mesmos pares da tabela `exchange_rates`.
+Valores Decimal vindos como texto são convertidos para número nessa fronteira.
+O cache único `erp_rates` é apenas uma prévia; o antigo `erp_exchange_rates` é migrado
+e deixa de ser escrito. Abrir diretamente o PDV também busca as taxas atuais.
+
+O editor compartilhado `ExchangeRateModal` é exibido em `body`, fora da rolagem
+do carrinho. Carrega os valores persistidos, mostra erro/repetição e não substitui
+as taxas de EUR por constantes. Salvar altera só os campos editados e recarrega o
+estado compartilhado. Perfis e validação do servidor continuam vigentes; pagamentos
+já adicionados guardam suas cotações negociadas. A gestão de histórico continua
+separada das taxas atuais. Não altera valores históricos do PDV/BI.
+
 ## Métodos e moeda do pagamento
 
 Novos pagamentos possuem moeda obrigatória, conferida na tela e na API:
@@ -51,6 +85,10 @@ Novos pagamentos possuem moeda obrigatória, conferida na tela e na API:
 | TransferenciaPY | GS |
 | USDT | USDT |
 | Anotar (fiado) | GS, com cliente cadastrado selecionado |
+
+Nos pagamentos em dinheiro, o símbolo também permite trocar a moeda, selecionando
+o método Dinheiro correspondente e limpando o valor anterior. PIX, cartão e os
+outros métodos conservam suas moedas obrigatórias.
 
 O botão **Total** preenche o restante na moeda do método. Trocar o método limpa
 o valor ainda não adicionado, para não reinterpretar dólares como reais/guaranis.

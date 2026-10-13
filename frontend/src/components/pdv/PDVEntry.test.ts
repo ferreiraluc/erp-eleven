@@ -4,8 +4,8 @@ import { createI18n } from 'vue-i18n'
 import PDVAvulsoModal from './PDVAvulsoModal.vue'
 import PDVCustomerPicker from './PDVCustomerPicker.vue'
 
-const mocks = vi.hoisted(() => ({ searchCustomers: vi.fn(), selectCustomer: vi.fn(), auth: {} as any }))
-vi.mock('@/services/api', () => ({ pdvAPI: mocks }))
+const mocks = vi.hoisted(() => ({ searchCustomers: vi.fn(), selectCustomer: vi.fn(), createCustomer: vi.fn(), auth: {} as any }))
+vi.mock('@/services/api', () => ({ pdvAPI: mocks, clientesAPI: { create: mocks.createCustomer } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => mocks.auth }))
 let app: App | undefined, container: HTMLDivElement
 const fixture = { id: 'main-1', source: 'cadastro', nome: 'João Ávila', doc: '123.456.789-09', telefone: '+595972123456', ceps: ['85865-310'] }
@@ -120,3 +120,20 @@ describe('PDV customer picker', () => {
     expect((container.querySelector('input') as HTMLInputElement).disabled).toBe(false)
   })
 })
+
+ it('creates a directory customer once and retries only the PDV link after a selection failure', async () => {
+    mocks.createCustomer.mockResolvedValue({id:'new-directory',nome:'Novo cliente',telefone:'595123',cpf:null})
+    mocks.selectCustomer.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({id:'pdv-new',nome:'Novo cliente'})
+    const id=ref<string|null>(null), name=ref<string|null>(null)
+    mount(defineComponent({setup:()=>()=>h(PDVCustomerPicker,{customerId:id.value,customerName:name.value,
+      'onUpdate:customerId':(v:string|null)=>id.value=v,'onUpdate:customerName':(v:string|null)=>name.value=v})}))
+    ;(container.querySelector('button[aria-label="Novo Cliente"]') as HTMLButtonElement).click();await nextTick()
+    const field=document.querySelector('#customer-form-name') as HTMLInputElement
+    field.value='Novo cliente';field.dispatchEvent(new Event('input',{bubbles:true}));await nextTick()
+    document.querySelector('.modal-body')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await tick()
+    expect(mocks.createCustomer).toHaveBeenCalledOnce();expect(id.value).toBeNull()
+    const retry=Array.from(container.querySelectorAll('button')).find(b=>b.textContent?.includes('Associar cliente cadastrado'))!
+    retry.click();await tick()
+    expect(mocks.createCustomer).toHaveBeenCalledOnce();expect(id.value).toBe('pdv-new')
+    expect(mocks.selectCustomer).toHaveBeenLastCalledWith({id:'new-directory',source:'cadastro'})
+  })

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
+import { createPinia } from 'pinia'
 import i18n from '@/i18n'
 import { uiText } from '@/i18n/uiText'
 import DashboardView from './DashboardView.vue'
@@ -9,7 +10,6 @@ const { auth, getRates, getAlerts, getItems, checkHealth } = vi.hoisted(() => ({
   getRates:vi.fn(),getAlerts:vi.fn(),getItems:vi.fn(),checkHealth:vi.fn(),
 }))
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>auth}))
-vi.mock('@/stores/currency',()=>({useCurrencyStore:()=>({availableCurrencies:[],selectedCurrency:'USD'})}))
 vi.mock('vue-router',()=>({useRouter:()=>({push:vi.fn(),replace:vi.fn()})}))
 vi.mock('@/services/api',()=>({
   exchangeRateAPI:{getCurrentRates:getRates},
@@ -24,7 +24,7 @@ function deferred<T>() { let resolve!:(value:T)=>void;const promise=new Promise<
 let app:App|null=null,element:HTMLElement|null=null
 function mount() {
   element=document.createElement('div');document.body.append(element)
-  app=createApp(DashboardView);app.use(i18n);app.config.globalProperties.$tr=uiText;app.mount(element)
+  app=createApp(DashboardView);app.use(createPinia());app.use(i18n);app.config.globalProperties.$tr=uiText;app.mount(element)
 }
 function unmount(){app?.unmount();app=null;element?.remove();element=null}
 async function settle(){await vi.dynamicImportSettled();await nextTick();await Promise.resolve()}
@@ -36,7 +36,7 @@ beforeEach(()=>{
 afterEach(()=>{unmount();vi.useRealTimers()})
 
 describe('dashboard lifecycle and session isolation',()=>{
-  it('does not start polling or save late exchange rates after unmount',async()=>{
+  it('does not start page polling or dependent requests after unmount',async()=>{
     const rates=deferred<unknown>();getRates.mockReturnValue(rates.promise)
     mount();await settle();expect(getRates).toHaveBeenCalledOnce()
     unmount();rates.resolve({usd_to_pyg:7501,usd_to_brl:5.2,last_updated:'2026-09-30T18:00:00Z'});await settle()
