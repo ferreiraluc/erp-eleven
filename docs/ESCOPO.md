@@ -9,6 +9,13 @@ lançando vendas nas planilhas do OneDrive. O BI é um consumidor de resultados
 salvos; não substitui a planilha por um caixa novo nem altera seus lançamentos.
 
 O dashboard reúne estoque, rastreamentos, folgas, status do sistema e câmbio.
+No celular e tablet (até 1024px, ou até 1366px em telas de toque sem hover),
+Nova Venda, Vendas, Estoque e Clientes ficam em uma única linha abaixo do cabeçalho.
+Os demais atalhos ficam no card Ações Rápidas: Vendedores, Pedidos, Rastreamento,
+Pagadores, Assistente IA e Endereços e envios. Cada perfil continua vendo apenas
+seus acessos permitidos; os seis aparecem para Lucas. No desktop, todos os atalhos
+permanecem no card inferior, sem repetir a linha no topo. Ambos os locais usam
+`DashboardQuickActions`, com as mesmas cores, ícones e destinos.
 No celular (até 600px), o card de rastreamento lista no máximo os três envios ativos
 mais recentemente cadastrados ainda não entregues (pendentes, em trânsito ou com
 consulta não resolvida). No desktop e tablet, conserva os últimos 12 rastreios

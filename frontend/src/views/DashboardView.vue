@@ -83,6 +83,7 @@
     <!-- Main Content -->
     <main class="dashboard-main">
       <div class="dashboard-content">
+        <DashboardQuickActions primary-only />
 
         <!-- Row 1: Large Inventory Card + Rastreamento -->
         <div class="main-top-grid">
@@ -175,75 +176,7 @@
         <!-- Row 2: Quick Actions compact strip -->
         <div class="quick-strip-card">
           <p class="quick-strip-title">{{ $tr("Ações Rápidas") }}</p>
-          <div class="quick-strip">
-            <button class="quick-btn q-primary erp-control" @click="navigateToNewSale">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span>{{ $tr("Nova Venda") }}</span>
-            </button>
-            <button class="quick-btn q-primary erp-control" @click="router.push('/vendas-pdv')">
-              <div class="quick-btn-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3h8l4 4v14l-4-2-4 2-4-2-4 2V3h4zm0 6h8m-8 4h8" /></svg></div>
-              <span>{{ $tr("Vendas") }}</span>
-            </button>
-            <button class="quick-btn q-orange erp-control" @click="navigateToInventory">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <span>{{ $tr("Estoque") }}</span>
-            </button>
-            <button class="quick-btn q-green erp-control" @click="navigateToVendors">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <span>{{ $tr("Vendedores") }}</span>
-            </button>
-            <button class="quick-btn q-purple erp-control" @click="navigateToPedidos">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-              <span>{{ $tr("Pedidos") }}</span>
-            </button>
-            <button class="quick-btn q-teal erp-control" @click="navigateToRastreamento">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <span>{{ $tr("Rastreamento") }}</span>
-            </button>
-            <button class="quick-btn q-indigo erp-control" @click="navigateToClientes">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <span>{{ $tr("Clientes") }}</span>
-            </button>
-            <button v-if="!authStore.ownSales" class="quick-btn q-amber erp-control" @click="router.push('/fiado')">
-              <div class="quick-btn-icon">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <span>{{ $tr("Pagadores") }}</span>
-            </button>
-            <button v-if="authStore.user?.role === 'ADMIN'" class="quick-btn q-indigo erp-control" @click="router.push('/assistente')">
-              <div class="quick-btn-icon" aria-hidden="true">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H9l-5 2V6a2 2 0 012-2z" /></svg>
-              </div>
-              <span>{{ $tr("Assistente IA") }}</span>
-            </button>
-          </div>
+          <DashboardQuickActions />
         </div>
 
         <div v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="operation-summary-grid">
@@ -412,6 +345,7 @@ import { useCurrencyStore } from '@/stores/currency'
 import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
+import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions.vue'
 import AddressSummaryCard from '@/components/dashboard/AddressSummaryCard.vue'
 import SalesSummaryCard from '@/components/dashboard/SalesSummaryCard.vue'
 import AccountNavigation from '@/components/AccountNavigation.vue'
@@ -545,32 +479,12 @@ const navigateToExchangeRates = () => {
   router.push('/exchange-rates')
 }
 
-const navigateToVendors = () => {
-  router.push('/vendors')
-}
-
 const navigateToInventory = () => {
   router.push('/inventory')
 }
 
 const navigateToNewProduct = () => {
   router.push('/inventory?new=1')
-}
-
-const navigateToPedidos = () => {
-  router.push('/pedidos')
-}
-
-const navigateToNewSale = () => {
-  router.push('/pdv')
-}
-
-const navigateToClientes = () => {
-  router.push('/clientes')
-}
-
-const navigateToRastreamento = () => {
-  router.push('/rastreamento')
 }
 
 const loadExchangeRates = () => currencyStore.loadCurrentRates()
@@ -854,54 +768,6 @@ onUnmounted(() => {
   letter-spacing: 0.07em;
   margin: 0 0 0.625rem;
 }
-
-.quick-strip {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.5rem;
-}
-
-.quick-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.625rem 0.375rem;
-  border: none;
-  border-radius: 0.625rem;
-  cursor: pointer;
-  gap: 0.375rem;
-  transition: all 0.15s;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-.quick-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-
-.quick-btn-icon {
-  width: 2.125rem;
-  height: 2.125rem;
-  background: rgba(0,0,0,0.07);
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.quick-btn-icon svg { width: 1.1rem; height: 1.1rem; stroke: currentColor; }
-
-.q-primary { background: #eff6ff; color: #2563eb; }
-.q-primary:hover { background: #dbeafe; }
-.q-orange  { background: #fff7ed; color: #ea580c; }
-.q-orange:hover  { background: #fed7aa; }
-.q-green   { background: #f0fdf4; color: #16a34a; }
-.q-green:hover   { background: #dcfce7; }
-.q-purple  { background: #faf5ff; color: #9333ea; }
-.q-purple:hover  { background: #f3e8ff; }
-.q-teal    { background: #f0fdfa; color: #0d9488; }
-.q-teal:hover    { background: #ccfbf1; }
-.q-indigo  { background: #eef2ff; color: #4338ca; }
-.q-indigo:hover  { background: #e0e7ff; }
-.q-amber   { background: #fffbeb; color: #d97706; }
-.q-amber:hover   { background: #fef3c7; }
 
 /* ── Bottom Grid (merged Folgas + Status + Exchange) ─────────────────── */
 .bottom-grid {
@@ -1283,9 +1149,6 @@ onUnmounted(() => {
   }
   .bottom-grid {
     grid-template-columns: 1fr;
-  }
-  .quick-strip {
-    grid-template-columns: repeat(3, 1fr);
   }
   /* Account navigation wraps while the compact preference controls stay together. */
   .header-content { padding: .75rem; align-items: flex-start; flex-wrap: wrap; }
@@ -2619,9 +2482,6 @@ onUnmounted(() => {
   .main-top-grid {
     grid-template-columns: 1fr;
   }
-  .quick-strip {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .bottom-grid {
     grid-template-columns: 1fr;
   }
@@ -2676,6 +2536,10 @@ onUnmounted(() => {
 </style>
 
 <style scoped>
+@media (max-width: 1024px), (max-width: 1366px) and (hover: none) and (pointer: coarse) {
+  .dashboard-content { gap: 1rem; }
+  .dashboard-main { padding-top: 1rem; }
+}
 .operation-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:stretch}
 @media(max-width:900px){.operation-summary-grid{grid-template-columns:1fr}}
 </style>
