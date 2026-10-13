@@ -10,13 +10,13 @@
   "background_color": "#101f2c",
   "icons": [
     {
-      "src": "/icons/eleven-midnight-v2-192.png",
+      "src": "/icons/eleven-midnight-v3-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/eleven-midnight-v2-512.png",
+      "src": "/icons/eleven-midnight-v3-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
