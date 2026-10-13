@@ -63,6 +63,23 @@ Node 25 apresentou incompatibilidade com `vite-plugin-vue-devtools` no ambiente 
 Use Node 22; `--mode test` é útil apenas para uma prévia isolada sem esse plugin.
 Não é necessário instalar outro framework de frontend.
 
+## Ícone do navegador e tela inicial
+
+`frontend/index.html` declara o ícone Eleven dourado/azul midnight, os tamanhos
+Apple touch (152/167/180px) e `public/site.webmanifest` com ícones Android 192/512px.
+O atalho tem nome Eleven e inicia em `/#/dashboard`, passando pela autenticação
+normal. O manifesto permite apresentação standalone nos navegadores compatíveis.
+Isso não adiciona service worker, armazenamento offline ou cache de dados do ERP.
+
+A matriz, o prompt e as instruções de exportação estão em
+[`frontend/branding/README.md`](../frontend/branding/README.md). Os PNGs têm nomes
+versionados; o ICO e o manifesto têm versão na referência do HTML. Atalhos já
+salvos podem conservar a imagem anterior: remova apenas o atalho e adicione o site
+novamente à tela inicial. Não é necessário apagar dados do navegador.
+
+Referências: [Apple touch icons](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html)
+e [ícones do manifesto](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons).
+
 ## Verificações
 
 Da raiz, em macOS/Linux:
