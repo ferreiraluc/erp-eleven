@@ -65,7 +65,8 @@ Não é necessário instalar outro framework de frontend.
 
 ## Ícone do navegador e tela inicial
 
-`frontend/index.html` declara o ícone Eleven dourado/azul midnight, os tamanhos
+`frontend/index.html` declara o ícone ELEVEN dourado/azul midnight, com letras
+maiúsculas, altas e espessas (arte v2), os tamanhos
 Apple touch (152/167/180px) e `public/manifest.json` com ícones Android 192/512px.
 A extensão `.json` garante resposta `application/json` no site estático Render.
 O atalho tem nome Eleven e inicia em `/#/dashboard`, passando pela autenticação
