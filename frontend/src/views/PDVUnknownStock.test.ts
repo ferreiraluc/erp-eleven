@@ -134,3 +134,34 @@ describe('PDV incomplete prices', () => {
     expect(container.querySelector('.pdv-result-row')).not.toBeNull()
   })
 })
+
+describe('PDV catalog after clearing the cart', () => {
+  it('keeps recent prices and stock usable across repeated cart clearing', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    try {
+      mocks.getItems.mockResolvedValue({ items: [{ ...item, sale_price: '100.50', sale_currency: 'USD', current_stock: 2, stock_loja: 2, stock_deposito: 0 }] })
+      await mountAndSearch()
+      for (let round = 0; round < 2; round++) {
+        expect(container.querySelector('.pdv-result-price')?.textContent).toContain('U$ 100,5')
+        expect(container.querySelector('.pdv-result-price')?.textContent).toContain('G$ 753.750')
+        ;(container.querySelector('.pdv-result-add') as HTMLButtonElement).click(); await nextTick()
+        expect(usePdvStore().cart[0].original_price).toBe(100.5)
+        ;(container.querySelector('.pdv-cart-clear') as HTMLButtonElement).click(); await nextTick()
+        expect(usePdvStore().cart).toEqual([])
+        expect(container.querySelector('.pdv-result-stock')?.textContent).toContain('Disponível: 2')
+        expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(false)
+      }
+      expect(mocks.createSale).not.toHaveBeenCalled()
+    } finally { confirm.mockRestore() }
+  })
+
+  it.each([null, '', ' ', 'invalid', 'NaN', 'Infinity', '-1', false])('does not turn an invalid catalog price %s into a free product', async sale_price => {
+    mocks.getItems.mockResolvedValue({ items: [{ ...item, sale_price, current_stock: 1, stock_loja: 1, stock_deposito: 0 }] })
+    const { input } = await mountAndSearch()
+    expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(true)
+    ;(container.querySelector('.pdv-result-row') as HTMLElement).click()
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await nextTick()
+    expect(usePdvStore().cart).toEqual([])
+    expect(mocks.createSale).not.toHaveBeenCalled()
+  })
+})

@@ -80,6 +80,7 @@ describe('PDV customer picker', () => {
     expect(state.id.value).toBe('pdv-1'); expect(state.name.value).toBe('João Ávila')
     ;(container.querySelector('.customer-selected button') as HTMLButtonElement).click(); await nextTick()
     expect(state.id.value).toBeNull(); expect(state.name.value).toBeNull()
+    expect(document.activeElement).not.toBe(container.querySelector('input'))
   })
   it('debounces search, discards stale responses and never treats a telephone as a name', async () => {
     let finish!: (value: any) => void
@@ -137,3 +138,12 @@ describe('PDV customer picker', () => {
     expect(mocks.createCustomer).toHaveBeenCalledOnce();expect(id.value).toBe('pdv-new')
     expect(mocks.selectCustomer).toHaveBeenLastCalledWith({id:'new-directory',source:'cadastro'})
   })
+
+it('opens manual item entry without focusing a text input automatically', async () => {
+  mount(PDVAvulsoModal)
+  await nextTick()
+  expect(document.activeElement?.tagName).not.toBe('INPUT')
+  const name = container.querySelector('input[type=text]') as HTMLInputElement
+  name.focus()
+  expect(document.activeElement).toBe(name)
+})

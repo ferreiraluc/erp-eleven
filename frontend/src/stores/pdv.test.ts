@@ -166,3 +166,25 @@ describe('PDV stock conservation', () => {
     expect(pdv.checkoutUncertain).toBe(false); expect(pdv.cart[0].is_avulso).toBe(true)
   })
 })
+
+describe('discarding a PDV draft', () => {
+  it('releases reservations and keeps known catalog stock available for another cart', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addPayment(payment)
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBe(2)
+    pdv.clearCart()
+    expect(pdv.cart).toEqual([]); expect(pdv.payments).toEqual([])
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBe(3)
+    pdv.addItem(catalog)
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBe(2)
+  })
+
+  it('expires balances when an uncertain checkout draft is discarded', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.checkoutUncertain = true
+    pdv.clearCart()
+    expect(pdv.checkoutUncertain).toBe(false)
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBeNull()
+    expect(() => pdv.addItem(catalog)).toThrow('unknownStock')
+  })
+})

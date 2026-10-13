@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
 import { uiText } from '@/i18n/uiText'
@@ -96,7 +96,7 @@ watch([() => auth.user?.id, () => auth.token], () => {
 function clear() {
   if (props.disabled || selecting.value) return
   emit('update:customerId', null); emit('update:customerName', null)
-  query.value = ''; selectedDetails.value = ''; invalidate(); nextTick(() => input.value?.focus())
+  query.value = ''; selectedDetails.value = ''; invalidate()
 }
 function move(step: number) { if (options.value.length) active.value = (active.value + step + options.value.length) % options.value.length }
 function chooseActive() { if (active.value >= 0 && options.value[active.value]) void choose(options.value[active.value]) }
