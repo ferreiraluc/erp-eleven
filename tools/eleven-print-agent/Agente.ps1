@@ -33,6 +33,7 @@ function Process-Job($record, $recordPath, $pdf) {
         if (-not (Test-Path -LiteralPath $config.sumatra)) { throw 'Sumatra ausente' }
         if ($config.profile -eq 'tickets') {
             if ($record.profile -ne 'tickets') { throw 'Trabalho sem perfil de ticket.' }
+            if ($record.paper_mode -eq 'continuous' -and -not (Test-Path -LiteralPath (Join-Path $root 'TicketContinuo.ps1'))) { throw 'Atualize o Eleven Tickets para bobina continua.' }
             $printerSettings = New-Object Drawing.Printing.PrinterSettings
             $printerSettings.PrinterName = $config.printer
             $paper = $printerSettings.DefaultPageSettings.PaperSize
@@ -45,6 +46,14 @@ function Process-Job($record, $recordPath, $pdf) {
     }
     $dispatch = {
         param($entry, $path, $document)
+        if ($config.profile -eq 'tickets' -and $entry.paper_mode -eq 'continuous') {
+            $helper = Join-Path $root 'TicketContinuo.ps1'
+            # EncodedCommand avoids interpolating printer/file names into shell code.
+            $command = "& '" + $helper.Replace("'", "''") + "' -Pdf '" + $document.Replace("'", "''") + "' -Printer '" + $config.printer.Replace("'", "''") + "' -WidthMm " + [int]$entry.paper_width_mm + ' -HeightMm ' + [int]$entry.paper_height_mm
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+            Invoke-Renderer $entry $path "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $encoded"
+            return
+        }
         $printSettings = Get-PrintSettings $config.profile
         $arguments = '-print-to "' + $config.printer + '" -print-settings "' + $printSettings + '" -silent "' + $document + '"'
         Invoke-Renderer $entry $path $config.sumatra $arguments
@@ -91,7 +100,8 @@ try {
                 $connection = Api 'POST' 'connect' @{ name = $name; profile = $profile }
                 if ($profile -eq 'tickets') {
                     if ($connection.profile -ne 'tickets') { throw 'Servidor nao habilitado para tickets.' }
-                    Write-Host "Papel ERP: $($connection.paper_width_mm) x $($connection.paper_height_mm) mm. Confira o mesmo tamanho no driver Zebra."
+                    if ($connection.paper_height_mm -eq 0) { Write-Host "Papel ERP: bobina continua $($connection.paper_width_mm) mm | altura automatica | Zebra ZPL 203 dpi." }
+                    else { Write-Host "Papel ERP: $($connection.paper_width_mm) x $($connection.paper_height_mm) mm. Confira o mesmo tamanho no driver Zebra." }
                 }
                 $connected = $true
                 Write-Host 'Conectado. Destino atualizado no ERP e no bot.'
@@ -108,13 +118,13 @@ try {
                 }
                 Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
             }
-            $job = Api 'POST' 'claim'
+            $job = Api 'POST' 'claim?continuous_tickets=true'
             if ($job) {
                 $id = [Guid]::Parse($job.id).ToString()
                 $recordPath = Join-Path $journal "$id.json"
                 if (Test-Path -LiteralPath $recordPath) { throw 'Trabalho repetido recusado.' }
                 $pdf = Join-Path $journal "$id.pdf"
-                $record = @{ id = $id; status = 'preparing'; sha256 = $job.sha256; acked = $false; profile = $job.profile; paper_width_mm = $job.paper_width_mm; paper_height_mm = $job.paper_height_mm }
+                $record = @{ id = $id; status = 'preparing'; sha256 = $job.sha256; acked = $false; profile = $job.profile; paper_mode = $job.paper_mode; paper_width_mm = $job.paper_width_mm; paper_height_mm = $job.paper_height_mm }
                 Save-Journal $recordPath $record
                 Process-Job $record $recordPath $pdf
                 Acknowledge $recordPath $record

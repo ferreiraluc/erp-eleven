@@ -183,6 +183,7 @@ def test_ticket_installer_is_distinct_and_has_no_credential(tickets):
         assert b"$AgentProfile = 'tickets'" in installer
         assert b"$AgentProfile = 'documents'" not in installer
         assert b'-NoExit' in installer
+        assert 'Eleven-Impressao/TicketContinuo.ps1' in package.namelist()
         assert not any(name.endswith(('config.json','.env')) for name in package.namelist())
 
 

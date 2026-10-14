@@ -6,7 +6,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     Read-Host 'Pressione Enter para fechar'
     return
 }
-$script:AgentVersion = '2026.10.14.2'
+$script:AgentVersion = '2026.10.14.3'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"
@@ -123,6 +123,11 @@ function Get-PrintSettings([string]$Profile) {
 function Test-TicketPaper($record, $paperWidthHundredths, $paperHeightHundredths) {
     if ($record.profile -ne 'tickets') { return $true }
     if (-not $record.paper_width_mm -or -not $record.paper_height_mm) { return $false }
+    # Native ZPL carries its own width/length and continuous sensor mode, bypassing
+    # the Windows driver's fixed-label pagination. Do not send this through Sumatra.
+    if ($record.paper_mode -eq 'continuous') {
+        return ($record.paper_width_mm -ge 50 -and $record.paper_width_mm -le 104 -and $record.paper_height_mm -ge 50 -and $record.paper_height_mm -le 991)
+    }
     $width = $paperWidthHundredths * 0.254
     $height = $paperHeightHundredths * 0.254
     return ([Math]::Abs($width - $record.paper_width_mm) -le 1.5 -and [Math]::Abs($height - $record.paper_height_mm) -le 1.5)

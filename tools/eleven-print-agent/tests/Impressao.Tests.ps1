@@ -9,6 +9,10 @@ Assert (Test-TicketPaper $ticket 236 315) '60x80 mm paper refused'
 Assert (-not (Test-TicketPaper $ticket 315 236)) 'Rotated driver paper must be corrected explicitly'
 Assert (-not (Test-TicketPaper $ticket 827 1169)) 'A4 must never accept receipt jobs'
 Assert (Test-TicketPaper @{} 827 1169) 'Legacy A4 validation changed'
+$roll = @{ profile='tickets';paper_width_mm=80;paper_height_mm=155;paper_mode='continuous' }
+Assert (Test-TicketPaper $roll 236 315) 'Continuous ZPL must use per-job media, not old label defaults'
+$roll.paper_height_mm=992
+Assert (-not (Test-TicketPaper $roll 236 315)) 'ZD220 maximum length must be respected'
 $folder = Join-Path ([IO.Path]::GetTempPath()) ('eleven-print-test-' + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $folder | Out-Null
 try {
