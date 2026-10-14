@@ -5,6 +5,13 @@ Nova Venda. Consulta exclusivamente `PdvSale`. `/vendas` conserva os lançamento
 operacionais antigos; `/bi-vendas` conserva as planilhas. Nenhuma destas operações
 altera Excel, cria conciliações automáticas ou soma receitas entre fontes.
 
+**Ver venda** no histórico do cliente abre os detalhes no gestor por um vínculo
+`/vendas-pdv?sale_id=…`, inclusive para vendas fora da página atual. Fechar o modal
+remove apenas esse parâmetro; voltar/avançar no navegador acompanha a seleção.
+A API de detalhes continua conferindo o acesso do vendedor. O atalho não concede
+edição, estorno ou exclusão: essas operações continuam exclusivas do Lucas, com
+prévia, confirmação e idempotência.
+
 ## Cliente e moeda na nova venda
 
 Em `/pdv`, busque o cliente por **nome, telefone, documento (CPF/RUC/C.I.) ou CEP**.

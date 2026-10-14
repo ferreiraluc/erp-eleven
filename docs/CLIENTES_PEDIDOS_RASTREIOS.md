@@ -24,7 +24,14 @@ O histórico expandido acompanha o conteúdo, sem limite de altura que corte eve
 - Em **Clientes**, Ativos é a seleção inicial; Inativos mostra apenas os cadastros
   desativados e Todos inclui os dois estados. A busca respeita a seleção. A API
   mantém ativos como padrão e aceita `include_inactive=true` para consultar ambos.
-  Falha de consulta oferece tentar novamente, sem tratar a falha como lista vazia.
+  A tela consulta páginas de 20 clientes, com busca e filtro aplicados antes da
+  contagem no servidor. O total cobre o diretório completo, inclusive cadastros
+  além dos primeiros 200; cadastros consolidados continuam fora de todas as listas.
+  Mudar a busca ou o estado retorna à primeira página. Respostas atrasadas não
+  substituem a seleção atual, inclusive durante a espera curta da busca.
+  Falha oferece tentar novamente na página solicitada, sem exibir total antigo
+  ou tratar a falha como lista vazia. Se a última página ficar vazia após uma
+  inativação, a tela retorna à última página existente.
 - Em **Clientes**, abra o histórico do cliente: o painel reúne pedidos, pacotes,
   entregues e em trânsito. Há paginação independente das duas listas. O mesmo painel
   reúne os endereços, impressões A4 e etiquetas, com data, situação e responsável.
@@ -116,6 +123,9 @@ vinculado ao endereço usado na emissão. A migração `a7b8c9d0e1f2` cria
 
 API relevante (autenticação obrigatória):
 
+- `GET /api/clientes/pagina`: `items`, `total`, `page`, `page_size`; aceita busca
+  literal por nome, telefone, documento, e-mail e endereço, além dos filtros de
+  estado. A rota `/api/clientes/` mantém seu contrato anterior em lista.
 - `GET /api/clientes/{id}/logistica`: resumo e listas paginadas.
 - `GET /api/clientes/{id}/historico-enderecos`: utilizações paginadas de todos os
   endereços vinculados, inclusive IDs antigos consolidados, sem contar o mesmo uso duas vezes.

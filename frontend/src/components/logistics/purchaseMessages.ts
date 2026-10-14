@@ -5,7 +5,7 @@ export const purchaseMessages = {
     own: 'Você está consultando apenas suas vendas.', sales: 'Vendas registradas', net: 'Valor líquido no ERP',
     refunds: 'Estornos registrados', cancelled: 'Canceladas', empty: 'Nenhuma compra vinculada disponível no seu acesso.',
     account: 'Conta PDV', seller: 'Vendedor', snapshot: 'Nome na venda', original: 'Total da venda', refund: 'Estorno',
-    items: 'Ver itens ({count})', returned: 'Devolvido: {count}', previous: 'Anterior', next: 'Próxima',
+    items: 'Ver itens ({count})', returned: 'Devolvido: {count}', previous: 'Anterior', next: 'Próxima', openSale: 'Ver venda',
     states: { completed: 'Concluída', partially_refunded: 'Devolução parcial', refunded: 'Estornada', cancelled: 'Cancelada' },
   },
   es: {
@@ -14,7 +14,7 @@ export const purchaseMessages = {
     own: 'Está consultando solo sus ventas.', sales: 'Ventas registradas', net: 'Valor neto en el ERP',
     refunds: 'Reversiones registradas', cancelled: 'Canceladas', empty: 'No hay compras vinculadas disponibles para su acceso.',
     account: 'Cuenta PDV', seller: 'Vendedor', snapshot: 'Nombre en la venta', original: 'Total de la venta', refund: 'Reversión',
-    items: 'Ver artículos ({count})', returned: 'Devuelto: {count}', previous: 'Anterior', next: 'Siguiente',
+    items: 'Ver artículos ({count})', returned: 'Devuelto: {count}', previous: 'Anterior', next: 'Siguiente', openSale: 'Ver venta',
     states: { completed: 'Completada', partially_refunded: 'Devolución parcial', refunded: 'Revertida', cancelled: 'Cancelada' },
   },
   en: {
@@ -23,7 +23,7 @@ export const purchaseMessages = {
     own: 'You are viewing only your sales.', sales: 'Recorded sales', net: 'Net amount in ERP',
     refunds: 'Recorded reversals', cancelled: 'Cancelled', empty: 'No linked purchases are available within your access.',
     account: 'POS account', seller: 'Seller', snapshot: 'Name on sale', original: 'Sale total', refund: 'Reversal',
-    items: 'View items ({count})', returned: 'Returned: {count}', previous: 'Previous', next: 'Next',
+    items: 'View items ({count})', returned: 'Returned: {count}', previous: 'Previous', next: 'Next', openSale: 'View sale',
     states: { completed: 'Completed', partially_refunded: 'Partially returned', refunded: 'Reversed', cancelled: 'Cancelled' },
   },
 }

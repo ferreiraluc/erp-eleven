@@ -64,9 +64,11 @@ computador da loja busca trabalhos por HTTPS; o laptop de desenvolvimento não �
 servidor de impressão.
 
 O histórico de Clientes reúne também compras do PDV vinculadas explicitamente,
-com itens, devoluções e valores separados do BI. O acesso pessoal dos vendedores
-é aplicado antes dos resumos e da paginação. Pedidos usam busca e paginação no
-servidor, incluindo registros antigos além da primeira página.
+com itens, devoluções, atalho aos detalhes da venda e valores separados do BI.
+O acesso pessoal dos vendedores é aplicado antes dos resumos e da paginação.
+Clientes e Pedidos usam busca e paginação no servidor, incluindo registros antigos
+além da primeira página. Criação de grades e duplicação preservam os locks e leem
+a foto original somente do produto de origem, reduzindo a memória da operação.
 
 ## Começar pela documentação certa
 

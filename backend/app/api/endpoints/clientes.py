@@ -8,7 +8,7 @@ from ...models.cliente import Cliente
 from ...models.pedido import Pedido
 from ...models.rastreamento import Rastreamento, RastreamentoStatus
 from ...models.usuario import Usuario
-from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate
+from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate, ClientePage
 from ...schemas.pedido import PedidoResponse
 from ...schemas.customer_links import CustomerLinkRequest, CustomerLogisticsResponse, CustomerPurchasesResponse
 from ...schemas.rastreamento import RastreamentoComPedido
@@ -58,6 +58,31 @@ def listar_clientes(
             )
         )
     return query.order_by(Cliente.nome).offset(skip).limit(limit).all()
+
+
+@router.get("/pagina", response_model=ClientePage)
+def listar_pagina_clientes(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: str = Query('', max_length=200),
+    ativo: Optional[bool] = Query(True),
+    include_inactive: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Count and page the complete filtered directory, excluding merged aliases."""
+    query = db.query(Cliente).filter(Cliente.merged_into_id.is_(None))
+    if not include_inactive and ativo is not None:
+        query = query.filter(Cliente.ativo == ativo)
+    term = search.strip()
+    if term:
+        pattern = '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = query.filter(or_(*(column.ilike(pattern, escape='\\') for column in (
+            Cliente.nome, Cliente.email, Cliente.telefone, Cliente.cpf, Cliente.endereco,
+        ))))
+    total = query.count()
+    rows = query.order_by(Cliente.nome, Cliente.id).offset((page - 1) * page_size).limit(page_size).all()
+    return {'items': rows, 'total': total, 'page': page, 'page_size': page_size}
 
 
 @router.post("/", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)

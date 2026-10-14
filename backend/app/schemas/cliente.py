@@ -35,6 +35,13 @@ class ClienteResponse(ClienteBase):
         from_attributes = True
 
 
+class ClientePage(BaseModel):
+    items: list[ClienteResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class ClienteSimple(BaseModel):
     id: uuid.UUID
     nome: str
