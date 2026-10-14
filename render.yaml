@@ -59,10 +59,7 @@ services:
       - path: /*
         name: Referrer-Policy
         value: no-referrer
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    # Production uses /#/ routes. Missing assets must return 404, never index.html.
     envVars:
       - key: NODE_ENV
         value: production
