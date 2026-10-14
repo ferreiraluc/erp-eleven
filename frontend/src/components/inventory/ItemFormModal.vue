@@ -969,17 +969,20 @@ watch(() => form.category, (cat) => {
 
 // Barcode duplicate check
 let barcodeTimer: ReturnType<typeof setTimeout> | null = null
-watch(() => form.barcode, (val) => {
+watch(() => form.barcode, (val, _previous, onCleanup) => {
+  let current = true
+  onCleanup(() => { current = false })
   if (barcodeTimer) clearTimeout(barcodeTimer)
   barcodeDuplicateWarning.value = false
   if (!val) return
   barcodeTimer = setTimeout(async () => {
     try {
       const items = await inventoryAPI.getByBarcode(val, false)
+      if (!current || disposed) return
       barcodeDuplicateWarning.value = items.filter((i: InventoryItem) => i.id !== props.item?.id).length > 0
     } catch {}
   }, 500)
-})
+}, { flush: 'sync' })
 
 function validate(includeStock = true) {
   Object.keys(errors).forEach(k => delete errors[k])
