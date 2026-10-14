@@ -55,7 +55,41 @@ selecionar um cliente na nova venda (ver [Vendas PDV](VENDAS_PDV.md)). A consoli
 move esse vínculo sem unir saldos ou alterar snapshots de vendas anteriores.
 O servidor valida a consistência cliente/pedido/pacote, inclusive fora da interface.
 
+## Compras do PDV no histórico do cliente
+
+O histórico em **Clientes** inclui **Compras no PDV**, com paginação própria,
+situação, vendedor, data em Brasília, itens e quantidades devolvidas. Cada venda
+mostra a conta PDV de origem e o nome registrado na venda. A associação considera
+exclusivamente `PdvCliente.cadastro_cliente_id`; nomes iguais ou vendas avulsas
+sem conta selecionada não criam vínculos. Contas PDV inativas mantêm suas compras
+visíveis. Consultar um cliente consolidado resolve o cadastro principal.
+
+O resumo considera todas as vendas visíveis desse cliente, inclusive quando a
+lista está paginada. Valor líquido desconta estornos e considera canceladas como
+zero, inclusive cancelamentos antigos sem valor de estorno registrado. Vendas
+excluídas ficam no histórico reservado do gestor de vendas. O filtro de vendas
+pessoais é aplicado no backend antes da contagem, dos totais e da paginação.
+
+Essa consulta não cria vendas, clientes ou vínculos, não reúne saldos de fiado e
+não soma receitas do BI ou das vendas operacionais. Os snapshots da venda e as
+contas PDV permanecem separados. A API é
+`GET /api/clientes/{id}/compras-pdv?page=1&page_size=20` (limite de 100 por página).
+Os testes `test_customer_purchases.py` cobrem homônimos, escopo financeiro,
+paginação, estornos, aliases, contas inativas e ausência de escritas na consulta.
+
 ## Estado dos pedidos
+
+A lista de Pedidos consulta a página solicitada no servidor (20 por vez), com
+busca por número, cliente, endereço ou código, status e tag antes de contar e
+paginar. Pedidos antigos continuam pesquisáveis, mesmo além dos primeiros cem.
+A rota `GET /api/pedidos/pagina` fornece `items`, `total`, `page` e `page_size`;
+a rota de listagem anterior conserva seu contrato para outros consumidores.
+Consultas atrasadas não substituem filtros mais recentes e falhas oferecem
+Tentar novamente. Links com `pedido_id` abrem o cadastro mesmo fora da página.
+
+O atalho Rastreamento da lista e dos detalhes abre a tela existente filtrada pelo
+código (ou destinatário quando não há código). Esse atalho apenas consulta;
+criar um novo rastreio continua exigindo o formulário e sua confirmação.
 
 O estado logístico considera todos os pacotes ativos do pedido:
 

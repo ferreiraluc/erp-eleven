@@ -28,6 +28,7 @@
         </section>
       </div>
     </template>
+    <CustomerPurchasesHistory :customer-id="customer.id" />
     <AddressUsageHistory :customer="customer" @freight="openFreight" @print="openPrint" />
     <p v-if="pdfError" role="alert" class="link-error">{{ t('error') }}</p>
     <details v-if="customer.ativo" class="link-form">
@@ -55,6 +56,7 @@ import api, { pedidosAPI, type Cliente, type Pedido } from '@/services/api'
 import { customerLogisticsAPI, type CustomerLogistics, type CustomerParcel } from '@/services/customerLogistics'
 import { useRouter } from 'vue-router'
 import AddressUsageHistory from '@/components/addresses/AddressUsageHistory.vue'
+import CustomerPurchasesHistory from './CustomerPurchasesHistory.vue'
 import { messages } from './messages'
 const router=useRouter()
 const pdfError=ref(false)

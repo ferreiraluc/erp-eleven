@@ -10,11 +10,12 @@ from ...models.rastreamento import Rastreamento, RastreamentoStatus
 from ...models.usuario import Usuario
 from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate
 from ...schemas.pedido import PedidoResponse
-from ...schemas.customer_links import CustomerLinkRequest, CustomerLogisticsResponse
+from ...schemas.customer_links import CustomerLinkRequest, CustomerLogisticsResponse, CustomerPurchasesResponse
 from ...schemas.rastreamento import RastreamentoComPedido
 from ...services.customer_links import customer_shipments, inherit_order_customer, validate_tracking_links, lock_tracking_row
 from ...services.customer_maintenance import resolve_customer
 from ...services.customer_identity import find_customer
+from ...services.customer_purchases import customer_purchases
 from ...services.address_book import lock_addresses
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
@@ -243,6 +244,16 @@ def vincular_ao_cliente(
         row.cliente_id = customer_id
     db.commit()
     return {"linked": True, "kind": link.kind, "target_id": link.target_id, "cliente_id": customer_id}
+
+
+@router.get("/{cliente_id}/compras-pdv", response_model=CustomerPurchasesResponse)
+def compras_pdv_do_cliente(
+    cliente_id: str,
+    page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user),
+):
+    customer_id = _customer(db, validate_uuid(cliente_id)).id
+    return customer_purchases(db, customer_id, current_user, page=page, page_size=page_size)
 
 
 @router.get("/{cliente_id}/historico-enderecos")

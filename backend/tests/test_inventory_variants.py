@@ -1,5 +1,6 @@
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from threading import Barrier
 
 import pytest
@@ -14,7 +15,7 @@ from app.database import Base
 from app.models import Usuario, Vendedor
 from app.models.inventory import Item, Supplier, StockMovement
 from app.services import inventory_variants as service
-from app.schemas.inventory_variants import VariantCreateRequest
+from app.schemas.inventory_variants import VariantCreateRequest, VariantSummary
 
 
 def source(factory, user_id, **values):
@@ -74,6 +75,50 @@ def test_grade_ignores_existing_sizes_and_unrelated_same_barcode(manager_stock_a
         rows = db.query(Item).filter(Item.size.in_(['10', '11'])).all()
         assert all(row.barcode is None and row.current_stock == 0 for row in rows)
         assert db.query(StockMovement).count() == 0
+
+
+@pytest.mark.parametrize('peer_count', [1, 40])
+def test_variant_preview_loads_only_source_photo_and_preserves_member_identity(manager_stock_app, peer_count):
+    factory, client, user_id = manager_stock_app
+    item_id = source(factory, user_id, group_key='preview-grade')
+    with factory() as db:
+        original = db.get(Item, item_id)
+        original_photo = original.image_data
+        version = service.source_version(original)
+        peers = [Item(name=f'Tênis Branco {index}', size=str(index), color='BRANCO',
+                      barcode=original.barcode, sku_internal=f'PREVIEW-{index}',
+                      group_key='preview-grade', is_active=index != 0,
+                      image_data='data:image/png;base64,' + 'x' * (128 * 1024))
+                 for index in range(peer_count)]
+        db.add_all(peers)
+        db.add_all([
+            Item(name='Outra cor', sku_internal='PREVIEW-COLOR', color='Preto', group_key='preview-grade'),
+            Item(name='Outra grade', sku_internal='PREVIEW-GROUP', color='Branco', group_key='other-grade'),
+            Item(name='Excluído', sku_internal='PREVIEW-DELETED', color='Branco',
+                 group_key='preview-grade', deleted_at=datetime(2026, 1, 1)),
+        ])
+        db.commit()
+        expected = [VariantSummary.model_validate(row).model_dump(mode='json')
+                    for row in sorted([original, *peers], key=lambda row: row.id)]
+        engine = db.bind
+
+    statements = []
+    def capture(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+    sa.event.listen(engine, 'before_cursor_execute', capture)
+    try:
+        response = client.get(f'/api/inventory/items/{item_id}/variants')
+    finally:
+        sa.event.remove(engine, 'before_cursor_execute', capture)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body['source']['image_data'] == original_photo
+    assert body['source_version'] == version
+    assert body['existing'] == expected  # Includes inactive members, never another color/grade or deleted rows.
+    reads = [sql for sql in statements if sql.lstrip().upper().startswith('SELECT') and 'inventory_items' in sql]
+    assert len(reads) == 2  # Constant with grade size, including response serialization.
+    assert sum('inventory_items.image_data' in sql for sql in reads) == 1
+    assert not any(sql.lstrip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')) for sql in statements)
 
 
 @pytest.mark.parametrize('change', [dict(confirm=False), dict(initial_stock=-1), dict(initial_stock=1.5), dict(sizes=['']), dict(stock_location='unknown'), dict(image_data='tampered')])

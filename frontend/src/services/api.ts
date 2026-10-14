@@ -406,6 +406,15 @@ export interface PedidoCreate {
 
 // Pedidos API
 export const pedidosAPI = {
+  getPage: (params: {
+    page: number
+    page_size: number
+    search?: string
+    status?: string
+    tag_id?: string
+  }): Promise<{ items: Pedido[]; total: number; page: number; page_size: number }> =>
+    api.get('/api/pedidos/pagina', { params }).then(res => res.data),
+
   getAll: (params?: {
     skip?: number
     limit?: number

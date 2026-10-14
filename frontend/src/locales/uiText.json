@@ -1,4 +1,14 @@
 {
+  "Não foi possível abrir o pedido solicitado.": {
+    "pt": "Não foi possível abrir o pedido solicitado.",
+    "es": "No se pudo abrir el pedido solicitado.",
+    "en": "Could not open the requested order."
+  },
+  "Não foi possível carregar os pedidos.": {
+    "pt": "Não foi possível carregar os pedidos.",
+    "es": "No se pudieron cargar los pedidos.",
+    "en": "Could not load orders."
+  },
   "Recibo": {
     "pt": "Recibo",
     "es": "Recibo",

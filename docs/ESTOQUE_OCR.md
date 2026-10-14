@@ -329,6 +329,12 @@ e sua grade explícita, na mesma cor. Tamanhos já existentes, inclusive inativo
 preservados e não recebem estoque adicional. Um produto avulso é agrupado com as
 novas variantes. Não há associação automática por nome ou código repetido.
 
+A leitura da prévia carrega a foto original somente do produto escolhido, junto
+dos dados usados na conferência e no token de versão. As demais peças da grade
+são consultadas apenas pelos campos do resumo de variantes, sem carregar fotos,
+preços ou saldos e sem uma consulta adicional por peça. A identidade, ordem e
+inclusão de tamanhos inativos permanecem iguais.
+
 No PostgreSQL, lock transacional por grade e locks dos itens serializam criações
 concorrentes. Produtos, agrupamento e estoque inicial são uma transação; falhas
 revertem tudo. Repetir tamanhos já criados não repete movimentações. Mudança dos dados

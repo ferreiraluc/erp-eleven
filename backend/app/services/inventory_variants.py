@@ -4,10 +4,10 @@ import json
 import uuid
 from fastapi import HTTPException
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from ..models.inventory import Item
-from ..schemas.inventory_variants import VariantCreateRequest
+from ..schemas.inventory_variants import VariantCreateRequest, VariantSummary
 from .inventory_service import create_movement
 from .inventory_taxonomy import key as taxonomy_key
 
@@ -37,7 +37,14 @@ def source_item(db, item_id):
 
 
 def same_color_members(db, source):
-    rows = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key == source.group_key).order_by(Item.id).all() if source.group_key else [source]
+    # The preview only displays each sibling's identity, size and color. Keep
+    # originals/prices/balances out of this read; the source remains fully loaded
+    # for its reviewed photo and version token. Raiseload prevents an accidental
+    # response-field change from turning this into one query per sibling.
+    rows = (db.query(Item).options(load_only(
+        *(getattr(Item, field) for field in VariantSummary.model_fields), raiseload=True))
+        .filter(Item.deleted_at.is_(None), Item.group_key == source.group_key)
+        .order_by(Item.id).all()) if source.group_key else [source]
     return [row for row in rows if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
 
 

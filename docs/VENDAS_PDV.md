@@ -48,6 +48,12 @@ A aba Produtos começa com os **8 produtos ativos mais recentes por criação**.
 Busca retorna até 20 resultados, cancela a consulta anterior e descarta respostas
 atrasadas. Usa listagem sem imagens originais e a fila/cache de miniaturas sob demanda.
 O ícone de câmera continua abrindo o leitor de código de barras.
+Enquanto o produto desse código está sendo consultado, o checkout aguarda: o
+resultado ainda pode alterar o carrinho. Limpar o carrinho ou iniciar outra busca
+descarta essa resposta pendente, sem adicionar produtos à venda seguinte. Limpar
+a busca recupera os produtos recentes mesmo quando o carregamento inicial foi
+interrompido. Os cartões recentes usam o último saldo consultado para validar a
+inclusão; uma cópia antiga do cartão não substitui esse saldo.
 Limpar um carrinho ainda não enviado libera as reservas locais e conserva os saldos
 consultados, permitindo iniciar outro carrinho sem recarregar a página. Após uma
 venda concluída, ou ao descartar um checkout de resultado incerto, a lista é
