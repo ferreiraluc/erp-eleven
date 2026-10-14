@@ -182,6 +182,12 @@ operacionais; para venda fora do acesso, omite referência, notas, motivo livre 
 autor, mantendo quantidades e saldos. Vendas excluídas aparecem somente para
 Lucas, inclusive nos totais e detalhes financeiros deste histórico; os demais
 perfis conservam o movimento de estoque sem os dados privados da venda.
+As listagens `GET /api/inventory/movements` e `/movements/item/{id}` usam a mesma
+permissão por página: movimentos PDV fora do acesso retornam `reference_id`,
+`reason`, `notes`, `created_by` e `unit_cost` vazios. Quantidade, saldos, locais,
+datas e identificação do produto continuam presentes; movimentos manuais mantêm
+seus dados. Referências antigas UUID em hexadecimal ou maiúsculas são comparadas
+sem reescrever o identificador histórico. A ocultação ocorre somente na resposta.
 Dados ausentes não viram zero. Não há backfill nem inferência de lançamentos.
 O histórico ainda não associa vendas operacionais/planilhas a itens, pois essas
 fontes não possuem vínculo estruturado de produto.

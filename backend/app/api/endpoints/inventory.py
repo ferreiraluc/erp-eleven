@@ -33,6 +33,7 @@ from ...dependencies import get_current_active_user, require_role, require_owner
 from ...schemas.inventory_deletion import ItemDeletionConfirmation
 from ...services.inventory_deletion import deletion_preview, permanently_delete_item, delete_from_catalog
 from ...services.inventory_history import product_history
+from ...services.inventory_movement_visibility import movement_read_responses
 from ...services.inventory_service import create_movement, apply_session, _compute_alert_level, StockMovementError
 from ..validators import validate_uuid
 from datetime import datetime as dt
@@ -954,7 +955,8 @@ def list_movements(
         query = query.filter(StockMovement.created_at >= date_from)
     if date_to:
         query = query.filter(StockMovement.created_at <= date_to)
-    return query.order_by(StockMovement.created_at.desc()).offset(skip).limit(limit).all()
+    rows = query.order_by(StockMovement.created_at.desc()).offset(skip).limit(limit).all()
+    return movement_read_responses(db, rows, current_user)
 
 
 @router.get("/movements/item/{item_id}", response_model=List[MovementResponse])
@@ -966,7 +968,7 @@ def get_item_movements(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     item_uuid = validate_uuid(item_id)
-    return (
+    rows = (
         db.query(StockMovement)
         .options(joinedload(StockMovement.item).load_only(Item.name, Item.deleted_at))
         .filter(StockMovement.item_id == item_uuid)
@@ -975,6 +977,7 @@ def get_item_movements(
         .limit(limit)
         .all()
     )
+    return movement_read_responses(db, rows, current_user)
 
 
 # --- Sessions ----------------------------------------------------------------

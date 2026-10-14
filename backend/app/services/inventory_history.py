@@ -1,7 +1,6 @@
 """Read-only product history from existing records, with financial access enforced."""
 from collections import defaultdict
 from datetime import timezone
-from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import load_only
@@ -14,6 +13,7 @@ from ..models.usuario import Usuario
 from ..models.access import AuditEvent
 from .access_policy import is_owner, own_sales, sales_query
 from .inventory_links import product_sale_link
+from .inventory_movement_visibility import restricted_movement_ids
 
 PRODUCT_FIELDS = ('id', 'name', 'sku_internal', 'barcode', 'brand', 'size', 'color',
                   'category', 'is_active', 'created_at', 'updated_at', 'created_by',
@@ -103,17 +103,9 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
     elif section == 'movements':
         batch = moves.order_by(StockMovement.created_at.desc(), StockMovement.id.desc()).offset(offset).limit(page_size).all()
         actors = names(db, [m.created_by for m in batch])
-        pdv_refs = {}
+        restricted_ids = restricted_movement_ids(db, batch, user)
         for m in batch:
-            if m.reference_type == 'pdv_sale':
-                try: pdv_refs[m.reference_id] = UUID(m.reference_id or '')
-                except ValueError: pass
-        readable_sales = sales_query(db.query(PdvSale.id).filter(PdvSale.id.in_(pdv_refs.values())), PdvSale, user, pdv=True)
-        if not owner:
-            readable_sales = readable_sales.filter(PdvSale.deleted_at.is_(None))
-        allowed_refs = {sid for (sid,) in readable_sales}
-        for m in batch:
-            restricted = (own_sales(user) or not owner) and m.reference_type == 'pdv_sale' and pdv_refs.get(m.reference_id) not in allowed_refs
+            restricted = m.id in restricted_ids
             rows.append({'id': str(m.id), 'at': timestamp(m.created_at), 'type': m.movement_type.value,
                 'quantity': m.quantity, 'before': m.quantity_before, 'after': m.quantity_after,
                 'location_from': m.location_from, 'location_to': m.location_to,
