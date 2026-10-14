@@ -124,9 +124,23 @@ existente é preservado; quando ainda não existe vínculo, a rotina compartilha
 de identificação de clientes o resolve antes de concluir a gravação. Usos novos
 continuam gerando seu próprio histórico, sem criar outra ficha de endereço.
 
-### Manutenção de um par revisado
+### Referências abreviadas e bairro repetido
 
-A ferramenta abaixo simula a união de dois IDs explicitamente escolhidos. Use o cadastro que deve continuar visível como `--target`; o cadastro duplicado torna-se uma referência histórica para ele. Não há varredura nem consolidação geral.
+No Brasil, `Ref.`, `Referência:` e `Ponto de referência:` no começo do complemento
+são rótulos; o local descrito depois continua sendo conferido. `Atac Exemplo`
+reconhece `Atacadão Exemplo` ou `Atacado Exemplo` somente quando o outro cadastro
+fornece essa expansão e o restante do nome coincide. Os dois nomes completos não
+são considerados iguais entre si. CEP, rua, número, cidade e UF precisam coincidir;
+apartamentos, salas ou complementos diferentes continuam separados.
+
+No Paraguai, o bairro escrito no próprio campo e repetido no final da rua não
+cria outro endereço. A comparação só remove esse sufixo inteiro, conferido pelo
+bairro informado; preserva os demais detalhes, nome, cidade e telefone. Esses
+ajustes são usados pelo bot e pelo editor sem alterar o texto dos PDFs antigos.
+
+### Manutenção de um grupo revisado
+
+A ferramenta abaixo simula a união de IDs explicitamente escolhidos. Use o cadastro que deve continuar visível como `--target`; os duplicados tornam-se referências históricas para ele. Não há varredura nem consolidação geral.
 
 ```sh
 PYTHONPATH=backend backend/venv/bin/python -m app.address_maintenance merge \
@@ -141,7 +155,13 @@ PYTHONPATH=backend backend/venv/bin/python -m app.address_maintenance merge \
   --apply --expected-plan TOKEN_DA_SIMULACAO
 ```
 
-Alterações entre a simulação e a aplicação invalidam o plano. Documentos/clientes conflitantes, locais diferentes ou outro candidato compatível fora do par bloqueiam a operação. O cadastro principal conserva seus campos preenchidos e recebe somente os ausentes, incluindo documento e vínculo com cliente quando compatíveis. O estado ativo é preservado se qualquer um dos dois estiver ativo. IDs antigos, aliases, fretes, impressões, PDFs e snapshots permanecem intactos; o histórico do principal passa a reunir suas utilizações. A ferramenta não imprime nem emite etiquetas.
+Para três ou mais cadastros, repita `--source ID` para cada duplicata revisada, tanto
+na simulação quanto na aplicação (máximo de 20 origens). O token inclui todos os
+registros; a união é feita em uma única transação. Todos os pares do grupo devem
+ser compatíveis: um documento ausente ou uma referência abreviada não pode servir
+de ponte entre dois cadastros conflitantes.
+
+Alterações entre a simulação e a aplicação invalidam o plano. Documentos/clientes conflitantes, locais diferentes ou outro candidato compatível fora do grupo bloqueiam a operação. O cadastro principal conserva seus campos preenchidos e recebe somente os ausentes, incluindo documento e vínculo com cliente quando compatíveis. O estado ativo é preservado se qualquer um dos registros estiver ativo. IDs antigos, aliases, fretes, impressões, PDFs e snapshots permanecem intactos; o histórico do principal passa a reunir suas utilizações. A ferramenta não imprime nem emite etiquetas.
 
 A aplicação exige o administrador proprietário ativo e registra `address_merged`
 na auditoria, com IDs envolvidos, campos completados e contagem de utilizações,

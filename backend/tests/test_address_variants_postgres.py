@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from test_access_postgres import pg
 from test_address_variants import ADDRESS, VARIANT
 from test_address_embedded_fields import ADDRESS as STRUCTURED, EMBEDDED
+from test_address_reference_variants import BR, SHORT, REF, PY, PY_REPEATED
 from app.database import Base
 from app.models import Usuario, Vendedor, Cliente
 from app.models.address_book import SavedAddress, FreightOrder
@@ -19,7 +20,8 @@ from app.services.address_book import save_or_reuse
 from app.services.address_maintenance import merge_addresses
 
 
-@pytest.mark.parametrize('address,variant', [(ADDRESS, VARIANT), (STRUCTURED | {'cpf': ''}, EMBEDDED)])
+@pytest.mark.parametrize('address,variant', [(ADDRESS, VARIANT), (STRUCTURED | {'cpf': ''}, EMBEDDED),
+                                           (BR, SHORT), (PY, PY_REPEATED)])
 def test_parallel_spelling_variants_reuse_one_row_and_legacy_pair_merges(pg, address, variant):
     engine, schema = pg
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
@@ -60,5 +62,46 @@ def test_parallel_spelling_variants_reuse_one_row_and_legacy_pair_merges(pg, add
             assert db.query(SavedAddress).filter_by(merged_into_id=None).count() == 2
             assert source.dedup_key is None
             assert target.data['cpf'] == variant['cpf']
+    finally:
+        isolated.dispose()
+
+
+def test_parallel_reviewed_group_merge_is_atomic_and_idempotent(pg):
+    engine, schema = pg
+    isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
+    models = (Usuario, Vendedor, Cliente, PdvCliente, SavedAddress, PrintDevice, PrintJob, FreightOrder)
+    Base.metadata.create_all(isolated, tables=[model.__table__ for model in models])
+    factory = sessionmaker(bind=isolated, autoflush=False)
+    uid = uuid.uuid4()
+    try:
+        with factory() as db:
+            db.add(Usuario(id=uid, nome='Fixture', email='fixture@example.test', senha_hash='unused'))
+            db.flush()
+            rows = [SavedAddress(label='Fixture', data=data, created_by=uid) for data in (BR, SHORT, REF)]
+            db.add_all(rows); db.commit()
+            target, source, extra = [row.id for row in rows]
+            plan = merge_addresses(db, target, source, additional_source_ids=[extra])
+            db.rollback()
+        barrier = Barrier(2)
+
+        def merge(_):
+            with factory() as db:
+                barrier.wait(timeout=5)
+                result = merge_addresses(db, target, source, additional_source_ids=[extra],
+                                         apply=True, expected_plan=plan['plan_token'])
+                db.commit()
+                return result['state']
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(merge, range(2)))
+        assert sorted(results) == ['already_merged', 'merged']
+        with factory() as db:
+            assert db.query(SavedAddress).count() == 3
+            assert db.query(SavedAddress).filter_by(merged_into_id=None).count() == 1
+            assert all(db.get(SavedAddress, key).merged_into_id == target for key in (source, extra))
+            # Concurrent/later creation of any known spelling still reuses the root.
+            row, reused = save_or_reuse(db, SHORT, uid)
+            assert reused and row.id == target
+            db.commit()
     finally:
         isolated.dispose()

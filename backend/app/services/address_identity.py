@@ -124,7 +124,35 @@ def _br_location(data, reference):
             parts[field] = suffix
         else:
             parts[field] = own
+    parts['complemento'] = _reference_complement(parts['complemento'], reference.get('complemento'))
     return ' '.join(value for value in (street, parts['numero'], parts['complemento']) if value)
+
+
+def _reference_complement(value, reference):
+    """Ignore reference labels, never the place/unit described after them.
+
+    Expand Atac only when the other spelling supplies the same full merchant
+    name. Atacado and Atacadão themselves remain distinct, as do unit numbers.
+    """
+    def core(raw):
+        return re.sub(r'^(?:ponto de referencia|referencia|ref)\s+', '', normalized(raw))
+
+    value, reference = core(value), core(reference)
+    short, _, suffix = value.partition(' ')
+    full, _, other_suffix = reference.partition(' ')
+    if short == 'atac' and full in {'atacado', 'atacadao'} and suffix and suffix == other_suffix:
+        return reference
+    return value
+
+
+def _py_street(data):
+    """A district repeated verbatim at the end of the street is not a new place."""
+    street, district = normalized(data.get('endereco')), normalized(data.get('bairro'))
+    if district and street.endswith(' ' + district):
+        stem = street[:-len(district)].strip()
+        if stem and stem not in {'calle', 'avenida', 'av', 'ruta', 'barrio'}:
+            return stem
+    return street
 
 
 def matches_paraguay_phone(left, right):
@@ -135,9 +163,11 @@ def matches_paraguay_phone(left, right):
         return False
     if not full_name(left.get('nome')) or not normalized(left.get('cidade')):
         return False
-    for field in ('nome', 'endereco', 'numero', 'bairro', 'complemento', 'cidade', 'estado', 'cep'):
+    for field in ('nome', 'numero', 'bairro', 'complemento', 'cidade', 'estado', 'cep'):
         if normalized(left.get(field)) != normalized(right.get(field)):
             return False
+    if _py_street(left) != _py_street(right):
+        return False
     before, after = (data.get('telefone') for data in (left, right))
     if not before or not after:
         return True  # Only a unique otherwise identical destination can be reused.

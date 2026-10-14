@@ -1,4 +1,4 @@
-"""Plan one explicit address merge; use --apply --expected-plan to persist it."""
+"""Plan an explicit address group merge; use --apply --expected-plan to persist it."""
 import argparse
 import json
 import uuid
@@ -14,8 +14,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['merge'])
     parser.add_argument('--target', type=uuid.UUID, required=True, help='Cadastro principal que continuará visível')
-    parser.add_argument('--source', type=uuid.UUID, required=True, help='Cadastro que será preservado como referência ao principal')
-    parser.add_argument('--apply', action='store_true', help='Aplicar o par explicitamente revisado; por padrão apenas simula')
+    parser.add_argument('--source', type=uuid.UUID, required=True, action='append', help='Cadastro preservado como referência; repita para outras duplicatas revisadas')
+    parser.add_argument('--apply', action='store_true', help='Aplicar o grupo explicitamente revisado; por padrão apenas simula')
     parser.add_argument('--expected-plan', help='plan_token retornado pela simulação imediatamente anterior')
     args = parser.parse_args(argv)
     if args.apply and not args.expected_plan:
@@ -30,7 +30,8 @@ def main(argv=None):
                 if not owner:
                     raise SystemExit('Administrador ativo não encontrado para registrar a auditoria.')
                 bind_actor(db, owner, source='reconciliation')
-            result = merge_addresses(db, args.target, args.source, apply=args.apply, expected_plan=args.expected_plan)
+            result = merge_addresses(db, args.target, args.source[0], additional_source_ids=args.source[1:],
+                                     apply=args.apply, expected_plan=args.expected_plan)
             if args.apply:
                 db.commit()
             else:
