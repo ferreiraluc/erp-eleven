@@ -29,15 +29,22 @@ try {
     if (-not $zpl.StartsWith('^XA^MNN^MMT^PW640^LL960') -or -not $zpl.EndsWith('^PQ1,0,1,N^XZ')) { throw 'Wrong media or copy count.' }
     if ([regex]::Matches($zpl, '\^XA').Count -ne 1 -or [regex]::Matches($zpl, '\^XZ').Count -ne 1) { throw 'Receipt divided into labels.' }
     $fields = [regex]::Matches($zpl, '\^FO0,(\d+)\^GFA,(\d+),(\d+),(\d+),([0-9A-F]+)\^FS')
-    $rows = 0; $black = 0
+    $rows = 0; $black = 0; $hex = New-Object Text.StringBuilder
     foreach ($field in $fields) {
         if ([int]$field.Groups[1].Value -ne $rows) { throw 'Missing or reordered raster rows.' }
         $count = [int]$field.Groups[2].Value; $rowBytes = [int]$field.Groups[4].Value
         if ($rowBytes -ne 80 -or $count -gt 60000 -or $field.Groups[3].Value -ne $field.Groups[2].Value -or $field.Groups[5].Value.Length -ne $count*2) { throw 'Bad GF byte counts.' }
         $rows += $count/$rowBytes
         $black += [regex]::Matches($field.Groups[5].Value, '[1-9A-F]').Count
+        $hex.Append($field.Groups[5].Value) | Out-Null
     }
     if ($rows -ne 960 -or $black -lt 100) { throw 'Missing PDF content.' }
+    # The fixture square is at the PDF's bottom-left: verify actual raster position,
+    # not only byte count, so upside-down/mirrored tickets cannot pass this check.
+    $pixels = $hex.ToString()
+    $bottom = [Convert]::ToInt32($pixels.Substring((900*80+5)*2,2),16)
+    $top = [Convert]::ToInt32($pixels.Substring((40*80+5)*2,2),16)
+    if (($bottom -band 128) -eq 0 -or $top -ne 0) { throw 'Raster flipped or PDF drawing lost.' }
     New-TestPdf $pdf 1 991
     $long = [Text.Encoding]::ASCII.GetString((Convert-TicketPdf $pdf 80 991))
     if ($long -notmatch '\^LL7928' -or [regex]::Matches($long, '\^XZ').Count -ne 1) { throw 'Long receipt split.' }
