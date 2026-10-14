@@ -18,6 +18,7 @@ from .access_policy import is_owner, own_sales, sales_query
 from .inventory_service import create_movement, StockMovementError
 from .user_audit import bind_actor, record
 from .pdv_payments import validate_payment, unchanged_payment
+from .pdv_ticket_identity import ticket_code, ticket_range
 
 CENT = Decimal('.01')
 MAX_MONEY = Decimal('9999999999999.99')
@@ -64,6 +65,7 @@ def get_sale(db, sid, user, lock=False):
 def detail(db,sid,user):
     sale=get_sale(db,sid,user)
     data=snapshot(sale)
+    data['ticket_code']=ticket_code(sale.id)
     people=dict(db.query(Usuario.id,Usuario.nome).filter(Usuario.id.in_([sale.vendedor_id,sale.created_by])).all())
     data.update(seller=people.get(sale.vendedor_id),actor=people.get(sale.created_by),can_manage=is_owner(user))
     removed=dict(db.query(Item.id,Item.name).filter(Item.id.in_([r.item_id for r in sale.items if r.item_id]),Item.deleted_at.isnot(None)).all())
@@ -96,6 +98,8 @@ def listing(db,user,*,page=1,page_size=25,q='',status=None,date_from=None,date_t
         parts=[PdvSale.cliente_nome.ilike(term,escape='\\'),PdvSale.id.in_(matches)]
         try:parts.append(PdvSale.id==uuid.UUID(q))
         except ValueError:pass
+        bounds=ticket_range(q)
+        if bounds:parts.append(PdvSale.id.between(*bounds))
         query=query.filter(or_(*parts))
     count=query.count()
     grouped=query.with_entities(PdvSale.status,func.count(PdvSale.id),func.sum(PdvSale.total_gs),func.sum(PdvSale.refunded_gs)).group_by(PdvSale.status).all()
@@ -106,7 +110,7 @@ def listing(db,user,*,page=1,page_size=25,q='',status=None,date_from=None,date_t
     rows=query.options(joinedload(PdvSale.vendedor),joinedload(PdvSale.items),joinedload(PdvSale.payments)).order_by(PdvSale.created_at.desc(),PdvSale.id.desc()).offset((page-1)*page_size).limit(page_size).all()
     return serial({'page':page,'page_size':page_size,'total':count,'own_sales_only':own_sales(user),'can_manage':is_owner(user),
         'summary':{'gross_gs':gross,'refunded_gs':refunds,'net_gs':gross-effective_refunds,'cancelled':sum(r[1] for r in grouped if r[0]=='cancelled')},
-        'items':[{'id':s.id,'created_at':s.created_at,'cliente_nome':s.cliente_nome,'seller':s.vendedor.nome if s.vendedor else None,
+        'items':[{'id':s.id,'ticket_code':ticket_code(s.id),'created_at':s.created_at,'cliente_nome':s.cliente_nome,'seller':s.vendedor.nome if s.vendedor else None,
                   'total_gs':s.total_gs,'refunded_gs':s.refunded_gs,'status':s.status,'items_count':len(s.items),
                   'payment_methods':sorted({p.method for p in s.payments}),'deleted_at':s.deleted_at,'version':s.version} for s in rows]})
 

@@ -14,7 +14,7 @@
         <article><span>{{ tr('Canceladas') }}</span><strong>{{ data.summary.cancelled }}</strong></article>
       </div>
       <form class="sales-filters" @submit.prevent="page = 1; load()">
-        <label class="search-field">{{ tr('Buscar') }}<input v-model="filters.q" :placeholder="tr('Cliente, produto, SKU ou código da venda')" maxlength="150" /></label>
+        <label class="search-field">{{ tr('Buscar') }}<input v-model="filters.q" :placeholder="tr('Cliente, produto, SKU ou código da venda')" maxlength="150" /><button type="button" class="erp-button erp-button--secondary erp-button--sm scan-ticket" @click="showScanner=true">{{ tr('Ler ticket') }}</button></label>
         <label>{{ tr('De') }}<input v-model="filters.date_from" type="date" /></label>
         <label>{{ tr('Até') }}<input v-model="filters.date_to" type="date" /></label>
         <label>{{ tr('Situação') }}<select v-model="filters.status"><option value="">{{ tr('Todas') }}</option><option v-for="status in statuses" :key="status" :value="status">{{ statusText(status) }}</option></select></label>
@@ -31,7 +31,7 @@
         <div v-if="!data.items.length" class="state-box"><p>{{ tr('Nenhuma venda encontrada neste filtro.') }}</p><button class="erp-button erp-button--secondary" @click="clear">{{ tr('Limpar filtros') }}</button></div>
         <div v-else class="sales-table-wrap"><table><thead><tr><th>{{ tr('Venda') }}</th><th>{{ tr('Cliente e vendedor') }}</th><th>{{ tr('Pagamento') }}</th><th>{{ tr('Situação') }}</th><th>{{ tr('Valor líquido') }}</th><th><span class="sr-only">{{ tr('Ações') }}</span></th></tr></thead>
           <tbody><tr v-for="sale in data.items" :key="sale.id">
-            <td :data-label="tr('Venda')"><strong>{{ saleDate(sale.created_at) }}</strong><small>#{{ sale.id.slice(0, 8) }} · {{ sale.items_count }} {{ tr('itens') }}</small></td>
+            <td :data-label="tr('Venda')"><strong>{{ saleDate(sale.created_at) }}</strong><small>#{{ sale.ticket_code || sale.id.replaceAll('-', '').slice(0, 10).toUpperCase() }} · {{ sale.items_count }} {{ tr('itens') }}</small></td>
             <td :data-label="tr('Cliente e vendedor')"><strong>{{ sale.cliente_nome || tr('Cliente não informado') }}</strong><small>{{ sale.seller || '—' }}</small></td>
             <td :data-label="tr('Pagamento')">{{ sale.payment_methods.map(paymentText).join(' · ') || '—' }}</td>
             <td :data-label="tr('Situação')"><span class="status" :class="sale.status">{{ statusText(sale.status) }}</span></td>
@@ -41,6 +41,7 @@
         <footer v-if="data.total > data.page_size" class="pagination"><button class="erp-button erp-button--secondary" :disabled="page === 1" @click="page--; load()">{{ tr('Anterior') }}</button><span>{{ page }} / {{ Math.ceil(data.total / data.page_size) }}</span><button class="erp-button erp-button--secondary" :disabled="page * data.page_size >= data.total" @click="page++; load()">{{ tr('Próxima') }}</button></footer>
       </section>
     </main>
+    <BarcodeScanner v-if="showScanner" @barcode-detected="findTicket" @close="showScanner=false" />
     <SaleManagerModal v-if="selected" :key="selected" :sale-id="selected" :sellers="sellers" @close="closeSale" @changed="load" />
   </div>
 </template>
@@ -50,6 +51,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import SaleManagerModal from '@/components/pdv/management/SaleManagerModal.vue'
+import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import { pdvManagementAPI, saleError, type SaleListing } from '@/services/pdvManagement'
 import { allPaymentFilters } from '@/services/pdvPayments'
 import { tr, gs, saleDate, statusText, paymentText } from '@/components/pdv/management/i18n'
@@ -57,7 +59,8 @@ const auth = useAuthStore(), router = useRouter(), route = useRoute()
 const blank = () => ({ q: '', date_from: '', date_to: '', status: '', seller_id: '', payment: '', deleted: false })
 const filters = ref(blank()), page = ref(1), loading = ref(false), error = ref(''), selected = ref('')
 const data = ref<SaleListing | null>(null), sellers = ref<Array<{ id: string; name: string }>>([])
-const optionsError = ref(false)
+const optionsError = ref(false), showScanner = ref(false)
+function findTicket(code: string) { showScanner.value = false; filters.value = { ...blank(), q: code.trim() }; page.value = 1; void load() }
 const statuses = ['completed', 'partially_refunded', 'refunded', 'cancelled']
 let sequence = 0, mounted = true
 watch(() => route.query.sale_id, value => {
@@ -86,7 +89,7 @@ onMounted(() => { load(); loadOptions() })
 onUnmounted(() => { sequence++; mounted = false })
 </script>
 <style scoped>
-.sales-manager{min-height:100vh;background:#f8fafc;color:#1e293b}.sales-manager>main{max-width:1440px;margin:auto;padding:0 24px 32px}.scope-note{font-size:13px;color:#64748b;line-height:1.5}.sale-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.sale-summary article{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;display:grid;gap:10px}.sale-summary span{font-size:12px;color:#64748b}.sale-summary strong{font-size:22px;color:#1d4ed8;overflow-wrap:anywhere}.sales-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:20px}label{display:grid;gap:6px;font-size:12px;font-weight:600}input,select{width:100%;min-width:0;box-sizing:border-box;font-size:14px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#334155}.search-field{grid-column:span 2}.filter-actions{display:flex;align-items:end;gap:8px}.sales-results{background:white;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}.result-toolbar,.pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px;font-size:13px}.sales-table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th{font-size:11px;text-transform:uppercase;background:#f8fafc;color:#64748b;padding:12px}td{padding:16px 12px;border-top:1px solid #e2e8f0;font-size:13px}td strong,td small{display:block}td small{margin-top:5px;font-size:11px;color:#64748b}.status{display:inline-block;padding:5px 8px;border-radius:6px;background:#f1f5f9;font-size:11px;font-weight:600}.completed{background:#dcfce7;color:#166534}.partially_refunded{background:#fef3c7;color:#92400e}.cancelled,.refunded{background:#fee2e2;color:#991b1b}.state-box{text-align:center;padding:40px 16px;color:#64748b}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.sales-manager{min-height:100vh;background:#f8fafc;color:#1e293b}.sales-manager>main{max-width:1440px;margin:auto;padding:0 24px 32px}.scope-note{font-size:13px;color:#64748b;line-height:1.5}.sale-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.sale-summary article{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;display:grid;gap:10px}.sale-summary span{font-size:12px;color:#64748b}.sale-summary strong{font-size:22px;color:#1d4ed8;overflow-wrap:anywhere}.sales-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:20px}label{display:grid;gap:6px;font-size:12px;font-weight:600}input,select{width:100%;min-width:0;box-sizing:border-box;font-size:14px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#334155}.search-field{grid-column:span 2;grid-template-columns:minmax(0,1fr) auto}.search-field input{grid-column:1;grid-row:2}.scan-ticket{grid-column:2;grid-row:2;align-self:stretch}.filter-actions{display:flex;align-items:end;gap:8px}.sales-results{background:white;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}.result-toolbar,.pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px;font-size:13px}.sales-table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th{font-size:11px;text-transform:uppercase;background:#f8fafc;color:#64748b;padding:12px}td{padding:16px 12px;border-top:1px solid #e2e8f0;font-size:13px}td strong,td small{display:block}td small{margin-top:5px;font-size:11px;color:#64748b}.status{display:inline-block;padding:5px 8px;border-radius:6px;background:#f1f5f9;font-size:11px;font-weight:600}.completed{background:#dcfce7;color:#166534}.partially_refunded{background:#fef3c7;color:#92400e}.cancelled,.refunded{background:#fee2e2;color:#991b1b}.state-box{text-align:center;padding:40px 16px;color:#64748b}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 @media(max-width:900px){.sales-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.sale-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.sale-summary strong{font-size:18px}}
 @media(max-width:600px){.sales-manager>main{padding:0 12px 24px}.sale-summary{gap:8px}.sale-summary article{padding:12px}.sales-filters{gap:10px;padding:12px}input,select{font-size:16px}.sales-table-wrap{overflow:visible}table,tbody,tr,td{display:block}thead{display:none}tr{padding:12px;border-top:1px solid #e2e8f0}td{border:0;padding:6px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:right;flex-wrap:wrap}td:before{content:attr(data-label);color:#64748b;font-size:11px;text-align:left}td small{flex-basis:100%;margin:0}td:last-child{justify-content:flex-end}.sale-summary strong{font-size:17px}.scope-note{font-size:12px}}
 </style>

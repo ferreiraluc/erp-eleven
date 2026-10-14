@@ -58,6 +58,37 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); root?.remove(); vi.restoreAllMocks(); vi.resetAllMocks() })
 
 describe('Unified optional photo and label intake', () => {
+  it('removes P and M directly from the preview without recreating the base size', async () => {
+    await mount(); await click('Ler etiqueta'); await click('fixture label'); await click('Conferir dados'); await review()
+    await click('Criar grade deste modelo'); await click('P → 2XL')
+    for (const size of ['P', 'M']) {
+      root.querySelector<HTMLButtonElement>(`.gp-remove[aria-label="Remover variação ${size}"]`)!.click(); await nextTick()
+    }
+    expect(root.querySelectorAll('.gp-row')).toHaveLength(3)
+    expect(root.textContent).toContain('3 produto(s), 0 unidade(s)')
+    await click('Criar grade (3 itens)')
+    expect(mock.createGrade).toHaveBeenCalledWith(expect.objectContaining({ sizes: ['L', 'XL', '2XL'] }))
+    expect(mock.createItem).not.toHaveBeenCalled()
+  })
+  it('removes only the selected color-size combination and can restore it', async () => {
+    await mount(); await click('Conferir dados'); await setField('Nome *', 'Camiseta'); await review()
+    await click('Criar grade deste modelo'); await click('P → 2XL'); await click('Branco'); await click('Preto')
+    const remove = async () => { root.querySelector<HTMLButtonElement>('.gp-remove[aria-label="Remover variação P Branco"]')!.click(); await nextTick() }
+    await remove(); expect(root.querySelectorAll('.gp-row')).toHaveLength(9)
+    await click('Restaurar variações removidas'); expect(root.querySelectorAll('.gp-row')).toHaveLength(10)
+    await remove(); await click('Criar grade (9 itens)')
+    expect(mock.createGrade.mock.calls.map(([p]) => [p.color, p.sizes])).toEqual([
+      ['Branco', ['M', 'L', 'XL', '2XL']], ['Preto', ['P', 'M', 'L', 'XL', '2XL']],
+    ])
+  })
+  it('does not fall back to creating a single product when every row was removed', async () => {
+    await mount(); await click('Conferir dados'); await setField('Nome *', 'Camiseta'); await review()
+    await click('Criar grade deste modelo'); await click('P → 2XL')
+    for (const button of Array.from(root.querySelectorAll<HTMLButtonElement>('.gp-remove'))) button.click()
+    await nextTick(); expect(root.textContent).toContain('0 produto(s), 0 unidade(s)')
+    await click('Criar'); expect(mock.createItem).not.toHaveBeenCalled(); expect(mock.createGrade).not.toHaveBeenCalled()
+    await click('Restaurar variações removidas'); expect(root.querySelectorAll('.gp-row')).toHaveLength(5)
+  })
   it.each(['photo-first', 'label-first'])('combines complementary evidence in either order: %s', async order => {
     await mount()
     const photo = async () => { await click('Adicionar foto'); await click('fixture photo') }

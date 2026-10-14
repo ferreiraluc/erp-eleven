@@ -2,7 +2,7 @@ import api, { type PdvSaleCreate, type PdvSaleItemResponse, type PdvPaymentRespo
 export type SaleOperation = 'edit' | 'return' | 'cancel' | 'delete'
 export interface ManagedLine extends PdvSaleItemResponse { returned_quantity: number | string; product_deleted?: boolean }
 export interface ManagedSale {
-  id: string; vendedor_id: string | null; cliente_id: string | null; cliente_nome: string | null
+  id: string; ticket_code?: string; vendedor_id: string | null; cliente_id: string | null; cliente_nome: string | null
   subtotal_gs: string; desconto_gs: string; total_gs: string; refunded_gs: string; fiado_reversed_gs: string
   status: string; stock_applied: boolean; notas: string | null; version: number; created_at: string
   deleted_at: string | null; seller: string | null; actor: string | null; can_manage: boolean
@@ -21,7 +21,7 @@ export interface SalePreview { operation: SaleOperation; reason: string; plan_to
 export interface SaleCommit { command: SaleCommand; plan_token: string; request_id: string; confirm: true }
 export interface SaleListing { page: number; page_size: number; total: number; own_sales_only: boolean; can_manage: boolean
   summary: { gross_gs: string; refunded_gs: string; net_gs: string; cancelled: number }
-  items: Array<{ id: string; created_at: string; cliente_nome: string | null; seller: string | null; total_gs: string
+  items: Array<{ id: string; ticket_code?: string; created_at: string; cliente_nome: string | null; seller: string | null; total_gs: string
     refunded_gs: string; status: string; items_count: number; payment_methods: string[]; deleted_at: string | null; version: number }> }
 export const pdvManagementAPI = {
   list: (params: Record<string, unknown>): Promise<SaleListing> => api.get('/api/pdv/management', { params }).then(r => r.data),

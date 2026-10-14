@@ -237,6 +237,25 @@ def receipt_status(sale_id: uuid.UUID, db: Session = Depends(get_db), user=Depen
     return {'job': receipts.receipt_state(job), 'printer': receipts.printer_info(receipts.destination(db))}
 
 
+@router.get('/sales/{sale_id}/receipt/preview')
+def receipt_preview(sale_id: uuid.UUID, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+    from fastapi.responses import JSONResponse
+    from ...services import pdv_receipts as receipts
+    sale = receipts.authorized_sale(db, sale_id, user)
+    return JSONResponse(receipts.view(receipts.snapshot_for_view(db, sale)), headers={'Cache-Control': 'no-store'})
+
+
+@router.get('/sales/{sale_id}/receipt/pdf')
+def receipt_pdf(sale_id: uuid.UUID, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+    from fastapi.responses import Response
+    from ...services import pdv_receipts as receipts
+    from ...services.pdv_ticket_identity import ticket_code
+    sale = receipts.authorized_sale(db, sale_id, user)
+    document = receipts.render(receipts.snapshot_for_view(db, sale))
+    return Response(document, media_type='application/pdf', headers={
+        'Cache-Control': 'no-store', 'Content-Disposition': f'attachment; filename="eleven-ticket-{ticket_code(sale.id)}.pdf"'})
+
+
 @router.post('/sales/{sale_id}/receipt')
 def print_receipt(sale_id: uuid.UUID, copy_key: Optional[uuid.UUID] = None,
                   confirm_copy: bool = False, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
