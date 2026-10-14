@@ -195,6 +195,7 @@ export const usePdvStore = defineStore('pdv', () => {
     loading.value = true
     try {
       const body: PdvSaleCreate = {
+        print_receipt: true,
         vendedor_id: vendedorId || undefined,
         cliente_id: clienteId.value || undefined,
         cliente_nome: clienteNome.value || undefined,

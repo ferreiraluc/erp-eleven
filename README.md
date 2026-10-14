@@ -63,6 +63,11 @@ que escrevem ou imprimem passam pelas permissões e confirmações do fluxo. O
 computador da loja busca trabalhos por HTTPS; o laptop de desenvolvimento não é
 servidor de impressão.
 
+O PDV também possui uma fila exclusiva de tickets para **Zebra ZD220 USB no Windows**,
+ativada por Lucas em **PDV → Tickets**. Vendas pelo celular usam a mesma fila;
+Samsung/A4 e bot permanecem separados. O agente para macOS ainda não está implementado.
+Veja [instalação e limites dos tickets](docs/IMPRESSAO_WINDOWS.md).
+
 O histórico de Clientes reúne também compras do PDV vinculadas explicitamente,
 com itens, devoluções, atalho aos detalhes da venda e valores separados do BI.
 O acesso pessoal dos vendedores é aplicado antes dos resumos e da paginação.

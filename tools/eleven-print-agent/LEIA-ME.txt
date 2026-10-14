@@ -1,4 +1,19 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.13.1
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.14.1
+
+TICKETS ZEBRA ZD220
+O ZIP baixado em PDV > Tickets configura o perfil tickets (Eleven Tickets).
+Use uma credencial propria criada ali, nunca a credencial da Samsung.
+A instalacao usa %LOCALAPPDATA%\ElevenPrintTickets e nao substitui a pasta A4.
+Selecione a Zebra USB e ajuste no driver o mesmo papel informado no ERP:
+inicialmente 60 x 80 mm, etiquetas com intervalo, orientacao retrato.
+O agente confere o tamanho padrao do driver e imprime sem escala.
+Tickets longos ocupam varias etiquetas. A impressora e termica direta, sem ribbon:
+bobina futura deve ser papel termico compativel, nao papel branco comum.
+Abra Eleven Tickets, aguarde Conectado e ative impressao automatica em PDV > Tickets.
+Vendas concluidas no celular tambem chegam a esta fila. Mantenha o Windows ligado.
+MacOS exige outro agente, ainda nao incluido. Este pacote e exclusivo do Windows.
+Estado incerto exige conferencia do papel/fila antes de confirmar outra copia.
+Ao atualizar, mantenha a pasta e o diario. Execute o instalador do MESMO perfil.
 
 Instale no computador Windows da loja onde a impressora ja imprime.
 Nao instale no laptop usado para desenvolver o ERP.

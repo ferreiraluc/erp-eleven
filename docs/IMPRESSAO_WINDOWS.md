@@ -1,5 +1,76 @@
 # Impressão da Eleven no Windows
 
+## Tickets do PDV — Zebra ZD220 (14/10/2026)
+
+O agente **2026.10.14.1** possui dois perfis independentes. **Eleven Impressao**
+continua em `%LOCALAPPDATA%\ElevenPrint`, para Samsung/A4. **Eleven Tickets** usa
+`%LOCALAPPDATA%\ElevenPrintTickets`, outra credencial, configuração e diário.
+Não reutilize a credencial da Samsung na Zebra. Ambos podem funcionar no mesmo Windows.
+
+Configuração inicial autorizada: Zebra USB, térmica direta sem ribbon, etiquetas
+separadas de **60 × 80 mm**. Confirme a orientação: largura é a dimensão atravessando
+a cabeça de impressão; se a etiqueta estiver invertida, ajuste os dois valores no
+ERP e no driver. O driver Zebra e SumatraPDF precisam estar instalados. O instalador
+não instala driver, não altera a mídia e não calibra a impressora.
+
+1. Lucas abre **PDV → Tickets**, confere largura/altura e salva. Começa desativado.
+2. Copia a credencial exibida uma única vez; baixa **agente Windows para tickets**.
+3. No Windows, extrai o ZIP e abre `Instalar.cmd`. Seleciona a Zebra e informa sua
+   credencial exclusiva. O pacote chama `Instalar.ps1 -Profile tickets`.
+4. Nas preferências da fila Zebra, configura o mesmo tamanho **60 × 80 mm**,
+   orientação retrato e etiquetas com intervalo, conforme a mídia real. Faz a
+   calibração pelo procedimento do fabricante se necessário.
+5. Abre **Eleven Tickets** e aguarda Conectado. O agente confere o papel padrão
+   do driver antes de despachar e imprime em tamanho real, sem a regra A4.
+6. Em PDV → Tickets, ativa **Imprimir ao confirmar a venda, inclusive pelo celular**.
+   A próxima venda confirmada nesse PDV enfileira uma cópia. A configuração sozinha
+   não imprime e não cria vendas. O recibo mostra estado e atualização manual.
+
+Vendas feitas no celular usam a fila no servidor; não precisam conectar-se por USB,
+AirPrint ou à mesma rede local. Windows, agente, internet e impressora devem estar
+ligados. O agente consulta a cada três segundos; isso não é garantia de prazo de
+saída física. Trabalhos não coletados expiram em 24 horas. Não há serviço/início
+automático nesta versão.
+
+Cada etiqueta é uma página física. Tickets longos podem consumir várias etiquetas,
+sempre identificadas pela venda e página, sem cortar conteúdo para forçar uma página.
+Para bobina contínua, compre papel **térmico direto** compatível com a ZD220, sem
+adesivo; o fabricante informa largura imprimível máxima 104 mm e rolo de até 127 mm
+de diâmetro. Confira também núcleo/espessura e a configuração do sensor no driver.
+Esta versão usa altura fixa configurável de 50–400 mm; não calcula corte automático
+nem promete guilhotina. Trocar mídia exige ajustar driver e ERP, com fila vazia.
+
+O ticket é um snapshot dos dados da venda na confirmação; a renderização PDF ocorre
+no servidor quando o agente busca o trabalho. Nenhuma IA ou API paga é utilizada.
+O snapshot permite preservar o comprovante mesmo depois de alterações no catálogo.
+A fila é criada na mesma transação da venda: rollback não deixa um ticket órfão.
+Sem impressora configurada/ativada, vender e imprimir pelo navegador continua possível.
+
+Repetir o envio original devolve o mesmo trabalho. **Outra cópia** exige confirmação,
+conserva a chave em falhas de rede e é bloqueada enquanto uma cópia está pendente ou
+em processamento. `uncertain` não é reimpresso automaticamente. Confira o Windows e
+o papel antes de confirmar nova cópia. Falha na geração marca o trabalho como falho
+antes de imprimir e libera os trabalhos seguintes.
+
+Somente Lucas configura tickets/credenciais; funcionários imprimem apenas vendas
+que podem consultar. Tickets não entram na agenda de endereços nem nas consultas
+de impressões do bot. O bot/SuperFrete continuam selecionando apenas impressoras A4.
+Credencial perdida pode ser substituída explicitamente em PDV → Tickets; a anterior
+para de funcionar e o instalador deve receber a nova. Não faça isso com trabalho
+em processamento. ID e histórico do dispositivo são preservados.
+
+**macOS ainda não está implementado no agente Eleven.** Na mudança do caixa, será
+necessário preparar uma ponte compatível com CUPS e validar a fila real. O fluxo
+celular → ERP → computador → Zebra será o mesmo; este ZIP é exclusivo do Windows.
+
+Referências: [Zebra ZD220](https://www.zebra.com/us/en/products/spec-sheets/printers/desktop/zd220.html),
+[CUPS no macOS](https://support.zebra.com/article/000012134).
+
+Validação: testes isolados de snapshot, acesso por vendedor, rollback, reenvio,
+separação A4/tickets, mídia PDF e pacote; migração e concorrência em PostgreSQL
+isolado; testes PowerShell sem spool físico. A saída na Zebra real depende da
+instalação e conferência pelo responsável; teste automatizado não comprova papel.
+
 ## Instalação e operação atuais
 
 O bot Telegram, o gestor de endereços e as etiquetas compartilham o mesmo agente

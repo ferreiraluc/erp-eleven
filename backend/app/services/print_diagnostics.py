@@ -14,6 +14,7 @@ class PrintDiagnostic(BaseModel):
 
 
 MESSAGES = {
+    'document_generation_failed': 'Não foi possível montar o ticket. Nada foi enviado à impressora. Confira a venda antes de solicitar outra cópia.',
     'download_failed': 'O PDF não pôde ser baixado após três tentativas. Nada foi enviado à impressora.',
     'invalid_pdf': 'O PDF recebido não passou na verificação de integridade. Nada foi enviado à impressora.',
     'printer_unavailable': 'Confira a fila configurada, o serviço de impressão do Windows e o Sumatra. Nada foi enviado.',

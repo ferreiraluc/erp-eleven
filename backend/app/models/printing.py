@@ -1,6 +1,6 @@
 """Printer-scoped credentials and durable, at-most-once dispatch."""
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, LargeBinary, String, JSON, Integer
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, LargeBinary, String, JSON, Integer, Index, text
 from sqlalchemy.dialects.postgresql import UUID
 from ..database import Base
 from .assistant import utcnow
@@ -12,8 +12,15 @@ class PrintDevice(Base):
     name = Column(String(100), nullable=False)
     token_hash = Column(String(64), nullable=False, unique=True)
     active = Column(Boolean, nullable=False, default=True)
+    purpose = Column(String(20), nullable=False, default='documents', server_default='documents')
+    paper_width_mm = Column(Integer, nullable=False, default=60, server_default='60')
+    paper_height_mm = Column(Integer, nullable=False, default=80, server_default='80')
+    auto_receipts = Column(Boolean, nullable=False, default=False, server_default='false')
     last_seen_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    __table_args__ = (Index('uq_print_device_auto_receipts', 'auto_receipts', unique=True,
+                           postgresql_where=text('auto_receipts = true'),
+                           sqlite_where=text('auto_receipts = 1')),)
 
 
 class PrintJob(Base):

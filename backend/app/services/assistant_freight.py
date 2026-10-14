@@ -120,7 +120,7 @@ def confirm(db,message,action):
                     return row.error or 'Não foi possível confirmar a emissão. Consulte o frete no gestor.'
             action.status='executed';action.result_id=key;action.executed_at=utcnow()
             return 'Etiqueta paga. Vou buscar o PDF automaticamente, enviá-lo aqui e colocar uma cópia A4 na fila da loja assim que a SuperFrete liberar. O PDF também aparecerá no gestor. Não é necessário pagar novamente.'
-        devices=db.query(PrintDevice).filter_by(active=True).limit(2).all()
+        devices=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True).limit(2).all()
         if len(devices)!=1:return 'Configure uma única impressora ativa no ERP.'
         # Printing is read-only externally; queue and confirmation commit together.
         job=sf.print_label(db,key,devices[0].id,action.id,message.user_id)

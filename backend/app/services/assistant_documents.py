@@ -83,7 +83,7 @@ def prepare_file(db,message,identity,args):
     source=query.filter(AssistantMessage.id==args.mensagem_id).first() if args.mensagem_id else (
         message if message.attachment else query.order_by(AssistantMessage.created_at.desc()).first())
     if not source or not source.attachment:return {'erro':'Envie o arquivo PDF nesta conversa do Telegram e peça para imprimir. Um nome de arquivo em texto não contém o PDF.'}
-    devices=db.query(PrintDevice).filter_by(active=True).limit(2).all()
+    devices=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True).limit(2).all()
     if len(devices)!=1:return {'erro':'Configure uma única impressora ativa no ERP.'}
     try:
         pdf=download_pdf(source.attachment)
@@ -102,7 +102,7 @@ def confirm_file(db,message,action):
     if not source or source.user_id!=message.user_id or source.channel!=message.channel or source.conversation_id!=message.conversation_id:
         return 'Arquivo não disponível para este usuário e conversa.'
     if not source.attachment:return 'A referência temporária do PDF expirou. Envie o arquivo novamente.'
-    device=db.query(PrintDevice).filter_by(id=uuid.UUID(p['device_id']),active=True).with_for_update().first()
+    device=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(id=uuid.UUID(p['device_id']),active=True).with_for_update().first()
     if not device:return 'A impressora foi desativada. Nenhum arquivo enviado.'
     job=db.query(PrintJob).filter_by(request_key=action.id).first()
     if not job:
@@ -138,10 +138,10 @@ def cleanup_documents(db):
 def query_prints(db,message,identity,args):
     from .print_diagnostics import diagnostic_message
     if not may_schedule(db,message,identity):return {'erro':'Histórico de impressões exige gestor habilitado.'}
-    q=db.query(PrintJob).filter(PrintJob.source!='bot_pdf_ephemeral')
+    q=db.query(PrintJob).filter(PrintJob.source.notin_(('bot_pdf_ephemeral', 'pdv_receipt')))
     if args.termo:q=q.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(args.termo),escape='\\'))
     total=q.count();rows=q.order_by(PrintJob.created_at.desc()).offset((args.pagina-1)*args.limite).limit(args.limite).all()
-    return {'impressoras':[{'nome':d.name,'ultimo_contato':d.last_seen_at.isoformat() if d.last_seen_at else None} for d in db.query(PrintDevice).filter_by(active=True)],
+    return {'impressoras':[{'nome':d.name,'ultimo_contato':d.last_seen_at.isoformat() if d.last_seen_at else None} for d in db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True)],
         'total':total,'resultados':[{'id':str(j.id),'status':j.status,'origem':j.source,'data':j.created_at.isoformat(),
         'diagnostico':diagnostic_message(j),'detalhes_tecnicos':j.diagnostic,
         'arquivo':(j.snapshot or {}).get('filename'),'destinatario':(j.snapshot or {}).get('endereco',{}).get('nome')} for j in rows],

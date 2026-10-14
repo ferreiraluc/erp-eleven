@@ -28,6 +28,7 @@
           />
         </svg>
       </button>
+      <button v-if="auth.isOwner" class="erp-button erp-button--secondary erp-button--sm" :disabled="pdv.loading" @click="showPrinterModal=true" :aria-label="uiText('Impressora de tickets')">🖨 {{ uiText('Tickets') }}</button>
     </ModuleHeader>
     <div v-if="!ratesReady" class="pdv-rates-status" role="status">
       {{ uiText(currencyStore.error ? 'Erro ao carregar taxas de câmbio' : currencyStore.currentRates ? 'Câmbio incompleto. Confira as taxas.' : 'Carregando taxas…') }}
@@ -297,6 +298,7 @@
     <!-- Modals -->
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
     <PDVAvulsoModal v-if="showAvulso" :scanned-code="avulsoCode" :rates="{ PYG: 1, USD: rateUsd, BRL: rateBrl, EUR: rateEur }" @add="onAvulsoAdd" @close="showAvulso = false" />
+    <PDVPrinterModal v-if="showPrinterModal" @close="showPrinterModal=false" />
     <PDVReceiptModal v-if="showReceipt && pdv.lastSale" :sale="pdv.lastSale" @close="showReceipt = false" />
 
     <ExchangeRateModal v-if="showRateModal" @close="showRateModal = false" @saved="showToast(uiText('Taxas atualizadas'))" />
@@ -312,6 +314,8 @@
 import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
+import { useAuthStore } from '@/stores/auth'
+import PDVPrinterModal from '@/components/pdv/PDVPrinterModal.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -332,6 +336,8 @@ import { vPdvActionKeyboard } from '@/directives/pdvKeyboard'
 import { usePdvCartText } from '@/components/pdv/cartMessages'
 const { cartText, cartErrorText } = usePdvCartText()
 
+const auth = useAuthStore()
+const showPrinterModal = ref(false)
 const pdv = usePdvStore()
 const currencyStore = useCurrencyStore()
 

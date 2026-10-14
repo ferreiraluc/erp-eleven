@@ -325,7 +325,7 @@ def print_label(db,key,device_id,request_key,user_id):
     from ..models.printing import PrintDevice,PrintJob
     row=locked(db,key)
     if row.state not in ('released','posted','delivered') or not (row.label_url or row.label_pdf):raise HTTPException(400,'Consulte a etiqueta emitida antes de imprimir.')
-    device=db.query(PrintDevice).filter_by(id=device_id,active=True).with_for_update().first()
+    device=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(id=device_id,active=True).with_for_update().first()
     if not device:raise HTTPException(404,'Impressora não encontrada.')
     old=db.query(PrintJob).filter_by(request_key=request_key).first()
     if old:

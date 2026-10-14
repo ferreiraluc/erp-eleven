@@ -220,9 +220,35 @@ def create_sale(
     _apply_stock(db, sale, current_user.id, stock_items)
     _update_fiado(db, sale, current_user.id)
 
+    if body.print_receipt:
+        from ...services.pdv_receipts import enqueue
+        enqueue(db, sale, current_user.id)
+
     db.commit()
     db.refresh(sale)
     return _sale_to_response(sale)
+
+
+@router.get('/sales/{sale_id}/receipt')
+def receipt_status(sale_id: uuid.UUID, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+    from ...services import pdv_receipts as receipts
+    sale = receipts.authorized_sale(db, sale_id, user)
+    job = receipts.latest_job(db, sale)
+    return {'job': receipts.receipt_state(job), 'printer': receipts.printer_info(receipts.destination(db))}
+
+
+@router.post('/sales/{sale_id}/receipt')
+def print_receipt(sale_id: uuid.UUID, copy_key: Optional[uuid.UUID] = None,
+                  confirm_copy: bool = False, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+    from ...services import pdv_receipts as receipts
+    if copy_key is not None and not confirm_copy:
+        raise HTTPException(422, 'Confirme a nova cópia após conferir a fila da impressora.')
+    sale = receipts.authorized_sale(db, sale_id, user)
+    job = receipts.enqueue(db, sale, user.id, copy_key=copy_key)
+    if not job:
+        raise HTTPException(409, 'Ative a impressora de tickets no PDV antes de enviar.')
+    db.commit()
+    return {'job': receipts.receipt_state(job), 'printer': receipts.printer_info(receipts.destination(db))}
 
 
 @router.get("/sales", response_model=List[PdvSaleListItem])

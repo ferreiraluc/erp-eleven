@@ -160,6 +160,7 @@ class PdvPaymentResponse(BaseModel):
 # ── PDV Sale ──────────────────────────────────────────────────────────────────
 
 class PdvSaleCreate(BaseModel):
+    print_receipt: bool = False
     vendedor_id: Optional[uuid.UUID] = None
     cliente_id: Optional[uuid.UUID] = None
     cliente_nome: Optional[str] = None

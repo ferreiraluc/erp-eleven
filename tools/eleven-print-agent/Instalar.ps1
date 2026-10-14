@@ -1,9 +1,11 @@
+param([ValidateSet('documents', 'tickets')][string]$Profile = 'documents')
 $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') { throw 'Instale somente no Windows da loja.' }
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 . (Join-Path $PSScriptRoot 'Configuracao.ps1')
-$root = Join-Path $env:LOCALAPPDATA 'ElevenPrint'
+$folder = if ($Profile -eq 'tickets') { 'ElevenPrintTickets' } else { 'ElevenPrint' }
+$root = Join-Path $env:LOCALAPPDATA $folder
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 $lockStream = $null
 try {
@@ -13,10 +15,11 @@ try {
     $existing = if (Test-Path -LiteralPath $configPath) { Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json } else { $null }
     $printers = @([System.Drawing.Printing.PrinterSettings]::InstalledPrinters)
     if (-not $printers.Count) { throw 'Nenhuma impressora instalada. Instale o driver da Samsung e teste um PDF no Windows.' }
-    Write-Host 'Atualizacao para Samsung SL-M2035W. Selecione a fila que ja imprime no Windows.'
+    if ($Profile -eq 'tickets') { Write-Host 'Tickets Zebra ZD220. Selecione a fila USB que imprime no Windows.' }
+    else { Write-Host 'Atualizacao para Samsung SL-M2035W. Selecione a fila que ja imprime no Windows.' }
     Write-Host 'O nome do driver pode ser diferente do modelo escrito na impressora.'
     if ($existing) { Write-Host "Destino anterior: $($existing.printer)" }
-    $suggested = Get-SuggestedPrinterIndex $printers
+    $suggested = Get-SuggestedPrinterIndex $printers $Profile
     for ($i = 0; $i -lt $printers.Count; $i++) { Write-Host "$($i + 1): $($printers[$i])" }
     $prompt = 'Numero da impressora da loja'
     if ($suggested -ge 0) { $prompt += " (Enter = $($suggested + 1))" }
@@ -43,12 +46,14 @@ try {
         $sumatra = $dialog.FileName
     }
 
-    Write-Host "Destino: $desired | A4 | uma copia | frente unica"
+    if ($Profile -eq 'tickets') { Write-Host "Destino: $desired | Ticket no tamanho configurado no driver | uma copia"; Write-Host 'Ajuste o driver Zebra ao papel (60 x 80 mm inicialmente). Desative ajuste automatico de escala.' }
+    else { Write-Host "Destino: $desired | A4 | uma copia | frente unica" }
     Write-Host 'Use somente a credencial exclusiva do agente, nunca a senha do ERP.'
     if ($existing -and $existing.token) { Write-Host 'Pressione Enter para MANTER a credencial atual, sem precisar digita-la novamente.' }
     else { Write-Host 'Sem credencial, Enter prepara o agente sem conectar.' }
     $secret = Read-Host 'Credencial do agente' -AsSecureString
     $config = @{
+        profile = $Profile
         server = 'https://erp-eleven-backend.onrender.com'
         printer = $desired
         sumatra = $sumatra
@@ -61,12 +66,13 @@ try {
     Save-AgentConfig $configPath $config
 
     $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Eleven Impressao.lnk'))
+    $shortcutName = if ($Profile -eq 'tickets') { 'Eleven Tickets.lnk' } else { 'Eleven Impressao.lnk' }
+    $shortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) $shortcutName))
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
     $shortcut.Arguments = '-NoLogo -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $root 'Agente.ps1') + '"'
     $shortcut.WorkingDirectory = $root
     $shortcut.Save()
-    Write-Host 'Atualizado. Abra Eleven Impressao na Area de Trabalho para conectar.'
+    Write-Host "Atualizado. Abra $shortcutName na Area de Trabalho para conectar."
     Write-Host 'O nome da impressora sera atualizado no ERP ao conectar. O historico foi preservado.'
     Write-Host 'A instalacao nao imprime. Ao abrir o agente, trabalhos pendentes voltam a ser processados.'
     Write-Host 'Este programa nao inicia com o Windows automaticamente.'

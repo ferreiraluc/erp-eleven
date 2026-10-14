@@ -24,7 +24,7 @@ def watch_label(db, row, *, auto_print=False, device_id=None, message=None):
         row.auto_print = auto_print
         if device_id:row.print_device_id = device_id
         if auto_print and not row.print_device_id:
-            devices = db.query(PrintDevice).filter_by(active=True).limit(2).all()
+            devices = db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True).limit(2).all()
             if len(devices) == 1:row.print_device_id = devices[0].id
     # Frontend purchases by a connected employee use their existing company conversation.
     if message is None and not row.notify_destination:
@@ -95,7 +95,7 @@ def process_label():
                     row.label_error='Impressão automática suspensa: gestor inativo ou sem permissão.'
                     row.auto_print=False
                 else:
-                    devices = db.query(PrintDevice).filter_by(active=True)
+                    devices = db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True)
                     if row.print_device_id:devices=devices.filter_by(id=row.print_device_id)
                     options = devices.limit(2).all()
                     if len(options) == 1:
