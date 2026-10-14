@@ -85,7 +85,7 @@ def enqueue(db, sale, user_id, *, copy_key=None):
 def build_snapshot(sale, device=None, *, copy=False):
     return dict(sale_id=str(sale.id), version=sale.version, date=sale.created_at.isoformat(),
                 customer=sale.cliente_nome, seller=sale.vendedor.nome if sale.vendedor else None,
-                width=device.paper_width_mm if device else 80, height=device.paper_height_mm if device else 200,
+                width=device.paper_width_mm if device else 80, height=device.paper_height_mm if device else 0,
                 status=sale.status, refunded=str(sale.refunded_gs or 0),
                 subtotal=str(sale.subtotal_gs), discount=str(sale.desconto_gs), total=str(sale.total_gs),
                 items=[dict(name=i.item_name, size=i.item_size, color=i.item_color,
@@ -98,9 +98,11 @@ def build_snapshot(sale, device=None, *, copy=False):
 def snapshot_for_view(db, sale):
     # Same immutable revision used by the printer, even after its temporary PDF is erased.
     original = db.query(PrintJob).filter_by(request_key=original_key(sale), source='pdv_receipt').first()
-    if original and original.snapshot:
-        return original.snapshot
     device = db.query(PrintDevice).filter_by(purpose='tickets', active=True).first()
+    if original and original.snapshot:
+        # Reflow the immutable financial data for today's media, without rewriting jobs.
+        return dict(original.snapshot, width=device.paper_width_mm if device else 80,
+                    height=device.paper_height_mm if device else 0)
     return build_snapshot(sale, device)
 
 

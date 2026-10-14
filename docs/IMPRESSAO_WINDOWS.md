@@ -2,29 +2,41 @@
 
 ## Tickets do PDV — Zebra ZD220 (14/10/2026)
 
-O agente **2026.10.14.2** possui dois perfis independentes. **Eleven Impressao**
+O agente **2026.10.14.3** possui dois perfis independentes. **Eleven Impressao**
 continua em `%LOCALAPPDATA%\ElevenPrint`, para Samsung/A4. **Eleven Tickets** usa
 `%LOCALAPPDATA%\ElevenPrintTickets`, outra credencial, configuração e diário.
 Não reutilize a credencial da Samsung na Zebra. Ambos podem funcionar no mesmo Windows.
 
-Configuração inicial autorizada: Zebra USB, térmica direta sem ribbon, etiquetas
-separadas de **60 × 80 mm**. Confirme a orientação: largura é a dimensão atravessando
-a cabeça de impressão; se a etiqueta estiver invertida, ajuste os dois valores no
-ERP e no driver. O driver Zebra e SumatraPDF precisam estar instalados. O instalador
-não instala driver, não altera a mídia e não calibra a impressora.
+A mídia atual é **bobina térmica direta contínua de 80 mm**, sem ribbon. Em
+**PDV → Tickets**, selecione **Bobina contínua**, largura **80 mm** e salve com a
+fila vazia. A altura é calculada conforme a venda: um PDF de uma página e um único
+trabalho ZPL, sem rodapés de página, cortes intermediários ou inversão de páginas.
+O formato de etiquetas separadas continua disponível explicitamente (altura fixa).
 
-1. Lucas abre **PDV → Tickets**, confere largura/altura e salva. Começa desativado.
-2. Copia a credencial exibida uma única vez; baixa **agente Windows para tickets**.
-3. No Windows, extrai o ZIP e abre `Instalar.cmd`. Seleciona a Zebra e informa sua
-   credencial exclusiva. O pacote chama `Instalar.ps1 -Profile tickets`.
-4. Nas preferências da fila Zebra, configura o mesmo tamanho **60 × 80 mm**,
-   orientação retrato e etiquetas com intervalo, conforme a mídia real. Faz a
-   calibração pelo procedimento do fabricante se necessário.
-5. Abre **Eleven Tickets** e aguarda Conectado. O agente confere o papel padrão
-   do driver antes de despachar e imprime em tamanho real, sem a regra A4.
-6. Em PDV → Tickets, ativa **Imprimir ao confirmar a venda, inclusive pelo celular**.
-   A próxima venda confirmada nesse PDV enfileira uma cópia. A configuração sozinha
-   não imprime e não cria vendas. O recibo mostra estado e atualização manual.
+Para atualizar uma instalação existente:
+1. Aguarde o trabalho atual terminar e feche **Eleven Tickets**.
+2. Baixe o agente em **PDV → Tickets**, extraia todo o ZIP e abra `Instalar.cmd`.
+3. Selecione a fila USB Zebra ZD220; na credencial, **Enter mantém a existente**.
+   Não gere outra credencial nem apague `config.json` ou `journal`.
+4. Confira que há bobina contínua de 80 mm na impressora e salve esse formato no ERP.
+5. Abra **Eleven Tickets** na Área de Trabalho. Ele informa bobina contínua/altura
+   automática. Reimprima uma venda pelo fluxo de cópia com confirmação.
+
+O modo contínuo requer Windows 10+ e Zebra ZD220 **203 dpi (8 pontos/mm), ZPL**.
+`TicketContinuo.ps1` renderiza o PDF com Windows.Data.Pdf, converte em bitmap
+monocromático e envia um único formato RAW ao spooler. `^MNN`, `^PW` e `^LL`
+definem mídia contínua, largura e comprimento; blocos `^GF` limitados a 60.000 bytes
+compõem a mesma página. Não depende da altura fixa do driver/Sumatra, não salva
+configuração em flash, não limpa a fila e não calibra o equipamento. Ao voltar para
+etiquetas com intervalo, ajuste novamente a mídia no driver conforme o fabricante.
+Sumatra continua sendo usado para etiquetas fixas e documentos A4.
+
+O servidor entrega a altura real do PDF junto ao SHA-256. Agentes anteriores não
+podem coletar trabalhos contínuos: recebem 409 e o trabalho permanece pendente até
+a atualização (respeitando sua expiração). O diário e a proteção contra reenvio são
+os mesmos; `submitted` significa aceito pelo spooler, não saída física confirmada.
+A configuração não imprime nem cria vendas. A próxima venda confirmada enfileira
+uma cópia apenas se a impressão automática estiver ativada.
 
 ### Janela fecha ao abrir os arquivos baixados
 
@@ -46,13 +58,17 @@ ligados. O agente consulta a cada três segundos; isso não é garantia de prazo
 saída física. Trabalhos não coletados expiram em 24 horas. Não há serviço/início
 automático nesta versão.
 
-Cada etiqueta é uma página física. Tickets longos podem consumir várias etiquetas,
-sempre identificadas pela venda e página, sem cortar conteúdo para forçar uma página.
-Para bobina contínua, compre papel **térmico direto** compatível com a ZD220, sem
-adesivo; o fabricante informa largura imprimível máxima 104 mm e rolo de até 127 mm
-de diâmetro. Confira também núcleo/espessura e a configuração do sensor no driver.
-Esta versão usa altura fixa configurável de 50–400 mm; não calcula corte automático
-nem promete guilhotina. Trocar mídia exige ajustar driver e ERP, com fila vazia.
+Em etiquetas com altura fixa (50–400 mm), cada página ocupa uma etiqueta, com a
+mesma configuração no driver. Em bobina contínua, o limite físico da ZD220 é
+**991 mm por comprovante**: acima disso a geração recusa claramente em vez de
+cortar, reduzir ou dividir silenciosamente. Não há comando de guilhotina.
+A largura imprimível máxima é 104 mm. Alterações de formato exigem fila vazia.
+Downloads de vendas antigas usam os dados preservados e o formato atual; snapshots
+e PDFs de trabalhos já enfileirados não são alterados. Uma nova cópia autorizada
+usa a mídia atual.
+
+Referências do modo contínuo: [Zebra ZD220 e limites físicos](https://www.zebra.com/us/en/products/spec-sheets/printers/desktop/zd220.html),
+[ZPL ^MN — mídia contínua](https://docs.zebra.com/us/en/printers/software/zpl-pg/c-zpl-zpl-commands/r-zpl-mn.html).
 
 O ticket é um snapshot dos dados da venda na confirmação; a renderização PDF ocorre
 no servidor quando o agente busca o trabalho. Nenhuma IA ou API paga é utilizada.

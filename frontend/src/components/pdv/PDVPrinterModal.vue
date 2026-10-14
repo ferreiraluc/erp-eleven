@@ -8,11 +8,14 @@
           <p v-if="loading" role="status">{{ uiText('Carregando…') }}</p>
           <template v-else>
             <label>{{ uiText('Nome') }}<input v-model.trim="form.name" required maxlength="100" /></label>
+            <label>{{ uiText('Tipo de papel') }}<select v-model="paperMode"><option value="continuous">{{ uiText('Bobina contínua') }}</option><option value="labels">{{ uiText('Etiquetas com altura fixa') }}</option></select></label>
             <div class="printer-size">
               <label>{{ uiText('Largura (mm)') }}<input v-model.number="form.paper_width_mm" type="number" min="50" max="104" required /></label>
-              <label>{{ uiText('Altura (mm)') }}<input v-model.number="form.paper_height_mm" type="number" min="50" max="400" required /></label>
+              <label v-if="paperMode === 'labels'">{{ uiText('Altura (mm)') }}<input v-model.number="fixedHeight" type="number" min="50" max="400" required /></label>
+              <p v-else class="printer-auto-height">{{ uiText('Altura automática conforme a venda') }}</p>
             </div>
-            <small>{{ uiText('Use o mesmo tamanho no driver Zebra. Etiquetas 6 × 8 cm: 60 × 80 mm. Vendas longas usam várias etiquetas.') }}</small>
+            <small v-if="paperMode === 'continuous'">{{ uiText('Um ticket inteiro, sem dividir em páginas. Requer o Eleven Tickets atualizado no Windows e bobina contínua na Zebra ZD220.') }}</small>
+            <small v-else>{{ uiText('Use o mesmo tamanho no driver Zebra. Etiquetas 6 × 8 cm: 60 × 80 mm. Vendas longas usam várias etiquetas.') }}</small>
             <label class="printer-check"><input v-model="form.auto_receipts" type="checkbox" />{{ uiText('Imprimir ao confirmar a venda, inclusive pelo celular') }}</label>
             <p v-if="device">{{ uiText('Último contato:') }} {{ device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : uiText('Ainda não conectado') }}</p>
             <div v-if="token" class="printer-secret">
@@ -45,13 +48,14 @@ import { pdvReceipts, type ReceiptPrinter } from '@/services/pdvReceipts'
 import { saleError } from '@/services/pdvManagement'
 const emit = defineEmits<{ (e:'close'):void }>()
 const device = ref<ReceiptPrinter | null>(null), token = ref(''), loading = ref(true), busy = ref(false), error = ref(''), saved = ref(false), copied = ref(false), savedToken = ref(false)
-const form = reactive({ name:'Zebra ZD220', paper_width_mm:60, paper_height_mm:80, auto_receipts:false })
+const form = reactive({ name:'Zebra ZD220', paper_width_mm:80, paper_height_mm:0, auto_receipts:false })
+const paperMode = ref('continuous'), fixedHeight = ref(80)
 const rotateConfirm=ref(false)
-onMounted(async () => { try { device.value = (await pdvReceipts.printer()).device; if(device.value) Object.assign(form, device.value) } catch(e) { error.value=saleError(e) } finally { loading.value=false } })
+onMounted(async () => { try { device.value = (await pdvReceipts.printer()).device; if(device.value) { Object.assign(form, device.value); paperMode.value=form.paper_height_mm===0?'continuous':'labels'; fixedHeight.value=form.paper_height_mm || 80 } } catch(e) { error.value=saleError(e) } finally { loading.value=false } })
 async function save() {
   if(busy.value) return
   busy.value=true; error.value=''; saved.value=false
-  try { const result=await pdvReceipts.configure({name:form.name, paper_width_mm:form.paper_width_mm, paper_height_mm:form.paper_height_mm, auto_receipts:form.auto_receipts}); device.value=result.device; if(result.token) token.value=result.token; saved.value=true }
+  try { const result=await pdvReceipts.configure({name:form.name, paper_width_mm:form.paper_width_mm, paper_height_mm:paperMode.value==='continuous'?0:fixedHeight.value, auto_receipts:form.auto_receipts}); device.value=result.device; if(result.token) token.value=result.token; saved.value=true }
   catch(e) { error.value=saleError(e) } finally { busy.value=false }
 }
 async function copyToken() { try { await navigator.clipboard.writeText(token.value); copied.value=true } catch { error.value=uiText('Selecione e copie a credencial manualmente.') } }
@@ -65,5 +69,6 @@ function close() { if(busy.value) return; if(token.value && !savedToken.value) {
 </script>
 <style scoped>
 .printer-backdrop{position:fixed;inset:0;z-index:2100;display:flex;align-items:center;justify-content:center}
+.printer-fields select{width:100%;padding:.55rem;border:1px solid #cbd5e1;border-radius:.5rem;font-size:16px;background:white}.printer-auto-height{align-self:center;color:#475569}
 .printer-dialog{background:white}.printer-fields{display:grid;gap:.85rem}.printer-fields p{margin:0;font-size:.875rem}.printer-fields label{display:grid;gap:.3rem;font-size:.875rem}.printer-fields input:not([type=checkbox]){width:100%;min-width:0;padding:.55rem;border:1px solid #cbd5e1;border-radius:.5rem;font-size:16px;box-sizing:border-box}.printer-size{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}.printer-fields .printer-check{display:flex;align-items:center;gap:.5rem}.printer-secret{display:grid;gap:.65rem;padding:.75rem;background:#eff6ff;border-radius:.75rem}
 </style>

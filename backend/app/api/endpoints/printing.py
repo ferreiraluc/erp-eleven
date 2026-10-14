@@ -50,9 +50,16 @@ class ConnectInput(DeviceInput):
 
 
 class ReceiptDeviceInput(DeviceInput):
-    paper_width_mm: int = Field(default=60, ge=50, le=104)
-    paper_height_mm: int = Field(default=80, ge=50, le=400)
+    paper_width_mm: int = Field(default=80, ge=50, le=104)
+    paper_height_mm: int = Field(default=0, ge=0, le=400)
     auto_receipts: bool = False
+
+    @field_validator('paper_height_mm')
+    @classmethod
+    def paper_height(cls, value):
+        if value != 0 and value < 50:
+            raise ValueError('Use altura automática (0) para bobina ou 50–400 mm para etiquetas.')
+        return value
 
 
 @router.get('/receipt-device')
@@ -104,7 +111,7 @@ def rotate_receipt_credential(response: Response, confirm: bool = False, user=De
 @router.get('/agent-package')
 def agent_package(profile: Literal['documents', 'tickets'] = 'documents', user=Depends(administrator)):
     root = Path(__file__).resolve().parents[4] / 'tools' / 'eleven-print-agent'
-    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'LEIA-ME.txt')
+    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'LEIA-ME.txt')
     if not all((root / name).is_file() for name in files):
         raise HTTPException(503, 'Pacote do agente indisponível nesta instalação')
     data = io.BytesIO()
@@ -201,7 +208,7 @@ def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
 
 
 @router.post("/agent/claim")
-def claim(device=Depends(printer), db: Session = Depends(get_db)):
+def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tickets: bool = False):
     from ...services.assistant_documents import cleanup_documents
     authenticated_hash = device.token_hash
     device = db.query(PrintDevice).filter_by(id=device.id, active=True).populate_existing().with_for_update().first()
@@ -217,6 +224,9 @@ def claim(device=Depends(printer), db: Session = Depends(get_db)):
     if not job:
         db.commit()
         return Response(status_code=204)
+    continuous = job.source == 'pdv_receipt' and job.snapshot.get('height') == 0
+    if continuous and not continuous_tickets:
+        raise HTTPException(409, 'Atualize o Eleven Tickets no Windows para imprimir em bobina contínua. O trabalho continua na fila.')
     from ...services.pdv_receipts import prepare_document
     try:
         prepare_document(job)
@@ -230,6 +240,10 @@ def claim(device=Depends(printer), db: Session = Depends(get_db)):
     result = {"id": str(job.id), "sha256": job.sha256}
     if job.source == 'pdv_receipt':
         result.update(profile='tickets', paper_width_mm=job.snapshot['width'], paper_height_mm=job.snapshot['height'])
+        if continuous:
+            from pypdf import PdfReader
+            pdf = PdfReader(io.BytesIO(job.pdf))
+            result.update(paper_mode='continuous', paper_height_mm=round(float(pdf.pages[0].mediabox.height)*25.4/72))
     db.commit()
     return result
 

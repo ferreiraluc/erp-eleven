@@ -1,6 +1,7 @@
 """One Spanish receipt presentation for preview, PDF download and Zebra jobs."""
 import base64
 import io
+import math
 from datetime import datetime
 from decimal import Decimal
 from html import escape
@@ -9,6 +10,7 @@ from zoneinfo import ZoneInfo
 from reportlab.graphics.barcode import createBarcodeDrawing
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle, KeepTogether
 from .pdv_ticket_identity import ticket_code
 
@@ -64,11 +66,11 @@ def view(snapshot):
 
 def render(snapshot):
     width, height = int(snapshot['width']), int(snapshot['height'])
-    if not 50 <= width <= 104 or not 50 <= height <= 400:
+    if not 50 <= width <= 104 or (height != 0 and not 50 <= height <= 400):
         raise ValueError('Formato de ticket inválido.')
     data = view(snapshot)
     output = io.BytesIO()
-    doc = BaseDocTemplate(output, pagesize=(width*mm, height*mm), leftMargin=3*mm, rightMargin=3*mm,
+    doc = BaseDocTemplate(output, pagesize=(width*mm, (height or 991)*mm), leftMargin=3*mm, rightMargin=3*mm,
                             topMargin=7*mm, bottomMargin=7*mm, title='ELEVEN - Ticket de venta', author='ELEVEN')
     style = ParagraphStyle('ticket', fontName='Helvetica', fontSize=8, leading=10, spaceAfter=3, splitLongWords=True)
     strong = ParagraphStyle('strong', parent=style, fontName='Helvetica-Bold')
@@ -126,6 +128,32 @@ def render(snapshot):
     line('ID: '+data['sale_id'], small)
     divider()
     story.append(KeepTogether([paragraph(text, center) for text in data['footer']]))
+    if height == 0:
+        # Continuous media: measure the actual flowables, then draw exactly one page.
+        # KeepTogether only affects the legacy fixed-label pagination below.
+        flat = []
+        for flowable in story:
+            flat.extend(flowable._content if isinstance(flowable, KeepTogether) else [flowable])
+        measure = Canvas(io.BytesIO())
+        measured = []
+        for flowable in flat:
+            w, h = flowable.wrapOn(measure, doc.width, 100000)
+            measured.append((flowable, w, h, flowable.getSpaceBefore(), flowable.getSpaceAfter()))
+        height = max(50, math.ceil((sum(h+b+a for _, _, h, b, a in measured) + 8*mm) / mm))
+        if height > 991:
+            raise ValueError('O ticket excede 991 mm, o limite da Zebra ZD220 para um único comprovante. Reduza o conteúdo ou use outro formato de papel.')
+        canvas = Canvas(output, pagesize=(width*mm, height*mm))
+        canvas.setTitle('ELEVEN - Ticket de venta')
+        canvas.setAuthor('ELEVEN')
+        canvas.setViewerPreference('PrintScaling', 'None')
+        y = height*mm - 4*mm
+        for flowable, w, h, before, after in measured:
+            y -= before + h
+            flowable.drawOn(canvas, 3*mm, y, _sW=doc.width-w)
+            y -= after
+        canvas.showPage()
+        canvas.save()
+        return output.getvalue()
     def page(canvas, document):
         canvas.saveState()
         canvas.setFont('Helvetica', 6)

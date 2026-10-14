@@ -1,4 +1,4 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.14.2
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.14.3
 
 QUAL ARQUIVO ABRIR
 Para instalar: extraia TODO o ZIP e abra Instalar.cmd.
@@ -15,11 +15,16 @@ TICKETS ZEBRA ZD220
 O ZIP baixado em PDV > Tickets configura o perfil tickets (Eleven Tickets).
 Use uma credencial propria criada ali, nunca a credencial da Samsung.
 A instalacao usa %LOCALAPPDATA%\ElevenPrintTickets e nao substitui a pasta A4.
-Selecione a Zebra USB e ajuste no driver o mesmo papel informado no ERP:
-inicialmente 60 x 80 mm, etiquetas com intervalo, orientacao retrato.
-O agente confere o tamanho padrao do driver e imprime sem escala.
-Tickets longos ocupam varias etiquetas. A impressora e termica direta, sem ribbon:
-bobina futura deve ser papel termico compativel, nao papel branco comum.
+Selecione a Zebra USB ZD220 203 dpi (ZPL). No ERP, PDV > Tickets:
+- Bobina continua: largura 80 mm, altura automatica conforme a venda.
+  Windows 10+ renderiza o PDF e envia ZPL em UM trabalho, sem divisao em paginas.
+  Nao depende da antiga altura fixa no driver. Limite fisico: 991 mm por ticket.
+- Etiquetas com intervalo: escolha altura fixa e configure o mesmo tamanho no
+  driver. Nesse modo, Sumatra imprime as paginas nas etiquetas separadas.
+A troca de formato exige fila vazia. A bobina precisa ser termica direta compativel.
+Para atualizar: feche Eleven Tickets, extraia o ZIP, rode Instalar.cmd e pressione
+Enter para manter a credencial. Abra novamente o atalho Eleven Tickets.
+TicketContinuo.ps1 e um auxiliar; nao abra esse arquivo para iniciar a fila.
 Abra Eleven Tickets, aguarde Conectado e ative impressao automatica em PDV > Tickets.
 Vendas concluidas no celular tambem chegam a esta fila. Mantenha o Windows ligado.
 MacOS exige outro agente, ainda nao incluido. Este pacote e exclusivo do Windows.
@@ -66,11 +71,11 @@ DOCUMENTOS
 
 ESTADOS
 failed: falha ANTES do envio. Confira conexao, Sumatra e servico de impressao.
-submitted: Sumatra aceitou o envio ao Windows; nao comprova saida fisica do papel.
+submitted: o renderizador aceitou o envio ao Windows; nao comprova saida fisica do papel.
 uncertain: envio interrompido/inconclusivo; confira a fila do Windows e a impressora.
 O download pode ser repetido ate 3 vezes antes do envio.
 O agente nunca reimprime automaticamente um trabalho ja despachado.
-Apos 2 minutos, tenta parar somente o Sumatra aberto para aquele trabalho.
+Apos 2 minutos, tenta parar somente o renderizador aberto para aquele trabalho.
 Confira a fila do Windows antes de pedir outra copia.
 O motivo tecnico agora aparece no log local, no historico do ERP e na consulta do bot.
 O programa antigo continua funcionando ate voce instalar esta atualizacao.

@@ -251,7 +251,10 @@ def receipt_pdf(sale_id: uuid.UUID, db: Session = Depends(get_db), user=Depends(
     from ...services import pdv_receipts as receipts
     from ...services.pdv_ticket_identity import ticket_code
     sale = receipts.authorized_sale(db, sale_id, user)
-    document = receipts.render(receipts.snapshot_for_view(db, sale))
+    try:
+        document = receipts.render(receipts.snapshot_for_view(db, sale))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     return Response(document, media_type='application/pdf', headers={
         'Cache-Control': 'no-store', 'Content-Disposition': f'attachment; filename="eleven-ticket-{ticket_code(sale.id)}.pdf"'})
 

@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $lockStream = $null
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Instale somente no Windows da loja.' }
-    foreach ($required in @('Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1')) {
+    foreach ($required in @('Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1')) {
         if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required) -PathType Leaf)) {
             throw 'Pacote incompleto. Use Extrair tudo no ZIP e abra Instalar.cmd na pasta extraida.'
         }
@@ -52,7 +52,7 @@ try {
         $sumatra = $dialog.FileName
     }
 
-    if ($AgentProfile -eq 'tickets') { Write-Host "Destino: $desired | Ticket no tamanho configurado no driver | uma copia"; Write-Host 'Ajuste o driver Zebra ao papel (60 x 80 mm inicialmente). Desative ajuste automatico de escala.' }
+    if ($AgentProfile -eq 'tickets') { Write-Host "Destino: $desired | Zebra ZD220 203 dpi | uma copia"; Write-Host 'Bobina continua: selecione Bobina continua e largura 80 mm no PDV > Tickets. A altura sera automatica. Etiquetas separadas: mantenha a altura fixa e o mesmo tamanho no driver.' }
     else { Write-Host "Destino: $desired | A4 | uma copia | frente unica" }
     Write-Host 'Use somente a credencial exclusiva do agente, nunca a senha do ERP.'
     if ($existing -and $existing.token) { Write-Host 'Pressione Enter para MANTER a credencial atual, sem precisar digita-la novamente.' }
@@ -66,7 +66,7 @@ try {
         token = Get-AgentToken $existing $secret
     }
     # Preserve the device identity and journal; upgrading must not replay jobs.
-    foreach ($file in @('Agente.ps1', 'Impressao.ps1')) {
+    foreach ($file in @('Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $root -Force
     }
     Save-AgentConfig $configPath $config

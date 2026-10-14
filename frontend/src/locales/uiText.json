@@ -3898,5 +3898,30 @@
     "pt": "Confirmar nova credencial",
     "es": "Confirmar nueva credencial",
     "en": "Confirm new credential"
+  },
+  "Tipo de papel": {
+    "pt": "Tipo de papel",
+    "es": "Tipo de papel",
+    "en": "Paper type"
+  },
+  "Bobina contínua": {
+    "pt": "Bobina contínua",
+    "es": "Rollo continuo",
+    "en": "Continuous roll"
+  },
+  "Etiquetas com altura fixa": {
+    "pt": "Etiquetas com altura fixa",
+    "es": "Etiquetas de altura fija",
+    "en": "Fixed-height labels"
+  },
+  "Altura automática conforme a venda": {
+    "pt": "Altura automática conforme a venda",
+    "es": "Altura automática según la venta",
+    "en": "Automatic height for each sale"
+  },
+  "Um ticket inteiro, sem dividir em páginas. Requer o Eleven Tickets atualizado no Windows e bobina contínua na Zebra ZD220.": {
+    "pt": "Um ticket inteiro, sem dividir em páginas. Requer o Eleven Tickets atualizado no Windows e bobina contínua na Zebra ZD220.",
+    "es": "Un ticket completo, sin dividir en páginas. Requiere Eleven Tickets actualizado en Windows y rollo continuo en la Zebra ZD220.",
+    "en": "One complete receipt, without page breaks. Requires updated Eleven Tickets on Windows and a continuous roll in the Zebra ZD220."
   }
 }

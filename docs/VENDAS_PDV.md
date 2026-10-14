@@ -14,8 +14,10 @@ exibem essa situação e as quantidades/valores devolvidos no comprovante. Não 
 apresentadas como uma venda normal. O ticket conserva o snapshot da revisão enviada.
 Alterações posteriores não reimprimem automaticamente.
 
-Filas A4 e tickets permanecem separadas. Tamanho inicial 60 × 80 mm, ajustável no
-ERP e driver com a fila vazia; tickets longos usam várias páginas. Instalação,
+Filas A4 e tickets permanecem separadas. Para bobina contínua de 80 mm, selecione
+**Bobina contínua** em PDV → Tickets: uma página com altura calculada (até 991 mm),
+sem separação em etiquetas. Requer agente Windows 2026.10.14.3. Etiquetas fixas
+continuam disponíveis; trocar formato exige fila vazia. Instalação,
 limites e migração futura ao Mac: [Impressão](IMPRESSAO_WINDOWS.md#tickets-do-pdv--zebra-zd220-14102026).
 
 A página **Vendas** (`/vendas-pdv`) fica nas ações rápidas do dashboard, ao lado de
