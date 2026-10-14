@@ -2,7 +2,7 @@
 
 ## Serviços de produção
 
-- Frontend: site estático Render, `https://erp-eleven-frontend.onrender.com`.
+- Frontend: site estático Render, `https://elevenparispy.com` (também `www.elevenparispy.com`).
 - Backend: web service Python, `https://erp-eleven-backend.onrender.com`.
 - Banco: PostgreSQL compartilhado entre API e workers.
 - Impressora: agente PowerShell na máquina Windows da loja, fora do Render.
@@ -27,6 +27,36 @@ plano ou configuração já ativa inadvertidamente.
 A sintaxe do Blueprint usa `type: web` e `runtime: static` para o frontend,
 conforme a [referência oficial do Render](https://render.com/docs/blueprint-spec).
 O servidor Express/Docker é uma alternativa local, não participa do site estático.
+
+### HTML e recuperação de arquivos após deploy
+
+Em 14/10/2026, a raiz do domínio ainda retornava HTML em cache com hashes do build
+anterior. Os arquivos JS/CSS antigos retornavam HTML pela regra de rewrite da SPA,
+inclusive com HTTP 200: a interface ficava sem estilos ou sem o componente da rota.
+A versão atual, consultada com query nova, carregava corretamente.
+
+Em **Headers** do frontend no Render, `/`, `/index.html` e `/loading-fallback.js`
+devem retornar `Cache-Control: no-store, max-age=0, s-maxage=0`. As mesmas regras
+estão em `render.yaml`; em serviços existentes, conferir o painel, pois editar o
+arquivo não garante que o Blueprint seja reaplicado. Preservar os headers de
+segurança e o cache dos arquivos com hash. As regras valem para ambos os domínios.
+Veja [headers estáticos do Render](https://render.com/docs/static-site-headers).
+
+O script independente `loading-fallback.js` registra a recuperação antes dos
+bundles. Uma falha de JS/CSS na abertura permite uma tentativa automática com
+query nova, mantendo rota e sessão. A query e um intervalo de cinco minutos em
+sessionStorage impedem loops; sem conexão, há botão para tentar novamente.
+Depois que a aplicação abre, falhas de módulos carregados sob demanda mostram um
+aviso com ação manual, para não interromper vendas ou formulários em edição.
+Falhas de API e imagens não acionam recarga automática. A inicialização da rota
+não monta mais um cabeçalho vazio quando falha.
+
+Após cada deploy, testar o domínio normal e uma query nova, comparar os arquivos
+referenciados no HTML e consultar seus corpos e Content-Type: JS deve ser
+JavaScript, CSS deve ser `text/css`. HTTP 200 sozinho não valida um asset devido
+ao rewrite da SPA. Confirmar também visualmente o login e a navegação. Uma aba
+já aberta durante o incidente precisa ser recarregada pelo usuário; essa política
+não altera retroativamente o documento que já está na memória do navegador.
 
 ## Configuração
 

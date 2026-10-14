@@ -27,14 +27,18 @@ function resumeSession() { void resumeVerifiedSession(auth, router) }
 window.addEventListener('focus', resumeSession)
 document.addEventListener('visibilitychange', resumeSession)
 window.addEventListener('pageshow', resumeSession)
+router.onError((error) => {
+  window.dispatchEvent(new CustomEvent('erp:route-load-error', { detail: error }))
+})
 app.use(router)
 app.use(i18n)
 
 // Wait for router to be ready before mounting
 router.isReady().then(() => {
   app.mount('#app')
+  window.dispatchEvent(new Event('erp:application-ready'))
 }).catch((error) => {
   console.error('[ROUTER_ERROR] Router initialization failed:', error)
-  // Mount anyway to show error state
-  app.mount('#app')
+  // Keep the independent recovery screen instead of mounting an empty shell.
+  window.dispatchEvent(new CustomEvent('erp:boot-error', { detail: error }))
 })

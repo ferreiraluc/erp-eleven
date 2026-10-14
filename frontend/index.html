@@ -2,6 +2,8 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8">
+    <!-- Register recovery before any build-specific script or stylesheet loads. -->
+    <script src="/loading-fallback.js"></script>
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=eleven-midnight-3" sizes="16x16 32x32 48x48">
     <link rel="icon" type="image/png" href="/icons/eleven-midnight-v3-32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="/icons/eleven-midnight-v3-48.png" sizes="48x48">
@@ -23,13 +25,9 @@
         <div style="text-align: center;">
           <h1>ERP Eleven</h1>
           <p>Carregando aplicação...</p>
-          <div id="loading-error" style="color: red; display: none;">
-            <p>Erro ao carregar a aplicação. Verifique a conexão e tente novamente.</p>
-          </div>
         </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
-    <script src="/loading-fallback.js" defer></script>
   </body>
 </html>

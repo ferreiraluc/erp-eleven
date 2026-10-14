@@ -33,6 +33,17 @@ services:
     buildCommand: cd frontend && npm ci --include=dev && npm run build
     staticPublishPath: ./frontend/dist
     headers:
+      # HTML must never retain hashes from a previous atomic deploy.
+      # Hashed assets keep Render's normal cache policy.
+      - path: /
+        name: Cache-Control
+        value: "no-store, max-age=0, s-maxage=0"
+      - path: /index.html
+        name: Cache-Control
+        value: "no-store, max-age=0, s-maxage=0"
+      - path: /loading-fallback.js
+        name: Cache-Control
+        value: "no-store, max-age=0, s-maxage=0"
       - path: /*
         name: Strict-Transport-Security
         value: "max-age=31536000"
