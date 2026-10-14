@@ -45,14 +45,17 @@ try {
     $bottom = [Convert]::ToInt32($pixels.Substring((900*80+5)*2,2),16)
     $top = [Convert]::ToInt32($pixels.Substring((40*80+5)*2,2),16)
     if (($bottom -band 128) -eq 0 -or $top -ne 0) { throw 'Raster flipped or PDF drawing lost.' }
-    New-TestPdf $pdf 1 991
-    $long = [Text.Encoding]::ASCII.GetString((Convert-TicketPdf $pdf 80 991))
+    # WinRT keeps a memory mapping until collection/process exit. Real jobs have
+    # distinct GUID filenames and each renderer exits; fixtures must also be distinct.
+    $longPdf = Join-Path $testRoot 'long.pdf'
+    New-TestPdf $longPdf 1 991
+    $long = [Text.Encoding]::ASCII.GetString((Convert-TicketPdf $longPdf 80 991))
     if ($long -notmatch '\^LL7928' -or [regex]::Matches($long, '\^XZ').Count -ne 1) { throw 'Long receipt split.' }
-    New-TestPdf $pdf 2
+    $pagedPdf = Join-Path $testRoot 'paged.pdf'
+    New-TestPdf $pagedPdf 2
     $rejected = $false
-    try { Convert-TicketPdf $pdf 80 120 | Out-Null } catch { $rejected = $true }
+    try { Convert-TicketPdf $pagedPdf 80 120 | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw 'Must reject paginated PDFs before dispatch.' }
-    New-TestPdf $pdf
     $rejected = $false
     try { Convert-TicketPdf $pdf 60 120 | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw 'Must reject different media dimensions.' }
