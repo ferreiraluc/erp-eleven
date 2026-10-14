@@ -26,6 +26,8 @@ app.get('/health', (_req, res) => {
   res.status(ready ? 200 : 503).json({ status: ready ? 'ok' : 'build_missing' })
 })
 app.use(express.static(distPath))
+// A missing JS/CSS asset is not an application route.
+app.use('/assets', (_req, res) => res.status(404).type('text').send('Asset not found'))
 app.get('*', (_req, res) => {
   if (!existsSync(indexPath)) {
     res.status(503).json({ error: 'Application not built. Run npm run build first.' })

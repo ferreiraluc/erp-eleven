@@ -1,11 +1,29 @@
 import { fileURLToPath, URL } from 'node:url'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig(async ({ mode }) => {
-  const plugins: any[] = [vue()]
+  // A missing asset used to receive a permanent redirect to index.html. New
+  // release paths also bypass cached redirects for unchanged vendor bundles.
+  let revision = process.env.RENDER_GIT_COMMIT || process.env.GITHUB_SHA || ''
+  if (!revision) {
+    try { revision = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() } catch { /* source archive */ }
+  }
+  const release = /^[a-f0-9]{7,40}$/i.test(revision) ? revision.slice(0, 12) : 'local'
+  const assetDirectory = `assets/${release}`
+  const recoveryVersion = createHash('sha256').update(readFileSync(new URL('./public/loading-fallback.js', import.meta.url))).digest('hex').slice(0, 12)
+  const plugins: any[] = [vue(), {
+    name: 'eleven-release-bootstrap',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html: string) => html.replace('src="/loading-fallback.js"', `src="/loading-fallback.js?v=${recoveryVersion}" data-release="${release}"`),
+    },
+  }]
 
   if (mode === 'development') {
     const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
@@ -22,7 +40,7 @@ export default defineConfig(async ({ mode }) => {
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
+    assetsDir: assetDirectory,
     sourcemap: mode === 'development',
     minify: 'esbuild',
     target: 'esnext',
@@ -35,9 +53,9 @@ export default defineConfig(async ({ mode }) => {
           charts: ['chart.js', 'vue-chartjs'],
           utils: ['axios'],
         },
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
+        entryFileNames: `${assetDirectory}/[name]-[hash].js`,
+        chunkFileNames: `${assetDirectory}/[name]-[hash].js`,
+        assetFileNames: `${assetDirectory}/[name]-[hash].[ext]`,
       },
     },
     reportCompressedSize: false,

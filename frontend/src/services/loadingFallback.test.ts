@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const source = readFileSync(resolve('public/loading-fallback.js'), 'utf8')
 const html = readFileSync(resolve('index.html'), 'utf8')
 
-type Signal = { target?: object; detail?: Error; payload?: Error; preventDefault?: () => void }
+type Signal = { target?: object; detail?: Error; payload?: Error; error?: Error; reason?: Error; preventDefault?: () => void }
 function boot(options: { url?: string; online?: boolean; storageBlocked?: boolean } = {}) {
   const listeners = new Map<string, (event: Signal) => void>()
   const url = new URL(options.url ?? 'https://elevenparispy.com/?source=shortcut#/pdv')
@@ -153,5 +153,27 @@ describe('Recovery independent of missing deployed JS/CSS', () => {
     expect(app.replace).not.toHaveBeenCalled()
     app.emit('erp:application-ready')
     expect(document.querySelector('[role="alert"]')).toBeNull()
+  })
+
+  it.each(['error', 'unhandledrejection'])('shows startup diagnostics for %s without exposing error contents', signal => {
+    const app = boot()
+    const error = new Error('Private request details must not be shown')
+    app.emit(signal, { error, reason: error })
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('Diagnóstico:')
+    expect(document.body.textContent).not.toContain(error.message)
+    expect(app.replace).not.toHaveBeenCalled()
+  })
+
+  it('distinguishes waiting for JS from waiting for session/route initialization', () => {
+    const app = boot()
+    app.emit('erp:entry-ready')
+    vi.advanceTimersByTime(15000)
+    expect(document.querySelector('small')?.textContent).toContain('TEMPO · SESSAO/ROTA')
+  })
+
+  it('recovers failures in release-scoped assets', () => {
+    const app = boot()
+    app.asset('SCRIPT', '/assets/cd7fe7f80a02/vendor-old.js')
+    expect(app.replace).toHaveBeenCalledOnce()
   })
 })
