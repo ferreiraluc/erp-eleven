@@ -2,7 +2,7 @@
 
 ## Tickets do PDV — Zebra ZD220 (14/10/2026)
 
-O agente **2026.10.14.1** possui dois perfis independentes. **Eleven Impressao**
+O agente **2026.10.14.2** possui dois perfis independentes. **Eleven Impressao**
 continua em `%LOCALAPPDATA%\ElevenPrint`, para Samsung/A4. **Eleven Tickets** usa
 `%LOCALAPPDATA%\ElevenPrintTickets`, outra credencial, configuração e diário.
 Não reutilize a credencial da Samsung na Zebra. Ambos podem funcionar no mesmo Windows.
@@ -25,6 +25,20 @@ não instala driver, não altera a mídia e não calibra a impressora.
 6. Em PDV → Tickets, ativa **Imprimir ao confirmar a venda, inclusive pelo celular**.
    A próxima venda confirmada nesse PDV enfileira uma cópia. A configuração sozinha
    não imprime e não cria vendas. O recibo mostra estado e atualização manual.
+
+### Janela fecha ao abrir os arquivos baixados
+
+Depois da instalação, abra o atalho **Eleven Tickets** da Área de Trabalho.
+`Impressao.ps1` é uma biblioteca auxiliar e não inicia a fila. `Agente.ps1` na pasta
+do download não possui a credencial/configuração, que fica em
+`%LOCALAPPDATA%\ElevenPrintTickets`. Não copie `config.json` para o download.
+
+A versão 2026.10.14.2 orienta esses dois casos, mantém erros iniciais visíveis e
+cria o atalho com `-NoExit`, inclusive para falhas anteriores à execução do script.
+O ZIP de tickets também fixa o perfil no próprio `Instalar.ps1`, para não selecionar
+o perfil A4 quando aberto diretamente pelo PowerShell. Prefira **Extrair tudo →
+Instalar.cmd**. Para atualizar, feche o agente do mesmo perfil e rode o instalador
+novamente; Enter mantém a credencial. Configuração e diário existentes são preservados.
 
 Vendas feitas no celular usam a fila no servidor; não precisam conectar-se por USB,
 AirPrint ou à mesma rede local. Windows, agente, internet e impressora devem estar
