@@ -178,7 +178,10 @@ Em **Estoque → Editar → Histórico**, a ficha apresenta criação, responsá
 
 `GET /api/inventory/items/{id}/history` exige autenticação e aplica o escopo de
 vendas pessoais antes das contagens e da paginação. Movimentações de estoque são
-operacionais; para venda alheia, omite referência, notas, motivo livre e autor.
+operacionais; para venda fora do acesso, omite referência, notas, motivo livre e
+autor, mantendo quantidades e saldos. Vendas excluídas aparecem somente para
+Lucas, inclusive nos totais e detalhes financeiros deste histórico; os demais
+perfis conservam o movimento de estoque sem os dados privados da venda.
 Dados ausentes não viram zero. Não há backfill nem inferência de lançamentos.
 O histórico ainda não associa vendas operacionais/planilhas a itens, pois essas
 fontes não possuem vínculo estruturado de produto.

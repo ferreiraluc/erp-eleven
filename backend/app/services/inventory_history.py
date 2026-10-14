@@ -54,6 +54,8 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
     movement_sale_ids = db.query(PdvSale.id).join(StockMovement, and_(StockMovement.item_id == item.id,
         StockMovement.reference_type == 'pdv_sale', func.replace(StockMovement.reference_id, '-', '') == func.replace(cast(PdvSale.id, String), '-', '')))
     sales = sales_query(db.query(PdvSale).filter(or_(PdvSale.id.in_(sale_ids), PdvSale.id.in_(movement_sale_ids))), PdvSale, user, pdv=True)
+    if not owner:
+        sales = sales.filter(PdvSale.deleted_at.is_(None))
     moves = db.query(StockMovement).filter_by(item_id=item.id)
     counts = db.query(InventorySessionItem).filter_by(item_id=item.id)
     changes = db.query(AuditEvent).filter(AuditEvent.entity == 'inventory_items',
@@ -101,14 +103,17 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
     elif section == 'movements':
         batch = moves.order_by(StockMovement.created_at.desc(), StockMovement.id.desc()).offset(offset).limit(page_size).all()
         actors = names(db, [m.created_by for m in batch])
-        pdv_refs = set()
+        pdv_refs = {}
         for m in batch:
             if m.reference_type == 'pdv_sale':
-                try: pdv_refs.add(UUID(m.reference_id or ''))
+                try: pdv_refs[m.reference_id] = UUID(m.reference_id or '')
                 except ValueError: pass
-        allowed_refs = {str(sid) for (sid,) in sales_query(db.query(PdvSale.id).filter(PdvSale.id.in_(pdv_refs)), PdvSale, user, pdv=True)}
+        readable_sales = sales_query(db.query(PdvSale.id).filter(PdvSale.id.in_(pdv_refs.values())), PdvSale, user, pdv=True)
+        if not owner:
+            readable_sales = readable_sales.filter(PdvSale.deleted_at.is_(None))
+        allowed_refs = {sid for (sid,) in readable_sales}
         for m in batch:
-            restricted = own_sales(user) and m.reference_type == 'pdv_sale' and m.reference_id not in allowed_refs
+            restricted = (own_sales(user) or not owner) and m.reference_type == 'pdv_sale' and pdv_refs.get(m.reference_id) not in allowed_refs
             rows.append({'id': str(m.id), 'at': timestamp(m.created_at), 'type': m.movement_type.value,
                 'quantity': m.quantity, 'before': m.quantity_before, 'after': m.quantity_after,
                 'location_from': m.location_from, 'location_to': m.location_to,

@@ -298,13 +298,15 @@ def create_item(
 @router.get("/items/barcode/{code}", response_model=List[ItemResponse])
 def get_items_by_barcode(
     code: str,
+    include_images: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.barcode == code, Item.is_active == True).all()
+    query = db.query(Item).filter(Item.deleted_at.is_(None), Item.barcode == code, Item.is_active == True)
+    items = catalog_query(query, include_images).all()
     result = []
-    for item in items:
-        resp = ItemResponse.model_validate(item)
+    for item, has_image in items:
+        resp = catalog_response(item, has_image, include_images)
         resp.alert_level = _compute_alert_level(item)
         result.append(resp)
     return result

@@ -671,8 +671,8 @@ export const inventoryAPI = {
   deleteItem: (id: string): Promise<{ message: string }> =>
     api.delete(`/api/inventory/items/${id}`).then(res => res.data),
 
-  getByBarcode: (code: string): Promise<InventoryItem[]> =>
-    api.get(`/api/inventory/items/barcode/${encodeURIComponent(code)}`).then(res => res.data),
+  getByBarcode: (code: string, includeImages = true): Promise<InventoryItem[]> =>
+    api.get(`/api/inventory/items/barcode/${encodeURIComponent(code)}`, { params: { include_images: includeImages } }).then(res => res.data),
 
   quickExit: (id: string, location: string = 'loja'): Promise<{ message: string; new_stock: number; location: string }> =>
     api.post(`/api/inventory/items/${id}/quick-exit`, { location }).then(res => res.data),

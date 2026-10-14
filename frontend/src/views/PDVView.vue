@@ -619,7 +619,7 @@ async function onBarcodeDetected(code: string) {
   searchQuery.value = code; searchResults.value = []; searchError.value = false
   loadingSearch.value = true; barcodePending.value = true
   try {
-    const results = await inventoryAPI.getByBarcode(code)
+    const results = await inventoryAPI.getByBarcode(code, false)
     if (disposed || request !== searchGeneration) return
     pdv.rememberStock(results)
     searchError.value = false
