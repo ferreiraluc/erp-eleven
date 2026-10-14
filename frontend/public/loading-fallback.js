@@ -8,6 +8,13 @@
   let navigating = false
   let panelPending = false
 
+  function isReady() {
+    // Older cached entry bundles do not dispatch application-ready. Vue marks
+    // their mounted root as well, so updating this stable script must not reload
+    // an already open form or show a false timeout warning in those versions.
+    return ready || Boolean(document.getElementById('app')?.hasAttribute('data-v-app'))
+  }
+
   function reload() {
     if (navigating) return
     navigating = true
@@ -52,6 +59,7 @@
   function failAsset() {
     failed = true
     if (navigating) return
+    ready = isReady()
     let lastRetry = 0
     try { lastRetry = Number(window.sessionStorage.getItem(retryKey)) || 0 } catch { /* private mode */ }
     const alreadyRetried = new URL(window.location.href).searchParams.has(retryParam)
@@ -91,7 +99,7 @@
   })
 
   const timeout = setTimeout(function () {
-    if (!ready && !navigating) showRecovery()
+    if (!isReady() && !navigating) showRecovery()
   }, 15000)
 
   window.addEventListener('erp:application-ready', function () {

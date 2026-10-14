@@ -98,6 +98,16 @@ describe('Recovery independent of missing deployed JS/CSS', () => {
     expect(app.replace).toHaveBeenCalledTimes(1)
   })
 
+  it('recognizes a mounted older build that does not emit the ready event', () => {
+    const app = boot()
+    document.getElementById('app')!.setAttribute('data-v-app', '')
+    vi.advanceTimersByTime(20000)
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+    app.asset('LINK', '/assets/old-route.css')
+    expect(app.replace).not.toHaveBeenCalled()
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('ainda não salvas')
+  })
+
   it('handles Vite CSS preload errors and keeps a single recovery panel', () => {
     const app = boot()
     app.emit('erp:application-ready')
