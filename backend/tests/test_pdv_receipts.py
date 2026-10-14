@@ -175,7 +175,11 @@ def test_ticket_installer_is_distinct_and_has_no_credential(tickets):
     assert response.status_code==200
     with ZipFile(io.BytesIO(response.content)) as package:
         assert b'-Profile tickets' in package.read('Eleven-Impressao/Instalar.cmd')
-        assert b'ElevenPrintTickets' in package.read('Eleven-Impressao/Instalar.ps1')
+        installer = package.read('Eleven-Impressao/Instalar.ps1')
+        assert b'ElevenPrintTickets' in installer
+        assert b"$AgentProfile = 'tickets'" in installer
+        assert b"$AgentProfile = 'documents'" not in installer
+        assert b'-NoExit' in installer
         assert not any(name.endswith(('config.json','.env')) for name in package.namelist())
 
 

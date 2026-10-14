@@ -1,4 +1,15 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.14.1
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.14.2
+
+QUAL ARQUIVO ABRIR
+Para instalar: extraia TODO o ZIP e abra Instalar.cmd.
+Depois de configurar: abra Eleven Tickets (Zebra) ou Eleven Impressao (A4)
+na Area de Trabalho. A credencial fica na pasta instalada, nao no download.
+Nao abra Agente.ps1 ou Impressao.ps1 na pasta extraida para iniciar a fila.
+Impressao.ps1 e um auxiliar: ele nao e o programa de impressao.
+O atalho atualizado mantem a janela aberta mesmo se ocorrer erro inicial.
+Se houver erro, leia a mensagem e informe apenas ela, sem enviar a credencial.
+Para corrigir o atalho antigo, rode este instalador do mesmo perfil novamente.
+Na credencial, Enter preserva a existente; nao apague config.json nem journal.
 
 TICKETS ZEBRA ZD220
 O ZIP baixado em PDV > Tickets configura o perfil tickets (Eleven Tickets).

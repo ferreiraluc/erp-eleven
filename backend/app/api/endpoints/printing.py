@@ -113,6 +113,10 @@ def agent_package(profile: Literal['documents', 'tickets'] = 'documents', user=D
             if name == 'Instalar.cmd' and profile == 'tickets':
                 contents = (root / name).read_text().replace('"%~dp0Instalar.ps1"', '"%~dp0Instalar.ps1" -Profile tickets')
                 archive.writestr('Eleven-Impressao/' + name, contents.replace('\n', '\r\n'))
+            elif name == 'Instalar.ps1' and profile == 'tickets':
+                # Preserve the profile even when opened via "Run with PowerShell".
+                contents = (root / name).read_text().replace("$AgentProfile = 'documents'", "$AgentProfile = 'tickets'", 1)
+                archive.writestr('Eleven-Impressao/' + name, contents.replace('\n', '\r\n'))
             else:
                 archive.write(root / name, 'Eleven-Impressao/' + name)
     return Response(data.getvalue(), media_type='application/zip', headers={

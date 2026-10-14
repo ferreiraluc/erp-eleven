@@ -1,5 +1,12 @@
 # Core functions only: safe to load in tests without a printer or network.
-$script:AgentVersion = '2026.10.14.1'
+if ($MyInvocation.InvocationName -ne '.') {
+    Write-Host 'Este e um arquivo auxiliar; ele nao inicia o agente.'
+    Write-Host 'Abra Eleven Tickets (Zebra) ou Eleven Impressao (A4) na Area de Trabalho.'
+    Write-Host 'Se ainda nao instalou, extraia todo o ZIP e abra Instalar.cmd.'
+    Read-Host 'Pressione Enter para fechar'
+    return
+}
+$script:AgentVersion = '2026.10.14.2'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"

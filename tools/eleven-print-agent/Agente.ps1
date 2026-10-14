@@ -1,14 +1,7 @@
 # Durable local journal: once dispatch starts, never print that job automatically again.
 $ErrorActionPreference = 'Stop'
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Add-Type -AssemblyName System.Drawing
 $root = $PSScriptRoot
 $lockStream = $null
-try {
-    $lockStream = [IO.File]::Open((Join-Path $root 'agent.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
-} catch { Write-Host 'O agente ja esta aberto. Feche esta janela.'; Read-Host; exit 1 }
-
-. (Join-Path $root 'Impressao.ps1')
 
 function Api($method, $path, $body = $null) {
     $options = @{
@@ -64,6 +57,17 @@ function Process-Job($record, $recordPath, $pdf) {
 }
 
 try {
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'config.json') -PathType Leaf)) {
+        throw 'Esta pasta nao tem a configuracao do agente. Abra o atalho Eleven Tickets (Zebra) ou Eleven Impressao (A4) na Area de Trabalho. Se o atalho nao existe, extraia todo o ZIP e execute Instalar.cmd.'
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'Impressao.ps1') -PathType Leaf)) {
+        throw 'Instalacao incompleta. Extraia todo o ZIP e execute Instalar.cmd novamente, mantendo a credencial existente.'
+    }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Add-Type -AssemblyName System.Drawing
+    try { $lockStream = [IO.File]::Open((Join-Path $root 'agent.lock'), 'OpenOrCreate', 'ReadWrite', 'None') }
+    catch { throw 'O agente ja esta aberto ou a pasta esta sem permissao. Confira a outra janela; nao abra duas copias.' }
+    . (Join-Path $root 'Impressao.ps1')
     $script:config = Get-Content -LiteralPath (Join-Path $root 'config.json') -Raw | ConvertFrom-Json
     if ($config.server -ne 'https://erp-eleven-backend.onrender.com') { throw 'Servidor nao autorizado.' }
     if (-not $config.token) { throw 'Instalado sem credencial. Execute Instalar.cmd quando receber a credencial exclusiva.' }
