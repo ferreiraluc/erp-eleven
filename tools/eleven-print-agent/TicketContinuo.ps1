@@ -120,7 +120,7 @@ function Convert-TicketPdf([string]$Path, [int]$Width, [int]$Height) {
         Wait-TicketAction ($page.RenderToStreamAsync($stream, $options))
         $stream.Seek(0)
         $readMethod = [System.IO.WindowsRuntimeStreamExtensions].GetMethods() | Where-Object {
-            $_.Name -eq 'AsStreamForRead' -and $_.GetParameters().Count -eq 1 -and
+            $_.Name -eq 'AsStream' -and $_.GetParameters().Count -eq 1 -and
             $_.GetParameters()[0].ParameterType.Name -eq 'IRandomAccessStream'
         } | Select-Object -First 1
         $reader = $readMethod.Invoke($null, @($stream))
