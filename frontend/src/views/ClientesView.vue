@@ -15,29 +15,29 @@
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="search-icon">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <input v-model="searchQuery" type="text" :placeholder="uiText(`Buscar por nome, telefone, CPF, e-mail...`)" class="search-input" />
+        <input v-model="searchQuery" type="text" maxlength="200" :placeholder="uiText(`Buscar por nome, telefone, CPF, e-mail...`)" class="search-input" />
       </div>
       <div class="filter-row">
         <button v-for="filter in statusFilters" :key="filter.value" class="erp-control" :class="['chip', { active: statusFilter === filter.value }]" :aria-pressed="statusFilter === filter.value" @click="statusFilter = filter.value">
           {{ uiText(filter.label) }}
         </button>
-        <span class="total-count">{{ store.clientes.length === 1 ? uiText('{0} cliente',{0:store.clientes.length}) : uiText('{0} clientes',{0:store.clientes.length}) }}</span>
+        <span v-if="!loading && !loadError" class="total-count">{{ total === 1 ? uiText('{0} cliente',{0:total}) : uiText('{0} clientes',{0:total}) }}</span>
       </div>
     </div>
 
     <!-- Loading -->
-    <div v-if="store.loading" class="loading-state">
+    <div v-if="loading" class="loading-state" role="status">
       <div class="spinner"></div>
       <p>{{ uiText(`Carregando...`) }}</p>
     </div>
 
-    <div v-else-if="store.error" class="empty-state" role="alert">
+    <div v-else-if="loadError" class="empty-state" role="alert">
       <p>{{ uiText('Não foi possível carregar os clientes.') }}</p>
-      <button @click="reload" class="erp-button erp-button--secondary">{{ uiText('Tentar novamente') }}</button>
+      <button @click="loadPage(page)" class="erp-button erp-button--secondary">{{ uiText('Tentar novamente') }}</button>
     </div>
 
     <!-- Empty -->
-    <div v-else-if="!store.loading && store.clientes.length === 0" class="empty-state">
+    <div v-else-if="clientes.length === 0" class="empty-state">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="48" height="48">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
@@ -49,7 +49,7 @@
     <!-- List -->
     <div v-else class="clientes-list">
       <div
-        v-for="c in store.clientes"
+        v-for="c in clientes"
         :key="c.id"
         class="cliente-wrap"
       >
@@ -109,10 +109,11 @@
       </div>
     </div>
 
-    <!-- Pagination sentinel -->
-    <div v-if="hasMore" class="load-more-wrap">
-      <button @click="loadMore" class="btn btn-secondary erp-button erp-button--secondary" :disabled="store.loading">{{ uiText(`Carregar mais`) }}</button>
-    </div>
+    <nav v-if="!loadError && totalPages > 1" class="customer-pagination" :aria-label="uiText('Página')">
+      <button @click="changePage(page - 1)" class="erp-button erp-button--secondary" :disabled="loading || page === 1">{{ uiText('Anterior') }}</button>
+      <span>{{ uiText('Página') }} {{ page }} {{ uiText('de') }} {{ totalPages }}</span>
+      <button @click="changePage(page + 1)" class="erp-button erp-button--secondary" :disabled="loading || page >= totalPages">{{ uiText('Próxima') }}</button>
+    </nav>
 
     <!-- Form Modal -->
     <ClienteFormModal
@@ -132,21 +133,24 @@
 <script setup lang="ts">
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText } from '@/i18n/uiText'
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useClientesStore, type CustomerStatusFilter } from '@/stores/clientes'
-import { type Cliente } from '@/services/api'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { clientesAPI, type Cliente } from '@/services/api'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
 import CustomerLogisticsPanel from '@/components/logistics/CustomerLogisticsPanel.vue'
 
-const store = useClientesStore()
+type CustomerStatusFilter = 'active' | 'inactive' | 'all'
+const clientes = ref<Cliente[]>([])
+const loading = ref(true), loadError = ref(false), total = ref(0)
 const searchQuery = ref('')
 const statusFilter = ref<CustomerStatusFilter>('active')
 const statusFilters = [{ value: 'active', label: 'Ativos' }, { value: 'inactive', label: 'Inativos' }, { value: 'all', label: 'Todos' }] as const
 const showForm = ref(false)
 const editingCliente = ref<Cliente | null>(null)
 const toast = ref<{ message: string; type: string } | null>(null)
-const page = ref(0)
-const hasMore = ref(false)
+const page = ref(1)
+const pageSize = 20
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+let requestVersion = 0
 
 // Histórico por cliente
 const expandedId = ref<string | null>(null)
@@ -157,15 +161,40 @@ function toggleHistory(id: string) {
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 watch(searchQuery, () => {
+  requestVersion++
+  loading.value = true; loadError.value = false; expandedId.value = null
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => reload(), 300)
 }, { flush: 'sync' })
-watch(statusFilter, () => reload())
+watch(statusFilter, () => reload(), { flush: 'sync' })
 
 function reload() {
+  expandedId.value = null
+  return loadPage(1)
+}
+
+async function loadPage(targetPage: number) {
   if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
-  page.value = 0
-  return store.loadClientes(searchQuery.value.trim() || undefined, statusFilter.value)
+  const version = ++requestVersion
+  page.value = targetPage
+  loading.value = true; loadError.value = false
+  try {
+    const result = await clientesAPI.getPage({
+      page: targetPage, page_size: pageSize,
+      search: searchQuery.value.trim() || undefined,
+      ativo: statusFilter.value !== 'inactive', include_inactive: statusFilter.value === 'all',
+    })
+    if (version !== requestVersion) return
+    total.value = result.total
+    if (targetPage > totalPages.value) {
+      await loadPage(totalPages.value)
+      return
+    }
+    clientes.value = result.items
+  } catch {
+    if (version !== requestVersion) return
+    loadError.value = true; clientes.value = []
+  } finally { if (version === requestVersion) loading.value = false }
 }
 
 function clearFilters() {
@@ -174,9 +203,10 @@ function clearFilters() {
   else reload()
 }
 
-function loadMore() {
-  page.value++
-  store.loadClientes(searchQuery.value.trim() || undefined, statusFilter.value)
+function changePage(targetPage: number) {
+  if (loading.value || targetPage < 1 || targetPage > totalPages.value) return
+  expandedId.value = null
+  void loadPage(targetPage)
 }
 
 function openCreate() {
@@ -189,19 +219,16 @@ function openEdit(c: Cliente) {
   showForm.value = true
 }
 
-function onSaved(c: Cliente) {
-  const idx = store.clientes.findIndex(x => x.id === c.id)
-  if (idx !== -1) store.clientes[idx] = c
-  else store.clientes.unshift(c)
-  void reload()
+function onSaved() {
+  void loadPage(editingCliente.value ? page.value : 1)
   showToast(editingCliente.value ? uiText(`Cliente atualizado.`) : uiText(`Cliente criado.`), 'success')
 }
 
 async function confirmDelete(c: Cliente) {
   if (!confirm(uiText(`Inativar cliente "{0}"?`,{0:c.nome}))) return
   try {
-    await store.deleteCliente(c.id)
-    await reload()
+    await clientesAPI.delete(c.id)
+    await loadPage(page.value)
     showToast(uiText(`Cliente inativado.`), 'success')
   } catch {
     showToast(uiText(`Erro ao inativar cliente.`), 'error')
@@ -214,7 +241,7 @@ function showToast(message: string, type: string) {
 }
 
 onMounted(() => reload())
-onUnmounted(() => { if (searchTimer) clearTimeout(searchTimer) })
+onUnmounted(() => { requestVersion++; if (searchTimer) clearTimeout(searchTimer) })
 </script>
 
 <style scoped>
@@ -272,7 +299,7 @@ onUnmounted(() => { if (searchTimer) clearTimeout(searchTimer) })
 }
 
 /* ─── Misc ─────────────────────────────────────────── */
-.load-more-wrap { display: flex; justify-content: center; padding: 1rem; }
+.customer-pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 0 1rem 2rem; color: #6b7280; font-size: .8rem; }
 
 .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: .7rem 1.2rem; border-radius: 8px; font-size: .85rem; font-weight: 600; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
 .toast-success { background: #10b981; color: white; }

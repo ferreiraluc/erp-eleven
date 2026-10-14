@@ -513,7 +513,16 @@ export const pedidoAnexosAPI = {
 
 // ─── Clientes API ──────────────────────────────────────────────────────────────
 
+export interface ClientePage {
+  items: Cliente[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export const clientesAPI = {
+  getPage: (params: { page: number; page_size?: number; search?: string; ativo?: boolean; include_inactive?: boolean }): Promise<ClientePage> =>
+    api.get('/api/clientes/pagina', { params }).then(r => r.data),
   getAll: (params?: { search?: string; ativo?: boolean; include_inactive?: boolean; skip?: number; limit?: number }): Promise<Cliente[]> => {
     const p = new URLSearchParams()
     if (params?.search) p.append('search', params.search)

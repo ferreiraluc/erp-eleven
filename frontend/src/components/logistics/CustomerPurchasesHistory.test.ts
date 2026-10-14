@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, h, nextTick, ref, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import type { CustomerPurchases } from '@/services/customerLogistics'
 import CustomerPurchasesHistory from './CustomerPurchasesHistory.vue'
 
@@ -21,8 +22,11 @@ let app: App | undefined, container: HTMLDivElement
 const customerId = ref('customer-one')
 const settle = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); await nextTick() }
 async function mount() {
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div />' } }, { path: '/vendas-pdv', name: 'vendas-pdv', component: { template: '<div />' } }] })
+  await router.push('/'); await router.isReady()
   app = createApp({ render: () => h(CustomerPurchasesHistory, { customerId: customerId.value }) })
     .use(createI18n({ legacy: false, locale: 'pt', messages: {} }))
+    .use(router)
   app.mount(container); await settle()
 }
 function button(label: string) {
@@ -45,10 +49,12 @@ describe('Customer POS history', () => {
     expect(container.textContent).toContain('2 × Camisa sintética')
     expect(container.textContent).toContain('Devolvido: 1')
     expect(container.textContent).toContain('Devolução parcial')
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/vendas-pdv?sale_id=sale-1')
     expect(button('Anterior').disabled).toBe(true)
     button('Próxima').click(); await settle()
     expect(api.purchases).toHaveBeenLastCalledWith('customer-one', 2)
     expect(container.textContent).toContain('#sale-2')
+    expect(container.querySelector('a')?.getAttribute('href')).toBe('/vendas-pdv?sale_id=sale-2')
     expect(container.textContent).not.toContain('#sale-1')
     expect(container.querySelector('.purchase-stats')?.textContent).toContain('G$ 75,00')
     expect(button('Próxima').disabled).toBe(true)

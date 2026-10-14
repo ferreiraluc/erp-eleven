@@ -335,6 +335,17 @@ são consultadas apenas pelos campos do resumo de variantes, sem carregar fotos,
 preços ou saldos e sem uma consulta adicional por peça. A identidade, ordem e
 inclusão de tamanhos inativos permanecem iguais.
 
+Na confirmação de novos tamanhos ou de uma duplicação, as mesmas linhas da grade
+continuam bloqueadas na mesma ordem, inclusive outras cores e itens inativos.
+A consulta não carrega as fotos dos demais membros: relê a foto original da
+origem depois dos locks, preservando a verificação de versão. Uma foto alterada
+durante a espera exige nova prévia. A resposta de novos tamanhos é preparada
+antes do commit para não recarregar cada produto durante a serialização;
+os campos e a confirmação transacional permanecem iguais. A duplicação continua
+retornando o cadastro completo criado e respeitando sua identidade de operação.
+`test_inventory_write_reads.py` verifica essas leituras e os contratos em SQLite
+e PostgreSQL isolado, incluindo alteração concorrente da foto da origem.
+
 No PostgreSQL, lock transacional por grade e locks dos itens serializam criações
 concorrentes. Produtos, agrupamento e estoque inicial são uma transação; falhas
 revertem tudo. Repetir tamanhos já criados não repete movimentações. Mudança dos dados

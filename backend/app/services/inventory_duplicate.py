@@ -4,6 +4,7 @@ import json
 import uuid
 from fastapi import HTTPException
 from sqlalchemy import text
+from sqlalchemy.orm import defer
 from ..models.inventory import Item, Supplier
 from .inventory_variants import source_item, source_version, normalized
 from .inventory_service import create_movement
@@ -35,9 +36,14 @@ def duplicate_item(db, item_id, request, user_id):
         lock(db, f'inventory-variants:{group or item_id}')
         members = db.query(Item).filter(Item.deleted_at.is_(None))
         members = members.filter(Item.group_key == group) if group else members.filter(Item.id == item_id)
-        members = members.order_by(Item.id).with_for_update().populate_existing().all()
+        members = members.options(defer(Item.image_data, raiseload=True)).order_by(Item.id).with_for_update().populate_existing().all()
         source = next((row for row in members if row.id == item_id), None)
-        if source is None or not source.is_active or source.group_key != group or source_version(source) != request.source_version:
+        if source is None or not source.is_active or source.group_key != group:
+            raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
+        # Preserve the full source-version check without loading originals of
+        # siblings. The source row is still protected by the lock above.
+        db.refresh(source, attribute_names=['image_data'])
+        if source_version(source) != request.source_version:
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
         data = request.item.model_dump(exclude={'group_key'})
         data['size'] = ' '.join((data['size'] or '').split()).upper() or None

@@ -28,6 +28,7 @@
           <summary>{{ t('items', { count: sale.lines.length }) }}</summary>
           <ul><li v-for="line in sale.lines" :key="line.id">{{ quantity(line.quantity) }} × {{ line.name }}<span v-if="Number(line.returned_quantity)" class="muted"> · {{ t('returned', { count: quantity(line.returned_quantity) }) }}</span></li></ul>
         </details>
+        <RouterLink class="erp-button erp-button--secondary erp-button--sm purchase-sale-link" :to="{ name: 'vendas-pdv', query: { sale_id: sale.id } }">{{ t('openSale') }}</RouterLink>
       </article>
       <footer v-if="data.total > data.page_size" class="row-top">
         <button class="erp-button erp-button--secondary erp-button--sm" :disabled="data.page === 1" @click="load(data.page - 1)">{{ t('previous') }}</button>
@@ -41,6 +42,7 @@
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { RouterLink } from 'vue-router'
 import { customerLogisticsAPI, type CustomerPurchases } from '@/services/customerLogistics'
 import { purchaseMessages } from './purchaseMessages'
 
@@ -76,5 +78,6 @@ onUnmounted(() => { sequence++ })
 .purchase-row { overflow-wrap: anywhere; }
 .purchase-row summary { cursor: pointer; color: #2563eb; margin-top: .6rem; }
 .purchase-row ul { margin-bottom: 0; padding-left: 1.2rem; line-height: 1.6; }
+.purchase-sale-link { margin-top: .75rem; text-decoration: none; }
 @media(max-width:800px) { .purchase-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

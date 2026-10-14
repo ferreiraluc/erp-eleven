@@ -36,30 +36,39 @@
             <td :data-label="tr('Pagamento')">{{ sale.payment_methods.map(paymentText).join(' · ') || '—' }}</td>
             <td :data-label="tr('Situação')"><span class="status" :class="sale.status">{{ statusText(sale.status) }}</span></td>
             <td :data-label="tr('Valor líquido')"><strong>{{ gs(sale.status === 'cancelled' ? 0 : Number(sale.total_gs) - Number(sale.refunded_gs)) }}</strong><small v-if="Number(sale.refunded_gs)">{{ tr('Estorno') }}: {{ gs(sale.refunded_gs) }}</small></td>
-            <td><button class="erp-button erp-button--secondary erp-button--sm" @click="selected = sale.id">{{ tr('Ver venda') }}</button></td>
+            <td><button class="erp-button erp-button--secondary erp-button--sm" @click="openSale(sale.id)">{{ tr('Ver venda') }}</button></td>
           </tr></tbody></table></div>
         <footer v-if="data.total > data.page_size" class="pagination"><button class="erp-button erp-button--secondary" :disabled="page === 1" @click="page--; load()">{{ tr('Anterior') }}</button><span>{{ page }} / {{ Math.ceil(data.total / data.page_size) }}</span><button class="erp-button erp-button--secondary" :disabled="page * data.page_size >= data.total" @click="page++; load()">{{ tr('Próxima') }}</button></footer>
       </section>
     </main>
-    <SaleManagerModal v-if="selected" :sale-id="selected" :sellers="sellers" @close="selected = ''" @changed="load" />
+    <SaleManagerModal v-if="selected" :key="selected" :sale-id="selected" :sellers="sellers" @close="closeSale" @changed="load" />
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import SaleManagerModal from '@/components/pdv/management/SaleManagerModal.vue'
 import { pdvManagementAPI, saleError, type SaleListing } from '@/services/pdvManagement'
 import { allPaymentFilters } from '@/services/pdvPayments'
 import { tr, gs, saleDate, statusText, paymentText } from '@/components/pdv/management/i18n'
-const auth = useAuthStore(), router = useRouter()
+const auth = useAuthStore(), router = useRouter(), route = useRoute()
 const blank = () => ({ q: '', date_from: '', date_to: '', status: '', seller_id: '', payment: '', deleted: false })
 const filters = ref(blank()), page = ref(1), loading = ref(false), error = ref(''), selected = ref('')
 const data = ref<SaleListing | null>(null), sellers = ref<Array<{ id: string; name: string }>>([])
 const optionsError = ref(false)
 const statuses = ['completed', 'partially_refunded', 'refunded', 'cancelled']
 let sequence = 0, mounted = true
+watch(() => route.query.sale_id, value => {
+  selected.value = typeof value === 'string' && value.trim().length <= 128 ? value.trim() : ''
+}, { immediate: true })
+function openSale(id: string) { void router.push({ query: { ...route.query, sale_id: id } }) }
+function closeSale() {
+  selected.value = ''
+  const query = { ...route.query }; delete query.sale_id
+  void router.replace({ query })
+}
 async function load() { const current = ++sequence; loading.value = true; error.value = ''
   try { const result = await pdvManagementAPI.list(Object.fromEntries(Object.entries({ ...filters.value, page: page.value }).filter(([,v]) => v !== ''))); if (current === sequence) data.value = result }
   catch (e) { if (current === sequence) error.value = saleError(e) } finally { if (current === sequence) loading.value = false }

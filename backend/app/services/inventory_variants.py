@@ -4,7 +4,7 @@ import json
 import uuid
 from fastapi import HTTPException
 from sqlalchemy import text
-from sqlalchemy.orm import Session, load_only
+from sqlalchemy.orm import Session, defer, load_only
 
 from ..models.inventory import Item
 from ..schemas.inventory_variants import VariantCreateRequest, VariantSummary
@@ -68,10 +68,13 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
             db.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': lock})
         query = db.query(Item).filter(Item.deleted_at.is_(None))
         query = query.filter(Item.group_key == original_group) if original_group else query.filter(Item.id == item_id)
-        members = query.order_by(Item.id).with_for_update().populate_existing().all()
+        members = query.options(defer(Item.image_data, raiseload=True)).order_by(Item.id).with_for_update().populate_existing().all()
         source = next((row for row in members if row.id == item_id), None)
         if source is None or source.group_key != original_group or not source.is_active:
             raise HTTPException(409, 'O produto ou sua grade mudou. Reabra a prévia antes de continuar.')
+        # All the same rows are locked in the same order. Only the chosen
+        # source needs its original, reread after waiting for those locks.
+        db.refresh(source, attribute_names=['image_data'])
         if request.source_version != source_version(source):
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
         matching = [row for row in members if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
@@ -98,7 +101,11 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
                                     reason='Estoque inicial — novo tamanho de produto existente',
                                     reference_type='inventory_variant', reference_id=str(item_id),
                                     location=request.stock_location)
-        result = dict(group_key=source.group_key, created=created, existing=existing)
+        # Commit expires ORM rows. Freeze the already-loaded response fields so
+        # serialization does not reread every sibling (including its photo).
+        result = dict(group_key=source.group_key,
+                      created=[VariantSummary.model_validate(row) for row in created],
+                      existing=[VariantSummary.model_validate(row) for row in existing])
         # Creation, grouping and initial stock are one transaction. A repeated
         # size/color is returned as existing and never receives stock twice.
         db.commit()
