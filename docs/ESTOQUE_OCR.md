@@ -280,6 +280,12 @@ solicitação são normalizados e
 deduplicados no backend. Cada chamada de criação de grade confirma produtos e
 movimentações iniciais na mesma transação, com rollback se uma movimentação falhar.
 
+O aviso de código de barras compartilhado no cadastro acompanha apenas o código
+atual: trocar ou limpar o campo descarta respostas anteriores, inclusive ao voltar
+ao mesmo código. Fechar a janela encerra essa verificação. Na edição, o próprio
+produto é desconsiderado; o aviso continua informativo e não impede salvar um
+código compartilhado após conferência.
+
 **Nome das grades automáticas:** a tela mostra o nome do modelo a partir do membro
 mais antigo disponível na grade, retirando somente o sufixo que corresponde ao seu
 tamanho. Por exemplo, `Tênis Givenchy DN0281 11` aparece como `Tênis Givenchy DN0281`.
