@@ -127,16 +127,18 @@ def handle_selection(db, message, identity, content):
         return None
     cancel = match[1].lower().startswith('cancel')
     values = pending(db, message)
+    # An explicit print instruction cannot authorize payment or another write,
+    # even when that is the only pending action or its UUID/name was supplied.
+    printing = match[1].lower() in ('imprimir', 'pode imprimir') or bool(re.search(r'impress[aã]o', target, re.I))
+    if printing:
+        values = [a for a in values if isinstance(a, AssistantAction) and a.kind in ('impressao', 'frete_imprimir', 'arquivo_imprimir')]
     if target:
         try:
             key = uuid.UUID(target)
             values = [a for a in values if a.id == key]
         except ValueError:
-            printing = bool(re.search(r'impress[aã]o', target, re.I))
             target = re.sub(r'^(?:a\s+)?impress[aã]o\s*', '', target, flags=re.I).strip(' "“”\'')
             name = normalized(target)
-            if printing:
-                values = [a for a in values if isinstance(a, AssistantAction) and a.kind in ('impressao','frete_imprimir','arquivo_imprimir')]
             exact = [a for a in values if normalized(subject(a)) == name]
             values = exact or [a for a in values if name and set(name.split()).issubset(normalized(subject(a)).split())]
     if len(values) == 1:

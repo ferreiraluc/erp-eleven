@@ -55,6 +55,24 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); app = undefined; root?.remove(); vi.clearAllTimers(); vi.useRealTimers(); vi.resetAllMocks() })
 
 describe('PDV asynchronous product selection', () => {
+  it('keeps shared barcode matches selectable without adding a product automatically', async () => {
+    const matches = [
+      { ...item, id: 'shoe-8', name: 'Tênis QA 8', image_data: null, has_image: false },
+      { ...item, id: 'shoe-9', name: 'Tênis QA 9', image_data: null, has_image: false },
+    ]
+    mocks.getByBarcode.mockResolvedValueOnce(matches)
+    await mount(); await scan()
+    expect(mocks.getByBarcode).toHaveBeenCalledWith('FIXTURE-CODE', false)
+    expect(root.querySelectorAll('.pdv-result-row')).toHaveLength(2)
+    expect(root.textContent).toContain('Tênis QA 8')
+    expect(root.textContent).toContain('Tênis QA 9')
+    expect(usePdvStore().cart).toEqual([])
+    await click('.pdv-result-row')
+    expect(usePdvStore().cart).toHaveLength(1)
+    expect(usePdvStore().cart[0].item_id).toBe('shoe-8')
+    expect(mocks.createSale).not.toHaveBeenCalled()
+  })
+
   it('does not restore cached recent stock over a newer search snapshot when the row is clicked', async () => {
     await mount()
     mocks.getItems.mockResolvedValueOnce({ items: [{ ...item, current_stock: 0, stock_loja: 0 }] })
@@ -71,6 +89,7 @@ describe('PDV asynchronous product selection', () => {
     const barcode = deferred<InventoryItem[]>()
     mocks.getByBarcode.mockReturnValueOnce(barcode.promise)
     await mount(); await click('.pdv-result-row'); await scan()
+    expect(mocks.getByBarcode).toHaveBeenCalledWith('FIXTURE-CODE', false)
     await click('.pdv-cart-clear')
     barcode.resolve([{ ...item, id: 'late-product', name: 'Produto atrasado' }]); await flush()
     expect(usePdvStore().cart).toEqual([])

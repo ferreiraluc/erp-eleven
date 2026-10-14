@@ -22,6 +22,11 @@ A confirmação é vinculada a uma solicitação persistida. O servidor devolve 
 
 “Confirmo” executa uma única prévia pendente do próprio autor, na mesma conversa, válida por 24 horas. Havendo várias, o bot mostra botões para escolher ou aceita “confirmar impressão NOME”; não seleciona silenciosamente outra impressão ou um pagamento. O botão identifica a solicitação exata, e repetir a confirmação não duplica o trabalho. Se a ferramenta não conseguir preparar a solicitação, o bot informa a falha sem oferecer uma confirmação sem efeito. Corrigir o fluxo não reenvia impressões antigas.
 
+“Pode imprimir” e “imprimir” sem novos dados selecionam somente prévias de impressão
+(endereço A4, PDF avulso ou etiqueta já emitida). Mesmo quando resta apenas uma
+prévia de pagamento, esse pedido não autoriza pagar ou emitir outra etiqueta.
+“Pode imprimir NOME” também mantém essa restrição ao selecionar o destinatário.
+
 ## Comprovantes dos Correios em foto
 
 Envie uma foto/JPG/PNG com “Cadastre os rastreios deste comprovante”. O bot lê os códigos e destinatários legíveis, valida o dígito verificador e mostra prévia com botão de confirmação. Não cadastra só por receber a imagem, não inventa caracteres e não duplica códigos existentes. Vínculos de pedido são sugestões explícitas na prévia, revalidadas ao confirmar. A foto não é arquivada no ERP; esta leitura usa o provedor de visão configurado (DeepSeek ou Anthropic). Veja os limites, privacidade e operação em [Rastreios por comprovante](RASTREIOS_COMPROVANTES.md).

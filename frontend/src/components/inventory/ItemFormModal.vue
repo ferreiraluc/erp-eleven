@@ -975,7 +975,7 @@ watch(() => form.barcode, (val) => {
   if (!val) return
   barcodeTimer = setTimeout(async () => {
     try {
-      const items = await inventoryAPI.getByBarcode(val)
+      const items = await inventoryAPI.getByBarcode(val, false)
       barcodeDuplicateWarning.value = items.filter((i: InventoryItem) => i.id !== props.item?.id).length > 0
     } catch {}
   }, 500)

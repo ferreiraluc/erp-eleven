@@ -55,6 +55,11 @@ A aba Produtos começa com os **8 produtos ativos mais recentes por criação**.
 Busca retorna até 20 resultados, cancela a consulta anterior e descarta respostas
 atrasadas. Usa listagem sem imagens originais e a fila/cache de miniaturas sob demanda.
 O ícone de câmera continua abrindo o leitor de código de barras.
+Essa leitura e o aviso de código já cadastrado também consultam produtos sem
+transportar as fotos originais (`include_images=false`). Miniaturas continuam
+carregadas sob demanda; todos os produtos ativos com o mesmo código são oferecidos
+para escolha, sem selecionar uma peça arbitrariamente. O endpoint mantém a opção
+legada de incluir imagens para outros consumidores.
 Enquanto o produto desse código está sendo consultado, o checkout aguarda: o
 resultado ainda pode alterar o carrinho. Limpar o carrinho ou iniciar outra busca
 descarta essa resposta pendente, sem adicionar produtos à venda seguinte. Limpar
