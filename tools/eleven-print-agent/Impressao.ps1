@@ -1,5 +1,5 @@
 # Core functions only: safe to load in tests without a printer or network.
-$script:AgentVersion = '2026.10.13.1'
+$script:AgentVersion = '2026.10.14.1'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"
@@ -104,4 +104,19 @@ function Invoke-PreparedPrint($record, $recordPath, $pdf, [scriptblock]$download
     catch { Set-PrintOutcome $record 'uncertain' 'renderer_interrupted' $watch.ElapsedMilliseconds }
     if ($record.status -eq 'started') { Set-PrintOutcome $record 'uncertain' 'renderer_interrupted' $watch.ElapsedMilliseconds }
     Save-Journal $recordPath $record
+}
+
+# Tickets use the media configured in the Zebra driver, at actual size.
+function Get-PrintSettings([string]$Profile) {
+    if ($Profile -eq 'tickets') { return 'noscale,simplex,monochrome,1x' }
+    if ($Profile -and $Profile -ne 'documents') { throw 'Perfil de impressao invalido.' }
+    return 'paper=A4,shrink,simplex,monochrome,1x'
+}
+
+function Test-TicketPaper($record, $paperWidthHundredths, $paperHeightHundredths) {
+    if ($record.profile -ne 'tickets') { return $true }
+    if (-not $record.paper_width_mm -or -not $record.paper_height_mm) { return $false }
+    $width = $paperWidthHundredths * 0.254
+    $height = $paperHeightHundredths * 0.254
+    return ([Math]::Abs($width - $record.paper_width_mm) -le 1.5 -and [Math]::Abs($height - $record.paper_height_mm) -le 1.5)
 }

@@ -1,6 +1,14 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Impressao.ps1')
 function Assert($condition, $message) { if (-not $condition) { throw $message } }
+Assert ((Get-PrintSettings '') -eq 'paper=A4,shrink,simplex,monochrome,1x') 'Legacy A4 settings changed'
+Assert ((Get-PrintSettings 'documents') -eq (Get-PrintSettings '')) 'Document profile must preserve A4'
+Assert ((Get-PrintSettings 'tickets') -eq 'noscale,simplex,monochrome,1x') 'Tickets must use driver media at actual size'
+$ticket = @{ profile='tickets';paper_width_mm=60;paper_height_mm=80 }
+Assert (Test-TicketPaper $ticket 236 315) '60x80 mm paper refused'
+Assert (-not (Test-TicketPaper $ticket 315 236)) 'Rotated driver paper must be corrected explicitly'
+Assert (-not (Test-TicketPaper $ticket 827 1169)) 'A4 must never accept receipt jobs'
+Assert (Test-TicketPaper @{} 827 1169) 'Legacy A4 validation changed'
 $folder = Join-Path ([IO.Path]::GetTempPath()) ('eleven-print-test-' + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $folder | Out-Null
 try {

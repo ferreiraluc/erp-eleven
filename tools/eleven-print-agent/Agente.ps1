@@ -38,11 +38,22 @@ function Process-Job($record, $recordPath, $pdf) {
         if ((Get-Service -Name Spooler).Status -ne 'Running') { throw 'Spooler parado' }
         if (@([Drawing.Printing.PrinterSettings]::InstalledPrinters) -notcontains $config.printer) { throw 'Fila ausente' }
         if (-not (Test-Path -LiteralPath $config.sumatra)) { throw 'Sumatra ausente' }
+        if ($config.profile -eq 'tickets') {
+            if ($record.profile -ne 'tickets') { throw 'Trabalho sem perfil de ticket.' }
+            $printerSettings = New-Object Drawing.Printing.PrinterSettings
+            $printerSettings.PrinterName = $config.printer
+            $paper = $printerSettings.DefaultPageSettings.PaperSize
+            if (-not (Test-TicketPaper $record $paper.Width $paper.Height)) {
+                Write-Host "Papel diferente do ERP: configure no driver Zebra $($record.paper_width_mm) x $($record.paper_height_mm) mm."
+                throw 'Tamanho de papel divergente.'
+            }
+        }
         if ($config.printer.Contains('"') -or $pdf.Contains('"')) { throw 'Configuracao invalida' }
     }
     $dispatch = {
         param($entry, $path, $document)
-        $arguments = '-print-to "' + $config.printer + '" -print-settings "paper=A4,shrink,simplex,monochrome,1x" -silent "' + $document + '"'
+        $printSettings = Get-PrintSettings $config.profile
+        $arguments = '-print-to "' + $config.printer + '" -print-settings "' + $printSettings + '" -silent "' + $document + '"'
         Invoke-Renderer $entry $path $config.sumatra $arguments
     }
     Invoke-PreparedPrint $record $recordPath $pdf $download $preflight $dispatch
@@ -64,7 +75,8 @@ try {
     finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
     $journal = Join-Path $root 'journal'
     New-Item -ItemType Directory -Force -Path $journal | Out-Null
-    Write-Host "Eleven Impressao | $($config.printer) | A4"
+    $profile = if ($config.profile -eq 'tickets') { 'tickets' } else { 'documents' }
+    Write-Host "Eleven Impressao | $($config.printer) | $profile"
     Write-Host 'Conectando ao ERP. Feche esta janela para parar.'
     $connected = $false
     while ($true) {
@@ -72,7 +84,11 @@ try {
             if (-not $connected) {
                 # Update only this credential's existing device; never create a second queue.
                 $name = $config.printer.Substring(0, [Math]::Min(100, $config.printer.Length))
-                Api 'POST' 'connect' @{ name = $name } | Out-Null
+                $connection = Api 'POST' 'connect' @{ name = $name; profile = $profile }
+                if ($profile -eq 'tickets') {
+                    if ($connection.profile -ne 'tickets') { throw 'Servidor nao habilitado para tickets.' }
+                    Write-Host "Papel ERP: $($connection.paper_width_mm) x $($connection.paper_height_mm) mm. Confira o mesmo tamanho no driver Zebra."
+                }
                 $connected = $true
                 Write-Host 'Conectado. Destino atualizado no ERP e no bot.'
             }
@@ -94,7 +110,7 @@ try {
                 $recordPath = Join-Path $journal "$id.json"
                 if (Test-Path -LiteralPath $recordPath) { throw 'Trabalho repetido recusado.' }
                 $pdf = Join-Path $journal "$id.pdf"
-                $record = @{ id = $id; status = 'preparing'; sha256 = $job.sha256; acked = $false }
+                $record = @{ id = $id; status = 'preparing'; sha256 = $job.sha256; acked = $false; profile = $job.profile; paper_width_mm = $job.paper_width_mm; paper_height_mm = $job.paper_height_mm }
                 Save-Journal $recordPath $record
                 Process-Job $record $recordPath $pdf
                 Acknowledge $recordPath $record
@@ -102,7 +118,7 @@ try {
                     Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
                 }
             }
-            Start-Sleep -Seconds 10
+            if ($profile -eq 'tickets') { Start-Sleep -Seconds 3 } else { Start-Sleep -Seconds 10 }
         } catch {
             Write-Host "$(Get-Date -Format 'HH:mm:ss') Fila pausada: confira a conexao com o ERP e se ha um Sumatra anterior travado. Nova verificacao em 30 segundos."
             Start-Sleep -Seconds 30

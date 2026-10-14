@@ -93,6 +93,13 @@ baixa o PDF por autorização própria, chama Sumatra e comunica resultado. Esta
 não provoca reimpressão automática. Documentos avulsos têm um caminho temporário distinto
 em `assistant_documents`, sem guardar conteúdo no banco.
 
+**Tickets PDV:** `services.pdv_receipts` persiste snapshot/solicitação na transação
+da venda e gera PDF ao recolher. `print_devices.purpose` separa `documents` de
+`tickets`; índice parcial admite um destino automático. A revisão da venda define
+a chave do original; cópias têm chave própria e referência ao original. O agente
+Windows possui pastas/credenciais independentes e confere mídia antes de imprimir.
+Endpoints de recibo aplicam `sales_query`; configuração/credencial exigem Lucas.
+
 **Frete:** `freight_orders` registra cotação/compra/etiqueta. Webhooks assinados apenas
 agendam consulta autenticada. `freight_labels` recupera PDFs atrasados, persiste o documento,
 enfileira impressão única e notificação; não repete pagamentos. `freight_recovery`

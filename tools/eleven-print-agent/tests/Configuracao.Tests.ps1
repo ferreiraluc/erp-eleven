@@ -12,6 +12,9 @@ Assert ((Get-SuggestedPrinterIndex @('HP antiga', 'Samsung SL-M2035W')) -eq 1) '
 Assert ((Get-SuggestedPrinterIndex @('HP antiga')) -eq -1) 'Old printer must not be selected'
 Assert ((Get-SuggestedPrinterIndex @('Samsung SL-M2035W', 'Samsung SL-M2035W (USB)')) -eq -1) 'Ambiguous printers must require selection'
 Assert ((Get-SuggestedPrinterIndex @('Microsoft Print to PDF', 'Samsung M203x Series')) -eq -1) 'Different driver name requires manual selection'
+Assert ((Get-SuggestedPrinterIndex @('Samsung SL-M2035W', 'ZDesigner ZD220') 'tickets') -eq 1) 'Ticket installer must suggest Zebra only'
+Assert ((Get-SuggestedPrinterIndex @('Samsung SL-M2035W') 'tickets') -eq -1) 'Ticket installer must not reuse Samsung'
+Assert ((Get-SuggestedPrinterIndex @('ZDesigner ZD220', 'ZDesigner ZD220 USB') 'tickets') -eq -1) 'Ambiguous Zebra queues require choice'
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('eleven-config-test-' + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $root | Out-Null

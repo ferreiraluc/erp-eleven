@@ -165,8 +165,8 @@ def save_layout(key:str,body:LayoutInput,user=Depends(manager),db:Session=Depend
 @router.get('/overview')
 def overview(user=Depends(manager),db:Session=Depends(get_db)):
     return {'addresses':db.query(SavedAddress).filter_by(active=True,merged_into_id=None).count(),
-            'statuses':dict(db.query(PrintJob.status,func.count(PrintJob.id)).group_by(PrintJob.status).all()),
-            'devices':[{'id':str(d.id),'name':d.name,'active':d.active,'last_seen_at':d.last_seen_at} for d in db.query(PrintDevice).order_by(PrintDevice.created_at)]}
+            'statuses':dict(db.query(PrintJob.status,func.count(PrintJob.id)).filter(PrintJob.source != 'pdv_receipt').group_by(PrintJob.status).all()),
+            'devices':[{'id':str(d.id),'name':d.name,'active':d.active,'last_seen_at':d.last_seen_at} for d in db.query(PrintDevice).filter_by(purpose='documents').order_by(PrintDevice.created_at)]}
 
 
 def job_info(j,name=None):
@@ -180,7 +180,7 @@ def job_info(j,name=None):
 
 @router.get('/history')
 def history(q:str=Query('',max_length=100),status:str='',offset:int=Query(0,ge=0),limit:int=Query(30,ge=1,le=100),user=Depends(manager),db:Session=Depends(get_db)):
-    query=db.query(PrintJob,Usuario.nome).join(Usuario,Usuario.id==PrintJob.user_id).filter(PrintJob.source!='bot_pdf_ephemeral')
+    query=db.query(PrintJob,Usuario.nome).join(Usuario,Usuario.id==PrintJob.user_id).filter(PrintJob.source.notin_(('bot_pdf_ephemeral', 'pdv_receipt')))
     if status:query=query.filter(PrintJob.status==status)
     if q:query=query.filter(cast(PrintJob.snapshot,String).ilike(pattern(q),escape='\\'))
     return {'total':query.count(),'items':[job_info(j,n) for j,n in query.order_by(PrintJob.created_at.desc(),PrintJob.id).offset(offset).limit(limit)]}
@@ -189,7 +189,7 @@ def history(q:str=Query('',max_length=100),status:str='',offset:int=Query(0,ge=0
 @router.get('/history/{key}')
 def detail(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
     row=db.get(PrintJob,key)
-    if not row:raise HTTPException(404,'Impressão não encontrada.')
+    if not row or row.source == 'pdv_receipt':raise HTTPException(404,'Impressão não encontrada.')
     if row.source=='bot_pdf_ephemeral':raise HTTPException(404,'Esse arquivo foi encaminhado sem arquivamento.')
     return {**job_info(row),'snapshot':row.snapshot,'device_id':str(row.device_id)}
 
@@ -197,7 +197,7 @@ def detail(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
 @router.get('/history/{key}/pdf')
 def pdf(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
     row=db.get(PrintJob,key)
-    if not row:raise HTTPException(404,'Impressão não encontrada.')
+    if not row or row.source == 'pdv_receipt':raise HTTPException(404,'Impressão não encontrada.')
     if row.source=='bot_pdf_ephemeral':raise HTTPException(410,'Esse PDF é temporário e não fica arquivado no ERP.')
     data=row.pdf
     if not data and row.snapshot:
@@ -212,7 +212,7 @@ def pdf(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
 @router.post('/history/{key}/cancel')
 def cancel(key:uuid.UUID,user=Depends(manager),db:Session=Depends(get_db)):
     row=db.query(PrintJob).filter_by(id=key).with_for_update().first()
-    if not row:raise HTTPException(404,'Impressão não encontrada.')
+    if not row or row.source == 'pdv_receipt':raise HTTPException(404,'Impressão não encontrada.')
     if row.status!='pending':raise HTTPException(409,'Já retirado pelo agente ou finalizado. Não é possível cancelar no servidor.')
     row.status='cancelled';row.pdf=b'';row.finished_at=utcnow()
     if row.source=='bot_pdf_ephemeral':row.snapshot=None

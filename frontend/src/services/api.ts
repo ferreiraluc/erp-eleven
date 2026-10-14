@@ -867,6 +867,7 @@ export interface PdvPaymentCreate {
 }
 
 export interface PdvSaleCreate {
+  print_receipt?: boolean
   vendedor_id?: string
   cliente_id?: string
   cliente_nome?: string

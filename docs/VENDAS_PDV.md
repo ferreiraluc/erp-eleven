@@ -1,5 +1,22 @@
 # Gestor de Vendas do PDV
 
+## Ticket automático no caixa
+
+Lucas configura **PDV → Tickets** para o agente Windows exclusivo da Zebra ZD220.
+Ao ativar, **Confirmar e imprimir** grava a venda e uma solicitação de ticket na
+mesma transação, inclusive em vendas pelo celular. Sem ativação, o recibo continua
+disponível para impressão neste aparelho/PDF. Não depende de IA nem de AirPrint.
+
+O recibo mostra fila, processamento, envio ou resultado incerto. Atualizar estado
+não imprime; outra cópia exige confirmação e respeita a identidade da venda, o
+escopo do vendedor e a chave de repetição. Vendas estornadas/devolvidas não geram um
+novo recibo normal por esse caminho. O ticket conserva o snapshot da revisão enviada.
+Alterações posteriores não reimprimem automaticamente.
+
+Filas A4 e tickets permanecem separadas. Tamanho inicial 60 × 80 mm, ajustável no
+ERP e driver com a fila vazia; tickets longos usam várias páginas. Instalação,
+limites e migração futura ao Mac: [Impressão](IMPRESSAO_WINDOWS.md#tickets-do-pdv--zebra-zd220-14102026).
+
 A página **Vendas** (`/vendas-pdv`) fica nas ações rápidas do dashboard, ao lado de
 Nova Venda. Consulta exclusivamente `PdvSale`. `/vendas` conserva os lançamentos
 operacionais antigos; `/bi-vendas` conserva as planilhas. Nenhuma destas operações

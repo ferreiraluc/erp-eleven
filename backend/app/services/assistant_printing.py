@@ -151,7 +151,7 @@ def prepare_print(db, message, identity, args, postal_check=None):
     if previous:
         from .assistant_schedule import action_preview
         return {'confirmacao': action_preview(previous)}
-    devices = db.query(PrintDevice).filter_by(active=True).limit(2).all()
+    devices = db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True).limit(2).all()
     if len(devices) != 1:
         return {'erro': 'É necessário configurar uma única impressora ativa da loja.'}
     sender = None
@@ -175,7 +175,7 @@ def enqueue_print(db, action):
     from .address_book import lock_addresses, save_print_address
     from ..schemas.address_book import AddressData
     lock_addresses(db)
-    device = db.query(PrintDevice).filter_by(id=uuid.UUID(action.payload['device_id']), active=True).with_for_update().first()
+    device = db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(id=uuid.UUID(action.payload['device_id']), active=True).with_for_update().first()
     if not device:
         return 'A impressora foi desativada. Nenhuma impressão enviada.'
     # Action UUID is stable across retries; confirmation and queue commit atomically.

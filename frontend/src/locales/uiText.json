@@ -3713,5 +3713,190 @@
     "pt": "Câmbio incompleto. Confira as taxas.",
     "es": "Tipos de cambio incompletos. Revise las tasas.",
     "en": "Exchange rates are incomplete. Review the rates."
+  },
+  "Impressora de tickets": {
+    "pt": "Impressora de tickets",
+    "es": "Impresora de tickets",
+    "en": "Receipt printer"
+  },
+  "Tickets": {
+    "pt": "Tickets",
+    "es": "Tickets",
+    "en": "Tickets"
+  },
+  "Tickets do PDV em uma fila própria. A impressora de endereços A4 continua separada.": {
+    "pt": "Tickets do PDV em uma fila própria. A impressora de endereços A4 continua separada.",
+    "es": "Tickets del PDV en una cola propia. La impresora de direcciones A4 sigue separada.",
+    "en": "POS receipts use their own queue. The A4 address printer remains separate."
+  },
+  "Largura (mm)": {
+    "pt": "Largura (mm)",
+    "es": "Ancho (mm)",
+    "en": "Width (mm)"
+  },
+  "Altura (mm)": {
+    "pt": "Altura (mm)",
+    "es": "Alto (mm)",
+    "en": "Height (mm)"
+  },
+  "Use o mesmo tamanho no driver Zebra. Etiquetas 6 × 8 cm: 60 × 80 mm. Vendas longas usam várias etiquetas.": {
+    "pt": "Use o mesmo tamanho no driver Zebra. Etiquetas 6 × 8 cm: 60 × 80 mm. Vendas longas usam várias etiquetas.",
+    "es": "Use el mismo tamaño en el controlador Zebra. Etiquetas de 6 × 8 cm: 60 × 80 mm. Las ventas largas usan varias etiquetas.",
+    "en": "Use the same size in the Zebra driver. 6 × 8 cm labels: 60 × 80 mm. Long receipts use multiple labels."
+  },
+  "Imprimir ao confirmar a venda, inclusive pelo celular": {
+    "pt": "Imprimir ao confirmar a venda, inclusive pelo celular",
+    "es": "Imprimir al confirmar la venta, incluso desde el celular",
+    "en": "Print when confirming the sale, including from phones"
+  },
+  "Último contato:": {
+    "pt": "Último contato:",
+    "es": "Última conexión:",
+    "en": "Last connection:"
+  },
+  "Ainda não conectado": {
+    "pt": "Ainda não conectado",
+    "es": "Aún no conectado",
+    "en": "Not connected yet"
+  },
+  "Credencial exclusiva da Zebra": {
+    "pt": "Credencial exclusiva da Zebra",
+    "es": "Credencial exclusiva de Zebra",
+    "en": "Dedicated Zebra credential"
+  },
+  "Copie agora para o instalador Eleven Tickets. Ela só é exibida nesta criação; não use a credencial da Samsung.": {
+    "pt": "Copie agora para o instalador Eleven Tickets. Ela só é exibida nesta criação; não use a credencial da Samsung.",
+    "es": "Copie ahora al instalador Eleven Tickets. Solo se muestra al crearla; no use la credencial de Samsung.",
+    "en": "Copy it to the Eleven Tickets installer now. It is only shown at creation; do not use the Samsung credential."
+  },
+  "Guardei a credencial no instalador": {
+    "pt": "Guardei a credencial no instalador",
+    "es": "Guardé la credencial en el instalador",
+    "en": "I saved the credential in the installer"
+  },
+  "Baixar agente Windows para tickets": {
+    "pt": "Baixar agente Windows para tickets",
+    "es": "Descargar agente Windows para tickets",
+    "en": "Download Windows receipt agent"
+  },
+  "Instale sem substituir o Eleven Impressao. Abra Eleven Tickets e mantenha o computador ligado. O agente para macOS será preparado na migração.": {
+    "pt": "Instale sem substituir o Eleven Impressao. Abra Eleven Tickets e mantenha o computador ligado. O agente para macOS será preparado na migração.",
+    "es": "Instale sin reemplazar Eleven Impressao. Abra Eleven Tickets y mantenga la computadora encendida. El agente macOS se preparará al migrar.",
+    "en": "Install alongside Eleven Impressao. Open Eleven Tickets and keep the computer on. A macOS agent will be prepared during migration."
+  },
+  "Configuração salva.": {
+    "pt": "Configuração salva.",
+    "es": "Configuración guardada.",
+    "en": "Settings saved."
+  },
+  "Selecione e copie a credencial manualmente.": {
+    "pt": "Selecione e copie a credencial manualmente.",
+    "es": "Seleccione y copie la credencial manualmente.",
+    "en": "Select and copy the credential manually."
+  },
+  "Guarde a credencial e marque a confirmação antes de fechar.": {
+    "pt": "Guarde a credencial e marque a confirmação antes de fechar.",
+    "es": "Guarde la credencial y marque la confirmación antes de cerrar.",
+    "en": "Save the credential and check the confirmation before closing."
+  },
+  "Consultando impressora do caixa…": {
+    "pt": "Consultando impressora do caixa…",
+    "es": "Consultando impresora de caja…",
+    "en": "Checking checkout printer…"
+  },
+  "Ticket da venda": {
+    "pt": "Ticket da venda",
+    "es": "Ticket de venta",
+    "en": "Sales receipt"
+  },
+  "Imprimir no caixa": {
+    "pt": "Imprimir no caixa",
+    "es": "Imprimir en caja",
+    "en": "Print at checkout"
+  },
+  "Atualizar estado": {
+    "pt": "Atualizar estado",
+    "es": "Actualizar estado",
+    "en": "Refresh status"
+  },
+  "Outra cópia": {
+    "pt": "Outra cópia",
+    "es": "Otra copia",
+    "en": "Another copy"
+  },
+  "Confira o papel e a fila do Windows. Confirmar envia uma nova cópia, mesmo que a anterior já tenha saído.": {
+    "pt": "Confira o papel e a fila do Windows. Confirmar envia uma nova cópia, mesmo que a anterior já tenha saído.",
+    "es": "Revise el papel y la cola de Windows. Confirmar envía una nueva copia, aunque la anterior ya se haya impreso.",
+    "en": "Check the paper and Windows queue. Confirming sends another copy, even if the previous one was printed."
+  },
+  "Confirmar nova cópia": {
+    "pt": "Confirmar nova cópia",
+    "es": "Confirmar nueva copia",
+    "en": "Confirm another copy"
+  },
+  "Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets no PDV.": {
+    "pt": "Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets no PDV.",
+    "es": "Impresora de caja no activada. Imprima desde este dispositivo o configure los tickets en el PDV.",
+    "en": "Checkout printer is not enabled. Print from this device or configure receipts in the POS."
+  },
+  "🖨 Neste aparelho": {
+    "pt": "🖨 Neste aparelho",
+    "es": "🖨 En este dispositivo",
+    "en": "🖨 On this device"
+  },
+  "Na fila do caixa. Mantenha o agente conectado.": {
+    "pt": "Na fila do caixa. Mantenha o agente conectado.",
+    "es": "En la cola de caja. Mantenga el agente conectado.",
+    "en": "Queued at checkout. Keep the agent connected."
+  },
+  "O agente está processando o ticket.": {
+    "pt": "O agente está processando o ticket.",
+    "es": "El agente está procesando el ticket.",
+    "en": "The agent is processing the receipt."
+  },
+  "Enviado à impressora. Confira a saída do papel.": {
+    "pt": "Enviado à impressora. Confira a saída do papel.",
+    "es": "Enviado a la impresora. Compruebe la salida del papel.",
+    "en": "Sent to the printer. Check the printed paper."
+  },
+  "Envio incerto. Confira a fila antes de pedir outra cópia.": {
+    "pt": "Envio incerto. Confira a fila antes de pedir outra cópia.",
+    "es": "Envío incierto. Revise la cola antes de pedir otra copia.",
+    "en": "Delivery uncertain. Check the queue before requesting another copy."
+  },
+  "Falha no envio do ticket.": {
+    "pt": "Falha no envio do ticket.",
+    "es": "Error al enviar el ticket.",
+    "en": "Receipt delivery failed."
+  },
+  "O ticket expirou sem ser recolhido.": {
+    "pt": "O ticket expirou sem ser recolhido.",
+    "es": "El ticket venció sin ser recogido.",
+    "en": "The receipt expired before collection."
+  },
+  "Impressão cancelada.": {
+    "pt": "Impressão cancelada.",
+    "es": "Impresión cancelada.",
+    "en": "Print cancelled."
+  },
+  "Pronto para enviar ao caixa.": {
+    "pt": "Pronto para enviar ao caixa.",
+    "es": "Listo para enviar a caja.",
+    "en": "Ready to send to checkout."
+  },
+  "Substituir credencial perdida": {
+    "pt": "Substituir credencial perdida",
+    "es": "Reemplazar credencial perdida",
+    "en": "Replace lost credential"
+  },
+  "A credencial anterior deixará de funcionar. Será necessário informar a nova no instalador Windows.": {
+    "pt": "A credencial anterior deixará de funcionar. Será necessário informar a nova no instalador Windows.",
+    "es": "La credencial anterior dejará de funcionar. Deberá ingresar la nueva en el instalador Windows.",
+    "en": "The previous credential will stop working. Enter the new one in the Windows installer."
+  },
+  "Confirmar nova credencial": {
+    "pt": "Confirmar nova credencial",
+    "es": "Confirmar nueva credencial",
+    "en": "Confirm new credential"
   }
 }

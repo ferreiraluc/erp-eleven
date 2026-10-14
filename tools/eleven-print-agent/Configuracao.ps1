@@ -1,8 +1,8 @@
 # Shared by the installer; never touches the print queue.
-function Get-SuggestedPrinterIndex([string[]]$Printers) {
+function Get-SuggestedPrinterIndex([string[]]$Printers, [string]$Profile = 'documents') {
     $matchingIndexes = @()
     for ($i = 0; $i -lt $Printers.Count; $i++) {
-        if ($Printers[$i] -match '(?i)(?:SL[- ]?)?M2035W\b') { $matchingIndexes += $i }
+        if (($Profile -eq 'tickets' -and $Printers[$i] -match '(?i)ZD220\b') -or ($Profile -ne 'tickets' -and $Printers[$i] -match '(?i)(?:SL[- ]?)?M2035W\b')) { $matchingIndexes += $i }
     }
     if ($matchingIndexes.Count -eq 1) { return [int]$matchingIndexes[0] }
     return -1

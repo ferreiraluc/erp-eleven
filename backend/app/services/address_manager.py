@@ -35,7 +35,7 @@ def enqueue_address(db, body, user_id):
     from .assistant_printing import render_address
     from .address_book import lock_addresses, resolve_address, save_print_address
     lock_addresses(db)
-    device=db.query(PrintDevice).filter_by(id=body.device_id,active=True).with_for_update().first()
+    device=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(id=body.device_id,active=True).with_for_update().first()
     if not device: raise HTTPException(404,'Impressora não encontrada.')
     previous=db.query(PrintJob).filter_by(request_key=body.request_key).first()
     if previous:
