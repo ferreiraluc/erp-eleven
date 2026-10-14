@@ -98,7 +98,7 @@ function Wait-TicketAction($Action) {
         $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncAction'
     } | Select-Object -First 1
     $task = $method.Invoke($null, @($Action))
-    $task.GetAwaiter().GetResult()
+    $task.Wait() # Do not emit Task<VoidTaskResult> into the PDF byte stream.
 }
 
 function Convert-TicketPdf([string]$Path, [int]$Width, [int]$Height) {
@@ -119,7 +119,11 @@ function Convert-TicketPdf([string]$Path, [int]$Width, [int]$Height) {
         $options.DestinationHeight = [uint32]($Height * 8)
         Wait-TicketAction ($page.RenderToStreamAsync($stream, $options))
         $stream.Seek(0)
-        $reader = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($stream)
+        $readMethod = [System.IO.WindowsRuntimeStreamExtensions].GetMethods() | Where-Object {
+            $_.Name -eq 'AsStreamForRead' -and $_.GetParameters().Count -eq 1 -and
+            $_.GetParameters()[0].ParameterType.Name -eq 'IRandomAccessStream'
+        } | Select-Object -First 1
+        $reader = $readMethod.Invoke($null, @($stream))
         try { $reader.CopyTo($memory) } finally { $reader.Dispose() }
         return ,([ElevenTicketRaster]::Zpl($memory.ToArray(), $Width*8, $Height*8))
     } finally { $page.Dispose(); $stream.Dispose(); $memory.Dispose() }
