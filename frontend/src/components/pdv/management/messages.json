@@ -530,5 +530,13 @@
   "Não foi possível carregar os vendedores.": [
     "No se pudieron cargar los vendedores.",
     "Could not load sellers."
+  ],
+  "Ticket / PDF": [
+    "Ticket / PDF",
+    "Receipt / PDF"
+  ],
+  "Ler ticket": [
+    "Leer ticket",
+    "Scan receipt"
   ]
 }

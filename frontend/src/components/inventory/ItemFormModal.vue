@@ -420,8 +420,8 @@
               </span>
             </div>
             <span class="form-hint">
-              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">{{ tr('Criará {colors} × {sizes} = {count} itens (cor × tamanho).', { colors: gradeColors.length, sizes: gradeSizes.length, count: gradeItemCount }) }}</template>
-              <template v-else-if="gradeColors.length > 0">{{ tr('Itens a criar: {count} (um por cor).', { count: gradeColors.length }) }}</template>
+              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">{{ tr('Variações a criar: {count}', { count: gradeItemCount }) }}</template>
+              <template v-else-if="gradeColors.length > 0">{{ tr('Itens a criar: {count} (um por cor).', { count: gradeItemCount }) }}</template>
               <template v-else>{{ tr('Cores opcionais — deixe vazio para criar apenas os tamanhos.') }}</template>
             </span>
           </div>
@@ -453,31 +453,17 @@
           <div v-if="gradeSizes.length > 0 || gradeColors.length > 0" class="form-group">
             <label>{{ tr('Prévia — itens a criar: {count}', { count: gradeItemCount }) }}</label>
             <div class="grade-preview">
-              <template v-if="gradeColors.length > 0 && gradeSizes.length > 0">
-                <template v-for="color in gradeColors" :key="color">
-                  <div v-for="size in gradeSizes" :key="color + size" class="gp-row">
-                    <span class="gp-size">{{ size }}</span>
-                    <span class="gp-color-badge">{{ color }}</span>
-                    <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + size + ' ' + color }}</span>
-                    <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
-                  </div>
-                </template>
-              </template>
-              <template v-else-if="gradeColors.length > 0">
-                <div v-for="color in gradeColors" :key="color" class="gp-row">
-                  <span class="gp-color-badge">{{ color }}</span>
-                  <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + color }}</span>
-                  <span v-if="form.size" class="gp-size">{{ form.size.trim().toUpperCase() }}</span>
-                  <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + form.size.trim().toUpperCase() }}</span>
+              <div v-for="row in gradeRows" :key="row.key" class="gp-row">
+                <span v-if="row.size" class="gp-size">{{ row.size }}</span>
+                <span v-if="row.color" class="gp-color-badge">{{ row.color }}</span>
+                <div class="gp-details">
+                  <span class="gp-name">{{ [form.name || tr('(nome)'), row.size, row.color].filter(Boolean).join(' ') }}</span>
+                  <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + row.size }}</span>
                 </div>
-              </template>
-              <template v-else>
-                <div v-for="size in gradeSizes" :key="size" class="gp-row">
-                  <span class="gp-size">{{ size }}</span>
-                  <span class="gp-name">{{ (form.name || tr('(nome)')) + ' ' + size }}</span>
-                  <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + size }}</span>
-                </div>
-              </template>
+                <button type="button" class="gp-remove erp-button erp-button--ghost erp-button--icon" :disabled="saving || uncertainSave || !!partialItems.length" :aria-label="tr('Remover variação {name}', { name: [row.size, row.color].filter(Boolean).join(' ') })" @click="excludeGradeRow(row.key)">×</button>
+              </div>
+              <p v-if="!gradeRows.length" role="status">{{ tr('Nenhuma variação selecionada. Restaure ou escolha outros tamanhos.') }}</p>
+              <button v-if="excludedGradeRows.length" type="button" class="erp-button erp-button--ghost erp-button--sm" :disabled="saving || uncertainSave || !!partialItems.length" @click="excludedGradeRows = []">{{ tr('Restaurar variações removidas') }}</button>
             </div>
           </div>
 
@@ -541,7 +527,7 @@
 
       </div>
 
-      <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeItemCount || 1, quantity: gradeItemCount ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
+      <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeEnabled ? gradeItemCount : 1, quantity: gradeEnabled ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer erp-dialog__footer">
         <template v-if="activeTab === 'basic' && needsIntakeReview">
           <label class="intake-review-check footer-review"><input ref="reviewInput" v-model="intakeReviewed" type="checkbox" :disabled="saving || conflicts.length > 0" />{{ tr('Conferi os dados e a foto escolhida para este produto.') }}</label>
@@ -678,13 +664,15 @@ let photoStream: MediaStream | null = null
 // ── Grade state ──────────────────────────────────────────────────────────────
 const gradeSizes = ref<string[]>([])
 const gradeEnabled = ref(false)
+const excludedGradeRows = ref<string[]>([])
+function excludeGradeRow(key: string) { if (!saving.value && !uncertainSave.value && !partialItems.value.length) excludedGradeRows.value = [...excludedGradeRows.value, key] }
 const editingGradeOptions = ref(false)
 const removedOption = ref<{ kind: 'color' | 'preset'; name: string } | null>(null)
 const optionRemovalNotice = computed(() => removedOption.value
   ? tr(removedOption.value.kind === 'color' ? 'Cor {name} removida dos botões salvos.' : 'Modelo {name} removido dos botões salvos.', { name: removedOption.value.name })
   : '')
 function disableGrade() {
-  gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0
+  excludedGradeRows.value = []; gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0
   colorInput.value = ''; showColorInput.value = false
   editingGradeOptions.value = false; removedOption.value = null
 }
@@ -748,13 +736,14 @@ function toggleQuickColor(c: string) {
   }
   // To remove, use × on the chip
 }
-const gradeItemCount = computed(() => {
-  const s = gradeSizes.value.length
-  const c = gradeColors.value.length
-  if (s > 0 && c > 0) return s * c
-  if (s > 0) return s
-  return c
+const gradeRows = computed(() => {
+  if (!gradeSizes.value.length && !gradeColors.value.length) return []
+  const sizes = gradeSizes.value.length ? gradeSizes.value : [form.size.trim().toUpperCase()]
+  const colors = gradeColors.value.length ? gradeColors.value : [form.color || '']
+  return colors.flatMap(color => sizes.map(size => ({ size, color, key: JSON.stringify([size, color]) })))
+    .filter(row => !excludedGradeRows.value.includes(row.key))
 })
+const gradeItemCount = computed(() => gradeRows.value.length)
 const stockLocation = ref<'loja' | 'deposito'>(
   readPreference('inv_stock_location') === 'deposito' ? 'deposito' : 'loja'
 )
@@ -788,7 +777,8 @@ function closePresetInput() {
 }
 
 function applyPreset(preset: GradePreset) {
-  // The photographed variant must not disappear when applying a preset.
+  excludedGradeRows.value = []
+  // Include the photographed size initially; operators can remove any preview row.
   gradeSizes.value = [...new Set([form.size.trim().toUpperCase(), ...preset.sizes.map(size => size.trim().toUpperCase())].filter(Boolean))]
   activePreset.value = preset.label
 }
@@ -1055,8 +1045,10 @@ async function handleSubmit() {
       if (gradeSizes.value.length > 0 && gradeColors.value.length > 0) {
         // Size × color matrix
         for (const color of gradeColors.value) {
+          const sizes = gradeRows.value.filter(row => row.color === color).map(row => row.size)
+          if (!sizes.length) continue
           creating = true
-          const result = await inventoryAPI.createGrade({ ...baseGradePayload, color })
+          const result = await inventoryAPI.createGrade({ ...baseGradePayload, color, sizes })
           creating = false
           createdItems.push(...result.items)
           if (!firstItem) firstItem = result.items[0]
@@ -1064,7 +1056,7 @@ async function handleSubmit() {
       } else if (gradeSizes.value.length > 0) {
         // Only sizes (original behavior)
         creating = true
-        const result = await inventoryAPI.createGrade({ ...baseGradePayload, color: form.color || null })
+        const result = await inventoryAPI.createGrade({ ...baseGradePayload, color: form.color || null, sizes: gradeRows.value.map(row => row.size) })
         creating = false
         createdItems.push(...result.items)
         firstItem = result.items[0]
@@ -1079,7 +1071,7 @@ async function handleSubmit() {
           barcode: form.barcode ? form.barcode + form.size.trim().toUpperCase() : '',
           group_key: sharedGroupKey,
         }
-        for (const color of gradeColors.value) {
+        for (const { color } of gradeRows.value) {
           creating = true
           const result = await inventoryAPI.createItem({ ...baseSinglePayload, color })
           creating = false
@@ -1549,8 +1541,10 @@ function handleComma(event: KeyboardEvent, add: () => void) {
   background: #e0e7ff; border-radius: 4px; padding: 0.1rem 0.3rem;
   text-align: center; font-size: 0.75rem;
 }
-.gp-name { flex: 1; color: #111827; }
-.gp-barcode { font-family: monospace; font-size: 0.72rem; color: #9ca3af; flex-shrink: 0; }
+.gp-details { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gp-name { display: block; color: #111827; }
+.gp-barcode { display: block; font-family: monospace; font-size: 0.72rem; color: #6b7280; }
+.gp-remove { flex-shrink: 0; min-width: 32px !important; min-height: 32px !important; width: 32px; height: 32px; padding: 0 !important; font-size: 20px; color: #b91c1c; }
 
 /* Add-size row */
 .add-size-row {

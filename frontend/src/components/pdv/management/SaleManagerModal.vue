@@ -1,7 +1,7 @@
 <template>
-  <Teleport to="body"><div class="sale-overlay erp-dialog-backdrop" @keydown.esc.stop.prevent="close" @keydown.tab="trapFocus">
-    <section v-erp-dialog ref="dialog" class="sale-dialog erp-dialog erp-dialog--lg" role="dialog" aria-modal="true" :aria-label="tr('Detalhes da venda')" tabindex="-1">
-      <header class="erp-dialog__header"><div><h2>{{ operation ? operationText(operation) : tr('Detalhes da venda') }}</h2><small>#{{ saleId.slice(0,8) }}</small></div><button data-dialog-close class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" :disabled="busy" @click="close">✕</button></header>
+  <Teleport to="body"><div v-show="!showReceipt" class="sale-overlay erp-dialog-backdrop" @keydown.esc.stop.prevent="close" @keydown.tab="trapFocus">
+    <section v-erp-dialog="!showReceipt" ref="dialog" class="sale-dialog erp-dialog erp-dialog--lg" role="dialog" aria-modal="true" :aria-label="tr('Detalhes da venda')" tabindex="-1">
+      <header class="erp-dialog__header"><div><h2>{{ operation ? operationText(operation) : tr('Detalhes da venda') }}</h2><small>#{{ sale?.ticket_code || saleId.replaceAll('-', '').slice(0,10).toUpperCase() }}</small></div><button data-dialog-close class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" :disabled="busy" @click="close">✕</button></header>
       <main class="erp-dialog__body">
         <p v-if="loading" role="status">{{ tr('Carregando venda...') }}</p>
         <div v-if="error" class="notice error" role="alert">{{ tr(error) }}<button v-if="!sale" class="erp-button erp-button--secondary erp-button--sm" @click="load">{{ tr('Tentar novamente') }}</button></div>
@@ -55,10 +55,11 @@
       <footer class="erp-dialog__footer">
         <template v-if="preview"><button class="erp-button erp-button--secondary" :disabled="busy || uncertain" @click="preview=null; prepared=null; error=''">{{ tr('Voltar à edição') }}</button><button class="erp-button erp-button--danger" :disabled="busy || !confirmed" @click="commit">{{ tr(busy ? 'Processando...' : uncertain ? 'Tentar a mesma confirmação' : 'Confirmar operação') }}</button></template>
         <template v-else-if="operation"><button class="erp-button erp-button--secondary" :disabled="busy" @click="operation=null; error=''">{{ tr('Cancelar') }}</button><button class="erp-button erp-button--primary" :disabled="busy || reason.trim().length<5" @click="review">{{ tr(busy ? 'Conferindo...' : 'Revisar alterações') }}</button></template>
-        <template v-else><button class="erp-button erp-button--secondary" @click="close">{{ tr('Fechar') }}</button><template v-if="sale?.can_manage && auth.isOwner && !sale.deleted_at"><button v-if="sale.status==='completed'" class="erp-button erp-button--primary" @click="start('edit')">{{ tr('Editar venda') }}</button><button v-if="availableLines.length && ['completed','partially_refunded'].includes(sale.status)" class="erp-button erp-button--secondary" @click="start('return')">{{ tr('Devolução parcial') }}</button><button v-if="['completed','partially_refunded'].includes(sale.status)" class="erp-button erp-button--danger" @click="start('cancel')">{{ tr('Estorno integral') }}</button><button class="erp-button erp-button--danger" @click="start('delete')">{{ tr('Excluir venda') }}</button></template></template>
+        <template v-else><button v-if="sale && !sale.deleted_at" class="erp-button erp-button--secondary" @click="showReceipt=true">{{ tr('Ticket / PDF') }}</button><button class="erp-button erp-button--secondary" @click="close">{{ tr('Fechar') }}</button><template v-if="sale?.can_manage && auth.isOwner && !sale.deleted_at"><button v-if="sale.status==='completed'" class="erp-button erp-button--primary" @click="start('edit')">{{ tr('Editar venda') }}</button><button v-if="availableLines.length && ['completed','partially_refunded'].includes(sale.status)" class="erp-button erp-button--secondary" @click="start('return')">{{ tr('Devolução parcial') }}</button><button v-if="['completed','partially_refunded'].includes(sale.status)" class="erp-button erp-button--danger" @click="start('cancel')">{{ tr('Estorno integral') }}</button><button class="erp-button erp-button--danger" @click="start('delete')">{{ tr('Excluir venda') }}</button></template></template>
       </footer>
     </section>
   </div></Teleport>
+  <PDVReceiptModal v-if="showReceipt && sale" :sale="sale" @close="showReceipt=false" />
 </template>
 <script setup lang="ts">
 import { vErpDialog } from '@/directives/erpDialog'
@@ -67,10 +68,12 @@ import { useAuthStore } from '@/stores/auth'
 import { pdvManagementAPI, saleError, type ManagedSale, type SaleOperation, type SaleCommand, type SalePreview, type SaleCommit } from '@/services/pdvManagement'
 import type { PdvSaleCreate } from '@/services/api'
 import SaleEditForm from './SaleEditForm.vue'
+import PDVReceiptModal from '../PDVReceiptModal.vue'
 import { tr, gs, qty, amount, saleDate, statusText, operationText, paymentText } from './i18n'
 const props=defineProps<{saleId:string;sellers:Array<{id:string;name:string}>}>()
 const emit=defineEmits<{(e:'close'):void;(e:'changed'):void}>(),auth=useAuthStore()
 const dialog=ref<HTMLElement>(),sale=ref<ManagedSale|null>(null),loading=ref(true),error=ref(''),tab=ref('items'),busy=ref(false)
+const showReceipt=ref(false)
 const operation=ref<SaleOperation|null>(null),draft=ref<PdvSaleCreate>(),reason=ref(''),restock=ref(true)
 const returnLines=ref<Record<string,{quantity:number;restock:boolean}>>({}),preview=ref<SalePreview|null>(null),prepared=ref<SaleCommit|null>(null),confirmed=ref(false),uncertain=ref(false)
 let mounted=true,prior:HTMLElement|null=null,sequence=0

@@ -46,3 +46,18 @@ def test_concurrent_receipt_requests_dispatch_one_job(pdv_pg):
     assert sorted(r.status_code for r in results)==[200,409]
     with factory() as db:
         assert db.query(PrintJob).count()==2
+
+
+def test_ticket_prefix_search_uses_uuid_bounds_in_postgres(pdv_pg):
+    import uuid
+    from app.models.pdv import PdvSale
+    factory,client,customer,_,_=pdv_pg
+    product=item(factory)
+    sale=client.post('/api/pdv/sales',json=payload(customer,[(product,1,'loja')])).json()
+    prefix=sale['id'].replace('-','')[:10].upper()
+    with factory() as db:
+        source=db.get(PdvSale,uuid.UUID(sale['id']))
+        collision=PdvSale(id=uuid.UUID(prefix+'0'*22),vendedor_id=source.vendedor_id,status='completed')
+        db.add(collision);db.commit();other_id=str(collision.id)
+    results=client.get('/api/pdv/management',params={'q':prefix}).json()
+    assert {row['id'] for row in results['items']}=={sale['id'],other_id}

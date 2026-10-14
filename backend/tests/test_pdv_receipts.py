@@ -137,6 +137,9 @@ def test_personal_sale_permissions_and_owner_configuration(tickets):
     url=f"/api/pdv/sales/{sold['id']}/receipt"
     assert client.get(url).status_code == 404
     assert client.post(url).status_code == 404
+    assert client.get(url+'/preview').status_code == 404
+    assert client.get(url+'/pdf').status_code == 404
+    assert client.get('/api/pdv/management',params={'q':sold['id'].replace('-','')[:10]}).json()['total']==0
     assert client.put('/api/printing/receipt-device',json={'name':'Zebra'}).status_code == 403
 
 
@@ -162,7 +165,7 @@ def test_receipt_pdf_paginated_and_escaped(tickets):
     pages=PdfReader(io.BytesIO(pdf)).pages
     assert len(pages)>1
     text='\n'.join(p.extract_text() for p in pages)
-    assert 'Givenchy' in text and 'TOTAL:' in text and 'Anotar (fiado)' in text
+    assert 'Givenchy' in text and 'TOTAL' in text and 'A cuenta (fiado)' in text
     assert text.count('DN0281')==18
     for page in pages:
         assert float(page.mediabox.width)==pytest.approx(60*72/25.4,abs=.01)
@@ -212,3 +215,67 @@ def test_generation_failure_does_not_claim_or_block_later_jobs(tickets, monkeypa
         job=db.query(PrintJob).one()
         assert job.status=='failed' and job.claimed_at is None
         assert job.diagnostic=={'code':'document_generation_failed'}
+
+
+def test_download_and_preview_are_read_only_and_work_without_a_printer(tickets):
+    factory,client,customer=tickets
+    sold=sale(client,customer)
+    url=f"/api/pdv/sales/{sold['id']}/receipt"
+    preview=client.get(url+'/preview')
+    assert preview.status_code==200 and preview.headers['cache-control']=='no-store'
+    data=preview.json()
+    assert data['code']==sold['id'].replace('-','')[:10].upper()
+    assert data['location']=='Shopping Paris - PY' and data['email']=='contato@elevenparispy.com'
+    assert data['payments'][0]['label']=='A cuenta (fiado)'
+    assert data['barcode'].startswith('data:image/svg+xml;base64,')
+    pdf=client.get(url+'/pdf')
+    assert pdf.status_code==200 and pdf.headers['content-type']=='application/pdf'
+    text='\n'.join(p.extract_text() for p in PdfReader(io.BytesIO(pdf.content)).pages)
+    for value in ('ELEVEN','Shopping Paris - PY','contato@elevenparispy.com',data['code'],'Gracias por su compra','Vendedor:','Cliente:'):
+        assert value in text
+    with factory() as db:
+        assert db.query(PrintJob).count()==0 and db.query(PdvSale).count()==1
+
+
+def test_printed_revision_remains_downloadable_after_temporary_pdf_removed(tickets):
+    factory,client,customer=tickets
+    configure(client);sold=sale(client,customer)
+    url=f"/api/pdv/sales/{sold['id']}/receipt"
+    with factory() as db:
+        job=db.query(PrintJob).one();job.pdf=b'';job.status='submitted'
+        db.get(PdvSale,uuid.UUID(sold['id'])).cliente_nome='Name changed outside receipt snapshot'
+        db.commit()
+    assert client.get(url+'/preview').json()['customer']!='Name changed outside receipt snapshot'
+    assert client.get(url+'/pdf').status_code==200
+    with factory() as db:assert db.query(PrintJob).count()==1
+
+
+def test_refunded_receipt_marks_status_and_preserves_original_values(tickets):
+    factory,client,customer=tickets
+    configure(client);sold=sale(client,customer)
+    with factory() as db:
+        row=db.get(PdvSale,uuid.UUID(sold['id']));row.status='refunded';row.refunded_gs=row.total_gs;row.version+=1
+        row.items[0].returned_quantity=row.items[0].quantity;db.commit()
+    url=f"/api/pdv/sales/{sold['id']}/receipt"
+    preview=client.get(url+'/preview').json()
+    assert preview['status']=='Venta devuelta' and preview['status_changed']
+    assert preview['refunded'] and preview['items'][0]['returned']
+    assert client.post(url).status_code==200
+    with factory() as db:
+        latest=db.query(PrintJob).filter_by(request_key=receipts.original_key(db.get(PdvSale,uuid.UUID(sold['id'])))).one()
+        assert latest.snapshot['status']=='refunded'
+        assert db.query(PdvSale).count()==1
+
+
+def test_ticket_lookup_includes_collisions_for_review_and_accepts_full_id(tickets):
+    factory,client,customer=tickets
+    sold=sale(client,customer)
+    code=sold['id'].replace('-','')[:10].upper()
+    with factory() as db:
+        original=db.get(PdvSale,uuid.UUID(sold['id']))
+        collision=PdvSale(id=uuid.UUID(code+'0'*22),vendedor_id=original.vendedor_id,status='completed',cliente_nome='Coincidencia sintética')
+        db.add(collision);db.commit();collision_id=str(collision.id)
+    for query in (code,code.lower(),'#'+code):
+        result=client.get('/api/pdv/management',params={'q':query}).json()
+        assert {row['id'] for row in result['items']}=={sold['id'],collision_id}
+    assert client.get('/api/pdv/management',params={'q':sold['id']}).json()['total']==1

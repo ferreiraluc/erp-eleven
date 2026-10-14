@@ -9,8 +9,9 @@ disponível para impressão neste aparelho/PDF. Não depende de IA nem de AirPri
 
 O recibo mostra fila, processamento, envio ou resultado incerto. Atualizar estado
 não imprime; outra cópia exige confirmação e respeita a identidade da venda, o
-escopo do vendedor e a chave de repetição. Vendas estornadas/devolvidas não geram um
-novo recibo normal por esse caminho. O ticket conserva o snapshot da revisão enviada.
+escopo do vendedor e a chave de repetição. Vendas estornadas, anuladas ou devolvidas
+exibem essa situação e as quantidades/valores devolvidos no comprovante. Não são
+apresentadas como uma venda normal. O ticket conserva o snapshot da revisão enviada.
 Alterações posteriores não reimprimem automaticamente.
 
 Filas A4 e tickets permanecem separadas. Tamanho inicial 60 × 80 mm, ajustável no
@@ -28,6 +29,35 @@ remove apenas esse parâmetro; voltar/avançar no navegador acompanha a seleçã
 A API de detalhes continua conferindo o acesso do vendedor. O atalho não concede
 edição, estorno ou exclusão: essas operações continuam exclusivas do Lucas, com
 prévia, confirmação e idempotência.
+
+## Consultar, baixar e reimprimir tickets
+
+Em **Vendas → Ver venda → Ticket / PDF**, o operador autorizado a consultar a venda
+pode baixar o PDF ou enviar uma cópia para a mesma fila de tickets do caixa. Abrir
+a prévia e **Salvar PDF** são leituras: não criam venda, movimentação ou impressão.
+Vendas excluídas permanecem no histórico administrativo, sem emissão de ticket.
+O botão **Ler ticket** usa a câmera; leitores USB podem preencher a busca textual.
+A leitura limpa os demais filtros para localizar o ticket, mantendo o escopo de
+acesso imposto pelo backend. Não abre nem seleciona automaticamente a primeira venda.
+
+O comprovante é sempre em espanhol, inclusive com o ERP em português/inglês:
+ELEVEN, Shopping Paris - PY, contato@elevenparispy.com, data/hora local, produtos,
+subtotal, descontos, total, pagamentos na moeda original, vendedor e cliente.
+Não inventa dados de cartão, autorização, impostos ou condições de garantia.
+A prévia HTML, o PDF baixado e o arquivo da Zebra usam a mesma apresentação no
+backend (`pdv_receipt_layout`). O PDF conserva as dimensões configuradas na fila;
+sem configuração, usa 80 × 200 mm. A paginação continua necessária em etiquetas curtas.
+Não é necessária atualização do agente Windows para esse layout.
+
+O Code 128 contém os primeiros **10 caracteres hexadecimais do UUID**, em caixa alta.
+Esse código legível e o UUID completo também aparecem no papel. A busca aceita
+ambos; o prefixo é consultado por intervalo no índice UUID. Ele é um localizador,
+não uma nova identidade única: se houver colisão, todos os resultados autorizados
+são exibidos para conferência. O ID real e as chaves de idempotência não mudam.
+
+O snapshot da revisão já enviada é reutilizado mesmo após a remoção do PDF
+temporário. Uma venda editada/devolvida usa a revisão atual; cópias são identificadas
+como **COPIA**. Nenhuma consulta dispara impressão ou refaz lançamentos financeiros.
 
 ## Cliente e moeda na nova venda
 

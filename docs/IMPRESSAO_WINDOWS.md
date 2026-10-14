@@ -273,3 +273,14 @@ A alternância altera apenas a apresentação, preservando o remetente escolhido
 todos os campos habilitados. PY continua sem remetente, CPF/RUC ausente é omitido.
 Os formatos em duas colunas limitam a fonte a 15 pontos (remetente: 14) para caber
 na folha; os demais respeitam a configuração. SuperFrete e PDFs avulsos não mudam.
+
+### Reimpressão e apresentação do ticket
+
+**Vendas → Ver venda → Ticket / PDF** reutiliza a fila Zebra e a confirmação de
+nova cópia. O PDF em espanhol é gerado no servidor; a mudança visual não exige
+reinstalar o agente. Baixar/visualizar é somente leitura, sem enviar à impressora.
+O ticket inclui Code 128 com localizador de 10 caracteres e UUID completo impresso;
+a busca e as restrições de acesso estão descritas em [Vendas PDV](VENDAS_PDV.md#consultar-baixar-e-reimprimir-tickets).
+A etiqueta de 60 × 80 mm pode receber várias páginas; mantenha o formato igual no
+ERP e no driver. O leitor foi validado por software a 203 dpi; legibilidade física
+depende de mídia, escala e calibração da Zebra.

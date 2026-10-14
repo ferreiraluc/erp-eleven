@@ -10,7 +10,7 @@ import FolgasCard from '@/components/FolgasCard.vue'
 import ColorPicker from '@/components/ColorPicker.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
-import type { PdvSaleResponse } from '@/services/api'
+import { pdvReceipts } from '@/services/pdvReceipts'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCurrencyStore } from '@/stores/currency'
 
@@ -19,6 +19,10 @@ vi.mock('@/services/api', () => ({ exchangeRateAPI: {}, clientesAPI: { create: c
   getFolgasCalendario: vi.fn(async () => []),
   getEstatisticasResumo: vi.fn(async () => ({ vendedores: [] })),
   getAll: vi.fn(async () => []),
+} }))
+
+vi.mock('@/services/pdvReceipts', () => ({ pdvReceipts: {
+  preview: vi.fn(), state: vi.fn(async () => ({ printer: null, job: null })),
 } }))
 
 const moduleFiles = [
@@ -118,30 +122,33 @@ describe('operational interface translations', () => {
     expect(element.querySelector('.color-name')?.textContent).toBe('Azul')
   })
 
-  it('updates receipt labels, payment labels and amounts without translating customer or product data', async () => {
-    const sale: PdvSaleResponse = {
-      id:'sale-12345678', vendedor_id:null, cliente_id:null, cliente_nome:'Cancelado',
-      subtotal_gs:1234, desconto_gs:0, total_gs:1234, status:'completed', stock_applied:false, notas:null,
-      created_at:'2026-09-30T15:00:00Z',
-      items:[{id:'item-1',item_id:null,item_name:'Vermelho',item_sku:null,item_category:null,
-        item_size:'M',item_color:'Azul',quantity:1,unit_price_gs:1234,original_price_gs:null,
-        discount_gs:0,total_gs:1234,is_avulso:true,location:'LOJA'}],
-      payments:[{id:'payment-1',method:'cash_gs',currency:'GS',amount_original:1234,exchange_rate:1,
-        amount_gs:1234,cambista_id:null,reference:null,created_at:'2026-09-30T15:00:00Z'}],
-    }
-    setLocale('pt'); const element = mountTest(() => h(PDVReceiptModal,{sale}))
-    expect(element.textContent).toContain('Dinheiro G$')
+  it('keeps the receipt in Spanish while translating app controls, without translating customer or product data', async () => {
+    vi.mocked(pdvReceipts.preview).mockResolvedValue({
+      title:'ELEVEN', location:'Shopping Paris - PY', email:'contato@elevenparispy.com',
+      code:'ABCDEF1234', sale_id:'sale-12345678', date:'30/09/2026 12:00',
+      status:'Venta registrada', status_changed:false, copy:false, subtotal:'G$ 1.234',
+      discount:null, total:'G$ 1.234', refunded:null, change:null,
+      seller:'Lucas', customer:'Cancelado', footer:['¡Gracias por su compra!'], barcode:'data:image/svg+xml;base64,',
+      items:[{name:'Vermelho',meta:'M · Azul',calculation:'1 × G$ 1.234',total:'G$ 1.234',discount:null,returned:null}],
+      payments:[{label:'Efectivo G$',amount:'GS 1.234',equivalent:null}],
+    })
+    setLocale('pt'); mountTest(() => h(PDVReceiptModal,{sale:{id:'sale-12345678'}}))
+    await new Promise(resolve => setTimeout(resolve, 0)); await nextTick()
+    const paper = document.querySelector('.receipt-paper')!
+    const original = paper.textContent
+    expect(paper.getAttribute('lang')).toBe('es')
+    expect(original).toContain('Efectivo G$')
+    expect(original).toContain('G$ 1.234')
+    expect(original).toContain('Cliente: Cancelado')
+    expect(original).toContain('Vermelho')
+    expect(original).toContain('M · Azul')
+    expect(original).toContain('¡Gracias por su compra!')
+    expect(document.querySelector('.receipt-actions')?.textContent).toContain('Ticket da venda')
     setLocale('en'); await nextTick()
-    expect(element.textContent).toContain('Cash G$')
-    expect(element.textContent).toContain('G$ 1,234')
-    expect(element.textContent).toContain('Thank you for your purchase!')
-    expect(element.querySelector('.receipt-client')?.textContent).toContain('Cancelado')
-    expect(element.querySelector('.receipt-item-name')?.textContent).toContain('Vermelho')
-    expect(element.querySelector('.receipt-item-meta')?.textContent).toContain('Azul')
-    expect(sale.payments[0].method).toBe('cash_gs')
+    expect(document.querySelector('.receipt-actions')?.textContent).toContain('Sales receipt')
+    expect(paper.textContent).toBe(original)
     setLocale('es'); await nextTick()
-    expect(element.textContent).toContain('Efectivo G$')
-    expect(element.textContent).toContain('G$ 1.234')
+    expect(paper.textContent).toBe(original)
   })
 
   it('keeps customer form values and submitted payload unchanged when the language switches', async () => {

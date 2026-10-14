@@ -2112,5 +2112,21 @@
   "Não foi possível abrir a foto. Tente novamente.": [
     "No se pudo abrir la foto. Intenta de nuevo.",
     "Could not open the photo. Try again."
+  ],
+  "Remover variação {name}": [
+    "Quitar variante {name}",
+    "Remove variant {name}"
+  ],
+  "Nenhuma variação selecionada. Restaure ou escolha outros tamanhos.": [
+    "No hay variantes seleccionadas. Restaure o elija otras tallas.",
+    "No variants selected. Restore or choose other sizes."
+  ],
+  "Restaurar variações removidas": [
+    "Restaurar variantes eliminadas",
+    "Restore removed variants"
+  ],
+  "Variações a criar: {count}": [
+    "Variantes a crear: {count}",
+    "Variants to create: {count}"
   ]
 }

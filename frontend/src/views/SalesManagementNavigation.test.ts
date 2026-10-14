@@ -6,6 +6,14 @@ import SalesManagementView from './SalesManagementView.vue'
 import type { ManagedSale } from '@/services/pdvManagement'
 
 const mocks = vi.hoisted(() => ({ detail: vi.fn(), list: vi.fn(), options: vi.fn(), preview: vi.fn(), commit: vi.fn() }))
+const receipts = vi.hoisted(() => ({ preview: vi.fn(), state: vi.fn(), print: vi.fn(), pdf: vi.fn() }))
+vi.mock('@/services/pdvReceipts', () => ({ pdvReceipts: receipts }))
+vi.mock('@/components/inventory/BarcodeScanner.vue', async () => {
+  const { defineComponent, h } = await import('vue')
+  return { default: defineComponent({ emits: ['barcode-detected', 'close'], setup(_, { emit }) {
+    return () => h('button', { onClick: () => emit('barcode-detected', 'ABCDEF1234') }, 'fixture scan ticket')
+  } }) }
+})
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: false, ownSales: true }) }))
 vi.mock('@/services/pdvManagement', async original => ({ ...await original<object>(), pdvManagementAPI: mocks }))
 vi.mock('@/services/api', () => ({ default: {}, inventoryAPI: {}, pdvAPI: {} }))
@@ -32,10 +40,43 @@ beforeEach(() => {
   mocks.list.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20, summary: { net_gs: '0', refunded_gs: '0', cancelled: 0 } })
   mocks.options.mockResolvedValue({ sellers: [] })
   mocks.detail.mockImplementation(async id => sale(id))
+  receipts.state.mockResolvedValue({ printer: null, job: null })
+  receipts.preview.mockResolvedValue({title:'ELEVEN',location:'Shopping Paris - PY',email:'contato@elevenparispy.com',
+    code:'ABCDEF1234',sale_id:'older-sale',date:'14/10/2026 14:00',status:'Venta registrada',status_changed:false,copy:false,
+    items:[],payments:[],subtotal:'G$ 100',total:'G$ 100',seller:'Lucas',customer:'Consumidor final',footer:['¡Gracias por su compra!'],barcode:'data:image/svg+xml;base64,'})
 })
 afterEach(() => { app?.unmount(); app = undefined; container.remove() })
 
 describe('Customer-to-sale navigation', () => {
+  it('lets an employee open and download their receipt without editing or dispatching a print', async () => {
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:receipt')
+    const clickLink = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    receipts.pdf.mockResolvedValue(new Blob(['%PDF-1.4'], { type:'application/pdf' }))
+    try {
+      await mount('/vendas-pdv?sale_id=older-sale')
+      button('Ticket / PDF')!.click(); await settle()
+      expect(document.querySelector('.receipt-paper')?.getAttribute('lang')).toBe('es')
+      expect(document.querySelector('.receipt-paper')?.textContent).toContain('Shopping Paris - PY')
+      expect(receipts.preview).toHaveBeenCalledWith('older-sale')
+      expect(receipts.print).not.toHaveBeenCalled()
+      button('📄 Salvar PDF')!.click(); await settle()
+      expect(receipts.pdf).toHaveBeenCalledWith('older-sale'); expect(clickLink).toHaveBeenCalledTimes(1)
+      expect(mocks.commit).not.toHaveBeenCalled(); expect(receipts.print).not.toHaveBeenCalled()
+      document.querySelector<HTMLButtonElement>('.receipt-actions [data-dialog-close]')!.click(); await settle()
+      expect(document.querySelector('.receipt-overlay')).toBeNull()
+      expect((document.querySelector('.sale-overlay') as HTMLElement).style.display).not.toBe('none')
+    } finally { createUrl.mockRestore(); clickLink.mockRestore() }
+  })
+
+  it('puts scanned ticket codes in the search and clears stale date filters', async () => {
+    await mount('/vendas-pdv')
+    const date = container.querySelector<HTMLInputElement>('input[type="date"]')!
+    date.value = '2024-01-01'; date.dispatchEvent(new Event('input', { bubbles:true })); await settle()
+    button('Ler ticket')!.click(); await settle(); button('fixture scan ticket')!.click(); await settle()
+    expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({q:'ABCDEF1234',page:1}))
+    expect(mocks.list.mock.calls.at(-1)![0]).not.toHaveProperty('date_from')
+    expect(mocks.detail).not.toHaveBeenCalled(); expect(receipts.print).not.toHaveBeenCalled()
+  })
   it('opens a linked sale outside the current page and retains employee permissions', async () => {
     await mount('/vendas-pdv?sale_id=older-sale&origin=customer')
     expect(mocks.detail).toHaveBeenCalledWith('older-sale')

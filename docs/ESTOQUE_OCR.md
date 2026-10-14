@@ -780,3 +780,16 @@ pertencem a um único gesto e são removidos em cancelamento, perda de foco, sa�
 seleção e desmontagem. A supressão do clique pós-arraste vale apenas para um card
 na mesma lista e expira imediatamente; não captura uma confirmação posterior em
 um modal. Ver [navegação e confirmações do cadastro](UI_MODAIS.md#cadastro-e-grade-navegação-e-confirmação).
+
+### Remover variações antes de cadastrar a grade
+
+Após selecionar um modelo, como **P → 2XL**, a prévia tem um **× em cada linha**.
+Remover P e M deixa apenas L, XL e 2XL para criação. Com várias cores, o × remove
+somente aquela combinação de tamanho e cor. **Restaurar variações removidas**
+recupera as linhas; aplicar um modelo de tamanhos novamente também refaz a prévia.
+O contador e o estoque inicial total consideram apenas as linhas restantes.
+Remover todas bloqueia a criação, sem cadastrar uma peça avulsa por engano.
+
+A exclusão é apenas da prévia: não apaga produtos existentes nem altera os modelos
+salvos no navegador. Durante o envio ou após uma criação parcial/incerta, a seleção
+fica protegida pelo fluxo de recuperação existente.
