@@ -91,6 +91,16 @@ function Wait-TicketOperation($Operation, [Type]$ResultType) {
     $task.GetAwaiter().GetResult()
 }
 
+function Wait-TicketAction($Action) {
+    # PowerShell 5.1 cannot select the WinRT IAsyncAction overload automatically.
+    $method = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
+        $_.Name -eq 'AsTask' -and -not $_.IsGenericMethod -and $_.GetParameters().Count -eq 1 -and
+        $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncAction'
+    } | Select-Object -First 1
+    $task = $method.Invoke($null, @($Action))
+    $task.GetAwaiter().GetResult()
+}
+
 function Convert-TicketPdf([string]$Path, [int]$Width, [int]$Height) {
     if ($Width -lt 50 -or $Width -gt 104 -or $Height -lt 50 -or $Height -gt 991) { throw 'Dimensoes invalidas.' }
     Initialize-TicketRaster
@@ -107,7 +117,7 @@ function Convert-TicketPdf([string]$Path, [int]$Width, [int]$Height) {
         $options = [Windows.Data.Pdf.PdfPageRenderOptions, Windows.Data.Pdf, ContentType=WindowsRuntime]::new()
         $options.DestinationWidth = [uint32]($Width * 8)
         $options.DestinationHeight = [uint32]($Height * 8)
-        [System.WindowsRuntimeSystemExtensions]::AsTask($page.RenderToStreamAsync($stream, $options)).GetAwaiter().GetResult()
+        Wait-TicketAction ($page.RenderToStreamAsync($stream, $options))
         $stream.Seek(0)
         $reader = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($stream)
         try { $reader.CopyTo($memory) } finally { $reader.Dispose() }

@@ -208,7 +208,7 @@ def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
 
 
 @router.post("/agent/claim")
-def claim(continuous_tickets: bool = False, device=Depends(printer), db: Session = Depends(get_db)):
+def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tickets: bool = False):
     from ...services.assistant_documents import cleanup_documents
     authenticated_hash = device.token_hash
     device = db.query(PrintDevice).filter_by(id=device.id, active=True).populate_existing().with_for_update().first()
