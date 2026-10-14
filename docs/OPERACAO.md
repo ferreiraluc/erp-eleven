@@ -31,9 +31,24 @@ O servidor Express/Docker é uma alternativa local, não participa do site está
 ### HTML e recuperação de arquivos após deploy
 
 Em 14/10/2026, a raiz do domínio ainda retornava HTML em cache com hashes do build
-anterior. Os arquivos JS/CSS antigos retornavam HTML pela regra de rewrite da SPA,
-inclusive com HTTP 200: a interface ficava sem estilos ou sem o componente da rota.
-A versão atual, consultada com query nova, carregava corretamente.
+anterior. A inspeção inicial, seguindo redirects, via HTML com HTTP 200 nos URLs
+de JS/CSS antigos. A inspeção sem seguir redirects confirmou que a regra real no
+Render era **Redirect 301 `/*` → `/index.html`**, diferente do rewrite versionado.
+Esses redirects permanentes podiam continuar no cache dos dispositivos mesmo após
+atualizar o HTML. O teste de login em outro navegador não comprovava a recuperação
+dos dispositivos afetados.
+
+A regra ampla foi removida. Produção usa `/#/dashboard`, `/#/inventory` etc.; não
+precisa de fallback para rotas de servidor. Arquivos ausentes devem responder 404,
+sem Location para index.html. Não recriar `/*` como redirect ou rewrite no painel.
+Links externos devem usar `/#/rota`, não `/rota`.
+
+Cada build usa `assets/<revisão>/` para todos os bundles, inclusive vendor e CSS,
+evitando reaproveitar redirects guardados de uma versão anterior. A revisão vem
+de `RENDER_GIT_COMMIT`, `GITHUB_SHA` ou Git local; arquivos de fonte sem Git usam
+`local`. O bootstrap independente tem query baseada no SHA-256 do seu conteúdo.
+`frontend/scripts/check-build.mjs` valida essa organização e a existência dos
+arquivos depois do build, inclusive no CI.
 
 Em **Headers** do frontend no Render, `/`, `/index.html` e `/loading-fallback.js`
 devem retornar `Cache-Control: no-store, max-age=0, s-maxage=0`. As mesmas regras
@@ -50,11 +65,15 @@ Depois que a aplicação abre, falhas de módulos carregados sob demanda mostram
 aviso com ação manual, para não interromper vendas ou formulários em edição.
 Falhas de API e imagens não acionam recarga automática. A inicialização da rota
 não monta mais um cabeçalho vazio quando falha.
+O aviso identifica a etapa (arquivos ou sessão/rota), o tipo de falha e a revisão,
+sem mostrar payloads, tokens ou dados da exceção. Erros JavaScript na inicialização
+também acionam o aviso; não ficam restritos aos eventos de carregamento de assets.
 
 Após cada deploy, testar o domínio normal e uma query nova, comparar os arquivos
-referenciados no HTML e consultar seus corpos e Content-Type: JS deve ser
-JavaScript, CSS deve ser `text/css`. HTTP 200 sozinho não valida um asset devido
-ao rewrite da SPA. Confirmar também visualmente o login e a navegação. Uma aba
+referenciados no HTML e consultar status **sem seguir redirects**, corpos e
+Content-Type: JS deve ser JavaScript, CSS deve ser `text/css`. Confirmar que um
+asset inexistente retorna 404. Confirmar visualmente o login e a navegação com
+sessão, além da recuperação de redirects guardados no navegador. Uma aba
 já aberta durante o incidente precisa ser recarregada pelo usuário; essa política
 não altera retroativamente o documento que já está na memória do navegador.
 

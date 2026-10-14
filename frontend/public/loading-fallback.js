@@ -7,6 +7,9 @@
   let failed = false
   let navigating = false
   let panelPending = false
+  let phase = 'ARQUIVOS'
+  const release = document.currentScript?.getAttribute('data-release') || 'anterior'
+  let diagnostic = 'AGUARDANDO'
 
   function isReady() {
     // Older cached entry bundles do not dispatch application-ready. Vue marks
@@ -47,16 +50,20 @@
       : ready
         ? 'Alguns arquivos ficaram indisponíveis após uma atualização. Recarregue quando puder; informações ainda não salvas nesta tela podem ser perdidas.'
         : 'Verifique sua conexão e recarregue para buscar a versão atual do sistema.'
+    const detail = document.createElement('small')
+    detail.textContent = `Diagnóstico: ${diagnostic} · ${phase} · ${release}`
+    detail.style.cssText = 'display:block;margin:12px 0;color:#526077;font:12px/1.5 monospace;overflow-wrap:anywhere'
     const button = document.createElement('button')
     button.type = 'button'
     button.textContent = 'Recarregar sistema'
     button.style.cssText = 'border:0;border-radius:10px;padding:12px 18px;background:#245ce8;color:white;font:600 16px Arial,sans-serif;cursor:pointer;min-height:44px'
     button.addEventListener('click', reload)
-    panel.append(title, message, button)
+    panel.append(title, message, detail, button)
     document.body.appendChild(panel)
   }
 
-  function failAsset() {
+  function failAsset(code = 'MODULO') {
+    diagnostic = code
     failed = true
     if (navigating) return
     ready = isReady()
@@ -78,11 +85,28 @@
 
   window.addEventListener('error', function (event) {
     const target = event.target
-    if (!target || !['SCRIPT', 'LINK'].includes(target.tagName)) return
+    if (!target || !['SCRIPT', 'LINK'].includes(target.tagName)) {
+      if (!isReady() && event.error) {
+        failed = true
+        diagnostic = 'JAVASCRIPT'
+        showRecovery()
+      }
+      return
+    }
     if (target.tagName === 'LINK' && !['stylesheet', 'modulepreload'].includes(target.rel)) return
     const url = new URL(target.src || target.href || '', window.location.href)
-    if (url.origin === window.location.origin && url.pathname.startsWith('/assets/')) failAsset()
+    if (url.origin === window.location.origin && url.pathname.startsWith('/assets/')) failAsset(target.tagName === 'LINK' && target.rel === 'stylesheet' ? 'CSS' : 'JS')
   }, true)
+
+  window.addEventListener('erp:entry-ready', function () { phase = 'SESSAO/ROTA' })
+  window.addEventListener('unhandledrejection', function (event) {
+    if (isChunkError(event.reason)) failAsset()
+    else if (!isReady()) {
+      failed = true
+      diagnostic = 'INICIALIZACAO'
+      showRecovery()
+    }
+  })
 
   window.addEventListener('vite:preloadError', function (event) {
     if (isChunkError(event.payload)) {
@@ -95,11 +119,11 @@
   })
   window.addEventListener('erp:boot-error', function (event) {
     if (isChunkError(event.detail)) failAsset()
-    else { failed = true; showRecovery() }
+    else { failed = true; diagnostic = 'ROTA'; showRecovery() }
   })
 
   const timeout = setTimeout(function () {
-    if (!isReady() && !navigating) showRecovery()
+    if (!isReady() && !navigating) { diagnostic = 'TEMPO'; showRecovery() }
   }, 15000)
 
   window.addEventListener('erp:application-ready', function () {

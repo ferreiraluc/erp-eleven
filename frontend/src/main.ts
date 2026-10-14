@@ -13,6 +13,7 @@ import { uiText } from './i18n/uiText'
 import { useAuthStore } from './stores/auth'
 import { resumeVerifiedSession } from './services/sessionResume'
 
+window.dispatchEvent(new Event('erp:entry-ready'))
 const app = createApp(App)
 app.config.globalProperties.$tr = uiText
 
