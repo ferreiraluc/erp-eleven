@@ -109,7 +109,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          {{ pedido.codigo_rastreio ? uiText(`Ver Rastreamento`) : uiText(`Criar Rastreamento`) }}
+          {{ $tr('Rastreamento') }}
         </button>
         <button @click="$emit('edit', pedido)" class="btn-primary erp-button erp-button--primary">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,6 +126,7 @@
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { useRouter } from 'vue-router'
+import { orderTrackingLocation } from '@/services/orderNavigation'
 import { ref, watch, onMounted } from 'vue'
 import { pedidosAPI, pedidoAnexosAPI, type Pedido, type PedidoAnexo } from '@/services/api'
 import AnexosCarousel from './AnexosCarousel.vue'
@@ -213,45 +214,7 @@ const getStatusClass = (status: string) => {
 }
 
 
-const createRastreamento = async () => {
-  if (!props.pedido.codigo_rastreio) {
-    // Se não tem código de rastreio, vai para página de rastreamentos para criar novo
-    router.push({
-      name: 'rastreamento',
-      query: { pedido_id: props.pedido.id }
-    })
-    return
-  }
-
-  try {
-    // Verificar se já existe rastreamento para este código
-    const resultado = await pedidosAPI.verificarRastreamento(props.pedido.codigo_rastreio)
-
-    if (resultado.exists && resultado.rastreamento_id) {
-      // Se existe, navegar diretamente para o rastreamento existente
-      router.push({
-        name: 'rastreamento-detalhes',
-        params: { id: resultado.rastreamento_id }
-      })
-    } else {
-      // Se não existe, criar novo rastreamento
-      router.push({
-        name: 'rastreamento',
-        query: {
-          pedido_id: props.pedido.id,
-          codigo_rastreio: props.pedido.codigo_rastreio
-        }
-      })
-    }
-  } catch (error) {
-    console.error('Erro ao verificar rastreamento:', error)
-    // Em caso de erro, ir para página de rastreamentos
-    router.push({
-      name: 'rastreamento',
-      query: { pedido_id: props.pedido.id }
-    })
-  }
-}
+const createRastreamento = () => router.push(orderTrackingLocation(props.pedido))
 </script>
 
 <style scoped>

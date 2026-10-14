@@ -48,3 +48,10 @@ class PedidoResponse(PedidoBase):
 
     class Config:
         from_attributes = True
+
+
+class PedidoPage(BaseModel):
+    items: List[PedidoResponse]
+    total: int
+    page: int
+    page_size: int

@@ -63,6 +63,11 @@ que escrevem ou imprimem passam pelas permissões e confirmações do fluxo. O
 computador da loja busca trabalhos por HTTPS; o laptop de desenvolvimento não é
 servidor de impressão.
 
+O histórico de Clientes reúne também compras do PDV vinculadas explicitamente,
+com itens, devoluções e valores separados do BI. O acesso pessoal dos vendedores
+é aplicado antes dos resumos e da paginação. Pedidos usam busca e paginação no
+servidor, incluindo registros antigos além da primeira página.
+
 ## Começar pela documentação certa
 
 - [Escopo e regras do produto](docs/ESCOPO.md): funcionalidades, limites e decisões da loja.

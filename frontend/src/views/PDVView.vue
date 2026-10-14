@@ -346,6 +346,7 @@ const visibleProducts = computed(() => searchQuery.value.trim() ? searchResults.
 let searchGeneration = 0, disposed = false
 let searchController: AbortController | undefined
 const loadingSearch = ref(false)
+const barcodePending = ref(false)
 const searchError = ref(false)
 const selectedLocations = reactive<Record<string, StockLocation>>({})
 const quantityDrafts = reactive<Record<string, string>>({})
@@ -420,7 +421,7 @@ const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
 const remainingInCurrency = computed(() =>
   validRate.value ? payRemaining.value / Number(newRate.value) : 0
 )
-const canConfirmPayment = computed(() => !customerBusy.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
+const canConfirmPayment = computed(() => !customerBusy.value && !barcodePending.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
 
 function fillTotal() {
   if (!validRate.value) return
@@ -488,16 +489,21 @@ function convertKnownPrice(value: number | null | undefined, rate: number): numb
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
+function invalidateProductSearch() {
+  searchGeneration++; searchController?.abort(); clearTimeout(searchTimer)
+  loadingSearch.value = false; barcodePending.value = false
+}
 function onSearchInput() {
-  clearTimeout(searchTimer); searchController?.abort(); searchGeneration++
+  invalidateProductSearch()
   searchResults.value = []; searchError.value = false
   if (!searchQuery.value.trim()) { loadingSearch.value = false; if (!recentProducts.value.length) void doSearch(); return }
   loadingSearch.value = true
   searchTimer = setTimeout(doSearch, 280)
 }
 async function doSearch() {
-  const request = ++searchGeneration, query = searchQuery.value.trim()
-  searchController?.abort(); searchController = new AbortController()
+  invalidateProductSearch()
+  const request = searchGeneration, query = searchQuery.value.trim()
+  searchController = new AbortController()
   loadingSearch.value = true; searchError.value = false
   try {
     const res = await inventoryAPI.getItems({ search: query || undefined, page_size: query ? 20 : 8, status: 'active', sort_by: query ? undefined : 'created_at', include_images: false }, searchController.signal)
@@ -513,8 +519,9 @@ function onSearchEnter() {
   if (!loadingSearch.value && searchQuery.value.trim() && searchResults.value.length === 1) addToCart(searchResults.value[0])
 }
 function clearSearch() {
-  searchGeneration++; searchController?.abort(); clearTimeout(searchTimer)
+  invalidateProductSearch()
   searchQuery.value = ''; searchResults.value = []; searchError.value = false; loadingSearch.value = false
+  if (!recentProducts.value.length) void doSearch()
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
@@ -559,6 +566,7 @@ function addToCart(item: InventoryItem) {
     const saleCurrency = item.sale_currency || 'PYG'
     const rate = getRate(saleCurrency)
     const priceGs = Math.round(price * rate)
+    // Lookups already stored the latest stock. A cached recent card must not replace it.
     pdv.addItem({
       item_id: item.id,
       item_name: item.name,
@@ -576,7 +584,7 @@ function addToCart(item: InventoryItem) {
       discount_gs: 0,
       is_avulso: false,
       location: productLocation(item),
-    }, item)
+    })
     showToast(uiText(`{0} adicionado`,{0:item.name}))
     clearSearch()
     mobileTab.value = 'cart'
@@ -591,21 +599,25 @@ function onAvulsoAdd(item: any) {
 }
 function refreshProductsAfterCheckout() {
   // A sale may have changed stock: never reuse the visible list's old snapshots.
-  clearSearch()
   recentProducts.value = []
-  void doSearch()
+  clearSearch()
 }
 function confirmClear() {
   if (!confirm(uiText(`Limpar o carrinho?`))) return
   const uncertain = pdv.checkoutUncertain
   pdv.clearCart()
   if (uncertain) refreshProductsAfterCheckout()
+  else clearSearch()
 }
 
 // ── Barcode ───────────────────────────────────────────────────────────────────
 async function onBarcodeDetected(code: string) {
   showScanner.value = false
-  const request = ++searchGeneration; searchController?.abort(); clearTimeout(searchTimer); loadingSearch.value = false
+  if (pdv.loading || pdv.checkoutUncertain) return
+  invalidateProductSearch()
+  const request = searchGeneration
+  searchQuery.value = code; searchResults.value = []; searchError.value = false
+  loadingSearch.value = true; barcodePending.value = true
   try {
     const results = await inventoryAPI.getByBarcode(code)
     if (disposed || request !== searchGeneration) return
@@ -615,6 +627,7 @@ async function onBarcodeDetected(code: string) {
     else if (results.length > 1) { searchQuery.value = code; searchResults.value = results }
     else openAvulso(code)
   } catch { if (disposed || request !== searchGeneration) return; searchQuery.value = code; searchResults.value = []; searchError.value = true; showToast(cartText('searchFailed'), 'error') }
+  finally { if (!disposed && request === searchGeneration) { loadingSearch.value = false; barcodePending.value = false } }
 }
 
 // ── Payment ───────────────────────────────────────────────────────────────────

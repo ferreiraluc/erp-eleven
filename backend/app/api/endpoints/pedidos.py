@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload, selectinload
 from typing import List, Optional
 from ...database import get_db
 from ...models.pedido import Pedido, PedidoStatus
@@ -7,7 +8,7 @@ from ...models.pedido_tag import TagStatus
 from ...models.cliente import Cliente
 from ...models.usuario import Usuario
 from ...models.pedido_anexo import PedidoAnexo
-from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate
+from ...schemas.pedido import PedidoCreate, PedidoResponse, PedidoUpdate, PedidoPage
 from ...schemas.pedido_anexo import PedidoAnexoCreate, PedidoAnexoResponse
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
@@ -34,6 +35,35 @@ def _sync_cliente_fields(db_pedido: Pedido, cliente: Cliente) -> None:
         db_pedido.endereco_entrega = cliente.endereco
 
 router = APIRouter()
+
+
+@router.get("/pagina", response_model=PedidoPage)
+def listar_pagina_pedidos(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: str = Query('', max_length=200),
+    status: Optional[PedidoStatus] = Query(None),
+    tag_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user),
+):
+    """Filter the complete order directory before counting and paging."""
+    query = db.query(Pedido)
+    if status:
+        query = query.filter(Pedido.status == status)
+    if tag_id:
+        query = query.filter(Pedido.tags.any(TagStatus.id == validate_uuid(tag_id)))
+    term = search.strip()
+    if term:
+        pattern = '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = query.filter(or_(*(column.ilike(pattern, escape='\\') for column in (
+            Pedido.numero_pedido, Pedido.cliente_nome, Pedido.endereco_entrega, Pedido.codigo_rastreio,
+        ))))
+    total = query.count()
+    rows = query.options(selectinload(Pedido.tags), joinedload(Pedido.cliente)).order_by(
+        Pedido.created_at.desc(), Pedido.id,
+    ).offset((page - 1) * page_size).limit(page_size).all()
+    return {'items': rows, 'total': total, 'page': page, 'page_size': page_size}
 
 @router.get("/", response_model=List[PedidoResponse])
 def listar_pedidos(

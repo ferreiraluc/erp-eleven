@@ -19,9 +19,24 @@ export interface CustomerLogistics {
   orders: Pedido[]
   shipments: CustomerParcel[]
 }
+export interface CustomerPurchases {
+  page: number
+  page_size: number
+  total: number
+  own_sales_only: boolean
+  summary: { net_gs: string; refunded_gs: string; cancelled: number }
+  items: Array<{
+    id: string; created_at: string; account_id: string; account_name: string
+    customer_name: string | null; seller: string | null; status: string
+    total_gs: string; refunded_gs: string; net_gs: string
+    lines: Array<{ id: string; name: string; quantity: string; returned_quantity: string }>
+  }>
+}
 export const customerLogisticsAPI = {
   get: (id: string, ordersSkip = 0, shipmentsSkip = 0): Promise<CustomerLogistics> =>
     api.get(`/api/clientes/${id}/logistica`, { params: { orders_skip: ordersSkip, shipments_skip: shipmentsSkip, limit: 20 } }).then(r => r.data),
+  purchases: (id: string, page = 1): Promise<CustomerPurchases> =>
+    api.get(`/api/clientes/${id}/compras-pdv`, { params: { page, page_size: 20 } }).then(r => r.data),
   link: (id: string, kind: 'pedido' | 'rastreamento', targetId: string): Promise<void> =>
     api.post(`/api/clientes/${id}/vinculos`, { kind, target_id: targetId }).then(() => undefined),
   findParcel: (code: string): Promise<CustomerParcel> =>

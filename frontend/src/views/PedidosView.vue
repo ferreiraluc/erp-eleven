@@ -74,6 +74,13 @@
       </div>
     </div>
 
+    <div v-if="linkedOrderError" class="empty-state" role="alert">
+      <p>{{ $tr("Não foi possível abrir o pedido solicitado.") }}</p>
+      <button type="button" class="erp-button erp-button--secondary" @click="loadLinkedOrder">
+        {{ $tr("Tentar novamente") }}
+      </button>
+    </div>
+
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-container">
       <div class="loading-spinner"></div>
@@ -81,7 +88,13 @@
     </div>
 
     <!-- No Results -->
-    <div v-else-if="filteredPedidos.length === 0" class="empty-state">
+    <div v-else-if="loadError" class="empty-state" role="alert">
+      <p>{{ $tr("Não foi possível carregar os pedidos.") }}</p>
+      <button type="button" class="erp-button erp-button--secondary" @click="loadPedidos">
+        {{ $tr("Tentar novamente") }}
+      </button>
+    </div>
+    <div v-else-if="pedidos.length === 0" class="empty-state">
       <div class="empty-icon">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m16 0l-2-2m0 0l-2 2m2-2v4" />
@@ -108,7 +121,7 @@
         </div>
 
         <div
-          v-for="pedido in filteredPedidos"
+          v-for="pedido in pedidos"
           :key="pedido.id"
           class="list-item"
           @click="openDetailsModal(pedido)"
@@ -170,7 +183,7 @@
       <!-- Cards View -->
       <div v-else class="pedidos-cards">
         <PedidoCard
-          v-for="pedido in filteredPedidos"
+          v-for="pedido in pedidos"
           :key="pedido.id"
           :pedido="pedido"
           @edit="openEditModal"
@@ -224,12 +237,14 @@
 <script setup lang="ts">
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PedidoCard from '@/components/PedidoCard.vue'
 import PedidoModal from '@/components/PedidoModal.vue'
 import PedidoDetailsModal from '@/components/PedidoDetailsModal.vue'
 import { pedidosAPI, tagsAPI, type Pedido, type Tag } from '@/services/api'
+
+import { orderTrackingLocation } from '@/services/orderNavigation'
 
 // State
 const router = useRouter()
@@ -237,6 +252,12 @@ const route = useRoute()
 const pedidos = ref<Pedido[]>([])
 const tags = ref<Tag[]>([])
 const isLoading = ref(true)
+const loadError = ref(false)
+const linkedOrderError = ref(false)
+let linkedRequest = 0
+const totalItems = ref(0)
+let requestVersion = 0
+let searchTimer: ReturnType<typeof setTimeout> | undefined
 const searchQuery = ref('')
 const statusFilter = ref('')
 const tagFilter = ref('')
@@ -250,53 +271,35 @@ const showDetailsModal = ref(false)
 const editingPedido = ref<Pedido | null>(null)
 const selectedPedido = ref<Pedido | null>(null)
 
-// Computed
-const filteredPedidos = computed(() => {
-  let filtered = pedidos.value
+const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage)))
 
-  // Search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(pedido =>
-      pedido.numero_pedido.toLowerCase().includes(query) ||
-      pedido.cliente_nome?.toLowerCase().includes(query) ||
-      pedido.endereco_entrega?.toLowerCase().includes(query)
-    )
-  }
-
-  // Status filter
-  if (statusFilter.value) {
-    filtered = filtered.filter(pedido => pedido.status === statusFilter.value)
-  }
-
-  // Tag filter
-  if (tagFilter.value) {
-    filtered = filtered.filter(pedido =>
-      pedido.tags.some(tag => tag.id === tagFilter.value)
-    )
-  }
-
-  return filtered
-})
-
-const totalPages = computed(() => Math.ceil(filteredPedidos.value.length / itemsPerPage))
-
-// Methods
 const loadPedidos = async () => {
+  clearTimeout(searchTimer)
+  const version = ++requestVersion
+  isLoading.value = true
+  loadError.value = false
   try {
-    isLoading.value = true
-
-    const params: any = {}
-
-    if (statusFilter.value) params.status = statusFilter.value
-    if (tagFilter.value) params.tag_id = tagFilter.value
-
-    pedidos.value = await pedidosAPI.getAll(params)
-  } catch (error) {
-    console.error('Erro ao carregar pedidos:', error)
+    const result = await pedidosAPI.getPage({
+      page: currentPage.value,
+      page_size: itemsPerPage,
+      search: searchQuery.value.trim() || undefined,
+      status: statusFilter.value || undefined,
+      tag_id: tagFilter.value || undefined,
+    })
+    if (version !== requestVersion) return
+    totalItems.value = result.total
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value
+      await loadPedidos()
+      return
+    }
+    pedidos.value = result.items
+  } catch {
+    if (version !== requestVersion) return
+    loadError.value = true
     pedidos.value = []
   } finally {
-    isLoading.value = false
+    if (version === requestVersion) isLoading.value = false
   }
 }
 
@@ -364,6 +367,8 @@ const openEditModal = (pedido: Pedido) => {
 }
 
 const openDetailsModal = (pedido: Pedido) => {
+  ++linkedRequest
+  linkedOrderError.value = false
   selectedPedido.value = pedido
   showDetailsModal.value = true
 }
@@ -374,6 +379,7 @@ const closeModals = () => {
 }
 
 const closeDetailsModal = () => {
+  ++linkedRequest
   showDetailsModal.value = false
   selectedPedido.value = null
 }
@@ -383,55 +389,19 @@ const handlePedidoSaved = async () => {
   await loadPedidos()
 }
 
-const createRastreamento = async (pedido: Pedido) => {
-  if (!pedido.codigo_rastreio) {
-    // Se não tem código de rastreio, vai para página de rastreamentos para criar novo
-    router.push({
-      name: 'rastreamento',
-      query: { pedido_id: pedido.id }
-    })
-    return
-  }
-
-  try {
-    // Verificar se já existe rastreamento para este código
-    const resultado = await pedidosAPI.verificarRastreamento(pedido.codigo_rastreio)
-
-    if (resultado.exists && resultado.rastreamento_id) {
-      // Se existe, navegar diretamente para o rastreamento existente
-      router.push({
-        name: 'rastreamento-detalhes',
-        params: { id: resultado.rastreamento_id }
-      })
-    } else {
-      // Se não existe, criar novo rastreamento
-      router.push({
-        name: 'rastreamento',
-        query: {
-          pedido_id: pedido.id,
-          codigo_rastreio: pedido.codigo_rastreio
-        }
-      })
-    }
-  } catch (error) {
-    console.error('Erro ao verificar rastreamento:', error)
-    // Em caso de erro, ir para página de rastreamentos
-    router.push({
-      name: 'rastreamento',
-      query: { pedido_id: pedido.id }
-    })
-  }
-}
+const createRastreamento = (pedido: Pedido) => router.push(orderTrackingLocation(pedido))
 
 const previousPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--
+    void loadPedidos()
   }
 }
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
+    void loadPedidos()
   }
 }
 
@@ -443,17 +413,28 @@ watch([statusFilter, tagFilter], () => {
 
 watch(searchQuery, () => {
   currentPage.value = 1
+  ++requestVersion // Invalidate in-flight results while waiting for debounce.
+  isLoading.value = true
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(loadPedidos, 300)
 })
 
-// Lifecycle
-onMounted(async () => {
-  await Promise.all([loadPedidos(), loadTags()])
-  // Abrir modal diretamente se veio com ?pedido_id= na URL (ex: clique no badge de rastreamento)
-  if (route.query.pedido_id) {
-    const pedido = pedidos.value.find(p => p.id === route.query.pedido_id)
-    if (pedido) openDetailsModal(pedido)
+onBeforeUnmount(() => { ++requestVersion; ++linkedRequest; clearTimeout(searchTimer) })
+
+async function loadLinkedOrder() {
+  const request = ++linkedRequest
+  linkedOrderError.value = false
+  const id = route.query.pedido_id
+  if (typeof id !== 'string' || !id) return
+  try {
+    const pedido = pedidos.value.find(p => p.id === id) || await pedidosAPI.getById(id)
+    if (request === linkedRequest) openDetailsModal(pedido)
+  } catch {
+    if (request === linkedRequest) linkedOrderError.value = true
   }
-})
+}
+watch(() => route.query.pedido_id, loadLinkedOrder, { immediate: true })
+onMounted(() => { void loadPedidos(); void loadTags() })
 </script>
 
 <style scoped>
