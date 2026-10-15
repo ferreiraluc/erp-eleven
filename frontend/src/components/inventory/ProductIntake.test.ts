@@ -376,3 +376,74 @@ describe('Reusable grade and color editors', () => {
     expect(localStorage.getItem('inv_grade_hidden_presets')).toBeNull(); noInventoryWrites()
   })
 })
+
+describe('Grade quantities before registration', () => {
+  async function openMatrix() {
+    await mount(); await click('Conferir dados'); await setField('Nome *', 'Camiseta X'); await review()
+    await click('Criar grade deste modelo'); await click('P → 2XL')
+    await click('Branco'); await click('Preto')
+    root.querySelector<HTMLButtonElement>('button[aria-label="Adicionar cor"]')!.click(); await nextTick()
+    const colorInput = root.querySelector<HTMLInputElement>('input[aria-label="Adicionar cor"]')!
+    colorInput.value = 'Azul'; colorInput.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+    colorInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await nextTick()
+    await setField('Estoque inicial por tamanho', '3')
+  }
+  async function quantity(label: string, value: string) {
+    const el = root.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!
+    el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+  }
+  async function apply(target: string, value: string) {
+    const select = root.querySelector<HTMLSelectElement>('[aria-label="Aplicar quantidade a"]')!
+    select.value = target; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    await quantity('Quantidade para aplicar', value); await click('Aplicar')
+  }
+  it('applies by color, individual size and all, sends exact quantities and shows piece/set totals', async () => {
+    await openMatrix()
+    await apply(JSON.stringify(['color', 'Azul']), '4'); await apply(JSON.stringify(['color', 'Preto']), '8')
+    expect(root.querySelector('.grade-quantity-summary')?.textContent).toContain('15 variações · 75 peças · 15 grades completas')
+    expect(root.querySelector('.intake-total')?.textContent).toContain('15 produto(s), 75 unidade(s)')
+    await quantity('Quantidade M Azul', '6')
+    expect(root.querySelector('.grade-quantity-summary')?.textContent).toContain('77 peças · 15 grades completas')
+    await click('Criar grade (15 itens)')
+    expect(mock.createGrade).toHaveBeenCalledTimes(3)
+    expect(mock.createGrade.mock.calls.map(([payload]) => [payload.color, payload.stock_by_size]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))).toEqual([
+      ['Azul', { P: 4, M: 6, L: 4, XL: 4, '2XL': 4 }],
+      ['Branco', { P: 3, M: 3, L: 3, XL: 3, '2XL': 3 }],
+      ['Preto', { P: 8, M: 8, L: 8, XL: 8, '2XL': 8 }],
+    ])
+    expect(mock.createMovement).not.toHaveBeenCalled()
+  })
+  it('applies one size across colors, excludes removed rows from totals and requests, preserves overrides after restoration', async () => {
+    await openMatrix(); await apply(JSON.stringify(['size', 'M']), '5')
+    for (const color of ['Branco', 'Azul', 'Preto']) {
+      expect(root.querySelector<HTMLInputElement>(`[aria-label="Quantidade M ${color}"]`)!.value).toBe('5')
+    }
+    root.querySelector<HTMLButtonElement>('.gp-remove[aria-label="Remover variação M Azul"]')!.click(); await nextTick()
+    expect(root.querySelector('.grade-quantity-summary')?.textContent).toContain('14 variações · 46 peças')
+    await click('Restaurar variações removidas')
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade M Azul"]')!.value).toBe('5')
+    await apply('all', '2'); expect(root.querySelector('.grade-quantity-summary')?.textContent).toContain('15 variações · 30 peças · 6 grades completas')
+    root.querySelector<HTMLButtonElement>('.gp-remove[aria-label="Remover variação M Azul"]')!.click(); await nextTick()
+    await click('Criar grade (14 itens)')
+    expect(mock.createGrade.mock.calls.find(([payload]) => payload.color === 'Azul')![0].stock_by_size).toEqual({ P: 2, L: 2, XL: 2, '2XL': 2 })
+  })
+  it.each(['', '-1', '1.5', '2147483648'])('rejects invalid individual quantity %s without creating anything', async (value) => {
+    await openMatrix(); await quantity('Quantidade P Branco', value); await click('Criar grade (15 itens)')
+    expect(mock.createGrade).not.toHaveBeenCalled(); expect(mock.createItem).not.toHaveBeenCalled()
+    expect(root.textContent).toContain('Estoque inicial deve ser inteiro')
+  })
+  it('keeps overrides when default changes, accepts zero, and clears them when leaving grade mode', async () => {
+    await openMatrix(); await quantity('Quantidade P Branco', '0'); await setField('Estoque inicial por tamanho', '4')
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade P Branco"]')!.value).toBe('0')
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade M Branco"]')!.value).toBe('4')
+    await click('Cadastrar apenas esta peça'); await click('Criar grade deste modelo'); await click('P → 2XL'); await click('Branco')
+    await setField('Estoque inicial por tamanho', '2')
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade P Branco"]')!.value).toBe('2')
+  })
+  it('supports custom quantities for color-only items and their initial movements', async () => {
+    await mount(); await click('Conferir dados'); await setField('Nome *', 'Boné'); await review()
+    await click('Criar grade deste modelo'); await click('Branco'); await click('Preto')
+    await quantity('Quantidade Branco', '4'); await quantity('Quantidade Preto', '8'); await click('Criar grade (2 itens)')
+    expect(mock.createMovement.mock.calls.map(([payload]) => payload.quantity)).toEqual([4, 8])
+  })
+})

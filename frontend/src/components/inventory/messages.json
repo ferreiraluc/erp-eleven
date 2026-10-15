@@ -2128,5 +2128,93 @@
   "Variações a criar: {count}": [
     "Variantes a crear: {count}",
     "Variants to create: {count}"
+  ],
+  "Quantidade padrão para as variações sem ajuste individual.": [
+    "Cantidad predeterminada para las variantes sin ajuste individual.",
+    "Default quantity for variants without individual adjustments."
+  ],
+  "Aplicar quantidade a": [
+    "Aplicar cantidad a",
+    "Apply quantity to"
+  ],
+  "Todas as variações": [
+    "Todas las variantes",
+    "All variants"
+  ],
+  "Por cor": [
+    "Por color",
+    "By color"
+  ],
+  "Por tamanho": [
+    "Por talla",
+    "By size"
+  ],
+  "Sem cor": [
+    "Sin color",
+    "No color"
+  ],
+  "Sem tamanho": [
+    "Sin talla",
+    "No size"
+  ],
+  "Quantidade para aplicar": [
+    "Cantidad a aplicar",
+    "Quantity to apply"
+  ],
+  "Aplicar": [
+    "Aplicar",
+    "Apply"
+  ],
+  "Aplique por cor ou tamanho, ou ajuste cada linha abaixo. Zero cria o cadastro sem estoque.": [
+    "Aplique por color o talla, o ajuste cada fila abajo. Cero crea el producto sin existencias.",
+    "Apply by color or size, or adjust each row below. Zero creates the product without stock."
+  ],
+  "Qtd.": [
+    "Cant.",
+    "Qty."
+  ],
+  "Quantidade {name}": [
+    "Cantidad {name}",
+    "Quantity {name}"
+  ],
+  "{variants} variações · {pieces} peças · {sets} grades completas": [
+    "{variants} variantes · {pieces} unidades · {sets} series completas",
+    "{variants} variants · {pieces} units · {sets} complete size sets"
+  ],
+  "{color}: {pieces} peças · {sets} grades de {sizes} tamanhos": [
+    "{color}: {pieces} unidades · {sets} series de {sizes} tallas",
+    "{color}: {pieces} units · {sets} sets of {sizes} sizes"
+  ],
+  "Uma grade completa reúne uma peça de cada tamanho selecionado da mesma cor.": [
+    "Una serie completa reúne una unidad de cada talla seleccionada del mismo color.",
+    "A complete set contains one unit of every selected size in the same color."
+  ],
+  "Preencha todas as quantidades com números inteiros, de zero até 2147483647.": [
+    "Complete todas las cantidades con números enteros entre cero y 2147483647.",
+    "Enter whole quantities from zero to 2147483647 in every row."
+  ],
+  "Mais recentes": [
+    "Más recientes",
+    "Newest"
+  ],
+  "Ordem padrão": [
+    "Orden predeterminado",
+    "Default order"
+  ],
+  "Ordenação dos produtos": [
+    "Orden de productos",
+    "Product order"
+  ],
+  "Adicionados mais recentemente": [
+    "Agregados más recientemente",
+    "Most recently added"
+  ],
+  "{grades} grades · {pieces} peças na seleção": [
+    "{grades} series · {pieces} unidades seleccionadas",
+    "{grades} size groups · {pieces} units selected"
+  ],
+  "Atualização do estoque em andamento. Tente novamente em instantes.": [
+    "Actualización del inventario en curso. Inténtelo de nuevo en unos instantes.",
+    "Inventory update in progress. Please try again shortly."
   ]
 }

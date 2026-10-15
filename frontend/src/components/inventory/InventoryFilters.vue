@@ -49,6 +49,13 @@
         <option value="deposito">{{ tr('Depósito') }} ({{ counts?.deposito_count || 0 }})</option>
       </select>
     </label>
+    <label class="sort-filter" :class="{ active: sortBy === 'created_at' }">
+      <span aria-hidden="true">{{ tr(sortBy === 'created_at' ? 'Mais recentes' : 'Ordem padrão') }} ▾</span>
+      <select :value="sortBy || ''" :aria-label="tr('Ordenação dos produtos')" @change="emit('sort', ($event.target as HTMLSelectElement).value)">
+        <option value="">{{ tr('Ordem padrão') }}</option>
+        <option value="created_at">{{ tr('Adicionados mais recentemente') }}</option>
+      </select>
+    </label>
     <button type="button" class="chip mobile-only erp-control" :class="{ active: ungroupedOnly }" :aria-pressed="!!ungroupedOnly" @click="emit('toggle-ungrouped')">{{ tr('Sem grade') }}</button>
     <button v-if="hasGroups" type="button" class="chip erp-control" :class="{ active: groupMode }" :aria-pressed="groupMode" @click="emit('toggle-groups')">
       {{ tr('Ver grades') }}<span v-if="counts?.group_count" class="chip-count">{{ counts.group_count }}</span><span v-if="groupMode" aria-hidden="true">✓</span>
@@ -73,12 +80,14 @@ const props = defineProps<{
   categories: string[]
   category: string
   location: string
+  sortBy?: string
   hasGroups: boolean
   groupMode: boolean
   ungroupedOnly?: boolean
   counts?: InventoryCounts | null
 }>()
 const emit = defineEmits<{
+  sort: [value: string]
   status: [value: string]
   brand: [value: string]
   category: [value: string]
@@ -112,9 +121,12 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
 
 <style scoped>
 .filter-chips{display:flex;gap:.375rem;flex-wrap:wrap;margin-bottom:.5rem}.chip{padding:.375rem .75rem;border-radius:20px;background:#f8fafc;border:1px solid #e5e7eb;font-size:.8rem;cursor:pointer;color:#374151;display:flex;align-items:center;gap:.25rem}.chip.active{background:#eaf1ff;border-color:#93b4ee;color:#1d4ed8;box-shadow:inset 0 1px 0 #ffffff,0 1px 3px #2563eb12}.chip-inactive.active{background:#fee2e2;border-color:#ef4444;color:#b91c1c}.chip-count{background:#bfdbfe;color:#1e40af;border-radius:10px;padding:0 5px;font-size:.7rem;min-width:16px;text-align:center}.chip.active .chip-count{background:var(--color-brand-600);color:#fff}.chip-inactive.active .chip-count{background:#b91c1c}.chip-dd-wrap{position:relative}.chip-caret{font-size:.6rem;margin-left:.2rem}.chip-dropdown{position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:0 4px 16px rgb(15 23 42 / 12%);min-width:180px;max-height:240px;overflow-y:auto}.chip-dd-search-wrap{padding:.35rem .5rem;border-bottom:1px solid #f3f4f6;position:sticky;top:0;background:#fff;z-index:1}.chip-dd-search{width:100%;font-size:.78rem;border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:.35rem .5rem;box-sizing:border-box;color:#374151}.chip-dd-opt{display:block;width:100%;text-align:left;padding:.45rem .85rem;font-size:.82rem;color:#374151;background:none;border:none;cursor:pointer}.chip-dd-opt:hover{background:#f8fafc}.chip-dd-opt.active{background:var(--color-brand-100);color:var(--color-brand-700);font-weight:600}
+.sort-filter{display:flex;position:relative;align-items:center;justify-content:center;min-width:0;padding:.375rem .75rem;border:1px solid #e5e7eb;border-radius:999px;background:#f8fafc;color:#374151;font-size:.8rem}
+.sort-filter.active{background:#eaf1ff;border-color:#93b4ee;color:#1d4ed8}.sort-filter:focus-within{outline:2px solid #2563eb;outline-offset:2px}.sort-filter span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sort-filter select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;font-size:16px}
 .mobile-only{display:none}
 @media(max-width:600px){
   .filter-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px}
+  .sort-filter{min-height:30px;font-size:.72rem;padding:4px 7px}
   .desktop-status,.desktop-location{display:none}
   .mobile-only{display:flex}
   .chip,.chip-dd-wrap{min-width:0;max-width:100%}

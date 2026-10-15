@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, model_validator
+from typing import Optional, List, Literal, Annotated
 from datetime import datetime
 from decimal import Decimal
 import uuid
@@ -262,7 +262,20 @@ class GradeCreateRequest(BaseModel):
     group_key: Optional[str] = None      # auto-generated from name+color if None
     sizes: List[str]                     # e.g. ["P","M","G","GG"] or ["38","39","40"]
     initial_stock: Optional[int] = Field(default=0, ge=0, le=2_147_483_647, strict=True)
+    stock_by_size: dict[str, Annotated[int, Field(ge=0, le=2_147_483_647, strict=True)]] = Field(default_factory=dict)
     stock_location: Optional[Literal['loja', 'deposito']] = "loja"
+
+    @model_validator(mode='after')
+    def validate_stock_by_size(self):
+        sizes = {size.strip().upper() for size in self.sizes if size.strip()}
+        normalized = {}
+        for size, quantity in self.stock_by_size.items():
+            key = size.strip().upper()
+            if key not in sizes or key in normalized:
+                raise ValueError('Quantidade deve corresponder a um tamanho selecionado, sem repetição.')
+            normalized[key] = quantity
+        self.stock_by_size = normalized
+        return self
 
 
 class GradeCreateResponse(BaseModel):
