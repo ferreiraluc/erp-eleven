@@ -3364,6 +3364,26 @@
     "es": "🖨 Imprimir",
     "en": "🖨 Print"
   },
+  "Compartilhar PDF": {
+    "pt": "Compartilhar PDF",
+    "es": "Compartir PDF",
+    "en": "Share PDF"
+  },
+  "Preparando PDF…": {
+    "pt": "Preparando PDF…",
+    "es": "Preparando PDF…",
+    "en": "Preparing PDF…"
+  },
+  "Preparar PDF": {
+    "pt": "Preparar PDF",
+    "es": "Preparar PDF",
+    "en": "Prepare PDF"
+  },
+  "Não foi possível compartilhar. Tente novamente ou salve o PDF.": {
+    "pt": "Não foi possível compartilhar. Tente novamente ou salve o PDF.",
+    "es": "No se pudo compartir. Intente de nuevo o guarde el PDF.",
+    "en": "Could not share. Try again or save the PDF."
+  },
   "📄 Salvar PDF": {
     "pt": "📄 Salvar PDF",
     "es": "📄 Guardar PDF",
