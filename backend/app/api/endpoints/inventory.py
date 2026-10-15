@@ -250,7 +250,7 @@ def list_items(
     if sort_by == "updated_at":
         items = query.order_by(Item.updated_at.desc()).offset(offset).limit(page_size).all()
     elif sort_by == "created_at":
-        items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
+        items = query.order_by(Item.created_at.desc(), Item.id.desc()).offset(offset).limit(page_size).all()
     else:
         items = query.order_by(*([searched.rank] if searched else []), Item.name, Item.color, Item.size, Item.id).offset(offset).limit(page_size).all()
 
@@ -544,6 +544,8 @@ def group_items_batch(
     return {"message": f"Grouped {len(items)} items", "count": len(items)}
 
 
+# Separate path prevents older servers from silently ignoring per-size quantities during a rolling deploy.
+@router.post("/items/grade/quantities", response_model=GradeCreateResponse, status_code=201)
 @router.post("/items/grade", response_model=GradeCreateResponse, status_code=201)
 def create_grade(
     grade: GradeCreateRequest,
@@ -609,13 +611,14 @@ def create_grade(
     # leave an undisclosed, half-created grade that would be duplicated on retry.
     try:
         db.flush()
-        if grade.initial_stock and grade.initial_stock > 0:
-            for item in created_items:
+        for item in created_items:
+            quantity = grade.stock_by_size.get(item.size, grade.initial_stock or 0)
+            if quantity > 0:
                 create_movement(
                     db=db,
                     item_id=item.id,
                     movement_type="entry",
-                    quantity=grade.initial_stock,
+                    quantity=quantity,
                     reason="Estoque inicial — criação de grade",
                     created_by=current_user.id,
                     location=grade.stock_location or "loja",

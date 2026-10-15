@@ -103,7 +103,7 @@ describe('Inventory search counts and mobile progress', () => {
     search('camiseta S'); await nextTick(); await vi.advanceTimersByTimeAsync(300)
     fresh.resolve(page(['new'], 1, 1)); await vi.advanceTimersByTimeAsync(0)
     old.resolve(page(['old'], 1, 99)); await vi.advanceTimersByTimeAsync(0)
-    expect(text('.search-result-count')).toContain('1 item'); expect(root.textContent).not.toContain('Camiseta old')
+    expect(text('.search-result-count')).toContain('1 item'); expect(root.textContent).not.toContain('Older')
     i18n.global.locale.value = 'en'; await nextTick()
     expect(text('.mobile-search-progress')).toContain('Search complete')
     expect(text('.results-complete')).toContain('End of results')
@@ -128,4 +128,49 @@ describe('Inventory search counts and mobile progress', () => {
     await vi.waitFor(() => expect(text('.search-result-count')).toContain('0 itens'))
     expect(text('.empty-state')).toContain('Nenhum item encontrado')
   })
+})
+
+it('keeps default order until requested, resets pagination, and passes newest ordering to following pages', async () => {
+  await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+  expect(api.getItems.mock.calls[0][0]).not.toHaveProperty('sort_by')
+  const choose = async (value: string) => {
+    const select = root.querySelector<HTMLSelectElement>('[aria-label="Ordenação dos produtos"]')!
+    select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick(); await nextTick()
+  }
+  await choose('created_at')
+  expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', page: 1 }), expect.any(AbortSignal))
+  api.getItems.mockResolvedValueOnce(page(['c', 'd'], 2)); button('Carregar mais').click(); await nextTick()
+  expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', page: 2 }), expect.any(AbortSignal))
+  await choose('')
+  expect(api.getItems.mock.lastCall![0]).not.toHaveProperty('sort_by'); expect(api.getItems.mock.lastCall![0].page).toBe(1)
+})
+
+it('counts distinct selected grades and stock without counting contextual unselected sizes', async () => {
+  api.getGroups.mockResolvedValue([{ group_key: 'Camisa', items: [{ ...item('a'), group_key: 'Camisa' }, { ...item('b'), group_key: 'Camisa' }], total_stock: 2 }])
+  api.getItems.mockResolvedValue({ ...page(['a', 'b'], 1, 2), items: [{ ...item('a'), group_key: 'Camisa' }, { ...item('b'), group_key: 'Camisa' }] })
+  await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+  button('Selecionar').click(); await nextTick(); root.querySelector<HTMLElement>('.item-card')!.click(); await nextTick()
+  expect(text('.sel-stock-summary')).toBe('1 grades · 1 peças na seleção')
+})
+
+it('orders groups by their newest member alongside loose items only when newest is chosen', async () => {
+  localStorage.setItem('inv_group_mode', 'true')
+  api.getItems.mockResolvedValue({ ...page(['loose'], 1, 1), items: [{ ...item('loose'), created_at: '2026-10-10T12:00:00Z' }] })
+  api.getGroups.mockResolvedValue([
+    { group_key: 'Older', items: [{ ...item('old'), group_key: 'Older', created_at: '2026-10-01T10:00:00Z' }], total_stock: 1 },
+    { group_key: 'Newer', items: [{ ...item('new'), group_key: 'Newer', created_at: '2026-10-12T10:00:00Z' }], total_stock: 1 },
+  ])
+  await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+  const names = () => Array.from(root.querySelectorAll('.items-container > .group-card, .items-container > .item-card')).map(el => el.textContent)
+  expect(names()[0]).toContain('Older')
+  const select = root.querySelector<HTMLSelectElement>('[aria-label="Ordenação dos produtos"]')!
+  select.value = 'created_at'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick(); await nextTick()
+  expect(names()[0]).toContain('Newer'); expect(names()[1]).toContain('Camiseta loose'); expect(names()[2]).toContain('Older')
+})
+
+it('does not turn an unknown selected balance into zero', async () => {
+  api.getItems.mockResolvedValue({ ...page(['a'], 1, 1), items: [{ ...item('a'), current_stock: null, stock_loja: null }] })
+  await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+  button('Selecionar').click(); await nextTick(); root.querySelector<HTMLElement>('.item-card')!.click(); await nextTick()
+  expect(text('.sel-stock-summary')).toContain('Não informado')
 })

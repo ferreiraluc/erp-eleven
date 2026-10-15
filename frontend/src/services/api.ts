@@ -680,10 +680,11 @@ export const inventoryAPI = {
   createGrade: (data: {
     name: string
     sizes: string[]
+    stock_by_size?: Record<string, number>
     base_barcode?: string | null
     [key: string]: any
   }): Promise<{ group_key: string; items: InventoryItem[]; total_created: number }> =>
-    api.post('/api/inventory/items/grade', data).then(res => res.data),
+    api.post(data.stock_by_size ? '/api/inventory/items/grade/quantities' : '/api/inventory/items/grade', data).then(res => res.data),
 
   groupItems: (itemIds: string[], groupKey: string): Promise<{ message: string; count: number }> =>
     api.post('/api/inventory/items/group', { item_ids: itemIds, group_key: groupKey }).then(res => res.data),

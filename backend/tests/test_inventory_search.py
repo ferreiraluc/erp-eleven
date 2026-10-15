@@ -126,3 +126,24 @@ def test_postgresql_search_matches_sqlite_semantics(pg):
             assert summary.total_active_items == 13 and summary.grouped_items_count == 2
     finally:
         isolated.dispose()
+
+
+def test_recent_order_preserves_default_and_is_stable_across_pages(stock_app):
+    import uuid
+    factory, client, _ = stock_app
+    with factory() as db:
+        for index, name, day in [(1, 'Alpha', 1), (2, 'Zulu', 3), (3, 'Beta', 3), (4, 'Other', 4)]:
+            db.add(Item(id=uuid.UUID(f'aaaaaaaa-0000-0000-0000-{index:012d}'), sku_internal=f'NEW-{index}', name=name,
+                        category='Camisetas' if index < 4 else 'Calçados',
+                        created_at=datetime(2026, 10, day), current_stock=0, stock_loja=0, stock_deposito=0))
+        db.commit()
+    params = {'category': 'Camisetas', 'page_size': 1, 'include_images': False}
+    default = client.get('/api/inventory/items', params=params).json()
+    assert default['items'][0]['name'] == 'Alpha'
+    ids = []
+    for page in range(1, 4):
+        response = client.get('/api/inventory/items', params={**params, 'sort_by': 'created_at', 'page': page})
+        assert response.status_code == 200, response.text
+        assert response.json()['total'] == 3
+        ids.append(response.json()['items'][0]['sku_internal'])
+    assert ids == ['NEW-3', 'NEW-2', 'NEW-1']

@@ -25,9 +25,10 @@ def manager_stock_app(stock_app):
     return stock_app
 
 
-def test_grade_creation_still_rejects_unauthorized_roles(stock_app):
+@pytest.mark.parametrize('path', ['/api/inventory/items/grade', '/api/inventory/items/grade/quantities'])
+def test_grade_creation_still_rejects_unauthorized_roles(stock_app, path):
     factory, client, _ = stock_app
-    response = client.post('/api/inventory/items/grade', json={'name': 'Polo', 'sizes': ['P', 'M']})
+    response = client.post(path, json={'name': 'Polo', 'sizes': ['P', 'M']})
     assert response.status_code == 403
     with factory() as db:
         assert db.query(Item).count() == 0
@@ -88,7 +89,7 @@ def test_grade_and_initial_movements_commit_or_rollback_together_on_postgresql(p
         with factory() as db:
             user = db.get(Usuario, user_id)
             args = GradeCreateRequest(name='Polo', color='Branco', sizes=['P', 'M'], initial_stock=3,
-                                      base_barcode='4006381333931')
+                                      base_barcode='4006381333931', stock_by_size={'M': 8})
             if fail_second:
                 with pytest.raises(StockMovementError):
                     inventory.create_grade(args, db, user)
@@ -98,6 +99,37 @@ def test_grade_and_initial_movements_commit_or_rollback_together_on_postgresql(p
             assert db.query(Item).count() == (0 if fail_second else 2)
             assert db.query(StockMovement).count() == (0 if fail_second else 2)
             for row in db.query(Item):
-                assert (row.current_stock, row.stock_loja, row.stock_deposito) == (3, 3, 0)
+                assert (row.current_stock, row.stock_loja, row.stock_deposito) == ((8, 8, 0) if row.size == 'M' else (3, 3, 0))
     finally:
         isolated.dispose()
+
+
+@pytest.mark.parametrize('path', ['/api/inventory/items/grade', '/api/inventory/items/grade/quantities'])
+def test_grade_quantities_per_size_override_default_including_zero(manager_stock_app, path):
+    factory, client, _ = manager_stock_app
+    response = client.post(path, json={
+        'name': 'Camiseta X', 'color': 'Azul', 'sizes': ['P', 'M', 'L', 'XL', '2XL'],
+        'initial_stock': 3, 'stock_by_size': {' p ': 4, 'M': 8, 'XL': 0}, 'stock_location': 'deposito',
+    })
+    assert response.status_code == 201, response.text
+    expected = {'P': 4, 'M': 8, 'L': 3, 'XL': 0, '2XL': 3}
+    for row in response.json()['items']:
+        assert (row['current_stock'], row['stock_loja'], row['stock_deposito']) == (expected[row['size']], 0, expected[row['size']])
+    with factory() as db:
+        assert db.query(StockMovement).count() == 4
+        assert sum(m.quantity for m in db.query(StockMovement)) == 18
+
+
+@pytest.mark.parametrize('quantities', [
+    {'P': -1}, {'P': 1.5}, {'P': True}, {'P': '3'}, {'P': 2_147_483_648},
+    {'P': None}, {'XL': 2}, {'P': 2, ' p ': 3}, {'': 2},
+])
+def test_invalid_grade_quantities_are_rejected_before_writing(manager_stock_app, quantities):
+    factory, client, _ = manager_stock_app
+    response = client.post('/api/inventory/items/grade', json={
+        'name': 'Modelo', 'sizes': ['P', 'M'], 'stock_by_size': quantities,
+    })
+    assert response.status_code == 422
+    with factory() as db:
+        assert db.query(Item).count() == 0
+        assert db.query(StockMovement).count() == 0

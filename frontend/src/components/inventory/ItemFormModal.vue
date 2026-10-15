@@ -430,9 +430,9 @@
           <div class="form-group">
             <label>{{ tr('Estoque inicial por tamanho') }}</label>
             <input v-model.number="gradeInitialStock" type="number" min="0" class="form-input" placeholder="0" />
-            <span class="form-hint">{{ tr('Quantidade adicionada a cada item da grade ao criar.') }}</span>
+            <span class="form-hint">{{ tr('Quantidade padrão para as variações sem ajuste individual.') }}</span>
           </div>
-          <div class="form-group" v-if="gradeInitialStock > 0">
+          <div class="form-group" v-if="gradeTotalStock > 0">
             <label>{{ tr('Cadastrar em') }}</label>
             <div class="loc-toggle">
               <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
@@ -452,14 +452,32 @@
           <!-- Preview -->
           <div v-if="gradeSizes.length > 0 || gradeColors.length > 0" class="form-group">
             <label>{{ tr('Prévia — itens a criar: {count}', { count: gradeItemCount }) }}</label>
+            <div class="grade-bulk-stock">
+              <label>{{ tr('Aplicar quantidade a') }}
+                <select v-model="bulkGradeTarget" class="form-input" :disabled="gradeLocked" :aria-label="tr('Aplicar quantidade a')">
+                  <option value="all">{{ tr('Todas as variações') }}</option>
+                  <optgroup :label="tr('Por cor')">
+                    <option v-for="color in [...new Set(gradeRows.map(row => row.color))]" :key="color" :value="JSON.stringify(['color', color])">{{ color || tr('Sem cor') }}</option>
+                  </optgroup>
+                  <optgroup :label="tr('Por tamanho')">
+                    <option v-for="size in [...new Set(gradeRows.map(row => row.size))]" :key="size" :value="JSON.stringify(['size', size])">{{ size || tr('Sem tamanho') }}</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label>{{ tr('Quantidade') }}<input v-model.number="bulkGradeQuantity" :disabled="gradeLocked" type="number" min="0" step="1" inputmode="numeric" class="form-input" :aria-label="tr('Quantidade para aplicar')" @keydown.enter.stop.prevent="applyGradeQuantity" /></label>
+              <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="gradeLocked || !validGradeQuantity(bulkGradeQuantity) || !gradeRows.length" @click="applyGradeQuantity">{{ tr('Aplicar') }}</button>
+            </div>
+            <p class="form-hint">{{ tr('Aplique por cor ou tamanho, ou ajuste cada linha abaixo. Zero cria o cadastro sem estoque.') }}</p>
             <div class="grade-preview">
               <div v-for="row in gradeRows" :key="row.key" class="gp-row">
-                <span v-if="row.size" class="gp-size">{{ row.size }}</span>
-                <span v-if="row.color" class="gp-color-badge">{{ row.color }}</span>
                 <div class="gp-details">
+                  <span class="gp-tags"><span v-if="row.size" class="gp-size">{{ row.size }}</span><span v-if="row.color" class="gp-color-badge">{{ row.color }}</span></span>
                   <span class="gp-name">{{ [form.name || tr('(nome)'), row.size, row.color].filter(Boolean).join(' ') }}</span>
                   <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + row.size }}</span>
                 </div>
+                <label class="gp-quantity">{{ tr('Qtd.') }}
+                  <input :value="gradeQuantity(row)" type="number" min="0" step="1" inputmode="numeric" class="form-input" :disabled="gradeLocked" :aria-label="tr('Quantidade {name}', { name: [row.size, row.color].filter(Boolean).join(' ') })" :aria-invalid="!validGradeQuantity(gradeQuantity(row))" @input="setGradeQuantity(row.key, $event)" @keydown.enter.stop.prevent />
+                </label>
                 <button type="button" class="gp-remove erp-button erp-button--ghost erp-button--icon" :disabled="saving || uncertainSave || !!partialItems.length" :aria-label="tr('Remover variação {name}', { name: [row.size, row.color].filter(Boolean).join(' ') })" @click="excludeGradeRow(row.key)">×</button>
               </div>
               <p v-if="!gradeRows.length" role="status">{{ tr('Nenhuma variação selecionada. Restaure ou escolha outros tamanhos.') }}</p>
@@ -467,6 +485,12 @@
             </div>
           </div>
 
+          <div v-if="gradeRows.length" class="grade-quantity-summary" role="status" aria-live="polite">
+            <strong>{{ tr('{variants} variações · {pieces} peças · {sets} grades completas', { variants: gradeItemCount, pieces: gradeQuantitiesValid ? gradeTotalStock : '—', sets: gradeQuantitiesValid ? gradeCompleteSets : '—' }) }}</strong>
+            <span v-for="row in gradeColorTotals" :key="row.color">{{ tr('{color}: {pieces} peças · {sets} grades de {sizes} tamanhos', { color: row.color || tr('Sem cor'), pieces: row.pieces, sets: row.sets, sizes: row.sizes }) }}</span>
+            <small>{{ tr('Uma grade completa reúne uma peça de cada tamanho selecionado da mesma cor.') }}</small>
+            <p v-if="!gradeQuantitiesValid" class="field-error">{{ tr('Preencha todas as quantidades com números inteiros, de zero até 2147483647.') }}</p>
+          </div>
           <div v-else class="grade-empty">
             {{ tr('Selecione um modelo acima ou adicione tamanhos e/ou cores.') }}
           </div>
@@ -527,7 +551,7 @@
 
       </div>
 
-      <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeEnabled ? gradeItemCount : 1, quantity: gradeEnabled ? gradeItemCount * (gradeInitialStock || 0) : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
+      <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeEnabled ? gradeItemCount : 1, quantity: gradeEnabled ? (gradeQuantitiesValid ? gradeTotalStock : '—') : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer erp-dialog__footer">
         <template v-if="activeTab === 'basic' && needsIntakeReview">
           <label class="intake-review-check footer-review"><input ref="reviewInput" v-model="intakeReviewed" type="checkbox" :disabled="saving || conflicts.length > 0" />{{ tr('Conferi os dados e a foto escolhida para este produto.') }}</label>
@@ -672,13 +696,19 @@ const optionRemovalNotice = computed(() => removedOption.value
   ? tr(removedOption.value.kind === 'color' ? 'Cor {name} removida dos botões salvos.' : 'Modelo {name} removido dos botões salvos.', { name: removedOption.value.name })
   : '')
 function disableGrade() {
-  excludedGradeRows.value = []; gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0
+  excludedGradeRows.value = []; gradeEnabled.value = false; gradeSizes.value = []; gradeColors.value = []; activePreset.value = ''; gradeInitialStock.value = 0; gradeQuantities.value = {}
   colorInput.value = ''; showColorInput.value = false
   editingGradeOptions.value = false; removedOption.value = null
 }
 const activePreset = ref('')
 const customSizeInput = ref('')
 const gradeInitialStock = ref(0)
+const gradeQuantities = ref<Record<string, number | string>>({})
+const bulkGradeTarget = ref('all')
+const bulkGradeQuantity = ref<number | string>(0)
+const validGradeQuantity = (quantity: unknown): quantity is number =>
+  typeof quantity === 'number' && Number.isInteger(quantity) && quantity >= 0 && quantity <= 2_147_483_647
+const gradeLocked = computed(() => saving.value || uncertainSave.value || !!partialItems.value.length)
 const initialStock = ref(0)
 
 // ── Color grade state ─────────────────────────────────────────────────────────
@@ -744,6 +774,35 @@ const gradeRows = computed(() => {
     .filter(row => !excludedGradeRows.value.includes(row.key))
 })
 const gradeItemCount = computed(() => gradeRows.value.length)
+function gradeQuantity(row: { key: string }) { return gradeQuantities.value[row.key] ?? gradeInitialStock.value }
+function setGradeQuantity(key: string, event: Event) {
+  if (gradeLocked.value) return
+  const value = (event.target as HTMLInputElement).value
+  gradeQuantities.value[key] = value === '' ? '' : Number(value)
+}
+const gradeTotalStock = computed(() => gradeRows.value.reduce((total, row) => {
+  const quantity = gradeQuantity(row)
+  return total + (validGradeQuantity(quantity) ? quantity : 0)
+}, 0))
+const gradeQuantitiesValid = computed(() => gradeRows.value.every(row => validGradeQuantity(gradeQuantity(row))))
+const gradeColorTotals = computed(() => [...new Set(gradeRows.value.map(row => row.color))].map(color => {
+  const rows = gradeRows.value.filter(row => row.color === color)
+  const quantities = rows.map(gradeQuantity)
+  const valid = quantities.every(validGradeQuantity)
+  return { color, sizes: rows.length, pieces: valid ? quantities.reduce<number>((sum, value) => sum + Number(value), 0) : '—',
+    sets: valid ? Math.min(...quantities.map(Number)) : '—' }
+}))
+const gradeCompleteSets = computed(() => gradeColorTotals.value.reduce((sum, row) => sum + (typeof row.sets === 'number' ? row.sets : 0), 0))
+function applyGradeQuantity() {
+  if (gradeLocked.value || !validGradeQuantity(bulkGradeQuantity.value)) return
+  const target = bulkGradeTarget.value === 'all' ? null : JSON.parse(bulkGradeTarget.value) as ['color' | 'size', string]
+  for (const row of gradeRows.value) {
+    if (!target || row[target[0]] === target[1]) gradeQuantities.value[row.key] = bulkGradeQuantity.value
+  }
+}
+function stockBySize(rows: typeof gradeRows.value) {
+  return Object.fromEntries(rows.map(row => [row.size, Number(gradeQuantity(row))]))
+}
 const stockLocation = ref<'loja' | 'deposito'>(
   readPreference('inv_stock_location') === 'deposito' ? 'deposito' : 'loja'
 )
@@ -977,8 +1036,10 @@ watch(() => form.barcode, (val, _previous, onCleanup) => {
 function validate(includeStock = true) {
   Object.keys(errors).forEach(k => delete errors[k])
   if (form.name.trim().length < 2) errors.name = 'Nome deve ter ao menos 2 caracteres'
-  const startingStock = (gradeSizes.value.length || gradeColors.value.length ? gradeInitialStock.value : initialStock.value) || 0
-  if (includeStock && !isEdit.value && (!Number.isInteger(startingStock) || startingStock < 0 || startingStock > (props.duplicateContext ? 1_000_000 : 2_147_483_647))) {
+  const startingStock = initialStock.value || 0
+  const invalidStock = gradeEnabled.value ? !gradeQuantitiesValid.value :
+    !Number.isInteger(startingStock) || startingStock < 0 || startingStock > (props.duplicateContext ? 1_000_000 : 2_147_483_647)
+  if (includeStock && !isEdit.value && invalidStock) {
     errors.name = 'Estoque inicial deve ser inteiro, não negativo e dentro do limite permitido.'
   }
   if (form.cost_price < 0) errors.cost_price = 'Custo não pode ser negativo'
@@ -1036,7 +1097,7 @@ async function handleSubmit() {
         image_data: form.image_data || null,
         group_key: sharedGroupKey,
         sizes: gradeSizes.value,
-        initial_stock: gradeInitialStock.value || 0,
+        initial_stock: validGradeQuantity(gradeInitialStock.value) ? gradeInitialStock.value : 0,
         stock_location: stockLocation.value,
       }
 
@@ -1045,10 +1106,11 @@ async function handleSubmit() {
       if (gradeSizes.value.length > 0 && gradeColors.value.length > 0) {
         // Size × color matrix
         for (const color of gradeColors.value) {
-          const sizes = gradeRows.value.filter(row => row.color === color).map(row => row.size)
+          const rows = gradeRows.value.filter(row => row.color === color)
+          const sizes = rows.map(row => row.size)
           if (!sizes.length) continue
           creating = true
-          const result = await inventoryAPI.createGrade({ ...baseGradePayload, color, sizes })
+          const result = await inventoryAPI.createGrade({ ...baseGradePayload, color, sizes, stock_by_size: stockBySize(rows) })
           creating = false
           createdItems.push(...result.items)
           if (!firstItem) firstItem = result.items[0]
@@ -1056,7 +1118,7 @@ async function handleSubmit() {
       } else if (gradeSizes.value.length > 0) {
         // Only sizes (original behavior)
         creating = true
-        const result = await inventoryAPI.createGrade({ ...baseGradePayload, color: form.color || null, sizes: gradeRows.value.map(row => row.size) })
+        const result = await inventoryAPI.createGrade({ ...baseGradePayload, color: form.color || null, sizes: gradeRows.value.map(row => row.size), stock_by_size: stockBySize(gradeRows.value) })
         creating = false
         createdItems.push(...result.items)
         firstItem = result.items[0]
@@ -1071,16 +1133,18 @@ async function handleSubmit() {
           barcode: form.barcode ? form.barcode + form.size.trim().toUpperCase() : '',
           group_key: sharedGroupKey,
         }
-        for (const { color } of gradeRows.value) {
+        for (const row of gradeRows.value) {
+          const { color } = row
+          const quantity = Number(gradeQuantity(row))
           creating = true
           const result = await inventoryAPI.createItem({ ...baseSinglePayload, color })
           creating = false
           createdItems.push(result)
-          if (gradeInitialStock.value > 0) {
+          if (quantity > 0) {
             await inventoryAPI.createMovement({
               item_id: result.id,
               movement_type: 'entry',
-              quantity: gradeInitialStock.value,
+              quantity,
               reason: 'Estoque inicial',
               location: stockLocation.value,
             })
@@ -1123,7 +1187,7 @@ async function handleSubmit() {
     emit('saved', result)
   } catch (e: any) {
     const detail = e.response?.data?.detail
-    submitError.value = typeof detail === 'string' ? detail : 'Erro ao salvar'
+    submitError.value = gradeEnabled.value && e.response?.status === 404 ? 'Atualização do estoque em andamento. Tente novamente em instantes.' : typeof detail === 'string' ? detail : 'Erro ao salvar'
     partialItems.value = createdItems
     uncertainSave.value = creating && !e.response
     if (createdItems.length || uncertainSave.value) emit('partial', createdItems)
@@ -1530,8 +1594,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
   max-height: 200px; overflow-y: auto;
 }
 .gp-row {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.35rem 0.65rem; font-size: 0.8rem;
+  display: grid; grid-template-columns: minmax(0, 1fr) 64px 32px; align-items: center; gap: 8px;
+  padding: 8px 10px; font-size: 0.8rem;
   border-bottom: 1px solid #f3f4f6;
 }
 .gp-row:last-child { border-bottom: none; }
@@ -1541,6 +1605,20 @@ function handleComma(event: KeyboardEvent, add: () => void) {
   background: #e0e7ff; border-radius: 4px; padding: 0.1rem 0.3rem;
   text-align: center; font-size: 0.75rem;
 }
+.grade-bulk-stock { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto; gap: 8px; align-items: end; margin: 10px 0 6px; }
+.grade-bulk-stock label, .gp-row .gp-quantity { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; margin: 0; font-size: .75rem; }
+.grade-bulk-stock .form-input { margin-top: 4px; min-width: 0; min-height: 40px; padding: 6px 8px; }
+.gp-quantity { flex: 0 0 64px; min-width: 0; font-size: .7rem; color: #64748b; }
+.gp-quantity .form-input { box-sizing: border-box; min-width: 0; width: 100%; padding: 5px; min-height: 40px; text-align: center; }
+.grade-quantity-summary { display: flex; flex-direction: column; gap: 5px; background: #eff6ff; border-radius: 10px; padding: 12px; margin-top: 10px; font-size: .8rem; color: #1e3a8a; }
+.grade-quantity-summary small { color: #64748b; line-height: 1.4; }
+@media (max-width: 600px) {
+  .gp-row { gap: 6px; padding: 8px; }
+  .grade-bulk-stock { grid-template-columns: minmax(0, 1fr) 72px auto; gap: 6px; }
+  .gp-color-badge { max-width: 45%; overflow-wrap: anywhere; }
+  .grade-bulk-stock .form-input, .gp-quantity .form-input { font-size: 16px; }
+}
+.gp-tags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px; }
 .gp-details { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .gp-name { display: block; color: #111827; }
 .gp-barcode { display: block; font-family: monospace; font-size: 0.72rem; color: #6b7280; }

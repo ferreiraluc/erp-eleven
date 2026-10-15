@@ -793,3 +793,44 @@ Remover todas bloqueia a criação, sem cadastrar uma peça avulsa por engano.
 A exclusão é apenas da prévia: não apaga produtos existentes nem altera os modelos
 salvos no navegador. Durante o envio ou após uma criação parcial/incerta, a seleção
 fica protegida pelo fluxo de recuperação existente.
+
+### Ordem de cadastro e conferência de quantidades
+
+O seletor **Ordem padrão → Adicionados mais recentemente** ordena por data de
+criação, sem confundir edição ou movimentação com cadastro novo. A ordem inicial
+continua a mesma. A API aplica a ordenação antes da paginação, com desempate por ID;
+busca, filtros e carregamento progressivo permanecem ativos. Em **Ver grades**, a
+posição do grupo considera o cadastro mais recente entre suas variações visíveis.
+Limpar filtros conserva a ordem escolhida; selecione **Ordem padrão** para voltar.
+
+No cadastro de um novo produto com grade, cada linha da prévia tem **Qtd.** editável.
+**Estoque inicial por tamanho** continua sendo o padrão das linhas sem ajuste.
+**Aplicar quantidade a** permite definir todas as variações, uma cor em todos os
+seus tamanhos ou um tamanho em todas as cores. O botão **Aplicar** substitui apenas
+as quantidades das linhas selecionadas e presentes na prévia; não restaura linhas
+removidas. Alterar o padrão não apaga ajustes individuais. Restaurar uma variação
+recupera seu ajuste anterior; sair do modo grade descarta esses ajustes.
+
+A conferência mostra variações (cadastros/SKUs), peças e grades completas por cor.
+Uma grade completa equivale a uma peça de cada tamanho **selecionado naquela cor**;
+sua quantidade é o menor saldo entre essas linhas. Por exemplo, cinco tamanhos em
+branco com 3 peças cada, azul com 4 e preto com 8 somam **15 variações, 75 peças e
+15 grades completas**. Quantidades desiguais podem deixar peças fora de conjuntos
+completos. Zero cria a variação sem entrada de estoque; não remove o tamanho.
+
+A API `POST /api/inventory/items/grade` aceita `stock_by_size`, com quantidades
+inteiras não negativas por tamanho. O campo é opcional; consumidores anteriores
+continuam usando `initial_stock`. Tamanhos desconhecidos/repetidos no mapa e
+quantidades inválidas são recusados antes de gravar. Cada chamada de grade mantém
+itens e movimentos na mesma transação; o fluxo de recuperação de criação parcial
+entre cores permanece. As quantidades finais são lançadas no local escolhido.
+O frontend usa a rota equivalente `/items/grade/quantities`, para que um backend
+ainda anterior à atualização recuse o pedido em vez de ignorar as quantidades.
+Essa edição se refere à prévia de **Novo item**; adicionar tamanhos a um produto já
+salvo continua usando seu fluxo de conferência próprio.
+
+Na seleção múltipla da listagem, a barra também informa quantas grades distintas
+estão representadas e quantas peças pertencem **aos itens selecionados**, somando
+loja e depósito. Não inclui automaticamente outros tamanhos do grupo. Se algum
+saldo não estiver confirmado, o total aparece como **Não informado**. Essa contagem
+de grupos existentes é distinta dos conjuntos completos calculados na prévia.

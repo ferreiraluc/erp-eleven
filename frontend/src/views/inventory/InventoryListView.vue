@@ -39,6 +39,8 @@
         :category="filterCategory"
         :location="filterLocation"
         :has-groups="hasGroups"
+        :sort-by="inventoryStore.filters.sort_by"
+        @sort="setProductOrder"
         :group-mode="groupMode"
         :ungrouped-only="filterUngroupedOnly"
         :counts="inventoryStore.alerts"
@@ -473,7 +475,9 @@
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
       <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit && !showBulkDelete" class="selection-bar">
-        <span class="sel-count">{{ tr('Itens selecionados: {count}', { count: selectedIds.length }) }}</span>
+        <div class="sel-summary"><span class="sel-count">{{ tr('Itens selecionados: {count}', { count: selectedIds.length }) }}</span>
+          <span class="sel-stock-summary">{{ tr('{grades} grades · {pieces} peças na seleção', { grades: selectedStockSummary.grades ?? tr('Não informado'), pieces: selectedStockSummary.pieces ?? tr('Não informado') }) }}</span>
+        </div>
         <div class="sel-actions">
           <button @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
@@ -671,7 +675,7 @@ function toggleExpand(groupKey: string) {
 
 const filterUngroupedOnly = ref(false)
 const hasActiveFilters = computed(() => !!searchQuery.value.trim() || filterUngroupedOnly.value ||
-  Object.values(inventoryStore.filters).some(value => !!value))
+  Object.entries(inventoryStore.filters).some(([key, value]) => key !== 'sort_by' && !!value))
 
 function clearItemFilters() {
   searchQuery.value = ''
@@ -768,6 +772,12 @@ function selectAll() {
   selectedIds.value = [...all]
 }
 
+const selectedStockSummary = computed(() => {
+  const rows = selectedIds.value.map(id => allVisibleItems.value.get(id))
+  const known = rows.every(item => item && hasKnownStock(item))
+  return { grades: rows.every(Boolean) ? new Set(rows.map(item => item?.group_key).filter(Boolean)).size : null,
+    pieces: known ? rows.reduce((total, item) => total + (item?.current_stock || 0), 0) : null }
+})
 const selectedItemsForBulkEdit = ref<InventoryItem[]>([])
 const showBulkDelete = ref(false), itemsForDeletion = ref<Array<{ id: string; name: string }>>([])
 function openBulkDelete() {
@@ -941,6 +951,12 @@ const flatList = computed<FlatEntry[]>(() => {
     }
   }
 
+  if (inventoryStore.filters.sort_by === 'created_at') {
+    const newest = (entry: FlatEntry) => entry.type === 'item' ? Date.parse(entry.item.created_at) || 0 :
+      Math.max(0, ...entry.group.items.map(item => Date.parse(item.created_at) || 0))
+    result.sort((a, b) => newest(b) - newest(a) ||
+      (a.type === 'item' ? a.item.id : a.group.group_key).localeCompare(b.type === 'item' ? b.item.id : b.group.group_key))
+  }
   return result
 })
 
@@ -1114,6 +1130,11 @@ function clearSearch() {
   } else {
     reloadItems()
   }
+}
+
+function setProductOrder(value: string) {
+  inventoryStore.filters.sort_by = value === 'created_at' ? value : ''
+  reloadItems()
 }
 
 function setStatusFilter(status: string) {
@@ -1780,6 +1801,8 @@ onMounted(async () => {
   box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000;
   max-width: calc(100vw - 2rem);
 }
+.sel-summary { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.sel-stock-summary { font-size:.75rem; color:#cbd5e1; }
 .sel-count { font-size: 0.82rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 .sel-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .sel-btn { padding: 0.38rem 0.75rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 600; background: rgba(255,255,255,0.15); color: white; white-space: nowrap; }
