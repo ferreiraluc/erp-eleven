@@ -74,7 +74,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label>{{ tr('Quantidade') }} <span class="label-hint">{{ tr('(+ entrada / − saída)') }}</span></label>
-                <input
+                <StockQuantityInput :min="-2147483647"
                   v-model.number="sharedStockDelta"
                   :disabled="unknownStock"
                   type="number"
@@ -103,6 +103,22 @@
               {{ tr('Itens com ajuste individual abaixo têm prioridade sobre este valor.') }}
             </p>
           </div>
+        </section>
+
+        <section class="section name-replace">
+          <h3 class="section-title">{{ tr('Corrigir nomes em lote') }}</h3>
+          <p class="section-hint">{{ tr('Substitua uma palavra ou trecho. O restante do nome e os tamanhos são preservados.') }}</p>
+          <div class="form-row">
+            <label class="form-group">{{ tr('Localizar no nome') }}<input v-model="nameFind" class="form-input" placeholder="Biss" :disabled="saving" /></label>
+            <label class="form-group">{{ tr('Substituir por') }}<input v-model="nameReplacement" class="form-input" placeholder="Boss" :disabled="saving" /></label>
+          </div>
+          <div v-if="nameFind.trim() && nameReplacement.trim()" class="name-preview" aria-live="polite">
+            <p>{{ namePreview.length }} {{ tr('nomes serão alterados') }}</p>
+            <ul><li v-for="row in namePreview.slice(0, 20)" :key="row.id"><del>{{ row.before }}</del><span>→ {{ row.after }}</span></li></ul>
+            <p v-if="namePreview.length > 20">{{ tr('A prévia mostra os primeiros 20. A correção será aplicada a todos os correspondentes.') }}</p>
+          </div>
+          <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving || !namePreview.length" @click="applyNameReplacement">{{ tr('Aplicar correção aos nomes') }}</button>
+          <p v-if="nameApplied" class="section-hint" role="status">{{ tr('Nomes preparados. Confira os itens e clique em Salvar para concluir.') }}</p>
         </section>
 
         <!-- ── Per-item fields ── -->
@@ -188,7 +204,7 @@
                 <!-- Per-item stock -->
                 <div class="field-group">
                   <label>{{ tr('Δ Estoque') }} <span class="label-hint">(+ / −)</span></label>
-                  <input
+                  <StockQuantityInput :min="-2147483647"
                     v-model.number="itemStockDeltas[item.id]"
                     :disabled="!hasKnownStock(item)"
                     type="number"
@@ -234,6 +250,8 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
+import StockQuantityInput from './StockQuantityInput.vue'
+import { replaceProductName } from '@/services/inventoryNameReplace'
 import ProductThumbnail from './ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
@@ -270,6 +288,17 @@ const itemCostPrices  = reactive<Record<string, string>>({})
 const itemSalePrices  = reactive<Record<string, string>>({})
 const itemStockDeltas = reactive<Record<string, number>>({})
 const itemStockReasons = reactive<Record<string, string>>({})
+
+const nameFind = ref(''), nameReplacement = ref(''), nameApplied = ref(false)
+const namePreview = computed(() => props.items.flatMap(item => {
+  const before = itemNames[item.id], after = replaceProductName(before, nameFind.value, nameReplacement.value)
+  return before !== after ? [{ id: item.id, before, after }] : []
+}))
+function applyNameReplacement() {
+  for (const row of namePreview.value) itemNames[row.id] = row.after
+  nameApplied.value = true
+  nameFind.value = ''; nameReplacement.value = ''
+}
 
 function formatPrice(val: any): string {
   if (val === null || val === undefined || val === '' || val === 0) return '—'
@@ -411,6 +440,7 @@ async function save() {
 </script>
 
 <style scoped>
+.name-preview{padding:10px;background:#f8fafc;border-radius:10px;margin-bottom:12px;font-size:13px}.name-preview ul{padding:0;list-style:none;max-height:180px;overflow:auto}.name-preview li{display:flex;flex-wrap:wrap;gap:4px 12px;padding:4px 0}.name-preview del{color:#64748b}.name-preview span{color:#166534}.name-replace label{display:flex;flex-direction:column;align-items:stretch;gap:6px}
 .stock-warning { margin: 0; padding: .75rem; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
 input:disabled { background: #f3f4f6; cursor: not-allowed; }
 .modal-overlay {

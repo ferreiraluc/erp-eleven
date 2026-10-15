@@ -18,7 +18,8 @@ async function mount(mode: 'duplicate' | 'grade' = 'duplicate') {
   app.directive('erp-dialog', {}); app.mount(root); await flush()
 }
 async function field(label: string, value: string) {
-  const input = Array.from(root.querySelectorAll('label')).find(l => l.textContent?.trim() === label)?.querySelector('input') as HTMLInputElement
+  const labelEl = Array.from(root.querySelectorAll('label')).find(l => l.textContent?.trim() === label)
+  const input = (labelEl?.control || labelEl?.querySelector('input')) as HTMLInputElement
   expect(input).toBeTruthy(); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); await flush()
 }
 async function confirm() { expect(root.querySelector('footer .variant-confirm')).not.toBeNull(); const input = root.querySelector('[type=checkbox]') as HTMLInputElement; input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); await flush() }
@@ -43,7 +44,7 @@ describe('Existing product variants', () => {
   })
   it('supports multiple sizes and skips defaults hidden by the option editor', async () => {
     localStorage.setItem('inv_grade_hidden_presets', JSON.stringify(['p → 2xl']))
-    await mount('grade'); expect(root.textContent).not.toContain('P → 2XL')
+    await mount('grade'); expect(root.textContent).not.toContain('S → 2XL')
     await field('Tamanhos da grade', '8; 9; 10; 8'); await confirm(); await submit()
     expect(api.create.mock.calls[0][1].sizes).toEqual(['8', '9', '10'])
     expect(api.create.mock.calls[0][1].initial_stock).toBe(0)

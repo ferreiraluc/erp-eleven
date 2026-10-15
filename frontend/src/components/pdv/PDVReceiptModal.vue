@@ -67,7 +67,7 @@ import { uiText } from '@/i18n/uiText'
 import { pdvReceipts, type ReceiptPreview } from '@/services/pdvReceipts'
 import { saleError } from '@/services/pdvManagement'
 import PDVReceiptDelivery from './PDVReceiptDelivery.vue'
-import { receiptPdfFile, receiptShareContext } from '@/utils/receiptPdf'
+import { receiptPdfFile, receiptShareContext, receiptSharePolicy } from '@/utils/receiptPdf'
 const props = defineProps<{ sale: { id: string } }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const data = ref<ReceiptPreview | null>(null), loading = ref(true), error = ref('')
@@ -146,7 +146,9 @@ async function sharePDF(event?: Event) {
     if (name === 'AbortError') {
       pdfNotice.value = uiText('Compartilhamento cancelado ou indisponível. Tente novamente ou use Salvar PDF para enviar o arquivo.')
     } else if (name === 'NotAllowedError') {
-      pdfError.value = uiText('Este navegador recusou compartilhar o PDF. Use Salvar PDF e envie o arquivo pelo app Arquivos ou Downloads.')
+      pdfError.value = receiptSharePolicy().allowed === false
+        ? uiText('A política desta página bloqueou o compartilhamento. Feche e abra o ERP novamente para carregar a configuração atualizada. Salvar PDF continua disponível.')
+        : uiText('Este navegador recusou compartilhar o PDF. Use Salvar PDF e envie o arquivo pelo app Arquivos ou Downloads.')
     } else if (name === 'InvalidStateError') {
       pdfError.value = uiText('Há um compartilhamento em andamento no aparelho. Feche essa janela para tentar novamente ou use Salvar PDF.')
     } else {

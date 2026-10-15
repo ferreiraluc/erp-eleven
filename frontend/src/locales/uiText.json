@@ -3736,7 +3736,7 @@
   },
   "Diminuir quantidade": {
     "pt": "Diminuir quantidade",
-    "es": "Reducir cantidad",
+    "es": "Disminuir cantidad",
     "en": "Decrease quantity"
   },
   "Aumentar quantidade": {
@@ -4003,5 +4003,50 @@
     "pt": "Um ticket inteiro, sem dividir em páginas. Requer o Eleven Tickets atualizado no Windows e bobina contínua na Zebra ZD220.",
     "es": "Un ticket completo, sin dividir en páginas. Requiere Eleven Tickets actualizado en Windows y rollo continuo en la Zebra ZD220.",
     "en": "One complete receipt, without page breaks. Requires updated Eleven Tickets on Windows and a continuous roll in the Zebra ZD220."
+  },
+  "Corrigir nomes em lote": {
+    "pt": "Corrigir nomes em lote",
+    "es": "Corregir nombres en lote",
+    "en": "Correct names in bulk"
+  },
+  "Substitua uma palavra ou trecho. O restante do nome e os tamanhos são preservados.": {
+    "pt": "Substitua uma palavra ou trecho. O restante do nome e os tamanhos são preservados.",
+    "es": "Sustituya una palabra o frase. El resto del nombre y las tallas se conservan.",
+    "en": "Replace a word or phrase. The rest of each name and its size stay unchanged."
+  },
+  "Localizar no nome": {
+    "pt": "Localizar no nome",
+    "es": "Buscar en el nombre",
+    "en": "Find in name"
+  },
+  "Substituir por": {
+    "pt": "Substituir por",
+    "es": "Reemplazar por",
+    "en": "Replace with"
+  },
+  "nomes serão alterados": {
+    "pt": "nomes serão alterados",
+    "es": "nombres se modificarán",
+    "en": "names will change"
+  },
+  "A prévia mostra os primeiros 20. A correção será aplicada a todos os correspondentes.": {
+    "pt": "A prévia mostra os primeiros 20. A correção será aplicada a todos os correspondentes.",
+    "es": "La vista previa muestra los primeros 20. Se corregirán todas las coincidencias.",
+    "en": "The preview shows the first 20. All matching names will be corrected."
+  },
+  "Aplicar correção aos nomes": {
+    "pt": "Aplicar correção aos nomes",
+    "es": "Aplicar corrección a los nombres",
+    "en": "Apply name correction"
+  },
+  "Nomes preparados. Confira os itens e clique em Salvar para concluir.": {
+    "pt": "Nomes preparados. Confira os itens e clique em Salvar para concluir.",
+    "es": "Nombres preparados. Revise los artículos y pulse Guardar para finalizar.",
+    "en": "Names prepared. Review the items and click Save to finish."
+  },
+  "A política desta página bloqueou o compartilhamento. Feche e abra o ERP novamente para carregar a configuração atualizada. Salvar PDF continua disponível.": {
+    "pt": "A política desta página bloqueou o compartilhamento. Feche e abra o ERP novamente para carregar a configuração atualizada. Salvar PDF continua disponível.",
+    "es": "La política de esta página bloqueó compartir. Cierre y vuelva a abrir el ERP para cargar la configuración actualizada. Guardar PDF sigue disponible.",
+    "en": "This page’s policy blocked sharing. Close and reopen the ERP to load the updated configuration. Save PDF is still available."
   }
 }

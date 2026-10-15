@@ -17,7 +17,7 @@
               <label>{{ tr('Código base (opcional)') }}<input v-model="barcode" maxlength="140" /></label>
               <small>{{ tr('Informe o código sem tamanho; ele receberá o tamanho ao final. Vazio: novos itens sem código de barras.') }}</small>
               <small>{{ tr('Código do produto original') }}: {{ context.source.barcode || '—' }}</small>
-              <div class="variant-fields"><label>{{ tr('Quantidade por novo tamanho') }}<input v-model.number="quantity" type="number" min="0" max="1000000" step="1" required /></label><label>{{ tr('Local do estoque') }}<select v-model="location"><option value="loja">{{ tr('Loja') }}</option><option value="deposito">{{ tr('Depósito') }}</option></select></label></div>
+              <div class="variant-fields"><div class="variant-quantity"><label for="variant-stock-quantity">{{ tr('Quantidade por novo tamanho') }}</label><StockQuantityInput id="variant-stock-quantity" v-model.number="quantity" type="number" :min="0" :max="1000000" step="1" required /></div><label>{{ tr('Local do estoque') }}<select v-model="location"><option value="loja">{{ tr('Loja') }}</option><option value="deposito">{{ tr('Depósito') }}</option></select></label></div>
               <ul class="variant-preview"><li v-for="size in sizes" :key="size"><strong>{{ name }} {{ size }}</strong><span v-if="exists(size)">{{ tr(existingItem(size)?.is_active === false ? 'Já cadastrado e inativo: estoque preservado' : 'Já cadastrado: estoque preservado') }}</span><span v-else>{{ barcode.trim() ? barcode.trim() + size : '—' }} · {{ quantity }} {{ tr('unidades') }}</span></li></ul>
               <p>{{ tr('Novos tamanhos: {count}', { count: missing.length }) }}</p>
             </fieldset>
@@ -36,6 +36,8 @@
   </div>
 </template>
 <script setup lang="ts">
+import StockQuantityInput from './StockQuantityInput.vue'
+import { canonicalSize } from '@/services/inventoryTaxonomy'
 import { isAxiosError } from 'axios'
 import { vErpDialog } from '@/directives/erpDialog'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -50,8 +52,8 @@ const name = ref(''), sizeText = ref(''), barcode = ref(''), quantity = ref(0), 
 const title = computed(() => tr(props.mode === 'duplicate' ? 'Duplicar produto' : 'Adicionar grade'))
 const hidden = readHiddenOptions(HIDDEN_PRESETS_KEY, GRADE_PRESETS.map(p => p.label))
 const presets = [...GRADE_PRESETS.filter(p => !hidden.includes(optionKey(p.label))), ...readCustomPresets()]
-const sizes = computed(() => [...new Set((props.mode === 'duplicate' ? [sizeText.value] : sizeText.value.split(/[;,\s]+/)).map(s => s.trim().toUpperCase()).filter(Boolean))])
-const existingItem = (size: string) => context.value?.existing.find(row => optionKey(row.size || '') === optionKey(size))
+const sizes = computed(() => [...new Set((props.mode === 'duplicate' ? [sizeText.value] : sizeText.value.split(/[;,\s]+/)).map(s => canonicalSize(s.trim().toUpperCase())).filter(Boolean))])
+const existingItem = (size: string) => context.value?.existing.find(row => optionKey(canonicalSize(row.size || '')) === optionKey(canonicalSize(size)))
 const exists = (size: string) => !!existingItem(size)
 const missing = computed(() => sizes.value.filter(s => !exists(s)))
 const validationHint = computed(() => {
@@ -96,6 +98,7 @@ async function submit() {
 onMounted(load)
 </script>
 <style scoped>
+.variant-quantity{display:flex;flex-direction:column;gap:6px;min-width:0}
 .erp-dialog-backdrop { position:fixed; inset:0; z-index:1100; display:flex; align-items:center; justify-content:center; }
 .variants-modal{width:min(640px,100%);max-height:90dvh;display:flex;flex-direction:column}.variants-form{display:flex;flex-direction:column;min-height:0}.variants-body{overflow:auto}.variant-source{display:flex;gap:12px;margin-bottom:18px}.variant-source img{width:76px;height:90px;object-fit:contain;border-radius:10px}.variant-source p{margin:5px 0}fieldset{border:0;padding:0;margin:0;display:grid;gap:12px;min-width:0}label{display:grid;gap:6px;font-size:.875rem;font-weight:600}input:not([type=checkbox]),select{width:100%;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}small{color:#64748b;display:block;line-height:1.4}.variant-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.variant-presets{display:flex;flex-wrap:wrap;gap:6px}.variant-preview{margin:0;padding:0;list-style:none;display:grid;gap:8px}.variant-preview li{display:grid;gap:4px;padding:10px;border-radius:8px;background:#f1f5f9;overflow-wrap:anywhere}.variant-preview span{font-size:.8rem;color:#475569}.variant-confirm{flex:1 0 100%;min-height:44px;display:flex;align-items:flex-start;line-height:1.5}.variant-confirm input{width:20px;height:20px;margin-top:4px;flex-shrink:0}.variant-error{color:#b91c1c}.erp-dialog__header h2{font-size:1.15rem;margin:0}@media(max-width:480px){.variants-modal{max-height:94dvh}.variant-fields{grid-template-columns:1fr}.erp-dialog__footer{flex-wrap:wrap}}
 .variant-hint,.footer-error{flex:1 0 100%;font-size:.8rem;margin:0;overflow-wrap:anywhere}.variant-hint{color:#64748b}

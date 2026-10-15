@@ -203,7 +203,7 @@ def list_items(
     taxonomy_filter = facet_filters(db)
     query = db.query(Item).filter(Item.deleted_at.is_(None))
 
-    searched = build_search(db, search, taxonomy_filter=taxonomy_filter, brand_context=brand or '') if search else None
+    searched = build_search(db, search or '', taxonomy_filter=taxonomy_filter, brand_context=brand or '', size=size) if search or size else None
     if searched:
         query = query.filter(searched.condition)
     if category:
@@ -212,8 +212,6 @@ def list_items(
         query = query.filter(taxonomy_filter(Item.brand, brand))
     if location:
         query = query.filter(Item.location.ilike(f"%{location}%"))
-    if size:
-        query = query.filter(Item.size == size)
     if color:
         query = query.filter(taxonomy_filter(Item.color, color))
     if supplier_id:

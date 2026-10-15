@@ -10,7 +10,7 @@ from decimal import Decimal
 from sqlalchemy import and_, case, false, func, literal, or_
 
 from ..models.inventory import Item
-from .inventory_taxonomy import facet_filters, search_text
+from .inventory_taxonomy import facet_filters, search_text, canonical_size
 from .inventory_footwear_sizes import DG, NUMBER, equivalent_filter, footwear_filter, numeric_size
 
 _ACCENTS = 'áàâãäéèêëíìîïóòôõöúùûüçñ'
@@ -20,7 +20,7 @@ _SIZE = re.compile(r'(?:\d{1,2}(?:[.,]\d{1,2})?|[2-6]xl|xxxs|xxs|xs|s|m|l|xl|xxl
 _MARKER = re.compile(r'\b(?:tamanho|tam\.?|size|talle|numero|n[º°])\s*:?\s+(\S+)')
 _CONNECTORS = {'de', 'do', 'da', 'dos', 'das', 'no', 'na'}
 _KINDS = (
-    ('camiseta', 'camisetas', 't-shirt', 't-shirts', 'tshirt', 'tshirts', 't shirt', 't shirts'),
+    ('camiseta', 'camisetas', 't-shirt', 't-shirts', 'tshirt', 'tshirts', 't shirt', 't shirts', 'tsirt', 't-sirt', 'tshrit', 'camseta', 'camsetas'),
     ('tenis', 'sneaker', 'sneakers'),
     ('chinelo', 'chinelos', 'slide', 'slides'),
     ('calca', 'calcas'),
@@ -46,7 +46,17 @@ def size_key(value):
     value = re.sub(r'^(?:tamanho|tam\.?|size|talle)\s*:?\s*', '', text_key(value).strip())
     if re.fullmatch(r'\d+(?:[.,]\d+)?', value):
         return format(Decimal(value.replace(',', '.')).normalize(), 'f')
-    return value
+    return canonical_size(value).lower()
+
+
+def one_typo(a, b):
+    """At most one insertion/deletion/substitution; don't turn calçados into calças."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) <= 1
+    short, long = sorted((a, b), key=len)
+    return any(long[:i] + long[i + 1:] == short for i in range(len(long)))
 
 
 def parse(value):
@@ -71,6 +81,13 @@ def parse(value):
         if _SIZE.fullmatch(token) or numeric_size(token):
             sizes.append(size_key(token))
         elif token not in _CONNECTORS or (len(tokens) == 1 and not sizes):
+            # Correct common words only, never brands, short sizes or model codes.
+            if token.isalpha() and len(token) >= 5 and not any(token in group for group in _KINDS):
+                from difflib import get_close_matches
+                vocabulary = [word for group in _KINDS for word in group if word.isalpha()]
+                near = get_close_matches(token, [word for word in vocabulary if one_typo(token, word)], n=1, cutoff=0.85)
+                if near:
+                    token = near[0]
             terms.append(token)
     return terms, sizes
 

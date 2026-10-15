@@ -111,14 +111,14 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Marca') }}</label>
-              <input v-model="form.brand" type="text" class="form-input" :placeholder="tr('Ex: Armani, Boss...')" list="brand-list" />
+              <input v-model="form.brand" @blur="form.brand = canonicalBrand(form.brand)" type="text" class="form-input" :placeholder="tr('Ex: Armani, Boss...')" list="brand-list" />
               <datalist id="brand-list">
                 <option v-for="b in existingBrands" :key="b" :value="b" />
               </datalist>
             </div>
             <div class="form-group">
               <label>{{ tr('Tamanho') }}</label>
-              <input v-model="form.size" type="text" class="form-input" placeholder="P, M, G, GG..." />
+              <input v-model="form.size" @blur="normalizeCatalogFields" type="text" class="form-input" placeholder="S, M, L, XL..." />
             </div>
           </div>
 
@@ -225,12 +225,12 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Estoque Mínimo') }}</label>
-              <input v-model.number="form.min_stock" type="number" min="0" class="form-input" :class="{ error: errors.min_stock }" />
+              <StockQuantityInput v-model.number="form.min_stock" type="number" :min="0" class="form-input" :class="{ error: errors.min_stock }" />
               <span v-if="errors.min_stock" class="error-msg">{{ tr(errors.min_stock) }}</span>
             </div>
             <div class="form-group">
               <label>{{ tr('Estoque Máximo') }}</label>
-              <input v-model.number="form.max_stock" type="number" min="0" class="form-input" />
+              <StockQuantityInput v-model.number="form.max_stock" type="number" :min="0" class="form-input" />
             </div>
           </div>
           </details>
@@ -253,7 +253,7 @@
             </div>
             <div v-if="!gradeItemCount" class="form-group">
               <label>{{ tr('Estoque inicial') }}</label>
-              <input v-model.number="initialStock" type="number" min="0" class="form-input" placeholder="0" />
+              <StockQuantityInput v-model.number="initialStock" type="number" :min="0" class="form-input" placeholder="0" />
               <span class="form-hint">{{ tr('Quantidade adicionada ao {local} ao criar o item.', { local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</span>
             </div>
           </template>
@@ -429,7 +429,7 @@
           <!-- Initial stock + location -->
           <div class="form-group">
             <label>{{ tr('Estoque inicial por tamanho') }}</label>
-            <input v-model.number="gradeInitialStock" type="number" min="0" class="form-input" placeholder="0" />
+            <StockQuantityInput v-model.number="gradeInitialStock" type="number" :min="0" class="form-input" placeholder="0" />
             <span class="form-hint">{{ tr('Quantidade padrão para as variações sem ajuste individual.') }}</span>
           </div>
           <div class="form-group" v-if="gradeTotalStock > 0">
@@ -445,7 +445,7 @@
             <span class="hint-label">{{ tr('Cod. de barras base:') }}</span>
             <code class="hint-code">{{ form.barcode }}</code>
             <span class="hint-arrow">→</span>
-            <code class="hint-code">{{ form.barcode }}<strong>{{ gradeSizes[0] || form.size.trim().toUpperCase() }}</strong></code>
+            <code class="hint-code">{{ form.barcode }}<strong>{{ gradeSizes[0] || canonicalSize(form.size.trim().toUpperCase()) }}</strong></code>
             <span>{{ tr('Na grade, o código de barras recebe o tamanho. Cada variação também terá seu próprio SKU.') }}</span>
           </div>
 
@@ -464,7 +464,7 @@
                   </optgroup>
                 </select>
               </label>
-              <label>{{ tr('Quantidade') }}<input v-model.number="bulkGradeQuantity" :disabled="gradeLocked" type="number" min="0" step="1" inputmode="numeric" class="form-input" :aria-label="tr('Quantidade para aplicar')" @keydown.enter.stop.prevent="applyGradeQuantity" /></label>
+              <div class="grade-quantity-field"><label for="bulk-grade-quantity">{{ tr('Quantidade') }}</label><StockQuantityInput id="bulk-grade-quantity" v-model.number="bulkGradeQuantity" :disabled="gradeLocked" type="number" :min="0" step="1" inputmode="numeric" class="form-input" :aria-label="tr('Quantidade para aplicar')" @keydown.enter.stop.prevent="applyGradeQuantity" /></div>
               <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="gradeLocked || !validGradeQuantity(bulkGradeQuantity) || !gradeRows.length" @click="applyGradeQuantity">{{ tr('Aplicar') }}</button>
             </div>
             <p class="form-hint">{{ tr('Aplique por cor ou tamanho, ou ajuste cada linha abaixo. Zero cria o cadastro sem estoque.') }}</p>
@@ -472,12 +472,12 @@
               <div v-for="row in gradeRows" :key="row.key" class="gp-row">
                 <div class="gp-details">
                   <span class="gp-tags"><span v-if="row.size" class="gp-size">{{ row.size }}</span><span v-if="row.color" class="gp-color-badge">{{ row.color }}</span></span>
-                  <span class="gp-name">{{ [form.name || tr('(nome)'), row.size, row.color].filter(Boolean).join(' ') }}</span>
+                  <span class="gp-name">{{ [gradeModelName || tr('(nome)'), row.size, row.color].filter(Boolean).join(' ') }}</span>
                   <span v-if="form.barcode" class="gp-barcode">{{ form.barcode + row.size }}</span>
                 </div>
-                <label class="gp-quantity">{{ tr('Qtd.') }}
-                  <input :value="gradeQuantity(row)" type="number" min="0" step="1" inputmode="numeric" class="form-input" :disabled="gradeLocked" :aria-label="tr('Quantidade {name}', { name: [row.size, row.color].filter(Boolean).join(' ') })" :aria-invalid="!validGradeQuantity(gradeQuantity(row))" @input="setGradeQuantity(row.key, $event)" @keydown.enter.stop.prevent />
-                </label>
+                <div class="gp-quantity"><span aria-hidden="true">{{ tr('Qtd.') }}</span>
+                  <StockQuantityInput :model-value="gradeQuantity(row)" type="number" :min="0" step="1" inputmode="numeric" class="form-input" :disabled="gradeLocked" :aria-label="tr('Quantidade {name}', { name: [row.size, row.color].filter(Boolean).join(' ') })" :aria-invalid="!validGradeQuantity(gradeQuantity(row))" @update:model-value="gradeQuantities[row.key] = $event" @keydown.enter.stop.prevent />
+                </div>
                 <button type="button" class="gp-remove erp-button erp-button--ghost erp-button--icon" :disabled="saving || uncertainSave || !!partialItems.length" :aria-label="tr('Remover variação {name}', { name: [row.size, row.color].filter(Boolean).join(' ') })" @click="excludeGradeRow(row.key)">×</button>
               </div>
               <p v-if="!gradeRows.length" role="status">{{ tr('Nenhuma variação selecionada. Restaure ou escolha outros tamanhos.') }}</p>
@@ -580,6 +580,8 @@
 </template>
 
 <script setup lang="ts">
+import StockQuantityInput from './StockQuantityInput.vue'
+import { canonicalSize, canonicalBrand } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import ProductVariantsModal from './ProductVariantsModal.vue'
 import { inventoryVariantsAPI, type VariantResult, type VariantContext, type DuplicateRequest } from '@/services/inventoryVariants'
@@ -768,18 +770,17 @@ function toggleQuickColor(c: string) {
 }
 const gradeRows = computed(() => {
   if (!gradeSizes.value.length && !gradeColors.value.length) return []
-  const sizes = gradeSizes.value.length ? gradeSizes.value : [form.size.trim().toUpperCase()]
+  const sizes = gradeSizes.value.length ? gradeSizes.value : [canonicalSize(form.size.trim().toUpperCase())]
   const colors = gradeColors.value.length ? gradeColors.value : [form.color || '']
   return colors.flatMap(color => sizes.map(size => ({ size, color, key: JSON.stringify([size, color]) })))
     .filter(row => !excludedGradeRows.value.includes(row.key))
 })
 const gradeItemCount = computed(() => gradeRows.value.length)
 function gradeQuantity(row: { key: string }) { return gradeQuantities.value[row.key] ?? gradeInitialStock.value }
-function setGradeQuantity(key: string, event: Event) {
-  if (gradeLocked.value) return
-  const value = (event.target as HTMLInputElement).value
-  gradeQuantities.value[key] = value === '' ? '' : Number(value)
-}
+const gradeModelName = computed(() => {
+  const name = form.name.trim(), suffix = form.size.trim() ? ' ' + canonicalSize(form.size.trim()) : ''
+  return suffix && name.toLowerCase().endsWith(suffix.toLowerCase()) ? name.slice(0, -suffix.length) : name
+})
 const gradeTotalStock = computed(() => gradeRows.value.reduce((total, row) => {
   const quantity = gradeQuantity(row)
   return total + (validGradeQuantity(quantity) ? quantity : 0)
@@ -838,7 +839,7 @@ function closePresetInput() {
 function applyPreset(preset: GradePreset) {
   excludedGradeRows.value = []
   // Include the photographed size initially; operators can remove any preview row.
-  gradeSizes.value = [...new Set([form.size.trim().toUpperCase(), ...preset.sizes.map(size => size.trim().toUpperCase())].filter(Boolean))]
+  gradeSizes.value = [...new Set([canonicalSize(form.size.trim().toUpperCase()), ...preset.sizes.map(size => canonicalSize(size.trim().toUpperCase()))].filter(Boolean))]
   activePreset.value = preset.label
 }
 
@@ -882,7 +883,7 @@ function removeGradeSize(index: number) {
 }
 
 function addCustomSize() {
-  const s = customSizeInput.value.trim().toUpperCase()
+  const s = canonicalSize(customSizeInput.value.trim().toUpperCase())
   if (s && !gradeSizes.value.includes(s)) {
     gradeSizes.value.push(s)
     activePreset.value = ''
@@ -997,6 +998,15 @@ onUnmounted(() => {
   if (photoStream) photoStream.getTracks().forEach(t => t.stop())
 })
 
+function normalizeCatalogFields() {
+  const old = form.size.trim(), size = canonicalSize(old)
+  if (old && old !== size && form.name.toLowerCase().endsWith(' ' + old.toLowerCase())) {
+    form.name = form.name.slice(0, -old.length) + size
+  }
+  form.size = size
+  form.brand = canonicalBrand(form.brand)
+}
+
 watch(() => form.size, (size, previous) => {
   if (!props.duplicateContext || !previous?.trim()) return
   const suffix = ' ' + previous.trim()
@@ -1079,7 +1089,7 @@ async function handleSubmit() {
     if (!isEdit.value && (gradeSizes.value.length > 0 || gradeColors.value.length > 0)) {
       const sharedGroupKey = form.group_key || `grade-${crypto.randomUUID()}`
       const baseGradePayload = {
-        name: form.name,
+        name: gradeModelName.value,
         description: form.description || null,
         category: form.category || null,
         brand: form.brand || null,
@@ -1129,8 +1139,8 @@ async function handleSubmit() {
           supplier_id: form.supplier_id || null,
           image_data: form.image_data || null,
           brand: form.brand || null,
-          size: form.size.trim().toUpperCase(),
-          barcode: form.barcode ? form.barcode + form.size.trim().toUpperCase() : '',
+          size: canonicalSize(form.size.trim().toUpperCase()),
+          barcode: form.barcode ? form.barcode + canonicalSize(form.size.trim().toUpperCase()) : '',
           group_key: sharedGroupKey,
         }
         for (const row of gradeRows.value) {
@@ -1300,6 +1310,7 @@ async function showReview() {
   else reviewInput.value?.focus({ preventScroll: true })
 }
 async function continueToStock() {
+  normalizeCatalogFields()
   if (saving.value) return
   if (conflicts.value.length || !intakeReviewed.value) {
     reviewError.value = 'Confira os dados e resolva as diferenças antes de continuar.'
@@ -1594,7 +1605,7 @@ function handleComma(event: KeyboardEvent, add: () => void) {
   max-height: 200px; overflow-y: auto;
 }
 .gp-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) 64px 32px; align-items: center; gap: 8px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 112px 32px; align-items: center; gap: 8px;
   padding: 8px 10px; font-size: 0.8rem;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -1605,8 +1616,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
   background: #e0e7ff; border-radius: 4px; padding: 0.1rem 0.3rem;
   text-align: center; font-size: 0.75rem;
 }
-.grade-bulk-stock { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto; gap: 8px; align-items: end; margin: 10px 0 6px; }
-.grade-bulk-stock label, .gp-row .gp-quantity { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; margin: 0; font-size: .75rem; }
+.grade-bulk-stock { display: grid; grid-template-columns: minmax(0, 1fr) 112px auto; gap: 8px; align-items: end; margin: 10px 0 6px; }
+.grade-quantity-field, .grade-bulk-stock label, .gp-row .gp-quantity { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; margin: 0; font-size: .75rem; }
 .grade-bulk-stock .form-input { margin-top: 4px; min-width: 0; min-height: 40px; padding: 6px 8px; }
 .gp-quantity { flex: 0 0 64px; min-width: 0; font-size: .7rem; color: #64748b; }
 .gp-quantity .form-input { box-sizing: border-box; min-width: 0; width: 100%; padding: 5px; min-height: 40px; text-align: center; }
@@ -1614,7 +1625,7 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .grade-quantity-summary small { color: #64748b; line-height: 1.4; }
 @media (max-width: 600px) {
   .gp-row { gap: 6px; padding: 8px; }
-  .grade-bulk-stock { grid-template-columns: minmax(0, 1fr) 72px auto; gap: 6px; }
+  .grade-bulk-stock { grid-template-columns: minmax(0, 1fr) 112px auto; gap: 6px; }
   .gp-color-badge { max-width: 45%; overflow-wrap: anywhere; }
   .grade-bulk-stock .form-input, .gp-quantity .form-input { font-size: 16px; }
 }

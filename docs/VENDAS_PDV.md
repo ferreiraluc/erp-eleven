@@ -324,3 +324,18 @@ A conciliação com o caderno/BI continua planejada em `CONCILIACAO_VENDAS.md`.
   troca de produto/cliente, fiado, rollback e revisão obsoleta. PostgreSQL valida
   migração e concorrência real; UI validada com dados sintéticos, sem emitir
   pagamentos, estornos externos ou impressões reais.
+
+
+### Política de compartilhamento do site
+
+O frontend no Render deve enviar `Permissions-Policy: web-share=(self), camera=(self), microphone=(), geolocation=()`
+para `/*`, conforme `render.yaml`. Essa configuração pertence à resposta HTML;
+um cabeçalho na API sozinho não libera o compartilhamento do documento frontend.
+Em serviços não geridos pelo Blueprint, aplicar também em **Headers** no Render.
+`web-share=(self)` permite compartilhar por toque no próprio ERP, sem habilitar
+origens externas. Não modifica CSP, autenticação ou o envio exclusivo do arquivo.
+Os detalhes agora distinguem política reconhecida e bloqueada de uma API de políticas
+incompleta (`policySupported=false`, política desconhecida). `NotAllowedError`
+também pode ser uma recusa nativa do aparelho; cabeçalho correto não garante suporte
+em todas as versões do navegador. Validar o compartilhamento final no Samsung/iOS.
+Referência: [Web Share API — Permissions Policy](https://www.w3.org/TR/web-share/#permissions-policy).
