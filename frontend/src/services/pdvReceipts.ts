@@ -12,7 +12,7 @@ export interface ReceiptPreview {
 }
 export const pdvReceipts = {
   preview: (id: string): Promise<ReceiptPreview> => api.get(`/api/pdv/sales/${id}/receipt/preview`).then(r => r.data),
-  pdf: (id: string): Promise<Blob> => api.get(`/api/pdv/sales/${id}/receipt/pdf`, { responseType: 'blob' }).then(r => r.data),
+  pdf: (id: string): Promise<ArrayBuffer> => api.get(`/api/pdv/sales/${id}/receipt/pdf`, { responseType: 'arraybuffer' }).then(r => r.data),
   credential: (): Promise<{token:string}> => api.post('/api/printing/receipt-device/credential', null, {params:{confirm:true}}).then(r=>r.data),
   printer: (): Promise<{ device: ReceiptPrinter | null }> => api.get('/api/printing/receipt-device').then(r => r.data),
   configure: (body: { name: string; paper_width_mm: number; paper_height_mm: number; auto_receipts: boolean }): Promise<{ device: ReceiptPrinter; token: string | null }> => api.put('/api/printing/receipt-device', body).then(r => r.data),
