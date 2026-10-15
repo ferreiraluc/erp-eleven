@@ -1,6 +1,6 @@
 """Shared persistence and filter rules; never change product identity or balances."""
 from sqlalchemy import inspect
-from .inventory_taxonomy_v1 import FIELDS, canonical, key, text_key, vocabulary
+from .inventory_taxonomy_v2 import FIELDS, canonical, key, text_key, vocabulary, canonical_size, normalized_size_name
 
 
 def clean_product_name(value):
@@ -12,6 +12,11 @@ def normalize_pending_items(session, flush_context, instances):
     from ..models.inventory import Item
     pending = [obj for obj in session.new | session.dirty
                if isinstance(obj, Item) and not obj.deleted_at]
+    for obj in pending:
+        if obj in session.new or inspect(obj).attrs.size.history.has_changes():
+            old = obj.size
+            obj.size = canonical_size(old)
+            obj.name = normalized_size_name(obj.name, old, obj.size)
     for field in FIELDS:
         changed = [obj for obj in pending if obj in session.new or inspect(obj).attrs[field].history.has_changes()]
         if not changed:

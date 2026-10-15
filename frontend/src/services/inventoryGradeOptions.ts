@@ -1,8 +1,8 @@
-import { taxonomyKey } from './inventoryTaxonomy'
+import { taxonomyKey, canonicalSize } from './inventoryTaxonomy'
 export type GradePreset = { label: string; sizes: string[]; custom?: true }
 
 export const GRADE_PRESETS: GradePreset[] = [
-  { label: 'P → 2XL', sizes: ['P', 'M', 'L', 'XL', '2XL'] },
+  { label: 'S → 2XL', sizes: ['S', 'M', 'L', 'XL', '2XL'] },
   { label: '46 → 54', sizes: ['46', '48', '50', '52', '54'] },
   { label: 'Calçados 38–42', sizes: ['38', '39', '40', '41', '42'] },
   { label: 'Calçados 38–44', sizes: ['38', '39', '40', '41', '42', '43', '44'] },
@@ -16,11 +16,11 @@ export const HIDDEN_COLORS_KEY = 'inv_grade_hidden_colors'
 export const STORAGE_ERROR = 'Não foi possível salvar neste navegador. Verifique o armazenamento e tente novamente.'
 
 export function optionKey(value: string) {
-  return taxonomyKey(value)
+  return taxonomyKey(value).replace(/^p → 2xl$/, 's → 2xl')
 }
 
 export function parseGradeSizes(value: string): string[] {
-  return [...new Set(value.toUpperCase().split(/[\s,;]+/).filter(Boolean))]
+  return [...new Set(value.toUpperCase().split(/[\s,;]+/).filter(Boolean).map(canonicalSize))]
 }
 
 export function readPreference(key: string): string | null {

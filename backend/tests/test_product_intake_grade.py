@@ -45,7 +45,7 @@ def test_intake_grade_uses_size_suffixed_barcode_and_shared_fields_and_deduplica
     assert result.status_code == 201, result.text
     rows = result.json()['items']
     assert len(rows) == 5
-    assert [r['size'] for r in rows] == ['P', 'M', 'L', 'XL', '2XL']
+    assert [r['size'] for r in rows] == ['S', 'M', 'L', 'XL', '2XL']
     assert len({r['sku_internal'] for r in rows}) == 5
     for row in rows:
         assert row['barcode'] == '4006381333931' + row['size']
@@ -61,7 +61,7 @@ def test_legacy_grade_barcode_contract_and_zero_stock_are_preserved(manager_stoc
     factory, client, _ = manager_stock_app
     result = client.post('/api/inventory/items/grade', json={'name': 'Modelo', 'sizes': ['P', 'M'], 'base_barcode': 'LEGACY'})
     assert result.status_code == 201, result.text
-    assert [r['barcode'] for r in result.json()['items']] == ['LEGACYP', 'LEGACYM']
+    assert [r['barcode'] for r in result.json()['items']] == ['LEGACYS', 'LEGACYM']
     with factory() as db:
         assert db.query(StockMovement).count() == 0
 
@@ -112,7 +112,7 @@ def test_grade_quantities_per_size_override_default_including_zero(manager_stock
         'initial_stock': 3, 'stock_by_size': {' p ': 4, 'M': 8, 'XL': 0}, 'stock_location': 'deposito',
     })
     assert response.status_code == 201, response.text
-    expected = {'P': 4, 'M': 8, 'L': 3, 'XL': 0, '2XL': 3}
+    expected = {'S': 4, 'M': 8, 'L': 3, 'XL': 0, '2XL': 3}
     for row in response.json()['items']:
         assert (row['current_stock'], row['stock_loja'], row['stock_deposito']) == (expected[row['size']], 0, expected[row['size']])
     with factory() as db:

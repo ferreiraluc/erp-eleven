@@ -68,7 +68,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Quantidade *') }}</label>
-              <input v-model.number="form.quantity" type="number" :min="form.movement_type === 'adjustment' ? 0 : 1" class="form-input" :class="{ error: errors.quantity }" />
+              <StockQuantityInput v-model.number="form.quantity" type="number" :min="form.movement_type === 'adjustment' ? 0 : 1" class="form-input" :class="{ error: errors.quantity }" />
               <span v-if="errors.quantity" class="error-msg">{{ tr(errors.quantity) }}</span>
             </div>
             <div class="form-group" v-if="form.movement_type === 'entry'">
@@ -94,7 +94,7 @@
           <div class="batch-list">
             <div v-for="(line, idx) in batchLines" :key="idx" class="batch-line">
               <input v-model="line.item_id" type="text" class="form-input" :placeholder="tr('ID do item')" />
-              <input v-model.number="line.quantity" type="number" min="1" class="form-input small" :placeholder="tr('Qtd')" />
+              <StockQuantityInput v-model.number="line.quantity" type="number" :min="1" class="form-input small" :placeholder="tr('Qtd')" />
               <input v-model.number="line.unit_cost" type="number" step="0.01" min="0" class="form-input small" :placeholder="tr('Custo')" />
               <button @click="batchLines.splice(idx, 1)" class="remove-btn erp-button erp-button--danger erp-button--icon" type="button">×</button>
             </div>
@@ -121,6 +121,7 @@
 </template>
 
 <script setup lang="ts">
+import StockQuantityInput from './StockQuantityInput.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()

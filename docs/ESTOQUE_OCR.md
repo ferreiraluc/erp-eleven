@@ -65,7 +65,8 @@ A busca combina nome/categoria, marca, cor e **tamanho** no mesmo produto:
 `Tênis tamanho 11`, `Armani 7`, `Boss 40`, `Tênis Boss 41`, `Camiseta tamanho S`
 e `T-shirt tamanho M`. Aceita maiúsculas/minúsculas, acentos, `tam.`, `tamanho`,
 `size` e `talle`. Camiseta e T-shirt são sinônimos na busca; tênis e sneakers também.
-Tamanhos de roupas continuam exatos: `S` não vira `P` e `40` não inclui `40.5`.
+Tamanhos de roupas reconhecem as equivalências `P=S`, `G=L`, `GG=XL` e `XXL=2XL`.
+Numeração de roupas continua exata: `40` não inclui `40.5`.
 SKU/código completo continuam encontráveis, inclusive identificadores curtos.
 Números que pertencem ao nome de um modelo podem ser ambíguos com tamanhos; nesse
 caso, use o SKU/código. Não há correção livre de erros de digitação nem IA paga.
@@ -269,7 +270,7 @@ novamente. Se o armazenamento falhar, o botão e a seleção permanecem, com avi
 Nenhum produto salvo ou histórico é alterado por essa organização de atalhos.
 Salvar modelo/cor não cria produtos nem movimenta estoque: isso ocorre na confirmação
 final do cadastro, após a conferência obrigatória.
-Ao selecionar **P → 2XL**, por exemplo, a peça branca P origina P, M, L, XL e 2XL
+Ao selecionar **S → 2XL**, por exemplo, a peça branca S (ou P) origina S, M, L, XL e 2XL
 no mesmo grupo, com foto, marca, descrição e preços compartilhados. O tamanho da
 peça base é preservado se estiver fora do modelo escolhido. Sem outras cores
 selecionadas, todas as variações usam a cor da peça. É possível cancelar a grade
@@ -279,7 +280,7 @@ sem perder os dados e cadastrar somente a peça. O estoque informado na grade é
 Essa opção monta uma grade no novo cadastro. Para produtos já salvos, use as ações
 descritas abaixo. Códigos de barras iguais não provam identidade. O cadastro
 unificado mantém a regra de negócio da grade: **código de barras base + tamanho**
-(por exemplo, `789123P`, `789123M`, `789123XL`), além de um SKU independente por
+(por exemplo, `789123S`, `789123M`, `789123XL`), além de um SKU independente por
 variação. A prévia mostra cada código resultante, inclusive na matriz de cores e
 tamanhos. No produto avulso o código permanece como informado. Os tamanhos de uma
 solicitação são normalizados e
@@ -736,8 +737,8 @@ Cores de significados diferentes, como Navy e Azul, também permanecem distintas
 
 A regra de persistência se aplica a cadastros ORM: formulário, bot, CSV, edição em
 lote, duplicação e novas grades. Os filtros reconhecem também grafias antigas e
-acentos; a categoria principal inclui suas subcategorias. Não há aproximação por
-semelhança de nomes nem união automática de produtos, tamanhos ou grades. SKUs,
+acentos; a categoria principal inclui suas subcategorias. A busca corrige pequenos erros em tipos conhecidos de produto, conforme a seção de
+aliases. Não há união automática de produtos ou grades por semelhança de nomes. SKUs,
 códigos de barras e nomes de modelos mantêm suas identidades.
 
 A migração `d6e7f8a9b0c1` consolida somente marca/categoria/cor dos produtos não
@@ -783,7 +784,7 @@ um modal. Ver [navegação e confirmações do cadastro](UI_MODAIS.md#cadastro-e
 
 ### Remover variações antes de cadastrar a grade
 
-Após selecionar um modelo, como **P → 2XL**, a prévia tem um **× em cada linha**.
+Após selecionar um modelo, como **S → 2XL**, a prévia tem um **× em cada linha**.
 Remover P e M deixa apenas L, XL e 2XL para criação. Com várias cores, o × remove
 somente aquela combinação de tamanho e cor. **Restaurar variações removidas**
 recupera as linhas; aplicar um modelo de tamanhos novamente também refaz a prévia.
@@ -834,3 +835,40 @@ estão representadas e quantas peças pertencem **aos itens selecionados**, soma
 loja e depósito. Não inclui automaticamente outros tamanhos do grupo. Se algum
 saldo não estiver confirmado, o total aparece como **Não informado**. Essa contagem
 de grupos existentes é distinta dos conjuntos completos calculados na prévia.
+
+
+## Correção de nomes, tamanhos e busca (15/10/2026)
+
+**Selecionar → Editar Massivo → Corrigir nomes em lote** permite localizar uma
+palavra/trecho e substituí-la nos nomes selecionados, ignorando caixa. A prévia
+mostra antes/depois; **Aplicar correção aos nomes** apenas prepara a edição,
+e **Salvar** confirma no backend com as permissões e auditoria existentes.
+`Biss → Boss` mantém `Y-26-09` e o tamanho de cada item. Não interpreta expressões
+regulares, não altera palavras parciais nem sobrescreve códigos/modelos por similaridade.
+
+Nos formulários de estoque, os campos numéricos têm +/− em celulares e telas de toque.
+Eles respeitam os limites de cada campo e não focam o texto ao tocar nos botões.
+Ajustes em lote continuam exigindo motivo; esses controles não movimentam estoque
+antes da confirmação do formulário.
+
+**DolceGabbana, Dolce&Gabbana, D&G e DG** usam **Dolce & Gabbana** como marca.
+Tamanhos de roupa usam **S (P), M, L (G), XL (GG), 2XL (XXL)**. Criação, duplicação,
+grade, importação, filtros e busca compartilham as equivalências. Grades antigas
+salvas no navegador são interpretadas com os mesmos tamanhos; uma grade não cria
+um novo S quando já contém P. Quantidades conflitantes para P e S na mesma
+requisição são rejeitadas para evitar perda de quantidade.
+
+A migração `i1d2e3f4a5b6` corrige marcas e tamanhos dos produtos não excluídos em
+lotes de 500, sem carregar fotos. Ajusta o sufixo do nome somente quando ele
+corresponde exatamente ao tamanho antigo, por exemplo `DN0281 P → DN0281 S`.
+Preserva ID, SKU, códigos de barras já impressos, grupos, saldos, vendas,
+movimentações e datas. Registra antes/depois em `inventory_catalog_snapshot_v2`.
+Se já existem dois cadastros equivalentes na mesma grade, ambos são preservados:
+a migração não soma saldos nem exclui produtos automaticamente.
+
+A busca reconhece `camseta`, `tsirt`, `t-sirt` e sinônimos de camiseta/T-shirt,
+além de pequenos erros de uma letra nas palavras conhecidas de tipos de produtos.
+`tsirt G` encontra camiseta/T-shirt L. Calçados mantêm suas escalas numéricas e
+meios tamanhos. Códigos alfanuméricos continuam literais; uma busca sem correspondência
+real pode retornar vazia. Não há chamadas de IA nem carregamento do catálogo/fotos
+em memória para esse tratamento: os filtros continuam no SQL antes da paginação.

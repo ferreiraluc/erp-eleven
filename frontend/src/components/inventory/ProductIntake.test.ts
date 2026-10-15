@@ -49,7 +49,7 @@ async function review() {
 beforeEach(() => {
   localStorage.clear()
   mock.photo = { name: 'Polo', description: 'Polo lisa', brand: '', size: '', category: 'Camisetas', color: 'Branco', image_data: 'data:image/jpeg;base64,photo' }
-  mock.label = { name: 'Polo', brand: 'Marca da etiqueta', size: 'P', barcode: '4006381333931', sale_price: 50, currency: 'USD' }
+  mock.label = { name: 'Polo', brand: 'Marca da etiqueta', size: 'S', barcode: '4006381333931', sale_price: 50, currency: 'USD' }
   mock.getByBarcode.mockResolvedValue([])
   mock.createItem.mockResolvedValue({ id: 'fixture', name: 'Polo', sku_internal: 'QA-1' })
   mock.createMovement.mockResolvedValue({})
@@ -58,10 +58,10 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); root?.remove(); vi.restoreAllMocks(); vi.resetAllMocks() })
 
 describe('Unified optional photo and label intake', () => {
-  it('removes P and M directly from the preview without recreating the base size', async () => {
+  it('removes S and M directly from the preview without recreating the base size', async () => {
     await mount(); await click('Ler etiqueta'); await click('fixture label'); await click('Conferir dados'); await review()
-    await click('Criar grade deste modelo'); await click('P → 2XL')
-    for (const size of ['P', 'M']) {
+    await click('Criar grade deste modelo'); await click('S → 2XL')
+    for (const size of ['S', 'M']) {
       root.querySelector<HTMLButtonElement>(`.gp-remove[aria-label="Remover variação ${size}"]`)!.click(); await nextTick()
     }
     expect(root.querySelectorAll('.gp-row')).toHaveLength(3)
@@ -72,18 +72,18 @@ describe('Unified optional photo and label intake', () => {
   })
   it('removes only the selected color-size combination and can restore it', async () => {
     await mount(); await click('Conferir dados'); await setField('Nome *', 'Camiseta'); await review()
-    await click('Criar grade deste modelo'); await click('P → 2XL'); await click('Branco'); await click('Preto')
-    const remove = async () => { root.querySelector<HTMLButtonElement>('.gp-remove[aria-label="Remover variação P Branco"]')!.click(); await nextTick() }
+    await click('Criar grade deste modelo'); await click('S → 2XL'); await click('Branco'); await click('Preto')
+    const remove = async () => { root.querySelector<HTMLButtonElement>('.gp-remove[aria-label="Remover variação S Branco"]')!.click(); await nextTick() }
     await remove(); expect(root.querySelectorAll('.gp-row')).toHaveLength(9)
     await click('Restaurar variações removidas'); expect(root.querySelectorAll('.gp-row')).toHaveLength(10)
     await remove(); await click('Criar grade (9 itens)')
     expect(mock.createGrade.mock.calls.map(([p]) => [p.color, p.sizes])).toEqual([
-      ['Branco', ['M', 'L', 'XL', '2XL']], ['Preto', ['P', 'M', 'L', 'XL', '2XL']],
+      ['Branco', ['M', 'L', 'XL', '2XL']], ['Preto', ['S', 'M', 'L', 'XL', '2XL']],
     ])
   })
   it('does not fall back to creating a single product when every row was removed', async () => {
     await mount(); await click('Conferir dados'); await setField('Nome *', 'Camiseta'); await review()
-    await click('Criar grade deste modelo'); await click('P → 2XL')
+    await click('Criar grade deste modelo'); await click('S → 2XL')
     for (const button of Array.from(root.querySelectorAll<HTMLButtonElement>('.gp-remove'))) button.click()
     await nextTick(); expect(root.textContent).toContain('0 produto(s), 0 unidade(s)')
     await click('Criar'); expect(mock.createItem).not.toHaveBeenCalled(); expect(mock.createGrade).not.toHaveBeenCalled()
@@ -97,13 +97,13 @@ describe('Unified optional photo and label intake', () => {
     expect(mock.createItem).not.toHaveBeenCalled()
     await click('Conferir dados')
     expect(input('Nome *').value).toBe('Polo'); expect(input('Marca').value).toBe('Marca da etiqueta')
-    expect(input('Tamanho').value).toBe('P'); expect(input('Cor').value).toBe('Branco')
+    expect(input('Tamanho').value).toBe('S'); expect(input('Cor').value).toBe('Branco')
     expect(input('Preço de Venda').value).toBe('50')
     expect(root.querySelector('.intake-conflicts')).toBeNull()
     await review(); await setField('Estoque inicial', '3'); await click('Criar')
     expect(mock.createItem).toHaveBeenCalledTimes(1)
     expect(mock.createGrade).not.toHaveBeenCalled()
-    expect(mock.createItem).toHaveBeenCalledWith(expect.objectContaining({ size: 'P', color: 'Branco', barcode: '4006381333931', image_data: mock.photo.image_data, sale_currency: 'USD' }))
+    expect(mock.createItem).toHaveBeenCalledWith(expect.objectContaining({ size: 'S', color: 'Branco', barcode: '4006381333931', image_data: mock.photo.image_data, sale_currency: 'USD' }))
     expect(mock.createMovement).toHaveBeenCalledWith(expect.objectContaining({ quantity: 3, location: 'loja' }))
   })
   it('preserves manual corrections and offers an explicit choice for conflicting brand and price/currency', async () => {
@@ -139,17 +139,17 @@ describe('Unified optional photo and label intake', () => {
     await mount(); await click('Adicionar foto'); await click('fixture photo'); await click('Ler etiqueta'); await click('fixture label')
     await click('Conferir dados'); await review()
     expect(button('Criar')).toBeDefined(); expect(mock.createGrade).not.toHaveBeenCalled()
-    await click('Criar grade deste modelo'); await click('P → 2XL')
+    await click('Criar grade deste modelo'); await click('S → 2XL')
     expect(root.textContent).toContain('5 produto(s), 0 unidade(s)')
-    for (const size of ['P', 'M', 'L', 'XL', '2XL']) expect(root.textContent).toContain('4006381333931' + size)
+    for (const size of ['S', 'M', 'L', 'XL', '2XL']) expect(root.textContent).toContain('4006381333931' + size)
     await click('Criar grade (5 itens)')
-    expect(mock.createGrade).toHaveBeenCalledWith(expect.objectContaining({ sizes: ['P', 'M', 'L', 'XL', '2XL'], color: 'Branco', initial_stock: 0, image_data: mock.photo.image_data, base_barcode: '4006381333931' }))
+    expect(mock.createGrade).toHaveBeenCalledWith(expect.objectContaining({ sizes: ['S', 'M', 'L', 'XL', '2XL'], color: 'Branco', initial_stock: 0, image_data: mock.photo.image_data, base_barcode: '4006381333931' }))
     expect(mock.createItem).not.toHaveBeenCalled(); expect(mock.createMovement).not.toHaveBeenCalled()
   })
   it('supports label-only input, preserves the base size when selecting another preset, and cancels grade without losing fields', async () => {
     mock.label = { ...mock.label, size: '3XL', color: 'Branco' }
     const i18n = await mount(); await click('Ler etiqueta'); await click('fixture label'); await click('Conferir dados'); await review()
-    await click('Criar grade deste modelo'); await click('P → 2XL')
+    await click('Criar grade deste modelo'); await click('S → 2XL')
     expect(button('Criar grade (6 itens)')).toBeDefined()
     await click('Cadastrar apenas esta peça'); expect(button('Criar')).toBeDefined()
     i18n.global.locale.value = 'en'; await nextTick(); expect(button('Create variants of this model')).toBeDefined()
@@ -162,7 +162,7 @@ describe('Unified optional photo and label intake', () => {
     await click('Criar grade deste modelo'); await click('Branco'); await click('Preto'); await click('Criar grade (2 itens)')
     expect(mock.createItem).toHaveBeenCalledTimes(2)
     for (const [payload] of mock.createItem.mock.calls) {
-      expect(payload).toMatchObject({ size: 'P', barcode: '4006381333931P' })
+      expect(payload).toMatchObject({ size: 'S', barcode: '4006381333931S' })
     }
     expect(mock.createGrade).not.toHaveBeenCalled()
   })
@@ -180,7 +180,7 @@ it('makes review visible in the footer and returns to it when stock is requested
   await click('Criar')
   expect(mock.createItem).not.toHaveBeenCalled()
   expect(root.querySelector('.submit-error')?.textContent).toContain('Selecione um modelo')
-  await click('P → 2XL'); await click('Criar grade (5 itens)')
+  await click('S → 2XL'); await click('Criar grade (5 itens)')
   expect(mock.createGrade).toHaveBeenCalledOnce()
 })
 
@@ -295,7 +295,7 @@ describe('Reusable grade and color editors', () => {
   })
   it('removes a saved color and its selection, preserves sizes, and allows adding it again later', async () => {
     localStorage.setItem('inv_grade_custom_colors', JSON.stringify(['M', 'Lilás']))
-    await mount(); await openGrade(); await click('P → 2XL'); await click('M')
+    await mount(); await openGrade(); await click('S → 2XL'); await click('M')
     expect(root.querySelector('[aria-label="Remover cor M"]')).toBeNull()
     await click('Editar opções'); await select('[aria-label="Remover cor M"]')
     expect(root.querySelector('[aria-label="Remover cor M"]')).toBeNull()
@@ -315,7 +315,7 @@ describe('Reusable grade and color editors', () => {
   it('removes a custom preset without erasing the current size draft or built-in options', async () => {
     await mount(); await openGrade(); await preset(); await click('Adicionar modelo')
     await click('Editar opções')
-    expect(root.querySelector('[aria-label="Remover modelo P → 2XL"]')).not.toBeNull()
+    expect(root.querySelector('[aria-label="Remover modelo S → 2XL"]')).not.toBeNull()
     expect(root.querySelector('[aria-label="Remover cor Preto"]')).not.toBeNull()
     await select('[aria-label="Remover modelo M ao 3XL"]')
     expect(root.textContent).toContain('Modelo M ao 3XL removido dos botões salvos.')
@@ -323,7 +323,7 @@ describe('Reusable grade and color editors', () => {
     expect(JSON.parse(localStorage.getItem('inv_grade_custom_presets')!)).toEqual([])
     app.unmount(); root.remove(); await mount(); await openGrade()
     expect(Array.from(root.querySelectorAll('.grade-presets button')).some(b => b.textContent?.trim() === 'M ao 3XL')).toBe(false)
-    expect(button('P → 2XL')).toBeDefined(); noInventoryWrites()
+    expect(button('S → 2XL')).toBeDefined(); noInventoryWrites()
   })
   it('does not remove saved options or selected colors when storage fails', async () => {
     localStorage.setItem('inv_grade_custom_colors', JSON.stringify(['M']))
@@ -342,35 +342,35 @@ describe('Reusable grade and color editors', () => {
   })
   it('removes built-in colors and presets persistently, keeping unrelated custom options and current sizes', async () => {
     localStorage.setItem('inv_grade_custom_colors', '["Lilás"]')
-    await mount(); await openGrade(); await click('P → 2XL'); await click('Preto'); await click('Editar opções')
-    await select('[aria-label="Remover cor Preto"]'); await select('[aria-label="Remover modelo P → 2XL"]')
+    await mount(); await openGrade(); await click('S → 2XL'); await click('Preto'); await click('Editar opções')
+    await select('[aria-label="Remover cor Preto"]'); await select('[aria-label="Remover modelo S → 2XL"]')
     expect(root.querySelector('.selected-colors')).toBeNull()
     expect(button('Criar grade (5 itens)')).toBeDefined()
     expect(button('Lilás')).toBeDefined()
     app.unmount(); root.remove(); await mount(); await openGrade()
     expect(Array.from(root.querySelectorAll('.quick-colors button')).some(b => b.textContent?.trim() === 'Preto')).toBe(false)
-    expect(Array.from(root.querySelectorAll('.grade-presets button')).some(b => b.textContent?.trim() === 'P → 2XL')).toBe(false)
+    expect(Array.from(root.querySelectorAll('.grade-presets button')).some(b => b.textContent?.trim() === 'S → 2XL')).toBe(false)
     expect(button('Lilás')).toBeDefined(); expect(button('46 → 54')).toBeDefined(); noInventoryWrites()
   })
   it('allows re-adding removed defaults without duplicate buttons or losing the new sizes on reopen', async () => {
     await mount(); await openGrade(); await click('Editar opções')
-    await select('[aria-label="Remover cor Preto"]'); await select('[aria-label="Remover modelo P → 2XL"]')
-    await color('preto'); await click('Adicionar'); await preset('P → 2XL', 'P M'); await click('Adicionar modelo')
+    await select('[aria-label="Remover cor Preto"]'); await select('[aria-label="Remover modelo S → 2XL"]')
+    await color('preto'); await click('Adicionar'); await preset('S → 2XL', 'S M'); await click('Adicionar modelo')
     app.unmount(); root.remove(); await mount(); await openGrade()
     expect(Array.from(root.querySelectorAll('.quick-colors button')).filter(b => b.textContent?.trim() === 'Preto')).toHaveLength(1)
-    expect(Array.from(root.querySelectorAll('.grade-presets button')).filter(b => b.textContent?.trim() === 'P → 2XL')).toHaveLength(1)
-    await click('P → 2XL'); expect(button('Criar grade (2 itens)')).toBeDefined()
-    await click('Editar opções'); await select('[aria-label="Remover modelo P → 2XL"]')
+    expect(Array.from(root.querySelectorAll('.grade-presets button')).filter(b => b.textContent?.trim() === 'S → 2XL')).toHaveLength(1)
+    await click('S → 2XL'); expect(button('Criar grade (2 itens)')).toBeDefined()
+    await click('Editar opções'); await select('[aria-label="Remover modelo S → 2XL"]')
     app.unmount(); root.remove(); await mount(); await openGrade()
-    expect(Array.from(root.querySelectorAll('.grade-presets button')).some(b => b.textContent?.trim() === 'P → 2XL')).toBe(false)
+    expect(Array.from(root.querySelectorAll('.grade-presets button')).some(b => b.textContent?.trim() === 'S → 2XL')).toBe(false)
     noInventoryWrites()
   })
   it('preserves built-in buttons and selections if saving their removal fails', async () => {
-    await mount(); await openGrade(); await click('Preto'); await click('P → 2XL'); await click('Editar opções')
+    await mount(); await openGrade(); await click('Preto'); await click('S → 2XL'); await click('Editar opções')
     vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw Error('Storage unavailable') })
-    await select('[aria-label="Remover cor Preto"]'); await select('[aria-label="Remover modelo P → 2XL"]')
+    await select('[aria-label="Remover cor Preto"]'); await select('[aria-label="Remover modelo S → 2XL"]')
     expect(root.querySelector('.selected-colors')?.textContent).toContain('Preto')
-    expect(button('P → 2XL').getAttribute('aria-pressed')).toBe('true')
+    expect(button('S → 2XL').getAttribute('aria-pressed')).toBe('true')
     expect(root.textContent).toContain('Não foi possível salvar neste navegador.')
     expect(localStorage.getItem('inv_grade_hidden_colors')).toBeNull()
     expect(localStorage.getItem('inv_grade_hidden_presets')).toBeNull(); noInventoryWrites()
@@ -380,7 +380,7 @@ describe('Reusable grade and color editors', () => {
 describe('Grade quantities before registration', () => {
   async function openMatrix() {
     await mount(); await click('Conferir dados'); await setField('Nome *', 'Camiseta X'); await review()
-    await click('Criar grade deste modelo'); await click('P → 2XL')
+    await click('Criar grade deste modelo'); await click('S → 2XL')
     await click('Branco'); await click('Preto')
     root.querySelector<HTMLButtonElement>('button[aria-label="Adicionar cor"]')!.click(); await nextTick()
     const colorInput = root.querySelector<HTMLInputElement>('input[aria-label="Adicionar cor"]')!
@@ -407,9 +407,9 @@ describe('Grade quantities before registration', () => {
     await click('Criar grade (15 itens)')
     expect(mock.createGrade).toHaveBeenCalledTimes(3)
     expect(mock.createGrade.mock.calls.map(([payload]) => [payload.color, payload.stock_by_size]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))).toEqual([
-      ['Azul', { P: 4, M: 6, L: 4, XL: 4, '2XL': 4 }],
-      ['Branco', { P: 3, M: 3, L: 3, XL: 3, '2XL': 3 }],
-      ['Preto', { P: 8, M: 8, L: 8, XL: 8, '2XL': 8 }],
+      ['Azul', { S: 4, M: 6, L: 4, XL: 4, '2XL': 4 }],
+      ['Branco', { S: 3, M: 3, L: 3, XL: 3, '2XL': 3 }],
+      ['Preto', { S: 8, M: 8, L: 8, XL: 8, '2XL': 8 }],
     ])
     expect(mock.createMovement).not.toHaveBeenCalled()
   })
@@ -425,20 +425,20 @@ describe('Grade quantities before registration', () => {
     await apply('all', '2'); expect(root.querySelector('.grade-quantity-summary')?.textContent).toContain('15 variações · 30 peças · 6 grades completas')
     root.querySelector<HTMLButtonElement>('.gp-remove[aria-label="Remover variação M Azul"]')!.click(); await nextTick()
     await click('Criar grade (14 itens)')
-    expect(mock.createGrade.mock.calls.find(([payload]) => payload.color === 'Azul')![0].stock_by_size).toEqual({ P: 2, L: 2, XL: 2, '2XL': 2 })
+    expect(mock.createGrade.mock.calls.find(([payload]) => payload.color === 'Azul')![0].stock_by_size).toEqual({ S: 2, L: 2, XL: 2, '2XL': 2 })
   })
   it.each(['', '-1', '1.5', '2147483648'])('rejects invalid individual quantity %s without creating anything', async (value) => {
-    await openMatrix(); await quantity('Quantidade P Branco', value); await click('Criar grade (15 itens)')
+    await openMatrix(); await quantity('Quantidade S Branco', value); await click('Criar grade (15 itens)')
     expect(mock.createGrade).not.toHaveBeenCalled(); expect(mock.createItem).not.toHaveBeenCalled()
     expect(root.textContent).toContain('Estoque inicial deve ser inteiro')
   })
   it('keeps overrides when default changes, accepts zero, and clears them when leaving grade mode', async () => {
-    await openMatrix(); await quantity('Quantidade P Branco', '0'); await setField('Estoque inicial por tamanho', '4')
-    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade P Branco"]')!.value).toBe('0')
+    await openMatrix(); await quantity('Quantidade S Branco', '0'); await setField('Estoque inicial por tamanho', '4')
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade S Branco"]')!.value).toBe('0')
     expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade M Branco"]')!.value).toBe('4')
-    await click('Cadastrar apenas esta peça'); await click('Criar grade deste modelo'); await click('P → 2XL'); await click('Branco')
+    await click('Cadastrar apenas esta peça'); await click('Criar grade deste modelo'); await click('S → 2XL'); await click('Branco')
     await setField('Estoque inicial por tamanho', '2')
-    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade P Branco"]')!.value).toBe('2')
+    expect(root.querySelector<HTMLInputElement>('[aria-label="Quantidade S Branco"]')!.value).toBe('2')
   })
   it('supports custom quantities for color-only items and their initial movements', async () => {
     await mount(); await click('Conferir dados'); await setField('Nome *', 'Boné'); await review()
@@ -446,4 +446,15 @@ describe('Grade quantities before registration', () => {
     await quantity('Quantidade Branco', '4'); await quantity('Quantidade Preto', '8'); await click('Criar grade (2 itens)')
     expect(mock.createMovement.mock.calls.map(([payload]) => payload.quantity)).toEqual([4, 8])
   })
+})
+
+it('normalizes entered P and DG before review and avoids duplicating size suffixes in a new grade', async () => {
+  await mount(); await click('Conferir dados')
+  await setField('Nome *', 'Camiseta DN0281 P'); await setField('Tamanho', 'P'); await setField('Marca', 'DG')
+  input('Tamanho').dispatchEvent(new Event('blur')); await nextTick()
+  await review(); await click('Criar grade deste modelo'); await click('S → 2XL')
+  expect(root.querySelector('.gp-name')?.textContent).toContain('Camiseta DN0281 S')
+  expect(root.querySelector('.gp-name')?.textContent).not.toContain('S S')
+  await click('Criar grade (5 itens)')
+  expect(mock.createGrade.mock.calls[0]![0]).toMatchObject({ name: 'Camiseta DN0281', brand: 'Dolce & Gabbana', sizes: ['S', 'M', 'L', 'XL', '2XL'] })
 })

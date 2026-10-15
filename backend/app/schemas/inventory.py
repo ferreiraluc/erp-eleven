@@ -267,10 +267,12 @@ class GradeCreateRequest(BaseModel):
 
     @model_validator(mode='after')
     def validate_stock_by_size(self):
-        sizes = {size.strip().upper() for size in self.sizes if size.strip()}
+        from ..services.inventory_taxonomy_v2 import canonical_size
+        self.sizes = list(dict.fromkeys(canonical_size(size.strip().upper()) for size in self.sizes if size.strip()))
+        sizes = set(self.sizes)
         normalized = {}
         for size, quantity in self.stock_by_size.items():
-            key = size.strip().upper()
+            key = canonical_size(size.strip().upper())
             if key not in sizes or key in normalized:
                 raise ValueError('Quantidade deve corresponder a um tamanho selecionado, sem repetição.')
             normalized[key] = quantity

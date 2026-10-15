@@ -36,7 +36,8 @@ class VariantCreateRequest(BaseModel):
     @field_validator('sizes')
     @classmethod
     def valid_sizes(cls, sizes):
-        values = list(dict.fromkeys(' '.join(s.split()).upper() for s in sizes))
+        from ..services.inventory_taxonomy_v2 import canonical_size
+        values = list(dict.fromkeys(canonical_size(' '.join(s.split()).upper()) for s in sizes))
         if any(not s or len(s) > 50 for s in values):
             raise ValueError('Informe tamanhos de 1 a 50 caracteres.')
         return values

@@ -249,3 +249,20 @@ describe('Unknown balances remain unknown during product operations', () => {
     for (const key of ['current_stock', 'stock_loja', 'stock_deposito']) expect(payload).not.toHaveProperty(key)
   })
 })
+
+it('previews a bulk word correction and sends distinct complete names only on Save', async () => {
+  api.batchEdit.mockResolvedValue({})
+  await mount(BulkEditModal, { items: [
+    { ...item, id: 's', name: 'T-shirt Biss Y-26-09 S', size: 'S' },
+    { ...item, id: 'm', name: 'T-shirt Biss Y-26-09 M', size: 'M' },
+  ] })
+  const fields = container.querySelectorAll<HTMLInputElement>('.name-replace input')
+  setInput(fields[0]!, 'Biss'); setInput(fields[1]!, 'Boss'); await nextTick()
+  expect(container.querySelector('.name-preview')?.textContent).toContain('T-shirt Boss Y-26-09 M')
+  button('Aplicar correção aos nomes').click(); await nextTick()
+  expect(api.batchEdit).not.toHaveBeenCalled()
+  button('Salvar 2 itens').click(); await nextTick(); await nextTick()
+  expect(api.batchEdit.mock.calls[0]![0].sizes).toEqual([
+    { id: 's', name: 'T-shirt Boss Y-26-09 S' }, { id: 'm', name: 'T-shirt Boss Y-26-09 M' },
+  ])
+})

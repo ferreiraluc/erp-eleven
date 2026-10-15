@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, defer, load_only
 from ..models.inventory import Item
 from ..schemas.inventory_variants import VariantCreateRequest, VariantSummary
 from .inventory_service import create_movement
-from .inventory_taxonomy import key as taxonomy_key
+from .inventory_taxonomy import key as taxonomy_key, canonical_size
 
 COPY_FIELDS = ('description', 'category', 'color', 'brand', 'unit', 'location',
                'supplier_id', 'cost_price', 'sale_price', 'currency', 'cost_currency',
@@ -17,7 +17,7 @@ COPY_FIELDS = ('description', 'category', 'color', 'brand', 'unit', 'location',
 
 
 def normalized(value):
-    return ' '.join((value or '').split()).casefold()
+    return canonical_size(value or '').casefold()
 
 
 def source_version(source):
