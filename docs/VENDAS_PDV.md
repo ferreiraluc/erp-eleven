@@ -43,7 +43,18 @@ com apenas o arquivo `eleven-ticket-CODIGO.pdf`, sem texto, título ou URL `blob
 O PDF é preparado ao abrir o ticket para que o toque de compartilhar funcione também
 no iOS. Se a preparação falhar, **Preparar PDF** tenta novamente; depois, um novo
 toque em **Compartilhar PDF** abre os aplicativos. Cancelar o compartilhamento não
-baixa nem imprime automaticamente. **Salvar PDF** permanece disponível quando o
+baixa nem imprime automaticamente. Os avisos ficam junto dos botões, fora da área
+rolável do ticket. `AbortError` gera um aviso neutro de cancelamento ou indisponibilidade:
+o navegador usa esse mesmo retorno quando não há aplicativos disponíveis para receber
+o arquivo, portanto não é tratado como cancelamento silencioso. Bloqueios e falhas
+de preparação também aparecem nesse local, com orientação para tentar ou salvar.
+Enquanto a janela nativa está abrindo, o botão indica o andamento e **Salvar PDF**
+continua disponível. Se o navegador não concluir a promessa em 12 segundos, a ação
+é liberada para uma nova tentativa explícita; o ERP não envia nem baixa novamente
+sozinho. Resultados atrasados de uma tentativa não alteram uma tentativa posterior.
+O compartilhamento nativo depende do navegador e dos aplicativos instalados; a
+abertura da janela não comprova que o cliente recebeu o arquivo.
+**Salvar PDF** permanece disponível quando o
 navegador não aceita compartilhar arquivos. Nesse caso, compartilhe o arquivo
 baixado pelo gerenciador de arquivos; o menu de compartilhar a página/visualizador
 do próprio navegador pode acrescentar seu endereço e não é controlado pelo ERP.

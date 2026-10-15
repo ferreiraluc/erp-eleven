@@ -3364,6 +3364,46 @@
     "es": "🖨 Imprimir",
     "en": "🖨 Print"
   },
+  "Abrindo compartilhamento…": {
+    "pt": "Abrindo compartilhamento…",
+    "es": "Abriendo opciones para compartir…",
+    "en": "Opening sharing…"
+  },
+  "Escolha um aplicativo para enviar. Se nenhuma janela abrir, use Salvar PDF e compartilhe o arquivo baixado.": {
+    "pt": "Escolha um aplicativo para enviar. Se nenhuma janela abrir, use Salvar PDF e compartilhe o arquivo baixado.",
+    "es": "Elija una aplicación para enviar. Si no se abre ninguna ventana, use Guardar PDF y comparta el archivo descargado.",
+    "en": "Choose an app to send the file. If no window opens, use Save PDF and share the downloaded file."
+  },
+  "Neste navegador, use Salvar PDF e compartilhe o arquivo pela pasta Downloads ou Arquivos.": {
+    "pt": "Neste navegador, use Salvar PDF e compartilhe o arquivo pela pasta Downloads ou Arquivos.",
+    "es": "En este navegador, use Guardar PDF y comparta el archivo desde Descargas o Archivos.",
+    "en": "In this browser, use Save PDF and share the file from Downloads or Files."
+  },
+  "PDF pronto. Toque em Compartilhar PDF para escolher o aplicativo.": {
+    "pt": "PDF pronto. Toque em Compartilhar PDF para escolher o aplicativo.",
+    "es": "PDF listo. Toque Compartir PDF para elegir la aplicación.",
+    "en": "PDF ready. Tap Share PDF to choose an app."
+  },
+  "Compartilhamento cancelado ou indisponível. Tente novamente ou use Salvar PDF para enviar o arquivo.": {
+    "pt": "Compartilhamento cancelado ou indisponível. Tente novamente ou use Salvar PDF para enviar o arquivo.",
+    "es": "Compartir se canceló o no está disponible. Intente de nuevo o use Guardar PDF para enviar el archivo.",
+    "en": "Sharing was cancelled or is unavailable. Try again or use Save PDF to send the file."
+  },
+  "O navegador bloqueou o compartilhamento. Toque novamente ou use Salvar PDF para enviar o arquivo.": {
+    "pt": "O navegador bloqueou o compartilhamento. Toque novamente ou use Salvar PDF para enviar o arquivo.",
+    "es": "El navegador bloqueó la opción de compartir. Toque de nuevo o use Guardar PDF para enviar el archivo.",
+    "en": "The browser blocked sharing. Tap again or use Save PDF to send the file."
+  },
+  "Há um compartilhamento em andamento no aparelho. Feche essa janela para tentar novamente ou use Salvar PDF.": {
+    "pt": "Há um compartilhamento em andamento no aparelho. Feche essa janela para tentar novamente ou use Salvar PDF.",
+    "es": "Hay una operación de compartir en curso en el dispositivo. Cierre esa ventana para intentarlo de nuevo o use Guardar PDF.",
+    "en": "Sharing is already in progress on this device. Close that window to try again or use Save PDF."
+  },
+  "O aparelho ainda não respondeu. Se a janela não abriu, tente novamente ou use Salvar PDF.": {
+    "pt": "O aparelho ainda não respondeu. Se a janela não abriu, tente novamente ou use Salvar PDF.",
+    "es": "El dispositivo aún no respondió. Si la ventana no se abrió, intente de nuevo o use Guardar PDF.",
+    "en": "The device has not responded yet. If no window opened, try again or use Save PDF."
+  },
   "Compartilhar PDF": {
     "pt": "Compartilhar PDF",
     "es": "Compartir PDF",
