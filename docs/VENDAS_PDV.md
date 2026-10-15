@@ -38,6 +38,16 @@ Em **Vendas → Ver venda → Ticket / PDF**, o operador autorizado a consultar 
 pode baixar o PDF ou enviar uma cópia para a mesma fila de tickets do caixa. Abrir
 a prévia e **Salvar PDF** são leituras: não criam venda, movimentação ou impressão.
 Vendas excluídas permanecem no histórico administrativo, sem emissão de ticket.
+Em navegadores compatíveis, **Compartilhar PDF** abre o compartilhamento do aparelho
+com apenas o arquivo `eleven-ticket-CODIGO.pdf`, sem texto, título ou URL `blob:`.
+O PDF é preparado ao abrir o ticket para que o toque de compartilhar funcione também
+no iOS. Se a preparação falhar, **Preparar PDF** tenta novamente; depois, um novo
+toque em **Compartilhar PDF** abre os aplicativos. Cancelar o compartilhamento não
+baixa nem imprime automaticamente. **Salvar PDF** permanece disponível quando o
+navegador não aceita compartilhar arquivos. Nesse caso, compartilhe o arquivo
+baixado pelo gerenciador de arquivos; o menu de compartilhar a página/visualizador
+do próprio navegador pode acrescentar seu endereço e não é controlado pelo ERP.
+O arquivo preparado fica somente na memória do modal, descartado ao fechá-lo.
 O botão **Ler ticket** usa a câmera; leitores USB podem preencher a busca textual.
 A leitura limpa os demais filtros para localizar o ticket, mantendo o escopo de
 acesso imposto pelo backend. Não abre nem seleciona automaticamente a primeira venda.
