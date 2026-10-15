@@ -40,8 +40,12 @@ a prévia e **Salvar PDF** são leituras: não criam venda, movimentação ou im
 Vendas excluídas permanecem no histórico administrativo, sem emissão de ticket.
 Em navegadores compatíveis, **Compartilhar PDF** abre o compartilhamento do aparelho
 com apenas o arquivo `eleven-ticket-CODIGO.pdf`, sem texto, título ou URL `blob:`.
-O PDF é preparado ao abrir o ticket para que o toque de compartilhar funcione também
-no iOS. Se a preparação falhar, **Preparar PDF** tenta novamente; depois, um novo
+O PDF é preparado ao abrir o ticket, inclusive em navegadores sem compartilhamento:
+a API é lida como `ArrayBuffer`, a assinatura `%PDF-` e o marcador final `%%EOF`
+são conferidos, e o `File` é construído com bytes em memória, extensão `.pdf` e
+MIME `application/pdf`. Isso evita repassar um Blob apoiado na resposta de rede;
+não é uma garantia de suporte do compartilhador de cada aparelho.
+Se a preparação falhar, **Preparar PDF** tenta novamente; depois, um novo
 toque em **Compartilhar PDF** abre os aplicativos. Cancelar o compartilhamento não
 baixa nem imprime automaticamente. Os avisos ficam junto dos botões, fora da área
 rolável do ticket. `AbortError` gera um aviso neutro de cancelamento ou indisponibilidade:
@@ -53,12 +57,19 @@ continua disponível. Se o navegador não concluir a promessa em 12 segundos, a 
 é liberada para uma nova tentativa explícita; o ERP não envia nem baixa novamente
 sozinho. Resultados atrasados de uma tentativa não alteram uma tentativa posterior.
 O compartilhamento nativo depende do navegador e dos aplicativos instalados; a
-abertura da janela não comprova que o cliente recebeu o arquivo.
-**Salvar PDF** permanece disponível quando o
+abertura da janela não comprova que o cliente recebeu o arquivo. A janela de seleção
+de aplicativos pertence ao sistema operacional; seu formato no iPad pode diferir do Android.
+Em falhas nativas, **Detalhes do compartilhamento** mostra localmente o erro, navegador,
+contexto seguro, ativação do toque, política e tamanho/tipo do arquivo. Não envia esses
+dados ao servidor, nem inclui conteúdo do ticket, tokens ou IDs da venda. Esse detalhe
+permite distinguir bloqueio de política, gesto e arquivo, em vez de presumir uma causa.
+**Salvar PDF** usa um link real com arquivo e nome já preparados, sem uma busca
+assíncrona ou clique sintético durante o toque. Permanece disponível quando o
 navegador não aceita compartilhar arquivos. Nesse caso, compartilhe o arquivo
 baixado pelo gerenciador de arquivos; o menu de compartilhar a página/visualizador
 do próprio navegador pode acrescentar seu endereço e não é controlado pelo ERP.
-O arquivo preparado fica somente na memória do modal, descartado ao fechá-lo.
+O arquivo preparado fica somente na memória do modal; a URL local é liberada 10 segundos
+após fechar para permitir que um download iniciado imediatamente antes termine.
 O botão **Ler ticket** usa a câmera; leitores USB podem preencher a busca textual.
 A leitura limpa os demais filtros para localizar o ticket, mantendo o escopo de
 acesso imposto pelo backend. Não abre nem seleciona automaticamente a primeira venda.

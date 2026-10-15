@@ -3404,6 +3404,26 @@
     "es": "El dispositivo aún no respondió. Si la ventana no se abrió, intente de nuevo o use Guardar PDF.",
     "en": "The device has not responded yet. If no window opened, try again or use Save PDF."
   },
+  "Detalhes do compartilhamento": {
+    "pt": "Detalhes do compartilhamento",
+    "es": "Detalles del intercambio",
+    "en": "Sharing details"
+  },
+  "O arquivo recebido não é um PDF completo. Prepare o ticket novamente antes de enviar.": {
+    "pt": "O arquivo recebido não é um PDF completo. Prepare o ticket novamente antes de enviar.",
+    "es": "El archivo recibido no es un PDF completo. Prepare el ticket de nuevo antes de enviarlo.",
+    "en": "The received file is not a complete PDF. Prepare the receipt again before sending it."
+  },
+  "Este navegador recusou compartilhar o PDF. Use Salvar PDF e envie o arquivo pelo app Arquivos ou Downloads.": {
+    "pt": "Este navegador recusou compartilhar o PDF. Use Salvar PDF e envie o arquivo pelo app Arquivos ou Downloads.",
+    "es": "Este navegador rechazó compartir el PDF. Use Guardar PDF y envíe el archivo desde Archivos o Descargas.",
+    "en": "This browser refused to share the PDF. Use Save PDF and send the file from Files or Downloads."
+  },
+  "Após baixar, abra o PDF em Arquivos ou Downloads e escolha Compartilhar para enviar somente o arquivo.": {
+    "pt": "Após baixar, abra o PDF em Arquivos ou Downloads e escolha Compartilhar para enviar somente o arquivo.",
+    "es": "Después de descargarlo, abra el PDF en Archivos o Descargas y elija Compartir para enviar solo el archivo.",
+    "en": "After downloading, open the PDF in Files or Downloads and choose Share to send only the file."
+  },
   "Compartilhar PDF": {
     "pt": "Compartilhar PDF",
     "es": "Compartir PDF",

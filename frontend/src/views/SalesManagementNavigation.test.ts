@@ -51,7 +51,7 @@ describe('Customer-to-sale navigation', () => {
   it('lets an employee open and download their receipt without editing or dispatching a print', async () => {
     const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:receipt')
     const clickLink = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    receipts.pdf.mockResolvedValue(new Blob(['%PDF-1.4'], { type:'application/pdf' }))
+    receipts.pdf.mockResolvedValue(new TextEncoder().encode('%PDF-1.4\nfixture\n%%EOF').buffer)
     try {
       await mount('/vendas-pdv?sale_id=older-sale')
       button('Ticket / PDF')!.click(); await settle()
@@ -59,8 +59,10 @@ describe('Customer-to-sale navigation', () => {
       expect(document.querySelector('.receipt-paper')?.textContent).toContain('Shopping Paris - PY')
       expect(receipts.preview).toHaveBeenCalledWith('older-sale')
       expect(receipts.print).not.toHaveBeenCalled()
-      button('📄 Salvar PDF')!.click(); await settle()
-      expect(receipts.pdf).toHaveBeenCalledWith('older-sale'); expect(clickLink).toHaveBeenCalledTimes(1)
+      const link = document.querySelector<HTMLAnchorElement>('.receipt-pdf-controls a[download]')!
+      expect(link.download).toBe('eleven-ticket-ABCDEF1234.pdf')
+      expect(link.href).toBe('blob:receipt')
+      expect(receipts.pdf).toHaveBeenCalledWith('older-sale'); expect(clickLink).not.toHaveBeenCalled()
       expect(mocks.commit).not.toHaveBeenCalled(); expect(receipts.print).not.toHaveBeenCalled()
       document.querySelector<HTMLButtonElement>('.receipt-actions [data-dialog-close]')!.click(); await settle()
       expect(document.querySelector('.receipt-overlay')).toBeNull()
