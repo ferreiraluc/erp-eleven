@@ -233,6 +233,39 @@ retornam 503 no download; nesses ambientes distribua o ZIP a partir do repositó
   `dep-db32gobl550s73cd7to0`, ambos no commit `85ab59d`. O [CI completo](https://github.com/ferreiraluc/erp-eleven/actions/runs/37612169262)
   passou nos três jobs: backend, frontend e agente Windows.
 
+## Fila pausada — 16/10/2026
+
+Agente **2026.10.16.1**: a mensagem genérica de conexão/Sumatra foi substituída por
+motivo, etapa, HTTP (0 quando não existe resposta), UUID do trabalho, PID e versão.
+`agente-diagnostico.log` na pasta instalada conserva as mesmas informações, gira
+em 64 KiB e mantém uma cópia `.1`. Não registra resposta HTTP bruta, token,
+conteúdo do documento, dados do destinatário nem caminhos de arquivos.
+
+- `renderer_active`: o processo identificado por PID **e horário de criação**
+  continua ativo. Conferir fila/papel e processo; não limpar filas automaticamente.
+- `renderer_check_failed`: não foi possível verificar o processo. Continua bloqueado
+  por segurança; não presumir que o processo terminou.
+- `erp_connection_failed` / `erp_unavailable`: comunicação/resposta indisponível;
+  tenta novamente em 30 segundos, sem repetir uma impressão despachada.
+- `credential_rejected` / `profile_conflict`: conferir perfil e credencial no instalador.
+- `job_conflict` / `erp_request_rejected`: servidor recusou a etapa (por exemplo,
+  confirmação de resultado); conferir o trabalho, sem descartar o diário local.
+- `journal_unavailable`: falha de leitura/escrita do diário; verificar arquivo,
+  permissões e espaço. Não apagar `journal` para desbloquear.
+
+Trabalhos `submitted`/`failed` não inspecionam mais processos antigos: o Windows pode
+reutilizar o PID para um programa protegido e antes essa consulta podia pausar toda
+a fila. `started`/`uncertain` continuam verificando identidade e bloqueando enquanto
+o renderizador estiver ativo ou não puder ser inspecionado. Histórico e resultados
+não são reescritos. Retomada informa **Fila retomada**, sem prometer saída física.
+No ticket contínuo o renderizador é PowerShell/ZPL, não Sumatra.
+
+O incidente informado conectou normalmente ao ERP, mas a mensagem antiga não
+registrava a exceção; não comprova retrospectivamente sua causa exata. A atualização
+precisa ser instalada no Windows da loja pelo pacote do **mesmo perfil**, preservando
+credencial (Enter), configuração e diário. Os testes Windows usam processos inofensivos
+e metadados de erro, sem spooler, Sumatra, API de produção ou impressão física.
+
 ## Recuperação e diagnóstico — 13/10/2026
 
 Versão do agente: **2026.10.13.1**. A atualização do servidor é compatível com o

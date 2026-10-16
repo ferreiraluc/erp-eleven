@@ -82,5 +82,6 @@ jobs:
         run: |
           ./tools/eleven-print-agent/tests/Configuracao.Tests.ps1
           ./tools/eleven-print-agent/tests/Impressao.Tests.ps1
+          ./tools/eleven-print-agent/tests/Recuperacao.Tests.ps1
           ./tools/eleven-print-agent/tests/Inicializacao.Tests.ps1
           ./tools/eleven-print-agent/tests/TicketContinuo.Tests.ps1
