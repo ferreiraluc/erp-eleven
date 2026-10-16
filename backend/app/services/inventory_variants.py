@@ -36,7 +36,7 @@ def source_item(db, item_id):
     return source
 
 
-def same_color_members(db, source):
+def same_color_members(db, source, all_colors=False):
     # The preview only displays each sibling's identity, size and color. Keep
     # originals/prices/balances out of this read; the source remains fully loaded
     # for its reviewed photo and version token. Raiseload prevents an accidental
@@ -45,17 +45,17 @@ def same_color_members(db, source):
         *(getattr(Item, field) for field in VariantSummary.model_fields), raiseload=True))
         .filter(Item.deleted_at.is_(None), Item.group_key == source.group_key)
         .order_by(Item.id).all()) if source.group_key else [source]
-    return [row for row in rows if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
+    return rows if all_colors else [row for row in rows if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
 
 
-def variant_context(db, item_id):
+def variant_context(db, item_id, all_colors=False):
     source = source_item(db, item_id)
     name = source.name.strip()
     suffix = f' {source.size.strip()}' if source.size else ''
     if suffix and name.casefold().endswith(suffix.casefold()) and len(name) > len(suffix) + 1:
         name = name[:-len(suffix)]
     return dict(source=source, source_version=source_version(source), model_name=name,
-                existing=same_color_members(db, source))
+                existing=same_color_members(db, source, all_colors))
 
 
 def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id):
@@ -77,28 +77,29 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
         db.refresh(source, attribute_names=['image_data'])
         if request.source_version != source_version(source):
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
-        matching = [row for row in members if taxonomy_key(row.color, 'color') == taxonomy_key(source.color, 'color')]
-        wanted = {normalized(s) for s in request.sizes}
-        existing = [row for row in matching if normalized(row.size) in wanted]
-        present = {normalized(row.size) for row in matching}
-        missing = [size for size in request.sizes if normalized(size) not in present]
+        combinations = [(v.size, v.color, v.quantity) for v in request.variants] if request.variants else [
+            (size, source.color, request.initial_stock) for size in request.sizes]
+        identity = lambda size, color: (normalized(size), taxonomy_key(color, 'color'))
+        wanted = {identity(size, color) for size, color, quantity in combinations}
+        existing = [row for row in members if identity(row.size, row.color) in wanted]
+        present = {identity(row.size, row.color) for row in members}
+        missing = [(size, color, quantity) for size, color, quantity in combinations if identity(size, color) not in present]
         created = []
         if missing:
             source.group_key = original_group or f'grade-{uuid.uuid4()}'
-            for size in missing:
-                # New identity and zero balances: no source SKU, sale or movement is copied.
-                row = Item(**{key: getattr(source, key) for key in COPY_FIELDS},
-                           name=f'{request.model_name} {size}', size=size,
+            for size, color, quantity in missing:
+                row = Item(**{key: getattr(source, key) for key in COPY_FIELDS if key != 'color'},
+                           name=f'{request.model_name} {size}'.strip(), size=size or None, color=color,
                            barcode=f'{request.base_barcode.strip()}{size}' if request.base_barcode and request.base_barcode.strip() else None,
                            sku_internal=f'INV-{uuid.uuid4().hex.upper()}', group_key=source.group_key,
                            current_stock=0, stock_loja=0, stock_deposito=0,
                            is_active=True, created_by=user_id)
                 db.add(row); created.append(row)
             db.flush()
-            if request.initial_stock:
-                for row in created:
-                    create_movement(db, row.id, 'entry', request.initial_stock, user_id,
-                                    reason='Estoque inicial — novo tamanho de produto existente',
+            for row, (_, _, quantity) in zip(created, missing):
+                if quantity:
+                    create_movement(db, row.id, 'entry', quantity, user_id,
+                                    reason='Estoque inicial — nova variação de produto existente',
                                     reference_type='inventory_variant', reference_id=str(item_id),
                                     location=request.stock_location)
         # Commit expires ORM rows. Freeze the already-loaded response fields so

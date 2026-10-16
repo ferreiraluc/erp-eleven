@@ -48,7 +48,7 @@ describe('OCR review', () => {
 
   it('requires human review and never uses the reference brand as an extracted value', async () => {
     const { result } = await mount()
-    const brand = container.querySelector('.brand-input') as HTMLInputElement
+    const brand = container.querySelector('.brand-picker input') as HTMLInputElement
     brand.value = 'Context brand'; brand.dispatchEvent(new Event('input', { bubbles: true }))
     await upload()
     expect((container.querySelector('#ocr-brand') as HTMLInputElement).value).toBe('')
@@ -61,6 +61,19 @@ describe('OCR review', () => {
     expect(result.mock.calls[0]?.[0]).not.toHaveProperty('brand')
     expect(result.mock.calls[0]?.[0]).not.toHaveProperty('quantity')
     expect(mocked.saveTemplate).not.toHaveBeenCalled()
+  })
+  it('keeps a selected trained brand and sends it as OCR context', async () => {
+    mocked.getBrands.mockResolvedValue([{ brand: 'Prada', count: 3 }])
+    await mount()
+    await nextTick()
+    const trigger = container.querySelector('.brand-picker button') as HTMLButtonElement
+    trigger.click(); await nextTick()
+    const option = container.querySelector('[role=option]') as HTMLButtonElement
+    expect(option).not.toBeNull()
+    option.click(); await nextTick()
+    expect((container.querySelector('.brand-picker input') as HTMLInputElement).value).toBe('Prada')
+    await upload()
+    expect(mocked.parseLabel.mock.calls[0]?.[1]).toBe('Prada')
   })
   it('changing a reviewed field requires another review and preserves locale switching', async () => {
     const { i18n } = await mount(); await upload()

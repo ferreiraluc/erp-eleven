@@ -116,7 +116,7 @@ describe('Unified optional photo and label intake', () => {
     expect((root.querySelector('.intake-review-check input') as HTMLInputElement).disabled).toBe(true)
     await click('Manter formulário: Nome escolhido'); await click('Usar etiqueta: Marca da etiqueta'); await click('Usar etiqueta: BRL 50')
     expect(input('Marca').value).toBe('Marca da etiqueta'); expect(input('Preço de Venda').value).toBe('50')
-    expect((root.querySelectorAll('.currency-select')[1] as HTMLSelectElement).value).toBe('BRL')
+    expect(root.querySelector('[aria-label="Moeda da venda"]')?.textContent).toContain('R$')
     await setField('Marca', 'Correção final')
     await click('Foto e etiqueta'); await click('Rever etiqueta'); await click('fixture label'); await click('Conferir dados')
     expect(input('Marca').value).toBe('Correção final'); expect(root.querySelector('.intake-conflicts')).toBeNull()
@@ -393,8 +393,10 @@ describe('Grade quantities before registration', () => {
     el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
   }
   async function apply(target: string, value: string) {
-    const select = root.querySelector<HTMLSelectElement>('[aria-label="Aplicar quantidade a"]')!
-    select.value = target; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    root.querySelector<HTMLButtonElement>('[aria-label="Aplicar quantidade a"]')!.click(); await nextTick()
+    const label = target === 'all' ? 'Todas as variações' : `${JSON.parse(target)[0] === 'color' ? 'Cor' : 'Tamanho'}: ${JSON.parse(target)[1]}`
+    const option = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="option"]')).find(b => b.textContent?.trim().replace(/✓$/, '').trim() === label)!
+    option.click(); await nextTick()
     await quantity('Quantidade para aplicar', value); await click('Aplicar')
   }
   it('applies by color, individual size and all, sends exact quantities and shows piece/set totals', async () => {

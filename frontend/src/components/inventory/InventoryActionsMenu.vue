@@ -2,6 +2,7 @@
     <details class="more-actions" @keydown.esc="($event.currentTarget as HTMLDetailsElement).open = false">
       <summary class="erp-button erp-button--secondary erp-button--sm" :class="{ 'actions-icon': compact }" :aria-label="tr('Mais ações')"><span v-if="!compact">{{ tr('Mais ações') }} <span aria-hidden="true">▾</span></span><span v-else aria-hidden="true">•••</span></summary>
       <div class="more-actions-menu" @click="($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')">
+    <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-receiving')">{{ tr('Lotes de recebimento') }}</button>
     <button v-if="isOwner" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-deleted')">
       {{ tr('Histórico de excluídos') }}
     </button>
@@ -30,6 +31,7 @@ const emit = defineEmits<{
   'toggle-diagnostics': []
   'open-labels': []
   'open-import': []
+  'open-receiving': []
 }>()
 const { tr } = useInventoryI18n()
 const { t: diagnosticsText } = useI18n({ useScope: 'local', messages: diagnosticsMessages })

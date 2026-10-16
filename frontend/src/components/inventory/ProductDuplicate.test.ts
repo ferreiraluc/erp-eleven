@@ -42,7 +42,7 @@ it('uses the same photo editor, allows different data and an independent model, 
   await mount(); await click('Editar foto'); expect(mock.photoSeed).toBe(source.image_data)
   await click('apply edited photo'); await click('Conferir dados')
   await set('Nome *', 'Camisa diferente'); await set('Marca', 'Outra marca'); await set('Cor', 'Azul'); await set('Código de Barras', 'NEW'); await set('Preço de Venda', '99')
-  const group = root.querySelector('.duplicate-notice input') as HTMLInputElement; group.checked = false; group.dispatchEvent(new Event('change', { bubbles: true })); await flush()
+  await click('Adicionar à grade do produto original'); await click('Criar um modelo independente')
   await click('Continuar para estoque'); expect(mock.duplicate).not.toHaveBeenCalled()
   await review(); await set('Estoque inicial', '2'); await click('Criar')
   expect(mock.duplicate.mock.calls[0][1]).toMatchObject({ keep_group: false, initial_stock: 2, item: { name: 'Camisa diferente', brand: 'Outra marca', color: 'Azul', barcode: 'NEW', sale_price: 99, image_data: 'data:image/png;base64,new' } })
@@ -67,4 +67,16 @@ it('refreshes an outdated source without discarding edits, and requires review a
   await review(); await click('Criar')
   expect(mock.duplicate.mock.calls[1][1]).toMatchObject({ source_version: 'b'.repeat(64), item: { name: 'Meu tênis corrigido', size: '8' } })
   expect(mock.duplicate.mock.calls[1][1].request_id).not.toBe(mock.duplicate.mock.calls[0][1].request_id)
+})
+
+it('allows a new multiword brand to be typed without trimming spaces between keystrokes', async () => {
+  await mount()
+  const input = field('Marca')
+  await set('Marca', '')
+  for (const letter of 'Nova Marca') {
+    input.value += letter
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await flush()
+  }
+  expect(input.value).toBe('Nova Marca')
 })

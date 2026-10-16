@@ -2,7 +2,7 @@
   <div v-show="open" class="ocr-overlay erp-dialog-backdrop" @click.self="emit('close')">
     <div v-erp-dialog="open" class="ocr-modal erp-dialog erp-dialog--media" role="dialog" aria-modal="true" :aria-label="t('title')">
       <div class="ocr-header erp-dialog__header"><h3>{{ t('title') }}</h3><button data-dialog-close class="close-btn erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" @click="emit('close')">×</button></div>
-      <div class="brand-bar erp-dialog__tabs"><input v-model="selectedBrand" class="brand-input" :placeholder="t('brandHint')" :aria-label="t('brandHint')" list="brand-datalist" maxlength="100" :disabled="phase === 'processing'" /><datalist id="brand-datalist"><option v-for="brand in knownBrands" :key="brand.brand" :value="brand.brand" /></datalist><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
+      <div class="brand-bar erp-dialog__tabs"><ErpDropdown v-model="selectedBrand" class="brand-picker" editable :options="knownBrands.map(b => ({ value: b.brand, label: `${b.brand} · ${t('examples', { count: b.count })}` }))" :label="t('brandHint')" :disabled="phase === 'processing'" /><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
       <div class="ocr-body erp-dialog__body">
         <p class="ocr-notice">{{ t('transient') }}</p>
         <div v-if="phase === 'camera'" class="camera-wrap">
@@ -43,6 +43,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -146,6 +147,7 @@ onUnmounted(() => { disposed = true; stopCamera(); controller?.abort(); captured
 </script>
 
 <style scoped>
+.brand-picker{flex:1;min-width:0}
 .ocr-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 600;
   display: flex; align-items: center; justify-content: center; padding: 1rem;

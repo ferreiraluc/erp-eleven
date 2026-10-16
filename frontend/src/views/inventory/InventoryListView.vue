@@ -7,7 +7,7 @@
         <button type="button" class="erp-button erp-button--primary erp-button--sm mobile-new-item" @click="openCreate" :aria-label="tr('Novo item')">+ {{ tr('Novo') }}</button>
         <InventoryActionsMenu compact :is-owner="auth.isOwner" :diagnostics-open="showDiagnostics"
           @open-deleted="showDeletedHistory = true" @toggle-diagnostics="showDiagnostics = !showDiagnostics"
-          @open-labels="showLabelTemplates = true" @open-import="showImport = true" />
+          @open-labels="showLabelTemplates = true" @open-import="showImport = true" @open-receiving="openReceiving(false)" />
         <button type="button" class="erp-button erp-button--secondary erp-button--sm mobile-toolbar-toggle"
           :aria-expanded="mobileToolbarOpen" aria-controls="inventory-toolbar-panel" @click="toggleMobileToolbar">
           {{ tr(mobileToolbarOpen ? 'Recolher' : 'Filtros') }}
@@ -22,7 +22,7 @@
       @open-deleted="showDeletedHistory = true"
       @toggle-diagnostics="showDiagnostics = !showDiagnostics"
       @open-labels="showLabelTemplates = true"
-      @open-import="showImport = true"
+      @open-import="showImport = true" @open-receiving="openReceiving(false)"
     />
 
     <!-- Search + Camera -->
@@ -87,6 +87,8 @@
       </div>
     </div><!-- /sticky-toolbar -->
 
+    <div v-if="inventoryStore.filters.receiving_lot_id" class="receiving-filter-bar"><span>{{ tr('Lote de recebimento') }}: <strong>{{ receivingFilterName || tr('Selecionado') }}</strong></span><button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="clearReceiving">{{ tr('Limpar filtro') }} ×</button></div>
+    <ReceivingLotsModal v-if="showReceiving" :selection="receivingSelection" :can-manage="['ADMIN','GERENTE'].includes(auth.userRole)" @close="showReceiving=false" @filter="filterReceiving" />
     <InventoryDiagnosticsPanel
       v-if="showDiagnostics"
       :revision="diagnosticsRevision"
@@ -479,6 +481,7 @@
           <span class="sel-stock-summary">{{ tr('{grades} grades · {pieces} peças na seleção', { grades: selectedStockSummary.grades ?? tr('Não informado'), pieces: selectedStockSummary.pieces ?? tr('Não informado') }) }}</span>
         </div>
         <div class="sel-actions">
+          <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
           <button @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
@@ -550,6 +553,8 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import ReceivingLotsModal from '@/components/inventory/ReceivingLotsModal.vue'
+import type { ReceivingCandidate, ReceivingLot } from '@/services/inventoryReceiving'
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
@@ -592,6 +597,18 @@ function toggleMobileToolbar() {
 
 const route = useRoute()
 const inventoryStore = useInventoryStore()
+const showReceiving=ref(false), receivingSelection=ref<ReceivingCandidate[]>([]), receivingFilterName=ref('')
+function openReceiving(manual:boolean) {
+  receivingSelection.value=manual ? selectedIds.value.map(id => ({ id, name:allVisibleItems.value.get(id)?.name || id, size:allVisibleItems.value.get(id)?.size, color:allVisibleItems.value.get(id)?.color })) : []
+  showReceiving.value=true
+}
+function filterReceiving(lot:ReceivingLot) {
+  receivingFilterName.value=lot.name; inventoryStore.filters.receiving_lot_id=lot.id
+  showReceiving.value=false; selectedIds.value=[]
+  reloadItems(); if(groupMode.value) loadGroupsFiltered()
+}
+function clearReceiving() { receivingFilterName.value=''; inventoryStore.filters.receiving_lot_id=''; reloadItems(); if(groupMode.value) loadGroupsFiltered() }
+
 const auth = useAuthStore()
 
 const searchQuery = ref(inventoryStore.filters.search || '')
@@ -685,7 +702,7 @@ function clearItemFilters() {
   filterLocation.value = ''
   filterUngroupedOnly.value = false
   Object.assign(inventoryStore.filters, {
-    search: '', status: '', category: '', brand: '', location: '', size: '', color: '', location_stock: '',
+    search: '', status: '', category: '', brand: '', location: '', size: '', color: '', location_stock: '', receiving_lot_id: '',
   })
   if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
   reloadItems()
@@ -726,6 +743,7 @@ function groupFilterParams(): Record<string, any> {
   if (filterBrand.value) p.brand = filterBrand.value
   if (filterCategory.value) p.category = filterCategory.value
   if (activeStatus.value) p.status = activeStatus.value
+  if (inventoryStore.filters.receiving_lot_id) p.receiving_lot_id = inventoryStore.filters.receiving_lot_id
   if (filterLocation.value) p.location_stock = filterLocation.value
   return p
 }
@@ -1408,6 +1426,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.receiving-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:.85rem}
 .stock-unknown { color: #92400e; }
 .badge-unknown, .chip-alert-unknown { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
 .alert-unknown, .exp-alert-unknown { border-left-color: #f59e0b; }
