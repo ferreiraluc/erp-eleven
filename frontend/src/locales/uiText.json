@@ -3449,6 +3449,16 @@
     "es": "📄 Guardar PDF",
     "en": "📄 Save PDF"
   },
+  "Download solicitado.": {
+    "pt": "Download solicitado.",
+    "es": "Descarga solicitada.",
+    "en": "Download requested."
+  },
+  "Para enviar só o PDF, salve o arquivo e compartilhe por Downloads ou Arquivos.": {
+    "pt": "Para enviar só o PDF, salve o arquivo e compartilhe por Downloads ou Arquivos.",
+    "es": "Para enviar solo el PDF, guarde el archivo y compártalo desde Descargas o Archivos.",
+    "en": "To send only the PDF, save the file and share it from Downloads or Files."
+  },
   "Moda & Vestuário": {
     "pt": "Moda & Vestuário",
     "es": "Moda y ropa",
