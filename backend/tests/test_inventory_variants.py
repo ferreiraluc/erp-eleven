@@ -199,3 +199,26 @@ def test_postgres_failure_rolls_back_grouping_products_and_movements(pg_variants
     with factory() as db:
         assert db.query(Item).count() == 1 and db.get(Item, item_id).group_key is None
         assert db.query(StockMovement).count() == 0
+
+
+def test_color_size_matrix_preserves_existing_and_variable_quantities(manager_stock_app):
+    factory, client, user_id = manager_stock_app
+    item_id = source(factory, user_id)
+    ctx = client.get(f'/api/inventory/items/{item_id}/variants', params={'all_colors':True}).json()
+    data = dict(model_name=ctx['model_name'], source_version=ctx['source_version'], confirm=True,
+                variants=[{'size':'9','color':'Branco','quantity':99}, {'size':'8','color':'Branco','quantity':3},
+                          {'size':'9','color':'Preto','quantity':8}, {'size':'8','color':'Preto','quantity':4}])
+    url=f'/api/inventory/items/{item_id}/variants'
+    first=client.post(url,json=data)
+    assert first.status_code==201,first.text
+    assert len(first.json()['created'])==3 and len(first.json()['existing'])==1
+    retry=client.post(url,json=data)
+    assert retry.status_code==201 and retry.json()['created']==[]
+    with factory() as db:
+        assert db.get(Item,item_id).current_stock==7
+        assert {(r.size,r.color,r.current_stock) for r in db.query(Item).filter(Item.id!=item_id)}=={('8','Branco',3),('9','Preto',8),('8','Preto',4)}
+        assert db.query(StockMovement).count()==3
+    ctx=client.get(url,params={'all_colors':True}).json()
+    assert len(ctx['existing'])==4
+    duplicate={**data,'variants':[{'size':'P','color':'Preto','quantity':1},{'size':'S','color':'preto','quantity':2}]}
+    assert client.post(url,json=duplicate).status_code==422

@@ -4,9 +4,9 @@
   <ProductHistoryModal v-if="showHistory && item" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
   <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
   <div v-show="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-overlay erp-dialog-backdrop" @click.self="!saving && emit('close')">
-    <div v-erp-dialog="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : duplicateContext ? 'Duplicar produto' : 'Novo Item')">
+    <div v-erp-dialog="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : gradeContext ? 'Adicionar grade' : duplicateContext ? 'Duplicar produto' : 'Novo Item')">
       <div class="modal-header erp-dialog__header">
-        <h2>{{ tr(isEdit ? 'Editar Item' : duplicateContext ? 'Duplicar produto' : 'Novo Item') }}</h2>
+        <h2>{{ tr(isEdit ? 'Editar Item' : gradeContext ? 'Adicionar grade' : duplicateContext ? 'Duplicar produto' : 'Novo Item') }}</h2>
         <button v-if="isEdit" ref="historyButton" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
         <button data-dialog-close :disabled="saving" @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
@@ -15,7 +15,7 @@
         </button>
       </div>
 
-      <div :inert="saving || undefined" class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
+      <div v-if="!gradeContext" :inert="saving || undefined" class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
         <button v-if="!isEdit" class="erp-control tab" :class="{ active: activeTab === 'capture' }" :aria-current="activeTab === 'capture' ? 'step' : undefined" @click="activeTab = 'capture'">1 · {{ tr('Foto e etiqueta') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'basic' }" :aria-current="activeTab === 'basic' ? 'step' : undefined" @click="activeTab = 'basic'">{{ isEdit ? tr('Básico') : '2 · ' + tr('Conferência') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'stock' }" :aria-current="activeTab === 'stock' ? 'step' : undefined" @click="isEdit ? activeTab = 'stock' : continueToStock()">{{ isEdit ? tr('Estoque') : '3 · ' + tr('Estoque') }}</button>
@@ -41,7 +41,7 @@
             <p>{{ tr('Os dados do produto podem ser editados. Salvar não preenche nem altera os saldos não informados.') }}</p>
           </div>
         </div>
-        <div v-if="(partialItems.length || uncertainSave) && !duplicateContext" class="partial-save-warning" role="alert">
+        <div v-if="(partialItems.length || uncertainSave) && !duplicateContext && !gradeContext" class="partial-save-warning" role="alert">
           <strong>{{ tr(partialItems.length ? 'Cadastro parcialmente concluído' : 'Não foi possível confirmar o cadastro') }}</strong>
           <p>{{ tr(partialItems.length ? 'Itens já criados: {count}. Uma etapa seguinte falhou; o estoque inicial pode estar incompleto.' : 'A conexão foi interrompida. Confira o inventário antes de tentar criar novamente.', { count: partialItems.length }) }}</p>
           <ul v-if="partialItems.length"><li v-for="created in partialItems" :key="created.id">{{ created.name }} · {{ created.sku_internal }}</li></ul>
@@ -49,11 +49,19 @@
         </div>
         <section v-if="duplicateContext" class="duplicate-notice">
           <p>{{ tr('Cópia editável: altere somente o tamanho ou revise todos os dados e a foto. O produto original não será editado.') }}</p>
-          <label><input v-model="keepSourceGroup" type="checkbox" :disabled="saving || uncertainSave" /> {{ tr('Adicionar à grade do produto original') }}</label>
-          <small>{{ tr('Desmarque para criar um modelo independente. O código de barras foi copiado; confira se precisa alterá-lo.') }}</small>
+          <ErpDropdown :model-value="keepSourceGroup ? 'family' : 'independent'" :options="[{ value: 'family', label: tr('Adicionar à grade do produto original') }, { value: 'independent', label: tr('Criar um modelo independente') }]" :label="tr('Vínculo com o produto original')" :disabled="saving || uncertainSave" @update:model-value="keepSourceGroup = $event === 'family'" />
+          <small>{{ tr('Escolha a mesma família para outra cor ou tamanho; use independente para um novo modelo. Confira o código de barras copiado.') }}</small>
           <p v-if="uncertainSave" role="alert">{{ tr('A resposta não chegou. Confira o resultado da mesma operação antes de continuar; o estoque não será lançado duas vezes.') }}</p>
           <button v-if="uncertainSave" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving" @click="retryDuplicate">{{ tr('Conferir resultado do cadastro') }}</button>
           <button v-if="duplicateNeedsRefresh" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="loadingDuplicate || saving" @click="refreshDuplicate">{{ tr('Atualizar referência do produto') }}</button>
+        </section>
+        <section v-if="gradeContext" class="duplicate-notice">
+          <p>{{ tr('A foto e os dados salvos serão reutilizados. O estoque original não será copiado.') }}</p>
+          <label>{{ tr('Nome do modelo') }}<input v-model="form.name" class="form-input" :disabled="gradeLocked" maxlength="140" /></label>
+          <label>{{ tr('Código base (opcional)') }}<input v-model="form.barcode" class="form-input" :disabled="gradeLocked" maxlength="140" /></label>
+          <small>{{ tr('Informe o código sem tamanho; ele receberá o tamanho ao final. Vazio: novos itens sem código de barras.') }}</small>
+          <p v-if="existingGradeRows.length">{{ tr('Já cadastrado: estoque preservado') }} · {{ existingGradeRows.map(r => [r.size, r.color].filter(Boolean).join(' / ')).join(' · ') }}</p>
+          <button v-if="uncertainSave" type="button" class="erp-button erp-button--secondary" @click="emit('reload-grade')">{{ tr('Conferir tamanhos cadastrados') }}</button>
         </section>
         <div v-if="activeTab === 'capture'" class="tab-content intake-capture">
           <p class="intake-hint">{{ tr('Use a foto da peça, a etiqueta ou as duas. Você também pode continuar sem imagens e preencher manualmente.') }}</p>
@@ -111,10 +119,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Marca') }}</label>
-              <input v-model="form.brand" @blur="form.brand = canonicalBrand(form.brand)" type="text" class="form-input" :placeholder="tr('Ex: Armani, Boss...')" list="brand-list" />
-              <datalist id="brand-list">
-                <option v-for="b in existingBrands" :key="b" :value="b" />
-              </datalist>
+              <ErpDropdown v-model="form.brand" editable :options="(existingBrands || []).map(value => ({ value, label: value }))" :label="tr('Marca')" :placeholder="tr('Ex: Armani, Boss...')" />
             </div>
             <div class="form-group">
               <label>{{ tr('Tamanho') }}</label>
@@ -125,38 +130,26 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Categoria') }}</label>
-              <select v-model="categoryParent" class="form-input">
-                <option value="">{{ tr('Selecione...') }}</option>
-                <option v-for="cat in parentCategories" :key="cat" :value="cat">{{ tr(cat) }}</option>
-                <option value="_custom">{{ tr('Outra...') }}</option>
-              </select>
+              <ErpDropdown v-model="categoryParent" :options="[{ value: '', label: tr('Selecione...') }, ...parentCategories.map(value => ({ value, label: tr(value) })), { value: '_custom', label: tr('Outra...') }]" :label="tr('Categoria')" />
               <input v-if="categoryParent === '_custom'" v-model="categoryCustom" type="text" class="form-input" style="margin-top:0.3rem" :placeholder="tr('Nome da categoria')" />
             </div>
             <div class="form-group">
               <label>{{ tr('Subcategoria') }}</label>
-              <input v-model="categorySub" type="text" class="form-input" :placeholder="tr('Ex: Sociais, Tênis...')" :disabled="!categoryParent || categoryParent === '_custom'" list="sub-list" />
-              <datalist id="sub-list">
-                <option v-for="s in subcategorySuggestions" :key="s" :value="s" />
-              </datalist>
+              <ErpDropdown v-model="categorySub" editable :options="subcategorySuggestions.map(value => ({ value, label: tr(value) }))" :label="tr('Subcategoria')" :placeholder="tr('Ex: Sociais, Tênis...')" :disabled="!categoryParent || categoryParent === '_custom'" />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Cor') }}</label>
-              <input v-model="form.color" type="text" class="form-input" :placeholder="tr('Vermelho, Azul...')" />
+              <ErpDropdown v-model="form.color" editable :options="allColors.map(value => ({ value, label: value }))" :label="tr('Cor')" :placeholder="tr('Vermelho, Azul...')" :maxlength="50" />
             </div>
             <div class="form-group">
               <label>
                 {{ tr('Unidade') }}
                 <span v-if="unitAutoSet" class="auto-tag">{{ tr('auto') }}</span>
               </label>
-              <select v-model="form.unit" class="form-input">
-                <option value="un">{{ tr('un') }}</option>
-                <option value="par">{{ tr('par') }}</option>
-                <option value="kg">kg</option>
-                <option value="m">m</option>
-              </select>
+              <ErpDropdown v-model="form.unit" :options="['un','par','kg','m'].map(value => ({ value, label: tr(value) }))" :label="tr('Unidade')" />
             </div>
           </div>
         </div>
@@ -176,16 +169,11 @@
             <span v-if="barcodeDuplicateWarning" class="warn-msg">{{ tr('Este código já existe em outro item.') }}</span>
           </div>
 
-          <div class="form-row">
+          <div class="form-row price-fields">
             <div class="form-group">
               <label>{{ tr('Custo') }}</label>
               <div class="price-with-currency">
-                <select v-model="form.cost_currency" class="currency-select">
-                  <option value="PYG">G$</option>
-                  <option value="BRL">R$</option>
-                  <option value="USD">U$</option>
-                  <option value="EUR">€</option>
-                </select>
+                <ErpDropdown v-model="form.cost_currency" class="price-currency-dropdown" :options="currencyOptions" :label="tr('Moeda do custo')" />
                 <input v-model.number="form.cost_price" type="number" step="0.01" min="0" class="form-input price-input" :class="{ error: errors.cost_price }" placeholder="0.00" />
               </div>
               <span v-if="errors.cost_price" class="error-msg">{{ tr(errors.cost_price) }}</span>
@@ -193,12 +181,7 @@
             <div class="form-group">
               <label>{{ tr('Preço de Venda') }}</label>
               <div class="price-with-currency">
-                <select v-model="form.sale_currency" class="currency-select">
-                  <option value="PYG">G$</option>
-                  <option value="BRL">R$</option>
-                  <option value="USD">U$</option>
-                  <option value="EUR">€</option>
-                </select>
+                <ErpDropdown v-model="form.sale_currency" class="price-currency-dropdown" :options="currencyOptions" :label="tr('Moeda da venda')" />
                 <input v-model.number="form.sale_price" type="number" step="0.01" min="0" class="form-input price-input" placeholder="0.00" />
               </div>
             </div>
@@ -216,10 +199,7 @@
           </div>
           <div class="form-group">
             <label>{{ tr('Fornecedor') }}</label>
-            <select v-model="form.supplier_id" class="form-input">
-              <option value="">{{ tr('Nenhum') }}</option>
-              <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
-            </select>
+            <ErpDropdown v-model="form.supplier_id" :options="[{ value: '', label: tr('Nenhum') }, ...(suppliers || []).map(s => ({ value: s.id, label: s.name }))]" :label="tr('Fornecedor')" />
           </div>
 
           <div class="form-row">
@@ -241,7 +221,7 @@
             <img v-if="form.image_data" :src="form.image_data" :alt="tr('Foto do produto')" />
             <div><strong>{{ form.name || tr('Nome do produto') }}</strong><p>{{ [form.brand, form.size, form.color].filter(Boolean).join(' · ') }}</p><p>{{ tr('O estoque será lançado somente ao concluir o cadastro.') }}</p></div>
           </div>
-          <p v-if="!intakeReviewed || conflicts.length" class="intake-conflict-note">{{ tr('Volte à conferência para revisar os dados antes de criar.') }}</p>
+          <p v-if="!gradeContext && (!intakeReviewed || conflicts.length)" class="intake-conflict-note">{{ tr('Volte à conferência para revisar os dados antes de criar.') }}</p>
           <!-- Initial stock + location — only when creating -->
           <template v-if="!isEdit && activeTab === 'stock'">
             <div class="form-group">
@@ -251,7 +231,7 @@
                 <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
               </div>
             </div>
-            <div v-if="!gradeItemCount" class="form-group">
+            <div v-if="!gradeItemCount && !gradeContext" class="form-group">
               <label>{{ tr('Estoque inicial') }}</label>
               <StockQuantityInput v-model.number="initialStock" type="number" :min="0" class="form-input" placeholder="0" />
               <span class="form-hint">{{ tr('Quantidade adicionada ao {local} ao criar o item.', { local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</span>
@@ -259,12 +239,12 @@
           </template>
         </div>
 
-        <div v-if="!isEdit && !duplicateContext && activeTab === 'stock'" class="intake-grade-toggle">
+        <div v-if="!isEdit && !duplicateContext && !gradeContext && activeTab === 'stock'" class="intake-grade-toggle">
           <button v-if="!gradeEnabled" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="gradeEnabled = true">{{ tr('Criar grade deste modelo') }}</button>
           <button v-else type="button" class="erp-button erp-button--ghost erp-button--sm" @click="disableGrade">{{ tr('Cadastrar apenas esta peça') }}</button>
         </div>
         <!-- Grade creation is explicitly enabled; presets create the selected variants together. -->
-        <section v-if="!isEdit && activeTab === 'stock' && gradeEnabled" class="intake-grade">
+        <section v-if="!isEdit && activeTab === 'stock' && gradeEnabled" class="intake-grade" :inert="gradeLocked || undefined">
           <div class="grade-options-heading">
             <h3>{{ tr('Grade de tamanhos e cores (opcional)') }}</h3>
             <button type="button" class="erp-button erp-button--secondary erp-button--sm"
@@ -432,14 +412,6 @@
             <StockQuantityInput v-model.number="gradeInitialStock" type="number" :min="0" class="form-input" placeholder="0" />
             <span class="form-hint">{{ tr('Quantidade padrão para as variações sem ajuste individual.') }}</span>
           </div>
-          <div class="form-group" v-if="gradeTotalStock > 0">
-            <label>{{ tr('Cadastrar em') }}</label>
-            <div class="loc-toggle">
-              <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'loja' }]" @click="stockLocation = 'loja'">{{ tr('Loja') }}</button>
-              <button class="erp-control" type="button" :class="['loc-btn', { active: stockLocation === 'deposito' }]" @click="stockLocation = 'deposito'">{{ tr('Depósito') }}</button>
-            </div>
-          </div>
-
           <!-- Barcode suffix info -->
           <div v-if="form.barcode" class="grade-barcode-hint">
             <span class="hint-label">{{ tr('Cod. de barras base:') }}</span>
@@ -453,17 +425,7 @@
           <div v-if="gradeSizes.length > 0 || gradeColors.length > 0" class="form-group">
             <label>{{ tr('Prévia — itens a criar: {count}', { count: gradeItemCount }) }}</label>
             <div class="grade-bulk-stock">
-              <label>{{ tr('Aplicar quantidade a') }}
-                <select v-model="bulkGradeTarget" class="form-input" :disabled="gradeLocked" :aria-label="tr('Aplicar quantidade a')">
-                  <option value="all">{{ tr('Todas as variações') }}</option>
-                  <optgroup :label="tr('Por cor')">
-                    <option v-for="color in [...new Set(gradeRows.map(row => row.color))]" :key="color" :value="JSON.stringify(['color', color])">{{ color || tr('Sem cor') }}</option>
-                  </optgroup>
-                  <optgroup :label="tr('Por tamanho')">
-                    <option v-for="size in [...new Set(gradeRows.map(row => row.size))]" :key="size" :value="JSON.stringify(['size', size])">{{ size || tr('Sem tamanho') }}</option>
-                  </optgroup>
-                </select>
-              </label>
+              <div class="grade-quantity-field"><span>{{ tr('Aplicar quantidade a') }}</span><ErpDropdown v-model="bulkGradeTarget" :options="gradeTargetOptions" :disabled="gradeLocked" :label="tr('Aplicar quantidade a')" /></div>
               <div class="grade-quantity-field"><label for="bulk-grade-quantity">{{ tr('Quantidade') }}</label><StockQuantityInput id="bulk-grade-quantity" v-model.number="bulkGradeQuantity" :disabled="gradeLocked" type="number" :min="0" step="1" inputmode="numeric" class="form-input" :aria-label="tr('Quantidade para aplicar')" @keydown.enter.stop.prevent="applyGradeQuantity" /></div>
               <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="gradeLocked || !validGradeQuantity(bulkGradeQuantity) || !gradeRows.length" @click="applyGradeQuantity">{{ tr('Aplicar') }}</button>
             </div>
@@ -553,17 +515,18 @@
 
       <div v-if="!isEdit && activeTab === 'stock' && !partialItems.length && !uncertainSave" class="intake-total" role="status">{{ tr('Ao concluir: {items} produto(s), {quantity} unidade(s) no {local}.', { items: gradeEnabled ? gradeItemCount : 1, quantity: gradeEnabled ? (gradeQuantitiesValid ? gradeTotalStock : '—') : (initialStock || 0), local: tr(stockLocation === 'loja' ? 'estoque da loja' : 'depósito') }) }}</div>
       <div class="modal-footer erp-dialog__footer">
+        <label v-if="gradeContext" class="variant-confirm"><input v-model="intakeReviewed" type="checkbox" :disabled="gradeLocked" /> {{ tr('Conferi os tamanhos, os códigos e o estoque dos novos itens.') }}</label>
         <template v-if="activeTab === 'basic' && needsIntakeReview">
           <label class="intake-review-check footer-review"><input ref="reviewInput" v-model="intakeReviewed" type="checkbox" :disabled="saving || conflicts.length > 0" />{{ tr('Conferi os dados e a foto escolhida para este produto.') }}</label>
           <p v-if="reviewError" class="error-msg" role="alert">{{ tr(reviewError) }}</p>
         </template>
         <p v-if="submitError" class="submit-error" role="alert">{{ tr(submitError) }}</p>
-        <button v-if="!isEdit && activeTab === 'stock' && !intakeReviewed" type="button" class="erp-button erp-button--secondary" :disabled="saving" @click="showReview">{{ tr('Revisar dados') }}</button>
+        <button v-if="!isEdit && !gradeContext && activeTab === 'stock' && !intakeReviewed" type="button" class="erp-button erp-button--secondary" :disabled="saving" @click="showReview">{{ tr('Revisar dados') }}</button>
         <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
         <button :disabled="saving" @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
         <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
-        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || loadingDuplicate || duplicateNeedsRefresh || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
+        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || loadingDuplicate || duplicateNeedsRefresh || (gradeContext && (!gradeItemCount || !gradeQuantitiesValid)) || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
           <template v-if="saving">{{ tr('Salvando...') }}</template>
           <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
           <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>
@@ -580,13 +543,15 @@
 </template>
 
 <script setup lang="ts">
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import StockQuantityInput from './StockQuantityInput.vue'
-import { canonicalSize, canonicalBrand } from '@/services/inventoryTaxonomy'
+import { canonicalSize, canonicalBrand, taxonomyKey } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import ProductVariantsModal from './ProductVariantsModal.vue'
 import { inventoryVariantsAPI, type VariantResult, type VariantContext, type DuplicateRequest } from '@/services/inventoryVariants'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
+const currencyOptions = [{value:'PYG',label:'🇵🇾 G$'},{value:'BRL',label:'🇧🇷 R$'},{value:'USD',label:'🇺🇸 U$'},{value:'EUR',label:'🇪🇺 €'}]
 import { ref, reactive, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
@@ -616,6 +581,7 @@ function toTitleCase(s: string | undefined | null): string {
 const props = defineProps<{
   item?: InventoryItem | null
   duplicateContext?: VariantContext
+  gradeContext?: VariantContext
   suppliers?: Array<{ id: string; name: string }>
   existingGroupKeys?: string[]
   existingBrands?: string[]
@@ -629,6 +595,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'deleted', id: string): void
   (e: 'variants-created', result: VariantResult): void
+  (e: 'reload-grade'): void
 }>()
 
 const variantMode = ref<'grade' | null>(null)
@@ -656,7 +623,7 @@ async function closeHistory() { showHistory.value = false; await nextTick(); his
 async function closeDeletion() { showDeletion.value = false; await nextTick(); deleteButton.value?.focus() }
 
 const isEdit = computed(() => !!props.item)
-const activeTab = ref(props.item || props.duplicateContext ? 'basic' : 'capture')
+const activeTab = ref(props.gradeContext ? 'stock' : props.item || props.duplicateContext ? 'basic' : 'capture')
 const modalBody = ref<HTMLElement>(), conflictsPanel = ref<HTMLElement>()
 const reviewInput = ref<HTMLInputElement>(), nameInput = ref<HTMLInputElement>()
 watch(activeTab, async tab => { if (tab !== 'photo') stopCameraPhoto(); await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
@@ -689,7 +656,7 @@ let photoStream: MediaStream | null = null
 
 // ── Grade state ──────────────────────────────────────────────────────────────
 const gradeSizes = ref<string[]>([])
-const gradeEnabled = ref(false)
+const gradeEnabled = ref(!!props.gradeContext)
 const excludedGradeRows = ref<string[]>([])
 function excludeGradeRow(key: string) { if (!saving.value && !uncertainSave.value && !partialItems.value.length) excludedGradeRows.value = [...excludedGradeRows.value, key] }
 const editingGradeOptions = ref(false)
@@ -709,7 +676,7 @@ const gradeQuantities = ref<Record<string, number | string>>({})
 const bulkGradeTarget = ref('all')
 const bulkGradeQuantity = ref<number | string>(0)
 const validGradeQuantity = (quantity: unknown): quantity is number =>
-  typeof quantity === 'number' && Number.isInteger(quantity) && quantity >= 0 && quantity <= 2_147_483_647
+  typeof quantity === 'number' && Number.isInteger(quantity) && quantity >= 0 && quantity <= (props.gradeContext ? 1_000_000 : 2_147_483_647)
 const gradeLocked = computed(() => saving.value || uncertainSave.value || !!partialItems.value.length)
 const initialStock = ref(0)
 
@@ -768,13 +735,20 @@ function toggleQuickColor(c: string) {
   }
   // To remove, use × on the chip
 }
-const gradeRows = computed(() => {
+const allGradeRows = computed(() => {
   if (!gradeSizes.value.length && !gradeColors.value.length) return []
   const sizes = gradeSizes.value.length ? gradeSizes.value : [canonicalSize(form.size.trim().toUpperCase())]
   const colors = gradeColors.value.length ? gradeColors.value : [form.color || '']
   return colors.flatMap(color => sizes.map(size => ({ size, color, key: JSON.stringify([size, color]) })))
     .filter(row => !excludedGradeRows.value.includes(row.key))
 })
+const gradeIdentity = (size: string, color: string) => JSON.stringify([canonicalSize(size).toLowerCase(), taxonomyKey(color)])
+const existingVariantKeys = computed(() => new Set((props.gradeContext?.existing || []).map(row => gradeIdentity(row.size || '', row.color || ''))))
+const existingGradeRows = computed(() => allGradeRows.value.filter(row => existingVariantKeys.value.has(gradeIdentity(row.size, row.color))))
+const gradeRows = computed(() => allGradeRows.value.filter(row => !props.gradeContext || !existingVariantKeys.value.has(gradeIdentity(row.size, row.color))))
+const gradeTargetOptions = computed(() => [{value:'all',label:tr('Todas as variações')},
+  ...[...new Set(gradeRows.value.map(row=>row.color))].map(color=>({value:JSON.stringify(['color',color]),label:`${tr('Cor')}: ${color || tr('Sem cor')}`})),
+  ...[...new Set(gradeRows.value.map(row=>row.size))].map(size=>({value:JSON.stringify(['size',size]),label:`${tr('Tamanho')}: ${size || tr('Sem tamanho')}`}))])
 const gradeItemCount = computed(() => gradeRows.value.length)
 function gradeQuantity(row: { key: string }) { return gradeQuantities.value[row.key] ?? gradeInitialStock.value }
 const gradeModelName = computed(() => {
@@ -807,6 +781,8 @@ function stockBySize(rows: typeof gradeRows.value) {
 const stockLocation = ref<'loja' | 'deposito'>(
   readPreference('inv_stock_location') === 'deposito' ? 'deposito' : 'loja'
 )
+
+watch([allGradeRows, gradeQuantities, gradeInitialStock, stockLocation], () => { if (props.gradeContext) intakeReviewed.value = false }, { deep: true })
 
 watch(stockLocation, (val) => {
   savePreference('inv_stock_location', val)
@@ -956,7 +932,7 @@ const submitError = ref('')
 
 onMounted(() => {
   void nextTick(() => { initializingCopy = false })
-  const source = props.item || props.duplicateContext?.source
+  const source = props.item || props.duplicateContext?.source || props.gradeContext?.source
   if (source) {
     Object.assign(form, {
       name: source.name || '',
@@ -979,6 +955,12 @@ onMounted(() => {
       image_data: source.image_data || '',
       group_key: props.duplicateContext ? '' : source.group_key || '',
     })
+    if (props.gradeContext) {
+      form.name = props.gradeContext.model_name
+      form.barcode = '' // A base barcode must be explicitly reviewed; never strip digits.
+      gradeSizes.value = source.size ? [canonicalSize(source.size)] : []
+      gradeColors.value = source.color ? [source.color] : []
+    }
     // Init hierarchical category
     const cat = source.category || ''
     const parts = cat.split('>')
@@ -1065,7 +1047,7 @@ async function handleSubmit() {
     return
   }
   if (!validate()) {
-    activeTab.value = errors.name?.startsWith('Estoque inicial') || (isEdit.value && !errors.name) ? 'stock' : 'basic'
+    activeTab.value = props.gradeContext || errors.name?.startsWith('Estoque inicial') || (isEdit.value && !errors.name) ? 'stock' : 'basic'
     return
   }
   if (gradeEnabled.value && !gradeItemCount.value) { submitError.value = 'Selecione um modelo acima ou adicione tamanhos e/ou cores.'; return }
@@ -1075,6 +1057,21 @@ async function handleSubmit() {
   const createdItems: InventoryItem[] = []
   let creating = false
   try {
+    if (props.gradeContext) {
+      if (gradeRows.value.length > 250) { submitError.value = 'Use até 250 variações por operação.'; return }
+      try {
+        const result = await inventoryVariantsAPI.create(props.gradeContext.source.id, {
+          variants: gradeRows.value.map(row => ({ size: row.size, color: row.color || null, quantity: Number(gradeQuantity(row)) })),
+          model_name: gradeModelName.value, base_barcode: form.barcode.trim() || null,
+          source_version: props.gradeContext.source_version, initial_stock: 0, stock_location: stockLocation.value, confirm: true,
+        })
+        emit('variants-created', result)
+      } catch (error: any) {
+        uncertainSave.value = !error.response || error.response.status >= 500 || error.response.status === 409; intakeReviewed.value = false
+        submitError.value = typeof error.response?.data?.detail === 'string' ? error.response.data.detail : 'Não foi possível confirmar a operação. Confira os tamanhos cadastrados antes de continuar; os existentes não receberão estoque novamente.'
+      }
+      return
+    }
     if (props.duplicateContext) {
       duplicatePending = JSON.parse(JSON.stringify({
         request_id: duplicateRequestId, source_version: duplicateSourceVersion.value,
@@ -1402,6 +1399,11 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.price-currency-dropdown { flex: 0 0 94px; width: 94px; }
+@media (max-width: 480px) {
+  .form-row.price-fields { grid-template-columns: minmax(0, 1fr); }
+}
+.variant-confirm{display:flex;align-items:center;gap:8px;flex:1 0 100%;font-size:.85rem}.variant-confirm input{width:20px;height:20px}
 .footer-review { flex:1 0 100%; width:100%; margin:0; }
 .submit-error { flex:1 0 100%; margin:0; color:#b91c1c; font-size:.85rem; overflow-wrap:anywhere; }
 .intake-review-check input { width:20px; height:20px; }

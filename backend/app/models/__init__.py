@@ -20,3 +20,5 @@ from .sales_bi import SalesBIConfig, SalesBIWorkbook
 from .access import AuthSession, AuditEvent, ActivitySpan
 
 from .operations import LoginThrottle, ScheduledRun
+
+from .inventory_receiving import ReceivingLot, ReceivingLotItem

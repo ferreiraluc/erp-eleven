@@ -2,7 +2,7 @@
   <ModuleHeader :title="tr('Estoque')" class="inventory-header-actions">
     <InventoryActionsMenu :is-owner="isOwner" :diagnostics-open="diagnosticsOpen"
       @open-deleted="emit('open-deleted')" @toggle-diagnostics="emit('toggle-diagnostics')"
-      @open-labels="emit('open-labels')" @open-import="emit('open-import')" />
+      @open-labels="emit('open-labels')" @open-import="emit('open-import')" @open-receiving="emit('open-receiving')" />
     <button type="button" class="erp-button erp-button--primary erp-button--sm" @click="emit('create')">
       <Plus aria-hidden="true" />{{ tr('Novo item') }}
     </button>
@@ -22,6 +22,7 @@ const emit = defineEmits<{
   'toggle-diagnostics': []
   'open-labels': []
   'open-import': []
+  'open-receiving': []
 }>()
 const { tr } = useInventoryI18n()
 </script>

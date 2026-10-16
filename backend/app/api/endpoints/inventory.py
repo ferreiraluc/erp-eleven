@@ -47,7 +47,11 @@ from ...services.inventory_taxonomy import canonical, clean_product_name, vocabu
 from ...services.inventory_search import build_search
 from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail, product_thumbnails
 
+from .inventory_receiving import router as receiving_router, lot_filter
+from uuid import UUID
+
 router = APIRouter()
+router.include_router(receiving_router)
 
 
 @router.post('/items/{item_id}/duplicate', response_model=ItemResponse, status_code=201)
@@ -57,9 +61,9 @@ def copy_inventory_item(item_id: str, request: DuplicateItemRequest, db: Session
 
 
 @router.get('/items/{item_id}/variants', response_model=VariantContext)
-def get_variant_context(item_id: str, db: Session = Depends(get_db),
+def get_variant_context(item_id: str, all_colors: bool = False, db: Session = Depends(get_db),
                         current_user: Usuario = Depends(require_role(['ADMIN', 'GERENTE']))):
-    return variant_context(db, validate_uuid(item_id, 'ID do item'))
+    return variant_context(db, validate_uuid(item_id, 'ID do item'), all_colors=all_colors)
 
 
 @router.post('/items/{item_id}/variants', response_model=VariantCreateResponse, status_code=201)
@@ -183,6 +187,7 @@ def get_distinct_values(
 
 @router.get("/items", response_model=ItemListResponse)
 def list_items(
+    receiving_lot_id: UUID | None = None,
     search: Optional[str] = Query(None, max_length=256),
     category: Optional[str] = Query(None),
     brand: Optional[str] = Query(None),
@@ -202,6 +207,9 @@ def list_items(
 ):
     taxonomy_filter = facet_filters(db)
     query = db.query(Item).filter(Item.deleted_at.is_(None))
+
+    if receiving_lot_id:
+        query = query.filter(lot_filter(receiving_lot_id))
 
     searched = build_search(db, search or '', taxonomy_filter=taxonomy_filter, brand_context=brand or '', size=size) if search or size else None
     if searched:
@@ -338,6 +346,7 @@ def get_alerts_summary(
 
 @router.get("/groups", response_model=List[GroupResponse])
 def get_groups(
+    receiving_lot_id: UUID | None = None,
     search: Optional[str] = Query(None, max_length=256),
     brand: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
@@ -357,11 +366,13 @@ def get_groups(
     matching_counts: dict = {}
     taxonomy_filter = facet_filters(db)
     searched = build_search(db, search, taxonomy_filter=taxonomy_filter, brand_context=brand or '') if search else None
-    if search or brand or category or item_status or location_stock:
+    if search or brand or category or item_status or location_stock or receiving_lot_id:
         kq = db.query(Item.group_key, func.count(Item.id)).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
             Item.is_active == True,
         )
+        if receiving_lot_id:
+            kq = kq.filter(lot_filter(receiving_lot_id))
         if searched:
             kq = kq.filter(searched.condition)
         if brand:
@@ -392,6 +403,8 @@ def get_groups(
 
     # Preserve the full grade as context for the matching variant.
     item_query = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key.isnot(None), Item.is_active == True)
+    if receiving_lot_id:
+        item_query = item_query.filter(lot_filter(receiving_lot_id))
     if matching_keys is not None:
         item_query = item_query.filter(Item.group_key.in_(matching_keys))
     items = catalog_query(item_query, include_images).order_by(Item.group_key, Item.name).all()

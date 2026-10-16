@@ -129,6 +129,38 @@ texto, status, marca, categoria, local e seleção de itens sem grade. O modo de
 visualização e agrupamento é preservado. Uma lista vazia sem filtros permite
 **Novo item**, sem afirmar que não existem outros produtos fora da seleção.
 
+## Lotes de recebimento
+
+**Estoque → Mais ações → Lotes de recebimento** organiza chegadas com nome livre,
+data de recebimento e descrição. Por exemplo, “Leva 1” e “1ª leva do container”.
+Em **Novo lote**, escolha o intervalo de **cadastro** e use **Buscar produtos**;
+confira a lista, retire os itens indesejados e confirme. A consulta inclui todos
+os cadastros do período, inclusive inativos, sem depender da página do estoque
+carregada. Limites: 93 dias e 1000 produtos por seleção; períodos maiores pedem
+um intervalo menor. As datas são dias inteiros em Brasília. No PostgreSQL, os
+limites são convertidos para os timestamps UTC legados antes de consultar o índice.
+
+Para escolher manualmente, use **Selecionar** nos produtos e **Vincular a lote**.
+Pode criar um lote ou usar **Vincular seleção** em um já existente. **Conferir**
+permite editar nome/data/descrição, adicionar produtos por outro período/seleção
+e retirar um vínculo. **Ver no estoque** aplica o lote junto dos demais filtros;
+**Limpar filtro** sai dele. Em **Ver grades**, aparecem somente membros daquele
+lote, sem misturar tamanhos recebidos em outra chegada. A busca e os contadores
+continuam no servidor, antes da paginação.
+
+Um produto pode estar em várias chegadas, mas só uma vez em cada lote. A operação
+não modifica família, fotos, SKU, data de cadastro, saldo ou movimentos. Este é
+um agrupamento de cadastros: **não representa quantidades recebidas por lote nem
+rastreabilidade física de unidades**. Entradas de reposição continuam em Movimentar.
+Excluir um produto mantém a identificação histórica no lote; retirar do lote
+remove apenas o vínculo. Consultas exigem login; alterações seguem ADMIN/GERENTE,
+com auditoria de modificações. Repetir uma confirmação após falha de rede não
+repete o lote nem seus membros. O servidor valida todos os IDs na mesma transação.
+
+Migração `j2e3f4a5b6c7`: tabelas de lotes e vínculos, índices e FK que preserva o
+nome/SKU histórico quando um produto sem vínculos operacionais é excluído de vez.
+Nenhum produto existente é agrupado automaticamente durante o deploy.
+
 ## Exclusão definitiva de produto
 
 Somente Lucas (`lucas@eleven.com`, ADMIN) vê **Excluir definitivamente** ao editar
@@ -304,11 +336,10 @@ Títulos, edição e avisos usam o nome legível. Ao agrupar produtos selecionad
 o seletor **Grade de destino** lista as grades pelo nome e envia a chave da opção
 escolhida; **Criar uma nova grade** permite digitar um novo nome.
 
-### Duplicar produto e adicionar tamanhos a uma grade existente
+### Duplicar produto e adicionar cores/tamanhos a uma grade existente
 
 Em **Estoque → editar produto**, os perfis ADMIN/GERENTE podem escolher **Duplicar
-produto** (cadastro completo preenchido) ou **Adicionar grade** (vários tamanhos e modelos salvos
-no navegador). Exemplo: abrir o tênis 9 e criar o 8 sem reenviar a foto.
+produto** (cadastro completo preenchido) ou **Adicionar grade** (mesmo editor de tamanhos, cores, modelos salvos e quantidades do novo cadastro). Exemplo: abrir o tênis 9 e criar o 8 sem reenviar a foto.
 A operação usa os **dados já salvos**; cancelar retorna ao formulário e preserva
 as edições locais. Foto, marca, cor, descrição, fornecedor, preços/moedas e limites
 são copiados; SKU, vendas, movimentos e saldos não são copiados.
@@ -322,8 +353,8 @@ A imagem original e seus dados não são sobrescritos. Ao trocar só o tamanho, 
 sufixo de tamanho no nome acompanha a alteração; o código é copiado exatamente e
 pode ser conferido/editado, sem tentar adivinhar quais dígitos pertencem ao tamanho.
 
-A opção **Adicionar à grade do produto original** conserva o vínculo explícito;
-desmarcada, cria um modelo independente. Na mesma grade, tamanho+cor já existentes
+O seletor **Vínculo com o produto original** oferece **Adicionar à grade do produto original**
+ou **Criar um modelo independente**, conservando a escolha explícita de família. Na mesma grade, tamanho+cor já existentes
 são recusados. Quantidade inicial começa em zero. O novo endpoint
 `POST /api/inventory/items/{id}/duplicate` exige ADMIN/GERENTE, versão da origem e
 conferência, cria identidade própria e grava o item/grade/movimento atomicamente.
@@ -334,16 +365,27 @@ reenvia exatamente a operação original. SKU, saldos e vínculos não são acei
 objeto de dados editáveis. Para vários novos tamanhos de um produto salvo, continua
 existindo a ação separada **Adicionar grade**.
 
-Em **Adicionar grade**, a prévia exige conferir nome, tamanhos, código base opcional e quantidade **por novo
-tamanho** (inicialmente zero). O código base é informado explicitamente, sem tamanho:
-não tentamos retirar dígitos do código original, pois podem fazer parte do código real.
-Cada código novo recebe o tamanho ao final; campo vazio cria variantes sem código.
-O código original permanece intacto. Para meios números use ponto (por exemplo `8.5`).
+Em **Adicionar grade**, a mesma tela de grade do cadastro novo recebe os dados da
+matriz já salva. Escolha modelos de tamanhos, adicione/remova cores e tamanhos,
+remova combinações pelo × e ajuste quantidades por cor, tamanho ou linha. A prévia
+mostra só as combinações novas; as existentes (inclusive inativas) aparecem como
+**estoque preservado** e não recebem nova entrada. Quantidades começam em zero.
+Fotos, marca, descrição, preços e demais dados vêm da matriz; o nome do modelo e
+o código base são conferidos antes de criar. Para alterar os dados da própria
+matriz, salve a edição antes de abrir Adicionar grade.
 
-`GET/POST /api/inventory/items/{id}/variants` trabalha somente com o produto escolhido
-e sua grade explícita, na mesma cor. Tamanhos já existentes, inclusive inativos, são
-preservados e não recebem estoque adicional. Um produto avulso é agrupado com as
-novas variantes. Não há associação automática por nome ou código repetido.
+O código base é informado explicitamente, sem tamanho: não retiramos dígitos do
+código original, pois podem fazer parte do código real. Cada código novo recebe o
+tamanho ao final; campo vazio cria variantes sem código. O código original permanece
+intacto. O endpoint aceita até 250 combinações tamanho/cor, com até 1.000.000 unidades
+por combinação. Tamanhos e cores equivalentes são comparados antes de criar.
+
+`GET /api/inventory/items/{id}/variants?all_colors=true` retorna o contexto de todas
+as cores da família explícita. `POST` aceita uma matriz de `variants` com `size`,
+`color`, `quantity`; o contrato anterior `sizes` permanece compatível na cor da
+origem. Matriz, vínculo e movimentos são criados atomicamente. Repetir a chamada
+não repete entradas de combinações existentes. Uma resposta incerta bloqueia a
+edição até **Conferir tamanhos cadastrados**, que relê a matriz antes de nova revisão.
 
 A leitura da prévia carrega a foto original somente do produto escolhido, junto
 dos dados usados na conferência e no token de versão. As demais peças da grade
@@ -376,6 +418,19 @@ Falhar ou cancelar uma fonte não apaga os dados aplicados pela outra. A origina
 é exibida junto da imagem recortada/gerada para comparação, mas não é enviada no
 cadastro do produto. Na edição de um item, as mesmas sugestões podem ser usadas
 com revisão, sem alterar saldos por isso.
+
+### Seletores no cadastro e na etiqueta
+
+Marca e marca de referência da etiqueta usam `ErpDropdown`, compartilhado com
+categoria, subcategoria, unidade, moedas, vínculo de duplicação, destino de
+quantidades e seleção de recebimento. O estilo segue os seletores do cabeçalho:
+contorno arredondado, seta e lista com opção ativa. Campos editáveis aceitam marca
+nova; escolher uma sugestão aplica seu valor imediatamente. IDs são únicos por
+instância, inclusive com o cadastro original e sua cópia abertos. A lista permanece
+no modal, respeita o foco e fecha por escolha, toque externo ou Escape; perder foco
+sem destino em um toque não descarta a escolha. Setas/Home/End e Enter permitem
+uso por teclado. Marca de referência orienta os exemplos, mas não é preenchida
+como marca detectada pela IA sem evidência da etiqueta.
 
 ## Leitura revisável com IA
 
