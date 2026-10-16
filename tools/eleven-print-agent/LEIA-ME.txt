@@ -1,4 +1,4 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.14.3
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.10.16.1
 
 QUAL ARQUIVO ABRIR
 Para instalar: extraia TODO o ZIP e abra Instalar.cmd.
@@ -89,3 +89,18 @@ PDFs temporarios sao removidos apos o resultado ser confirmado pelo servidor.
 REMOVER
 Feche o agente, revogue a credencial no ERP e guarde o diario antes de remover.
 Nao remova/reinstale para trocar apenas a impressora; use a atualizacao acima.
+
+FILA PAUSADA - DIAGNOSTICO
+A janela agora mostra versao, codigo do motivo, etapa, HTTP, trabalho e PID.
+O mesmo diagnostico fica em agente-diagnostico.log na pasta instalada, com uma
+copia rotativa .1. Nao contem credencial, endereco, conteudo do PDF nem erro HTTP bruto.
+- renderer_active: renderizador deste trabalho ainda ativo; confira Windows/papel.
+- renderer_check_failed: Windows nao permitiu verificar um processo anterior.
+- erp_connection_failed/erp_unavailable: comunicacao falhou; aguarda e tenta novamente.
+- credential_rejected/profile_conflict: confira perfil/credencial, sem apagar diario.
+- journal_unavailable: diario nao pode ser lido/salvo; nao o exclua para destravar.
+Trabalhos concluidos nao consultam mais o PID antigo, que o Windows pode reutilizar.
+Trabalhos iniciados/incertos continuam protegidos e nunca sao reimpressos sozinhos.
+Para tickets em bobina continua o renderizador e PowerShell/ZPL, nao Sumatra.
+Atualize pelo ZIP do mesmo perfil e pressione Enter para manter a credencial.
+Se a pausa persistir, envie apenas as linhas do diagnostico, nao config.json.

@@ -6,7 +6,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     Read-Host 'Pressione Enter para fechar'
     return
 }
-$script:AgentVersion = '2026.10.14.3'
+$script:AgentVersion = '2026.10.16.1'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"
@@ -25,6 +25,9 @@ function Set-PrintOutcome($record, $status, $code, $duration = 0, $exitCode = $n
 }
 
 function Test-OwnedRendererRunning($record) {
+    # These outcomes prove the child exited or was never started. Windows can
+    # reuse its old PID for an unrelated/protected process; do not inspect it.
+    if ($record.status -in @('submitted', 'failed')) { return $false }
     if (-not $record.process_id -or -not $record.process_started_ticks) { return $false }
     try {
         $p = [Diagnostics.Process]::GetProcessById([int]$record.process_id)
@@ -32,6 +35,59 @@ function Test-OwnedRendererRunning($record) {
         finally { $p.Dispose() }
     } catch [ArgumentException] { return $false }
     # Access denied must block, not assume an old process ended.
+}
+
+function Assert-RendererStopped($record) {
+    if (Test-OwnedRendererRunning $record) {
+        $exception = New-Object InvalidOperationException 'Renderizador anterior ainda ativo.'
+        $exception.Data['ElevenPauseCode'] = 'renderer_active'
+        throw $exception
+    }
+}
+
+function Get-AgentPauseDiagnostic($failure, [string]$stage, $record) {
+    $stages = @('connect', 'journal_read', 'journal_write', 'renderer_check', 'resume_job', 'acknowledge', 'claim', 'process_job', 'cleanup')
+    if ($stage -notin $stages) { $stage = 'unknown' }
+    $status = 0; $rendererActive = $false; $exception = $failure.Exception
+    # Read only typed metadata: never expose HTTP bodies, headers, token, document
+    # contents, local paths or Exception.Message (which can contain any of those).
+    for ($depth = 0; $exception -and $depth -lt 5; $depth++) {
+        if ($exception.Data['ElevenPauseCode'] -eq 'renderer_active') { $rendererActive = $true }
+        if ($exception.PSObject.Properties['Response'] -and $exception.Response) {
+            try { $status = [int]$exception.Response.StatusCode } catch { }
+        }
+        $exception = $exception.InnerException
+    }
+    $code = 'agent_error'; $hint = 'Envie este diagnostico ao suporte. Nao apague journal nem solicite outra copia sem conferir o papel.'
+    if ($rendererActive) { $code = 'renderer_active'; $hint = 'Um renderizador deste trabalho ainda esta ativo (Sumatra ou ticket continuo). Confira o processo e a fila do Windows antes de outra copia.' }
+    elseif ($stage -eq 'renderer_check') { $code = 'renderer_check_failed'; $hint = 'O Windows nao permitiu verificar um renderizador anterior. Confira a fila; nao apague o diario para destravar.' }
+    elseif ($status -in @(401, 403)) { $code = 'credential_rejected'; $hint = 'O ERP recusou a credencial. Confira o perfil A4/Tickets e a credencial no instalador; nao apague o diario.' }
+    elseif ($status -eq 409 -and $stage -eq 'connect') { $code = 'profile_conflict'; $hint = 'A credencial nao corresponde ao perfil A4/Tickets. Use o instalador do mesmo perfil.' }
+    elseif ($status -eq 409) { $code = 'job_conflict'; $hint = 'O ERP recusou a operacao por conflito. Confira o trabalho no ERP e envie este diagnostico; nao reimprima nem apague o diario.' }
+    elseif ($status -eq 429 -or $status -ge 500) { $code = 'erp_unavailable'; $hint = 'O ERP esta temporariamente indisponivel ou limitou as consultas. O agente tentara novamente, sem repetir impressao.' }
+    elseif ($status -gt 0) { $code = 'erp_request_rejected'; $hint = 'O ERP recusou esta etapa. Envie o codigo HTTP e o trabalho ao suporte; preserve a configuracao e o diario.' }
+    elseif ($stage -in @('connect', 'claim', 'acknowledge')) { $code = 'erp_connection_failed'; $hint = 'Nao foi possivel concluir a comunicacao com o ERP. Confira a internet; o agente tentara novamente sem repetir impressao.' }
+    elseif ($stage -in @('journal_read', 'journal_write')) { $code = 'journal_unavailable'; $hint = 'Nao foi possivel ler ou salvar o diario local. Confira espaco/permissoes e envie o diagnostico; nao exclua journal.' }
+    $jobId = ''; $parsed = [Guid]::Empty
+    if ($record -and [Guid]::TryParse([string]$record.id, [ref]$parsed)) { $jobId = $parsed.ToString() }
+    $processId = 0
+    if ($record) { [int]::TryParse([string]$record.process_id, [ref]$processId) | Out-Null }
+    $errorType = if ($failure.Exception) { $failure.Exception.GetType().Name } else { 'Unknown' }
+    return @{ code=$code; hint=$hint; stage=$stage; http=$status; job=$jobId; process_id=[Math]::Max(0,$processId); error_type=$errorType; agent_version=$script:AgentVersion }
+}
+
+function Write-AgentPause($folder, $diagnostic) {
+    $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Fila pausada [$($diagnostic.code)] | etapa=$($diagnostic.stage) | HTTP=$($diagnostic.http) | trabalho=$($diagnostic.job) | PID=$($diagnostic.process_id) | erro=$($diagnostic.error_type) | agente=$($diagnostic.agent_version)"
+    Write-Host $line
+    Write-Host $diagnostic.hint
+    Write-Host 'Nova verificacao em 30 segundos. Nenhum trabalho enviado sera reimpresso automaticamente.'
+    try {
+        $path = Join-Path $folder 'agente-diagnostico.log'
+        if ((Test-Path -LiteralPath $path) -and (Get-Item -LiteralPath $path).Length -ge 65536) {
+            Move-Item -LiteralPath $path -Destination "$path.1" -Force
+        }
+        [IO.File]::AppendAllText($path, ($line + [Environment]::NewLine + $diagnostic.hint + [Environment]::NewLine), [Text.Encoding]::UTF8)
+    } catch { Write-Host 'Nao foi possivel gravar agente-diagnostico.log. Copie o diagnostico acima.' }
 }
 
 function Invoke-Renderer($record, $recordPath, $executable, $arguments, $timeoutMs = 120000) {
