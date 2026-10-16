@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { jsPDF } from 'jspdf'
 import { receiptPdfFile } from './receiptPdf'
 
-describe('receipt PDF bytes for mobile sharing', () => {
+describe('receipt PDF bytes for downloading', () => {
   it('preserves all bytes of a real PDF with a safe name and explicit MIME', async () => {
     const pdf = new jsPDF(); pdf.text('ELEVEN - prueba', 10, 10)
     const buffer = pdf.output('arraybuffer')
@@ -26,15 +26,4 @@ it('requests materialized binary data from the authenticated receipt endpoint', 
   vi.mocked(api.get).mockResolvedValueOnce({ data: buffer })
   expect(await pdvReceipts.pdf('test-sale')).toBe(buffer)
   expect(api.get).toHaveBeenCalledWith('/api/pdv/sales/test-sale/receipt/pdf', { responseType: 'arraybuffer' })
-})
-
-import { receiptSharePolicy } from './receiptPdf'
-it('distinguishes a denied sharing policy from an unrecognized policy name', () => {
-  Object.defineProperty(document, 'featurePolicy', { configurable: true, value: { features: () => ['web-share'], allowsFeature: () => false } })
-  expect(receiptSharePolicy()).toEqual({ allowed: false, supported: true })
-  Object.defineProperty(document, 'featurePolicy', { configurable: true, value: { features: () => ['camera'], allowsFeature: () => false } })
-  expect(receiptSharePolicy()).toEqual({ allowed: 'unknown', supported: false })
-  Object.defineProperty(document, 'featurePolicy', { configurable: true, value: { features: () => ['web-share'], allowsFeature: () => true } })
-  expect(receiptSharePolicy()).toEqual({ allowed: true, supported: true })
-  Object.defineProperty(document, 'featurePolicy', { configurable: true, value: undefined })
 })
