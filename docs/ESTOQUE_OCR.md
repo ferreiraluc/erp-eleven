@@ -56,6 +56,9 @@ do modo comum; são carregadas ao usar grades, seleção ou cadastro.
 Ampliar ou editar busca a foto original pela ficha individual. O editor só abre
 depois dessa leitura, evitando apagar ou substituir a foto por uma miniatura ao
 salvar/duplicar. Nenhuma imagem armazenada é regravada e não há consumo de IA.
+A galeria ampliada abre em uma camada fixa sobre a listagem, tanto no celular
+quanto no desktop. Fechar pelo ×, pelo fundo ou por Esc devolve a rolagem da
+lista; a janela continua podendo ser fechada durante carregamento ou erro das fotos.
 As APIs preservam o modo completo por padrão para consumidores existentes;
 grades continuam retornando todos os metadados correspondentes, sem paginação.
 Os contadores do dashboard são agregações SQL, sem carregar fotos ou cadastros
