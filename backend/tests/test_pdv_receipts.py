@@ -274,7 +274,9 @@ def test_ticket_lookup_includes_collisions_for_review_and_accepts_full_id(ticket
     code=sold['id'].replace('-','')[:10].upper()
     with factory() as db:
         original=db.get(PdvSale,uuid.UUID(sold['id']))
-        collision=PdvSale(id=uuid.UUID(code+'0'*22),vendedor_id=original.vendedor_id,status='completed',cliente_nome='Coincidencia sintética')
+        # The legacy UUID column has numeric affinity in SQLite. Keep the
+        # synthetic collision textual even when the random prefix is all digits.
+        collision=PdvSale(id=uuid.UUID(code+'a'*22),vendedor_id=original.vendedor_id,status='completed',cliente_nome='Coincidencia sintética')
         db.add(collision);db.commit();collision_id=str(collision.id)
     for query in (code,code.lower(),'#'+code):
         result=client.get('/api/pdv/management',params={'q':query}).json()
