@@ -124,7 +124,7 @@
     </div>
 
     <!-- Items list -->
-    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
+    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, !groupMode && `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
       <svg v-if="!groupMode && gradeConnections.length" class="grade-connections" aria-hidden="true">
         <path v-for="connection in gradeConnections" :key="connection.id" :d="connection.path" />
       </svg>
