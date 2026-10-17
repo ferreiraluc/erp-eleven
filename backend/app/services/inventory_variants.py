@@ -4,7 +4,7 @@ import json
 import uuid
 from fastapi import HTTPException
 from sqlalchemy import text
-from sqlalchemy.orm import Session, defer, load_only
+from sqlalchemy.orm import Session, defer, load_only, undefer
 
 from ..models.inventory import Item
 from ..schemas.inventory_variants import VariantCreateRequest, VariantSummary
@@ -13,7 +13,7 @@ from .inventory_taxonomy import key as taxonomy_key, canonical_size
 
 COPY_FIELDS = ('description', 'category', 'color', 'brand', 'unit', 'location',
                'supplier_id', 'cost_price', 'sale_price', 'currency', 'cost_currency',
-               'sale_currency', 'min_stock', 'max_stock', 'image_data')
+               'sale_currency', 'min_stock', 'max_stock', 'image_data', 'additional_images')
 
 
 def normalized(value):
@@ -28,7 +28,7 @@ def source_version(source):
 
 
 def source_item(db, item_id):
-    source = db.query(Item).filter(Item.id == item_id, Item.deleted_at.is_(None)).first()
+    source = db.query(Item).options(undefer(Item.additional_images)).filter(Item.id == item_id, Item.deleted_at.is_(None)).first()
     if source is None:
         raise HTTPException(404, 'Produto não encontrado. Atualize a lista de estoque.')
     if not source.is_active:
@@ -74,7 +74,7 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
             raise HTTPException(409, 'O produto ou sua grade mudou. Reabra a prévia antes de continuar.')
         # All the same rows are locked in the same order. Only the chosen
         # source needs its original, reread after waiting for those locks.
-        db.refresh(source, attribute_names=['image_data'])
+        db.refresh(source, attribute_names=['image_data', 'additional_images'])
         if request.source_version != source_version(source):
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
         combinations = [(v.size, v.color, v.quantity) for v in request.variants] if request.variants else [
@@ -88,7 +88,7 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
         if missing:
             source.group_key = original_group or f'grade-{uuid.uuid4()}'
             for size, color, quantity in missing:
-                row = Item(**{key: getattr(source, key) for key in COPY_FIELDS if key != 'color'},
+                row = Item(**{key: getattr(source, key) for key in COPY_FIELDS if key not in ('color', 'additional_images')},
                            name=f'{request.model_name} {size}'.strip(), size=size or None, color=color,
                            barcode=f'{request.base_barcode.strip()}{size}' if request.base_barcode and request.base_barcode.strip() else None,
                            sku_internal=f'INV-{uuid.uuid4().hex.upper()}', group_key=source.group_key,
@@ -96,6 +96,10 @@ def create_variants(db: Session, item_id, request: VariantCreateRequest, user_id
                            is_active=True, created_by=user_id)
                 db.add(row); created.append(row)
             db.flush()
+            if source.additional_images:
+                db.query(Item).filter(Item.id.in_([row.id for row in created])).update(
+                    {Item.additional_images: source.additional_images, Item.updated_at: Item.updated_at},
+                    synchronize_session=False)
             for row, (_, _, quantity) in zip(created, missing):
                 if quantity:
                     create_movement(db, row.id, 'entry', quantity, user_id,

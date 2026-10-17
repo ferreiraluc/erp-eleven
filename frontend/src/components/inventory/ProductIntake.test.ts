@@ -6,7 +6,7 @@ import { mergeIntake } from '@/services/productIntake'
 
 const mock = vi.hoisted(() => ({ photo: {} as Record<string, unknown>, label: {} as Record<string, unknown>,
   createItem: vi.fn(), createGrade: vi.fn(), createMovement: vi.fn(), getByBarcode: vi.fn() }))
-vi.mock('@/services/api', () => ({ inventoryAPI: mock, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { ...mock, getItemPhotos: async () => ({ additional_images: [] }) }, ocrAPI: {} }))
 vi.mock('./ProductPhotoAssistant.vue', async () => {
   const { defineComponent, h } = await import('vue')
   return { default: defineComponent({ props: ['open', 'draft'], emits: ['result', 'close'], setup(props, { emit }) {

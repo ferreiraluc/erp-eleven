@@ -7,7 +7,7 @@ const mock = vi.hoisted(() => ({ createItem: vi.fn(), getByBarcode: vi.fn(), ana
   generateCatalog: vi.fn(), cutoutPhoto: vi.fn(), preparePhoto: vi.fn(), catalogForStorage: vi.fn(),
   photoStatus: vi.fn(), photoError: vi.fn(() => 'edit_uncertain') }))
 vi.mock('@/services/productPhoto', () => mock)
-vi.mock('@/services/api', () => ({ inventoryAPI: mock, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { ...mock, getItemPhotos: async () => ({ additional_images: [] }) }, ocrAPI: {} }))
 let app: App, root: HTMLDivElement
 const button = (text: string, scope: ParentNode = document) => {
   const found = Array.from(scope.querySelectorAll('button')).find(b => b.textContent?.trim() === text)

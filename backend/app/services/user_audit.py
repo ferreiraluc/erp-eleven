@@ -15,7 +15,7 @@ SAFE_VALUES = {'status', 'state', 'ativo', 'active', 'is_active', 'role', 'sales
                'quantity_after', 'total_gs', 'valor_bruto', 'valor_liquido', 'moeda',
                'sale_price', 'cost_price', 'label_status', 'tipo', 'aprovada'}
 SECRET_FIELDS = {'senha_hash', 'auth_version', 'token_hash', 'token', 'webhook_secret',
-                 'document_pdf', 'pdf', 'image_data', 'snapshot', 'payload', 'response', 'text',
+                 'document_pdf', 'pdf', 'image_data', 'additional_images', 'snapshot', 'payload', 'response', 'text',
                  'content', 'data', 'raw_data', 'lines', 'config'}
 MODULES = {
     'usuarios': 'usuarios', 'users': 'usuarios', 'access': 'usuarios', 'auth': 'conta',

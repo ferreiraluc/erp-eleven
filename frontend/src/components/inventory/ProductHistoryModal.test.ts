@@ -7,7 +7,7 @@ import type { ProductHistory, HistorySection } from '@/services/inventoryHistory
 const mock = vi.hoisted(() => ({ get: vi.fn(), preview: vi.fn() }))
 vi.mock('@/services/inventoryHistory', () => ({ inventoryHistoryAPI: mock }))
 vi.mock('@/services/inventoryDeletion', () => ({ inventoryDeletionAPI: mock }))
-vi.mock('@/services/api', () => ({ inventoryAPI: {}, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { getItemPhotos: async () => ({ additional_images: [] }),}, ocrAPI: {} }))
 let app: App, root: HTMLDivElement
 const product = { id:'product',name:'Polo',sku_internal:'LOCAL-001',barcode:'123',brand:'Marca',size:'P',color:'Branco',category:'Camisetas',is_active:true,created_at:'2026-10-07T12:00:00-03:00',updated_at:null,created_by:'Lucas',current_stock:0,stock_loja:0,stock_deposito:null }
 const fixture = (section: HistorySection = 'movements'): ProductHistory => ({ product,section,page:1,page_size:20,total:0,totals:{movements:0,sales:0,counts:0,changes:0},rows:[],own_sales_only:false,can_view_changes:true })

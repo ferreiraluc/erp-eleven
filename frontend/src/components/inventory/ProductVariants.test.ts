@@ -6,7 +6,7 @@ import ItemFormModal from './ItemFormModal.vue'
 import type { InventoryItem } from '@/services/api'
 const api = vi.hoisted(() => ({ context: vi.fn(), create: vi.fn() }))
 vi.mock('@/services/api', () => ({
-  inventoryAPI: { getByBarcode: vi.fn().mockResolvedValue([]) },
+  inventoryAPI: { getItemPhotos: async () => ({ additional_images: [] }), getByBarcode: vi.fn().mockResolvedValue([]) },
   ocrAPI: {},
 }))
 vi.mock('@/services/inventoryVariants', () => ({ inventoryVariantsAPI: api }))

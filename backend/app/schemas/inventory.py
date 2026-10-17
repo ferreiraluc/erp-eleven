@@ -3,6 +3,7 @@ from typing import Optional, List, Literal, Annotated
 from datetime import datetime
 from decimal import Decimal
 import uuid
+from .product_gallery import GalleryInput
 
 
 class SupplierBase(BaseModel):
@@ -46,11 +47,11 @@ class ItemBase(BaseModel):
     group_key: Optional[str] = None
 
 
-class ItemCreate(ItemBase):
+class ItemCreate(ItemBase, GalleryInput):
     pass
 
 
-class ItemUpdate(ItemBase):
+class ItemUpdate(ItemBase, GalleryInput):
     name: Optional[str] = None
 
 
@@ -240,7 +241,7 @@ class AlertSummary(BaseModel):
     deposito_count: int = 0      # active items with stock_deposito > 0
 
 
-class GradeCreateRequest(BaseModel):
+class GradeCreateRequest(GalleryInput):
     """Create a group of items (grade) all at once from a base product + list of sizes."""
     name: str
     description: Optional[str] = None

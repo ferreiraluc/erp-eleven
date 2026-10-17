@@ -5,7 +5,7 @@ import ItemFormModal from './ItemFormModal.vue'
 import type { InventoryItem } from '@/services/api'
 
 const api = vi.hoisted(() => ({ getByBarcode: vi.fn(), updateItem: vi.fn() }))
-vi.mock('@/services/api', () => ({ inventoryAPI: api, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { ...api, getItemPhotos: async () => ({ additional_images: [] }) }, ocrAPI: {} }))
 const item = { id: 'edited-item', name: 'Produto teste', barcode: '', sku_internal: 'QA-1',
   current_stock: 1, stock_loja: 1, stock_deposito: 0, min_stock: 0, max_stock: 0,
   cost_price: 10, sale_price: 20, currency: 'PYG', cost_currency: 'BRL', sale_currency: 'USD',

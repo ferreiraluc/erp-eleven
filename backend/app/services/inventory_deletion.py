@@ -54,6 +54,7 @@ def delete_from_catalog(db, item_id, user, body):
     item.deleted_by = user.id
     item.is_active = False
     item.image_data = None
+    item.additional_images = None
     record(db, 'item_catalog_deleted', 'inventory', entity='inventory_items', entity_id=str(item.id),
            changes={'name': item.name, 'sku': item.sku_internal, 'history_preserved': True,
                     'stock_at_deletion': {'total': item.current_stock, 'loja': item.stock_loja, 'deposito': item.stock_deposito},
