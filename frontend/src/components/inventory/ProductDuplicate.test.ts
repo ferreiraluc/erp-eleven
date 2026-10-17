@@ -5,7 +5,7 @@ import ItemFormModal from './ItemFormModal.vue'
 import type { VariantContext } from '@/services/inventoryVariants'
 const mock = vi.hoisted(() => ({ duplicate: vi.fn(), photoSeed: '', updateItem: vi.fn(), createItem: vi.fn(), context: vi.fn() }))
 vi.mock('@/services/inventoryVariants', () => ({ inventoryVariantsAPI: { duplicate: mock.duplicate, context: mock.context } }))
-vi.mock('@/services/api', () => ({ inventoryAPI: { updateItem: mock.updateItem, createItem: mock.createItem, getByBarcode: vi.fn().mockResolvedValue([]) }, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { getItemPhotos: async () => ({ additional_images: [] }), updateItem: mock.updateItem, createItem: mock.createItem, getByBarcode: vi.fn().mockResolvedValue([]) }, ocrAPI: {} }))
 vi.mock('./ProductPhotoAssistant.vue', async () => {
   const { defineComponent, h } = await import('vue')
   return { default: defineComponent({ props: ['open', 'initialImage'], emits: ['result'], setup(props, { emit }) {

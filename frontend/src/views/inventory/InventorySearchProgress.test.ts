@@ -7,7 +7,7 @@ import { useInventoryStore } from '@/stores/inventory'
 import type { InventoryItem } from '@/services/api'
 
 const api = vi.hoisted(() => ({ getItems: vi.fn(), getGroups: vi.fn(), getAlertsSummary: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn() }))
-vi.mock('@/services/api', () => ({ inventoryAPI: api, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { ...api, getItemPhotos: async () => ({ additional_images: [] }) }, ocrAPI: {} }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: false }) }))
 let app: App | undefined, root: HTMLDivElement, observe: (entries: { isIntersecting: boolean }[]) => void
@@ -215,5 +215,5 @@ it('opens the matching photo from the compact list thumbnail without selecting t
   expect(thumbs[1].disabled).toBe(true)
   thumbs[0].click(); await nextTick()
   expect(root.querySelector('.card-selected')).toBeNull()
-  expect(root.querySelector('.image-modal-img')?.getAttribute('src')).toBe(photo)
+  expect(root.querySelector('.gallery-main')?.getAttribute('src')).toBe(photo)
 })

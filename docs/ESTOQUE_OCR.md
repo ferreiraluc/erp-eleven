@@ -532,11 +532,36 @@ Preço, estoque, código de barras, SKU e variantes nunca são inferidos pela im
 O SKU continua sendo gerado pelo cadastro; códigos repetidos não mesclam produtos.
 O botão normal de salvar continua responsável por persistir e movimentar o estoque.
 
-Nesta versão a foto escolhida fica em `Item.image_data`, JPEG até 1200 px e cerca de
-250 KB, com redução adicional quando necessário, e aparece nas miniaturas existentes.
-Não existe galeria nem armazenamento separado de original/alta resolução; use
-**Baixar foto escolhida** para conservar a prévia antes de fechar. Para um marketplace
-com muitas imagens, migrar a mídia para armazenamento próprio e miniaturas separadas.
+Cada produto pode ter **até cinco fotos**: uma principal e quatro adicionais.
+No cadastro novo, a galeria aparece em **Foto e etiqueta/Conferência**; nos produtos
+salvos, também na aba **Foto**. É possível selecionar vários arquivos, fotografar,
+remover uma foto e escolher a principal. A remoção da principal promove a seguinte.
+Clicar na foto do estoque abre a galeria; só uma imagem ampliada é renderizada por vez.
+A edição/geração por IA continua sendo uma ação opcional sobre a foto principal,
+com as confirmações e limites existentes; adicionar fotos não chama provedores de IA.
+
+A principal continua em `Item.image_data`. As adicionais ficam na coluna JSON
+**deferred** `additional_images`, fora das respostas de catálogo, PDV e ficha comum.
+`GET /api/inventory/items/{id}/photos` busca as adicionais somente ao abrir a galeria
+ou o editor, com autenticação e bloqueio de produtos excluídos. JPEG/PNG/WebP novos
+são comprimidos no navegador (até 1200 px e 340.000 caracteres de data URL por foto,
+aproximadamente 250 KB de arquivo). O backend confere formato real, dimensões,
+quantidade e tamanho. Processamento e miniaturas de 128 px são sequenciais.
+A galeria não mantém um cache global de originais no navegador ou no servidor.
+
+Falha ao buscar as fotos bloqueia o salvamento do editor até tentar novamente;
+edições comuns e clientes antigos preservam as adicionais. Fotos inalteradas não
+são reenviadas ao atualizar nome/preço. Duplicação e grades herdam a galeria da matriz;
+a conferência de versão detecta mudança nas fotos. Grades usam uma escrita da
+coleção com um único parâmetro de imagens, evitando um buffer grande por variante.
+A exclusão do catálogo limpa a galeria e preserva o histórico existente.
+
+A migração `k3f4a5b6c7d8` acrescenta uma coluna nullable, sem regravar as imagens
+anteriores. Não existe armazenamento separado da foto original em alta resolução;
+use **Baixar foto escolhida** para conservar a prévia da IA. Cada variante possui
+sua própria galeria no banco; imagens adicionais de grades não têm deduplicação de
+armazenamento. Para um marketplace com muitas imagens, migrar mídia para object
+storage é uma evolução separada. Veja [medição de desempenho da galeria](DESEMPENHO_GALERIA.md).
 
 Código: `ItemFormModal.vue`, `services/productIntake.ts`, `ProductPhotoAssistant.vue`, `services/productPhoto.ts`, worker de recorte,
 `api/endpoints/product_photo.py`, `services/product_photo.py` e contrato correspondente.

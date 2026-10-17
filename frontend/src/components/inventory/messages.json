@@ -2393,5 +2393,17 @@
   "Ampliar foto de {name}": ["Ampliar foto de {name}", "Enlarge photo of {name}"],
   "Saldo total: {count}": ["Stock total: {count}", "Total stock: {count}"],
   "Movimentar {name}": ["Mover {name}", "Move {name}"],
-  "Editar {name}": ["Editar {name}", "Edit {name}"]
+  "Editar {name}": ["Editar {name}", "Edit {name}"],
+  "Fotos do produto": ["Fotos del producto", "Product photos"],
+  "Carregando fotos...": ["Cargando fotos...", "Loading photos..."],
+  "Não foi possível carregar as fotos. Tente novamente antes de salvar.": ["No se pudieron cargar las fotos. Inténtelo de nuevo antes de guardar.", "Could not load photos. Retry before saving."],
+  "Foto {number} do produto": ["Foto {number} del producto", "Product photo {number}"],
+  "Escolher foto": ["Elegir foto", "Choose photo"],
+  "Principal": ["Principal", "Main"],
+  "Usar como principal": ["Usar como principal", "Use as main photo"],
+  "Adicionar fotos": ["Añadir fotos", "Add photos"],
+  "Preparando fotos...": ["Preparando fotos...", "Preparing photos..."],
+  "Até 5 fotos. A principal aparece nos cards; as outras ficam nesta galeria.": ["Hasta 5 fotos. La principal aparece en las tarjetas; las demás quedan en esta galería.", "Up to 5 photos. The main photo appears on cards; the others stay in this gallery."],
+  "Não foi possível preparar a foto. Use JPEG, PNG ou WebP de até 15 MB.": ["No se pudo preparar la foto. Use JPEG, PNG o WebP de hasta 15 MB.", "Could not prepare the photo. Use JPEG, PNG or WebP up to 15 MB."],
+  "Selecione apenas as fotos que cabem no limite de 5.": ["Seleccione solo las fotos que caben en el límite de 5.", "Select only the photos that fit within the limit of 5."]
 }

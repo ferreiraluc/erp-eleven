@@ -409,10 +409,7 @@
     </div>
 
     <!-- Image modal -->
-    <div v-if="imageModalSrc" class="image-modal-overlay" @click="imageModalSrc = null">
-      <img :src="imageModalSrc" alt="" class="image-modal-img" @click.stop />
-      <button class="image-modal-close erp-button erp-button--ghost erp-button--icon" @click="imageModalSrc = null">✕</button>
-    </div>
+    <ProductGalleryModal v-if="imageModalItem" :item="imageModalItem" @close="imageModalItem = null" />
 
     <!-- Toast -->
     <div v-if="toast" class="toast" :class="'toast-' + toast.type">{{ tr(toast.message, toast.params) }}</div>
@@ -566,6 +563,7 @@ import type { ReceivingCandidate, ReceivingLot } from '@/services/inventoryRecei
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
+import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
 import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
 import { readPreference, savePreference } from '@/services/inventoryGradeOptions'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
@@ -656,7 +654,7 @@ const allVisibleItems = computed(() => {
   }
   return map
 })
-const imageModalSrc = ref<string | null>(null)
+const imageModalItem = ref<InventoryItem | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
 )
@@ -1272,7 +1270,7 @@ async function openProductImage(item?: InventoryItem) {
   const request = ++imageOpenGeneration
   try {
     const full = item.image_data ? item : await inventoryAPI.getItem(item.id)
-    if (request === imageOpenGeneration) imageModalSrc.value = full.image_data || null
+    if (request === imageOpenGeneration) imageModalItem.value = full
   } catch {
     if (request === imageOpenGeneration) showToast('Não foi possível abrir a foto. Tente novamente.', 'error')
   }
@@ -1776,45 +1774,6 @@ onMounted(async () => {
 .action-btn { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; border: none; font-weight: 600; white-space: nowrap; }
 .move-btn  { background: #dbeafe; color: #1d4ed8; }
 .edit-btn  { background: #f3f4f6; color: #374151; }
-
-/* ── Image modal ─────────────────────────────────────────────────────────────── */
-.image-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.82);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9000;
-  cursor: zoom-out;
-  padding: 1rem;
-}
-.image-modal-img {
-  max-width: min(90vw, 600px);
-  max-height: 85vh;
-  object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  cursor: default;
-}
-.image-modal-close {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255,255,255,0.15);
-  border: none;
-  color: white;
-  font-size: 1.25rem;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.image-modal-close:hover { background: rgba(255,255,255,0.3); }
 
 /* ── Selection mode ──────────────────────────────────────────────────────────── */
 .btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }

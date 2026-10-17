@@ -3,9 +3,10 @@ from typing import Literal
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 from .inventory import ItemBase
+from .product_gallery import GalleryInput
 
 
-class DuplicateItemData(ItemBase):
+class DuplicateItemData(ItemBase, GalleryInput):
     model_config = {'extra': 'forbid'}
     name: str = Field(min_length=2, max_length=200)
     size: str | None = Field(default=None, max_length=50)

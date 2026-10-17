@@ -502,6 +502,16 @@ def get_product_thumbnail(item_id: str, db: Session = Depends(get_db),
     return product_thumbnail(db, validate_uuid(item_id))
 
 
+@router.get('/items/{item_id}/photos')
+def get_item_photos(item_id: str, db: Session = Depends(get_db),
+                    current_user: Usuario = Depends(get_current_active_user)):
+    row = db.query(Item.additional_images).filter(
+        Item.id == validate_uuid(item_id), Item.deleted_at.is_(None)).first()
+    if row is None:
+        raise HTTPException(404, 'Item not found')
+    return {'additional_images': row.additional_images or []}
+
+
 @router.get("/items/{item_id}", response_model=ItemResponse)
 def get_item(
     item_id: str,
@@ -622,6 +632,12 @@ def create_grade(
     # leave an undisclosed, half-created grade that would be duplicated on retry.
     try:
         db.flush()
+        if grade.additional_images:
+            # Bind the gallery once, not once per size in a bulk INSERT. A large
+            # grade must not multiply the Python/driver image buffers.
+            db.query(Item).filter(Item.id.in_([row.id for row in created_items])).update(
+                {Item.additional_images: grade.additional_images, Item.updated_at: Item.updated_at},
+                synchronize_session=False)
         for item in created_items:
             quantity = grade.stock_by_size.get(item.size, grade.initial_stock or 0)
             if quantity > 0:

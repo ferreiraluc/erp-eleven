@@ -42,10 +42,12 @@ def duplicate_item(db, item_id, request, user_id):
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
         # Preserve the full source-version check without loading originals of
         # siblings. The source row is still protected by the lock above.
-        db.refresh(source, attribute_names=['image_data'])
+        db.refresh(source, attribute_names=['image_data', 'additional_images'])
         if source_version(source) != request.source_version:
             raise HTTPException(409, 'Os dados do produto mudaram. Reabra a prévia e confira novamente.')
         data = request.item.model_dump(exclude={'group_key'})
+        if 'additional_images' not in request.item.model_fields_set:
+            data['additional_images'] = source.additional_images
         data['size'] = ' '.join((data['size'] or '').split()).upper() or None
         if data['supplier_id'] and not db.get(Supplier, data['supplier_id']):
             raise HTTPException(422, 'Fornecedor não encontrado.')

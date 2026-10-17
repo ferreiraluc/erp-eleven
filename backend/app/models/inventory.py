@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, DECIMAL, Integer, Text, Enum as SAEnum
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, DECIMAL, Integer, Text, JSON, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.sql import func
@@ -66,6 +66,8 @@ class Item(Base):
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
     image_data = Column(Text, nullable=True)
+    # Gallery originals never participate in catalog, stock or PDV reads.
+    additional_images = deferred(Column(JSON, nullable=True))
     thumbnail_data = deferred(Column(Text, nullable=True))
     thumbnail_ready = deferred(Column(Boolean, nullable=False, default=False, server_default="false"))
     deleted_at = Column(DateTime(timezone=True), nullable=True)

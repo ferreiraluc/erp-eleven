@@ -577,6 +577,8 @@ export interface InventoryItem {
   is_active: boolean
   alert_level?: string
   image_data?: string | null
+  /** Write-only gallery draft; fetched separately from catalog/detail responses. */
+  additional_images?: string[] | null
   has_image?: boolean | null
   brand?: string | null
   group_key?: string | null
@@ -661,6 +663,9 @@ export const inventoryAPI = {
 
   getThumbnail: (id: string): Promise<{ image_data: string | null }> =>
     api.get(`/api/inventory/items/${id}/thumbnail`).then(res => res.data),
+
+  getItemPhotos: (id: string): Promise<{ additional_images: string[] }> =>
+    api.get(`/api/inventory/items/${id}/photos`).then(res => res.data),
 
   getThumbnails: (ids: string[]): Promise<{ thumbnails: Record<string, { image_data: string | null }>; retry_ids: string[] }> =>
     api.get('/api/inventory/items/thumbnails', { params: { ids }, paramsSerializer: { indexes: null } }).then(res => res.data),

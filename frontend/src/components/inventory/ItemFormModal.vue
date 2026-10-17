@@ -15,14 +15,14 @@
         </button>
       </div>
 
-      <div v-if="!gradeContext" :inert="saving || undefined" class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
+      <div v-if="!gradeContext" :inert="saving || galleryBusy || undefined" class="tabs erp-dialog__tabs" :aria-label="tr('Etapas do cadastro')">
         <button v-if="!isEdit" class="erp-control tab" :class="{ active: activeTab === 'capture' }" :aria-current="activeTab === 'capture' ? 'step' : undefined" @click="activeTab = 'capture'">1 · {{ tr('Foto e etiqueta') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'basic' }" :aria-current="activeTab === 'basic' ? 'step' : undefined" @click="activeTab = 'basic'">{{ isEdit ? tr('Básico') : '2 · ' + tr('Conferência') }}</button>
         <button class="erp-control tab" :class="{ active: activeTab === 'stock' }" :aria-current="activeTab === 'stock' ? 'step' : undefined" @click="isEdit ? activeTab = 'stock' : continueToStock()">{{ isEdit ? tr('Estoque') : '3 · ' + tr('Estoque') }}</button>
         <button v-if="isEdit" class="erp-control tab" :class="{ active: activeTab === 'photo' }" @click="activeTab = 'photo'">{{ tr('Foto') }}<span v-if="form.image_data" class="tab-dot"></span></button>
       </div>
 
-      <div ref="modalBody" :inert="saving || undefined" class="modal-body erp-dialog__body">
+      <div ref="modalBody" :inert="saving || galleryBusy || undefined" class="modal-body erp-dialog__body">
         <div v-if="isEdit && canCreateVariants" class="stock-readout variant-entry">
           <p>{{ tr('Use os dados já salvos para criar outros tamanhos com a mesma foto.') }}</p>
           <div class="variant-actions">
@@ -99,7 +99,7 @@
             <figure><img :src="form.image_data" :alt="tr('Foto do produto')" /><figcaption>{{ tr('Foto do produto') }}</figcaption></figure>
             <button v-if="!isEdit" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto()">{{ tr('Editar foto') }}</button>
             <button v-if="!isEdit" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
-            <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="form.image_data = ''; reviewOriginal = ''">{{ tr('Remover foto') }}</button>
+            <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="removeCover">{{ tr('Remover foto') }}</button>
           </div>
           <section v-if="conflicts.length" ref="conflictsPanel" class="intake-conflicts" aria-live="polite">
             <h3>{{ tr('Escolha os dados que deseja usar') }}</h3>
@@ -460,56 +460,16 @@
 
         </section>
 
-        <!-- ── Photo Tab ── -->
         <div v-if="activeTab === 'photo'" class="tab-content">
-          <!-- Current image preview -->
-          <div v-if="form.image_data" class="photo-preview">
-            <img :src="form.image_data" :alt="tr('Foto do item')" class="item-photo" />
-            <button @click="form.image_data = ''" class="remove-photo erp-button erp-button--danger">{{ tr('× Remover foto') }}</button>
-          </div>
-
-          <div v-else class="photo-placeholder">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="40" height="40" class="photo-icon">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p>{{ tr('Nenhuma foto adicionada') }}</p>
-          </div>
-
           <div class="photo-actions">
-            <button @click="photoInputRef?.click()" class="btn btn-secondary erp-button erp-button--secondary" type="button">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              {{ tr('Galeria') }}
-            </button>
-            <button @click="showCameraPhoto = true" class="btn btn-secondary erp-button erp-button--secondary" type="button">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="2" fill="none" />
-              </svg>
-              {{ tr('Câmera') }}
-            </button>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openProductPhoto()">{{ tr('Editar foto') }}</button>
+            <button type="button" class="erp-button erp-button--primary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
           </div>
-
-          <input
-            ref="photoInputRef"
-            type="file"
-            accept="image/*"
-            class="hidden-input"
-            @change="onPhotoFile"
-          />
-
-          <!-- Inline camera capture for photo -->
-          <div v-if="showCameraPhoto" class="inline-camera">
-            <video ref="photoVideoRef" autoplay playsinline class="inline-video"></video>
-            <div class="inline-camera-btns">
-              <button @click="capturePhoto" class="btn btn-primary erp-button erp-button--primary" type="button">{{ tr('Capturar') }}</button>
-              <button @click="stopCameraPhoto" class="btn btn-secondary erp-button erp-button--secondary" type="button">{{ tr('Cancelar') }}</button>
-            </div>
-          </div>
-
-          <p class="photo-hint">{{ tr('A imagem é redimensionada para 400×400px e armazenada no banco de dados.') }}</p>
         </div>
+        <ProductGallery v-if="!gradeContext" v-show="['capture', 'basic', 'photo'].includes(activeTab)"
+          v-model:cover="form.image_data" v-model:additional="form.additional_images" editable
+          :expanded="activeTab === 'photo'" :loading="galleryLoading" :load-error="galleryLoadError"
+          @retry="loadGallery" @busy="galleryBusy = $event" />
 
       </div>
 
@@ -526,7 +486,7 @@
         <button :disabled="saving" @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
         <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
-        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || loadingDuplicate || duplicateNeedsRefresh || (gradeContext && (!gradeItemCount || !gradeQuantitiesValid)) || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
+        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || galleryBusy || galleryLoading || galleryLoadError || loadingDuplicate || duplicateNeedsRefresh || (gradeContext && (!gradeItemCount || !gradeQuantitiesValid)) || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
           <template v-if="saving">{{ tr('Salvando...') }}</template>
           <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
           <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>
@@ -560,6 +520,7 @@ import { GRADE_PRESETS, QUICK_COLORS, PRESETS_KEY, COLORS_KEY, STORAGE_ERROR, op
   readPreference, savePreference, type GradePreset } from '@/services/inventoryGradeOptions'
 import BarcodeScanner from './BarcodeScanner.vue'
 import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
+import ProductGallery from './ProductGallery.vue'
 import ProductHistoryModal from './ProductHistoryModal.vue'
 import type { HistorySection } from '@/services/inventoryHistory'
 import type { ProductPhotoResult } from '@/services/productPhoto'
@@ -626,7 +587,7 @@ const isEdit = computed(() => !!props.item)
 const activeTab = ref(props.gradeContext ? 'stock' : props.item || props.duplicateContext ? 'basic' : 'capture')
 const modalBody = ref<HTMLElement>(), conflictsPanel = ref<HTMLElement>()
 const reviewInput = ref<HTMLInputElement>(), nameInput = ref<HTMLInputElement>()
-watch(activeTab, async tab => { if (tab !== 'photo') stopCameraPhoto(); await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
+watch(activeTab, async () => { await nextTick(); if (modalBody.value) modalBody.value.scrollTop = 0 })
 const showScanner = ref(false)
 const showOcr = ref(false)
 const showProductPhoto = ref(false)
@@ -643,16 +604,14 @@ const needsIntakeReview = computed(() => !isEdit.value || photoAdded.value || la
 const conflicts = ref<IntakeConflict[]>([])
 const previousSuggestions: Record<IntakeSource, IntakeDraft> = { photo: {}, label: {} }
 const intakeLabels: Record<IntakeField, string> = { name: 'Nome', description: 'Descrição', category: 'Categoria', brand: 'Marca', size: 'Tamanho', color: 'Cor', barcode: 'Código de barras', price: 'Preço de Venda' }
-const showCameraPhoto = ref(false)
+const galleryLoading = ref(false), galleryLoadError = ref(false), galleryBusy = ref(false)
+let loadedGallery: string[] = []
 const saving = ref(false)
 const partialItems = ref<InventoryItem[]>([])
 const uncertainSave = ref(false)
 const barcodeDuplicateWarning = ref(false)
 const unitAutoSet = ref(false)
-const photoInputRef = ref<HTMLInputElement>()
-const photoVideoRef = ref<HTMLVideoElement>()
 const chipInputRef = ref<HTMLInputElement>()
-let photoStream: MediaStream | null = null
 
 // ── Grade state ──────────────────────────────────────────────────────────────
 const gradeSizes = ref<string[]>([])
@@ -924,13 +883,33 @@ const form = reactive({
   max_stock: 0,
   is_active: true,
   image_data: '',
+  additional_images: [] as string[],
   group_key: '',
 })
 
 const errors = reactive<Record<string, string>>({})
 const submitError = ref('')
 
+async function loadGallery() {
+  const source = props.item || props.duplicateContext?.source
+  if (!source) return
+  galleryLoading.value = true; galleryLoadError.value = false
+  try {
+    const result = await inventoryAPI.getItemPhotos(source.id)
+    if (!disposed) {
+      loadedGallery = result.additional_images
+      form.additional_images = [...loadedGallery]
+    }
+  } catch { if (!disposed) galleryLoadError.value = true }
+  finally { if (!disposed) galleryLoading.value = false }
+}
+function removeCover() {
+  form.image_data = form.additional_images[0] || ''
+  form.additional_images = form.additional_images.slice(1)
+  reviewOriginal.value = ''
+}
 onMounted(() => {
+  void loadGallery()
   void nextTick(() => { initializingCopy = false })
   const source = props.item || props.duplicateContext?.source || props.gradeContext?.source
   if (source) {
@@ -977,7 +956,6 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true
   if (barcodeTimer) clearTimeout(barcodeTimer)
-  if (photoStream) photoStream.getTracks().forEach(t => t.stop())
 })
 
 function normalizeCatalogFields() {
@@ -1040,7 +1018,7 @@ function validate(includeStock = true) {
 }
 
 async function handleSubmit() {
-  if (saving.value || partialItems.value.length || uncertainSave.value) return
+  if (saving.value || galleryBusy.value || galleryLoading.value || galleryLoadError.value || partialItems.value.length || uncertainSave.value) return
   if (conflicts.value.length || (needsIntakeReview.value && !intakeReviewed.value)) {
     reviewError.value = 'Confira os dados e resolva as diferenças antes de continuar.'
     activeTab.value = 'basic'
@@ -1102,6 +1080,7 @@ async function handleSubmit() {
         min_stock: form.min_stock,
         max_stock: form.max_stock,
         image_data: form.image_data || null,
+        additional_images: form.additional_images,
         group_key: sharedGroupKey,
         sizes: gradeSizes.value,
         initial_stock: validGradeQuantity(gradeInitialStock.value) ? gradeInitialStock.value : 0,
@@ -1169,6 +1148,9 @@ async function handleSubmit() {
       ...form,
       supplier_id: form.supplier_id || null,
       image_data: form.image_data || null,
+      // Price/name/stock edits do not re-upload the unchanged gallery.
+      additional_images: isEdit.value && form.additional_images.length === loadedGallery.length &&
+        form.additional_images.every((photo, index) => photo === loadedGallery[index]) ? undefined : form.additional_images,
       brand: form.brand || null,
       group_key: form.group_key || null,
     }
@@ -1319,77 +1301,6 @@ async function continueToStock() {
   activeTab.value = 'stock'
 }
 
-// Photo handling
-function onPhotoFile(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  resizeAndStore(file)
-}
-
-function resizeAndStore(source: File | HTMLCanvasElement) {
-  if (source instanceof File) {
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const img = new Image()
-      img.onload = () => { storeResized(img) }
-      img.src = ev.target?.result as string
-    }
-    reader.readAsDataURL(source)
-  } else {
-    // source is already a canvas
-    form.image_data = source.toDataURL('image/jpeg', 0.82)
-  }
-}
-
-function storeResized(img: HTMLImageElement) {
-  const MAX = 400
-  const scale = Math.min(MAX / img.width, MAX / img.height, 1)
-  const w = Math.round(img.width * scale)
-  const h = Math.round(img.height * scale)
-  const canvas = document.createElement('canvas')
-  canvas.width = w; canvas.height = h
-  canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
-  form.image_data = canvas.toDataURL('image/jpeg', 0.82)
-  activeTab.value = 'photo'
-}
-
-async function stopCameraPhoto() {
-  if (photoStream) { photoStream.getTracks().forEach(t => t.stop()); photoStream = null }
-  showCameraPhoto.value = false
-}
-
-watch(showCameraPhoto, async (val) => {
-  if (!val) return
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    if (disposed || !showCameraPhoto.value) { stream.getTracks().forEach(track => track.stop()); return }
-    photoStream = stream
-    await nextTick()
-    if (photoVideoRef.value) photoVideoRef.value.srcObject = stream
-  } catch {
-    showCameraPhoto.value = false
-  }
-})
-
-function capturePhoto() {
-  const video = photoVideoRef.value
-  if (!video?.videoWidth || !video.videoHeight) return
-  const canvas = document.createElement('canvas')
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight
-  canvas.getContext('2d')!.drawImage(video, 0, 0)
-  stopCameraPhoto()
-  // Use canvas directly
-  const MAX = 400
-  const scale = Math.min(MAX / canvas.width, MAX / canvas.height, 1)
-  const w = Math.round(canvas.width * scale)
-  const h = Math.round(canvas.height * scale)
-  const out = document.createElement('canvas')
-  out.width = w; out.height = h
-  out.getContext('2d')!.drawImage(canvas, 0, 0, w, h)
-  form.image_data = out.toDataURL('image/jpeg', 0.82)
-  activeTab.value = 'photo'
-}
 function handleComma(event: KeyboardEvent, add: () => void) {
   if (event.key === ',') {
     event.preventDefault()
@@ -1499,17 +1410,8 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 .barcode-row .form-input { flex: 1; }
 .scan-btn { padding: 0.5rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; color: #374151; }
 /* Photo tab */
-.photo-preview { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-.item-photo { width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; border: 1px solid #e5e7eb; }
-.remove-photo { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; }
-.photo-placeholder { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 2rem; color: #9ca3af; border: 2px dashed #e5e7eb; border-radius: 10px; }
-.photo-icon { color: #d1d5db; }
 .photo-actions { display: flex; gap: 0.75rem; }
 .hidden-input { display: none; }
-.inline-camera { margin-top: 0.75rem; border-radius: 8px; overflow: hidden; }
-.inline-video { width: 100%; display: block; }
-.inline-camera-btns { display: flex; gap: 0.5rem; padding: 0.75rem; background: #f9fafb; }
-.photo-hint { font-size: 0.72rem; color: #9ca3af; }
 .modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; }
 .delete-product { margin-right: auto; }
 @media(max-width: 480px) { .delete-product { flex-basis: 100%; } }

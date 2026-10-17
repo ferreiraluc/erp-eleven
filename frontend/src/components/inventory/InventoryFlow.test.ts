@@ -9,7 +9,7 @@ import { inventoryMessages, useInventoryI18n } from './i18n'
 
 const api = vi.hoisted(() => ({ createMovement: vi.fn(), createBatchMovement: vi.fn(), transferBulk: vi.fn(),
   batchEdit: vi.fn(), createItem: vi.fn(), updateItem: vi.fn(), createGrade: vi.fn(), getByBarcode: vi.fn() }))
-vi.mock('@/services/api', () => ({ inventoryAPI: api, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { ...api, getItemPhotos: async () => ({ additional_images: [] }) }, ocrAPI: {} }))
 let app: App | undefined, container: HTMLDivElement
 const item = { id: 'item-1', name: 'Loja', sku_internal: 'TEST-001', current_stock: 10, stock_loja: 5, stock_deposito: 5,
   cost_price: 0, sale_price: 0, currency: 'PYG', is_active: true }
