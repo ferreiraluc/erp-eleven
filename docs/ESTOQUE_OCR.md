@@ -927,3 +927,26 @@ além de pequenos erros de uma letra nas palavras conhecidas de tipos de produto
 meios tamanhos. Códigos alfanuméricos continuam literais; uma busca sem correspondência
 real pode retornar vazia. Não há chamadas de IA nem carregamento do catálogo/fotos
 em memória para esse tratamento: os filtros continuam no SQL antes da paginação.
+
+## Visualização do estoque no celular (16/10/2026)
+
+Em **Quadrados**, telas de até 600 px têm uma barra **Zoom** com três posições:
+quatro, três ou duas colunas. Os botões −/+ também mudam a posição. O padrão
+continua sendo duas colunas com os detalhes atuais; a preferência de zoom fica
+salva naquele navegador. A barra permanece acessível ao recolher os filtros e
+não altera a busca, a seleção nem os produtos já carregados.
+
+Nas posições menores, cada card prioriza foto, nome, cor, tamanho e saldo total
+(loja + depósito). Movimentar e Editar aparecem como ícones identificados; os
+vínculos e indicadores de grade continuam visíveis. Amplie o zoom para conferir
+os demais dados e a separação dos saldos por local. Quatro colunas permitem ver
+oito cards em duas linhas no espaço do print de referência (408 × 622 px), mas
+a quantidade inteiramente visível depende da altura da tela e do texto ampliado.
+
+**Lista** ganhou miniaturas de 26 px dentro das linhas de 32 px já existentes.
+No celular, prioriza nome, tamanho e saldos, com as ações em ícones. Tocar na
+miniatura abre a foto; itens sem foto mostram um ícone neutro. As imagens usam
+o carregamento progressivo e o cache limitado existentes; o original só é
+solicitado ao abrir a foto ou a edição. **Compacto**, **Ver grades** e o tamanho
+dos cards em tablets/desktop preservam seus controles anteriores; o zoom é
+exclusivo dos quadrados individuais no celular.

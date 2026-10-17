@@ -2384,5 +2384,14 @@
   "Mais de 1000 produtos neste período. Selecione um intervalo menor.": [
     "Más de 1000 productos en este período. Elija un intervalo menor.",
     "More than 1000 products in this period. Choose a shorter range."
-  ]
+  ],
+  "Zoom dos produtos": ["Zoom de productos", "Product zoom"],
+  "Zoom": ["Zoom", "Zoom"],
+  "Diminuir produtos": ["Reducir productos", "Make products smaller"],
+  "Aumentar produtos": ["Ampliar productos", "Make products larger"],
+  "{count} colunas": ["{count} columnas", "{count} columns"],
+  "Ampliar foto de {name}": ["Ampliar foto de {name}", "Enlarge photo of {name}"],
+  "Saldo total: {count}": ["Stock total: {count}", "Total stock: {count}"],
+  "Movimentar {name}": ["Mover {name}", "Move {name}"],
+  "Editar {name}": ["Editar {name}", "Edit {name}"]
 }

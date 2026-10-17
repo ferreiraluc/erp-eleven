@@ -174,3 +174,37 @@ it('does not turn an unknown selected balance into zero', async () => {
   button('Selecionar').click(); await nextTick(); root.querySelector<HTMLElement>('.item-card')!.click(); await nextTick()
   expect(text('.sel-stock-summary')).toContain('Não informado')
 })
+
+it('changes photo zoom without reloading results or losing selection, and remembers it across visits', async () => {
+  localStorage.setItem('inv_view', 'grid')
+  await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+  button('Selecionar').click(); await nextTick(); root.querySelector<HTMLElement>('.item-card')!.click(); await nextTick()
+  const requests = api.getItems.mock.calls.length
+  const slider = root.querySelector<HTMLInputElement>('[type="range"]')!
+  expect(slider.value).toBe('2')
+  slider.value = '0'; slider.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+  expect(slider.getAttribute('aria-valuetext')).toBe('4 colunas')
+  expect(root.querySelector('.item-card.card-selected')?.getAttribute('data-item-id')).toBe('a')
+  expect(root.querySelectorAll('.item-card')).toHaveLength(2)
+  expect(api.getItems).toHaveBeenCalledTimes(requests)
+  expect(localStorage.getItem('inv_mobile_grid_zoom')).toBe('0')
+  expect(root.querySelector<HTMLButtonElement>('[aria-label="Diminuir produtos"]')!.disabled).toBe(true)
+  root.querySelector<HTMLButtonElement>('[aria-label="Aumentar produtos"]')!.click(); await nextTick()
+  expect(slider.getAttribute('aria-valuetext')).toBe('3 colunas')
+  app!.unmount(); root.remove()
+  await mount(); await nextTick()
+  expect(root.querySelector<HTMLInputElement>('[type="range"]')!.value).toBe('1')
+})
+
+it('opens the matching photo from the compact list thumbnail without selecting the product', async () => {
+  localStorage.setItem('inv_view', 'list')
+  const photo = 'data:image/png;base64,aW1hZ2U='
+  api.getItems.mockResolvedValue({ ...page(['a', 'b']), items: [{ ...item('a'), image_data: photo }, item('b')] })
+  await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+  button('Selecionar').click(); await nextTick()
+  const thumbs = root.querySelectorAll<HTMLButtonElement>('.list-thumbnail')
+  expect(thumbs[1].disabled).toBe(true)
+  thumbs[0].click(); await nextTick()
+  expect(root.querySelector('.card-selected')).toBeNull()
+  expect(root.querySelector('.image-modal-img')?.getAttribute('src')).toBe(photo)
+})

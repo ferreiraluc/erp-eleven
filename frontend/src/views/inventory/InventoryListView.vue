@@ -85,6 +85,7 @@
         <span v-if="searchBusy || inventoryStore.loadingMore" class="spinner-sm" aria-hidden="true"></span>
         <span>{{ searchProgressText }}</span>
       </div>
+      <InventoryGridZoom v-if="viewMode === 'grid' && !groupMode" v-model="mobileGridZoom" />
     </div><!-- /sticky-toolbar -->
 
     <div v-if="inventoryStore.filters.receiving_lot_id" class="receiving-filter-bar"><span>{{ tr('Lote de recebimento') }}: <strong>{{ receivingFilterName || tr('Selecionado') }}</strong></span><button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="clearReceiving">{{ tr('Limpar filtro') }} ×</button></div>
@@ -123,7 +124,7 @@
     </div>
 
     <!-- Items list -->
-    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, { 'drag-selecting': isDragSelecting }]">
+    <div v-else-if="flatList.length > 0" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, !groupMode && `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
       <svg v-if="!groupMode && gradeConnections.length" class="grade-connections" aria-hidden="true">
         <path v-for="connection in gradeConnections" :key="connection.id" :d="connection.path" />
       </svg>
@@ -259,7 +260,7 @@
           @pointerdown="onItemPointerDown(entry.item.id, $event)"
         >
           <div v-if="!groupMode && entry.item.group_key" class="card-grade-label" :title="groupTitle(entry.item.group_key)">
-            <span aria-hidden="true">↔</span> {{ tr('Grade {number}', { number: visibleGradeNumbers.get(entry.item.group_key)! }) }}
+            <span aria-hidden="true">↔</span><span class="grade-label-full">{{ tr('Grade {number}', { number: visibleGradeNumbers.get(entry.item.group_key)! }) }}</span><span class="grade-label-short" aria-hidden="true">{{ visibleGradeNumbers.get(entry.item.group_key)! }}</span>
           </div>
           <!-- Checkbox de seleção -->
           <button v-if="selectionMode" type="button" class="card-check" :aria-label="tr('Selecionar {name}', { name: entry.item.name })" :aria-pressed="selectedIds.includes(entry.item.id)" @click.stop="toggleSelection(entry.item.id)">
@@ -278,8 +279,13 @@
 
           <!-- ── MODO LISTA: linha única ── -->
           <div v-if="viewMode === 'list'" class="item-list-row" :style="selectionMode ? 'padding-left:1.85rem' : ''">
+            <button type="button" class="list-thumbnail erp-control" :disabled="!hasProductImage(entry.item)"
+              :aria-label="tr('Ampliar foto de {name}', { name: entry.item.name })" @click.stop="openProductImage(entry.item)">
+              <ProductThumbnail v-if="hasProductImage(entry.item)" :item="entry.item" alt="" />
+              <Package v-else aria-hidden="true" />
+            </button>
             <div class="list-left">
-              <span class="list-name" :class="'stock-' + stockAlertLevel(entry.item)">{{ entry.item.name }}</span>
+              <span class="list-name" :class="'stock-' + stockAlertLevel(entry.item)" :title="entry.item.name">{{ entry.item.name }}</span>
               <template v-if="entry.item.color">
                 <span class="list-sep">·</span><span class="list-attr">{{ entry.item.color }}</span>
               </template>
@@ -307,8 +313,8 @@
               </template>
             </div>
             <div class="list-actions">
-              <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn list-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Movimentar') }}</button>
-              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Editar') }}</button>
+              <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn list-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Movimentar {name}', { name: entry.item.name })" :title="tr('Movimentar')"><ArrowUpDown class="list-action-icon" aria-hidden="true" /><span class="action-label">{{ tr('Movimentar') }}</span></button>
+              <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn list-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Editar {name}', { name: entry.item.name })" :title="tr('Editar')"><Pencil class="list-action-icon" aria-hidden="true" /><span class="action-label">{{ tr('Editar') }}</span></button>
             </div>
           </div>
 
@@ -321,8 +327,8 @@
 
             <div class="item-info">
               <div class="item-name-row">
-                <span class="item-name">{{ entry.item.name }}</span>
-                <span v-if="entry.item.color" class="item-color-tag">{{ entry.item.color }}</span>
+                <span class="item-name" :title="entry.item.name">{{ entry.item.name }}</span>
+                <span v-if="entry.item.color" class="item-color-tag" :title="entry.item.color">{{ entry.item.color }}</span>
               </div>
               <div class="item-sub">
                 <span v-if="entry.item.brand" class="item-brand">{{ entry.item.brand }}</span>
@@ -344,13 +350,14 @@
                   <span class="stock-number" :class="'stock-' + stockAlertLevel(entry.item)">
                     {{ tr('Loja:') }}{{ displayStock(entry.item.stock_loja) }} {{ tr('· Dep.:') }}{{ displayStock(entry.item.stock_deposito) }}
                   </span>
+                  <span class="dense-stock-total" :class="'stock-' + stockAlertLevel(entry.item)" :aria-label="tr('Saldo total: {count}', { count: displayStock(entry.item.current_stock) })">{{ displayStock(entry.item.current_stock) }} <span>{{ entry.item.unit || 'un' }}</span></span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
                   <span v-if="stockAlertLevel(entry.item) !== 'ok'" class="alert-badge" :class="'badge-' + stockAlertLevel(entry.item)">{{ alertLabel(stockAlertLevel(entry.item)) }}</span>
                 </div>
                 <div class="item-actions">
-                  <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Movimentar') }}</button>
-                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Editar') }}</button>
+                  <button @click.stop="openMovement(entry.item)" :disabled="!hasKnownStock(entry.item)" class="action-btn move-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Movimentar {name}', { name: entry.item.name })" :title="tr('Movimentar')"><ArrowUpDown class="dense-action-icon" aria-hidden="true" /><span class="action-label">{{ tr('Movimentar') }}</span></button>
+                  <button @click.stop="openEdit(entry.item)" class="action-btn edit-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Editar {name}', { name: entry.item.name })" :title="tr('Editar')"><Pencil class="dense-action-icon" aria-hidden="true" /><span class="action-label">{{ tr('Editar') }}</span></button>
                 </div>
               </div>
             </div>
@@ -558,6 +565,9 @@ import type { ReceivingCandidate, ReceivingLot } from '@/services/inventoryRecei
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
+import InventoryGridZoom from '@/components/inventory/InventoryGridZoom.vue'
+import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
+import { readPreference, savePreference } from '@/services/inventoryGradeOptions'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
@@ -650,6 +660,9 @@ const imageModalSrc = ref<string | null>(null)
 const viewMode = ref<'list' | 'compact' | 'grid'>(
   (localStorage.getItem('inv_view') as any) || 'compact'
 )
+const savedZoom = readPreference('inv_mobile_grid_zoom')
+const mobileGridZoom = ref(savedZoom !== null && ['0', '1', '2'].includes(savedZoom) ? Number(savedZoom) : 2)
+watch(mobileGridZoom, value => { savePreference('inv_mobile_grid_zoom', String(value)) })
 const groupMode = ref(localStorage.getItem('inv_group_mode') === 'true')
 const expandedGroups = ref<string[]>([])
 const selectionMode = ref(false)
@@ -986,7 +999,7 @@ const visibleGradeNumbers = computed(() => {
   }
   return groups
 })
-const gradeConnections = useInventoryGradeLinks(itemsContainer, computed(() => [flatList.value, viewMode.value]), computed(() => !groupMode.value))
+const gradeConnections = useInventoryGradeLinks(itemsContainer, computed(() => [flatList.value, viewMode.value, mobileGridZoom.value]), computed(() => !groupMode.value))
 
 function groupAlertLevel(items: InventoryItem[]): string {
   if (items.some(item => !hasKnownStock(item))) return 'unknown'
@@ -1493,6 +1506,9 @@ onMounted(async () => {
 
 /* ── List single-line row ──────────────────────────────────────────────────── */
 .item-list-row { display: flex; align-items: center; width: 100%; min-width: 0; gap: 0; min-height: 32px; }
+.list-thumbnail { flex:0 0 26px; width:26px; height:26px; margin-right:6px; padding:0; border:1px solid #e2e8f0; border-radius:5px; background:#f8fafc; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#94a3b8; cursor:zoom-in; }
+.list-thumbnail img { width:100%; height:100%; object-fit:contain; }
+.list-thumbnail svg { width:16px; height:16px; }
 .list-left { display: flex; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
 .list-name { font-weight: 600; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 40px; }
 .list-sep { color: #d1d5db; margin: 0 0.18rem; font-size: 0.72rem; flex-shrink: 0; }
@@ -1943,4 +1959,45 @@ onMounted(async () => {
 .view-list .card-grade-label { margin-bottom:.1rem; }
 .sel-btn-delete { background:#dc2626; } .sel-btn-delete:hover { background:#b91c1c; }
 .items-container:has(.grade-connections) { gap:.6rem; }
+
+/* Only the photo-square view becomes denser; compact, list and desktop retain their sizing. */
+.dense-action-icon, .dense-stock-total, .grade-label-short, .list-action-icon { display:none; }
+@media (max-width:600px) {
+  .view-list .list-left { gap:5px; }
+  .view-list .list-name { flex:1; min-width:0; }
+  .view-list :is(.list-sep,.list-attr,.list-brand-tag,.list-price,.list-barcode,.list-actions .action-label) { display:none; }
+  .view-list .list-actions { margin-left:6px; gap:4px; }
+  .view-list .list-action-icon { display:block; width:14px; height:14px; }
+  :is(#app,body) .view-list .list-btn { width:28px; height:28px; min-height:28px; padding:3px!important; gap:0; border-radius:6px; }
+  .view-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .view-grid.grid-zoom-1 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .view-grid.grid-zoom-0 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) { padding-inline:10px; gap:6px; align-items:start; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-card { border-radius:8px; border-left-width:2px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-grid-image { height:clamp(68px,22vw,110px); background:#f8fafc; }
+  .view-grid.grid-zoom-0 .item-grid-image { height:clamp(50px,15vw,78px); }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-grid-img { object-fit:contain; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-row-main { padding:5px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-info { gap:3px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-name { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; font-size:.72rem; line-height:1.2; height:2.4em; flex:none; width:100%; overflow:hidden; }
+  .view-grid.grid-zoom-0 .item-name { font-size:.6875rem; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-color-tag { padding:0; max-width:100%; background:none; font-size:.625rem; line-height:1.2; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-name-row { gap:2px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) :is(.item-barcode-row,.item-sub,.stock-number,.item-location-inline,.alert-badge) { display:none; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-bottom-row { margin:0; gap:4px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-left-info { width:100%; justify-content:space-between; gap:2px; flex-wrap:nowrap; min-width:0; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .dense-stock-total { display:inline-flex; gap:2px; align-items:baseline; font-size:.65rem; font-weight:700; min-width:0; overflow:hidden; white-space:nowrap; }
+  .dense-stock-total > span { font-size:.6rem; font-weight:400; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-size-inline { font-size:.625rem; padding:1px 3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .action-label { display:none; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .dense-action-icon { display:block; }
+  :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-actions > .action-btn { flex:1 1 0; min-height:28px; height:28px; padding:3px; border-radius:6px; gap:0; }
+  :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-actions > .action-btn svg { width:14px; height:14px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .card-grade-label { position:absolute; top:3px; right:3px; z-index:2; margin:0; padding:2px 3px; font-size:.6rem; pointer-events:none; gap:2px; background:#eef2fff0; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .grade-label-full { display:none; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .grade-label-short { display:inline; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .card-check { top:3px; left:3px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-extra { padding:5px; overflow-wrap:anywhere; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-extra-row { flex-wrap:wrap; gap:2px; }
+}
 </style>
