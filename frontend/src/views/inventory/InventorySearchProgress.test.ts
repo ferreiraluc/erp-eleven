@@ -176,10 +176,18 @@ it('does not turn an unknown selected balance into zero', async () => {
 })
 
 it('changes photo zoom without reloading results or losing selection, and remembers it across visits', async () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true }))
+  const openZoom = async () => {
+    const trigger = button('Quadrados')
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 80, bottom: 240, width: 34 } as DOMRect)
+    trigger.click(); await nextTick(); await nextTick()
+  }
   localStorage.setItem('inv_view', 'grid')
   await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
   button('Selecionar').click(); await nextTick(); root.querySelector<HTMLElement>('.item-card')!.click(); await nextTick()
   const requests = api.getItems.mock.calls.length
+  expect(root.querySelector('[type="range"]')).toBeNull()
+  await openZoom()
   const slider = root.querySelector<HTMLInputElement>('[type="range"]')!
   expect(slider.value).toBe('2')
   slider.value = '0'; slider.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
@@ -193,6 +201,7 @@ it('changes photo zoom without reloading results or losing selection, and rememb
   expect(slider.getAttribute('aria-valuetext')).toBe('3 colunas')
   app!.unmount(); root.remove()
   await mount(); await nextTick()
+  await openZoom()
   expect(root.querySelector<HTMLInputElement>('[type="range"]')!.value).toBe('1')
 })
 

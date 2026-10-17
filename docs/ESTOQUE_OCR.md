@@ -930,11 +930,14 @@ em memória para esse tratamento: os filtros continuam no SQL antes da paginaç�
 
 ## Visualização do estoque no celular (16/10/2026)
 
-Em **Quadrados**, telas de até 600 px têm uma barra **Zoom** com três posições:
-quatro, três ou duas colunas. Os botões −/+ também mudam a posição. O padrão
+Em telas de até 600 px, tocar no ícone **Quadrados** seleciona essa visualização
+e abre um dropdown com **Zoom** em três posições: quatro, três ou duas colunas.
+O controle fica sobre os produtos, sem acrescentar altura ao cabeçalho. Tocar
+novamente no ícone, fora do dropdown, mudar de visualização ou pressionar Escape
+fecha o controle. Os botões −/+ também mudam a posição. O padrão
 continua sendo duas colunas com os detalhes atuais; a preferência de zoom fica
-salva naquele navegador. A barra permanece acessível ao recolher os filtros e
-não altera a busca, a seleção nem os produtos já carregados.
+salva naquele navegador. Se os filtros estiverem recolhidos, abra **Filtros** para
+acessar o ícone. O ajuste não altera a busca, a seleção nem os produtos já carregados.
 
 Nas posições menores, cada card prioriza foto, nome, cor, tamanho e saldo total
 (loja + depósito). Movimentar e Editar aparecem como ícones identificados; os

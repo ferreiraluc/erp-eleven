@@ -17,7 +17,7 @@ function button(text: string) {
   if (!match) throw new Error(`Button missing: ${text}`)
   return match
 }
-afterEach(() => { app?.unmount(); app = undefined; container?.remove() })
+afterEach(() => { app?.unmount(); app = undefined; container?.remove(); vi.unstubAllGlobals() })
 
 describe('Inventory toolbar controls', () => {
   it('labels the search and emits text, clear and scanner intents', async () => {
@@ -39,5 +39,42 @@ describe('Inventory toolbar controls', () => {
     expect(container.querySelector('[role="status"]')?.textContent).toContain('42 itens')
     button('Quadrados').click(); button('Selecionar').click()
     expect(mode).toHaveBeenCalledWith('grid'); expect(toggle).toHaveBeenCalledOnce()
+  })
+
+  it('discloses mobile zoom from Squares, keeps it open while adjusting and dismisses outside or by keyboard', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    const update = vi.fn()
+    await mount(InventoryViewControls, { mode: 'grid', selectionMode: false, busy: false, ready: true, resultText: '42 itens', zoomEnabled: true, gridZoom: 1, 'onUpdate:gridZoom': update })
+    const trigger = button('Quadrados')
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 80, bottom: 240, width: 34 } as DOMRect)
+    expect(container.querySelector('[type="range"]')).toBeNull()
+    trigger.click(); await nextTick(); await nextTick()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    const range = container.querySelector<HTMLInputElement>('[type="range"]')!
+    range.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    range.value = '0'; range.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+    expect(update).toHaveBeenCalledWith(0)
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })); await nextTick()
+    expect(container.querySelector('[type="range"]')).toBeNull()
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); await nextTick(); await nextTick()
+    const openedRange = container.querySelector<HTMLInputElement>('[type="range"]')!
+    expect(document.activeElement).toBe(openedRange)
+    openedRange.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await nextTick()
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(trigger)
+    trigger.click(); await nextTick(); await nextTick()
+    button('Lista').click(); await nextTick()
+    expect(container.querySelector('[type="range"]')).toBeNull()
+  })
+
+  it('keeps the desktop Squares control as a plain view selector', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    const mode = vi.fn()
+    await mount(InventoryViewControls, { mode: 'compact', selectionMode: false, busy: false, ready: true, resultText: '42 itens', zoomEnabled: true, onMode: mode })
+    button('Quadrados').click(); await nextTick()
+    expect(mode).toHaveBeenCalledWith('grid')
+    expect(button('Quadrados').hasAttribute('aria-expanded')).toBe(false)
+    expect(container.querySelector('[type="range"]')).toBeNull()
   })
 })

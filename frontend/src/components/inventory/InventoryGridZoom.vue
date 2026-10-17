@@ -21,7 +21,7 @@ const { tr } = useInventoryI18n()
 <style scoped>
 .inventory-grid-zoom { display:none; }
 @media(max-width:600px) {
-  .inventory-grid-zoom { display:flex; align-items:center; gap:6px; padding:2px 12px 6px; color:#64748b; background:#fff; }
+  .inventory-grid-zoom { display:flex; align-items:center; gap:6px; padding:4px; color:#64748b; background:#fff; }
   label { font-size:.72rem; font-weight:600; }
   output { min-width:56px; text-align:right; font-size:.7rem; font-variant-numeric:tabular-nums; }
   input { flex:1; min-width:0; height:28px; padding:0; accent-color:#2563eb; cursor:pointer; touch-action:pan-y; }

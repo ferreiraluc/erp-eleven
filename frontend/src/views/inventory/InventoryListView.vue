@@ -72,6 +72,8 @@
       <!-- View mode switcher -->
       <InventoryViewControls
         :mode="viewMode"
+        v-model:grid-zoom="mobileGridZoom"
+        :zoom-enabled="!groupMode"
         :selection-mode="selectionMode"
         :busy="searchBusy"
         :ready="resultsReady"
@@ -85,7 +87,6 @@
         <span v-if="searchBusy || inventoryStore.loadingMore" class="spinner-sm" aria-hidden="true"></span>
         <span>{{ searchProgressText }}</span>
       </div>
-      <InventoryGridZoom v-if="viewMode === 'grid' && !groupMode" v-model="mobileGridZoom" />
     </div><!-- /sticky-toolbar -->
 
     <div v-if="inventoryStore.filters.receiving_lot_id" class="receiving-filter-bar"><span>{{ tr('Lote de recebimento') }}: <strong>{{ receivingFilterName || tr('Selecionado') }}</strong></span><button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="clearReceiving">{{ tr('Limpar filtro') }} ×</button></div>
@@ -565,7 +566,6 @@ import type { ReceivingCandidate, ReceivingLot } from '@/services/inventoryRecei
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
-import InventoryGridZoom from '@/components/inventory/InventoryGridZoom.vue'
 import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
 import { readPreference, savePreference } from '@/services/inventoryGradeOptions'
 import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
