@@ -22,7 +22,7 @@ vi.mock('./OcrScanner.vue', async () => {
 })
 let app: App, root: HTMLDivElement
 const button = (text: string) => {
-  const b = Array.from(root.querySelectorAll('button')).find(b => b.textContent?.trim() === text)
+  const b = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === text)
   if (!b) throw Error(`Missing button: ${text}`)
   return b
 }
@@ -395,7 +395,7 @@ describe('Grade quantities before registration', () => {
   async function apply(target: string, value: string) {
     root.querySelector<HTMLButtonElement>('[aria-label="Aplicar quantidade a"]')!.click(); await nextTick()
     const label = target === 'all' ? 'Todas as variações' : `${JSON.parse(target)[0] === 'color' ? 'Cor' : 'Tamanho'}: ${JSON.parse(target)[1]}`
-    const option = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="option"]')).find(b => b.textContent?.trim().replace(/✓$/, '').trim() === label)!
+    const option = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]')).find(b => b.textContent?.trim().replace(/✓$/, '').trim() === label)!
     option.click(); await nextTick()
     await quantity('Quantidade para aplicar', value); await click('Aplicar')
   }

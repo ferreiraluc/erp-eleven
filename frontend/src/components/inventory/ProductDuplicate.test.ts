@@ -21,7 +21,7 @@ async function mount() {
   app = createApp(ItemFormModal, { duplicateContext: { source, source_version: 'a'.repeat(64), existing: [], model_name: 'Tênis' } as unknown as VariantContext, onSaved: saved }).use(createI18n({ legacy: false, locale: 'pt', messages: { pt: {} } }))
   app.mount(root); await flush()
 }
-const button = (text: string) => Array.from(root.querySelectorAll('button')).find(b => b.textContent?.trim() === text)!
+const button = (text: string) => Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === text)!
 const field = (label: string) => Array.from(root.querySelectorAll('.form-group')).find(g => g.querySelector('label')?.textContent?.trim() === label)?.querySelector('input') as HTMLInputElement
 async function set(label: string, value: string) { const input = field(label); input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); await flush() }
 async function click(text: string) { expect(button(text)).toBeTruthy(); button(text).click(); await flush() }

@@ -525,11 +525,11 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           {{ tr('Selecione pelo menos 2 itens sem grupo para poder agrupar.') }}
         </div>
-        <select v-if="existingGroupKeys.length" v-model="selectedExistingGroup" class="gmodal-input"
+        <ErpSelect v-if="existingGroupKeys.length" v-model="selectedExistingGroup" class="gmodal-input"
           :aria-label="tr('Grade de destino')" :disabled="grouping || selectedUngrouped.length < 2">
           <option value="">{{ tr('Criar uma nova grade') }}</option>
           <option v-for="gk in existingGroupKeys" :key="gk" :value="gk">{{ groupTitle(gk) }}</option>
-        </select>
+        </ErpSelect>
         <input v-if="!selectedExistingGroup"
           v-model="groupNameInput"
           type="text"
@@ -553,6 +553,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { uniqueLabels } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import { startInventoryDrag } from '@/services/inventoryDragSelection'

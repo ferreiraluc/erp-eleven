@@ -1,3 +1,4 @@
+import { chooseDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -78,9 +79,9 @@ describe('Address search empty states', () => {
 
   it('applies country, archived and customer filters without changing their query semantics, then explicitly resets them', async () => {
     await mount('?customer_id=fixture-customer')
-    const selects = container.querySelectorAll<HTMLSelectElement>('.toolbar select')
-    selects[0]!.value = 'PY'; selects[0]!.dispatchEvent(new Event('change', { bubbles: true })); await flush()
-    selects[1]!.selectedIndex = 1; selects[1]!.dispatchEvent(new Event('change', { bubbles: true })); await flush()
+    const selects = container.querySelectorAll('.toolbar .erp-dropdown')
+    await chooseDropdown(selects[0], 'PY'); await flush()
+    await chooseDropdown(selects[1], 'false'); await flush()
     expect(addressRequests().at(-1)![1].params).toMatchObject({ country: 'PY', active: false, customer_id: 'fixture-customer', offset: 0 })
     expect(container.querySelector('.empty h3')?.textContent).toBe('Nenhum endereço encontrado')
     container.querySelector<HTMLButtonElement>('.empty button')!.click(); await flush()

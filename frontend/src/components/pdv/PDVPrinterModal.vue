@@ -8,7 +8,7 @@
           <p v-if="loading" role="status">{{ uiText('Carregando…') }}</p>
           <template v-else>
             <label>{{ uiText('Nome') }}<input v-model.trim="form.name" required maxlength="100" /></label>
-            <label>{{ uiText('Tipo de papel') }}<select v-model="paperMode"><option value="continuous">{{ uiText('Bobina contínua') }}</option><option value="labels">{{ uiText('Etiquetas com altura fixa') }}</option></select></label>
+            <label>{{ uiText('Tipo de papel') }}<ErpSelect :label="(uiText('Tipo de papel'))" v-model="paperMode"><option value="continuous">{{ uiText('Bobina contínua') }}</option><option value="labels">{{ uiText('Etiquetas com altura fixa') }}</option></ErpSelect></label>
             <div class="printer-size">
               <label>{{ uiText('Largura (mm)') }}<input v-model.number="form.paper_width_mm" type="number" min="50" max="104" required /></label>
               <label v-if="paperMode === 'labels'">{{ uiText('Altura (mm)') }}<input v-model.number="fixedHeight" type="number" min="50" max="400" required /></label>
@@ -41,6 +41,7 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { onMounted, ref, reactive } from 'vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText } from '@/i18n/uiText'

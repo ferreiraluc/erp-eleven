@@ -32,17 +32,17 @@
     <div class="sales-average-section">
       <h2>{{ $t('exchangeManagement.salesWeeklyAverage') }}</h2>
       <div class="average-controls">
-        <select v-model="selectedCurrency" @change="loadSalesAverage" class="currency-select">
+        <ErpSelect v-model="selectedCurrency" @change="loadSalesAverage" class="currency-select">
           <option value="USD_TO_BRL">USD → BRL</option>
           <option value="USD_TO_PYG">USD → G$</option>
           <option value="EUR_TO_BRL">EUR → BRL</option>
           <option value="EUR_TO_USD">EUR → USD</option>
-        </select>
-        <select v-model="averageDays" @change="loadSalesAverage" class="days-select">
+        </ErpSelect>
+        <ErpSelect v-model="averageDays" @change="loadSalesAverage" class="days-select">
           <option value="7">{{ $t('exchangeManagement.last7Days') }}</option>
           <option value="14">{{ $t('exchangeManagement.last14Days') }}</option>
           <option value="30">{{ $t('exchangeManagement.last30Days') }}</option>
-        </select>
+        </ErpSelect>
       </div>
 
       <div v-if="salesAverage" class="average-card">
@@ -68,11 +68,11 @@
       <div class="section-header">
         <h2>{{ $t('exchangeManagement.exchangeHistory') }}</h2>
         <div class="history-controls">
-          <select v-model="historyDays" @change="loadHistory" class="days-select">
+          <ErpSelect v-model="historyDays" @change="loadHistory" class="days-select">
             <option value="7">{{ $t('exchangeManagement.last7Days') }}</option>
             <option value="30">{{ $t('exchangeManagement.last30Days') }}</option>
             <option value="90">{{ $t('exchangeManagement.last3Months') }}</option>
-          </select>
+          </ErpSelect>
           <button @click="loadHistory" class="btn btn-secondary erp-button erp-button--secondary">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -281,6 +281,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
@@ -1221,4 +1222,5 @@ onMounted(async () => {
     align-items: stretch;
   }
 }
+.average-controls > .erp-dropdown,.history-controls > .erp-dropdown{width:auto;min-width:140px}
 </style>

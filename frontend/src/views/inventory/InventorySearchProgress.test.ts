@@ -1,3 +1,4 @@
+import { chooseDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
@@ -134,8 +135,8 @@ it('keeps default order until requested, resets pagination, and passes newest or
   await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
   expect(api.getItems.mock.calls[0][0]).not.toHaveProperty('sort_by')
   const choose = async (value: string) => {
-    const select = root.querySelector<HTMLSelectElement>('[aria-label="Ordenação dos produtos"]')!
-    select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick(); await nextTick()
+    const select = root.querySelector<HTMLButtonElement>('[aria-label="Ordenação dos produtos"]')!
+    await chooseDropdown(select, value); await nextTick(); await nextTick()
   }
   await choose('created_at')
   expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', page: 1 }), expect.any(AbortSignal))
@@ -163,8 +164,8 @@ it('orders groups by their newest member alongside loose items only when newest 
   await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
   const names = () => Array.from(root.querySelectorAll('.items-container > .group-card, .items-container > .item-card')).map(el => el.textContent)
   expect(names()[0]).toContain('Older')
-  const select = root.querySelector<HTMLSelectElement>('[aria-label="Ordenação dos produtos"]')!
-  select.value = 'created_at'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick(); await nextTick()
+  const select = root.querySelector<HTMLButtonElement>('[aria-label="Ordenação dos produtos"]')!
+  await chooseDropdown(select, 'created_at'); await nextTick(); await nextTick()
   expect(names()[0]).toContain('Newer'); expect(names()[1]).toContain('Camiseta loose'); expect(names()[2]).toContain('Older')
 })
 

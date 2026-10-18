@@ -86,34 +86,34 @@
 
         <div class="filter-group">
           <label>{{ $tr("👤 Vendedor") }}</label>
-          <select v-model="filters.vendedor" class="filter-select">
+          <ErpSelect :label="($tr('👤 Vendedor'))" v-model="filters.vendedor" class="filter-select">
             <option value="">{{ $tr("Todos os vendedores") }}</option>
             <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
               {{ vendedor.nome }}
             </option>
-          </select>
+          </ErpSelect>
         </div>
 
         <div class="filter-group">
           <label>{{ $tr("💰 Moeda") }}</label>
-          <select v-model="filters.moeda" class="filter-select">
+          <ErpSelect :label="($tr('💰 Moeda'))" v-model="filters.moeda" class="filter-select">
             <option value="">{{ $tr("Todas as moedas") }}</option>
             <option value="G$">{{ $tr("G$ (Guaranis)") }}</option>
             <option value="R$">{{ $tr("R$ (Reais)") }}</option>
             <option value="U$">{{ $tr("U$ (Dólares)") }}</option>
             <option value="EUR">{{ $tr("EUR (Euros)") }}</option>
-          </select>
+          </ErpSelect>
         </div>
 
         <div class="filter-group">
           <label>{{ $tr("📅 Período") }}</label>
-          <select v-model="filters.periodo" class="filter-select">
+          <ErpSelect :label="($tr('📅 Período'))" v-model="filters.periodo" class="filter-select">
             <option value="">{{ $tr("Todos os períodos") }}</option>
             <option value="hoje">{{ $tr("Hoje") }}</option>
             <option value="semana">{{ $tr("Esta semana") }}</option>
             <option value="mes">{{ $tr("Este mês") }}</option>
             <option value="ano">{{ $tr("Este ano") }}</option>
-          </select>
+          </ErpSelect>
         </div>
 
         <div class="filter-actions">
@@ -253,6 +253,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'

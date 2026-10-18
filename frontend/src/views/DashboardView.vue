@@ -18,39 +18,9 @@
           <AccountNavigation embedded hide-language />
           <div class="header-tools">
             <div class="header-preferences">
-              <div class="currency-selector-group dropdown" @keydown.esc="showCurrencyDropdown = false">
-                <button
-                  type="button"
-                  class="preference-button erp-control"
-                  :aria-label="$t('footer.currency')"
-                  :aria-expanded="showCurrencyDropdown"
-                  aria-controls="dashboard-currencies"
-                  @click="toggleCurrencyDropdown"
-                >
-                  <span aria-hidden="true">{{ currencyStore.getCurrentCurrency?.flag }}</span>
-                  <span>{{ currencyStore.selectedCurrency }}</span>
-                  <svg class="preference-chevron" :class="{ rotate: showCurrencyDropdown }" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div v-if="showCurrencyDropdown" id="dashboard-currencies" class="header-dropdown-menu">
-                  <button
-                    v-for="currency in currencyStore.availableCurrencies"
-                    :key="currency.code"
-                    type="button"
-                    class="header-dropdown-item erp-control"
-                    :class="{ active: currency.code === currencyStore.selectedCurrency }"
-                    :aria-pressed="currency.code === currencyStore.selectedCurrency"
-                    @click="handleCurrencyChange(currency.code)"
-                  >
-                    <span aria-hidden="true">{{ currency.flag }}</span>
-                    <span class="currency-info">
-                      <span class="currency-code">{{ currency.code }}</span>
-                      <span class="currency-name">{{ currency.name }}</span>
-                    </span>
-                  </button>
-                </div>
-              </div>
+              <ErpDropdown class="currency-selector-group" compact :model-value="currencyStore.selectedCurrency"
+                :label="$t('footer.currency')" :options="currencyStore.availableCurrencies.map(c => ({ value: c.code, label: c.code, description: c.name, icon: c.flag }))"
+                @update:model-value="currencyStore.setSelectedCurrency($event)" />
 
               <LanguageSelector compact />
 
@@ -334,6 +304,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
 import { storeToRefs } from 'pinia'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
@@ -342,7 +313,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
-import type { CurrencyCode } from '@/stores/currency'
 import RastreamentoCard from '@/components/RastreamentoCard.vue'
 import FolgasCard from '@/components/FolgasCard.vue'
 import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions.vue'
@@ -365,7 +335,6 @@ const isActive = () => !disposed && !!sessionUserId && authStore.user?.id === se
 
 const currentTime = ref('')
 const timeUpdateTrigger = ref(0) // Para forçar atualizações do getLastUpdateTime
-const showCurrencyDropdown = ref(false)
 const showExchangeRateModal = ref(false)
 const showExchangeRateHeaderModal = ref(false)
 
@@ -424,15 +393,6 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString(uiLocale())
 }
 
-const toggleCurrencyDropdown = () => {
-  showCurrencyDropdown.value = !showCurrencyDropdown.value
-}
-
-const handleCurrencyChange = (currencyCode: CurrencyCode) => {
-  currencyStore.setSelectedCurrency(currencyCode)
-  showCurrencyDropdown.value = false
-}
-
 // Exchange Rate Modal Functions
 const openCardModal = () => {
   if (!canEditRates.value) return
@@ -489,20 +449,11 @@ const navigateToNewProduct = () => {
 
 const loadExchangeRates = () => currencyStore.loadCurrentRates()
 
-// Close dropdowns when clicking outside
-const handleClickOutside = (event: Event) => {
-  const target = event.target as HTMLElement
-  if (!target.closest('.dropdown')) {
-    showCurrencyDropdown.value = false
-  }
-}
-
 let timeInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
-  document.addEventListener('click', handleClickOutside)
 
   // Load exchange rates, dashboard data, and stock alerts
   await loadExchangeRates()
@@ -519,7 +470,6 @@ onUnmounted(() => {
   disposed = true
   if (timeInterval) clearInterval(timeInterval)
   if (healthInterval) clearInterval(healthInterval)
-  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -858,57 +808,16 @@ onUnmounted(() => {
 }
 
 .header-preferences { display: flex; align-items: center; gap: .75rem; flex: 0 0 auto; }
-.currency-selector-group { display: flex; align-items: center; }
-.preference-button, .compact-exchange { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; height: 32px; padding: .25rem .5rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #f9fafb; color: #475569; font-family: inherit; font-size: .75rem; font-weight: 500; white-space: nowrap; cursor: pointer; }
-.preference-button:hover, .compact-exchange:not(:disabled):hover { background: #f3f4f6; border-color: #9ca3af; }
-.preference-button:focus-visible, .compact-exchange:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-.preference-chevron { width: 12px; height: 12px; transition: transform .2s; }
-.preference-chevron.rotate { transform: rotate(180deg); }
+.currency-selector-group { width: 86px; flex: 0 0 86px; }
+.compact-exchange { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; height: 32px; padding: .25rem .5rem; border: 1px solid #d1d5db; border-radius: .5rem; background: #f9fafb; color: #475569; font-family: inherit; font-size: .75rem; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.compact-exchange:not(:disabled):hover { background: #f3f4f6; border-color: #9ca3af; }
+.compact-exchange:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .compact-exchange { gap: .4rem; padding-inline: .4rem; font-size: .6875rem; }
 .compact-exchange:disabled { opacity: 1; cursor: default; }
 .compact-rate { display: inline-flex; align-items: center; gap: .2rem; font-variant-numeric: tabular-nums; }
 .compact-rate + .compact-rate { padding-left: .4rem; border-left: 1px solid #e2e8f0; }
 .compact-rate-flags { font-size: .625rem; }
 .compact-edit-icon { width: 12px; height: 12px; flex: 0 0 12px; }
-
-.header-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  background-color: white;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 50;
-  margin-top: 0.25rem;
-  max-height: 200px;
-  overflow-y: auto;
-  min-width: 200px;
-}
-
-.header-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.75rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: background-color 0.2s;
-}
-
-.header-dropdown-item:hover {
-  background-color: #f9fafb;
-}
-
-.header-dropdown-item.active {
-  background-color: #eff6ff;
-  color: #2563eb;
-}
 
 .current-time {
   display: flex;
@@ -1846,23 +1755,6 @@ onUnmounted(() => {
   color: #2563eb;
 }
 
-.currency-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.currency-code {
-  font-weight: 500;
-  line-height: 1;
-}
-
-.currency-name {
-  font-size: 0.75rem;
-  color: #6b7280;
-  line-height: 1;
-}
-
 .language-name {
   font-weight: 500;
 }
@@ -2329,10 +2221,6 @@ onUnmounted(() => {
     font-size: 0.6875rem;
   }
 
-  .header-dropdown-menu {
-    min-width: 150px;
-  }
-
   .footer-content {
     flex-direction: column;
     gap: 1rem;
@@ -2379,7 +2267,7 @@ onUnmounted(() => {
   .inv-add-label { display: none; }
   .inv-add-label-short { display: inline; }
   .header-preferences { gap: .375rem; }
-  .preference-button { padding-inline: .35rem; gap: .25rem; font-size: .6875rem; }
+  .currency-selector-group { width: 78px; flex-basis: 78px; }
   .compact-exchange { font-size: .625rem; }
   .compact-edit-icon { display: none; }
 }

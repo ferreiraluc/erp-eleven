@@ -1,3 +1,4 @@
+import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, h, nextTick, reactive, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -262,11 +263,11 @@ describe('Readable automatic grade names', () => {
       container.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.click(); await nextTick()
     }
     button('Agrupar').click(); await nextTick()
-    const select = document.querySelector<HTMLSelectElement>('select[aria-label="Grade de destino"]')!
-    expect(Array.from(select.options).map(option => option.textContent)).toEqual([
+    const select = document.querySelector<HTMLButtonElement>('[aria-label="Grade de destino"]')!
+    expect((await openDropdown(select)).map(option => option.textContent)).toEqual([
       'Criar uma nova grade', 'Tênis Givenchy DN0281', 'Tênis Givenchy DN0281',
     ])
-    select.value = keyB; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    await chooseDropdown(select, keyB)
     const confirm = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === 'Agrupar 2')!
     confirm.click(); await nextTick()
     expect(mocks.groupItems).toHaveBeenCalledExactlyOnceWith(['new-1', 'new-2'], keyB)

@@ -23,33 +23,33 @@
         <div class="filters">
           <div class="filter-group">
             <label>{{ $tr("Vendedor:") }}</label>
-            <select v-model="filters.vendedorId" @change="loadFolgas">
+            <ErpSelect :label="($tr('Vendedor:'))" v-model="filters.vendedorId" @change="loadFolgas">
               <option value="">{{ $tr("Todos") }}</option>
               <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
                 {{ vendedor.nome }}
               </option>
-            </select>
+            </ErpSelect>
           </div>
 
           <div class="filter-group">
             <label>{{ $tr("Tipo:") }}</label>
-            <select v-model="filters.tipo" @change="loadFolgas">
+            <ErpSelect :label="($tr('Tipo:'))" v-model="filters.tipo" @change="loadFolgas">
               <option value="">{{ $tr("Todos") }}</option>
               <option value="FOLGA">{{ $tr("Folga") }}</option>
               <option value="FERIAS">{{ $tr("Férias") }}</option>
               <option value="LICENCA">{{ $tr("Licença") }}</option>
               <option value="FALTA">{{ $tr("Falta") }}</option>
               <option value="MEIO_PERIODO">{{ $tr("Meio Período") }}</option>
-            </select>
+            </ErpSelect>
           </div>
 
           <div class="filter-group">
             <label>{{ $tr("Status:") }}</label>
-            <select v-model="filters.aprovado" @change="loadFolgas">
+            <ErpSelect :label="($tr('Status:'))" v-model="filters.aprovado" @change="loadFolgas">
               <option value="">{{ $tr("Todos") }}</option>
               <option value="true">{{ $tr("Aprovadas") }}</option>
               <option value="false">{{ $tr("Pendentes") }}</option>
-            </select>
+            </ErpSelect>
           </div>
         </div>
 
@@ -259,12 +259,12 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="vendedor">{{ $tr("Vendedor:") }}</label>
-                <select v-model="folgaForm.vendedor_id" id="vendedor" required>
+                <ErpSelect :label="($tr('Vendedor:'))" v-model="folgaForm.vendedor_id" id="vendedor" required>
                   <option value="">{{ $tr("Selecione um vendedor") }}</option>
                   <option v-for="vendedor in vendedores" :key="vendedor.id" :value="vendedor.id">
                     {{ vendedor.nome }}
                   </option>
-                </select>
+                </ErpSelect>
               </div>
 
               <div class="form-group">
@@ -276,22 +276,22 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="tipo">{{ $tr("Tipo de Folga:") }}</label>
-                <select v-model="folgaForm.tipo" id="tipo" required>
+                <ErpSelect :label="($tr('Tipo de Folga:'))" v-model="folgaForm.tipo" id="tipo" required>
                   <option value="FOLGA">{{ $tr("Folga") }}</option>
                   <option value="FERIAS">{{ $tr("Férias") }}</option>
                   <option value="LICENCA">{{ $tr("Licença") }}</option>
                   <option value="FALTA">{{ $tr("Falta") }}</option>
                   <option value="MEIO_PERIODO">{{ $tr("Meio Período") }}</option>
-                </select>
+                </ErpSelect>
               </div>
 
               <div class="form-group">
                 <label for="periodo">{{ $tr("Período:") }}</label>
-                <select v-model="folgaForm.periodo" id="periodo">
+                <ErpSelect :label="($tr('Período:'))" v-model="folgaForm.periodo" id="periodo">
                   <option value="COMPLETO">{{ $tr("Dia Completo") }}</option>
                   <option value="MANHA">{{ $tr("Manhã") }}</option>
                   <option value="TARDE">{{ $tr("Tarde") }}</option>
-                </select>
+                </ErpSelect>
               </div>
             </div>
 
@@ -360,6 +360,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, reactive, computed, onMounted, watch } from 'vue'

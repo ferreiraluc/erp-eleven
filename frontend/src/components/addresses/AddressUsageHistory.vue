@@ -9,7 +9,7 @@
     </div>
     <p class="usage-note">{{ tr('O total inclui') }} {{ result.summary.address_prints }} {{ tr('endereço(s) A4 e') }} {{ result.summary.label_prints }} {{ tr('etiqueta(s). Conta somente envios confirmados pelo agente; cancelamentos, falhas e trabalhos na fila não entram no total. A saída física do papel depende da impressora.') }}<br/><strong v-if="result.summary.last_printed_at">{{ tr('Última impressão:') }} {{ date(result.summary.last_printed_at) }}</strong></p>
     <div class="usage-toolbar">
-      <label>{{ tr('Mostrar') }} <select v-model="kind" @change="offset=0;load()"><option value="all">{{ tr('Todas as utilizações') }}</option><option value="frete">{{ tr('Cotações e etiquetas') }}</option><option value="impressao">{{ tr('Impressões') }}</option></select></label>
+      <label>{{ tr('Mostrar') }} <ErpSelect :label="(tr('Mostrar'))" v-model="kind" @change="offset=0;load()"><option value="all">{{ tr('Todas as utilizações') }}</option><option value="frete">{{ tr('Cotações e etiquetas') }}</option><option value="impressao">{{ tr('Impressões') }}</option></ErpSelect></label>
       <button class="erp-button erp-button--secondary erp-button--sm" :disabled="loading" @click="load">{{ tr('Atualizar') }}</button>
     </div>
     <p v-if="error" role="alert" class="usage-error">{{ tr(error) }}</p>
@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { watch,ref,onUnmounted } from 'vue'
 import api from '@/services/api'
 import { useAddressI18n } from './i18n'
@@ -49,4 +50,5 @@ onUnmounted(()=>{sequence++})
 <style scoped>
 .usage-note{color:#64748b;font-size:12px;line-height:1.6;margin:12px 0}.usage-note strong{display:block;margin-top:6px;color:#475569}
 .intro{color:#64748b;font-size:13px;line-height:1.6;margin:18px 0}.intro strong{color:#172033;font-size:16px}.usage-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.usage-metrics>div{border:1px solid #e2e8f0;background:#f8fafc;border-radius:12px;padding:16px}.usage-metrics strong{display:block;font-size:25px;color:#172033}.usage-metrics span,small{display:block;color:#64748b;font-size:12px;margin-top:5px}.usage-toolbar,footer,footer>div{display:flex;align-items:center;justify-content:space-between;gap:10px}.usage-toolbar{margin:18px 0}.usage-toolbar label{font-size:12px;color:#475569;display:flex;gap:10px;align-items:center}select,button{border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;background:white;color:#334155;font:inherit;font-size:12px}button{font-weight:600;cursor:pointer}button:hover{background:#f1f5f9}button:disabled{opacity:.5;cursor:not-allowed}.usage-table{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}th{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;padding:12px}td{padding:15px 12px;border-bottom:1px solid #edf1f5;vertical-align:top}details{margin-bottom:10px}summary{cursor:pointer;color:#2563eb}details p{max-width:250px;line-height:1.5;font-size:12px;color:#64748b;overflow-wrap:anywhere}.usage-badge{display:inline-block;padding:5px 8px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:11px}.usage-empty{text-align:center;color:#64748b;padding:30px 12px}.usage-error{background:#fff1f2;color:#9f1239;padding:12px;border-radius:8px}code{display:block;font-size:12px;margin-top:8px}footer{margin-top:20px;color:#64748b;font-size:12px}@media(max-width:600px){.usage-metrics{gap:6px}.usage-metrics>div{padding:11px}.usage-metrics span{font-size:11px}.usage-toolbar label{display:block}select{display:block;margin-top:5px}}
+.usage-toolbar .erp-dropdown{width:160px;max-width:100%}
 </style>

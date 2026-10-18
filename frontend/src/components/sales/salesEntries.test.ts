@@ -1,3 +1,4 @@
+import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, h, nextTick, reactive, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -32,8 +33,9 @@ async function mount() {
   await vi.waitFor(() => expect(node.textContent).toContain('Recebimentos por tipo'))
   return { node, props, i18n }
 }
-async function change(input: HTMLInputElement | HTMLSelectElement, value: string) {
-  input.value = value; input.dispatchEvent(new Event(input instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))
+async function change(input: Element, value: string) {
+  if (input instanceof HTMLInputElement) { input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })) }
+  else await chooseDropdown(input, value)
   if (input instanceof HTMLInputElement) input.dispatchEvent(new Event('change', { bubbles: true }))
   await nextTick()
   await vi.waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull())
@@ -46,7 +48,7 @@ describe('payment filters and receipt summaries', () => {
     const { node } = await mount()
     button(node, 'Próxima').click(); await nextTick()
     await vi.waitFor(() => expect(salesEntries.list).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 })))
-    const selects = node.querySelectorAll('select'), dates = node.querySelectorAll<HTMLInputElement>('input[type=date]')
+    const selects = node.querySelectorAll('.entry-filters .erp-dropdown'), dates = node.querySelectorAll<HTMLInputElement>('input[type=date]')
     await change(selects[0]!, 'BRL'); await change(selects[1]!, 'maquina')
     await change(dates[0]!, '2026-09-01'); await change(dates[1]!, '2026-09-30')
     expect(salesEntries.list).toHaveBeenLastCalledWith(expect.objectContaining({ year: 2026, month: 9, seller: 'Lucas', currency: 'BRL', payment_method: 'maquina', date_from: '2026-09-01', date_to: '2026-09-30', offset: 0 }))
@@ -58,7 +60,7 @@ describe('payment filters and receipt summaries', () => {
   it('labels empty source payments as cash and translates known types while preserving custom labels', async () => {
     const { node, i18n } = await mount()
     expect(node.querySelector('tbody tr td:nth-child(4)')?.textContent).toBe('Dinheiro')
-    expect(node.textContent).toContain('Pix Banco A')
+    expect((await openDropdown(node.querySelectorAll('.erp-dropdown')[1])).some(o => o.textContent === 'Pix Banco A')).toBe(true)
     i18n.global.locale.value = 'es'; await nextTick()
     expect(node.querySelector('tbody tr td:nth-child(4)')?.textContent).toBe('Efectivo')
     i18n.global.locale.value = 'en'; await nextTick()
@@ -97,7 +99,7 @@ describe('payment filters and receipt summaries', () => {
 
   it('selects Monday to Sunday and highlights the saved net for machine settlement', async () => {
     const { node } = await mount()
-    const selects = node.querySelectorAll('select')
+    const selects = node.querySelectorAll('.entry-filters .erp-dropdown')
     await change(selects[1]!, 'maquina')
     await change(selects[2]!, '2026-09-21')
     expect(salesEntries.list).toHaveBeenLastCalledWith(expect.objectContaining({ payment_method: 'maquina', date_from: '2026-09-21', date_to: '2026-09-27', offset: 0 }))
@@ -105,7 +107,7 @@ describe('payment filters and receipt summaries', () => {
     expect(node.querySelector('.currency-summary strong')?.textContent).toContain('4.400,00')
     expect(node.querySelector('.currency-summary')?.textContent).toContain('4.500,00')
     await change(node.querySelector<HTMLInputElement>('input[type=date]')!, '2026-09-22')
-    expect(selects[2]!.value).toBe('')
+    expect((await openDropdown(selects[2])).find(o => o.getAttribute('aria-selected') === 'true')?.value).toBe('')
     expect(node.querySelector('.settlement-summary')).toBeNull()
     expect(node.querySelector('.currency-summary strong')?.textContent).toContain('4.500,00')
   })

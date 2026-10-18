@@ -34,7 +34,7 @@
               <div class="form-group required">
                 <label for="valor_total">{{ $tr("Valor Total") }}</label>
                 <div class="valor-with-moeda">
-                  <select
+                  <ErpSelect compact
                     v-model="formData.moeda"
                     class="moeda-select"
                     :title='$tr("Moeda")'
@@ -42,7 +42,7 @@
                     <option value="G$">G$</option>
                     <option value="R$">R$</option>
                     <option value="U$">U$</option>
-                  </select>
+                  </ErpSelect>
                   <input
                     id="valor_total"
                     v-model="formData.valor_total"
@@ -57,7 +57,7 @@
               </div>
               <div class="form-group">
                 <label for="status">{{ $tr("Status") }}</label>
-                <select
+                <ErpSelect :label="($tr('Status'))"
                   id="status"
                   v-model="formData.status"
                   class="form-select"
@@ -67,7 +67,7 @@
                   <option value="ENVIADO">{{ $tr("Enviado") }}</option>
                   <option value="ENTREGUE">{{ $tr("Entregue") }}</option>
                   <option value="CANCELADO">{{ $tr("Cancelado") }}</option>
-                </select>
+                </ErpSelect>
               </div>
               <div class="form-group rastreio-group">
                 <label>{{ $tr("Rastreamento") }}</label>
@@ -324,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, watch, onMounted } from 'vue'

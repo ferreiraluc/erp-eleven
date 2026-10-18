@@ -16,7 +16,7 @@ async function mount(props: Record<string, unknown>) {
 }
 
 function button(text: string) {
-  const found = Array.from(container.querySelectorAll('button')).find(item => item.textContent?.trim().startsWith(text))
+  const found = Array.from(document.querySelectorAll('button')).find(item => item.textContent?.trim().startsWith(text))
   if (!found) throw new Error(`Button missing: ${text}`)
   return found
 }
@@ -51,12 +51,12 @@ describe('Inventory filters', () => {
       hasGroups: false, groupMode: false, onBrand,
     })
     button('Marca').click(); await nextTick()
-    const search = container.querySelector('input[type="search"]') as HTMLInputElement
+    const search = document.querySelector('input[type="search"]') as HTMLInputElement
     search.value = 'nik'; search.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
-    expect(container.textContent).toContain('Nike')
-    expect(container.textContent).not.toContain('Adidas')
+    expect(document.body.textContent).toContain('Nike')
+    expect(document.body.textContent).not.toContain('Adidas')
     button('Nike').click(); await nextTick()
     expect(onBrand).toHaveBeenCalledWith('Nike')
-    expect(container.querySelector('.chip-dropdown')).toBeNull()
+    expect(document.querySelector('.erp-dropdown__menu')).toBeNull()
   })
 })

@@ -7,10 +7,10 @@
     </ModuleHeader>
     <p class="notice">{{ $t('access.auditNotice') }}</p><p v-if="error" class="notice error" role="alert">{{ error }}</p>
     <section class="access-card filters">
-      <label>{{ $t('access.period') }}<select v-model.number="days" @change="filter"><option :value="1">{{ $t('access.lastDay') }}</option><option :value="7">{{ $t('access.lastWeek') }}</option><option :value="30">{{ $t('access.lastMonth') }}</option><option :value="90">{{ $t('access.lastQuarter') }}</option></select></label>
-      <label>{{ $t('access.user') }}<select v-model="userId" @change="filter"><option value="">{{ $t('access.allUsers') }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }}</option></select></label>
-      <label>{{ $t('access.module') }}<select v-model="module" @change="filter"><option value="">{{ $t('access.allModules') }}</option><option v-for="m in modules" :key="m" :value="m">{{ moduleName(m) }}</option></select></label>
-      <label>{{ $t('access.action') }}<select v-model="action" @change="filter"><option value="">{{ $t('access.allActions') }}</option><option v-for="a in actions" :key="a" :value="a">{{ actionName(a) }}</option></select></label>
+      <label>{{ $t('access.period') }}<ErpSelect :label="($t('access.period'))" v-model.number="days" @change="filter"><option :value="1">{{ $t('access.lastDay') }}</option><option :value="7">{{ $t('access.lastWeek') }}</option><option :value="30">{{ $t('access.lastMonth') }}</option><option :value="90">{{ $t('access.lastQuarter') }}</option></ErpSelect></label>
+      <label>{{ $t('access.user') }}<ErpSelect :label="($t('access.user'))" v-model="userId" @change="filter"><option value="">{{ $t('access.allUsers') }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }}</option></ErpSelect></label>
+      <label>{{ $t('access.module') }}<ErpSelect :label="($t('access.module'))" v-model="module" @change="filter"><option value="">{{ $t('access.allModules') }}</option><option v-for="m in modules" :key="m" :value="m">{{ moduleName(m) }}</option></ErpSelect></label>
+      <label>{{ $t('access.action') }}<ErpSelect :label="($t('access.action'))" v-model="action" @change="filter"><option value="">{{ $t('access.allActions') }}</option><option v-for="a in actions" :key="a" :value="a">{{ actionName(a) }}</option></ErpSelect></label>
     </section>
     <div v-if="loading&&!data" class="empty">{{ $t('common.loading') }}</div>
     <template v-if="data">
@@ -32,6 +32,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'

@@ -1,3 +1,4 @@
+import { chooseDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, reactive, ref, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -18,6 +19,7 @@ function mount(component: any, props: any = {}) {
 }
 async function set(selector: string, value: string, event = 'input') {
   const input = container.querySelector(selector) as HTMLInputElement
+  if (input.matches('[aria-haspopup=listbox]')) { await chooseDropdown(input, value); return }
   input.value = value; input.dispatchEvent(new Event(event, { bubbles: true })); await nextTick()
 }
 beforeEach(() => {

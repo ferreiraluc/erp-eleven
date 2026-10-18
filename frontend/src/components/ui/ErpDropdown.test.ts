@@ -16,7 +16,7 @@ async function mount(editable = true) {
         h('div', [
           h(ErpDropdown, {
             modelValue: value.value,
-            'onUpdate:modelValue': (v: string) => (value.value = v),
+            'onUpdate:modelValue': v => (value.value = String(v ?? '')),
             options: [
               { value: 'Boss', label: 'Boss' },
               { value: 'Prada', label: 'Prada' },
@@ -44,11 +44,11 @@ it('commits a tapped option after a mobile blur with no related target', async (
     .querySelector('input')!
     .dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }))
   await flush()
-  const option = root.querySelector<HTMLButtonElement>('[role=option]')!
+  const option = document.querySelector<HTMLButtonElement>('[role=option]')!
   option.click()
   await flush()
   expect(root.querySelector('output')?.textContent).toBe('Boss')
-  expect(root.querySelector('[role=listbox]')).toBeNull()
+  expect(document.querySelector('[role=listbox]')).toBeNull()
   expect(root.querySelector<HTMLInputElement>('input')!.value).toBe('Boss')
 })
 it('allows free text, filters suggestions and isolates keyboard Enter from the parent form', async () => {
@@ -57,7 +57,7 @@ it('allows free text, filters suggestions and isolates keyboard Enter from the p
   input.value = 'pra'
   input.dispatchEvent(new Event('input', { bubbles: true }))
   await flush()
-  expect(root.querySelector('[role=option]')?.textContent).toContain('Prada')
+  expect(document.querySelector('[role=option]')?.textContent).toContain('Prada')
   const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
   input.dispatchEvent(event)
   await flush()
@@ -80,6 +80,6 @@ it('supports keyboard selection and Escape without closing its parent dialog', a
     new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
   )
   await flush()
-  expect(root.querySelector('[role=listbox]')).toBeNull()
+  expect(document.querySelector('[role=listbox]')).toBeNull()
   expect(document.activeElement).toBe(trigger)
 })

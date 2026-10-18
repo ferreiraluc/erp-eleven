@@ -1,6 +1,6 @@
 <template>
   <div class="fields">
-    <label>{{ tr('País') }}<select :value="modelValue.pais" @change="update('pais',($event.target as HTMLSelectElement).value)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></select></label>
+    <label>{{ tr('País') }}<ErpSelect :label="(tr('País'))" :value="modelValue.pais" @change="update('pais',$event)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></ErpSelect></label>
     <label>{{tr(nameLabel || 'Nome do destinatário')}}<input :value="modelValue.nome" @input="update('nome',($event.target as HTMLInputElement).value)" maxlength="120"/></label>
     <label v-for="f in primaryFields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.key==='cpf' && modelValue.pais==='PY' ? 'RUC/C.I (opcional na impressão)' : f.label)}}
       <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
@@ -26,6 +26,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import {computed,ref,watch,nextTick} from 'vue'
 import api from '@/services/api'
 import { useAddressI18n } from './i18n'

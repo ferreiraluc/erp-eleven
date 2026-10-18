@@ -44,34 +44,18 @@
             <!-- Category -->
             <div class="config-row">
               <label class="config-label">{{ tr('Categoria dos produtos') }}</label>
-              <input
-                v-model="nfeConfig.category"
-                type="text"
-                class="config-input"
-                :placeholder="tr('Ex: Calçados, Camisetas, Acessórios...')"
-                list="category-suggestions"
-              />
-              <datalist id="category-suggestions">
-                <option value="Calçados" />
-                <option value="Camisetas" />
-                <option value="Calças" />
-                <option value="Vestidos" />
-                <option value="Acessórios" />
-                <option value="Bolsas" />
-                <option value="Bermudas" />
-                <option value="Jaquetas" />
-              </datalist>
+              <ErpDropdown v-model="nfeConfig.category" editable :label="tr('Categoria dos produtos')" :placeholder="tr('Ex: Calçados, Camisetas, Acessórios...')" :options="['Calçados','Camisetas','Calças','Vestidos','Acessórios','Bolsas','Bermudas','Jaquetas'].map(value => ({ value, label: tr(value) }))" />
             </div>
 
             <!-- Currency -->
             <div class="config-row">
               <label class="config-label">{{ tr('Moeda do XML') }}</label>
-              <select v-model="nfeConfig.currency" class="config-select">
+              <ErpSelect :label="(tr('Moeda do XML'))" v-model="nfeConfig.currency" class="config-select">
                 <option value="BRL">{{ tr('R$ — Real Brasileiro') }}</option>
                 <option value="USD">{{ tr('U$ — Dólar Americano') }}</option>
                 <option value="PYG">{{ tr('G$ — Guarani Paraguaio') }}</option>
                 <option value="EUR">{{ tr('€ — Euro') }}</option>
-              </select>
+              </ErpSelect>
             </div>
 
             <!-- Split info (always active) -->
@@ -153,6 +137,8 @@
 </template>
 
 <script setup lang="ts">
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()

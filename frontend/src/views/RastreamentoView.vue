@@ -89,13 +89,13 @@
         </div>
 
         <div class="filter-select">
-          <select v-model="filtros.status" :aria-label="$tr('Status')" @change="aplicarFiltros" class="status-select">
+          <ErpSelect v-model="filtros.status" :aria-label="$tr('Status')" @change="aplicarFiltros" class="status-select">
             <option value="">{{ $tr("Todos os Status") }}</option>
             <option value="PENDENTE">{{ $tr("Pendente") }}</option>
             <option value="EM_TRANSITO">{{ $tr("Em Trânsito") }}</option>
             <option value="ENTREGUE">{{ $tr("Entregue") }}</option>
             <option value="ERRO">{{ $tr("Erro") }}</option>
-          </select>
+          </ErpSelect>
         </div>
       </div>
     </div>
@@ -611,6 +611,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import '@/assets/trackingCards.css'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'

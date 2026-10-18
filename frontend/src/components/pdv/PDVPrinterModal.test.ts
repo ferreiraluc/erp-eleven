@@ -1,3 +1,4 @@
+import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import PDVPrinterModal from './PDVPrinterModal.vue'
@@ -26,11 +27,11 @@ describe('receipt media', () => {
   })
   it('keeps existing labels until continuous is selected and preserves its fixed height when switching back',async () => {
     await mount({id:'z',name:'Zebra',paper_width_mm:80,paper_height_mm:80,auto_receipts:true})
-    const select=form().querySelector('select')!
-    expect(select.value).toBe('labels')
-    select.value='continuous'; select.dispatchEvent(new Event('change')); await tick(); await submit()
+    const select=form().querySelector('.erp-dropdown')!
+    expect((await openDropdown(select)).find(o => o.getAttribute('aria-selected') === 'true')?.value).toBe('labels')
+    await chooseDropdown(select, 'continuous'); await tick(); await submit()
     expect(api.configure).toHaveBeenLastCalledWith({name:'Zebra',paper_width_mm:80,paper_height_mm:0,auto_receipts:true})
-    select.value='labels'; select.dispatchEvent(new Event('change')); await tick(); await submit()
+    await chooseDropdown(select, 'labels'); await tick(); await submit()
     expect(api.configure).toHaveBeenLastCalledWith({name:'Zebra',paper_width_mm:80,paper_height_mm:80,auto_receipts:true})
   })
 })
