@@ -135,8 +135,11 @@
         <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)" @click="toggleExpand(entry.group.group_key)">
           <div class="group-header">
             <!-- Imagem do grupo (primeira imagem disponível) -->
-            <div
+            <button
+              type="button"
               class="group-thumb-wrap"
+              :aria-label="tr('Ver foto de {name}', { name: groupTitle(entry.group.group_key) })"
+              :disabled="!entry.group.items.some(hasProductImage)"
               @click.stop="openProductImage(entry.group.items.find(hasProductImage))"
               :class="{ 'thumb-clickable': entry.group.items.some(hasProductImage) }"
             >
@@ -149,7 +152,7 @@
               <div v-else class="group-thumb-placeholder">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
               </div>
-            </div>
+            </button>
             <div class="group-title-area">
               <input
                 v-if="editingGroupKey === entry.group.group_key"
@@ -1582,6 +1585,9 @@ onMounted(async () => {
 
 /* ── Group card ───────────────────────────────────────────────── */
 .group-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  gap: 8px 14px;
   background: white;
   border-radius: 7px;
   border: 1px solid #e5e7eb;
@@ -1603,8 +1609,6 @@ onMounted(async () => {
   padding: 0.35rem 0.65rem;
   border-left-width: 3px;
 }
-.view-list .group-thumb-wrap { width: 26px; height: 26px; }
-.view-list .group-header { margin-bottom: 0.25rem; }
 
 /* Grade (grid): fundo levemente diferente para distinguir das tiles de item */
 .view-grid .group-card {
@@ -1665,9 +1669,21 @@ onMounted(async () => {
 .exp-move { background: #e0f2fe; color: #0369a1; }
 .exp-edit { background: #eff6ff; color: #2563eb; }
 
-.group-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
-.group-thumb-wrap { flex-shrink: 0; width: 36px; height: 36px; border-radius: 5px; overflow: hidden; background: #f3f4f6; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; }
-.group-thumb { width: 100%; height: 100%; object-fit: cover; }
+.group-header { display: contents; }
+.group-thumb-wrap { grid-column: 1; grid-row: 1 / span 2; align-self: start; width: 112px; height: 112px; padding: 0; border-radius: 10px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; }
+.group-thumb { width: 100%; height: 100%; object-fit: contain; }
+.group-thumb-wrap:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+.group-title-area { grid-column: 2; grid-row: 1; align-self: center; }
+.group-title-area .group-name { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.group-btns { grid-column: 3; grid-row: 1; align-self: start; }
+.group-card > .size-chips { grid-column: 2 / -1; grid-row: 2; align-content: start; }
+.group-card > .group-exp-section { grid-column: 1 / -1; }
+@media (max-width: 600px) {
+  .group-card { grid-template-columns: 80px minmax(0, 1fr) auto; gap: 8px; }
+  .group-thumb-wrap { width: 80px; height: 80px; }
+  .group-card .group-btns { flex-direction: column; gap: 4px; }
+  .group-card > .size-chips { grid-column: 1 / -1; grid-row: 3; }
+}
 .group-thumb-placeholder { color: #9ca3af; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .thumb-clickable { cursor: zoom-in; }
 .group-title-area { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; flex-wrap: wrap; }

@@ -2405,5 +2405,97 @@
   "Preparando fotos...": ["Preparando fotos...", "Preparing photos..."],
   "Até 5 fotos. A principal aparece nos cards; as outras ficam nesta galeria.": ["Hasta 5 fotos. La principal aparece en las tarjetas; las demás quedan en esta galería.", "Up to 5 photos. The main photo appears on cards; the others stay in this gallery."],
   "Não foi possível preparar a foto. Use JPEG, PNG ou WebP de até 15 MB.": ["No se pudo preparar la foto. Use JPEG, PNG o WebP de hasta 15 MB.", "Could not prepare the photo. Use JPEG, PNG or WebP up to 15 MB."],
-  "Selecione apenas as fotos que cabem no limite de 5.": ["Seleccione solo las fotos que caben en el límite de 5.", "Select only the photos that fit within the limit of 5."]
+  "Selecione apenas as fotos que cabem no limite de 5.": ["Seleccione solo las fotos que caben en el límite de 5.", "Select only the photos that fit within the limit of 5."],
+  "Estoque por item": [
+    "Stock por producto",
+    "Stock by product"
+  ],
+  "Local do ajuste": [
+    "Ubicación del ajuste",
+    "Adjustment location"
+  ],
+  "Confira a quantidade final no local escolhido. O outro local é preservado.": [
+    "Revise la cantidad final en la ubicación elegida. La otra ubicación se conserva.",
+    "Review the final quantity at the selected location. The other location is preserved."
+  ],
+  "Operação de quantidade": [
+    "Operación de cantidad",
+    "Quantity operation"
+  ],
+  "Definir quantidade": [
+    "Establecer cantidad",
+    "Set quantity"
+  ],
+  "Somar ou retirar": [
+    "Sumar o restar",
+    "Add or subtract"
+  ],
+  "Todos os selecionados": [
+    "Todos los seleccionados",
+    "All selected products"
+  ],
+  "Quantidade preparada em {count} itens. Salve para confirmar.": [
+    "Cantidad preparada en {count} productos. Guarde para confirmar.",
+    "Quantity prepared for {count} products. Save to confirm."
+  ],
+  "Qtd. final": [
+    "Cant. final",
+    "Final qty."
+  ],
+  "{count} produtos com saldo alterado": [
+    "{count} productos con stock modificado",
+    "{count} products with stock changes"
+  ],
+  "Peças na seleção após salvar": [
+    "Unidades seleccionadas después de guardar",
+    "Selected units after saving"
+  ],
+  "Confira as quantidades: use inteiros a partir de zero, dentro do limite de estoque.": [
+    "Revise las cantidades: use enteros desde cero, dentro del límite de stock.",
+    "Check quantities: use whole numbers from zero, within the stock limit."
+  ],
+  "A quantidade aplicada deixaria um saldo inválido. Nenhuma linha foi alterada.": [
+    "La cantidad aplicada dejaría un saldo inválido. No se modificó ninguna fila.",
+    "This quantity would leave an invalid balance. No rows were changed."
+  ],
+  "Motivo do ajuste (opcional)": [
+    "Motivo del ajuste (opcional)",
+    "Adjustment reason (optional)"
+  ],
+  "O histórico registra o ajuste mesmo sem preencher.": [
+    "El historial registra el ajuste aunque no se complete.",
+    "The adjustment is recorded even when left blank."
+  ],
+  "Usar motivo compartilhado ou registro automático": [
+    "Usar motivo compartido o registro automático",
+    "Use shared reason or automatic record"
+  ],
+  "Cor para vários itens": [
+    "Color para varios productos",
+    "Color for multiple products"
+  ],
+  "Digite ou escolha uma cor": [
+    "Escriba o seleccione un color",
+    "Type or select a color"
+  ],
+  "Aplicar cor a todos": [
+    "Aplicar color a todos",
+    "Apply color to all"
+  ],
+  "A cor preenche os itens abaixo. Você ainda pode alterar cada um antes de salvar.": [
+    "El color se aplica a los productos de abajo. Puede editar cada uno antes de guardar.",
+    "The color fills the products below. You can still edit each one before saving."
+  ],
+  "Ver foto de {name}": [
+    "Ver foto de {name}",
+    "View photo of {name}"
+  ],
+  "Um produto selecionado não está mais disponível. Reabra a edição para conferir a seleção.": [
+    "Un producto seleccionado ya no está disponible. Vuelva a abrir la edición para revisar la selección.",
+    "A selected product is no longer available. Reopen the editor to review the selection."
+  ],
+  "O estoque mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra a edição para conferir os saldos atuais.": [
+    "El stock cambió desde que abrió la edición. No se guardaron cambios; vuelva a abrir la edición para revisar los saldos actuales.",
+    "Stock changed since the editor was opened. No changes were saved; reopen the editor to review the current balances."
+  ]
 }

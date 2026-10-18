@@ -103,7 +103,26 @@ class BatchSizeEntry(BaseModel):
     cost_price: Optional[Decimal] = None
     sale_price: Optional[Decimal] = None
     stock_delta: Optional[int] = None    # positive=entry, negative=exit
-    stock_reason: Optional[str] = None  # required if stock_delta != 0
+    stock_reason: Optional[str] = None
+
+
+StockCount = Annotated[int, Field(strict=True, ge=0, le=2_147_483_647)]
+
+
+class BatchStockAdjustment(BaseModel):
+    id: uuid.UUID
+    stock_loja: StockCount
+    stock_deposito: StockCount
+    expected_loja: StockCount
+    expected_deposito: StockCount
+    expected_total: StockCount
+    reason: Optional[str] = None
+
+    @model_validator(mode="after")
+    def valid_total(self):
+        if self.stock_loja + self.stock_deposito > 2_147_483_647:
+            raise ValueError("O total resultante excede o limite permitido.")
+        return self
 
 
 class BatchEditRequest(BaseModel):
@@ -119,6 +138,20 @@ class BatchEditRequest(BaseModel):
     stock_reason: Optional[str] = None
     # Per-item fields (optional)
     sizes: Optional[List[BatchSizeEntry]] = None
+    stock_adjustments: Optional[List[BatchStockAdjustment]] = None
+
+    @model_validator(mode="after")
+    def validate_selection(self):
+        selected = set(self.item_ids)
+        if not selected or len(selected) != len(self.item_ids):
+            raise ValueError("Selecione produtos distintos para editar.")
+        for entries in (self.sizes or [], self.stock_adjustments or []):
+            ids = [entry.id for entry in entries]
+            if len(set(ids)) != len(ids) or not set(ids).issubset(selected):
+                raise ValueError("Cada ajuste deve pertencer a um produto selecionado, sem duplicatas.")
+        if self.stock_adjustments and (self.stock_delta or any(entry.stock_delta for entry in self.sizes or [])):
+            raise ValueError("Não combine quantidade final com entrada ou saída no mesmo pedido.")
+        return self
 
 
 class GroupResponse(BaseModel):

@@ -708,22 +708,26 @@ def remove_item_from_group(
 
 
 @router.patch("/items/batch", status_code=200)
+@router.patch("/items/batch/quantities", status_code=200)
 def batch_edit_items(
     request: BatchEditRequest,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
-    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).with_for_update().all()
-    if not items:
-        raise HTTPException(status_code=404, detail="No items found")
+    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).populate_existing().with_for_update().all()
+    if len(items) != len(request.item_ids):
+        raise HTTPException(status_code=409, detail="Um produto selecionado não está mais disponível. Reabra a edição para conferir a seleção.")
 
-    # Validate stock reasons
-    if request.stock_delta and request.stock_delta != 0 and not request.stock_reason:
-        raise HTTPException(status_code=422, detail="Motivo é obrigatório para ajuste de estoque compartilhado")
-    for entry in (request.sizes or []):
-        if entry.stock_delta and entry.stock_delta != 0 and not entry.stock_reason:
-            raise HTTPException(status_code=422, detail=f"Motivo é obrigatório para ajuste de estoque do item {entry.id}")
+    adjustments = {entry.id: entry for entry in request.stock_adjustments or []}
+    # Compare all locations under the row locks, before changing any metadata.
+    # A stale browser must never overwrite a sale/transfer made after its preview.
+    for item in items:
+        adjustment = adjustments.get(item.id)
+        if adjustment and (item.stock_loja, item.stock_deposito, item.current_stock) != (
+            adjustment.expected_loja, adjustment.expected_deposito, adjustment.expected_total,
+        ):
+            raise HTTPException(status_code=409, detail="O estoque mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra a edição para conferir os saldos atuais.")
 
     per_item_map = {str(s.id): s for s in (request.sizes or [])}
 
@@ -760,14 +764,34 @@ def batch_edit_items(
     # Metadata and stock changes share one transaction. A failed exit rolls back both.
     for item in items:
         entry = per_item_map.get(str(item.id))
+        adjustment = adjustments.get(item.id)
+        if adjustment:
+            # Decrease first: moving counts between locations must not overflow
+            # temporarily when the final total is within the column's limit.
+            changes = [(loc, getattr(adjustment, f"stock_{loc}"), getattr(item, f"stock_{loc}"))
+                       for loc in ("loja", "deposito")]
+            try:
+                for loc, quantity, previous in sorted(changes, key=lambda change: change[1] - change[2]):
+                    if quantity != previous:
+                        create_movement(
+                            db=db, item_id=item.id, movement_type="adjustment", quantity=quantity,
+                            reason=(adjustment.reason or request.stock_reason or "").strip() or "Conferência de estoque — edição em lote",
+                            created_by=current_user.id, location=loc,
+                        )
+            except StockMovementError as error:
+                db.rollback()
+                raise HTTPException(error.status_code, str(error)) from None
+            continue
         # Per-item delta takes precedence over shared delta
-        if entry and entry.stock_delta is not None and entry.stock_delta != 0:
+        if entry and entry.stock_delta is not None:
             delta = entry.stock_delta
-            reason = entry.stock_reason or "Ajuste massivo"
+            reason = (entry.stock_reason or request.stock_reason or "").strip() or "Ajuste de estoque — edição em lote"
         elif request.stock_delta is not None and request.stock_delta != 0:
             delta = request.stock_delta
-            reason = request.stock_reason or "Ajuste massivo"
+            reason = (request.stock_reason or "").strip() or "Ajuste de estoque — edição em lote"
         else:
+            continue
+        if delta == 0:
             continue
 
         try:

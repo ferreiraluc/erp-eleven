@@ -723,6 +723,15 @@ export const inventoryAPI = {
     currency?: string
     stock_delta?: number
     stock_reason?: string
+    stock_adjustments?: Array<{
+      id: string
+      stock_loja: number
+      stock_deposito: number
+      expected_loja: number
+      expected_deposito: number
+      expected_total: number
+      reason?: string
+    }>
     sizes?: Array<{
       id: string
       size?: string
@@ -735,7 +744,7 @@ export const inventoryAPI = {
       stock_reason?: string
     }>
   }): Promise<{ message: string; count: number }> =>
-    api.patch('/api/inventory/items/batch', data).then(res => res.data),
+    api.patch(data.stock_adjustments?.length ? '/api/inventory/items/batch/quantities' : '/api/inventory/items/batch', data).then(res => res.data),
 
   getDistinctValues: (): Promise<{ brands: string[]; categories: string[] }> =>
     api.get('/api/inventory/items/distinct-values').then(res => res.data),
