@@ -49,12 +49,30 @@ def search_text(value):
     return re.sub(r'\bea7\s+emp[oó]rio\s+armani\b', 'Emporio Armani', value, flags=re.I)
 
 
+class FacetFilters:
+    """Request-local vocabulary, shared by filters and spelling suggestions."""
+
+    def __init__(self, db):
+        self.db = db
+        self.values = {}
+
+    def values_for(self, column):
+        from ..models.inventory import Item
+        if column.key not in self.values:
+            self.values[column.key] = [row[0] for row in self.db.query(column)
+                .filter(Item.deleted_at.is_(None)).distinct() if row[0]]
+        return self.values[column.key]
+
+    def __call__(self, column, value, *, partial=False):
+        return facet_filter(self.db, column, value, partial=partial, values=self.values_for(column))
+
+    def words(self):
+        import re
+        from ..models.inventory import Item
+        return {word for field in FIELDS for raw in self.values_for(getattr(Item, field))
+                for word in re.findall(r'[a-z]+', key(raw, field)) if len(word) >= 4}
+
+
 def facet_filters(db):
-    """Request-local cache: at most one vocabulary query per field, never stale across writes."""
-    from ..models.inventory import Item
-    values = {}
-    def compare(column, value, *, partial=False):
-        if column.key not in values:
-            values[column.key] = [row[0] for row in db.query(column).filter(Item.deleted_at.is_(None)).distinct() if row[0]]
-        return facet_filter(db, column, value, partial=partial, values=values[column.key])
-    return compare
+    """At most one vocabulary query per field; never stale across writes."""
+    return FacetFilters(db)
