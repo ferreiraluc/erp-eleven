@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from types import SimpleNamespace
 import uuid
+import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from fastapi import HTTPException
@@ -12,6 +13,7 @@ from app.models import Usuario, Vendedor
 from app.models.inventory import Item, Supplier, StockMovement
 from app.schemas.inventory import BatchEditRequest
 from app.api.endpoints.inventory import batch_edit_items
+from test_inventory_ocr import picture
 
 
 def test_two_preloaded_bulk_previews_cannot_overwrite_each_other(pg):
@@ -50,5 +52,47 @@ def test_two_preloaded_bulk_previews_cannot_overwrite_each_other(pg):
             assert row.brand==f'Winner {winner}'
             movement=db.query(StockMovement).one()
             assert (movement.quantity_before,movement.quantity_after,movement.created_by)==(5,winner+2,user_id)
+    finally:
+        isolated.dispose()
+
+
+def test_photo_groups_wait_for_locks_and_preserve_concurrent_gallery_edit(pg):
+    from threading import Event
+    engine, schema = pg
+    isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
+    started = Event()
+    try:
+        Base.metadata.create_all(isolated, tables=[m.__table__ for m in (Usuario, Vendedor, Supplier, Item, StockMovement)])
+        factory = sessionmaker(bind=isolated, autoflush=False)
+        ids = [uuid.uuid4(), uuid.uuid4()]
+        cover, extra = picture('JPEG', (200, 120)), picture('JPEG', (210, 130))
+        with factory() as db:
+            db.add_all([Item(id=identity, name='Bege M', sku_internal=str(identity), current_stock=0,
+                             stock_loja=0, stock_deposito=0, image_data='original') for identity in ids])
+            db.commit()
+        # A separate editor holds the product while updating only its gallery.
+        with factory() as gallery:
+            row = gallery.query(Item).filter(Item.id == ids[0]).with_for_update().one()
+            row.additional_images = [extra]
+            def replace():
+                with factory() as db:
+                    started.set()
+                    batch_edit_items(BatchEditRequest(item_ids=ids, image_groups=[{
+                        'item_ids': ids, 'image_data': cover}]), db, SimpleNamespace(id=uuid.uuid4()))
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(replace)
+                try:
+                    assert started.wait(timeout=5)
+                    with pytest.raises(TimeoutError):
+                        future.result(timeout=0.2)
+                finally:
+                    gallery.commit()
+                future.result(timeout=10)
+        with factory() as db:
+            assert all(db.get(Item, identity).image_data == cover for identity in ids)
+            assert db.get(Item, ids[0]).additional_images == [extra]
+            assert db.get(Item, ids[1]).additional_images is None
+            assert all(db.get(Item, identity).thumbnail_ready is False for identity in ids)
+            assert db.query(StockMovement).count() == 0
     finally:
         isolated.dispose()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, Body
 from pydantic import BaseModel
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, defer
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_, func, or_, case
 from typing import List, Optional, Literal
@@ -709,13 +709,17 @@ def remove_item_from_group(
 
 @router.patch("/items/batch", status_code=200)
 @router.patch("/items/batch/quantities", status_code=200)
+@router.patch("/items/batch/photos", status_code=200)
 def batch_edit_items(
     request: BatchEditRequest,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
-    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).populate_existing().with_for_update().all()
+    query = db.query(Item)
+    if request.image_groups:
+        query = query.options(defer(Item.image_data, raiseload=True))
+    items = query.filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).populate_existing().with_for_update().all()
     if len(items) != len(request.item_ids):
         raise HTTPException(status_code=409, detail="Um produto selecionado não está mais disponível. Reabra a edição para conferir a seleção.")
 
@@ -808,6 +812,26 @@ def batch_edit_items(
         except StockMovementError as error:
             db.rollback()
             raise HTTPException(error.status_code, str(error)) from None
+    if request.image_groups:
+        # Flush metadata/stock before set-based photo writes. One bound image per
+        # group avoids multiplying large driver buffers by the number of sizes.
+        db.flush()
+        from ...services.user_audit import record
+        for group in request.image_groups:
+            db.query(Item).filter(Item.id.in_(group.item_ids)).update({
+                Item.image_data: group.image_data,
+                Item.thumbnail_data: None,
+                Item.thumbnail_ready: False,
+            }, synchronize_session=False)
+            if db.info.get('audit_enabled') and db.info.get('audit_actor'):
+                for identity in group.item_ids:
+                    record(db, 'update', 'inventory', entity='inventory_items', entity_id=str(identity),
+                           changes={'image_data': {'changed': True}})
+        # Keep preloaded identities coherent without loading their old photos.
+        photo_ids = {identity for group in request.image_groups for identity in group.item_ids}
+        for item in items:
+            if item.id in photo_ids:
+                db.expire(item, ['image_data', 'thumbnail_data', 'thumbnail_ready', 'updated_at'])
     db.commit()
 
     return {"message": f"Updated {len(items)} items", "count": len(items)}

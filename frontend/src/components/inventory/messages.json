@@ -2497,5 +2497,49 @@
   "O estoque mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra a edição para conferir os saldos atuais.": [
     "El stock cambió desde que abrió la edición. No se guardaron cambios; vuelva a abrir la edición para revisar los saldos actuales.",
     "Stock changed since the editor was opened. No changes were saved; reopen the editor to review the current balances."
+  ],
+  "Fotos por cor": [
+    "Fotos por color",
+    "Photos by color"
+  ],
+  "Troque a foto principal dos itens escolhidos. As fotos adicionais da galeria são preservadas.": [
+    "Cambie la foto principal de los productos elegidos. Se conservan las fotos adicionales de la galería.",
+    "Replace the selected products’ main photo. Additional gallery photos are preserved."
+  ],
+  "Aplicar foto a": [
+    "Aplicar foto a",
+    "Apply photo to"
+  ],
+  "Enviar foto": [
+    "Subir foto",
+    "Upload photo"
+  ],
+  "{count} itens receberão a foto enviada.": [
+    "{count} productos recibirán la foto enviada.",
+    "{count} products will receive the uploaded photo."
+  ],
+  "Nova foto principal": [
+    "Nueva foto principal",
+    "New main photo"
+  ],
+  "{count} itens selecionados": [
+    "{count} productos seleccionados",
+    "{count} selected products"
+  ],
+  "Conferir itens": [
+    "Revisar productos",
+    "Review products"
+  ],
+  "Desfazer foto de {color}": [
+    "Deshacer foto de {color}",
+    "Undo photo for {color}"
+  ],
+  "{count} itens com foto preparada. Clique em Salvar para concluir.": [
+    "{count} productos con foto preparada. Pulse Guardar para confirmar.",
+    "{count} products with a staged photo. Click Save to confirm."
+  ],
+  "Prepare até 20 fotos diferentes por edição. Salve este lote antes de continuar.": [
+    "Prepare hasta 20 fotos diferentes por edición. Guarde este lote antes de continuar.",
+    "Prepare up to 20 different photos per edit. Save this batch before continuing."
   ]
 }
