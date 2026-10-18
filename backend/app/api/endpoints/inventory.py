@@ -25,7 +25,7 @@ from ...schemas.inventory import (
     SessionCreate, SessionResponse, SessionStatusUpdate, ScanItemCreate,
     SessionItemResponse, AlertSummary, GroupItemsRequest,
     GroupResponse, SuggestionResponse, RenameGroupRequest, UngroupRequest,
-    BatchEditRequest, BatchSizeEntry, GradeCreateRequest, GradeCreateResponse,
+    BatchEditRequest, BatchSizeEntry, BatchProductFields, GradeCreateRequest, GradeCreateResponse,
     BulkTransferRequest,
 )
 from ...schemas.inventory_diagnostics import InventoryDiagnostics, IssueFilter
@@ -309,7 +309,8 @@ def get_items_by_barcode(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = db.query(Item).filter(Item.deleted_at.is_(None), Item.barcode == code, Item.is_active == True)
+    query = db.query(Item).filter(Item.deleted_at.is_(None),
+        or_(Item.barcode == code, Item.sku_internal == code, Item.inventory_code == code.strip().upper()), Item.is_active == True)
     items = catalog_query(query, include_images).all()
     result = []
     for item, has_image in items:
@@ -710,15 +711,14 @@ def remove_item_from_group(
 @router.patch("/items/batch", status_code=200)
 @router.patch("/items/batch/quantities", status_code=200)
 @router.patch("/items/batch/photos", status_code=200)
+@router.patch("/items/batch/details", status_code=200)
 def batch_edit_items(
     request: BatchEditRequest,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
-    query = db.query(Item)
-    if request.image_groups:
-        query = query.options(defer(Item.image_data, raiseload=True))
+    query = db.query(Item).options(defer(Item.image_data, raiseload=True))
     items = query.filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).populate_existing().with_for_update().all()
     if len(items) != len(request.item_ids):
         raise HTTPException(status_code=409, detail="Um produto selecionado não está mais disponível. Reabra a edição para conferir a seleção.")
@@ -734,36 +734,38 @@ def batch_edit_items(
             raise HTTPException(status_code=409, detail="O estoque mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra a edição para conferir os saldos atuais.")
 
     per_item_map = {str(s.id): s for s in (request.sizes or [])}
-
+    fields = set(BatchProductFields.model_fields)
+    clearable = {'description', 'brand', 'category', 'size', 'color', 'barcode', 'location', 'supplier_id', 'group_key'}
+    def metadata(source):
+        return {field: getattr(source, field) for field in source.model_fields_set & fields
+                if getattr(source, field) is not None or field in clearable}
+    shared = metadata(request)
+    changes = {}
     for item in items:
-        # Shared fields
-        if request.brand is not None:
-            item.brand = request.brand
-        if request.category is not None:
-            item.category = request.category
+        entry = per_item_map.get(str(item.id))
+        if entry and entry.expected_updated_at is not None:
+            def aware(value):
+                return value if value.tzinfo else value.replace(tzinfo=settings.tz)
+            if item.updated_at is None or aware(item.updated_at) != aware(entry.expected_updated_at):
+                raise HTTPException(409, 'O cadastro mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra para conferir.')
+        values = _normalize_item({**shared, **(metadata(entry) if entry else {})})
+        if {'min_stock', 'max_stock'} & values.keys():
+            minimum = values.get('min_stock', item.min_stock) or 0
+            maximum = values.get('max_stock', item.max_stock) or 0
+            if maximum and minimum > maximum:
+                raise HTTPException(422, 'Mínimo não pode ser maior que máximo.')
+        changes[item.id] = values
+    suppliers = {values['supplier_id'] for values in changes.values() if values.get('supplier_id')}
+    if suppliers:
+        existing_suppliers = {row[0] for row in db.query(Supplier.id).filter(Supplier.id.in_(suppliers)).all()}
+        if suppliers != existing_suppliers:
+            raise HTTPException(422, 'Fornecedor não encontrado.')
+    # All metadata is validated before changing any product or recording a movement.
+    for item in items:
+        for field, value in changes[item.id].items():
+            setattr(item, field, value)
         if request.image_data is not None:
             item.image_data = request.image_data
-        if request.cost_price is not None:
-            item.cost_price = request.cost_price
-        if request.sale_price is not None:
-            item.sale_price = request.sale_price
-        if request.currency is not None:
-            item.currency = request.currency
-        # Per-item fields
-        entry = per_item_map.get(str(item.id))
-        if entry:
-            if entry.size is not None:
-                item.size = entry.size
-            if entry.name is not None:
-                item.name = entry.name
-            if entry.color is not None:
-                item.color = entry.color
-            if entry.barcode is not None:
-                item.barcode = entry.barcode
-            if entry.cost_price is not None:
-                item.cost_price = entry.cost_price
-            if entry.sale_price is not None:
-                item.sale_price = entry.sale_price
 
     # Metadata and stock changes share one transaction. A failed exit rolls back both.
     for item in items:

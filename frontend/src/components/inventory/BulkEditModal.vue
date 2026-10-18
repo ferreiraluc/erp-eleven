@@ -11,6 +11,8 @@
       </div>
 
       <div class="modal-body erp-dialog__body" :inert="saving || undefined">
+        <BulkDetailsEditor v-model="detailsDraft" :items="stockBaseline" :brands="distinctBrands" :categories="distinctCategories" :disabled="saving" />
+        <BulkBarcodeEditor :model-value="itemBarcodes" :items="previewItems" :disabled="saving" @update:model-value="Object.assign(itemBarcodes, $event)" />
         <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.') }}</p>
         <BulkStockEditor v-model="stockDraft" :items="previewItems" :disabled="saving" />
         <label class="form-group shared-stock-reason">
@@ -182,6 +184,9 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
 import BulkPhotoEditor from './BulkPhotoEditor.vue'
+import BulkDetailsEditor from './BulkDetailsEditor.vue'
+import BulkBarcodeEditor from './BulkBarcodeEditor.vue'
+import { detailsError, type DetailDraft } from '@/services/inventoryBulkDetails'
 import { photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
 import BulkStockEditor from './BulkStockEditor.vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
@@ -204,6 +209,7 @@ const emit = defineEmits<{
 }>()
 
 const photoDraft = ref<PhotoDraft>({})
+const detailsDraft = ref<DetailDraft>({})
 const photoBusy = ref(false)
 const sharedBrand = ref('')
 const sharedCategory = ref('')
@@ -254,6 +260,7 @@ function formatPrice(val: any): string {
 }
 
 const hasChanges = computed(() => {
+  if (Object.keys(detailsDraft.value).length) return true
   if (Object.keys(photoDraft.value).length || sharedBrand.value || sharedCategory.value) return true
   if (sharedCostPrice.value !== '' || sharedSalePrice.value !== '') return true
   if (changedStock(stockBaseline, stockDraft.value).length) return true
@@ -276,13 +283,12 @@ async function save() {
     return
   }
   saveError.value = ''
+  saveError.value = detailsError(detailsDraft.value)
+  if (saveError.value) return
 
   saving.value = true
   try {
-    const perItems: Array<{
-      id: string; size?: string; name?: string; color?: string; barcode?: string
-      cost_price?: number; sale_price?: number
-    }> = []
+    const perItems: NonNullable<Parameters<typeof inventoryAPI.batchEdit>[0]['sizes']> = []
 
     for (const item of props.items) {
       const entry: typeof perItems[0] = { id: item.id }
@@ -298,11 +304,17 @@ async function save() {
       if (cp !== '' && cp !== undefined)  { entry.cost_price = Number(cp); changed = true }
       if (sp !== '' && sp !== undefined)  { entry.sale_price = Number(sp); changed = true }
 
+      if (detailsDraft.value[item.id]) {
+        Object.assign(entry, detailsDraft.value[item.id]); changed = true
+      }
+      if (changed && stockBaseline.find(row => row.id === item.id)?.updated_at) entry.expected_updated_at = stockBaseline.find(row => row.id === item.id)!.updated_at
+
       if (changed) perItems.push(entry)
     }
 
     await inventoryAPI.batchEdit({
       item_ids:    props.items.map(i => i.id),
+      details: true,
       brand:       sharedBrand.value    || undefined,
       category:    sharedCategory.value || undefined,
       image_groups: photoAssignments(photoDraft.value, props.items.map(item => item.id)),

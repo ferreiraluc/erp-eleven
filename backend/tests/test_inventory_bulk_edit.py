@@ -1,5 +1,6 @@
 """Bulk editing uses synthetic products, no production database or images."""
 import uuid
+import re
 import pytest
 from test_assistant import setup
 from test_inventory_ocr import stock_app, item
@@ -129,3 +130,71 @@ def test_failure_during_second_adjustment_rolls_back_first_and_metadata(stock_ap
     with factory() as db:
         assert db.query(StockMovement).count()==0
         assert all(row.stock_loja==3 and row.brand is None for row in db.query(Item).all())
+
+
+def test_bulk_all_details_override_clear_and_keep_legacy_identity(stock_app):
+    factory, client, user_id = stock_app
+    ids = seed(factory)
+    from app.models.inventory import Supplier
+    with factory() as db:
+        supplier = Supplier(name='Fornecedor teste'); db.add(supplier); db.flush(); supplier_id=str(supplier.id)
+        before = [(db.get(Item,uuid.UUID(i)).sku_internal, db.get(Item,uuid.UUID(i)).inventory_code) for i in ids]
+        db.commit()
+    response = client.patch('/api/inventory/items/batch/details', json={
+        'item_ids': ids, 'description': 'Placa de metal', 'brand': 'PRADA', 'category': 'Camisetas',
+        'unit': 'peça', 'location': 'A3', 'supplier_id': supplier_id, 'group_key': 'Família teste',
+        'cost_currency': 'USD', 'sale_currency': 'BRL', 'currency': 'USD', 'min_stock': 2, 'max_stock': 8,
+        'is_active': False, 'cost_price': 12.25, 'sale_price': 90,
+        'sizes': [{'id':ids[0], 'description':'Logo emborrachado', 'barcode':'00123S'},
+                  {'id':ids[1], 'supplier_id':None, 'location':'', 'barcode':'00123M'}]})
+    assert response.status_code == 200, response.text
+    with factory() as db:
+        rows=[db.get(Item,uuid.UUID(i)) for i in ids]
+        assert [r.description for r in rows] == ['Logo emborrachado','Placa de metal']
+        assert [r.barcode for r in rows] == ['00123S','00123M']
+        assert rows[0].supplier_id == uuid.UUID(supplier_id) and rows[1].supplier_id is None
+        assert rows[1].location == ''
+        assert all(r.brand == 'Prada' and r.min_stock == 2 and r.max_stock == 8 and not r.is_active for r in rows)
+        assert all(r.cost_currency == 'USD' and r.sale_currency == 'BRL' and r.unit == 'peça' for r in rows)
+        assert [(r.sku_internal,r.inventory_code) for r in rows] == before
+        assert all(r.current_stock == 5 for r in rows)
+        assert db.query(StockMovement).count() == 0
+    response=client.patch('/api/inventory/items/batch/details',json={'item_ids':ids,'description':None})
+    assert response.status_code==200
+    with factory() as db: assert all(db.get(Item,uuid.UUID(i)).description is None for i in ids)
+
+
+@pytest.mark.parametrize('patch',[{'unit':' '},{'name':''},{'brand':'x'*101},{'cost_price':-1},
+    {'sale_currency':'XYZ'},{'min_stock':1.5},{'min_stock':8,'max_stock':2},{'supplier_id':str(uuid.uuid4())}])
+def test_invalid_bulk_details_roll_back_entire_selection(stock_app,patch):
+    factory,client,_=stock_app
+    ids=seed(factory)
+    response=client.patch('/api/inventory/items/batch/details',json={'item_ids':ids,'description':'Must not persist',**patch})
+    assert response.status_code==422,response.text
+    with factory() as db: assert all(db.get(Item,uuid.UUID(i)).description is None for i in ids)
+
+
+def test_stale_description_preview_is_rejected_atomically(stock_app):
+    factory,client,_=stock_app
+    ids=seed(factory)
+    with factory() as db:
+        row=db.get(Item,uuid.UUID(ids[1])); timestamp=row.updated_at.isoformat()
+        row.description='Editado por outro usuário';db.commit()
+    response=client.patch('/api/inventory/items/batch/details',json={'item_ids':ids,'description':'Old preview',
+        'sizes':[{'id':ids[1],'expected_updated_at':timestamp}]})
+    assert response.status_code==409,response.text
+    with factory() as db:
+        assert db.get(Item,uuid.UUID(ids[0])).description is None
+        assert db.get(Item,uuid.UUID(ids[1])).description=='Editado por outro usuário'
+
+
+def test_new_short_reference_and_old_sku_both_find_the_product(stock_app):
+    factory,client,_=stock_app
+    identity=seed(factory,1)[0]
+    with factory() as db:
+        row=db.get(Item,uuid.UUID(identity));code,sku=row.inventory_code,row.sku_internal
+    assert re.fullmatch(r'INV-[A-Z2-9]{6}',code)
+    for value in [code,code.lower(),sku]:
+        result=client.get('/api/inventory/items',params={'search':value})
+        assert result.status_code==200,result.text
+        assert any(i['id']==identity for i in result.json()['items'])

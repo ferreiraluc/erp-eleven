@@ -6,7 +6,7 @@
         <main class="erp-dialog__body" ref="body">
           <section v-if="data" class="history-product">
             <h3>{{ data.product.name }}</h3><p>{{ [data.product.brand, data.product.size, data.product.color].filter(Boolean).join(' · ') }}</p>
-            <code>{{ data.product.sku_internal }}</code><p v-if="data.product.barcode">{{ tr('Código de barras') }}: {{ data.product.barcode }}</p>
+            <code>{{ data.product.inventory_code || data.product.sku_internal }}</code><p v-if="data.product.inventory_code">{{ tr('SKU anterior') }}: {{ data.product.sku_internal }}</p><p v-if="data.product.barcode">{{ tr('Código de barras') }}: {{ data.product.barcode }}</p>
             <p v-if="data.product.deleted_at" class="history-warning">{{ tr('Excluído do catálogo em') }} {{ date(data.product.deleted_at) }} · {{ data.product.deleted_by || tr('Não registrado') }}. {{ tr('Saldos preservados como histórico; não fazem parte do estoque disponível.') }}</p>
             <p v-else-if="!data.product.is_active" class="history-warning">{{ tr('Produto inativo') }}</p>
             <dl class="history-meta"><div><dt>{{ tr('Criado em') }}</dt><dd>{{ date(data.product.created_at) }}</dd></div><div><dt>{{ tr('Cadastrado por') }}</dt><dd>{{ data.product.created_by || tr('Não registrado') }}</dd></div><div><dt>{{ tr('Última atualização') }}</dt><dd>{{ date(data.product.updated_at) }}</dd></div></dl>

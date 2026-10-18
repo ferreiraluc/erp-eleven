@@ -1113,3 +1113,43 @@ não carrega fotos originais nem as imagens extras na listagem.
 Validação: `test_inventory_bulk_edit.py`, `test_inventory_bulk_edit_postgres.py`
 (concorrência real com duas prévias antigas), `BulkEditModal.test.ts` e
 `InventoryFlow.test.ts`. Nenhuma migração de banco ou ajuste em produção é necessário.
+
+### Edição completa em lote e referências curtas
+
+Em **Selecionar → Editar Massivo**, **Dados do produto em lote** permite substituir
+ou limpar descrições e acrescentar texto ao final, preservando as descrições
+individuais. O campo escolhido pode ser aplicado a todos os selecionados, por cor
+ou tamanho, com revisão individual antes de Salvar. Também estão disponíveis
+marca, categoria, unidade, localização, fornecedor, família/grade, moedas,
+limites de estoque e situação ativo/inativo. Os controles existentes continuam
+responsáveis por nomes (inclusive substituição de trechos), tamanhos, cores,
+preços, foto principal por cor e saldos por local. Alterar a moeda **não converte**
+o valor. Galerias adicionais continuam no editor individual.
+
+**Códigos de barras em lote** oferece digitação/leitor USB por item (Enter avança),
+câmera e prévia de preenchimento com o mesmo código base ou base + tamanho
+canônico: `00123` + P resulta em `00123S`. Zeros à esquerda são preservados.
+Por padrão só preenche vazios; é possível revisar a substituição dos existentes.
+A prévia não salva sozinha. Códigos repetidos **entre os selecionados** são avisados,
+mas permitidos: não unem produtos. Base + tamanho é uma referência interna,
+não um EAN/GTIN atribuído pelo fabricante. Câmera depende da permissão do aparelho.
+
+Cada produto recebe `inventory_code` no formato `INV-XXXXXX`, com seis símbolos
+maiúsculos legíveis (letras/números, sem 0/O/1/I). Esta é a referência curta exibida
+no catálogo, PDV e histórico. UUID e `sku_internal` anteriores permanecem intactos;
+a busca aceita ambos, assim como o novo código e seus seis caracteres finais. O código curto é
+imutável pela API de edição e não substitui o código de barras comercial.
+
+A migração `m5b6c7d8e9f0` preenche os produtos existentes em lotes de 500 sem mudar
+nomes, fotos, vínculos, saldos ou `updated_at`. PostgreSQL aloca referências com
+sequência e permutação sem colisões dentro de 32^6 posições; códigos não são
+reciclados quando produtos são excluídos. Um índice único atende à busca pela referência curta. SQLite local usa geração aleatória com verificação; os
+testes de concorrência e migração são executados em PostgreSQL isolado.
+
+`PATCH /api/inventory/items/batch/details` usa o mesmo processamento transacional
+com bloqueio de linhas das outras edições em lote. Valida campos, fornecedor,
+limites e comparação de versão enviada por item antes de aplicar mudanças.
+Se um cadastro mudou durante a conferência, retorna 409 sem salvar o lote.
+Campos omitidos permanecem; `null` explícito limpa apenas os campos opcionais.
+Descrições acrescentadas são enviadas como texto final, evitando repetir o
+acréscimo em uma tentativa idêntica. A edição não carrega originais das imagens.

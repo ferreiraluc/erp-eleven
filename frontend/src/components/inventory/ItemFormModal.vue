@@ -31,6 +31,7 @@
           </div>
         </div>
         <div v-if="isEdit && item" class="stock-readout">
+          <p><strong>{{ item.inventory_code || item.sku_internal }}</strong><small v-if="item.inventory_code"> · {{ tr('SKU anterior') }}: {{ item.sku_internal }}</small></p>
           <div class="stock-readout-values">
             <span>{{ tr('Total salvo') }}: <strong>{{ displayStock(item.current_stock) }}</strong></span>
             <span>{{ tr('Loja:') }} <strong>{{ displayStock(item.stock_loja) }}</strong></span>
@@ -44,7 +45,7 @@
         <div v-if="(partialItems.length || uncertainSave) && !duplicateContext && !gradeContext" class="partial-save-warning" role="alert">
           <strong>{{ tr(partialItems.length ? 'Cadastro parcialmente concluído' : 'Não foi possível confirmar o cadastro') }}</strong>
           <p>{{ tr(partialItems.length ? 'Itens já criados: {count}. Uma etapa seguinte falhou; o estoque inicial pode estar incompleto.' : 'A conexão foi interrompida. Confira o inventário antes de tentar criar novamente.', { count: partialItems.length }) }}</p>
-          <ul v-if="partialItems.length"><li v-for="created in partialItems" :key="created.id">{{ created.name }} · {{ created.sku_internal }}</li></ul>
+          <ul v-if="partialItems.length"><li v-for="created in partialItems" :key="created.id">{{ created.name }} · {{ created.inventory_code || created.sku_internal }}</li></ul>
           <p>{{ tr('Feche esta janela, confira os itens e use Movimentar para concluir apenas o estoque que faltar. O cadastro não será repetido aqui.') }}</p>
         </div>
         <section v-if="duplicateContext" class="duplicate-notice">

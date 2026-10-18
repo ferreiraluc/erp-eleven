@@ -42,7 +42,7 @@
                 <div class="item-meta">
                   <span v-if="item.color" class="meta-tag">{{ item.color }}</span>
                   <span v-if="item.size" class="meta-tag meta-size">{{ item.size }}</span>
-                  <span v-if="item.sku_internal" class="meta-sku">{{ item.sku_internal }}</span>
+                  <span v-if="item.sku_internal" class="meta-sku">{{ item.inventory_code || item.sku_internal }}</span>
                 </div>
               </div>
               <div class="item-stock">{{ displayStock(item.current_stock) }}<small v-if="!hasKnownStock(item)"> · {{ tr('Revisar estoque') }}</small></div>

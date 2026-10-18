@@ -78,7 +78,7 @@
             <div class="pdv-result-left">
               <div class="pdv-result-name">{{ item.name }}</div>
               <div class="pdv-result-meta">{{ [item.category, item.size, item.color].filter(Boolean).join(' · ') }}</div>
-              <div class="pdv-result-sku">{{ item.sku_internal }}</div>
+              <div class="pdv-result-sku">{{ item.inventory_code || item.sku_internal }}</div>
             </div>
             <div class="pdv-result-right">
               <div class="pdv-result-stock" :class="productAvailable(item) === null ? 'stock-unknown' : productAvailable(item) === 0 ? 'stock-out' : 'stock-ok'">
