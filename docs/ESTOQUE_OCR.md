@@ -931,7 +931,8 @@ regulares, não altera palavras parciais nem sobrescreve códigos/modelos por si
 
 Nos formulários de estoque, os campos numéricos têm +/− em celulares e telas de toque.
 Eles respeitam os limites de cada campo e não focam o texto ao tocar nos botões.
-Ajustes em lote continuam exigindo motivo; esses controles não movimentam estoque
+Na edição em lote, o motivo é opcional; o histórico registra o responsável e um
+motivo contextual quando o campo fica vazio. Os controles não movimentam estoque
 antes da confirmação do formulário.
 
 **DolceGabbana, Dolce&Gabbana, D&G e DG** usam **Dolce & Gabbana** como marca.
@@ -981,3 +982,49 @@ o carregamento progressivo e o cache limitado existentes; o original só é
 solicitado ao abrir a foto ou a edição. **Compacto**, **Ver grades** e o tamanho
 dos cards em tablets/desktop preservam seus controles anteriores; o zoom é
 exclusivo dos quadrados individuais no celular.
+
+
+## Edição em lote: cor e conferência de estoque (17/10/2026)
+
+Em **Selecionar → Editar Massivo**, a seção **Estoque por item** abre com os saldos
+atuais e controles **− / quantidade / +**, também no computador. Escolha **Loja** ou
+**Depósito**; as alterações feitas em cada local permanecem na prévia ao alternar.
+Cada linha informa a **quantidade final** naquele local, e o resumo soma as peças
+selecionadas dos dois locais. Zero é um saldo válido; saldo desconhecido permanece
+bloqueado e nunca vira zero automaticamente.
+
+**Aplicar quantidade a** prepara todos os selecionados, somente uma cor ou somente
+um tamanho. **Definir quantidade** substitui o saldo na prévia; **Somar ou retirar**
+modifica a quantidade que está na prévia. Um resultado negativo/inválido recusa a
+aplicação inteira, sem recortar saldos para zero. É possível conferir e ajustar
+qualquer linha depois. **Aplicar** não salva: somente **Salvar** confirma o lote.
+
+Em **Campos compartilhados → Cor para vários itens**, digite/escolha a cor e clique
+em **Aplicar cor a todos**. A cor preenche os campos individuais, que ainda aceitam
+exceções antes de salvar. Cores e tamanhos continuam usando as equivalências do
+catálogo; nomes, fotos, códigos e vínculos de grade não são recriados.
+
+O motivo de estoque é **opcional**, tanto compartilhado quanto por item. Quando
+omitido, o movimento registra **Conferência de estoque — edição em lote**, com ator,
+data, local e saldos antes/depois. Não é necessário preencher um motivo para cada
+produto. O endpoint anterior de entrada/saída em lote também aceita motivo vazio e
+continua disponível para versões antigas; seus movimentos usam motivo contextual.
+
+A API **PATCH /api/inventory/items/batch/quantities** recebe `stock_adjustments`,
+com quantidades finais de loja/depósito e os três saldos vistos na abertura.
+Todos os produtos são bloqueados em ordem de ID, e esses saldos são relidos e
+comparados **antes de alterar qualquer dado**. Uma venda, transferência ou outro
+ajuste posterior à prévia devolve conflito 409 e recusa o lote inteiro: reabra a
+edição para conferir. Produtos removidos, IDs duplicados/fora da seleção e mistura
+de quantidade final com deltas também são recusados. Alterações de cadastro e
+movimentos ficam na mesma transação. Saldo inalterado não cria movimento artificial.
+A rota específica impede que um backend antigo ignore as novas quantidades.
+
+Em **Ver grades**, a foto ocupa **112 × 112 px** no computador/tablet e **80 × 80 px**
+no celular, sem recortar a peça. Tamanhos e ações ficam ao lado/abaixo, e expandir a
+grade mantém os itens dentro do mesmo card. Continua usando a miniatura existente;
+não carrega fotos originais nem as imagens extras na listagem.
+
+Validação: `test_inventory_bulk_edit.py`, `test_inventory_bulk_edit_postgres.py`
+(concorrência real com duas prévias antigas), `BulkEditModal.test.ts` e
+`InventoryFlow.test.ts`. Nenhuma migração de banco ou ajuste em produção é necessário.

@@ -1,17 +1,23 @@
 <template>
-  <div class="modal-overlay erp-dialog-backdrop" @click.self="emit('close')">
+  <div class="modal-overlay erp-dialog-backdrop" @click.self="!saving && emit('close')">
     <div v-erp-dialog class="modal-container erp-dialog">
       <div class="modal-header erp-dialog__header">
         <h2>{{ tr('Editar Massivo') }} <span class="item-count">({{ items.length }} {{ tr('itens)') }}</span></h2>
-        <button data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
+        <button :disabled="saving" data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div class="modal-body erp-dialog__body">
+      <div class="modal-body erp-dialog__body" :inert="saving || undefined">
         <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.') }}</p>
+        <BulkStockEditor v-model="stockDraft" :items="previewItems" :disabled="saving" />
+        <label class="form-group shared-stock-reason">
+          {{ tr('Motivo do ajuste (opcional)') }}
+          <input v-model="sharedStockReason" class="form-input" :placeholder="tr('O histórico registra o ajuste mesmo sem preencher.')" />
+        </label>
+        <p v-if="stockError" role="alert" class="error-msg">{{ tr(stockError) }}</p>
         <!-- ── Shared fields ── -->
         <section class="section">
           <h3 class="section-title">{{ tr('Campos compartilhados') }}</h3>
@@ -63,46 +69,14 @@
             </div>
           </div>
 
-          <!-- Shared stock adjustment -->
-          <div class="stock-adjust-block">
-            <div class="stock-adjust-header">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-              </svg>
-              <span>{{ tr('Ajuste de estoque compartilhado') }}</span>
+          <div class="shared-color">
+            <div class="form-group">
+              <span>{{ tr('Cor para vários itens') }}</span>
+              <ErpDropdown v-model="sharedColor" :options="colorOptions" editable :label="tr('Cor para vários itens')" :placeholder="tr('Digite ou escolha uma cor')" />
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>{{ tr('Quantidade') }} <span class="label-hint">{{ tr('(+ entrada / − saída)') }}</span></label>
-                <StockQuantityInput :min="-2147483647"
-                  v-model.number="sharedStockDelta"
-                  :disabled="unknownStock"
-                  type="number"
-                  class="form-input"
-                  :class="{ 'input-entry': sharedStockDelta > 0, 'input-exit': sharedStockDelta < 0 }"
-                  :placeholder="tr('Ex: +5 ou -3')"
-                />
-              </div>
-              <div class="form-group">
-                <label>
-                  {{ tr('Motivo') }}
-                  <span v-if="sharedStockDelta && sharedStockDelta !== 0" class="required-mark">*</span>
-                </label>
-                <input
-                  v-model="sharedStockReason"
-                  :disabled="unknownStock"
-                  type="text"
-                  class="form-input"
-                  :class="{ error: stockErrors.shared }"
-                  :placeholder="tr('Motivo obrigatório')"
-                />
-                <span v-if="stockErrors.shared" class="error-msg">{{ tr(stockErrors.shared) }}</span>
-              </div>
-            </div>
-            <p class="stock-adjust-hint">
-              {{ tr('Itens com ajuste individual abaixo têm prioridade sobre este valor.') }}
-            </p>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving || !sharedColor.trim()" @click="applyColor">{{ tr('Aplicar cor a todos') }}</button>
           </div>
+          <p class="section-hint">{{ tr('A cor preenche os itens abaixo. Você ainda pode alterar cada um antes de salvar.') }}</p>
         </section>
 
         <section class="section name-replace">
@@ -201,32 +175,9 @@
                   />
                 </div>
 
-                <!-- Per-item stock -->
-                <div class="field-group">
-                  <label>{{ tr('Δ Estoque') }} <span class="label-hint">(+ / −)</span></label>
-                  <StockQuantityInput :min="-2147483647"
-                    v-model.number="itemStockDeltas[item.id]"
-                    :disabled="!hasKnownStock(item)"
-                    type="number"
-                    class="field-input"
-                    :class="{ 'input-entry': itemStockDeltas[item.id] > 0, 'input-exit': itemStockDeltas[item.id] < 0 }"
-                    :placeholder="tr('Ex: +2 ou -1')"
-                  />
-                </div>
-                <div class="field-group">
-                  <label>
-                    {{ tr('Motivo') }}
-                    <span v-if="itemStockDeltas[item.id] && itemStockDeltas[item.id] !== 0" class="required-mark">*</span>
-                  </label>
-                  <input
-                    v-model="itemStockReasons[item.id]"
-                    :disabled="!hasKnownStock(item)"
-                    type="text"
-                    class="field-input"
-                    :class="{ error: stockErrors[item.id] }"
-                    :placeholder="tr('Motivo do ajuste')"
-                  />
-                  <span v-if="stockErrors[item.id]" class="error-msg">{{ tr(stockErrors[item.id]) }}</span>
+                <div class="field-group field-group-wide">
+                  <label>{{ tr('Motivo do ajuste (opcional)') }}</label>
+                  <input v-model="itemStockReasons[item.id]" class="field-input" :disabled="!hasKnownStock(item)" :placeholder="tr('Usar motivo compartilhado ou registro automático')" />
                 </div>
               </div>
             </div>
@@ -234,6 +185,7 @@
         </section>
       </div>
 
+      <p v-if="saveError" role="alert" class="save-error">{{ tr(saveError) }}</p>
       <div class="modal-footer erp-dialog__footer">
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary" :disabled="saving">{{ tr('Cancelar') }}</button>
         <button @click="save" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || !hasChanges">
@@ -250,11 +202,14 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
-import StockQuantityInput from './StockQuantityInput.vue'
+import BulkStockEditor from './BulkStockEditor.vue'
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
+import { uniqueLabels } from '@/services/inventoryTaxonomy'
+import { initialStockDraft, changedStock, validStockDraft } from '@/services/inventoryBulkStock'
 import { replaceProductName } from '@/services/inventoryNameReplace'
 import ProductThumbnail from './ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
-import { displayStock, hasKnownStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
+import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 
 const props = defineProps<{
   items: InventoryItem[]
@@ -272,12 +227,15 @@ const sharedBrand = ref('')
 const sharedCategory = ref('')
 const sharedCostPrice = ref<string>('')
 const sharedSalePrice = ref<string>('')
-const sharedStockDelta = ref<number>(0)
+const sharedColor = ref('')
+// Keep the reviewed baseline stable even if the parent refreshes the list.
+const stockBaseline = props.items.map(item => ({ ...item }))
+const stockDraft = ref(initialStockDraft(stockBaseline))
+const stockError = ref(''), saveError = ref('')
 const sharedStockReason = ref('')
 const saving = ref(false)
-const unknownStock = computed(() => props.items.some(item => !hasKnownStock(item)))
+const unknownStock = computed(() => stockBaseline.some(item => !hasKnownStock(item)))
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const stockErrors = reactive<Record<string, string>>({})
 
 // Per-item maps — pre-populated with current values for text fields
 const itemNames     = reactive<Record<string, string>>(Object.fromEntries(props.items.map(i => [i.id, i.name])))
@@ -286,8 +244,17 @@ const itemSizes     = reactive<Record<string, string>>({})
 const itemBarcodes  = reactive<Record<string, string>>(Object.fromEntries(props.items.map(i => [i.id, i.barcode || ''])))
 const itemCostPrices  = reactive<Record<string, string>>({})
 const itemSalePrices  = reactive<Record<string, string>>({})
-const itemStockDeltas = reactive<Record<string, number>>({})
+
 const itemStockReasons = reactive<Record<string, string>>({})
+
+const previewItems = computed(() => stockBaseline.map(item => ({ ...item,
+  name: itemNames[item.id], color: itemColors[item.id], size: itemSizes[item.id] || item.size,
+})))
+const colorOptions = computed(() => uniqueLabels(Object.values(itemColors)).map(color => ({ value: color, label: color })))
+function applyColor() {
+  if (saving.value || !sharedColor.value.trim()) return
+  for (const item of props.items) itemColors[item.id] = sharedColor.value.trim()
+}
 
 const nameFind = ref(''), nameReplacement = ref(''), nameApplied = ref(false)
 const namePreview = computed(() => props.items.flatMap(item => {
@@ -308,7 +275,7 @@ function formatPrice(val: any): string {
 const hasChanges = computed(() => {
   if (sharedImage.value || sharedBrand.value || sharedCategory.value) return true
   if (sharedCostPrice.value !== '' || sharedSalePrice.value !== '') return true
-  if (sharedStockDelta.value && sharedStockDelta.value !== 0) return true
+  if (changedStock(stockBaseline, stockDraft.value).length) return true
   return props.items.some(item => {
     if (itemNames[item.id] !== item.name) return true
     if (itemColors[item.id] !== (item.color || '')) return true
@@ -316,7 +283,6 @@ const hasChanges = computed(() => {
     if (itemBarcodes[item.id] !== (item.barcode || '')) return true
     if (itemCostPrices[item.id] !== '' && itemCostPrices[item.id] !== undefined) return true
     if (itemSalePrices[item.id] !== '' && itemSalePrices[item.id] !== undefined) return true
-    if (itemStockDeltas[item.id] && itemStockDeltas[item.id] !== 0) return true
     return false
   })
 })
@@ -348,43 +314,20 @@ function onImageFile(e: Event) {
   input.value = ''
 }
 
-function validateStock(): boolean {
-  // Clear previous errors
-  Object.keys(stockErrors).forEach(k => delete stockErrors[k])
-
-  let valid = true
-  if (sharedStockDelta.value && sharedStockDelta.value !== 0 && !sharedStockReason.value.trim()) {
-    stockErrors.shared = 'Informe o motivo do ajuste'
-    valid = false
-  }
-  if (sharedStockDelta.value && unknownStock.value) {
-    stockErrors.shared = UNKNOWN_STOCK_MESSAGE
-    valid = false
-  }
-  for (const item of props.items) {
-    const delta = itemStockDeltas[item.id]
-    if (delta && !hasKnownStock(item)) {
-      stockErrors[item.id] = UNKNOWN_STOCK_MESSAGE
-      valid = false
-      continue
-    }
-    if (delta && delta !== 0 && !itemStockReasons[item.id]?.trim()) {
-      stockErrors[item.id] = 'Informe o motivo'
-      valid = false
-    }
-  }
-  return valid
-}
-
 async function save() {
   if (!hasChanges.value || saving.value) return
-  if (!validateStock()) return
+  stockError.value = ''
+  if (!validStockDraft(stockBaseline, stockDraft.value)) {
+    stockError.value = 'Confira as quantidades: use inteiros a partir de zero, dentro do limite de estoque.'
+    return
+  }
+  saveError.value = ''
 
   saving.value = true
   try {
     const perItems: Array<{
       id: string; size?: string; name?: string; color?: string; barcode?: string
-      cost_price?: number; sale_price?: number; stock_delta?: number; stock_reason?: string
+      cost_price?: number; sale_price?: number
     }> = []
 
     for (const item of props.items) {
@@ -401,13 +344,6 @@ async function save() {
       if (cp !== '' && cp !== undefined)  { entry.cost_price = Number(cp); changed = true }
       if (sp !== '' && sp !== undefined)  { entry.sale_price = Number(sp); changed = true }
 
-      const delta = itemStockDeltas[item.id]
-      if (delta && delta !== 0) {
-        entry.stock_delta  = delta
-        entry.stock_reason = itemStockReasons[item.id] || ''
-        changed = true
-      }
-
       if (changed) perItems.push(entry)
     }
 
@@ -418,7 +354,13 @@ async function save() {
       image_data:  sharedImage.value    || undefined,
       cost_price:  sharedCostPrice.value !== '' ? Number(sharedCostPrice.value) : undefined,
       sale_price:  sharedSalePrice.value !== '' ? Number(sharedSalePrice.value) : undefined,
-      stock_delta:  (sharedStockDelta.value && sharedStockDelta.value !== 0) ? sharedStockDelta.value : undefined,
+      stock_adjustments: changedStock(stockBaseline, stockDraft.value).map(item => ({
+        id: item.id,
+        stock_loja: stockDraft.value[item.id].loja,
+        stock_deposito: stockDraft.value[item.id].deposito,
+        expected_loja: item.stock_loja!, expected_deposito: item.stock_deposito!, expected_total: item.current_stock!,
+        reason: itemStockReasons[item.id]?.trim() || undefined,
+      })),
       stock_reason: sharedStockReason.value || undefined,
       sizes: perItems.length ? perItems : undefined,
     })
@@ -432,7 +374,7 @@ async function save() {
       : Array.isArray(detail)
         ? detail.map((d: any) => d.msg || d.loc?.join('.') || JSON.stringify(d)).join('\n')
         : e.message || 'Erro ao salvar'
-    alert(tr(msg))
+    saveError.value = msg
   } finally {
     saving.value = false
   }
@@ -448,6 +390,7 @@ input:disabled { background: #f3f4f6; cursor: not-allowed; }
   display: flex; align-items: center; justify-content: center;
   z-index: 2500; padding: 1rem;
 }
+.shared-color{display:flex;align-items:end;gap:10px}.shared-color .form-group{min-width:0;margin:0}.shared-color .erp-button{min-height:40px}.save-error{margin:0;padding:12px 20px;background:#fef2f2;color:#b91c1c;font-size:13px}
 .modal-container {
   background: white; border-radius: 12px; width: 100%;
   max-width: 620px; max-height: 92vh;
@@ -474,23 +417,7 @@ input:disabled { background: #f3f4f6; cursor: not-allowed; }
 /* Labels helpers */
 .label-hint { font-size: 0.68rem; font-weight: 400; color: #9ca3af; }
 .label-current { font-size: 0.65rem; font-weight: 400; color: #9ca3af; }
-.required-mark { color: #ef4444; font-size: 0.75rem; }
 .error-msg { font-size: 0.72rem; color: #ef4444; }
-
-/* Stock inputs colors */
-.input-entry { border-color: #86efac !important; background: #f0fdf4; color: #15803d; }
-.input-exit  { border-color: #fca5a5 !important; background: #fff5f5; color: #b91c1c; }
-
-/* Stock adjust block */
-.stock-adjust-block {
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
-  padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
-}
-.stock-adjust-header {
-  display: flex; align-items: center; gap: 0.4rem;
-  font-size: 0.78rem; font-weight: 600; color: #475569;
-}
-.stock-adjust-hint { font-size: 0.68rem; color: #94a3b8; margin: 0; }
 
 /* Image */
 .image-area { }
@@ -546,7 +473,6 @@ input:disabled { background: #f3f4f6; cursor: not-allowed; }
   .item-fields { grid-template-columns: 1fr 1fr; gap: 0.3rem 0.45rem; }
   .field-input { padding: 0.25rem 0.4rem; font-size: 0.78rem; }
   .items-list { gap: 0.4rem; max-height: none; }
-  .stock-adjust-block { padding: 0.55rem; gap: 0.35rem; }
   .btn { padding: 0.42rem 0.85rem; font-size: 0.82rem; }
   .image-placeholder, .image-preview img { width: 56px; height: 56px; }
 }
