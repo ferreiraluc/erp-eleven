@@ -17,10 +17,10 @@
         <label class="search-field">{{ tr('Buscar') }}<input v-model="filters.q" :placeholder="tr('Cliente, produto, SKU ou código da venda')" maxlength="150" /><button type="button" class="erp-button erp-button--secondary erp-button--sm scan-ticket" @click="showScanner=true">{{ tr('Ler ticket') }}</button></label>
         <label>{{ tr('De') }}<input v-model="filters.date_from" type="date" /></label>
         <label>{{ tr('Até') }}<input v-model="filters.date_to" type="date" /></label>
-        <label>{{ tr('Situação') }}<select v-model="filters.status"><option value="">{{ tr('Todas') }}</option><option v-for="status in statuses" :key="status" :value="status">{{ statusText(status) }}</option></select></label>
-        <label v-if="!auth.ownSales">{{ tr('Vendedor') }}<select v-model="filters.seller_id"><option value="">{{ tr('Todos') }}</option><option v-for="s in sellers" :key="s.id" :value="s.id">{{ s.name }}</option></select></label>
-        <label>{{ tr('Pagamento') }}<select v-model="filters.payment"><option value="">{{ tr('Todos') }}</option><option v-for="method in allPaymentFilters" :key="method" :value="method">{{ paymentText(method) }}</option></select></label>
-        <label v-if="auth.isOwner">{{ tr('Listagem') }}<select v-model="filters.deleted"><option :value="false">{{ tr('Vendas visíveis') }}</option><option :value="true">{{ tr('Histórico de excluídas') }}</option></select></label>
+        <label>{{ tr('Situação') }}<ErpSelect :label="(tr('Situação'))" v-model="filters.status"><option value="">{{ tr('Todas') }}</option><option v-for="status in statuses" :key="status" :value="status">{{ statusText(status) }}</option></ErpSelect></label>
+        <label v-if="!auth.ownSales">{{ tr('Vendedor') }}<ErpSelect :label="(tr('Vendedor'))" v-model="filters.seller_id"><option value="">{{ tr('Todos') }}</option><option v-for="s in sellers" :key="s.id" :value="s.id">{{ s.name }}</option></ErpSelect></label>
+        <label>{{ tr('Pagamento') }}<ErpSelect :label="(tr('Pagamento'))" v-model="filters.payment"><option value="">{{ tr('Todos') }}</option><option v-for="method in allPaymentFilters" :key="method" :value="method">{{ paymentText(method) }}</option></ErpSelect></label>
+        <label v-if="auth.isOwner">{{ tr('Listagem') }}<ErpSelect :label="(tr('Listagem'))" v-model="filters.deleted"><option :value="false">{{ tr('Vendas visíveis') }}</option><option :value="true">{{ tr('Histórico de excluídas') }}</option></ErpSelect></label>
         <div class="filter-actions"><button class="erp-button erp-button--primary" :disabled="loading">{{ tr('Filtrar') }}</button><button type="button" class="erp-button erp-button--secondary" @click="clear">{{ tr('Limpar') }}</button></div>
       </form>
       <p v-if="optionsError" role="alert" class="scope-note">{{ tr('Não foi possível carregar os vendedores.') }} <button class="erp-button erp-button--ghost erp-button--sm" @click="loadOptions">{{ tr('Tentar novamente') }}</button></p>
@@ -46,6 +46,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'

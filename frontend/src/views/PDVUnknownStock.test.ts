@@ -1,3 +1,4 @@
+import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -84,11 +85,11 @@ describe('PDV quantity and checkout UI', () => {
     await vi.advanceTimersByTimeAsync(300); await nextTick()
     expect(container.querySelector('.pdv-result-stock')?.textContent).toContain('Disponível: 0')
     expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(true)
-    const select = container.querySelector('.pdv-stock-location select') as HTMLSelectElement
+    const select = container.querySelector('.pdv-stock-location .erp-dropdown')!
     expect(select.closest('[aria-disabled="true"]')).toBeNull()
-    expect(select.disabled).toBe(false)
-    expect(select.value).toBe('loja')
-    select.value = 'deposito'; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    expect(select.querySelector<HTMLButtonElement>('button')?.disabled).toBe(false)
+    expect((await openDropdown(select)).find(o => o.getAttribute('aria-selected') === 'true')?.value).toBe('loja')
+    await chooseDropdown(select, 'deposito')
     expect(container.querySelector('.pdv-result-stock')?.textContent).toContain('Disponível: 2')
     click('.pdv-result-row'); await nextTick()
     expect(usePdvStore().cart.map(line => line.location)).toEqual(['loja', 'deposito'])

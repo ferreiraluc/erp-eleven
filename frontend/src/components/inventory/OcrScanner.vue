@@ -24,7 +24,7 @@
               <span class="field-status">{{ !values[field.key] ? t('empty') : values[field.key] === originals[field.key] ? t('detected') : t('edited') }}</span>
               <small v-if="reading?.evidencias[field.source]" class="ocr-evidence">{{ reading.evidencias[field.source] }}</small>
             </div>
-            <div class="field-card"><label class="field-label" for="ocr-currency">{{ t('currency') }}</label><select id="ocr-currency" v-model="currency" class="field-input"><option value="">{{ t('unknown') }}</option><option v-for="code in currencies" :key="code" :value="code">{{ code }}</option></select></div>
+            <div class="field-card"><label class="field-label" for="ocr-currency">{{ t('currency') }}</label><ErpSelect :label="(t('currency'))" id="ocr-currency" v-model="currency" class="field-input"><option value="">{{ t('unknown') }}</option><option v-for="code in currencies" :key="code" :value="code">{{ code }}</option></ErpSelect></div>
           </div>
           <label class="ocr-review"><input v-model="reviewed" type="checkbox" />{{ t(draft ? 'reviewExample' : 'reviewed') }}</label><p class="ocr-next">{{ t(draft ? 'draftNext' : 'next') }}</p>
           <p v-if="formError" class="error-msg-big" role="alert">{{ t(formError) }}</p>
@@ -43,6 +43,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'

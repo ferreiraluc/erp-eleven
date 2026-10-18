@@ -13,6 +13,12 @@ function visible(element: HTMLElement) {
   return element.isConnected && !element.closest('[hidden],[inert]') && element.getClientRects().length > 0
 }
 function top() { return dialogs.filter(entry => visible(entry.element)).at(-1) }
+function owns(element: HTMLElement, target: EventTarget | null) {
+  if (!(target instanceof Node)) return false
+  if (element.contains(target)) return true
+  const portal = target instanceof Element ? target.closest<HTMLElement>('[data-erp-dialog-owner]') : null
+  return !!element.id && portal?.dataset.erpDialogOwner === element.id
+}
 function controls(element: HTMLElement) {
   return Array.from(element.querySelectorAll<HTMLElement>(focusable))
     .filter(node => node.tabIndex >= 0 && !node.matches(':disabled,[aria-disabled="true"]') && visible(node))
@@ -26,10 +32,10 @@ function layers() {
     entry.backdrop.style.zIndex = String(level)
   }
 }
-function onKeydown(event: KeyboardEvent) {
+export function trapDialogTab(event: KeyboardEvent, origin: EventTarget | null = event.target) {
   if (event.key !== 'Tab' || event.defaultPrevented) return
   const current = top()
-  if (!current || !current.element.contains(event.target as Node)) return
+  if (!current || !(origin instanceof Node) || !current.element.contains(origin)) return
   const nodes = controls(current.element)
   const first = nodes[0], last = nodes.at(-1)
   const focused = document.activeElement
@@ -58,7 +64,7 @@ function activate(element: HTMLElement) {
   if (!dialogs.length) {
     previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', onKeydown, true)
+    document.addEventListener('keydown', trapDialogTab, true)
     document.addEventListener('keydown', onEscape)
   }
   // Vue mounts descendants first. Keep an already mounted child above its parent.
@@ -76,26 +82,26 @@ function activate(element: HTMLElement) {
   }
   layers()
   queueMicrotask(() => {
-    if (top() === entry && !element.contains(document.activeElement)) element.focus({ preventScroll: true })
+    if (top() === entry && !owns(element, document.activeElement)) element.focus({ preventScroll: true })
   })
 }
 function deactivate(element: HTMLElement) {
   const entry = entries.get(element)
   if (!entry) return
-  const ownedFocus = element.contains(document.activeElement)
+  const ownedFocus = owns(element, document.activeElement)
   dialogs.splice(dialogs.indexOf(entry), 1)
   entries.delete(element)
   if (entry.backdrop) entry.backdrop.style.zIndex = entry.zIndex
   layers()
   if (!dialogs.length) {
     document.body.style.overflow = previousOverflow
-    document.removeEventListener('keydown', onKeydown, true)
+    document.removeEventListener('keydown', trapDialogTab, true)
     document.removeEventListener('keydown', onEscape)
   }
   queueMicrotask(() => {
     if (!ownedFocus) return
     const current = top()
-    if (entry.opener && visible(entry.opener) && (!current || current.element.contains(entry.opener))) {
+    if (entry.opener && visible(entry.opener) && (!current || owns(current.element, entry.opener))) {
       entry.opener.focus({ preventScroll: true })
     } else current?.element.focus({ preventScroll: true })
   })

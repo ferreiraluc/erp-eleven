@@ -1,3 +1,4 @@
+import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createApp, nextTick, reactive, type App } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
@@ -13,7 +14,7 @@ vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ currentRates: {
 let app: App | undefined, root: HTMLDivElement
 async function tick() { await nextTick(); await Promise.resolve(); await nextTick() }
 const input = (selector: string) => root.querySelector(selector) as HTMLInputElement
-async function set(selector: string, value: string, event = 'input') { const el = input(selector); el.value = value; el.dispatchEvent(new Event(event, { bubbles: true })); await tick() }
+async function set(selector: string, value: string, event = 'input') { const el = input(selector); if (el.matches('.erp-dropdown')) { await chooseDropdown(el, value); await tick(); return } el.value = value; el.dispatchEvent(new Event(event, { bubbles: true })); await tick() }
 async function method(value: string) { await set('.pay-select', value, 'change') }
 const button = (selector: string) => root.querySelector(selector) as HTMLButtonElement
 beforeEach(async () => {
@@ -29,10 +30,10 @@ beforeEach(async () => {
 afterEach(() => { app?.unmount(); root?.remove(); vi.clearAllTimers(); vi.useRealTimers(); i18n.global.locale.value = 'pt' })
 
 it('offers exactly the requested methods and locks each amount to its currency', async () => {
-  expect(Array.from(root.querySelectorAll('.pay-select option')).map(el => (el as HTMLOptionElement).value)).toEqual(paymentMethods.map(m => m.value))
+  expect((await openDropdown(root.querySelector('.pay-select'))).map(el => el.value)).toEqual(paymentMethods.map(m => m.value))
   for (const m of paymentMethods) {
     await method(m.value)
-    expect(m.value.startsWith('cash_') ? input('.pay-cash-currency').value : root.querySelector('.pay-fixed-currency')?.textContent).toBe(m.value.startsWith('cash_') ? m.currency : paymentSymbol(m.currency))
+    expect(m.value.startsWith('cash_') ? (await openDropdown(root.querySelector('.pay-cash-currency'))).find(o => o.getAttribute('aria-selected') === 'true')?.value : root.querySelector('.pay-fixed-currency')?.textContent).toBe(m.value.startsWith('cash_') ? m.currency : paymentSymbol(m.currency))
     expect(input('.pay-amount-input').getAttribute('aria-label')).toContain(paymentSymbol(m.currency))
     expect(root.querySelector('.pay-select-sm')).toBeNull()
   }
@@ -94,7 +95,7 @@ it('updates prices while typing comma decimals, changes currency and keeps remov
   expect(usePdvStore().total).toBe(13325)
   expect(root.querySelector('.pdv-ci-controls .pdv-ci-remove')).not.toBeNull()
   await set('.pay-cash-currency','BRL','change')
-  expect(input('.pay-select').value).toBe('cash_brl')
+  expect(root.querySelector('.pay-select')?.textContent).toContain('Dinheiro R$')
   await set('.pay-amount-input','10,25')
   expect(root.querySelector('.pay-converted')?.textContent).toContain('13.325')
   expect(mocks.createSale).not.toHaveBeenCalled()

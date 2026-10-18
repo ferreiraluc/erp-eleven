@@ -162,10 +162,10 @@
           <div class="fiado-row">
             <div class="fiado-field">
               <label>{{ $tr("Tipo") }}</label>
-              <select v-model="newClient.tipo" class="fiado-input">
+              <ErpSelect :label="($tr('Tipo'))" v-model="newClient.tipo" class="fiado-input">
                 <option value="atacadista">{{ $tr("Atacadista") }}</option>
                 <option value="varejo">{{ $tr("Varejo") }}</option>
-              </select>
+              </ErpSelect>
             </div>
             <div class="fiado-field">
               <label>{{ $tr("Limite de fiado (G$)") }}</label>
@@ -194,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { tr as salesText } from '@/components/pdv/management/i18n'
 import ModuleHeader from '@/components/ModuleHeader.vue'

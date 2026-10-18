@@ -6,9 +6,9 @@
       <div class="origin-note"><Sparkles :size="17"/><p>{{ t('origin') }}</p></div>
       <p v-if="error" class="error" role="alert">{{ t('errors.' + error) }}</p>
       <div class="generate-controls">
-        <label>{{ t('sex') }}<select v-model="options.sexo" :disabled="busy || saving"><option value="I">{{ t('random') }}</option><option value="M">{{ t('male') }}</option><option value="F">{{ t('female') }}</option></select></label>
+        <label>{{ t('sex') }}<ErpSelect :label="(t('sex'))" v-model="options.sexo" :disabled="busy || saving"><option value="I">{{ t('random') }}</option><option value="M">{{ t('male') }}</option><option value="F">{{ t('female') }}</option></ErpSelect></label>
         <label>{{ t('age') }}<input v-model.number="age" type="number" min="18" max="90" :placeholder="t('optional')" :disabled="busy || saving"/></label>
-        <label>{{ t('state') }}<select v-model="options.estado" :disabled="busy || saving"><option value="">{{ t('random') }}</option><option v-for="state in BRAZIL_STATES" :key="state">{{ state }}</option></select></label>
+        <label>{{ t('state') }}<ErpSelect :label="(t('state'))" v-model="options.estado" :disabled="busy || saving"><option value="">{{ t('random') }}</option><option v-for="state in BRAZIL_STATES" :key="state">{{ state }}</option></ErpSelect></label>
         <button type="button" class="primary erp-button erp-button--primary" :disabled="busy || saving" @click="generate"><RefreshCw v-if="busy" :size="16" class="spin"/><Sparkles v-else :size="16"/>{{ busy ? t('generating') : t('generate') }}</button>
       </div>
       <details class="manual" :open="manualOpen">
@@ -23,7 +23,7 @@
         <label>{{ t('label') }}<input v-model="name" required maxlength="100" :disabled="saving"/></label>
         <div class="person-grid">
           <label v-for="field in senderFields" :key="field.key" :class="{wide:field.key==='endereco'}">{{ t('fields.' + field.key) }}
-            <select v-if="field.key==='estado'" v-model="person[field.key]" :disabled="saving"><option value="">{{ t('optional') }}</option><option v-for="state in BRAZIL_STATES" :key="state">{{ state }}</option></select>
+            <ErpSelect :label="(t('fields.' + field.key))" v-if="field.key==='estado'" v-model="person[field.key]" :disabled="saving"><option value="">{{ t('optional') }}</option><option v-for="state in BRAZIL_STATES" :key="state">{{ state }}</option></ErpSelect>
             <input v-else v-model="person[field.key]" :maxlength="field.max" :required="field.key==='nome'" :disabled="saving"/>
           </label>
           <label>{{ t('complement') }}<input v-model="complement" maxlength="60" :disabled="saving"/></label>
@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

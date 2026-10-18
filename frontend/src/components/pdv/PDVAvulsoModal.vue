@@ -28,12 +28,12 @@
 
         <div class="avulso-field">
           <label for="avulso-currency">{{ text('currency') }}</label>
-          <select id="avulso-currency" v-model="form.currency" class="avulso-input">
+          <ErpSelect :label="(text('currency'))" id="avulso-currency" v-model="form.currency" class="avulso-input">
             <option value="PYG">🇵🇾 G$</option>
             <option value="BRL">🇧🇷 R$</option>
             <option value="USD">🇺🇸 U$</option>
             <option value="EUR">🇪🇺 EUR (€)</option>
-          </select>
+          </ErpSelect>
         </div>
         <div class="avulso-row">
           <div class="avulso-field">
@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { usePdvEntryText } from './entryMessages'

@@ -1,3 +1,4 @@
+import { chooseDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, reactive, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -32,8 +33,7 @@ function button(text: string) {
   return found
 }
 async function filter(value: string) {
-  const select = container.querySelector('select') as HTMLSelectElement
-  select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+  await chooseDropdown(container.querySelector('.erp-dropdown'), value)
 }
 beforeEach(() => api.get.mockReset().mockResolvedValue(fixture()))
 afterEach(async () => { app?.unmount(); app = undefined; container?.remove(); await nextTick(); vi.resetAllMocks() })

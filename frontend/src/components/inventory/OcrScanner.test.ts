@@ -68,7 +68,7 @@ describe('OCR review', () => {
     await nextTick()
     const trigger = container.querySelector('.brand-picker button') as HTMLButtonElement
     trigger.click(); await nextTick()
-    const option = container.querySelector('[role=option]') as HTMLButtonElement
+    const option = document.querySelector('[role=option]') as HTMLButtonElement
     expect(option).not.toBeNull()
     option.click(); await nextTick()
     expect((container.querySelector('.brand-picker input') as HTMLInputElement).value).toBe('Prada')

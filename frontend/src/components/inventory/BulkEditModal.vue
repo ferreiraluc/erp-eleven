@@ -43,17 +43,11 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Marca') }}</label>
-              <input v-model="sharedBrand" type="text" class="form-input" :placeholder="tr('Vazio = não alterar')" :list="'bulk-brand-list'" />
-              <datalist id="bulk-brand-list">
-                <option v-for="b in distinctBrands" :key="b" :value="b" />
-              </datalist>
+              <ErpDropdown v-model="sharedBrand" editable :label="tr('Marca')" :placeholder="tr('Vazio = não alterar')" :options="(distinctBrands || []).map(value => ({ value, label: value }))" />
             </div>
             <div class="form-group">
               <label>{{ tr('Categoria') }}</label>
-              <input v-model="sharedCategory" type="text" class="form-input" :placeholder="tr('Vazio = não alterar')" :list="'bulk-cat-list'" />
-              <datalist id="bulk-cat-list">
-                <option v-for="c in distinctCategories" :key="c" :value="c" />
-              </datalist>
+              <ErpDropdown v-model="sharedCategory" editable :label="tr('Categoria')" :placeholder="tr('Vazio = não alterar')" :options="(distinctCategories || []).map(value => ({ value, label: value }))" />
             </div>
           </div>
 

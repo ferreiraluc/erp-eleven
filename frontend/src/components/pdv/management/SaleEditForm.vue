@@ -1,7 +1,7 @@
 <template>
   <div class="edit-sale">
     <div class="form-grid">
-      <label>{{ tr('Vendedor') }}<select v-model="model.vendedor_id"><option v-for="s in sellers" :key="s.id" :value="s.id">{{ s.name }}</option></select></label>
+      <label>{{ tr('Vendedor') }}<ErpSelect :label="(tr('Vendedor'))" v-model="model.vendedor_id"><option v-for="s in sellers" :key="s.id" :value="s.id">{{ s.name }}</option></ErpSelect></label>
       <label>{{ tr('Cliente') }}<input v-model="customerSearch" :placeholder="tr('Buscar cliente cadastrado')" @input="searchClients" /></label>
     </div>
     <div v-if="clients.length" class="search-results"><button v-for="client in clients" :key="client.id" type="button" class="erp-control" @click="chooseClient(client)">{{ client.nome }}<small>{{ client.doc || client.telefone || '' }}</small></button></div>
@@ -17,7 +17,7 @@
         <label>{{ tr('Quantidade') }}<input v-model.number="line.quantity" type="number" :step="line.is_avulso ? '.001' : '1'" min="0.001" /></label>
         <label>{{ tr('Preço unitário G$') }}<input v-model.number="line.unit_price_gs" type="number" step=".01" min="0" /></label>
         <label>{{ tr('Desconto do item G$') }}<input v-model.number="line.discount_gs" type="number" step=".01" min="0" /></label>
-        <label>{{ tr('Local') }}<select v-model="line.location"><option value="loja">{{ tr('Loja') }}</option><option value="deposito">{{ tr('Depósito') }}</option></select></label>
+        <label>{{ tr('Local') }}<ErpSelect :label="(tr('Local'))" v-model="line.location"><option value="loja">{{ tr('Loja') }}</option><option value="deposito">{{ tr('Depósito') }}</option></ErpSelect></label>
       </div>
       <strong class="line-total">{{ gs(Number(line.quantity) * Number(line.unit_price_gs) - Number(line.discount_gs)) }}</strong>
     </article>
@@ -31,7 +31,7 @@
     <h3>{{ tr('Pagamentos aplicados à venda') }}</h3><p class="hint">{{ tr('Informe os valores aplicados, sem incluir troco. A soma deve coincidir com o total corrigido.') }}</p>
     <article v-for="(p,index) in model.payments" :key="index" class="edit-line">
       <div class="form-grid quantities">
-        <label>{{ tr('Pagamento') }}<select v-model="p.method" @change="changePaymentMethod(p)"><option v-for="method in [...new Set([...paymentMethods,p.method])]" :key="method" :value="method">{{ paymentText(method) }}</option></select></label>
+        <label>{{ tr('Pagamento') }}<ErpSelect :label="(tr('Pagamento'))" v-model="p.method" @change="changePaymentMethod(p)"><option v-for="method in [...new Set([...paymentMethods,p.method])]" :key="method" :value="method">{{ paymentText(method) }}</option></ErpSelect></label>
         <label>{{ tr('Moeda') }}<input :value="paymentSymbol(p.currency)" readonly /></label>
         <label>{{ tr('Valor na moeda') }}<input v-model.number="p.amount_original" :disabled="!paymentCurrency(p.method)" type="number" step=".01" min="0" @input="recalculate(p)" /></label>
         <label>{{ tr('Câmbio para G$') }}<input v-model.number="p.exchange_rate" :disabled="!paymentCurrency(p.method) || p.currency === 'GS'" type="number" step=".000001" min=".000001" @input="recalculate(p)" /></label>
@@ -47,6 +47,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { useCurrencyStore } from '@/stores/currency'
 import { paymentCurrency, paymentSymbol, paymentRate } from '@/services/pdvPayments'
 import { computed, onUnmounted, ref } from 'vue'

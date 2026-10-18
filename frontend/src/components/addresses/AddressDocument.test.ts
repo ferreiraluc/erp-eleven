@@ -1,3 +1,4 @@
+import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, h, nextTick, ref, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -70,12 +71,11 @@ describe('country-specific optional recipient document', () => {
     input.value = '80012345-6'; input.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
     expect(data.value.cpf).toBe('80012345-6')
     expect(Object.keys(data.value)).toEqual(Object.keys(blankAddress()))
-    const country = container.querySelector('select')!
-    country.value = 'BR'; country.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    await chooseDropdown(container.querySelector('.erp-dropdown'), 'BR')
     expect(container.textContent).toContain('CPF / document')
     expect(container.textContent).not.toContain('RUC/C.I')
     expect(data.value.cpf).toBe('80012345-6')
-    country.value = 'PY'; country.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
+    await chooseDropdown(container.querySelector('.erp-dropdown'), 'PY')
     expect(container.textContent).toContain('RUC/C.I')
     expect(data.value.cpf).toBe('80012345-6')
     expect(api.post).not.toHaveBeenCalled()
@@ -95,8 +95,8 @@ describe('country-specific optional recipient document', () => {
       i18n.global.locale.value = locale; await nextTick()
       expect(Array.from(br!.querySelectorAll('.field-order span')).map(element => element.textContent)).toContain('CPF')
       expect(Array.from(py!.querySelectorAll('.field-order span')).map(element => element.textContent)).toContain('RUC/C.I')
-      expect(br!.querySelector('option[value="cpf"]')?.textContent).toBe('CPF')
-      expect(py!.querySelector('option[value="cpf"]')?.textContent).toBe('RUC/C.I')
+      expect((await openDropdown(Array.from(br!.querySelectorAll('.erp-dropdown')).at(-1))).find(o => o.value === 'cpf')?.textContent).toBe('CPF')
+      expect((await openDropdown(Array.from(py!.querySelectorAll('.erp-dropdown')).at(-1))).find(o => o.value === 'cpf')?.textContent).toBe('RUC/C.I')
     }
     py!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await flush()
     expect(api.put).toHaveBeenCalledOnce()

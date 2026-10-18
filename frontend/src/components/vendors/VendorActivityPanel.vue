@@ -1,7 +1,7 @@
 <template>
   <section class="vendor-activity" :aria-label="`${vendor.nome} · ${t('activity')}`">
     <header><div><h2>{{ vendor.nome }} · {{ t('activity') }}</h2><small v-if="data?.seller">{{ data.seller }}</small></div><button class="erp-button erp-button--secondary erp-button--sm" @click="$emit('close')">{{ t('close') }}</button></header>
-    <form class="filters" @submit.prevent="load"><label>{{ t('year') }}<select v-model.number="year" @change="load"><option v-for="y in years" :key="y" :value="y">{{ y }}</option></select></label><label>{{ t('month') }}<select v-model.number="month" @change="load"><option :value="0">{{ t('all') }}</option><option v-for="m in 12" :key="m" :value="m">{{ monthLabel(m) }}</option></select></label></form>
+    <form class="filters" @submit.prevent="load"><label>{{ t('year') }}<ErpSelect :label="(t('year'))" v-model.number="year" @change="load"><option v-for="y in years" :key="y" :value="y">{{ y }}</option></ErpSelect></label><label>{{ t('month') }}<ErpSelect :label="(t('month'))" v-model.number="month" @change="load"><option :value="0">{{ t('all') }}</option><option v-for="m in 12" :key="m" :value="m">{{ monthLabel(m) }}</option></ErpSelect></label></form>
     <p v-if="loading" role="status">{{ t('loading') }}</p><p v-if="error" role="alert">{{ t('error') }} <button class="erp-button erp-button--secondary erp-button--sm" @click="load">{{ t('retry') }}</button></p>
     <template v-if="data && !loading && !error">
       <p class="note">{{ t('source') }}<span v-if="data.last_synced_at"> {{ t('synced') }}: {{ date(data.last_synced_at) }}</span></p>
@@ -17,6 +17,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api, { type VendorResponse } from '@/services/api'

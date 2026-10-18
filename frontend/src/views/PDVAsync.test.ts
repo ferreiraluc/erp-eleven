@@ -1,3 +1,4 @@
+import { chooseDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
@@ -35,8 +36,7 @@ async function search(value: string) {
 async function scan() { await click('.pdv-scan-btn'); await click('.scan-fixture') }
 async function preparePayment() {
   await click('.pdv-result-row')
-  const select = root.querySelector<HTMLSelectElement>('.pay-select')!
-  select.value = 'cash_gs'; select.dispatchEvent(new Event('change', { bubbles: true })); await flush()
+  await chooseDropdown(root.querySelector('.pay-select'), 'cash_gs'); await flush()
   await click('.pay-btn-total'); await click('.pay-btn-add')
 }
 async function mount() {

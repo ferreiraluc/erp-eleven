@@ -13,7 +13,7 @@ const items = [
 ].map(item => ({ ...item, stock_loja: 3, stock_deposito: 2, current_stock: 5, sku_internal: item.id, currency: 'USD', is_active: true }))
 const tick = async () => { await nextTick(); await nextTick() }
 function button(label: string) {
-  const b = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === label)
+  const b = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === label)
   if (!b) throw new Error(`Missing button: ${label}`)
   return b
 }

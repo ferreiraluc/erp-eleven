@@ -20,9 +20,9 @@
         <h2>{{ uiText(`Funcionários autorizados`) }}</h2>
         <p>{{ uiText(`Vincule o WhatsApp e o ID do Telegram ao mesmo usuário do ERP. Confirme a identidade do funcionário antes de liberar acesso.`) }}</p>
         <form @submit.prevent="saveIdentity">
-          <label>{{ uiText(`Canal`) }}<select v-model="form.channel" :aria-label="uiText(`Canal`)"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select></label>
+          <label>{{ uiText(`Canal`) }}<ErpSelect v-model="form.channel" :aria-label="uiText(`Canal`)"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></ErpSelect></label>
           <label>{{ uiText(`Identificador`) }}<input v-model.trim="form.external_id" required :placeholder="form.channel === 'whatsapp' ? 'whatsapp:+5511999999999' : uiText(`ID numérico do usuário`)" /></label>
-          <label>{{ uiText(`Usuário ERP`) }}<select v-model="form.user_id" required :aria-label="uiText(`Usuário ERP`)"><option disabled value="">{{ uiText(`Selecione`) }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ roleLabel(u.role) }}</option></select></label>
+          <label>{{ uiText(`Usuário ERP`) }}<ErpSelect v-model="form.user_id" required :aria-label="uiText(`Usuário ERP`)"><option disabled value="">{{ uiText(`Selecione`) }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ roleLabel(u.role) }}</option></ErpSelect></label>
           <label class="check"><input v-model="form.active" type="checkbox" /> {{ uiText(`Acesso ativo`) }}</label>
           <label class="check"><input v-model="form.can_register" type="checkbox" /> {{ uiText(`Pode registrar ocorrências e preparar folgas (gestores)`) }}</label>
           <button class="erp-button erp-button--secondary" :disabled="saving" type="submit">{{ saving ? uiText(`Salvando…`) : uiText(`Salvar acesso`) }}</button>
@@ -62,6 +62,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { onMounted, ref } from 'vue'

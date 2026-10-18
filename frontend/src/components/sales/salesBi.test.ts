@@ -86,7 +86,7 @@ describe('BI translations and personal sales rendering', () => {
     expect(node.querySelector('.ranking-panel .rank-index')).toBeNull()
     expect(node.querySelector('.tabs')?.textContent).not.toContain('Sources')
     expect(node.textContent).not.toContain('Seller ranking')
-    expect(node.querySelector('select[disabled]')?.textContent).toBe('Junior')
+    expect(node.querySelector('.erp-dropdown__value[disabled]')?.textContent).toBe('Junior')
   })
 
   it('keeps full-store labels and source navigation for unrestricted accounts', async () => {

@@ -32,16 +32,16 @@
       </label>
       <label>
         <span>{{ t('issue') }}</span>
-        <select v-model="issue" @change="applyFilters()">
+        <ErpSelect v-model="issue" @change="applyFilters()">
           <option value="all">{{ t('all') }}</option>
           <option v-for="key in issueKeys" :key="key" :value="key">{{ t(key) }}</option>
-        </select>
+        </ErpSelect>
       </label>
       <label>
         <span>{{ t('pageSize') }}</span>
-        <select v-model.number="pageSize" @change="applyFilters()">
+        <ErpSelect v-model.number="pageSize" @change="applyFilters()">
           <option v-for="size in [25, 50, 100]" :key="size" :value="size">{{ size }}</option>
-        </select>
+        </ErpSelect>
       </label>
       <button class="diag-button primary erp-button erp-button--primary" type="submit">{{ t('search') }}</button>
       <button v-if="issue !== 'all' || query || searchDraft" class="diag-button erp-button erp-button--secondary" type="button" @click="clearFilters()">{{ t('clear') }}</button>
@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { inventoryDiagnosticsAPI, type InventoryDiagnostics, type InventoryIssue, type InventoryIssueFilter } from '@/services/inventoryDiagnostics'

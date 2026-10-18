@@ -1,3 +1,4 @@
+import { openDropdown } from '@/test/dropdown'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
@@ -17,8 +18,8 @@ describe('Focused audit view',()=>{
     await vi.waitFor(()=>expect(api.users).toHaveBeenCalled())
     expect(root.textContent).toContain('Consultas e tempo de navegação não são registrados.')
     expect(root.textContent).not.toContain('Tempo ativo')
-    const options=Array.from(root.querySelectorAll('select:last-child option')).map(node=>node.getAttribute('value'))
-    expect(options).not.toContain('read');expect(options).not.toContain('request')
+    const options=(await openDropdown(Array.from(root.querySelectorAll('.filters .erp-dropdown')).at(-1))).map(node=>node.value)
+    expect(options).toContain('login');expect(options).not.toContain('read');expect(options).not.toContain('request')
     expect(root.querySelector('.metrics')?.textContent).toContain('Usuários com eventos')
     expect(root.querySelector('tbody tr')?.textContent).toContain('Lucas12')
   })

@@ -14,18 +14,7 @@
         <!-- Nome do grupo -->
         <div class="form-group">
           <label>{{ tr('Nome do grupo') }}</label>
-          <input
-            v-model="groupName"
-            type="text"
-            class="form-input"
-            :placeholder="tr('Ex: DKR003, FLC009 LUTT/NAPA...')"
-            :list="'sug-gname-list'"
-            ref="nameInputRef"
-            @keydown.enter.prevent="confirm"
-          />
-          <datalist id="sug-gname-list">
-            <option v-for="gk in existingGroupKeys" :key="gk" :value="gk" />
-          </datalist>
+          <ErpDropdown v-model="groupName" editable :label="tr('Nome do grupo')" :placeholder="tr('Ex: DKR003, FLC009 LUTT/NAPA...')" :options="(existingGroupKeys || []).map(value => ({ value, label: value }))" />
         </div>
 
         <!-- Lista de itens -->
@@ -82,10 +71,11 @@
 </template>
 
 <script setup lang="ts">
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
-import { ref, nextTick, onMounted } from 'vue'
+import { ref } from 'vue'
 import ProductThumbnail from './ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
@@ -104,11 +94,8 @@ const emit = defineEmits<{
 const groupName = ref(props.suggestedName)
 const localItems = ref<InventoryItem[]>([...props.items])
 const grouping = ref(false)
-const nameInputRef = ref<HTMLInputElement | null>(null)
 
-onMounted(() => {
-  nextTick(() => nameInputRef.value?.focus())
-})
+
 
 function removeItem(id: string) {
   localItems.value = localItems.value.filter(i => i.id !== id)

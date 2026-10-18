@@ -2,11 +2,11 @@
   <section class="entries-panel">
     <header><div><h2>{{ t('title') }}</h2><p>{{ t('description') }}</p></div><button class="erp-button erp-button--secondary erp-button--sm" :disabled="loading" @click="load()"><RefreshCw :size="15" />{{ t('reload') }}</button></header>
     <form class="entry-filters" @submit.prevent="offset=0; load()">
-      <label>{{ t('currency') }}<select v-model="currency" @change="offset=0; load()"><option value="">{{ t('allCurrencies') }}</option><option v-for="code in result?.currencies || []" :key="code">{{ code }}</option></select></label>
-      <label>{{ t('payment') }}<select v-model="paymentMethod" @change="offset=0; load()"><option value="">{{ t('allPayments') }}</option><option v-for="method in paymentOptions" :key="method.value" :value="method.value">{{ method.label }}</option></select></label>
+      <label>{{ t('currency') }}<ErpSelect :label="(t('currency'))" v-model="currency" @change="offset=0; load()"><option value="">{{ t('allCurrencies') }}</option><option v-for="code in result?.currencies || []" :key="code">{{ code }}</option></ErpSelect></label>
+      <label>{{ t('payment') }}<ErpSelect :label="(t('payment'))" v-model="paymentMethod" @change="offset=0; load()"><option value="">{{ t('allPayments') }}</option><option v-for="method in paymentOptions" :key="method.value" :value="method.value">{{ method.label }}</option></ErpSelect></label>
       <label>{{ t('dateFrom') }}<input v-model="dateFrom" type="date" @change="offset=0; load()" /></label>
       <label>{{ t('dateTo') }}<input v-model="dateTo" type="date" @change="offset=0; load()" /></label>
-      <label class="search">{{ t('weekFilter') }}<select :value="selectedWeek?.start || ''" @change="selectWeek"><option value="">{{ t('chooseWeek') }}</option><option v-for="week in result?.weeks || []" :key="week.start" :value="week.start">{{ formatDate(week.start) }} – {{ formatDate(week.end) }}</option></select></label>
+      <label class="search">{{ t('weekFilter') }}<ErpSelect :label="(t('weekFilter'))" :value="selectedWeek?.start || ''" @change="selectWeek"><option value="">{{ t('chooseWeek') }}</option><option v-for="week in result?.weeks || []" :key="week.start" :value="week.start">{{ formatDate(week.start) }} – {{ formatDate(week.end) }}</option></ErpSelect></label>
       <label class="search">{{ t('search') }}<input v-model="search" type="search" :placeholder="t('searchHint')" maxlength="120" /></label>
       <div class="filter-actions"><button class="erp-button erp-button--secondary erp-button--sm" type="submit">{{ t('filter') }}</button><button class="erp-button erp-button--secondary erp-button--sm" v-if="currency || dateFrom || dateTo || paymentMethod || search" type="button" @click="clearFilters">{{ t('clear') }}</button></div>
       <p class="filter-help">{{ dateFrom || dateTo ? t('dateRangeHelp') : t('periodHelp') }}</p>
@@ -55,6 +55,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Download, RefreshCw } from 'lucide-vue-next'
@@ -67,8 +68,8 @@ const currency = ref(''), dateFrom = ref(''), dateTo = ref(''), paymentMethod = 
 let sequence = 0
 const selectedWeek = computed(() => result.value?.weeks?.find(w => w.start === dateFrom.value && w.end === dateTo.value))
 const weeklyMachine = computed(() => paymentMethod.value === 'maquina' && Boolean(selectedWeek.value))
-function selectWeek(event: Event) {
-  const week = result.value?.weeks?.find(w => w.start === (event.target as HTMLSelectElement).value)
+function selectWeek(value: string) {
+  const week = result.value?.weeks?.find(w => w.start === value)
   dateFrom.value = week?.start || ''; dateTo.value = week?.end || ''; offset.value = 0; load()
 }
 function paymentLabel(key: string, fallback: string) { return Object.hasOwn(messages.pt.paymentTypes, key) ? t(`paymentTypes.${key}`) : fallback }

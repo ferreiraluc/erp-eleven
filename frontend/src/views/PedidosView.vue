@@ -29,25 +29,25 @@
         <!-- Status Filter -->
         <div class="filter-group">
           <label class="filter-label">{{ $tr("Status") }}</label>
-          <select v-model="statusFilter" class="filter-select">
+          <ErpSelect :label="($tr('Status'))" v-model="statusFilter" class="filter-select">
             <option value="">{{ $tr("Todos") }}</option>
             <option value="PENDENTE">{{ $tr("Pendente") }}</option>
             <option value="PROCESSANDO">{{ $tr("Processando") }}</option>
             <option value="ENVIADO">{{ $tr("Enviado") }}</option>
             <option value="ENTREGUE">{{ $tr("Entregue") }}</option>
             <option value="CANCELADO">{{ $tr("Cancelado") }}</option>
-          </select>
+          </ErpSelect>
         </div>
 
         <!-- Tag Filter -->
         <div class="filter-group">
           <label class="filter-label">{{ $tr("Tag") }}</label>
-          <select v-model="tagFilter" class="filter-select">
+          <ErpSelect :label="($tr('Tag'))" v-model="tagFilter" class="filter-select">
             <option value="">{{ $tr("Todas") }}</option>
             <option v-for="tag in tags" :key="tag.id" :value="tag.id">
               {{ tag.nome }}
             </option>
-          </select>
+          </ErpSelect>
         </div>
 
         <!-- View Toggle -->
@@ -235,6 +235,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'

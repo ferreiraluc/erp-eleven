@@ -34,7 +34,7 @@
     <details v-if="customer.ativo" class="link-form">
       <summary>{{ t('link') }}</summary><p class="muted">{{ t('hint') }}</p>
       <form @submit.prevent="find">
-        <label>{{ t('kind') }}<select v-model="kind" :disabled="saving" @change="candidate = null"><option value="rastreamento">{{ t('parcel') }}</option><option value="pedido">{{ t('order') }}</option></select></label>
+        <label>{{ t('kind') }}<ErpSelect :label="(t('kind'))" v-model="kind" :disabled="saving" @change="candidate = null"><option value="rastreamento">{{ t('parcel') }}</option><option value="pedido">{{ t('order') }}</option></ErpSelect></label>
         <label class="identifier">{{ t('identifier') }}<input v-model="identifier" required maxlength="100" :disabled="saving" @input="candidate = null" /></label>
         <button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !identifier.trim()">{{ t('find') }}</button>
       </form>
@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isAxiosError } from 'axios'

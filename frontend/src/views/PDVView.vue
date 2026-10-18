@@ -87,10 +87,10 @@
               </div>
               <label class="pdv-stock-location" @click.stop>
                 {{ cartText('location') }}
-                <select :value="productLocation(item)" @change="selectedLocations[item.id] = ($event.target as HTMLSelectElement).value as StockLocation">
+                <ErpSelect compact :label="(cartText('location'))" :value="productLocation(item)" @change="selectedLocations[item.id] = $event as StockLocation">
                   <option value="loja">{{ cartText('loja') }}: {{ displayStock(item.stock_loja) }}</option>
                   <option value="deposito">{{ cartText('deposito') }}: {{ displayStock(item.stock_deposito) }}</option>
-                </select>
+                </ErpSelect>
               </label>
               <div class="pdv-result-price">
                 <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(catalogPrice(item.sale_price)) }}</span>
@@ -167,9 +167,9 @@
                     <button class="qty-btn erp-control" :aria-label="uiText('Aumentar quantidade')" @click="changeQuantity(item, item.quantity + 1)" :disabled="!canIncrease(item)">+</button>
                   </div>
                   <div class="pdv-ci-price-wrap">
-                    <select class="pdv-ci-currency" :value="item.sale_currency === 'GS' ? 'PYG' : item.sale_currency" :aria-label="uiText('Moeda do item')" @change="changeItemCurrency(item, ($event.target as HTMLSelectElement).value)">
+                    <ErpSelect compact class="pdv-ci-currency" :value="item.sale_currency === 'GS' ? 'PYG' : item.sale_currency" :aria-label="uiText('Moeda do item')" @change="changeItemCurrency(item, $event)">
                       <option v-for="currency in itemCurrencies" :key="currency" :value="currency">{{ currencyLabel(currency) }}</option>
-                    </select>
+                    </ErpSelect>
                     <DecimalInput :model-value="item.original_price" class="pdv-ci-price" :aria-label="uiText('Preço unitário')" :aria-invalid="!!priceErrors[item.id]"
                       @update:model-value="changeItemPrice(item, $event)" />
                   </div>
@@ -233,12 +233,12 @@
             <!-- Add payment form -->
             <div class="pay-add-section">
               <div class="pay-add-row">
-                <select v-model="newMethod" class="pay-select" :aria-label="uiText('Método de pagamento')">
+                <ErpSelect v-model="newMethod" class="pay-select" :aria-label="uiText('Método de pagamento')">
                   <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
-                </select>
-                <select v-if="newMethod.startsWith('cash_')" class="pay-cash-currency" :value="newCurrency" :aria-label="uiText('Moeda do pagamento')" @change="changeCashCurrency(($event.target as HTMLSelectElement).value)">
+                </ErpSelect>
+                <ErpSelect compact v-if="newMethod.startsWith('cash_')" class="pay-cash-currency" :value="newCurrency" :aria-label="uiText('Moeda do pagamento')" @change="changeCashCurrency($event)">
                   <option v-for="method in cashMethods" :key="method.value" :value="method.currency">{{ paymentSymbol(method.currency) }}</option>
-                </select>
+                </ErpSelect>
                 <span v-else class="pay-fixed-currency" :aria-label="uiText('Moeda do pagamento')">{{ currencySymbol }}</span>
               </div>
               <div class="pay-add-row">
@@ -311,6 +311,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
@@ -683,7 +684,7 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 <style scoped>
 .pdv-checkout-lock { display: contents; }
 .pdv-stock-location { min-width: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .65rem; color: #6b7280; }
-.pdv-stock-location select { width: 100%; min-width: 0; max-width: 140px; padding: .2rem; border: 1px solid #d1d5db; border-radius: 4px; background: white; color: #374151; cursor: pointer; }
+.pdv-stock-location .erp-dropdown { max-width: 140px; }
 .pdv-stock-note, .pdv-ci-stock { font-size: .72rem; color: #6b7280; padding: .3rem 0; }
 .pdv-checkout-error, .pdv-search-error { margin: .5rem; padding: .75rem; border-radius: 8px; background: #fff7ed; color: #9a3412; font-size: .8rem; }
 .pdv-quantity-error { color: #b91c1c; font-size: .7rem; }

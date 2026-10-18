@@ -158,3 +158,39 @@ somente o controle central de foco/teclado, evitando dois controles concorrentes
 Fechar e reabrir devolve o foco ao botão de origem; fechar o último modal libera a
 rolagem da página. A câmera local é encerrada ao sair da aba e captura só com vídeo
 pronto, sem tentar converter uma imagem vazia.
+
+## Seletores de opções
+
+`components/ui/ErpDropdown.vue` é o controle compartilhado de opções do ERP,
+incluindo câmbio/idioma, filtros operacionais e modais de criação/edição. A revisão
+substituiu 71 selects nativos em 28 componentes/telas e cinco datalists. Não criar
+novos `<select>`/`<datalist>`: eles abrem seletores próprios do Android/iOS e não
+seguem o menu do ERP. Calendários, caixas de confirmação, seleção múltipla de
+cores/tamanhos e resultados de busca de entidades mantêm suas funções específicas.
+
+- `ErpDropdown` recebe opções com `value`, `label` e, opcionalmente, `icon`,
+  `description`, `triggerLabel` e `disabled`. `editable` permite texto livre e
+  sugestões (marca, cor, subcategoria). `compact`/`pill` preservam os controles
+  pequenos do cabeçalho e filtros de estoque.
+- `ErpSelect` adapta opções declarativas existentes (`<option>`, `v-for`, `v-if`
+  e grupos) ao mesmo dropdown. Preserva valores numéricos, booleanos e nulos.
+  Seu `change` emite **o valor**, após atualizar o modelo, e não um evento DOM.
+  Campos obrigatórios continuam validando o formulário; o foco e o erro ficam
+  no controle visível. Nome de campo continua disponível em `FormData`.
+- Menus são ancorados ao botão e renderizados em `body`, acima da camada do modal.
+  A posição respeita a área visível, abre para cima quando necessário e acompanha
+  rolagem/redimensionamento. Não aumentar a altura do formulário para mostrar opções.
+- Listas com mais de oito opções têm busca interna; `searchable` permite controlar
+  isso explicitamente. A busca ignora caixa e acentos. Abrir pelo botão não foca
+  o campo de busca nem solicita teclado virtual. Digitar continua sendo uma ação
+  explícita em campos editáveis.
+- Setas/Home/End navegam, Enter escolhe, Escape fecha só o menu e Tab continua no
+  formulário, respeitando os limites do modal. Só um menu fica aberto por vez.
+  O foco considera o portal como parte do modal. Blur sem `relatedTarget`, comum
+  durante toque móvel, não descarta uma opção antes do clique.
+
+Testes cobrem valores tipados, carga assíncrona, traduções, validação obrigatória,
+seleção/toque, foco e menus em modais. Há uma verificação para impedir retorno de
+selects/datalists nativos nos templates. A inspeção visual local utiliza dados
+fictícios em larguras de 360/412/834/1440px; não substitui validação em Safari e
+Samsung Internet físicos.

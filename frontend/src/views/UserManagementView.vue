@@ -13,15 +13,17 @@
       <label>{{ $t('access.name') }}<input v-model="form.nome" required minlength="2" maxlength="100" /></label>
       <label v-if="!editingId">{{ $t('auth.emailLabel') }}<input v-model="email" type="email" autocomplete="off" required /></label>
       <label v-if="!editingId">{{ $t('access.initialPassword') }}<input v-model="temporary" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
-      <label>{{ $t('access.salesAccess') }}<select v-model="form.sales_scope" :disabled="editingId===auth.user?.id"><option value="all">{{ $t('access.allSales') }}</option><option value="own">{{ $t('access.onlyOwn') }}</option></select></label>
-      <label>{{ $t('access.vendorLink') }}<select v-model="form.vendedor_id" :required="form.sales_scope==='own'"><option :value="null">{{ $t('access.select') }}</option><option v-for="v in vendors" :key="v.id" :value="v.id">{{ v.nome }}</option></select></label>
-      <label>{{ $t('access.sheetSeller') }}<input v-model="form.sales_seller" list="sheet-sellers" :required="form.sales_scope==='own'" maxlength="100" /><datalist id="sheet-sellers"><option v-for="s in sellers" :key="s">{{ s }}</option></datalist></label>
+      <label>{{ $t('access.salesAccess') }}<ErpSelect :label="($t('access.salesAccess'))" v-model="form.sales_scope" :disabled="editingId===auth.user?.id"><option value="all">{{ $t('access.allSales') }}</option><option value="own">{{ $t('access.onlyOwn') }}</option></ErpSelect></label>
+      <label>{{ $t('access.vendorLink') }}<ErpSelect :label="($t('access.vendorLink'))" v-model="form.vendedor_id" :required="form.sales_scope==='own'"><option :value="null">{{ $t('access.select') }}</option><option v-for="v in vendors" :key="v.id" :value="v.id">{{ v.nome }}</option></ErpSelect></label>
+      <label>{{ $t('access.sheetSeller') }}<ErpDropdown v-model="form.sales_seller" editable :label="$t('access.sheetSeller')" :options="sellers.map(value => ({ value, label: value }))" :required="form.sales_scope==='own'" :maxlength="100" /></label>
       <label class="check"><input v-model="form.ativo" type="checkbox" :disabled="editingId===auth.user?.id" />{{ $t('access.active') }}</label>
     </div><p class="muted">{{ $t('access.accessRevokeHelp') }}</p><p v-if="error" class="notice error">{{ error }}</p></div><div class="actions erp-dialog__footer"><button class="erp-button erp-button--secondary" type="button" @click="editing=false">{{ $t('common.cancel') }}</button><button class="primary erp-button erp-button--primary" :disabled="saving">{{ $t('common.save') }}</button></div></form></section></div>
     <div v-if="resetUser" class="overlay erp-dialog-backdrop" @click.self="resetUser=null"><section v-erp-dialog class="access-card dialog erp-dialog" role="dialog" aria-modal="true" :aria-label="$t('access.resetPassword')"><h2 class="erp-dialog__header">{{ $t('access.resetPassword') }} · {{ resetUser.nome }}</h2><form @submit.prevent="reset" class="erp-dialog__form"><div class="erp-dialog__body"><p>{{ $t('access.resetDescription') }}</p><label>{{ $t('access.initialPassword') }}<input v-model="temporary" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label><p v-if="error" class="notice error">{{ error }}</p></div><div class="actions erp-dialog__footer"><button class="erp-button erp-button--secondary" type="button" @click="resetUser=null">{{ $t('common.cancel') }}</button><button class="primary erp-button erp-button--primary" :disabled="saving">{{ $t('common.save') }}</button></div></form></section></div>
   </main>
 </template>
 <script setup lang="ts">
+import ErpDropdown from '@/components/ui/ErpDropdown.vue'
+import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { ref, onMounted } from 'vue'
