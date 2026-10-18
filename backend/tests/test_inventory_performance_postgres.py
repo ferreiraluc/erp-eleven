@@ -19,11 +19,15 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
         conn.exec_driver_sql('''CREATE TABLE inventory_items (
             id uuid PRIMARY KEY, name varchar(200), brand varchar(100), category varchar(100),
             color varchar(50), size varchar(50), group_key varchar(100), sku_internal varchar(50),
-            barcode varchar(200), image_data text, updated_at timestamp, deleted_at timestamptz)''')
+            barcode varchar(200), image_data text, updated_at timestamp, deleted_at timestamptz,
+            description text)''')
         conn.exec_driver_sql('''INSERT INTO inventory_items
             SELECT md5(g::text)::uuid, CASE WHEN g=77 THEN 'Tênis Givenchy DN0281' ELSE 'Camiseta modelo '||g END,
             CASE WHEN g=77 THEN 'Givenchy' ELSE 'Boss' END, 'Vestuário', 'Preto', 'M', NULL,
-            'INV-'||g, NULL, NULL, now(), NULL FROM generate_series(1,10000) g''')
+            'INV-'||g, NULL, NULL, now(), NULL,
+            CASE WHEN g IN (80,81) THEN 'Camiseta de placa de metal, com logo emborrachado e algodão'
+                 ELSE 'Peça com costura reforçada, modelo '||g END
+            FROM generate_series(1,50000) g''')
         conn.exec_driver_sql('ANALYZE inventory_items')
         conn.commit()
         def plan():
@@ -40,10 +44,15 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
         context = MigrationContext.configure(conn)
         with context.begin_transaction(), Operations.context(context):
             migration.upgrade()
+        path = Path(__file__).parents[1] / 'alembic/versions/l4a5b6c7d8e9_inventory_description_search.py'
+        spec = importlib.util.spec_from_file_location('description_migration', path)
+        description_migration = importlib.util.module_from_spec(spec); spec.loader.exec_module(description_migration)
+        with context.begin_transaction(), Operations.context(context):
+            description_migration.upgrade()
         after = plan()
         assert before['Plan']['Actual Rows'] == after['Plan']['Actual Rows'] == 1
         assert 'ix_inventory_search_trgm' in json.dumps(after), after
-        print(json.dumps({'rows': 10000, 'before_ms': before['Execution Time'], 'after_ms': after['Execution Time'],
+        print(json.dumps({'rows': 50000, 'before_ms': before['Execution Time'], 'after_ms': after['Execution Time'],
                           'indexed_plan': after['Plan']['Node Type']}))
         conn.exec_driver_sql("""UPDATE inventory_items SET name='Tshirt Armani AF16548 UB102 2XL',
             brand='Emporio Armani' WHERE sku_internal='INV-78'""")
@@ -62,8 +71,27 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
                 # no three-character fragment and can legitimately use a scan.
                 if term in ('8UB102', 'AF 16548'):
                     assert 'ix_inventory_search_trgm' in json.dumps(measured), measured
-                print(json.dumps({'search': term, 'rows': 10000, 'execution_ms': measured['Execution Time'],
+                print(json.dumps({'search': term, 'rows': 50000, 'execution_ms': measured['Execution Time'],
                                   'planning_ms': measured['Planning Time']}))
+        for term in ('placa', 'metal emborrachado', 'algodao', 'Boss placa M'):
+            with Session(bind=conn) as db:
+                searched = build_search(db, term)
+                base = sa.select(Item.id).where(Item.deleted_at.is_(None), searched.condition)
+                # Real pagination/order and total count both use the description index.
+                for query in (base.order_by(searched.rank, Item.name, Item.id).limit(50),
+                              sa.select(sa.func.count()).select_from(base.subquery())):
+                    sql = str(query.compile(conn, compile_kwargs={'literal_binds': True}))
+                    measured = conn.exec_driver_sql('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + sql).scalar()[0]
+                    assert 'ix_inventory_description_trgm' in json.dumps(measured), measured
+                    print(json.dumps({'search': term, 'rows': 50000, 'execution_ms': measured['Execution Time'],
+                                      'planning_ms': measured['Planning Time']}))
+                assert len(conn.execute(base).all()) == 2
+        conn.exec_driver_sql("UPDATE inventory_items SET description='Bordado exclusivo' WHERE sku_internal='INV-80'")
+        with Session(bind=conn) as db:
+            for term, expected in [('placa', 1), ('bordado', 1)]:
+                searched = build_search(db, term)
+                assert conn.execute(sa.select(sa.func.count()).select_from(Item).where(
+                    Item.deleted_at.is_(None), searched.condition)).scalar() == expected
         conn.commit()
         assert not conn.exec_driver_sql('''SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
             JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND NOT i.indisvalid''').scalar()
@@ -76,5 +104,6 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
         # Startup can retry after a concurrent index build committed independently.
         with context.begin_transaction(), Operations.context(context):
             migration.upgrade()
-        assert conn.exec_driver_sql('SELECT count(*) FROM inventory_items').scalar() == 10000
+            description_migration.upgrade()
+        assert conn.exec_driver_sql('SELECT count(*) FROM inventory_items').scalar() == 50000
         conn.commit()

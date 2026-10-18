@@ -8,7 +8,7 @@
         class="search-input"
         :class="{ 'search-input-clearable': modelValue }"
         :aria-label="tr('Buscar no estoque')"
-        :placeholder="tr('Produto, marca, tamanho ou código...')"
+        :placeholder="tr('Produto, descrição, marca, tamanho ou código...')"
         autocomplete="off"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
