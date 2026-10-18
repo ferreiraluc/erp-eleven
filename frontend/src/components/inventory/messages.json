@@ -929,9 +929,17 @@
     "Nuevo artículo",
     "New item"
   ],
-  "Produto, marca, tamanho ou código...": [
-    "Producto, marca, talla o código...",
-    "Product, brand, size or code..."
+  "Produto, descrição, marca, tamanho ou código...": [
+    "Producto, descripción, marca, talla o código...",
+    "Product, description, brand, size or code..."
+  ],
+  "Ex.: placa de metal, logo emborrachado...": [
+    "Ej.: placa de metal, logo de goma...",
+    "E.g.: metal plate, rubber logo..."
+  ],
+  "Descreva detalhes da peça. Essas palavras também encontram o produto na busca.": [
+    "Describe los detalles de la prenda. Estas palabras también permiten encontrar el producto en la búsqueda.",
+    "Describe the garment's details. These words also help find the product in search."
   ],
   "Limpar busca": [
     "Limpiar búsqueda",

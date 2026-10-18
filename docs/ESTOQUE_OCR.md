@@ -64,13 +64,42 @@ grades continuam retornando todos os metadados correspondentes, sem paginação.
 Os contadores do dashboard são agregações SQL, sem carregar fotos ou cadastros
 inteiros em memória.
 
-A busca combina nome/categoria, marca, cor e **tamanho** no mesmo produto:
+A busca combina nome/categoria, descrição, marca, cor e **tamanho** no mesmo produto:
 `Tênis tamanho 11`, `Armani 7`, `Boss 40`, `Tênis Boss 41`, `Camiseta tamanho S`
 e `T-shirt tamanho M`. Aceita maiúsculas/minúsculas, acentos, `tam.`, `tamanho`,
 `size` e `talle`. Camiseta e T-shirt são sinônimos na busca; tênis e sneakers também.
 Tamanhos de roupas reconhecem as equivalências `P=S`, `G=L`, `GG=XL` e `XXL=2XL`.
 Numeração de roupas continua exata: `40` não inclui `40.5`.
 SKU/código completo continuam encontráveis, inclusive identificadores curtos.
+
+### Detalhes e palavras-chave na descrição
+
+Em **Novo item/Editar → Organização e limites → Descrição**, registre detalhes
+visuais, material, acabamento e outras palavras úteis. Não é necessário repetir
+essas informações no nome, SKU ou código de barras. Por exemplo, a descrição
+“Camiseta de placa de metal, com logo emborrachado” permite buscar `placa`,
+`metal emborrachado` ou `Boss placa tamanho S`, se a marca/tamanho corresponderem.
+A ordem das palavras não importa; palavras comuns precisam corresponder ao mesmo
+produto, podendo estar em campos diferentes. A busca ignora caixa e acentos,
+inclui fragmentos e mantém os sinônimos de tipo de peça e as regras de tamanhos.
+
+Descrições já salvas também participam, sem recadastrar nem sincronizar. Alterar
+ou remover a descrição passa a valer na próxima consulta. Vale para itens,
+grades e consultas de estoque do bot, com os mesmos filtros, permissões,
+contadores e paginação. Nas grades, outros tamanhos exibidos como contexto não
+somam como correspondências se não atenderem à consulta. A tolerância a erros
+ortográficos continua restrita ao vocabulário descrito abaixo; não há correção
+genérica de qualquer palavra da descrição nem interpretação de imagem nesta etapa.
+
+A migração `l4a5b6c7d8e9` adiciona um GIN parcial `pg_trgm` na descrição normalizada,
+construído com `CONCURRENTLY`, sem regravar produtos/fotos. O índice combina com
+os índices existentes e se atualiza nas gravações normais; não há custo de IA,
+varredura de descrições em Python nem carregamento das 50 mil peças no navegador.
+O teste PostgreSQL isolado usa 50 mil itens sintéticos e verifica o índice na
+listagem paginada e na contagem. Em uma execução local, consultas seletivas de
+descrição levaram aproximadamente 0,1–1,4 ms de execução SQL (sem planejamento,
+rede, serialização ou renderização). Isso não é SLA de produção: termos muito
+curtos ou comuns, volume das descrições e recursos do banco alteram o custo.
 
 ### Escrita aproximada e referências de modelo
 
@@ -100,7 +129,7 @@ por data continua sendo respeitada. São relações **apenas para consulta**: n�
 fundem produtos, grades ou saldos e não modificam os nomes/SKUs. Números isolados
 continuam podendo representar tamanhos; use o modelo completo para desambiguar.
 
-Não há chamadas de IA, nova migração nem carregamento de fotos/produtos em memória
+Não há chamadas de IA nem carregamento de fotos/produtos em memória
 para filtrar. O vocabulário pequeno é reaproveitado na requisição; as expressões
 SQL preservam os índices existentes. Termos muito curtos podem não aproveitar
 trigramas, e uma busca sem relação reconhecida ainda pode retornar vazia.

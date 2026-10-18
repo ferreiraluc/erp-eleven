@@ -160,10 +160,11 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
             # complete words; ordinary model/brand fragments stay searchable.
             pattern = r'(^|[^a-z])(' + '|'.join(re.escape(kind) for kind in kinds) + r')([^a-z]|$)'
             product_type = or_(*(normalize(column).regexp_match(pattern)
-                                 for column in (Item.name, Item.category, Item.group_key)))
+                                 for column in (Item.name, Item.category, Item.group_key, Item.description)))
         else:
             product_type = or_(normalize(Item.name).contains(term, autoescape=True),
                                normalize(Item.group_key).contains(term, autoescape=True),
+                               normalize(Item.description).contains(term, autoescape=True),
                                taxonomy_filter(Item.category, term, partial=True))
         return or_(
             *(normalize(column).contains(term, autoescape=True)
@@ -180,7 +181,7 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
         pattern = code_pattern(term)
         if pattern:
             code_predicates.append(or_(strict, *(normalize(column).regexp_match(pattern)
-                for column in (Item.name, Item.group_key, Item.sku_internal, Item.barcode))))
+                for column in (Item.name, Item.group_key, Item.sku_internal, Item.barcode, Item.description))))
         else:
             predicates.append(or_(*(term_filter(candidate)
                 for candidate in spelling_variants(term, vocabulary))))

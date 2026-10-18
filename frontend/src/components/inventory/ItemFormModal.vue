@@ -190,8 +190,9 @@
           <details class="erp-dialog__section" :open="!!errors.min_stock">
           <summary>{{ tr('Organização e limites (opcional)') }}</summary>
           <div class="form-group">
-            <label>{{ tr('Descrição') }}</label>
-            <textarea v-model="form.description" class="form-input" rows="2" :placeholder="tr('Descrição opcional')"></textarea>
+            <label for="item-description">{{ tr('Descrição') }}</label>
+            <textarea id="item-description" v-model="form.description" class="form-input" rows="2" :placeholder="tr('Ex.: placa de metal, logo emborrachado...')" aria-describedby="item-description-help"></textarea>
+            <small id="item-description-help" class="form-hint">{{ tr('Descreva detalhes da peça. Essas palavras também encontram o produto na busca.') }}</small>
           </div>
           <div class="form-group">
             <label>{{ tr('Localização') }}</label>
