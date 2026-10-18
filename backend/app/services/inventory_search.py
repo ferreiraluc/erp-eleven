@@ -1,7 +1,8 @@
 """Deterministic catalog search: combine attributes before SQL pagination.
 
-No model calls or product rewrites. Codes remain literal identifiers; footwear
-equivalences use the store's own table, only on items identified as footwear.
+No model calls or product rewrites. Code separators and a limited leading-digit
+variant are search aliases, never product identities. Footwear equivalences use
+the store's own table, only on items identified as footwear.
 """
 import re
 from dataclasses import dataclass
@@ -50,11 +51,14 @@ def size_key(value):
 
 
 def one_typo(a, b):
-    """At most one insertion/deletion/substitution; don't turn calçados into calças."""
+    """One insertion/deletion/substitution or adjacent swap, not arbitrary similarity."""
     if abs(len(a) - len(b)) > 1:
         return False
     if len(a) == len(b):
-        return sum(x != y for x, y in zip(a, b)) <= 1
+        differences = [i for i, (x, y) in enumerate(zip(a, b)) if x != y]
+        return len(differences) <= 1 or (len(differences) == 2
+            and differences[1] == differences[0] + 1
+            and a[differences[0]:differences[1] + 1] == b[differences[0]:differences[1] + 1][::-1])
     short, long = sorted((a, b), key=len)
     return any(long[:i] + long[i + 1:] == short for i in range(len(long)))
 
@@ -75,21 +79,55 @@ def parse(value):
 
     text = _MARKER.sub(explicit, text)
     text = re.sub(r'\bt[-\s]?shirts?\b', 't-shirt', text)
+    # "Y 26" is a model, not size 26. Short clothing sizes/brand DG and
+    # country scales stay independent ("M 40", "DG 40", "US 11").
+    def join_code(match):
+        letters, digits = match[1], match[2]
+        if _SIZE.fullmatch(letters) or letters in {'dg', 'us', 'br', 'eu', 'it'}:
+            return match[0]
+        if len(letters) > 1 and len(digits) < 3:
+            return match[0]
+        return letters + digits
+
+    text = re.sub(r'(?<![a-z0-9])([a-z]{1,3})(?:\s+|\s*[-_./]\s*)(\d{2,})(?![a-z0-9.,])', join_code, text)
     tokens = text.split()
     terms = []
     for token in tokens:
         if _SIZE.fullmatch(token) or numeric_size(token):
             sizes.append(size_key(token))
         elif token not in _CONNECTORS or (len(tokens) == 1 and not sizes):
-            # Correct common words only, never brands, short sizes or model codes.
-            if token.isalpha() and len(token) >= 5 and not any(token in group for group in _KINDS):
-                from difflib import get_close_matches
-                vocabulary = [word for group in _KINDS for word in group if word.isalpha()]
-                near = get_close_matches(token, [word for word in vocabulary if one_typo(token, word)], n=1, cutoff=0.85)
-                if near:
-                    token = near[0]
             terms.append(token)
     return terms, sizes
+
+
+def code_pattern(term):
+    """Keep all model digits; allow separators and 8UB102/UB102-style prefixes."""
+    if not re.fullmatch(r'[a-z0-9]+(?:[-_./][a-z0-9]+)*', term):
+        return None
+    if not re.search('[a-z]', term) or not re.search('[0-9]', term):
+        return None
+    compact = re.sub('[-_./]', '', term)
+    # Only a single leading digit before >=2 letters + >=2 digits. A different
+    # numeric model suffix (DN0281 vs DN0282) is never corrected by distance.
+    core = compact[1:] if re.fullmatch(r'\d[a-z]{2,}\d{2,}', compact) else compact
+    prefix = '[0-9]?' if re.fullmatch(r'[a-z]{2,}\d{2,}', core) else ''
+    parts = re.findall(r'[a-z]+|\d+', core)
+    # Retain explicit numeric separators, e.g. Y-26-09, as separate components.
+    if core == compact and re.search('[-_./]', term):
+        parts = re.findall(r'[a-z]+|\d+', term)
+    pattern = '[-_./ ]*'.join(re.escape(part) for part in parts)
+    return r'(^|[^a-z0-9])' + prefix + pattern + r'([^a-z0-9]|$)'
+
+
+def spelling_variants(term, vocabulary):
+    if not term.isalpha() or not 4 <= len(term) <= 40:
+        return [term]
+    # Existing words/fragments have intentional meanings (camisa != camiseta).
+    if any(term in word for word in vocabulary):
+        return [term]
+    candidates = sorted((word for word in vocabulary if one_typo(term, word)),
+                        key=lambda word: (abs(len(word) - len(term)), word))
+    return [term, *candidates[:8]]
 
 
 @dataclass
@@ -99,7 +137,7 @@ class CatalogSearch:
 
 
 def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None):
-    """All words/sizes must match one item; exact codes remain discoverable."""
+    """Words/sizes must match one item; shared model codes can suggest related items."""
     terms, sizes = parse(value)
     if size:
         sizes.append(size_key(size))
@@ -108,8 +146,14 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
     normalize = normalizer(db)
     taxonomy_filter = taxonomy_filter or facet_filters(db)
     predicates = []
+    code_predicates = []
+    strict_predicates = []
     ranks = []
-    for term in terms:
+    vocabulary = {word for group in _KINDS for word in group if word.isalpha()}
+    if any(term.isalpha() and 4 <= len(term) <= 40 for term in terms):
+        vocabulary.update(taxonomy_filter.words())
+
+    def term_filter(term):
         kinds = next((group for group in _KINDS if term in group), None)
         if kinds:
             # "calça" must not match "calçados". Known product types use
@@ -121,14 +165,27 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
             product_type = or_(normalize(Item.name).contains(term, autoescape=True),
                                normalize(Item.group_key).contains(term, autoescape=True),
                                taxonomy_filter(Item.category, term, partial=True))
-        predicates.append(or_(
+        return or_(
             *(normalize(column).contains(term, autoescape=True)
               for column in (Item.sku_internal, Item.barcode)),
             taxonomy_filter(Item.brand, term, partial=True),
             taxonomy_filter(Item.color, term, partial=True),
             normalize(Item.brand).regexp_match(DG) if term in ('dg', 'd&g') else false(),
             product_type,
-        ))
+        )
+
+    for term in terms:
+        strict = term_filter(term)
+        strict_predicates.append(strict)
+        pattern = code_pattern(term)
+        if pattern:
+            code_predicates.append(or_(strict, *(normalize(column).regexp_match(pattern)
+                for column in (Item.name, Item.group_key, Item.sku_internal, Item.barcode))))
+        else:
+            predicates.append(or_(*(term_filter(candidate)
+                for candidate in spelling_variants(term, vocabulary))))
+    if code_predicates:
+        predicates.append(or_(*code_predicates))
     size_predicates = []
     if sizes:
         # Small vocabulary only; never load photos/products for in-memory filtering.
@@ -157,7 +214,11 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
                      func.lower(Item.barcode) == value.strip().lower()) if value.strip() else false()
     if size and size_predicates:
         identifier = and_(identifier, *size_predicates)
-    rank = case((identifier, -1), *sorted(ranks, key=lambda pair: pair[1]), else_=4)
+    # Literal matches/all supplied model references precede suggestions, while
+    # preserving the existing footwear relevance within each spelling tier.
+    spelling_rank = sum(case((condition, 0), else_=10) for condition in strict_predicates)
+    size_rank = case(*sorted(ranks, key=lambda pair: pair[1]), else_=4) if ranks else literal(4)
+    rank = case((identifier, -1), else_=spelling_rank + size_rank)
     return CatalogSearch(or_(structured, identifier), rank)
 
 

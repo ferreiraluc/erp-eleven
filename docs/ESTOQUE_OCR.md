@@ -71,8 +71,39 @@ e `T-shirt tamanho M`. Aceita maiúsculas/minúsculas, acentos, `tam.`, `tamanho
 Tamanhos de roupas reconhecem as equivalências `P=S`, `G=L`, `GG=XL` e `XXL=2XL`.
 Numeração de roupas continua exata: `40` não inclui `40.5`.
 SKU/código completo continuam encontráveis, inclusive identificadores curtos.
-Números que pertencem ao nome de um modelo podem ser ambíguos com tamanhos; nesse
-caso, use o SKU/código. Não há correção livre de erros de digitação nem IA paga.
+
+### Escrita aproximada e referências de modelo
+
+A mesma interpretação vale para itens, grades e consultas do assistente, antes da
+contagem e paginação. Os filtros explícitos de marca, cor, local e tamanho continuam
+obrigatórios. Exemplos:
+
+| Busca | Correspondência |
+| --- | --- |
+| `Y 26`, `Y-26`, `Y26` | Modelo `Y-26-09`, sem interpretar 26 como tamanho |
+| `8UB102`, `UB102`, `UB 102` | Referência `UB102` ou `8UB102`, mesmo com outros códigos no nome |
+| `AF16548 UB102` | Primeiro os itens com ambas as referências; depois os que compartilham uma delas |
+| `calsa` | Calça/calças, sem incluir calçados por essa palavra |
+| `tsirt`, `camseta` | Camisetas/T-shirts; `tsirt G` mantém o filtro L/G |
+| `Emprio Armani`, `Emporio Armnai` | Emporio Armani |
+
+Erros de uma letra (inserção, remoção, substituição ou troca adjacente) são
+comparados com tipos conhecidos e o vocabulário de marcas, categorias e cores
+cadastradas. Palavras válidas/fragmentos existentes mantêm seu significado. A
+expansão é limitada a oito alternativas por termo e não aplica similaridade a
+números, tamanhos ou códigos de barras. Códigos de modelo aceitam separadores e
+um único dígito inicial antes de duas ou mais letras e dois ou mais dígitos:
+`8UB102/UB102`. Não corrigimos `DN0282` para `DN0281` por distância textual.
+
+Resultados literais precedem aproximações na ordem padrão. A ordenação explícita
+por data continua sendo respeitada. São relações **apenas para consulta**: não
+fundem produtos, grades ou saldos e não modificam os nomes/SKUs. Números isolados
+continuam podendo representar tamanhos; use o modelo completo para desambiguar.
+
+Não há chamadas de IA, nova migração nem carregamento de fotos/produtos em memória
+para filtrar. O vocabulário pequeno é reaproveitado na requisição; as expressões
+SQL preservam os índices existentes. Termos muito curtos podem não aproveitar
+trigramas, e uma busca sem relação reconhecida ainda pode retornar vazia.
 
 ### Equivalências de calçados
 
@@ -950,12 +981,11 @@ movimentações e datas. Registra antes/depois em `inventory_catalog_snapshot_v2
 Se já existem dois cadastros equivalentes na mesma grade, ambos são preservados:
 a migração não soma saldos nem exclui produtos automaticamente.
 
-A busca reconhece `camseta`, `tsirt`, `t-sirt` e sinônimos de camiseta/T-shirt,
-além de pequenos erros de uma letra nas palavras conhecidas de tipos de produtos.
+A busca reconhece `camseta`, `tsirt`, `t-sirt` e sinônimos de camiseta/T-shirt.
 `tsirt G` encontra camiseta/T-shirt L. Calçados mantêm suas escalas numéricas e
-meios tamanhos. Códigos alfanuméricos continuam literais; uma busca sem correspondência
-real pode retornar vazia. Não há chamadas de IA nem carregamento do catálogo/fotos
-em memória para esse tratamento: os filtros continuam no SQL antes da paginação.
+meios tamanhos. A tolerância posterior para marcas e referências de modelo está
+descrita em **Escrita aproximada e referências de modelo**, acima. Os filtros
+continuam no SQL antes da paginação, sem IA nem leitura de fotos para pesquisar.
 
 ## Visualização do estoque no celular (16/10/2026)
 

@@ -45,6 +45,26 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
         assert 'ix_inventory_search_trgm' in json.dumps(after), after
         print(json.dumps({'rows': 10000, 'before_ms': before['Execution Time'], 'after_ms': after['Execution Time'],
                           'indexed_plan': after['Plan']['Node Type']}))
+        conn.exec_driver_sql("""UPDATE inventory_items SET name='Tshirt Armani AF16548 UB102 2XL',
+            brand='Emporio Armani' WHERE sku_internal='INV-78'""")
+        conn.exec_driver_sql("""UPDATE inventory_items SET name='T-shirt Boss Y-26-09 L'
+            WHERE sku_internal='INV-79'""")
+        conn.exec_driver_sql('ANALYZE inventory_items')
+        conn.commit()
+        for term in ('8UB102', 'AF 16548', 'Y 26', 'Emprio Armani'):
+            with Session(bind=conn) as db:
+                searched = build_search(db, term)
+                query = sa.select(Item.id).where(Item.deleted_at.is_(None), searched.condition).order_by(searched.rank)
+                sql = str(query.compile(conn, compile_kwargs={'literal_binds': True}))
+                measured = conn.exec_driver_sql('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + sql).scalar()[0]
+                assert measured['Plan']['Actual Rows'] == 1, (term, measured)
+                # Longer code fragments remain indexable. Very short Y/26 has
+                # no three-character fragment and can legitimately use a scan.
+                if term in ('8UB102', 'AF 16548'):
+                    assert 'ix_inventory_search_trgm' in json.dumps(measured), measured
+                print(json.dumps({'search': term, 'rows': 10000, 'execution_ms': measured['Execution Time'],
+                                  'planning_ms': measured['Planning Time']}))
+        conn.commit()
         assert not conn.exec_driver_sql('''SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
             JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND NOT i.indisvalid''').scalar()
         conn.exec_driver_sql("UPDATE inventory_items SET thumbnail_data='cached', thumbnail_ready=true WHERE sku_internal='INV-77'")
