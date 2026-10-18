@@ -200,3 +200,56 @@ it('blocks Save while preparing an image and translates the photo controls', asy
   finish('prepared:slow.jpg'); await tick(); await tick()
   expect(button('Guardar 3 artículos').disabled).toBe(false)
 })
+
+it('appends descriptions by color, permits individual edits and saves only after review', async () => {
+  await mount(items.map((item, i) => ({ ...item, description: `Original ${i}` })))
+  await chooseDropdown(root.querySelector('button[aria-label="Aplicar dados a"]'), 'color:branca')
+  await chooseDropdown(root.querySelector('button[aria-label="Operação dos dados"]'), 'append')
+  await input('textarea[aria-label="Valor para aplicar"]', 'Placa de metal')
+  button('Preparar alteração · 2').click(); await tick()
+  expect(root.querySelector<HTMLTextAreaElement>('[data-detail-item="s-white"] textarea')!.value).toBe('Original 0\nPlaca de metal')
+  expect(root.querySelector<HTMLTextAreaElement>('[data-detail-item="s-blue"] textarea')!.value).toBe('Original 2')
+  await input('[data-detail-item="m-white"] textarea', 'Logo emborrachado')
+  expect(api.batchEdit).not.toHaveBeenCalled()
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0]).toMatchObject({ details: true, sizes: [
+    { id: 's-white', description: 'Original 0\nPlaca de metal' }, { id: 'm-white', description: 'Logo emborrachado' },
+  ] })
+})
+
+it('clears descriptions explicitly without erasing other fields', async () => {
+  await mount(items.map(item => ({ ...item, description: 'Antiga' })))
+  await chooseDropdown(root.querySelector('button[aria-label="Operação dos dados"]'), 'clear')
+  button('Preparar alteração · 3').click(); await tick()
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0].sizes).toEqual(items.map(item => ({ id:item.id, description:'' })))
+})
+
+it('reviews base plus canonical sizes, preserves leading zeros and permits one barcode per item', async () => {
+  await mount()
+  await input('input[aria-label="Código base"]', '00123')
+  button('Conferir códigos').click(); await tick()
+  expect(root.querySelector('.barcode-preview')!.textContent).toContain('00123S')
+  expect(api.batchEdit).not.toHaveBeenCalled()
+  button('Aplicar códigos à prévia').click(); await tick()
+  await input('input[aria-label="Código do item em leitura"]', '00099')
+  root.querySelector('input[aria-label="Código do item em leitura"]')!.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter', bubbles:true }))
+  await tick()
+  expect(root.querySelector<HTMLInputElement>('input[aria-label="Código do item em leitura"]')!.value).toBe('00123M')
+  await input('input[aria-label="Código do item em leitura"]', '00088')
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0].sizes).toEqual([
+    {id:'s-white',barcode:'00099'}, {id:'m-white',barcode:'00088'}, {id:'s-blue',barcode:'00123S'},
+  ])
+})
+
+it('prevents an old barcode preview from overwriting a manual scan', async () => {
+  await mount()
+  await input('input[aria-label="Código base"]','00123')
+  button('Conferir códigos').click(); await tick()
+  await input('input[aria-label="Código do item em leitura"]','00099')
+  button('Aplicar códigos à prévia').click(); await tick()
+  expect(root.textContent).toContain('Os códigos mudaram. Confira a prévia novamente.')
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0].sizes).toEqual([{id:'s-white',barcode:'00099'}])
+})

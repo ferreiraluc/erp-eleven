@@ -201,7 +201,7 @@
               :key="v.id"
               class="size-chip"
               :class="'chip-alert-' + stockAlertLevel(v)"
-              :title="v.name + ' · ' + v.sku_internal"
+              :title="v.name + ' · ' + (v.inventory_code || v.sku_internal)"
             >
               <span class="chip-label" @click.stop="openEdit(v)">
                 {{ v.size || v.name }}&nbsp;
@@ -313,7 +313,7 @@
               </template>
               <template v-if="entry.item.barcode">
                 <span class="list-sep list-sep-subtle">·</span>
-                <span class="list-barcode">{{ entry.item.barcode }}</span>
+                <span class="list-barcode">{{ [entry.item.inventory_code, entry.item.barcode].filter(Boolean).join(' · ') }}</span>
               </template>
             </div>
             <div class="list-actions">
@@ -345,9 +345,9 @@
                   <span class="item-price">{{ currencySymbol(entry.item.sale_currency || entry.item.currency) }} {{ Number(entry.item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 2 }) }}</span>
                 </template>
               </div>
-              <div v-if="entry.item.barcode" class="item-barcode-row">
+              <div v-if="entry.item.inventory_code || entry.item.barcode" class="item-barcode-row">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="10" height="10" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
-                <span class="item-barcode">{{ entry.item.barcode }}</span>
+                <span class="item-barcode">{{ [entry.item.inventory_code, entry.item.barcode].filter(Boolean).join(' · ') }}</span>
               </div>
               <div class="item-bottom-row">
                 <div class="item-left-info">
@@ -370,7 +370,7 @@
           <!-- Expanded detail section -->
           <div v-if="expandedCardIds.includes(entry.item.id)" class="item-extra" @click.stop>
             <div class="item-extra-row">
-              <span class="item-extra-label">SKU</span>
+              <span class="item-extra-label">{{ tr('SKU anterior') }}</span>
               <span class="item-extra-val mono">{{ entry.item.sku_internal }}</span>
             </div>
             <div v-if="entry.item.min_stock || entry.item.max_stock" class="item-extra-row">

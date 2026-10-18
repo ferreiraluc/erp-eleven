@@ -314,7 +314,7 @@ def query_stock(db, args):
                          "Calçados incluem equivalências e meios tamanhos da tabela da loja. "
                          "Informe sempre o tamanho original cadastrado de cada resultado; não prometa ajuste idêntico. "
                          "Não confirme disponibilidade de um valor ausente. A conferência está em Estoque → Conferir estoque.",
-            "resultados": [{"id":str(x.id),"produto": x.name, "sku": x.sku_internal, "categoria": x.category,
+            "resultados": [{"id":str(x.id),"produto": x.name, "sku": x.sku_internal, "codigo": x.inventory_code, "categoria": x.category,
                             "tamanho": x.size, "cor": x.color, "marca": x.brand,
                             "total": x.current_stock, "loja": x.stock_loja, "deposito": x.stock_deposito,
                             "saldo_incompleto": any(value is None for value in (x.current_stock, x.stock_loja, x.stock_deposito)),

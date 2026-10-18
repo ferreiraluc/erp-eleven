@@ -211,7 +211,11 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
     structured = and_(*predicates) if predicates else false()
     # A short SKU like "M" or "41" can itself look like a size. Preserve exact
     # identity without allowing arbitrary barcode substrings to satisfy size 41.
+    public_code = value.strip().upper()
+    if re.fullmatch(r'[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}', public_code):
+        public_code = 'INV-' + public_code
     identifier = or_(func.lower(Item.sku_internal) == value.strip().lower(),
+                     Item.inventory_code == public_code,
                      func.lower(Item.barcode) == value.strip().lower()) if value.strip() else false()
     if size and size_predicates:
         identifier = and_(identifier, *size_predicates)

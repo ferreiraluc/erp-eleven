@@ -563,6 +563,7 @@ export interface InventoryItem {
   location?: string
   barcode?: string
   sku_internal: string
+  inventory_code?: string | null
   supplier_id?: string | null
   cost_price: number
   sale_price: number
@@ -722,6 +723,8 @@ export const inventoryAPI = {
     cost_price?: number | null
     sale_price?: number | null
     currency?: string
+    description?: string | null
+    details?: boolean
     stock_delta?: number
     stock_reason?: string
     stock_adjustments?: Array<{
@@ -733,8 +736,9 @@ export const inventoryAPI = {
       expected_total: number
       reason?: string
     }>
-    sizes?: Array<{
+    sizes?: Array<Partial<Pick<InventoryItem, 'description' | 'brand' | 'category' | 'unit' | 'location' | 'supplier_id' | 'group_key' | 'cost_currency' | 'sale_currency' | 'currency' | 'min_stock' | 'max_stock' | 'is_active'>> & {
       id: string
+      expected_updated_at?: string
       size?: string
       name?: string
       color?: string
@@ -745,7 +749,7 @@ export const inventoryAPI = {
       stock_reason?: string
     }>
   }): Promise<{ message: string; count: number }> =>
-    api.patch(data.image_groups?.length ? '/api/inventory/items/batch/photos' : data.stock_adjustments?.length ? '/api/inventory/items/batch/quantities' : '/api/inventory/items/batch', data).then(res => res.data),
+    api.patch(data.details ? '/api/inventory/items/batch/details' : data.image_groups?.length ? '/api/inventory/items/batch/photos' : data.stock_adjustments?.length ? '/api/inventory/items/batch/quantities' : '/api/inventory/items/batch', data).then(res => res.data),
 
   getDistinctValues: (): Promise<{ brands: string[]; categories: string[] }> =>
     api.get('/api/inventory/items/distinct-values').then(res => res.data),

@@ -23,7 +23,7 @@ export interface ProductChange extends HistoryBase {
   fields: Record<string, { before?: string | number | boolean | null; after?: string | number | boolean | null; changed?: boolean }>
 }
 export interface ProductHistory {
-  product: { id: string; name: string; sku_internal: string; barcode: string | null; brand: string | null
+  product: { id: string; name: string; sku_internal: string; inventory_code?: string | null; barcode: string | null; brand: string | null
     size: string | null; color: string | null; category: string | null; is_active: boolean
     created_at: string | null; updated_at: string | null; created_by: string | null
     current_stock: number | null; stock_loja: number | null; stock_deposito: number | null

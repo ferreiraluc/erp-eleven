@@ -15,7 +15,7 @@ from .access_policy import is_owner, own_sales, sales_query
 from .inventory_links import product_sale_link
 from .inventory_movement_visibility import restricted_movement_ids
 
-PRODUCT_FIELDS = ('id', 'name', 'sku_internal', 'barcode', 'brand', 'size', 'color',
+PRODUCT_FIELDS = ('id', 'name', 'sku_internal', 'inventory_code', 'barcode', 'brand', 'size', 'color',
                   'category', 'is_active', 'created_at', 'updated_at', 'created_by',
                   'current_stock', 'stock_loja', 'stock_deposito', 'deleted_at', 'deleted_by')
 # Never expose arbitrary audit JSON (photos, private payloads or request context).

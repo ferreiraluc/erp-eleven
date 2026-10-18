@@ -59,6 +59,7 @@ class ItemResponse(ItemBase):
     has_image: bool | None = None
     id: uuid.UUID
     sku_internal: str
+    inventory_code: str | None = None
     current_stock: int | None
     stock_loja: int | None
     stock_deposito: int | None
@@ -94,14 +95,38 @@ class UngroupRequest(BaseModel):
     group_key: str
 
 
-class BatchSizeEntry(BaseModel):
+class BatchProductFields(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    brand: Optional[str] = Field(default=None, max_length=100)
+    category: Optional[str] = Field(default=None, max_length=100)
+    size: Optional[str] = Field(default=None, max_length=50)
+    color: Optional[str] = Field(default=None, max_length=50)
+    barcode: Optional[str] = Field(default=None, max_length=200)
+    unit: Optional[str] = Field(default=None, min_length=1, max_length=20)
+    location: Optional[str] = Field(default=None, max_length=100)
+    supplier_id: Optional[uuid.UUID] = None
+    group_key: Optional[str] = Field(default=None, max_length=100)
+    cost_price: Optional[Decimal] = Field(default=None, ge=0, le=Decimal('9999999999.99'))
+    sale_price: Optional[Decimal] = Field(default=None, ge=0, le=Decimal('9999999999.99'))
+    currency: Optional[Literal['PYG', 'USD', 'BRL', 'EUR']] = None
+    cost_currency: Optional[Literal['PYG', 'USD', 'BRL', 'EUR']] = None
+    sale_currency: Optional[Literal['PYG', 'USD', 'BRL', 'EUR']] = None
+    min_stock: Optional[Annotated[int, Field(strict=True, ge=0, le=2_147_483_647)]] = None
+    max_stock: Optional[Annotated[int, Field(strict=True, ge=0, le=2_147_483_647)]] = None
+    is_active: Optional[bool] = None
+
+    @field_validator('name', 'unit')
+    @classmethod
+    def nonblank(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError('Este campo não pode ficar vazio.')
+        return value
+
+
+class BatchSizeEntry(BatchProductFields):
     id: uuid.UUID
-    size: Optional[str] = None
-    name: Optional[str] = None
-    color: Optional[str] = None
-    barcode: Optional[str] = None
-    cost_price: Optional[Decimal] = None
-    sale_price: Optional[Decimal] = None
+    expected_updated_at: Optional[datetime] = None
     stock_delta: Optional[int] = None    # positive=entry, negative=exit
     stock_reason: Optional[str] = None
 
@@ -137,16 +162,11 @@ class BatchPhotoAssignment(BaseModel):
         return value
 
 
-class BatchEditRequest(BaseModel):
+class BatchEditRequest(BatchProductFields):
     item_ids: List[uuid.UUID]
-    # Shared fields — only applied when not None
-    brand: Optional[str] = None
-    category: Optional[str] = None
+    # Omitted metadata stays unchanged; explicit null clears optional text/FKs.
     image_data: Optional[str] = None
     image_groups: List[BatchPhotoAssignment] = Field(default_factory=list, max_length=20)
-    cost_price: Optional[Decimal] = None
-    sale_price: Optional[Decimal] = None
-    currency: Optional[str] = None
     stock_delta: Optional[int] = None    # applied to all items without per-item override
     stock_reason: Optional[str] = None
     # Per-item fields (optional)

@@ -20,13 +20,13 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
             id uuid PRIMARY KEY, name varchar(200), brand varchar(100), category varchar(100),
             color varchar(50), size varchar(50), group_key varchar(100), sku_internal varchar(50),
             barcode varchar(200), image_data text, updated_at timestamp, deleted_at timestamptz,
-            description text)''')
+            description text, inventory_code varchar(10))''')
         conn.exec_driver_sql('''INSERT INTO inventory_items
             SELECT md5(g::text)::uuid, CASE WHEN g=77 THEN 'Tênis Givenchy DN0281' ELSE 'Camiseta modelo '||g END,
             CASE WHEN g=77 THEN 'Givenchy' ELSE 'Boss' END, 'Vestuário', 'Preto', 'M', NULL,
             'INV-'||g, NULL, NULL, now(), NULL,
             CASE WHEN g IN (80,81) THEN 'Camiseta de placa de metal, com logo emborrachado e algodão'
-                 ELSE 'Peça com costura reforçada, modelo '||g END
+                 ELSE 'Peça com costura reforçada, modelo '||g END, NULL
             FROM generate_series(1,50000) g''')
         conn.exec_driver_sql('ANALYZE inventory_items')
         conn.commit()
@@ -49,6 +49,8 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
         description_migration = importlib.util.module_from_spec(spec); spec.loader.exec_module(description_migration)
         with context.begin_transaction(), Operations.context(context):
             description_migration.upgrade()
+        from test_inventory_codes import upgrade
+        upgrade(conn, 'm5b6c7d8e9f0_inventory_public_codes.py')
         after = plan()
         assert before['Plan']['Actual Rows'] == after['Plan']['Actual Rows'] == 1
         assert 'ix_inventory_search_trgm' in json.dumps(after), after
@@ -86,6 +88,15 @@ def test_indexed_search_and_photo_cache_invalidation(pg):
                     print(json.dumps({'search': term, 'rows': 50000, 'execution_ms': measured['Execution Time'],
                                       'planning_ms': measured['Planning Time']}))
                 assert len(conn.execute(base).all()) == 2
+        code = conn.exec_driver_sql("SELECT inventory_code FROM inventory_items WHERE sku_internal='INV-77'").scalar()
+        for term in (code, code[4:].lower()):
+            with Session(bind=conn) as db:
+                searched = build_search(db, term)
+                query = sa.select(Item.id).where(Item.deleted_at.is_(None), searched.condition)
+                assert len(conn.execute(query).all()) == 1
+                sql = str(query.compile(conn, compile_kwargs={'literal_binds': True}))
+                measured = conn.exec_driver_sql('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + sql).scalar()[0]
+                assert 'ix_inventory_public_code' in json.dumps(measured)
         conn.exec_driver_sql("UPDATE inventory_items SET description='Bordado exclusivo' WHERE sku_internal='INV-80'")
         with Session(bind=conn) as db:
             for term, expected in [('placa', 1), ('bordado', 1)]:

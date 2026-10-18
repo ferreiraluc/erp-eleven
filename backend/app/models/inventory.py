@@ -6,6 +6,7 @@ import uuid
 import enum
 from ..database import Base
 from ..config import settings
+from ..inventory_codes import new_inventory_code
 
 
 class MovementType(enum.Enum):
@@ -48,6 +49,7 @@ class Item(Base):
     location = Column(String(100))
     barcode = Column(String(200))
     sku_internal = Column(String(50), unique=True, nullable=False)
+    inventory_code = Column(String(10), unique=True, default=new_inventory_code)
     supplier_id = Column(UUID(as_uuid=True), ForeignKey("suppliers.id"), nullable=True)
     cost_price = Column(DECIMAL(12, 2), default=0)
     sale_price = Column(DECIMAL(12, 2), default=0)

@@ -8,6 +8,7 @@ class VariantSummary(BaseModel):
     id: UUID
     name: str
     sku_internal: str
+    inventory_code: str | None = None
     size: str | None
     color: str | None
     barcode: str | None
