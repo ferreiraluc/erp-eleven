@@ -18,26 +18,11 @@
           <input v-model="sharedStockReason" class="form-input" :placeholder="tr('O histórico registra o ajuste mesmo sem preencher.')" />
         </label>
         <p v-if="stockError" role="alert" class="error-msg">{{ tr(stockError) }}</p>
+        <BulkPhotoEditor v-model="photoDraft" :items="previewItems" :disabled="saving" @busy="photoBusy = $event" />
         <!-- ── Shared fields ── -->
         <section class="section">
           <h3 class="section-title">{{ tr('Campos compartilhados') }}</h3>
           <p class="section-hint">{{ tr('Deixe em branco para não alterar. Aplica a todos os itens selecionados.') }}</p>
-
-          <!-- Image -->
-          <div class="form-group">
-            <label>{{ tr('Imagem (aplicar a todos)') }}</label>
-            <div class="image-area">
-              <div v-if="sharedImage" class="image-preview">
-                <img :src="sharedImage" :alt="tr('Preview')" />
-                <button @click="sharedImage = ''" class="remove-img-btn erp-button erp-button--danger erp-button--icon" type="button">×</button>
-              </div>
-              <div v-else class="image-placeholder" @click="triggerFileInput">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="32" height="32"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span>{{ tr('Clique para selecionar') }}</span>
-              </div>
-              <input ref="fileInputRef" type="file" accept="image/*" class="hidden-input" @change="onImageFile" />
-            </div>
-          </div>
 
           <!-- Brand + Category -->
           <div class="form-row">
@@ -97,7 +82,7 @@
             <div v-for="item in items" :key="item.id" class="item-card">
               <!-- Item header -->
               <div class="item-card-header">
-                <img v-if="sharedImage" :src="sharedImage" class="card-thumb" alt="" />
+                <img v-if="photoDraft[item.id]" :src="photoDraft[item.id].preview" class="card-thumb" alt="" />
                 <ProductThumbnail v-else-if="item.image_data || item.has_image" :item="item" class="card-thumb" />
                 <div v-else class="card-thumb-placeholder"></div>
                 <div class="card-header-info">
@@ -182,7 +167,7 @@
       <p v-if="saveError" role="alert" class="save-error">{{ tr(saveError) }}</p>
       <div class="modal-footer erp-dialog__footer">
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary" :disabled="saving">{{ tr('Cancelar') }}</button>
-        <button @click="save" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || !hasChanges">
+        <button @click="save" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || photoBusy || !hasChanges">
           <span v-if="saving">{{ tr('Salvando...') }}</span>
           <span v-else>{{ tr('Salvar') }} {{ items.length }} {{ tr('itens') }}</span>
         </button>
@@ -196,6 +181,8 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import { ref, computed, reactive } from 'vue'
+import BulkPhotoEditor from './BulkPhotoEditor.vue'
+import { photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
 import BulkStockEditor from './BulkStockEditor.vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import { uniqueLabels } from '@/services/inventoryTaxonomy'
@@ -216,7 +203,8 @@ const emit = defineEmits<{
   (e: 'saved'): void
 }>()
 
-const sharedImage = ref('')
+const photoDraft = ref<PhotoDraft>({})
+const photoBusy = ref(false)
 const sharedBrand = ref('')
 const sharedCategory = ref('')
 const sharedCostPrice = ref<string>('')
@@ -229,7 +217,6 @@ const stockError = ref(''), saveError = ref('')
 const sharedStockReason = ref('')
 const saving = ref(false)
 const unknownStock = computed(() => stockBaseline.some(item => !hasKnownStock(item)))
-const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // Per-item maps — pre-populated with current values for text fields
 const itemNames     = reactive<Record<string, string>>(Object.fromEntries(props.items.map(i => [i.id, i.name])))
@@ -267,7 +254,7 @@ function formatPrice(val: any): string {
 }
 
 const hasChanges = computed(() => {
-  if (sharedImage.value || sharedBrand.value || sharedCategory.value) return true
+  if (Object.keys(photoDraft.value).length || sharedBrand.value || sharedCategory.value) return true
   if (sharedCostPrice.value !== '' || sharedSalePrice.value !== '') return true
   if (changedStock(stockBaseline, stockDraft.value).length) return true
   return props.items.some(item => {
@@ -281,35 +268,8 @@ const hasChanges = computed(() => {
   })
 })
 
-function triggerFileInput() {
-  fileInputRef.value?.click()
-}
-
-function onImageFile(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = (ev) => {
-    const img = new Image()
-    img.onload = () => {
-      const MAX = 400
-      const scale = Math.min(MAX / img.width, MAX / img.height, 1)
-      const w = Math.round(img.width * scale)
-      const h = Math.round(img.height * scale)
-      const canvas = document.createElement('canvas')
-      canvas.width = w; canvas.height = h
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
-      sharedImage.value = canvas.toDataURL('image/jpeg', 0.82)
-    }
-    img.src = ev.target?.result as string
-  }
-  reader.readAsDataURL(file)
-  input.value = ''
-}
-
 async function save() {
-  if (!hasChanges.value || saving.value) return
+  if (!hasChanges.value || saving.value || photoBusy.value) return
   stockError.value = ''
   if (!validStockDraft(stockBaseline, stockDraft.value)) {
     stockError.value = 'Confira as quantidades: use inteiros a partir de zero, dentro do limite de estoque.'
@@ -345,7 +305,7 @@ async function save() {
       item_ids:    props.items.map(i => i.id),
       brand:       sharedBrand.value    || undefined,
       category:    sharedCategory.value || undefined,
-      image_data:  sharedImage.value    || undefined,
+      image_groups: photoAssignments(photoDraft.value, props.items.map(item => item.id)),
       cost_price:  sharedCostPrice.value !== '' ? Number(sharedCostPrice.value) : undefined,
       sale_price:  sharedSalePrice.value !== '' ? Number(sharedSalePrice.value) : undefined,
       stock_adjustments: changedStock(stockBaseline, stockDraft.value).map(item => ({
@@ -413,15 +373,6 @@ input:disabled { background: #f3f4f6; cursor: not-allowed; }
 .label-current { font-size: 0.65rem; font-weight: 400; color: #9ca3af; }
 .error-msg { font-size: 0.72rem; color: #ef4444; }
 
-/* Image */
-.image-area { }
-.image-preview { position: relative; display: inline-block; }
-.image-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
-.remove-img-btn { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.image-placeholder { width: 72px; height: 72px; border: 2px dashed #d1d5db; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; cursor: pointer; color: #9ca3af; font-size: 0.58rem; text-align: center; }
-.image-placeholder:hover { border-color: #3b82f6; color: #3b82f6; }
-.hidden-input { display: none; }
-
 /* Per-item list */
 .items-list { display: flex; flex-direction: column; gap: 0.6rem; max-height: 420px; overflow-y: auto; }
 .item-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.6rem 0.75rem; background: #fafafa; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -468,6 +419,5 @@ input:disabled { background: #f3f4f6; cursor: not-allowed; }
   .field-input { padding: 0.25rem 0.4rem; font-size: 0.78rem; }
   .items-list { gap: 0.4rem; max-height: none; }
   .btn { padding: 0.42rem 0.85rem; font-size: 0.82rem; }
-  .image-placeholder, .image-preview img { width: 56px; height: 56px; }
 }
 </style>

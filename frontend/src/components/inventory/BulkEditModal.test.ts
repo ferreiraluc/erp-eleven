@@ -2,9 +2,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createApp, nextTick, reactive, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import BulkEditModal from './BulkEditModal.vue'
+import { chooseDropdown } from '@/test/dropdown'
 
 const api = vi.hoisted(() => ({ batchEdit: vi.fn() }))
+const photos = vi.hoisted(() => ({ prepareGalleryFile: vi.fn(), galleryPreview: vi.fn() }))
 vi.mock('@/services/api', () => ({ inventoryAPI: api }))
+vi.mock('@/services/productGallery', () => photos)
 let app: App, root: HTMLDivElement
 const items = [
   { id: 's-white', name: 'Camiseta S Branca', size: 'S', color: 'Branca' },
@@ -32,7 +35,12 @@ async function mount(data = items, saved = vi.fn()) {
   app = createApp(BulkEditModal, { items: data, onSaved: saved }).use(i18n); app.mount(root); await tick()
   return i18n
 }
-beforeEach(() => { api.batchEdit.mockResolvedValue({}); vi.spyOn(console, 'error').mockImplementation(() => {}) })
+beforeEach(() => {
+  api.batchEdit.mockResolvedValue({})
+  photos.prepareGalleryFile.mockImplementation(async (file: File) => `prepared:${file.name}`)
+  photos.galleryPreview.mockImplementation(async (source: string) => `thumb:${source}`)
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+})
 afterEach(() => { app?.unmount(); root?.remove(); vi.restoreAllMocks(); vi.resetAllMocks() })
 
 it('applies colors to the selection, allows an individual override and waits for Save', async () => {
@@ -121,4 +129,74 @@ it('retains the reviewed baseline if the parent refreshes while the editor is op
   expect(api.batchEdit.mock.calls[0][0].stock_adjustments[0]).toMatchObject({
     stock_loja: 6, expected_loja: 3, expected_total: 5,
   })
+})
+
+async function uploadPhoto(name: string) {
+  const control = root.querySelector<HTMLInputElement>('[data-bulk-photo-file]')!
+  Object.defineProperty(control, 'files', { value: [new File(['fixture'], name, { type: 'image/jpeg' })], configurable: true })
+  control.dispatchEvent(new Event('change', { bubbles: true }))
+  await tick(); await tick()
+}
+async function photoScope(value: string) {
+  await chooseDropdown(root.querySelector('button[aria-label="Aplicar foto a"]'), value)
+}
+
+it('stages one cover per color, includes every size and only saves the selected IDs once', async () => {
+  await mount()
+  await photoScope('color:branca'); await uploadPhoto('white.jpg')
+  await photoScope('color:azul'); await uploadPhoto('blue.jpg')
+  expect(api.batchEdit).not.toHaveBeenCalled()
+  expect(root.querySelectorAll('.photo-draft')).toHaveLength(2)
+  expect(Array.from(root.querySelectorAll('.card-thumb')).map(el => el.getAttribute('src'))).toEqual([
+    'thumb:prepared:white.jpg', 'thumb:prepared:white.jpg', 'thumb:prepared:blue.jpg',
+  ])
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0]).toMatchObject({
+    item_ids: items.map(item => item.id), stock_adjustments: [],
+    image_groups: [
+      { item_ids: ['s-white', 'm-white'], image_data: 'prepared:white.jpg' },
+      { item_ids: ['s-blue'], image_data: 'prepared:blue.jpg' },
+    ],
+  })
+  expect(api.batchEdit.mock.calls[0][0].image_data).toBeUndefined()
+  expect(api.batchEdit.mock.calls[0][0].additional_images).toBeUndefined()
+})
+
+it('lets a color override a shared photo and undo preserves other drafts', async () => {
+  await mount(); await uploadPhoto('all.jpg')
+  await photoScope('color:azul'); await uploadPhoto('blue.jpg')
+  const undo = root.querySelector<HTMLButtonElement>('button[aria-label="Desfazer foto de Azul"]')!
+  undo.click(); await tick()
+  expect(root.querySelectorAll('.photo-draft')).toHaveLength(1)
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0].image_groups).toEqual([
+    { item_ids: ['s-white', 'm-white'], image_data: 'prepared:all.jpg' },
+  ])
+})
+
+it('keeps photo membership by ID when color changes and ignores file failure without losing drafts', async () => {
+  await mount(); await photoScope('color:branca'); await uploadPhoto('white.jpg')
+  await input('input[aria-label="Cor para vários itens"]', 'Bege')
+  button('Aplicar cor a todos').click(); await tick()
+  expect(root.querySelector('.photo-draft')?.textContent).toContain('Bege')
+  photos.prepareGalleryFile.mockRejectedValueOnce(new Error('invalid'))
+  await uploadPhoto('broken.jpg')
+  expect(root.querySelector('.photo-error')?.textContent).toContain('Não foi possível preparar')
+  button('Salvar 3 itens').click(); await tick()
+  expect(api.batchEdit.mock.calls[0][0].image_groups).toEqual([
+    { item_ids: ['s-white', 'm-white'], image_data: 'prepared:white.jpg' },
+  ])
+})
+
+it('blocks Save while preparing an image and translates the photo controls', async () => {
+  const i18n = await mount()
+  let finish!: (value: string) => void
+  photos.prepareGalleryFile.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+  await input('input[aria-label="Marca"]', 'Boss')
+  await uploadPhoto('slow.jpg')
+  expect(button('Salvar 3 itens').disabled).toBe(true)
+  i18n.global.locale.value = 'es'; await tick()
+  expect(root.textContent).toContain('Fotos por color')
+  finish('prepared:slow.jpg'); await tick(); await tick()
+  expect(button('Guardar 3 artículos').disabled).toBe(false)
 })

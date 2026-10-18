@@ -718,6 +718,7 @@ export const inventoryAPI = {
     brand?: string
     category?: string
     image_data?: string
+    image_groups?: Array<{ item_ids: string[]; image_data: string }>
     cost_price?: number | null
     sale_price?: number | null
     currency?: string
@@ -744,7 +745,7 @@ export const inventoryAPI = {
       stock_reason?: string
     }>
   }): Promise<{ message: string; count: number }> =>
-    api.patch(data.stock_adjustments?.length ? '/api/inventory/items/batch/quantities' : '/api/inventory/items/batch', data).then(res => res.data),
+    api.patch(data.image_groups?.length ? '/api/inventory/items/batch/photos' : data.stock_adjustments?.length ? '/api/inventory/items/batch/quantities' : '/api/inventory/items/batch', data).then(res => res.data),
 
   getDistinctValues: (): Promise<{ brands: string[]; categories: string[] }> =>
     api.get('/api/inventory/items/distinct-values').then(res => res.data),

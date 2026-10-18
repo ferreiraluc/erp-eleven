@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Literal, Annotated
 from datetime import datetime
 from decimal import Decimal
@@ -125,12 +125,25 @@ class BatchStockAdjustment(BaseModel):
         return self
 
 
+class BatchPhotoAssignment(BaseModel):
+    item_ids: List[uuid.UUID] = Field(min_length=1, max_length=2000)
+    image_data: str = Field(max_length=340000)
+
+    @field_validator('image_data')
+    @classmethod
+    def valid_photo(cls, value):
+        # Same decoded format, dimensions and byte limits as the product gallery.
+        GalleryInput(additional_images=[value])
+        return value
+
+
 class BatchEditRequest(BaseModel):
     item_ids: List[uuid.UUID]
     # Shared fields — only applied when not None
     brand: Optional[str] = None
     category: Optional[str] = None
     image_data: Optional[str] = None
+    image_groups: List[BatchPhotoAssignment] = Field(default_factory=list, max_length=20)
     cost_price: Optional[Decimal] = None
     sale_price: Optional[Decimal] = None
     currency: Optional[str] = None
@@ -149,6 +162,11 @@ class BatchEditRequest(BaseModel):
             ids = [entry.id for entry in entries]
             if len(set(ids)) != len(ids) or not set(ids).issubset(selected):
                 raise ValueError("Cada ajuste deve pertencer a um produto selecionado, sem duplicatas.")
+        photo_ids = [identity for group in self.image_groups for identity in group.item_ids]
+        if len(set(photo_ids)) != len(photo_ids) or not set(photo_ids).issubset(selected):
+            raise ValueError("Cada foto deve pertencer a um produto selecionado, sem duplicatas.")
+        if self.image_groups and self.image_data is not None:
+            raise ValueError("Não combine a foto compartilhada com fotos por seleção.")
         if self.stock_adjustments and (self.stock_delta or any(entry.stock_delta for entry in self.sizes or [])):
             raise ValueError("Não combine quantidade final com entrada ou saída no mesmo pedido.")
         return self

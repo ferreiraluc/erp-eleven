@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from sqlalchemy import inspect
 from decimal import Decimal
 from typing import Optional
@@ -41,7 +41,8 @@ def create_movement(
     location_to: Optional[str] = None,
     notes: Optional[str] = None,
 ) -> StockMovement:
-    item = db.query(Item).filter(Item.id == item_id).with_for_update().first()
+    # Stock checks never need the original photo, including mixed photo/count batches.
+    item = db.query(Item).options(defer(Item.image_data)).filter(Item.id == item_id).with_for_update().first()
     if not item:
         raise ValueError(f"Item {item_id} not found")
     # A prior lookup may have populated this session before the row lock waited.

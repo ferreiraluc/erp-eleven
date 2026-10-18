@@ -590,6 +590,32 @@ a conferência de versão detecta mudança nas fotos. Grades usam uma escrita da
 coleção com um único parâmetro de imagens, evitando um buffer grande por variante.
 A exclusão do catálogo limpa a galeria e preserva o histórico existente.
 
+### Foto principal por cor na edição em lote
+
+Em **Selecionar → Editar Massivo → Fotos por cor**, escolha uma cor no dropdown
+**Aplicar foto a** e use **Enviar foto** ou **Câmera**. Todos os tamanhos daquela
+cor dentro da seleção recebem a mesma foto principal. Maiúsculas, acentos e espaços
+não separam as cores. **Todos os selecionados** mantém a troca compartilhada.
+É possível preparar fotos para várias cores e conferir os produtos de cada foto
+antes de **Salvar**; desfazer uma foto preparada mantém a foto já salva no banco.
+Enviar novamente para a mesma seleção substitui a preparação anterior.
+
+As fotos ficam vinculadas aos IDs selecionados no momento do envio. Renomear uma
+cor depois não transfere sua foto para outros produtos. O editor mostra a cor e os
+itens atuais na conferência. Produtos fora da seleção, fotos adicionais, família,
+estoque e preços são preservados, salvo outras alterações explícitas no mesmo modal.
+A troca substitui a principal; não acrescenta a imagem antiga à galeria.
+
+As imagens são preparadas sequencialmente com os limites da galeria, sem IA,
+e o botão Salvar aguarda o processamento. São até 20 fotos distintas por edição;
+cada foto atende até 2.000 IDs. `PATCH /api/inventory/items/batch/photos` valida os
+grupos, não aceita IDs repetidos ou fora da seleção e usa a mesma transação/locks
+dos metadados e ajustes de estoque. O caminho próprio impede que um servidor ainda
+antigo ignore as novas fotos durante um deploy. Nenhum original ou galeria é lido
+para substituir as capas; cada arquivo é enviado e vinculado uma vez por grupo,
+invalidando as miniaturas. A auditoria registra os IDs e a troca, sem guardar a
+imagem no evento. O armazenamento final continua sendo por produto, como no cadastro.
+
 A migração `k3f4a5b6c7d8` acrescenta uma coluna nullable, sem regravar as imagens
 anteriores. Não existe armazenamento separado da foto original em alta resolução;
 use **Baixar foto escolhida** para conservar a prévia da IA. Cada variante possui
