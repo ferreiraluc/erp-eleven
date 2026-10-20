@@ -19,6 +19,7 @@ O [README principal](../README.md) apresenta o sistema e os comandos essenciais.
 | [Fluxos do assistente](ASSISTENTE_FLUXOS_OPERACIONAIS.md) | Rastreios, contexto, estoque e impressão de PDFs |
 | [Endereços e SuperFrete](GESTOR_ENDERECOS_SUPERFRETE.md) | Cadastro único, impressão A4, CEP e emissão de etiquetas |
 | [Impressão Windows](IMPRESSAO_WINDOWS.md) | Instalar e operar o agente na máquina da loja |
+| [Tickets macOS / 3nStar](IMPRESSAO_MACOS.md) | Instalar no iMac, testar e migrar os tickets sem interromper a Zebra |
 | [BI de vendas](sales-bi.md) | Interpretar totais, cobertura, correções e sincronização OneDrive |
 | [Auditoria de manutenção](AUDITORIA_MANUTENCAO.md) | Evidências de limpeza e pendências técnicas |
 | [Revisão de UX de 06/10](REVISAO_UX_2026-10-06.md) | Rodadas de revisão, evidências e melhorias pendentes |

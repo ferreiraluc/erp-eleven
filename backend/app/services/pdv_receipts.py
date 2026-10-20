@@ -23,12 +23,16 @@ def printer_info(device):
         return None
     return dict(id=str(device.id), name=device.name, paper_width_mm=device.paper_width_mm,
                 paper_height_mm=device.paper_height_mm, auto_receipts=device.auto_receipts,
-                last_seen_at=device.last_seen_at)
+                last_seen_at=device.last_seen_at, driver=device.driver)
 
 
 def destination(db, *, lock=False):
     query = db.query(PrintDevice).filter_by(purpose='tickets', active=True, auto_receipts=True)
-    return (query.with_for_update() if lock else query).first()
+    if not lock:
+        return query.first()
+    # A cutover may change the old destination while this SELECT waits on its
+    # lock. A fresh statement sees the committed replacement (READ COMMITTED).
+    return query.with_for_update().first() or query.with_for_update().first()
 
 
 def receipt_state(job):
@@ -98,7 +102,7 @@ def build_snapshot(sale, device=None, *, copy=False):
 def snapshot_for_view(db, sale):
     # Same immutable revision used by the printer, even after its temporary PDF is erased.
     original = db.query(PrintJob).filter_by(request_key=original_key(sale), source='pdv_receipt').first()
-    device = db.query(PrintDevice).filter_by(purpose='tickets', active=True).first()
+    device = destination(db) or db.query(PrintDevice).filter_by(purpose='tickets', active=True).order_by(PrintDevice.created_at).first()
     if original and original.snapshot:
         # Reflow the immutable financial data for today's media, without rewriting jobs.
         return dict(original.snapshot, width=device.paper_width_mm if device else 80,
@@ -107,6 +111,10 @@ def snapshot_for_view(db, sale):
 
 
 def prepare_document(job):
+    if job.source == 'printer_test' and not job.pdf:
+        from .receipt_printer_setup import test_document
+        job.pdf = test_document(job.id)
+        job.sha256 = hashlib.sha256(job.pdf).hexdigest()
     if job.source == 'pdv_receipt' and not job.pdf:
         job.pdf = render(job.snapshot)
         job.sha256 = hashlib.sha256(job.pdf).hexdigest()

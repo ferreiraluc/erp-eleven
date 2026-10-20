@@ -2,7 +2,10 @@
 
 ## Ticket automático no caixa
 
-Lucas configura **PDV → Tickets** para o agente Windows exclusivo da Zebra ZD220.
+Lucas configura **PDV → Tickets** para o agente Windows/Zebra ou prepara a
+**3nStar RPT006W no iMac**, com agente nativo e bobina contínua de 80 mm.
+A troca exige teste físico confirmado e fila antiga concluída; preparar o Mac
+não desativa a Zebra. Instalação e recuperação: [Tickets macOS](IMPRESSAO_MACOS.md).
 Ao ativar, **Confirmar e imprimir** grava a venda e uma solicitação de ticket na
 mesma transação, inclusive em vendas pelo celular. Sem ativação, o recibo continua
 disponível para impressão neste aparelho/PDF. Não depende de IA nem de AirPrint.

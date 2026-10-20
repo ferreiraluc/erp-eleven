@@ -64,6 +64,7 @@ não houver uma migração explícita de seus consumidores.
 | BI | `services.sales_bi_sync.main` | Thread da API; leitura às 18h Brasília ou pedido manual no banco |
 | Atualização de rastreios | `_job_atualizar_rastreamentos` | APScheduler, às 19h Brasília |
 | Impressão | `tools/eleven-print-agent/Agente.ps1` | PowerShell na sessão do Windows da loja |
+| Tickets macOS | `tools/eleven-ticket-agent-macos/main.swift` | LaunchAgent na sessão do iMac; HTTPS → TCP local ESC/POS |
 
 Use uma instância/processo Uvicorn no arranjo atual. As filas do assistente/frete/BI
 têm mecanismos de concorrência no PostgreSQL. O agendamento local de rastreios
@@ -99,6 +100,11 @@ da venda e gera PDF ao recolher. `print_devices.purpose` separa `documents` de
 a chave do original; cópias têm chave própria e referência ao original. O agente
 Windows possui pastas/credenciais independentes e confere mídia antes de imprimir.
 Endpoints de recibo aplicam `sales_query`; configuração/credencial exigem Lucas.
+`print_devices.driver` separa Windows de `escpos_tcp`; a preparação macOS cria um
+destino inativo para vendas, testado antes da troca atômica. `print_jobs.claim_key`
+permite recuperar respostas perdidas sem recolher outro trabalho. O agente nativo
+guarda token no Chaves e diário durável antes do envio; usa o mesmo PDF em espanhol.
+Ver [instalação, reconexão e limites macOS](IMPRESSAO_MACOS.md).
 
 **Frete:** `freight_orders` registra cotação/compra/etiqueta. Webhooks assinados apenas
 agendam consulta autenticada. `freight_labels` recupera PDFs atrasados, persiste o documento,

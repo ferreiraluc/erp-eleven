@@ -2,7 +2,7 @@ import { chooseDropdown, openDropdown } from '@/test/dropdown'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
 import PDVPrinterModal from './PDVPrinterModal.vue'
-const api = vi.hoisted(() => ({ printer:vi.fn(), configure:vi.fn() }))
+const api = vi.hoisted(() => ({ printer:vi.fn(), configure:vi.fn(), destinations:vi.fn() }))
 vi.mock('@/services/pdvReceipts', () => ({ pdvReceipts:api }))
 vi.mock('@/directives/erpDialog', () => ({ vErpDialog:{} }))
 let app:App, root:HTMLDivElement
@@ -10,6 +10,7 @@ const tick = async () => { await Promise.resolve(); await Promise.resolve(); awa
 afterEach(() => { app?.unmount(); root?.remove(); vi.resetAllMocks() })
 async function mount(device:object|null) {
   api.printer.mockResolvedValue({device})
+  api.destinations.mockResolvedValue({devices:[],mac_package_url:'https://example.invalid/agent.zip',mac_agent_version:'test'})
   api.configure.mockImplementation(async data => ({device:data,token:null}))
   root=document.createElement('div'); document.body.append(root)
   app=createApp(PDVPrinterModal); app.mount(root); await tick()

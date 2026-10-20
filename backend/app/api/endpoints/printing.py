@@ -47,6 +47,7 @@ class DeviceInput(BaseModel):
 
 class ConnectInput(DeviceInput):
     profile: Literal['documents', 'tickets'] = 'documents'
+    driver: Literal['windows', 'escpos_tcp'] = 'windows'
 
 
 class ReceiptDeviceInput(DeviceInput):
@@ -60,6 +61,60 @@ class ReceiptDeviceInput(DeviceInput):
         if value != 0 and value < 50:
             raise ValueError('Use altura automática (0) para bobina ou 50–400 mm para etiquetas.')
         return value
+
+
+@router.get('/receipt-devices')
+def receipt_devices(user=Depends(require_owner), db: Session = Depends(get_db)):
+    from ...services.receipt_printer_setup import list_devices
+    return list_devices(db)
+
+
+@router.post('/receipt-device/macos')
+def prepare_macos_device(response: Response, user=Depends(require_owner), db: Session = Depends(get_db)):
+    from ...services.receipt_printer_setup import prepare_mac
+    response.headers['Cache-Control'] = 'no-store'
+    return prepare_mac(db, user)
+
+
+class PrinterTestInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    request_key: UUID
+    confirm: bool = False
+
+
+@router.post('/receipt-devices/{device_id}/test')
+def test_receipt_device(device_id: UUID, body: PrinterTestInput,
+                        user=Depends(require_owner), db: Session = Depends(get_db)):
+    from ...services.receipt_printer_setup import enqueue_test
+    return {'job': enqueue_test(db, user, device_id, body.request_key, body.confirm)}
+
+
+class ActivateReceiptInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    confirm: bool = False
+    test_job_id: UUID | None = None
+
+
+@router.post('/receipt-devices/{device_id}/activate')
+def activate_receipt_device(device_id: UUID, body: ActivateReceiptInput,
+                            user=Depends(require_owner), db: Session = Depends(get_db)):
+    from ...services.receipt_printer_setup import activate
+    return activate(db, user, device_id, body.test_job_id, body.confirm)
+
+
+@router.post('/receipt-devices/{device_id}/pause')
+def pause_receipt_device(device_id: UUID, body: ActivateReceiptInput,
+                         user=Depends(require_owner), db: Session = Depends(get_db)):
+    from ...services.receipt_printer_setup import owner_lock
+    if not body.confirm:
+        raise HTTPException(422, 'Confirme a pausa de novos tickets automáticos.')
+    owner_lock(db, user)
+    device = db.query(PrintDevice).filter_by(id=device_id, active=True, purpose='tickets').with_for_update().first()
+    if not device:
+        raise HTTPException(404, 'Impressora de tickets não encontrada.')
+    device.auto_receipts = False
+    db.commit()
+    return {'paused': True}
 
 
 @router.get('/receipt-device')
@@ -76,7 +131,9 @@ def configure_receipt_device(body: ReceiptDeviceInput, response: Response, user=
     # One ticket station in this first version. Serialize configuration on the owner.
     from ...models.usuario import Usuario
     db.query(Usuario).filter_by(id=user.id).with_for_update().first()
-    device = db.query(PrintDevice).filter_by(purpose='tickets', active=True).order_by(PrintDevice.created_at).with_for_update().first()
+    device = db.query(PrintDevice).filter_by(purpose='tickets', active=True, driver='windows').order_by(PrintDevice.created_at).with_for_update().first()
+    if body.auto_receipts and db.query(PrintDevice.id).filter_by(purpose='tickets', active=True, driver='escpos_tcp', auto_receipts=True).first():
+        raise HTTPException(409, 'Use a troca de destino de tickets para voltar ao Windows.')
     token = None
     if not device:
         token = secrets.token_urlsafe(48)
@@ -93,10 +150,12 @@ def configure_receipt_device(body: ReceiptDeviceInput, response: Response, user=
 
 
 @router.post('/receipt-device/credential')
-def rotate_receipt_credential(response: Response, confirm: bool = False, user=Depends(require_owner), db: Session = Depends(get_db)):
+def rotate_receipt_credential(response: Response, confirm: bool = False, device_id: UUID | None = None,
+                              user=Depends(require_owner), db: Session = Depends(get_db)):
     if not confirm:
-        raise HTTPException(422, 'Confirme a substituição da credencial e a atualização no Windows.')
-    device = db.query(PrintDevice).filter_by(purpose='tickets', active=True).with_for_update().first()
+        raise HTTPException(422, 'Confirme a substituição da credencial e a atualização no agente de impressão.')
+    query = db.query(PrintDevice).filter_by(purpose='tickets', active=True)
+    device = (query.filter_by(id=device_id) if device_id else query.filter_by(driver='windows')).with_for_update().first()
     if not device:
         raise HTTPException(404, 'Configure primeiro a impressora de tickets.')
     if db.query(PrintJob.id).filter_by(device_id=device.id, status='claimed').first():
@@ -135,14 +194,15 @@ def agent_package(profile: Literal['documents', 'tickets'] = 'documents', user=D
 @router.post('/agent/connect')
 def connect(body: ConnectInput, device=Depends(printer), db: Session = Depends(get_db)):
     # The scoped credential may rename only its own device; IDs/jobs/tokens survive replacement.
-    if body.profile != device.purpose:
+    if body.profile != device.purpose or body.driver != device.driver:
         raise HTTPException(409, 'Credencial de outra finalidade. Use o instalador e a credencial exclusivos desta impressora.')
     device.name = body.name
     device.last_seen_at = utcnow()
     db.commit()
     data = {'id': str(device.id), 'name': device.name}
     if device.purpose == 'tickets':
-        data.update(profile='tickets', paper_width_mm=device.paper_width_mm, paper_height_mm=device.paper_height_mm)
+        data.update(profile='tickets', paper_width_mm=device.paper_width_mm,
+                    paper_height_mm=device.paper_height_mm, driver=device.driver)
     return data
 
 
@@ -208,23 +268,40 @@ def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
 
 
 @router.post("/agent/claim")
-def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tickets: bool = False):
+def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tickets: bool = False,
+          driver: Literal['windows', 'escpos_tcp'] = 'windows', claim_key: UUID | None = None):
     from ...services.assistant_documents import cleanup_documents
     authenticated_hash = device.token_hash
     device = db.query(PrintDevice).filter_by(id=device.id, active=True).populate_existing().with_for_update().first()
     if not device or device.token_hash != authenticated_hash:
         raise HTTPException(401, 'Credencial substituída ou revogada.')
+    if device.driver != driver:
+        raise HTTPException(409, 'Agente de outro protocolo. Preserve a credencial exclusiva de cada impressora.')
+    if driver == 'escpos_tcp' and (device.purpose != 'tickets' or not claim_key or not continuous_tickets):
+        raise HTTPException(422, 'O agente macOS requer tickets contínuos e chave persistente de coleta.')
     cleanup_documents(db)
     # Claim is permanent. Lost responses never cause a job to be dispatched again.
     device.last_seen_at = utcnow()
-    db.query(PrintJob).filter(PrintJob.device_id == device.id, PrintJob.status == "pending",
-                             PrintJob.expires_at <= utcnow()).update({"status": "expired", "pdf": b""})
-    job = db.query(PrintJob).filter_by(device_id=device.id, status="pending").order_by(
+    if driver == 'windows':
+        db.query(PrintJob).filter(PrintJob.device_id == device.id, PrintJob.status == "pending",
+                                 PrintJob.expires_at <= utcnow()).update({"status": "expired", "pdf": b""})
+    job = None
+    if driver == 'escpos_tcp':
+        # Persisted before the HTTP request on the Mac. A lost response can be
+        # recovered without claiming a second job or resetting dispatch state.
+        job = db.query(PrintJob).filter_by(claim_key=claim_key).first()
+        if job and (job.device_id != device.id or job.status != 'claimed'):
+            raise HTTPException(409, 'Chave de coleta já finalizada ou de outro dispositivo.')
+        if not job and db.query(PrintJob.id).filter_by(device_id=device.id, status='claimed').first():
+            raise HTTPException(409, 'Existe uma coleta anterior. Recupere o diário do agente; não reenvie o ticket.')
+    job = job or db.query(PrintJob).filter_by(device_id=device.id, status="pending").order_by(
         PrintJob.created_at, PrintJob.id).with_for_update(skip_locked=True).first()
     if not job:
         db.commit()
         return Response(status_code=204)
-    continuous = job.source == 'pdv_receipt' and job.snapshot.get('height') == 0
+    continuous = job.source in ('pdv_receipt', 'printer_test') and job.snapshot.get('height') == 0
+    if driver == 'escpos_tcp' and (not continuous or job.snapshot.get('width') != 80):
+        raise HTTPException(409, 'A 3nStar recebe somente tickets contínuos de 80 mm.')
     if continuous and not continuous_tickets:
         raise HTTPException(409, 'Atualize o Eleven Tickets no Windows para imprimir em bobina contínua. O trabalho continua na fila.')
     from ...services.pdv_receipts import prepare_document
@@ -236,9 +313,11 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
         job.diagnostic = {'code': 'document_generation_failed'}
         db.commit()
         return Response(status_code=204)
-    job.status, job.claimed_at = "claimed", utcnow()
+    job.status, job.claimed_at = "claimed", job.claimed_at or utcnow()
+    if driver == 'escpos_tcp':
+        job.claim_key = claim_key
     result = {"id": str(job.id), "sha256": job.sha256}
-    if job.source == 'pdv_receipt':
+    if job.source in ('pdv_receipt', 'printer_test'):
         result.update(profile='tickets', paper_width_mm=job.snapshot['width'], paper_height_mm=job.snapshot['height'])
         if continuous:
             from pypdf import PdfReader

@@ -1,0 +1,53 @@
+ELEVEN TICKETS MACOS 2026.10.20.1 — 3nStar RPT006W
+
+macOS 12 ou superior, Intel ou Apple Silicon. Não precisa de Python, Homebrew,
+Xcode, driver, Sumatra ou janela aberta. O binário usa frameworks do macOS.
+Não é um aplicativo notarizado/assinado com Developer ID. Se o macOS bloquear,
+use Abrir no menu de contexto ou Privacidade e Segurança > Abrir Mesmo Assim
+somente para este pacote. Não desative o Gatekeeper nem altere políticas globais.
+
+1. No ERP, entre como Lucas em PDV > Tickets > Preparar 3nStar no Mac.
+   Isso cria um destino separado, SEM desativar a Zebra.
+2. Extraia todo o ZIP no iMac do caixa. Abra Instalar.command como o usuário
+   do caixa (sem sudo). Cole a credencial EXCLUSIVA do Mac quando solicitada.
+   Ela fica no Chaves. Enter mantém a credencial em uma atualização.
+3. O instalador inicia o agente em segundo plano e o carrega ao entrar nessa
+   conta do Mac. Não inicia antes do login/FileVault. O iMac deve ficar ligado,
+   acordado, conectado à internet e com a sessão iniciada.
+4. No ERP, solicite o teste explicitamente. Confira o papel, acentos, margens,
+   início/fim e corte. O teste não registra uma venda nem movimenta estoque.
+5. Atualize o estado no ERP. Marque que conferiu o papel e ative a 3nStar.
+   A troca exige que a fila antiga esteja concluída. A Zebra permanece cadastrada
+   para retorno; só o destino automático de novos tickets é trocado.
+
+Rede local: impressora 192.168.123.100, TCP 9100; Ethernet do iMac 192.168.123.10.
+O agente usa esse endereço de origem, sem abrir porta de entrada nem configurar
+roteador, firewall, Ethernet, compartilhamento de internet ou redirecionamento.
+Mantenha o acesso ao ERP pelo Wi-Fi/outra interface e sem gateway nessa rede direta.
+A configuração já testada pelo responsável não é modificada pelo instalador.
+
+Bobina 80 mm, 576 pontos úteis. Reutiliza o PDF em espanhol e seu código de barras,
+convertendo em imagem ESC/POS. Uma página, bandas de imagem, um corte ao final.
+O limite atual do gerador compartilhado continua sendo 991 mm por ticket;
+comprovantes acima disso são recusados, nunca divididos/cortados silenciosamente.
+
+FILA E RECUPERAÇÃO
+- Sem conexão antes do envio: espera e retenta em 30 segundos. Tickets pendentes
+  do Mac não expiram automaticamente. Nada é removido só porque ficou offline.
+- PDF/claim/resposta do ERP: chave persistente recupera respostas perdidas.
+- Após começar a transmitir: uma interrupção é INCERTA. Não há como garantir
+  saída física pela confirmação TCP. Confira o papel antes de pedir outra cópia
+  em Vendas > Ticket/PDF. Nunca repete automaticamente um envio parcial.
+- Resultado aceito pelo ERP: PDF temporário é apagado. O histórico fica no ERP.
+- Erro no diário: para com diagnóstico; nunca apaga ou recria o histórico local.
+
+Arquivos locais: ~/Library/Application Support/ElevenTickets
+Credencial: Chaves do macOS, serviço com.eleven.tickets.escpos.
+Log sem documentos/credenciais: agent.log, máximo 64 KiB + uma cópia.
+Diagnostico.command mostra o log. Parar.command pausa; Iniciar.command retoma.
+Atualizações preservam a configuração e o diário. Não apague journal.json para
+destravar nem instale a mesma credencial em dois computadores.
+
+Etiquetas e Samsung/A4 continuam usando seus agentes atuais. Este agente aceita
+somente tickets da própria credencial. Vendas feitas no celular ou iMac seguem
+a mesma fila no ERP/Render; o telefone não precisa estar na rede da impressora.

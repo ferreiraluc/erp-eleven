@@ -7,7 +7,8 @@ class PrintDiagnostic(BaseModel):
     model_config = ConfigDict(extra='forbid')
     code: Literal['download_failed', 'invalid_pdf', 'printer_unavailable',
                   'renderer_start_failed', 'renderer_accepted', 'renderer_exit_error',
-                  'renderer_timeout', 'renderer_interrupted', 'agent_restarted']
+                  'renderer_timeout', 'renderer_interrupted', 'agent_restarted',
+                  'network_accepted', 'network_interrupted']
     agent_version: str = Field(pattern=r'^\d{4}\.\d{2}\.\d{2}\.\d{1,3}$')
     duration_ms: int = Field(default=0, ge=0, le=86400000)
     exit_code: int | None = Field(default=None, ge=-2147483648, le=2147483647)
@@ -24,6 +25,8 @@ MESSAGES = {
     'renderer_timeout': 'O Sumatra excedeu dois minutos. Confira a fila do Windows antes de solicitar outra cópia.',
     'renderer_interrupted': 'Houve uma interrupção após iniciar o envio. Confira a fila do Windows antes de solicitar outra cópia.',
     'agent_restarted': 'O agente reiniciou após iniciar o envio. Confira a fila do Windows antes de solicitar outra cópia.',
+    'network_accepted': 'O ticket foi enviado à conexão da impressora. Confira o papel; o aceite TCP não comprova saída física.',
+    'network_interrupted': 'O envio à impressora foi interrompido ou o agente reiniciou. Confira o papel antes de solicitar outra cópia; não houve reenvio automático.',
 }
 
 
