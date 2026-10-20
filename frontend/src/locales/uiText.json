@@ -4061,5 +4061,130 @@
   },
   "Selecione uma opção": {"pt": "Selecione uma opção", "es": "Seleccione una opción", "en": "Select an option"},
   "Buscar opções...": {"pt": "Buscar opções...", "es": "Buscar opciones...", "en": "Search options..."},
-  "Nenhuma opção encontrada": {"pt": "Nenhuma opção encontrada", "es": "No se encontraron opciones", "en": "No options found"}
+  "Nenhuma opção encontrada": {"pt": "Nenhuma opção encontrada", "es": "No se encontraron opciones", "en": "No options found"},
+  "3nStar no iMac": {
+    "pt": "3nStar no iMac",
+    "es": "3nStar en el iMac",
+    "en": "3nStar on the iMac"
+  },
+  "Bobina 80 mm · Ethernet · início automático após login no macOS.": {
+    "pt": "Bobina 80 mm · Ethernet · início automático após login no macOS.",
+    "es": "Rollo de 80 mm · Ethernet · inicio automático al iniciar sesión en macOS.",
+    "en": "80 mm roll · Ethernet · starts automatically after macOS login."
+  },
+  "A impressora atual continua atendendo até você conferir o teste e ativar a 3nStar.": {
+    "pt": "A impressora atual continua atendendo até você conferir o teste e ativar a 3nStar.",
+    "es": "La impresora actual sigue funcionando hasta verificar la prueba y activar la 3nStar.",
+    "en": "The current printer stays active until you check the test and activate the 3nStar."
+  },
+  "Preparar 3nStar no Mac": {
+    "pt": "Preparar 3nStar no Mac",
+    "es": "Preparar 3nStar en el Mac",
+    "en": "Prepare 3nStar on Mac"
+  },
+  "3nStar ativa para as próximas vendas": {
+    "pt": "3nStar ativa para as próximas vendas",
+    "es": "3nStar activa para las próximas ventas",
+    "en": "3nStar active for upcoming sales"
+  },
+  "3nStar em preparação": {
+    "pt": "3nStar em preparação",
+    "es": "3nStar en preparación",
+    "en": "3nStar being prepared"
+  },
+  "Credencial exclusiva do Mac": {
+    "pt": "Credencial exclusiva do Mac",
+    "es": "Credencial exclusiva del Mac",
+    "en": "Mac-only credential"
+  },
+  "Cole no Instalar.command do iMac. Não use a credencial da Zebra ou da Samsung.": {
+    "pt": "Cole no Instalar.command do iMac. Não use a credencial da Zebra ou da Samsung.",
+    "es": "Péguela en Instalar.command del iMac. No use la credencial de Zebra o Samsung.",
+    "en": "Paste into Instalar.command on the iMac. Do not use the Zebra or Samsung credential."
+  },
+  "Baixar agente macOS": {
+    "pt": "Baixar agente macOS",
+    "es": "Descargar agente macOS",
+    "en": "Download macOS agent"
+  },
+  "Extraia o ZIP e abra Instalar.command no iMac. Depois pode fechar o Terminal.": {
+    "pt": "Extraia o ZIP e abra Instalar.command no iMac. Depois pode fechar o Terminal.",
+    "es": "Extraiga el ZIP y abra Instalar.command en el iMac. Después puede cerrar Terminal.",
+    "en": "Extract the ZIP and open Instalar.command on the iMac. You can then close Terminal."
+  },
+  "A credencial antiga do Mac deixará de funcionar. Atualize o instalador do iMac.": {
+    "pt": "A credencial antiga do Mac deixará de funcionar. Atualize o instalador do iMac.",
+    "es": "La credencial anterior del Mac dejará de funcionar. Actualice el instalador del iMac.",
+    "en": "The old Mac credential will stop working. Update the iMac installer."
+  },
+  "O teste imprime um comprovante de conferência, sem criar venda. Confira o papel antes de pedir outro teste.": {
+    "pt": "O teste imprime um comprovante de conferência, sem criar venda. Confira o papel antes de pedir outro teste.",
+    "es": "La prueba imprime un comprobante de verificación, sin crear una venta. Revise el papel antes de pedir otra prueba.",
+    "en": "The test prints a verification receipt without creating a sale. Check the paper before requesting another test."
+  },
+  "Imprimir teste na 3nStar": {
+    "pt": "Imprimir teste na 3nStar",
+    "es": "Imprimir prueba en la 3nStar",
+    "en": "Print test on 3nStar"
+  },
+  "Teste:": {
+    "pt": "Teste:",
+    "es": "Prueba:",
+    "en": "Test:"
+  },
+  "Conferi o papel: conteúdo completo, legível e corte correto.": {
+    "pt": "Conferi o papel: conteúdo completo, legível e corte correto.",
+    "es": "Verifiqué el papel: contenido completo, legible y corte correcto.",
+    "en": "I checked the paper: complete, legible content and correct cut."
+  },
+  "Ativar 3nStar para as próximas vendas": {
+    "pt": "Ativar 3nStar para as próximas vendas",
+    "es": "Activar 3nStar para las próximas ventas",
+    "en": "Activate 3nStar for upcoming sales"
+  },
+  "Retornar à impressora Windows": {
+    "pt": "Retornar à impressora Windows",
+    "es": "Volver a la impresora Windows",
+    "en": "Return to Windows printer"
+  },
+  "Conclua os tickets pendentes e mantenha o agente Windows aberto antes de trocar.": {
+    "pt": "Conclua os tickets pendentes e mantenha o agente Windows aberto antes de trocar.",
+    "es": "Complete los tickets pendientes y mantenga el agente Windows abierto antes del cambio.",
+    "en": "Finish pending tickets and keep the Windows agent running before switching."
+  },
+  "Confirmar retorno ao Windows": {
+    "pt": "Confirmar retorno ao Windows",
+    "es": "Confirmar regreso a Windows",
+    "en": "Confirm return to Windows"
+  },
+  "Enviado à impressora": {
+    "pt": "Enviado à impressora",
+    "es": "Enviado a la impresora",
+    "en": "Sent to printer"
+  },
+  "Falhou": {
+    "pt": "Falhou",
+    "es": "Falló",
+    "en": "Failed"
+  },
+  "Aguardando": {
+    "pt": "Aguardando",
+    "es": "Esperando",
+    "en": "Waiting"
+  },
+  "Configuração do agente Windows existente. A migração para o Mac fica na seção acima.": {
+    "pt": "Configuração do agente Windows existente. A migração para o Mac fica na seção acima.",
+    "es": "Configuración del agente Windows existente. La migración al Mac está en la sección anterior.",
+    "en": "Existing Windows agent settings. Mac migration is in the section above."
+  },
+  "Desativar impressão automática de novas vendas": {
+    "pt": "Desativar impressão automática de novas vendas",
+    "es": "Desactivar impresión automática de nuevas ventas",
+    "en": "Disable automatic printing for new sales"
+  },
+  "Os trabalhos já confirmados continuam na fila.": {
+    "pt": "Os trabalhos já confirmados continuam na fila.",
+    "es": "Los trabajos ya confirmados permanecen en cola.",
+    "en": "Previously confirmed jobs remain queued."
+  }
 }

@@ -138,7 +138,7 @@ def cleanup_documents(db):
 def query_prints(db,message,identity,args):
     from .print_diagnostics import diagnostic_message
     if not may_schedule(db,message,identity):return {'erro':'Histórico de impressões exige gestor habilitado.'}
-    q=db.query(PrintJob).filter(PrintJob.source.notin_(('bot_pdf_ephemeral', 'pdv_receipt')))
+    q=db.query(PrintJob).filter(PrintJob.source.notin_(('bot_pdf_ephemeral', 'pdv_receipt', 'printer_test')))
     if args.termo:q=q.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(args.termo),escape='\\'))
     total=q.count();rows=q.order_by(PrintJob.created_at.desc()).offset((args.pagina-1)*args.limite).limit(args.limite).all()
     return {'impressoras':[{'nome':d.name,'ultimo_contato':d.last_seen_at.isoformat() if d.last_seen_at else None} for d in db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True)],

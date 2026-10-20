@@ -7,6 +7,8 @@
           <p>{{ uiText('Tickets do PDV em uma fila própria. A impressora de endereços A4 continua separada.') }}</p>
           <p v-if="loading" role="status">{{ uiText('Carregando…') }}</p>
           <template v-else>
+            <MacTicketSetup ref="macSetup" @activated="reloadPrinter" />
+            <template v-if="device?.driver !== 'escpos_tcp'">
             <label>{{ uiText('Nome') }}<input v-model.trim="form.name" required maxlength="100" /></label>
             <label>{{ uiText('Tipo de papel') }}<ErpSelect :label="(uiText('Tipo de papel'))" v-model="paperMode"><option value="continuous">{{ uiText('Bobina contínua') }}</option><option value="labels">{{ uiText('Etiquetas com altura fixa') }}</option></ErpSelect></label>
             <div class="printer-size">
@@ -31,17 +33,19 @@
               <p>{{ uiText('A credencial anterior deixará de funcionar. Será necessário informar a nova no instalador Windows.') }}</p>
               <button type="button" class="erp-button erp-button--secondary" :disabled="busy" @click="rotate">{{ uiText('Confirmar nova credencial') }}</button>
             </div>
-            <p>{{ uiText('Instale sem substituir o Eleven Impressao. Abra Eleven Tickets e mantenha o computador ligado. O agente para macOS será preparado na migração.') }}</p>
+            <p>{{ uiText('Configuração do agente Windows existente. A migração para o Mac fica na seção acima.') }}</p>
+            </template>
           </template>
           <p v-if="error" role="alert">{{ error }}</p><p v-if="saved" role="status">{{ uiText('Configuração salva.') }}</p>
         </div>
-        <footer class="erp-dialog__footer"><button type="button" class="erp-button erp-button--secondary" @click="close">{{ uiText('Fechar') }}</button><button class="erp-button erp-button--primary" :disabled="busy || loading">{{ uiText('Salvar') }}</button></footer>
+        <footer class="erp-dialog__footer"><button type="button" class="erp-button erp-button--secondary" @click="close">{{ uiText('Fechar') }}</button><button v-if="device?.driver !== 'escpos_tcp'" class="erp-button erp-button--primary" :disabled="busy || loading">{{ uiText('Salvar') }}</button></footer>
       </form>
     </div>
   </Teleport>
 </template>
 <script setup lang="ts">
 import ErpSelect from '@/components/ui/ErpSelect.vue'
+import MacTicketSetup from './MacTicketSetup.vue'
 import { onMounted, ref, reactive } from 'vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText } from '@/i18n/uiText'
@@ -52,9 +56,11 @@ const device = ref<ReceiptPrinter | null>(null), token = ref(''), loading = ref(
 const form = reactive({ name:'Zebra ZD220', paper_width_mm:80, paper_height_mm:0, auto_receipts:false })
 const paperMode = ref('continuous'), fixedHeight = ref(80)
 const rotateConfirm=ref(false)
-onMounted(async () => { try { device.value = (await pdvReceipts.printer()).device; if(device.value) { Object.assign(form, device.value); paperMode.value=form.paper_height_mm===0?'continuous':'labels'; fixedHeight.value=form.paper_height_mm || 80 } } catch(e) { error.value=saleError(e) } finally { loading.value=false } })
+const macSetup=ref<InstanceType<typeof MacTicketSetup>|null>(null)
+async function reloadPrinter() { try { device.value = (await pdvReceipts.printer()).device; if(device.value) { Object.assign(form, device.value); paperMode.value=form.paper_height_mm===0?'continuous':'labels'; fixedHeight.value=form.paper_height_mm || 80 } } catch(e) { error.value=saleError(e) } finally { loading.value=false } }
+onMounted(reloadPrinter)
 async function save() {
-  if(busy.value) return
+  if(busy.value || device.value?.driver === 'escpos_tcp') return
   busy.value=true; error.value=''; saved.value=false
   try { const result=await pdvReceipts.configure({name:form.name, paper_width_mm:form.paper_width_mm, paper_height_mm:paperMode.value==='continuous'?0:fixedHeight.value, auto_receipts:form.auto_receipts}); device.value=result.device; if(result.token) token.value=result.token; saved.value=true }
   catch(e) { error.value=saleError(e) } finally { busy.value=false }
@@ -66,7 +72,7 @@ async function download() {
   try { const blob=await pdvReceipts.package(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='Eleven-Tickets-Windows.zip'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),10000) }
   catch(e) { error.value=saleError(e) } finally { busy.value=false }
 }
-function close() { if(busy.value) return; if(token.value && !savedToken.value) { error.value=uiText('Guarde a credencial e marque a confirmação antes de fechar.'); return } emit('close') }
+function close() { if(busy.value || macSetup.value?.canClose() === false) return; if(token.value && !savedToken.value) { error.value=uiText('Guarde a credencial e marque a confirmação antes de fechar.'); return } emit('close') }
 </script>
 <style scoped>
 .printer-backdrop{position:fixed;inset:0;z-index:2100;display:flex;align-items:center;justify-content:center}

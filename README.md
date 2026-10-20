@@ -63,10 +63,12 @@ que escrevem ou imprimem passam pelas permissões e confirmações do fluxo. O
 computador da loja busca trabalhos por HTTPS; o laptop de desenvolvimento não é
 servidor de impressão.
 
-O PDV também possui uma fila exclusiva de tickets para **Zebra ZD220 USB no Windows**,
-ativada por Lucas em **PDV → Tickets**. Vendas pelo celular usam a mesma fila;
-Samsung/A4 e bot permanecem separados. O agente para macOS ainda não está implementado.
-Veja [instalação e limites dos tickets](docs/IMPRESSAO_WINDOWS.md).
+O PDV possui uma fila exclusiva de tickets, configurada por Lucas em **PDV → Tickets**.
+Há agente Windows/Zebra e agente macOS/ESC-POS para **3nStar RPT006W via Ethernet**,
+com início após login, bobina de 80 mm e reconexão. A preparação do Mac não desativa
+a Zebra: a troca exige teste conferido e fila anterior concluída. Vendas pelo celular
+usam a mesma fila; Samsung/A4 e bot permanecem separados.
+Veja [macOS/3nStar](docs/IMPRESSAO_MACOS.md) e [Windows/Zebra](docs/IMPRESSAO_WINDOWS.md).
 
 O histórico de Clientes reúne também compras do PDV vinculadas explicitamente,
 com itens, devoluções, atalho aos detalhes da venda e valores separados do BI.
@@ -108,6 +110,7 @@ frontend/
   .nvmrc               Node 22 para desenvolvimento
   Dockerfile           Alternativa local; produção usa site estático Render
 tools/eleven-print-agent/  Instalador e agente PowerShell para Windows
+tools/eleven-ticket-agent-macos/  Agente nativo e instalador de tickets macOS/ESC-POS
 docs/                  Guias atuais e histórico separado em archive/
 .github/workflows/     Build, tipagem e testes em integração contínua
 render.yaml            Referência da infraestrutura Render

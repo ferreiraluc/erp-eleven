@@ -85,3 +85,20 @@ jobs:
           ./tools/eleven-print-agent/tests/Recuperacao.Tests.ps1
           ./tools/eleven-print-agent/tests/Inicializacao.Tests.ps1
           ./tools/eleven-print-agent/tests/TicketContinuo.Tests.ps1
+  macos-agent:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test journal recovery and raster conversion without printing
+        run: bash tools/eleven-ticket-agent-macos/test.sh
+      - name: Build universal macOS agent
+        run: |
+          bash tools/eleven-ticket-agent-macos/build.sh "$RUNNER_TEMP/Eleven-Tickets-macOS"
+          cd "$RUNNER_TEMP"
+          zip -r Eleven-Tickets-macOS-2026.10.20.1.zip Eleven-Tickets-macOS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Eleven-Tickets-macOS
+          path: ${{ runner.temp }}/Eleven-Tickets-macOS-2026.10.20.1.zip
+          retention-days: 30

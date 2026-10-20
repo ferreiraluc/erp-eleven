@@ -89,9 +89,10 @@ Credencial perdida pode ser substituída explicitamente em PDV → Tickets; a an
 para de funcionar e o instalador deve receber a nova. Não faça isso com trabalho
 em processamento. ID e histórico do dispositivo são preservados.
 
-**macOS ainda não está implementado no agente Eleven.** Na mudança do caixa, será
-necessário preparar uma ponte compatível com CUPS e validar a fila real. O fluxo
-celular → ERP → computador → Zebra será o mesmo; este ZIP é exclusivo do Windows.
+Para migrar os tickets à **3nStar RPT006W no iMac**, use o agente macOS nativo
+descrito em [Impressão macOS](IMPRESSAO_MACOS.md). A preparação conserva a Zebra;
+só a ativação após teste físico e fila concluída troca o destino automático.
+Este ZIP continua exclusivo do Windows; etiquetas e A4 não são migrados.
 
 Referências: [Zebra ZD220](https://www.zebra.com/us/en/products/spec-sheets/printers/desktop/zd220.html),
 [CUPS no macOS](https://support.zebra.com/article/000012134).
