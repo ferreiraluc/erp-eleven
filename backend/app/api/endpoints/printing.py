@@ -46,7 +46,7 @@ class DeviceInput(BaseModel):
 
 
 class ConnectInput(DeviceInput):
-    profile: Literal['documents', 'tickets'] = 'documents'
+    profile: Literal['documents', 'tickets', 'product_labels'] = 'documents'
     driver: Literal['windows', 'escpos_tcp'] = 'windows'
 
 
@@ -131,6 +131,8 @@ def configure_receipt_device(body: ReceiptDeviceInput, response: Response, user=
     # One ticket station in this first version. Serialize configuration on the owner.
     from ...models.usuario import Usuario
     db.query(Usuario).filter_by(id=user.id).with_for_update().first()
+    if db.query(PrintDevice.id).filter_by(purpose='product_labels', active=True).first():
+        raise HTTPException(409, 'A Zebra foi reservada para etiquetas de produtos. Configure os tickets na 3nStar.')
     device = db.query(PrintDevice).filter_by(purpose='tickets', active=True, driver='windows').order_by(PrintDevice.created_at).with_for_update().first()
     if body.auto_receipts and db.query(PrintDevice.id).filter_by(purpose='tickets', active=True, driver='escpos_tcp', auto_receipts=True).first():
         raise HTTPException(409, 'Use a troca de destino de tickets para voltar ao Windows.')
@@ -168,20 +170,20 @@ def rotate_receipt_credential(response: Response, confirm: bool = False, device_
 
 
 @router.get('/agent-package')
-def agent_package(profile: Literal['documents', 'tickets'] = 'documents', user=Depends(administrator)):
+def agent_package(profile: Literal['documents', 'tickets', 'product_labels'] = 'documents', user=Depends(administrator)):
     root = Path(__file__).resolve().parents[4] / 'tools' / 'eleven-print-agent'
-    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'LEIA-ME.txt')
+    files = ('Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'AgenteEtiquetas.ps1', 'Etiquetas.ps1', 'LEIA-ME.txt')
     if not all((root / name).is_file() for name in files):
         raise HTTPException(503, 'Pacote do agente indisponível nesta instalação')
     data = io.BytesIO()
     with ZipFile(data, 'w', compression=ZIP_DEFLATED) as archive:
         for name in files:
-            if name == 'Instalar.cmd' and profile == 'tickets':
-                contents = (root / name).read_text().replace('"%~dp0Instalar.ps1"', '"%~dp0Instalar.ps1" -Profile tickets')
+            if name == 'Instalar.cmd' and profile in ('tickets', 'product_labels'):
+                contents = (root / name).read_text().replace('"%~dp0Instalar.ps1"', f'"%~dp0Instalar.ps1" -Profile {profile}')
                 archive.writestr('Eleven-Impressao/' + name, contents.replace('\n', '\r\n'))
-            elif name == 'Instalar.ps1' and profile == 'tickets':
+            elif name == 'Instalar.ps1' and profile in ('tickets', 'product_labels'):
                 # Preserve the profile even when opened via "Run with PowerShell".
-                contents = (root / name).read_text().replace("$AgentProfile = 'documents'", "$AgentProfile = 'tickets'", 1)
+                contents = (root / name).read_text().replace("$AgentProfile = 'documents'", f"$AgentProfile = '{profile}'", 1)
                 archive.writestr('Eleven-Impressao/' + name, contents.replace('\n', '\r\n'))
             else:
                 archive.write(root / name, 'Eleven-Impressao/' + name)
@@ -200,8 +202,8 @@ def connect(body: ConnectInput, device=Depends(printer), db: Session = Depends(g
     device.last_seen_at = utcnow()
     db.commit()
     data = {'id': str(device.id), 'name': device.name}
-    if device.purpose == 'tickets':
-        data.update(profile='tickets', paper_width_mm=device.paper_width_mm,
+    if device.purpose in ('tickets', 'product_labels'):
+        data.update(profile=device.purpose, paper_width_mm=device.paper_width_mm,
                     paper_height_mm=device.paper_height_mm, driver=device.driver)
     return data
 
@@ -269,7 +271,7 @@ def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
 
 @router.post("/agent/claim")
 def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tickets: bool = False,
-          driver: Literal['windows', 'escpos_tcp'] = 'windows', claim_key: UUID | None = None):
+          driver: Literal['windows', 'escpos_tcp'] = 'windows', claim_key: UUID | None = None, product_labels: bool = False):
     from ...services.assistant_documents import cleanup_documents
     authenticated_hash = device.token_hash
     device = db.query(PrintDevice).filter_by(id=device.id, active=True).populate_existing().with_for_update().first()
@@ -279,14 +281,18 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
         raise HTTPException(409, 'Agente de outro protocolo. Preserve a credencial exclusiva de cada impressora.')
     if driver == 'escpos_tcp' and (device.purpose != 'tickets' or not claim_key or not continuous_tickets):
         raise HTTPException(422, 'O agente macOS requer tickets contínuos e chave persistente de coleta.')
+    label_device = device.purpose == 'product_labels'
+    durable_claim = driver == 'escpos_tcp' or label_device
+    if label_device and (not product_labels or not claim_key):
+        raise HTTPException(409, 'Use o agente Eleven Etiquetas atualizado. Os trabalhos continuam na fila.')
     cleanup_documents(db)
     # Claim is permanent. Lost responses never cause a job to be dispatched again.
     device.last_seen_at = utcnow()
-    if driver == 'windows':
+    if driver == 'windows' and not label_device:
         db.query(PrintJob).filter(PrintJob.device_id == device.id, PrintJob.status == "pending",
                                  PrintJob.expires_at <= utcnow()).update({"status": "expired", "pdf": b""})
     job = None
-    if driver == 'escpos_tcp':
+    if durable_claim:
         # Persisted before the HTTP request on the Mac. A lost response can be
         # recovered without claiming a second job or resetting dispatch state.
         job = db.query(PrintJob).filter_by(claim_key=claim_key).first()
@@ -299,6 +305,8 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
     if not job:
         db.commit()
         return Response(status_code=204)
+    if label_device != (job.source == 'product_labels'):
+        raise HTTPException(409, 'Trabalho de outra finalidade. Confira a fila antes de trocar o papel.')
     continuous = job.source in ('pdv_receipt', 'printer_test') and job.snapshot.get('height') == 0
     if driver == 'escpos_tcp' and (not continuous or job.snapshot.get('width') != 80):
         raise HTTPException(409, 'A 3nStar recebe somente tickets contínuos de 80 mm.')
@@ -306,7 +314,11 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
         raise HTTPException(409, 'Atualize o Eleven Tickets no Windows para imprimir em bobina contínua. O trabalho continua na fila.')
     from ...services.pdv_receipts import prepare_document
     try:
-        prepare_document(job)
+        if label_device:
+            from ...services.product_labels import render_zpl
+            job.sha256 = hashlib.sha256(render_zpl(job.snapshot)).hexdigest()
+        else:
+            prepare_document(job)
     except Exception:
         # A malformed historical snapshot must not block the device's entire queue.
         job.status, job.finished_at = 'failed', utcnow()
@@ -314,9 +326,11 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
         db.commit()
         return Response(status_code=204)
     job.status, job.claimed_at = "claimed", job.claimed_at or utcnow()
-    if driver == 'escpos_tcp':
+    if durable_claim:
         job.claim_key = claim_key
     result = {"id": str(job.id), "sha256": job.sha256}
+    if label_device:
+        result.update(profile="product_labels", paper_width_mm=60, paper_height_mm=30, copies=job.snapshot["copies"], format="zpl")
     if job.source in ('pdv_receipt', 'printer_test'):
         result.update(profile='tickets', paper_width_mm=job.snapshot['width'], paper_height_mm=job.snapshot['height'])
         if continuous:
@@ -332,12 +346,25 @@ def document(job_id: UUID, device=Depends(printer), db: Session = Depends(get_db
     job = db.query(PrintJob).filter_by(id=job_id, device_id=device.id, status="claimed").first()
     if not job:
         raise HTTPException(404, "Trabalho indisponível")
+    if job.source == 'product_labels':
+        raise HTTPException(409, 'Etiqueta interna utiliza o documento ZPL, não PDF.')
     if job.source=='bot_pdf_ephemeral':
         from ...services.assistant_documents import ephemeral_pdf
         try:data=ephemeral_pdf(job)
         except ValueError as exc:raise HTTPException(410,str(exc)) from None
     else:data=job.pdf
     return Response(data, media_type="application/pdf", headers={"Cache-Control": "no-store"})
+
+
+@router.get('/agent/jobs/{job_id}/zpl')
+def label_document(job_id: UUID, device=Depends(printer), db: Session = Depends(get_db)):
+    from ...services.product_labels import render_zpl
+    if device.purpose != 'product_labels':
+        raise HTTPException(404, 'Trabalho indisponível')
+    job = db.query(PrintJob).filter_by(id=job_id, device_id=device.id, source='product_labels', status='claimed').first()
+    if not job:
+        raise HTTPException(404, 'Trabalho indisponível')
+    return Response(render_zpl(job.snapshot), media_type='application/octet-stream', headers={'Cache-Control': 'no-store'})
 
 
 class ResultInput(BaseModel):

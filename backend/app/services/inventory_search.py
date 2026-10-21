@@ -138,6 +138,9 @@ class CatalogSearch:
 
 def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None):
     """Words/sizes must match one item; shared model codes can suggest related items."""
+    if re.fullmatch(r'INV-[A-Z0-9]{6}', value.strip().upper()) and not size:
+        # Internal QR codes are exact identities; never fuzzy-match a different item.
+        return CatalogSearch(Item.inventory_code == value.strip().upper(), literal(-1))
     terms, sizes = parse(value)
     if size:
         sizes.append(size_key(size))

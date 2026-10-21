@@ -2,7 +2,7 @@
 function Get-SuggestedPrinterIndex([string[]]$Printers, [string]$Profile = 'documents') {
     $matchingIndexes = @()
     for ($i = 0; $i -lt $Printers.Count; $i++) {
-        if (($Profile -eq 'tickets' -and $Printers[$i] -match '(?i)ZD220\b') -or ($Profile -ne 'tickets' -and $Printers[$i] -match '(?i)(?:SL[- ]?)?M2035W\b')) { $matchingIndexes += $i }
+        if (($Profile -in @('tickets', 'product_labels') -and $Printers[$i] -match '(?i)ZD220\b') -or ($Profile -eq 'documents' -and $Printers[$i] -match '(?i)(?:SL[- ]?)?M2035W\b')) { $matchingIndexes += $i }
     }
     if ($matchingIndexes.Count -eq 1) { return [int]$matchingIndexes[0] }
     return -1

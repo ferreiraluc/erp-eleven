@@ -104,3 +104,13 @@ Trabalhos iniciados/incertos continuam protegidos e nunca sao reimpressos sozinh
 Para tickets em bobina continua o renderizador e PowerShell/ZPL, nao Sumatra.
 Atualize pelo ZIP do mesmo perfil e pressione Enter para manter a credencial.
 Se a pausa persistir, envie apenas as linhas do diagnostico, nao config.json.
+
+ETIQUETAS INTERNAS DE PRODUTOS — 2026.10.21.1
+Use o pacote do componente Etiquetas de produtos. Instala Eleven Etiquetas
+em %LOCALAPPDATA%\ElevenPrintLabels, com outra credencial e diario.
+Zebra ZD220 USB, 203 dpi, etiquetas 60 mm largura x 30 mm altura, uma por
+fileira e com intervalo. Calibre a midia pelo driver ao trocar a bobina.
+Feche o antigo Eleven Tickets da Zebra. Tickets de vendas ficam na 3nStar.
+Este perfil envia ZPL direto, sem Sumatra, sem abrir portas de rede.
+Nao apague journal/claim.json para resolver erros. Envios incertos exigem
+conferencia do papel e spooler antes de solicitar novas copias no ERP.

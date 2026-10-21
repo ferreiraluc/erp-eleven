@@ -309,8 +309,10 @@ def get_items_by_barcode(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    query = db.query(Item).filter(Item.deleted_at.is_(None),
-        or_(Item.barcode == code, Item.sku_internal == code, Item.inventory_code == code.strip().upper()), Item.is_active == True)
+    normalized = code.strip().upper()
+    identity = Item.inventory_code == normalized if re.fullmatch(r'INV-[A-Z0-9]{6}', normalized) else or_(
+        Item.barcode == code, Item.sku_internal == code, Item.inventory_code == normalized)
+    query = db.query(Item).filter(Item.deleted_at.is_(None), identity, Item.is_active == True)
     items = catalog_query(query, include_images).all()
     result = []
     for item, has_image in items:

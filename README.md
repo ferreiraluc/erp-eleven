@@ -13,6 +13,7 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | --- | --- | --- |
 | Dashboard | Estoque e rastreios; cards lado a lado de endereços e vendas, resumos e atalhos | `/dashboard` |
 | Estoque | Produtos, grades por cor/tamanho, lotes de recebimento por data ou seleção, loja/depósito, movimentações, histórico por produto, contagem, etiquetas, OCR e cadastro por foto com IA | `/inventory` |
+| Etiquetas de produtos | Seleção por produto, grade ou lote; QR interno; fila Zebra USB/Windows 60 × 30 mm | `/inventory/labels` |
 | Clientes e pedidos | Cadastros, endereços, impressões, pedidos e vínculos logísticos | `/clientes`, `/pedidos` |
 | Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
 | Equipe e folgas | Vendedores com resultados do BI, calendário e histórico de folgas | `/vendors`, card de folgas |
@@ -68,6 +69,8 @@ Há agente Windows/Zebra e agente macOS/ESC-POS para **3nStar RPT006W via Ethern
 com início após login, bobina de 80 mm e reconexão. A preparação do Mac não desativa
 a Zebra: a troca exige teste conferido e fila anterior concluída. Vendas pelo celular
 usam a mesma fila; Samsung/A4 e bot permanecem separados.
+A Zebra pode ser reservada para [etiquetas internas de produtos](docs/ETIQUETAS_PRODUTOS.md),
+com perfil Windows próprio, QR e seleção por grades/lotes, após concluir sua fila de tickets.
 Veja [macOS/3nStar](docs/IMPRESSAO_MACOS.md) e [Windows/Zebra](docs/IMPRESSAO_WINDOWS.md).
 
 O histórico de Clientes reúne também compras do PDV vinculadas explicitamente,
