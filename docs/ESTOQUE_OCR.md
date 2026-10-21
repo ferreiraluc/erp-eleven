@@ -1153,3 +1153,12 @@ Se um cadastro mudou durante a conferência, retorna 409 sem salvar o lote.
 Campos omitidos permanecem; `null` explícito limpa apenas os campos opcionais.
 Descrições acrescentadas são enviadas como texto final, evitando repetir o
 acréscimo em uma tentativa idêntica. A edição não carrega originais das imagens.
+
+## Etiquetas internas de produtos (21/10/2026)
+
+O componente **Estoque → Mais ações → Etiquetas de produtos** permite selecionar
+produtos, grades ou lotes, conferir cópias por variação/cor/tamanho e imprimir
+QR + código interno na Zebra USB/Windows, em etiquetas de 60 × 30 mm. Não altera
+estoque e não depende do Sumatra. Tickets ficam na 3nStar; a configuração exclusiva
+da Zebra exige fila anterior concluída e preserva histórico.
+Instalação, limites, reconexão e teste físico: [guia de etiquetas](ETIQUETAS_PRODUTOS.md).

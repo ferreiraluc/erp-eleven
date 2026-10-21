@@ -1,9 +1,9 @@
-param([Alias('Profile')][ValidateSet('documents', 'tickets')][string]$AgentProfile = 'documents')
+param([Alias('Profile')][ValidateSet('documents', 'tickets', 'product_labels')][string]$AgentProfile = 'documents')
 $ErrorActionPreference = 'Stop'
 $lockStream = $null
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Instale somente no Windows da loja.' }
-    foreach ($required in @('Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1')) {
+    foreach ($required in @('Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'AgenteEtiquetas.ps1', 'Etiquetas.ps1')) {
         if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $required) -PathType Leaf)) {
             throw 'Pacote incompleto. Use Extrair tudo no ZIP e abra Instalar.cmd na pasta extraida.'
         }
@@ -11,8 +11,8 @@ try {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
     . (Join-Path $PSScriptRoot 'Configuracao.ps1')
-    $folder = if ($AgentProfile -eq 'tickets') { 'ElevenPrintTickets' } else { 'ElevenPrint' }
-    $shortcutName = if ($AgentProfile -eq 'tickets') { 'Eleven Tickets.lnk' } else { 'Eleven Impressao.lnk' }
+    $folder = if ($AgentProfile -eq 'product_labels') { 'ElevenPrintLabels' } elseif ($AgentProfile -eq 'tickets') { 'ElevenPrintTickets' } else { 'ElevenPrint' }
+    $shortcutName = if ($AgentProfile -eq 'product_labels') { 'Eleven Etiquetas.lnk' } elseif ($AgentProfile -eq 'tickets') { 'Eleven Tickets.lnk' } else { 'Eleven Impressao.lnk' }
     $root = Join-Path $env:LOCALAPPDATA $folder
     New-Item -ItemType Directory -Force -Path $root | Out-Null
     try { $lockStream = [IO.File]::Open((Join-Path $root 'agent.lock'), 'OpenOrCreate', 'ReadWrite', 'None') }
@@ -21,7 +21,8 @@ try {
     $existing = if (Test-Path -LiteralPath $configPath) { Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json } else { $null }
     $printers = @([System.Drawing.Printing.PrinterSettings]::InstalledPrinters)
     if (-not $printers.Count) { throw 'Nenhuma impressora instalada. Instale o driver da impressora e teste um PDF no Windows.' }
-    if ($AgentProfile -eq 'tickets') { Write-Host 'Tickets Zebra ZD220. Selecione a fila USB que imprime no Windows.' }
+    if ($AgentProfile -eq 'product_labels') { Write-Host 'Etiquetas de produtos: Zebra ZD220 USB. Feche o antigo Eleven Tickets da Zebra.' }
+    elseif ($AgentProfile -eq 'tickets') { Write-Host 'Tickets Zebra ZD220. Selecione a fila USB que imprime no Windows.' }
     else { Write-Host 'Atualizacao para Samsung SL-M2035W. Selecione a fila que ja imprime no Windows.' }
     Write-Host 'O nome do driver pode ser diferente do modelo escrito na impressora.'
     if ($existing) { Write-Host "Destino anterior: $($existing.printer)" }
@@ -44,7 +45,7 @@ try {
         "${env:ProgramFiles(x86)}\SumatraPDF\SumatraPDF.exe"
     )
     $sumatra = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
-    if (-not $sumatra) {
+    if (-not $sumatra -and $AgentProfile -ne 'product_labels') {
         $dialog = New-Object System.Windows.Forms.OpenFileDialog
         $dialog.Title = 'Selecione o SumatraPDF.exe instalado'
         $dialog.Filter = 'SumatraPDF|SumatraPDF.exe'
@@ -52,7 +53,8 @@ try {
         $sumatra = $dialog.FileName
     }
 
-    if ($AgentProfile -eq 'tickets') { Write-Host "Destino: $desired | Zebra ZD220 203 dpi | uma copia"; Write-Host 'Bobina continua: selecione Bobina continua e largura 80 mm no PDV > Tickets. A altura sera automatica. Etiquetas separadas: mantenha a altura fixa e o mesmo tamanho no driver.' }
+    if ($AgentProfile -eq 'product_labels') { Write-Host "Destino: $desired | etiquetas 60 x 30 mm, com intervalo, uma por fileira | ZPL sem Sumatra" }
+    elseif ($AgentProfile -eq 'tickets') { Write-Host "Destino: $desired | Zebra ZD220 203 dpi | uma copia"; Write-Host 'Bobina continua: selecione Bobina continua e largura 80 mm no PDV > Tickets. A altura sera automatica. Etiquetas separadas: mantenha a altura fixa e o mesmo tamanho no driver.' }
     else { Write-Host "Destino: $desired | A4 | uma copia | frente unica" }
     Write-Host 'Use somente a credencial exclusiva do agente, nunca a senha do ERP.'
     if ($existing -and $existing.token) { Write-Host 'Pressione Enter para MANTER a credencial atual, sem precisar digita-la novamente.' }
@@ -66,7 +68,7 @@ try {
         token = Get-AgentToken $existing $secret
     }
     # Preserve the device identity and journal; upgrading must not replay jobs.
-    foreach ($file in @('Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1')) {
+    foreach ($file in @('Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'AgenteEtiquetas.ps1', 'Etiquetas.ps1')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $root -Force
     }
     Save-AgentConfig $configPath $config
@@ -74,7 +76,8 @@ try {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) $shortcutName))
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-    $shortcut.Arguments = '-NoLogo -NoProfile -NoExit -ExecutionPolicy Bypass -File "' + (Join-Path $root 'Agente.ps1') + '"'
+    $entryPoint = if ($AgentProfile -eq 'product_labels') { 'AgenteEtiquetas.ps1' } else { 'Agente.ps1' }
+    $shortcut.Arguments = '-NoLogo -NoProfile -NoExit -ExecutionPolicy Bypass -File "' + (Join-Path $root $entryPoint) + '"'
     $shortcut.WorkingDirectory = $root
     $shortcut.Save()
     Write-Host "Atualizado. Abra $shortcutName na Area de Trabalho para conectar."

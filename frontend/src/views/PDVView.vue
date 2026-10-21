@@ -632,6 +632,7 @@ async function onBarcodeDetected(code: string) {
     searchError.value = false
     if (results.length === 1) addToCart(results[0])
     else if (results.length > 1) { searchQuery.value = code; searchResults.value = results }
+    else if (/^INV-[A-Z0-9]{6}$/i.test(code.trim())) showToast(cartText('internalCodeMissing'), 'error')
     else openAvulso(code)
   } catch { if (disposed || request !== searchGeneration) return; searchQuery.value = code; searchResults.value = []; searchError.value = true; showToast(cartText('searchFailed'), 'error') }
   finally { if (!disposed && request === searchGeneration) { loadingSearch.value = false; barcodePending.value = false } }

@@ -489,6 +489,7 @@
           <span class="sel-stock-summary">{{ tr('{grades} grades · {pieces} peças na seleção', { grades: selectedStockSummary.grades ?? tr('Não informado'), pieces: selectedStockSummary.pieces ?? tr('Não informado') }) }}</span>
         </div>
         <div class="sel-actions">
+          <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
           <button @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">

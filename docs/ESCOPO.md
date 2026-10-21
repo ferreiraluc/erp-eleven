@@ -163,3 +163,12 @@ A aplicação tem verificação real de saúde, limites de banco, limitação co
 de login e proteção de publicações por CI. O procedimento de backup cifrado e
 restauração isolada está em [Operação](OPERACAO.md). Isso não elimina os pontos únicos
 de falha do plano atual e da impressora Windows, nem substitui MFA e custódia de segredos.
+
+## Etiquetas internas de produtos (21/10/2026)
+
+O componente **Estoque → Mais ações → Etiquetas de produtos** permite selecionar
+produtos, grades ou lotes, conferir cópias por variação/cor/tamanho e imprimir
+QR + código interno na Zebra USB/Windows, em etiquetas de 60 × 30 mm. Não altera
+estoque e não depende do Sumatra. Tickets ficam na 3nStar; a configuração exclusiva
+da Zebra exige fila anterior concluída e preserva histórico.
+Instalação, limites, reconexão e teste físico: [guia de etiquetas](ETIQUETAS_PRODUTOS.md).

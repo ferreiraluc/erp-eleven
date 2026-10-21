@@ -14,7 +14,7 @@
         <div v-if="!cameraError" class="camera-container">
           <div id="qr-reader" class="qr-reader"></div>
           <div class="scan-line"></div>
-          <p class="scanner-hint">{{ tr('Aponte a câmera para o código de barras') }}</p>
+          <p class="scanner-hint">{{ tr('Aponte a câmera para o QR Code ou código de barras') }}</p>
         </div>
 
         <div v-if="cameraError" class="camera-error">
@@ -65,17 +65,23 @@ const manualCode = ref('')
 const timeoutWarning = ref(false)
 const manualInputRef = ref<HTMLInputElement>()
 let html5QrCode: any = null
+let detected = false
+let disposed = false
 let timeoutId: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   try {
     const { Html5Qrcode } = await import('html5-qrcode')
-    html5QrCode = new Html5Qrcode('qr-reader')
+    if (disposed) return
+    const scanner = new Html5Qrcode('qr-reader')
+    html5QrCode = scanner
 
-    await html5QrCode.start(
+    await scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 150 } },
+      { fps: 10, qrbox: (width: number, height: number) => { const side = Math.min(250, Math.floor(Math.min(width, height) * 0.8)); return { width: side, height: side } } },
       (decodedText: string) => {
+        if (detected || disposed) return
+        detected = true
         if (navigator.vibrate) navigator.vibrate(200)
         stopScanner()
         emit('barcode-detected', decodedText)
@@ -83,32 +89,43 @@ onMounted(async () => {
       () => {}
     )
 
+    if (disposed || detected) {
+      // A close may happen while camera permission/start is still pending.
+      // Keep the local instance so that stream is stopped after start resolves.
+      try { await scanner.stop() } catch { /* already stopped */ }
+      if (html5QrCode === scanner) html5QrCode = null
+      return
+    }
     // 30s timeout
     timeoutId = setTimeout(() => {
       timeoutWarning.value = true
       manualInputRef.value?.focus()
     }, 30000)
   } catch {
+    if (disposed) return
     cameraError.value = true
     manualInputRef.value?.focus()
   }
 })
 
 onUnmounted(() => {
+  disposed = true
   stopScanner()
 })
 
 function stopScanner() {
   if (timeoutId) clearTimeout(timeoutId)
   if (html5QrCode) {
-    html5QrCode.stop().catch(() => {})
+    try { html5QrCode.stop().catch(() => {}) } catch { /* start still pending */ }
     html5QrCode = null
   }
 }
 
 function submitManual() {
   const code = manualCode.value.trim()
-  if (!code) return
+  if (!code || detected) return
+  detected = true
+  stopScanner()
   emit('barcode-detected', code)
 }
 </script>

@@ -334,3 +334,12 @@ a busca e as restrições de acesso estão descritas em [Vendas PDV](VENDAS_PDV.
 A etiqueta de 60 × 80 mm pode receber várias páginas; mantenha o formato igual no
 ERP e no driver. O leitor foi validado por software a 203 dpi; legibilidade física
 depende de mídia, escala e calibração da Zebra.
+
+## Etiquetas internas de produtos (21/10/2026)
+
+O componente **Estoque → Mais ações → Etiquetas de produtos** permite selecionar
+produtos, grades ou lotes, conferir cópias por variação/cor/tamanho e imprimir
+QR + código interno na Zebra USB/Windows, em etiquetas de 60 × 30 mm. Não altera
+estoque e não depende do Sumatra. Tickets ficam na 3nStar; a configuração exclusiva
+da Zebra exige fila anterior concluída e preserva histórico.
+Instalação, limites, reconexão e teste físico: [guia de etiquetas](ETIQUETAS_PRODUTOS.md).

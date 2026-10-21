@@ -243,7 +243,7 @@ def test_agent_package_has_only_distributable_files(print_env):
     assert response.headers['cache-control'] == 'no-store'
     with ZipFile(io.BytesIO(response.content)) as archive:
         assert set(archive.namelist()) == {'Eleven-Impressao/' + name for name in (
-            'Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'LEIA-ME.txt')}
+            'Instalar.cmd', 'Instalar.ps1', 'Configuracao.ps1', 'Agente.ps1', 'Impressao.ps1', 'TicketContinuo.ps1', 'AgenteEtiquetas.ps1', 'Etiquetas.ps1', 'LEIA-ME.txt')}
         assert b'Samsung SL-M2035W' in archive.read('Eleven-Impressao/Instalar.ps1')
         assert b"$AgentProfile = 'documents'" in archive.read('Eleven-Impressao/Instalar.ps1')
     app = FastAPI()

@@ -30,3 +30,5 @@ executável é o OpenAPI gerado por `backend/app/main.py` em `/docs` e `/openapi
 As famílias de rotas e seus donos estão no mapa de arquitetura.
 
 - [Gestor de Vendas do PDV](VENDAS_PDV.md): consulta, correção, devoluções e estorno exclusivo do Lucas.
+
+- [Etiquetas internas de produtos](ETIQUETAS_PRODUTOS.md): seleção por item/grade/lote, QR e Zebra 60 × 30 mm.

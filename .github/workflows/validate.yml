@@ -85,6 +85,7 @@ jobs:
           ./tools/eleven-print-agent/tests/Recuperacao.Tests.ps1
           ./tools/eleven-print-agent/tests/Inicializacao.Tests.ps1
           ./tools/eleven-print-agent/tests/TicketContinuo.Tests.ps1
+          ./tools/eleven-print-agent/tests/Etiquetas.Tests.ps1
   macos-agent:
     runs-on: macos-latest
     timeout-minutes: 10

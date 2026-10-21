@@ -1,7 +1,7 @@
 # Core functions only: safe to load in tests without a printer or network.
 if ($MyInvocation.InvocationName -ne '.') {
     Write-Host 'Este e um arquivo auxiliar; ele nao inicia o agente.'
-    Write-Host 'Abra Eleven Tickets (Zebra) ou Eleven Impressao (A4) na Area de Trabalho.'
+    Write-Host 'Abra Eleven Etiquetas, Eleven Tickets ou Eleven Impressao (A4) na Area de Trabalho.'
     Write-Host 'Se ainda nao instalou, extraia todo o ZIP e abra Instalar.cmd.'
     Read-Host 'Pressione Enter para fechar'
     return
@@ -59,10 +59,10 @@ function Get-AgentPauseDiagnostic($failure, [string]$stage, $record) {
         $exception = $exception.InnerException
     }
     $code = 'agent_error'; $hint = 'Envie este diagnostico ao suporte. Nao apague journal nem solicite outra copia sem conferir o papel.'
-    if ($rendererActive) { $code = 'renderer_active'; $hint = 'Um renderizador deste trabalho ainda esta ativo (Sumatra ou ticket continuo). Confira o processo e a fila do Windows antes de outra copia.' }
+    if ($rendererActive) { $code = 'renderer_active'; $hint = 'Um processo de impressao deste trabalho ainda esta ativo. Confira o processo e a fila do Windows antes de outra copia.' }
     elseif ($stage -eq 'renderer_check') { $code = 'renderer_check_failed'; $hint = 'O Windows nao permitiu verificar um renderizador anterior. Confira a fila; nao apague o diario para destravar.' }
-    elseif ($status -in @(401, 403)) { $code = 'credential_rejected'; $hint = 'O ERP recusou a credencial. Confira o perfil A4/Tickets e a credencial no instalador; nao apague o diario.' }
-    elseif ($status -eq 409 -and $stage -eq 'connect') { $code = 'profile_conflict'; $hint = 'A credencial nao corresponde ao perfil A4/Tickets. Use o instalador do mesmo perfil.' }
+    elseif ($status -in @(401, 403)) { $code = 'credential_rejected'; $hint = 'O ERP recusou a credencial. Confira o perfil A4/Tickets/Etiquetas e a credencial no instalador; nao apague o diario.' }
+    elseif ($status -eq 409 -and $stage -eq 'connect') { $code = 'profile_conflict'; $hint = 'A credencial nao corresponde ao perfil A4/Tickets/Etiquetas. Use o instalador do mesmo perfil.' }
     elseif ($status -eq 409) { $code = 'job_conflict'; $hint = 'O ERP recusou a operacao por conflito. Confira o trabalho no ERP e envie este diagnostico; nao reimprima nem apague o diario.' }
     elseif ($status -eq 429 -or $status -ge 500) { $code = 'erp_unavailable'; $hint = 'O ERP esta temporariamente indisponivel ou limitou as consultas. O agente tentara novamente, sem repetir impressao.' }
     elseif ($status -gt 0) { $code = 'erp_request_rejected'; $hint = 'O ERP recusou esta etapa. Envie o codigo HTTP e o trabalho ao suporte; preserve a configuracao e o diario.' }

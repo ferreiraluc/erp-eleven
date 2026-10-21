@@ -38,6 +38,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Acesso/auditoria | `AccountView`, `UserManagementView`, `AuditView`, `services/activity` | `auth`, `access` | `access_policy`, `user_sessions`, `user_audit`, `models/access`, CLI `user_access_setup` |
 | Dashboard | `DashboardView`, `components/dashboard/*` | Resumos dos módulos | API de cada card; BI usa snapshots |
 | Estoque | `views/inventory/`, `components/inventory/`, `stores/inventory` | `inventory`, `ocr`, `product-photo` | `product_photo`, `inventory_service`, `inventory_history`, `inventory_deletion`, `inventory_diagnostics`, `ocr_service`, `models/inventory`, `label_template` |
+| Etiquetas internas | `ProductLabelsView`, `services/productLabels` | `inventory-labels`, agente `printing` | `product_labels`, `PrintDevice`/`PrintJob`, `AgenteEtiquetas.ps1` RAW/ZPL |
 | Pedidos/clientes | `PedidosView`, `ClientesView`, componentes de pedidos/clientes | `pedidos`, `clientes`, `tags` | `models/pedido`, `cliente`, `pedido_tag`, `pedido_anexo` |
 | Rastreio | `RastreamentoView`, `RastreamentoCard`, `stores/rastreamento` | `rastreamento` | `wonca_service`, `rastreamento_sync`, `models/rastreamento` |
 | Equipe/folgas | `VendorManagement`, `FolgasCard`, `FolgasCalendarAdvanced` | `vendedores` | `models/vendedor`, `funcionario`, `folga`, `assistant_schedule` |
@@ -105,6 +106,12 @@ destino inativo para vendas, testado antes da troca atômica. `print_jobs.claim_
 permite recuperar respostas perdidas sem recolher outro trabalho. O agente nativo
 guarda token no Chaves e diário durável antes do envio; usa o mesmo PDF em espanhol.
 Ver [instalação, reconexão e limites macOS](IMPRESSAO_MACOS.md).
+
+**Etiquetas de produtos:** `/inventory/labels` resolve seleção de itens/grades/lotes com
+projeção de metadados sem fotos; confirmação cria jobs/snapshots por variação.
+`purpose=product_labels` isola a Zebra de tickets e A4. Coleta usa chave persistente,
+ZPL 60 × 30 mm gerado no servidor e envio RAW USB pelo agente Windows, sem Sumatra.
+Falhas incertas não são reenviadas. Ver [guia](ETIQUETAS_PRODUTOS.md).
 
 **Frete:** `freight_orders` registra cotação/compra/etiqueta. Webhooks assinados apenas
 agendam consulta autenticada. `freight_labels` recupera PDFs atrasados, persiste o documento,

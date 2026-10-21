@@ -78,6 +78,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/inventory/labels',
+      name: 'product-labels',
+      component: () => import('@/views/inventory/ProductLabelsView.vue'),
+      meta: { requiresAuth: true, requiresManager: true }
+    },
+    {
       path: '/inventory',
       name: 'inventory',
       component: InventoryListView,
