@@ -81,6 +81,21 @@ class ItemListResponse(BaseModel):
     total_pages: int
 
 
+class RelatedItem(BaseModel):
+    item: ItemResponse
+    relation: Literal['family', 'brand_category', 'brand', 'category']
+
+
+class RelatedCursor(BaseModel):
+    after_rank: int
+    after_id: uuid.UUID
+
+
+class RelatedItemsResponse(BaseModel):
+    items: List[RelatedItem]
+    next_cursor: RelatedCursor | None = None
+
+
 class GroupItemsRequest(BaseModel):
     item_ids: List[uuid.UUID]
     group_key: str

@@ -33,7 +33,9 @@ it('offers exactly the requested methods and locks each amount to its currency',
   expect((await openDropdown(root.querySelector('.pay-select'))).map(el => el.value)).toEqual(paymentMethods.map(m => m.value))
   for (const m of paymentMethods) {
     await method(m.value)
-    expect(m.value.startsWith('cash_') ? (await openDropdown(root.querySelector('.pay-cash-currency'))).find(o => o.getAttribute('aria-selected') === 'true')?.value : root.querySelector('.pay-fixed-currency')?.textContent).toBe(m.value.startsWith('cash_') ? m.currency : paymentSymbol(m.currency))
+    expect(root.querySelector('.pay-input-wrap .pay-currency-prefix')?.textContent).toBe(paymentSymbol(m.currency))
+    expect(root.querySelector('.pay-cash-currency')).toBeNull()
+    expect(root.querySelector('.pay-fixed-currency')).toBeNull()
     expect(input('.pay-amount-input').getAttribute('aria-label')).toContain(paymentSymbol(m.currency))
     expect(root.querySelector('.pay-select-sm')).toBeNull()
   }
@@ -94,7 +96,7 @@ it('updates prices while typing comma decimals, changes currency and keeps remov
   await set('.pdv-ci-price','10,25')
   expect(usePdvStore().total).toBe(13325)
   expect(root.querySelector('.pdv-ci-controls .pdv-ci-remove')).not.toBeNull()
-  await set('.pay-cash-currency','BRL','change')
+  await method('cash_brl')
   expect(root.querySelector('.pay-select')?.textContent).toContain('Dinheiro R$')
   await set('.pay-amount-input','10,25')
   expect(root.querySelector('.pay-converted')?.textContent).toContain('13.325')
@@ -155,4 +157,16 @@ it('reloads products after checkout and does not offer old stock while the respo
   expect(root.querySelector('.pdv-result-stock')?.textContent).toContain('Disponível: 0')
   expect(button('.pdv-result-add').disabled).toBe(true)
   expect(root.querySelector('.pdv-price-orig')?.textContent).toBe('U$ 100')
+})
+
+
+it('edits the discount below the rate and before Paid, recalculating the outstanding amount', async () => {
+  const rate = root.querySelector('.pay-rate-row')!, discount = root.querySelector('.pay-discount-row')!, paid = root.querySelector('.pay-summary-inline')!
+  expect(rate.compareDocumentPosition(discount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(discount.compareDocumentPosition(paid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  await set('.pay-discount-input', '65000')
+  expect(usePdvStore().total).toBe(585000)
+  button('.pay-btn-total').click(); await tick()
+  expect(Number(input('.pay-amount-input').value)).toBe(90)
+  expect(mocks.createSale).not.toHaveBeenCalled()
 })

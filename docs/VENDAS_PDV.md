@@ -130,7 +130,25 @@ ou criado pelo fluxo de associação. Se a seleção falhar depois do cadastro, 
 A aba Produtos começa com os **8 produtos ativos mais recentes por criação**.
 Busca retorna até 20 resultados, cancela a consulta anterior e descarta respostas
 atrasadas. Usa listagem sem imagens originais e a fila/cache de miniaturas sob demanda.
-O ícone de câmera continua abrindo o leitor de código de barras.
+Adicionar um produto mantém a aba **Produtos**, o texto buscado e os resultados;
+o aviso e o contador do carrinho confirmam a inclusão. Itens avulsos também
+mantêm a aba atual. Abrir o carrinho é uma ação explícita do operador.
+
+O ícone de câmera abre o leitor de códigos de barras/QR. Uma leitura com um único
+cadastro inclui esse item imediatamente e o mantém no topo da lista. Abaixo,
+**relacionados** chegam em uma consulta separada: mesma grade/família explícita,
+mesma marca e categoria, mesma marca, depois mesma categoria. São sugestões,
+não uma fusão de produtos nem garantia de mesmo modelo. Códigos compartilhados
+continuam exigindo a escolha do item antes da inclusão e das sugestões.
+
+A API `/api/inventory/items/{id}/related` traz 12 itens por vez (máximo 24),
+com continuação por prioridade/ID, sem contagem geral, fotos originais ou varredura
+textual por semelhança. **Ver mais relacionados** permite consultar as páginas
+seguintes, incluindo outras cores/tamanhos vinculados. Campos canônicos e os
+índices existentes de grade/marca/categoria são reutilizados, sem nova migração.
+As miniaturas continuam sob demanda. A consulta tem timeout de cinco segundos;
+falha exibe repetição sem bloquear o item lido, o carrinho ou o checkout. Outra
+busca/leitura, limpar carrinho ou sair da tela cancela e descarta respostas atrasadas.
 Essa leitura e o aviso de código já cadastrado também consultam produtos sem
 transportar as fotos originais (`include_images=false`). Miniaturas continuam
 carregadas sob demanda; todos os produtos ativos com o mesmo código são oferecidos
@@ -194,9 +212,12 @@ Novos pagamentos possuem moeda obrigatória, conferida na tela e na API:
 | USDT | USDT |
 | Anotar (fiado) | GS, com cliente cadastrado selecionado |
 
-Nos pagamentos em dinheiro, o símbolo também permite trocar a moeda, selecionando
-o método Dinheiro correspondente e limpando o valor anterior. PIX, cartão e os
-outros métodos conservam suas moedas obrigatórias.
+O dropdown de **método** (laranja claro) também define a moeda; o seletor de moeda
+redundante ao lado foi removido. O símbolo permanece no campo de valor. Para trocar
+a moeda do dinheiro, escolha o método Dinheiro correspondente. PIX, cartão e os
+outros métodos conservam suas moedas obrigatórias. **Total** tem destaque violeta
+claro. O desconto fica abaixo da taxa e antes de **Pago**, em uma linha neutra com
+valor verde; **Faltando** mantém o destaque de pendência.
 
 O botão **Total** preenche o restante na moeda do método. Trocar o método limpa
 o valor ainda não adicionado, para não reinterpretar dólares como reais/guaranis.

@@ -27,6 +27,7 @@ from ...schemas.inventory import (
     GroupResponse, SuggestionResponse, RenameGroupRequest, UngroupRequest,
     BatchEditRequest, BatchSizeEntry, BatchProductFields, GradeCreateRequest, GradeCreateResponse,
     BulkTransferRequest,
+    RelatedItemsResponse,
 )
 from ...schemas.inventory_diagnostics import InventoryDiagnostics, IssueFilter
 from ...dependencies import get_current_active_user, require_role, require_owner
@@ -46,12 +47,20 @@ from ...services.inventory_variants import variant_context, create_variants
 from ...services.inventory_taxonomy import canonical, clean_product_name, vocabulary, facet_filters
 from ...services.inventory_search import build_search
 from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail, product_thumbnails
+from ...services.inventory_related import related_products
 
 from .inventory_receiving import router as receiving_router, lot_filter
 from uuid import UUID
 
 router = APIRouter()
 router.include_router(receiving_router)
+
+
+@router.get('/items/{item_id}/related', response_model=RelatedItemsResponse)
+def get_related_products(item_id: UUID, limit: int = Query(12, ge=1, le=24),
+                         after_rank: int | None = Query(None, ge=0, le=3), after_id: UUID | None = None,
+                         db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user)):
+    return related_products(db, item_id, limit=limit, after_rank=after_rank, after_id=after_id)
 
 
 @router.post('/items/{item_id}/duplicate', response_model=ItemResponse, status_code=201)
