@@ -87,6 +87,8 @@ jobs:
           ./tools/eleven-print-agent/tests/TicketContinuo.Tests.ps1
           ./tools/eleven-print-agent/tests/Etiquetas.Tests.ps1
   macos-agent:
+    # Validated before merge; macOS capacity must not hold up a checked main release.
+    if: github.event_name != 'push'
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
