@@ -14,6 +14,9 @@ operacional: use apenas para uma revisão previamente validada.
 `main` exige PR e os checks `backend`, `frontend`, `print-agent` e `python-security`,
 inclusive para administradores; force-push e exclusão da branch estão bloqueados.
 Não exige aprovação de uma segunda pessoa enquanto houver apenas um mantenedor.
+O agente macOS é testado nas PRs e em execuções manuais da CI; o job é
+ignorado no push da `main` após a validação do PR para não bloquear o deploy
+por indisponibilidade de runners macOS. Os demais checks continuam obrigatórios.
 `render.yaml` é a referência versionada; confira diferenças com os serviços existentes
 antes de reaplicar um Blueprint. Não use essa operação para substituir banco, segredos,
 plano ou configuração já ativa inadvertidamente.
