@@ -16,7 +16,7 @@
         <button type="button" class="erp-button erp-button--ghost erp-button--sm" :disabled="busy" @click="confirmCopy=false">{{ uiText('Cancelar') }}</button>
       </div>
     </template>
-    <p v-else-if="!error">{{ uiText('Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets no PDV.') }}</p>
+    <p v-else-if="!error">{{ uiText('Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets em Configurações.') }}</p>
     <p v-if="error" role="alert">{{ error }} <button type="button" class="erp-button erp-button--sm" :disabled="busy" @click="refresh">{{ uiText('Tentar novamente') }}</button></p>
   </section>
 </template>

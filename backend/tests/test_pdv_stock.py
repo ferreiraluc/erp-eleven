@@ -91,6 +91,7 @@ def test_later_line_conflict_rolls_back_sale_payments_fiado_and_earlier_stock(pd
         payload["items"][1]["item_id"] = str(uuid.uuid4())
     elif bad_item == "insufficient_local":
         payload["items"][1].update(location="deposito", quantity=5)
+        payload["payments"][0].update(amount_original=600, amount_gs=600)
     response = client.post("/api/pdv/sales", json=payload)
     assert response.status_code == 409, response.text
     assert_nothing_sold(factory, customer_id, item_ids, before)
@@ -104,6 +105,7 @@ def test_repeated_catalog_lines_accumulate_instead_of_resetting_the_balance(pdv_
     payload = sale_payload([item_id, item_id], customer_id)
     for line in payload["items"]:
         line["quantity"] = 4
+    payload["payments"][0].update(amount_original=800, amount_gs=800)
     response = client.post("/api/pdv/sales", json=payload)
     assert response.status_code == 409, response.text
     assert "Saldo insuficiente" in response.json()["detail"]

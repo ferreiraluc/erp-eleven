@@ -45,3 +45,12 @@ export function validPaymentAmount(amount: number, rate: number) {
     Math.abs(amount * 100 - Math.round(amount * 100)) < .0001 &&
     rate <= 999999999 && amount <= 9999999999999.99 && amount * rate <= 9999999999999.99
 }
+
+/** A "Total" amount can differ from the remaining G$ by at most half a cent of its currency. */
+export function totalPaymentRoundingDelta(remainingGs: number, amountOriginal: number, rate: number, amountGs: number): number | null {
+  if (!Number.isFinite(remainingGs) || remainingGs <= 0 || !validPaymentAmount(amountOriginal, rate) || !Number.isFinite(amountGs)) return null
+  const converted = Math.round(amountOriginal * rate * 100) / 100
+  if (Math.abs(converted - amountGs) > .000001) return null
+  const delta = (Math.round(amountGs * 100) - Math.round(remainingGs * 100)) / 100
+  return Math.abs(delta) <= rate * .005 + .000001 ? delta : null
+}

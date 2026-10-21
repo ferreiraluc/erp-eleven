@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { PdvCartError, stockAt, validateLocation, validateQuantity, type CatalogStockSnapshot } from '@/services/pdvCart'
+import { totalPaymentRoundingDelta } from '@/services/pdvPayments'
 import { pdvAPI, type PdvSaleCreate, type PdvSaleResponse, type PdvClienteResponse } from '@/services/api'
 
 export interface CartItem {
@@ -35,6 +36,16 @@ export interface CartPayment {
   cambista_id: string | null
   reference: string | null
   label: string                 // display label
+  rounding_snapshot?: CartRoundingSnapshot | null // local draft only; not sent to the API
+}
+
+export interface CartRoundingSnapshot {
+  itemId: string
+  priorPrice: number
+  priorDiscount: number
+  adjustedPrice: number
+  adjustedDiscount: number
+  financialSignature: string
 }
 
 export const usePdvStore = defineStore('pdv', () => {
@@ -141,6 +152,62 @@ export const usePdvStore = defineStore('pdv', () => {
     if (!item) return
     item.original_price = Math.max(0, originalPrice)
     item.unit_price_gs = Math.round(originalPrice * rateToGs)
+  }
+
+  function financialSignature() {
+    return JSON.stringify([discountGs.value, cart.value.map(item =>
+      [item.id, item.quantity, item.unit_price_gs, item.discount_gs, item.original_price, item.sale_currency])])
+  }
+
+  // Use only for an amount explicitly filled by "Total". The returned snapshot
+  // lets the view undo the adjustment if the associated payment is removed.
+  function roundCartTotalToPayment(payment: Pick<CartPayment, 'amount_original' | 'exchange_rate' | 'amount_gs'>, paidBeforeGs: number): CartRoundingSnapshot | null {
+    ensureEditable()
+    if (!Number.isFinite(paidBeforeGs) || paidBeforeGs < 0 || !cart.value.length) return null
+    const delta = totalPaymentRoundingDelta(total.value - paidBeforeGs, payment.amount_original, payment.exchange_rate, payment.amount_gs)
+    if (delta === null || delta === 0) return null
+    const targetCents = Math.round((paidBeforeGs + payment.amount_gs) * 100)
+    const totalWith = (item: CartItem, price: number, discount: number) =>
+      Math.round((subtotal.value - item.quantity * item.unit_price_gs + item.discount_gs + item.quantity * price - discount - discountGs.value) * 100)
+    const apply = (item: CartItem, price: number, discount: number): CartRoundingSnapshot => {
+      const priorPrice = item.unit_price_gs, priorDiscount = item.discount_gs
+      item.unit_price_gs = price
+      item.discount_gs = discount
+      return { itemId: item.id, priorPrice, priorDiscount, adjustedPrice: price,
+        adjustedDiscount: discount, financialSignature: financialSignature() }
+    }
+
+    // A one-unit line can absorb any G$0.01 delta without changing quantity or stock.
+    // Other quantities work only when their two-decimal unit price reaches the exact target.
+    const lines = [...cart.value].reverse().sort((a, b) => Number(b.quantity === 1) - Number(a.quantity === 1))
+    for (const item of lines) {
+      const newPriceCents = Math.round((item.unit_price_gs + delta / item.quantity) * 100)
+      for (const candidate of [newPriceCents, newPriceCents - 1, newPriceCents + 1]) {
+        if (candidate < 0 || candidate > 999999999999999) continue
+        const price = candidate / 100
+        if (totalWith(item, price, item.discount_gs) === targetCents) {
+          return apply(item, price, item.discount_gs)
+        }
+      }
+    }
+    // A line discount is already stored as an amount rather than a unit price.
+    for (const item of lines) {
+      const discount = Math.round((item.discount_gs - delta) * 100) / 100
+      if (discount >= 0 && discount <= item.quantity * item.unit_price_gs && totalWith(item, item.unit_price_gs, discount) === targetCents) {
+        return apply(item, item.unit_price_gs, discount)
+      }
+    }
+    return null
+  }
+
+  function undoCartTotalRounding(snapshot: CartRoundingSnapshot): boolean {
+    ensureEditable()
+    if (financialSignature() !== snapshot.financialSignature) return false
+    const item = cart.value.find(line => line.id === snapshot.itemId)
+    if (!item || item.unit_price_gs !== snapshot.adjustedPrice || item.discount_gs !== snapshot.adjustedDiscount) return false
+    item.unit_price_gs = snapshot.priorPrice
+    item.discount_gs = snapshot.priorDiscount
+    return true
   }
 
   function addPayment(payment: Omit<CartPayment, 'id'>) {
@@ -253,6 +320,6 @@ export const usePdvStore = defineStore('pdv', () => {
     loading, checkoutUncertain, lastSale, clients,
     subtotal, total, totalPaid, troco, remaining, cartCount,
     rememberStock, availableStock, addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount, updateItemOriginalPrice,
-    addPayment, removePayment, clearCart, completeSale, loadClients,
+    roundCartTotalToPayment, undoCartTotalRounding, addPayment, removePayment, clearCart, completeSale, loadClients,
   }
 })

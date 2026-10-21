@@ -188,3 +188,68 @@ describe('discarding a PDV draft', () => {
     expect(() => pdv.addItem(catalog)).toThrow('unknownStock')
   })
 })
+
+describe('rounding a payment filled with Total', () => {
+  it('raises the product price by the half-cent USD residue shown in the checkout', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem({ ...item, unit_price_gs: 2571450, original_price: 395, sale_currency: 'EUR' })
+    const payment = { amount_original: 428.58, exchange_rate: 6000, amount_gs: 2571480 }
+    const adjustment = pdv.roundCartTotalToPayment(payment, 0)
+    expect(adjustment).toMatchObject({ priorPrice: 2571450, adjustedPrice: 2571480 })
+    expect(pdv.cart[0].unit_price_gs).toBe(2571480)
+    expect(pdv.total).toBe(payment.amount_gs)
+    expect(pdv.troco).toBe(0)
+    expect(pdv.undoCartTotalRounding(adjustment!)).toBe(true)
+    expect(pdv.total).toBe(2571450)
+  })
+
+  it('can lower a two-unit line exactly and leaves an unrepresentable positive cent visible', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem({ ...item, quantity: 2, unit_price_gs: 50, original_price: 50 })
+    expect(pdv.roundCartTotalToPayment({ amount_original: .03, exchange_rate: 3000, amount_gs: 90 }, 0)).toMatchObject({ priorPrice: 50, adjustedPrice: 45 })
+    expect(pdv.cart[0].unit_price_gs).toBe(45)
+    pdv.updateItemPrice(pdv.cart[0].id, 50)
+    expect(pdv.roundCartTotalToPayment({ amount_original: 1, exchange_rate: 100.01, amount_gs: 100.01 }, 0)).toBeNull()
+    expect(pdv.total).toBe(100)
+  })
+
+  it('uses an existing line discount when unit pricing cannot represent a positive cent', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem({ ...item, quantity: 2, unit_price_gs: 50, discount_gs: .01 })
+    expect(pdv.roundCartTotalToPayment({ amount_original: 1, exchange_rate: 100, amount_gs: 100 }, 0)).toMatchObject({ priorDiscount: .01, adjustedDiscount: 0 })
+    expect(pdv.cart[0].discount_gs).toBe(0)
+    expect(pdv.total).toBe(100)
+  })
+
+  it('rounds only the unpaid remainder when the sale has an earlier payment', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem({ ...item, unit_price_gs: 251 })
+    const adjustment = pdv.roundCartTotalToPayment({ amount_original: .03, exchange_rate: 5000, amount_gs: 150 }, 100)
+    expect(adjustment).toMatchObject({ priorPrice: 251, adjustedPrice: 250 })
+    expect(pdv.total).toBe(250)
+  })
+
+  it('does not undo a rounding after a price, quantity, discount or exchange repricing change', () => {
+    for (const edit of [
+      (pdv: ReturnType<typeof usePdvStore>) => pdv.updateItemPrice(pdv.cart[0].id, 2571400),
+      (pdv: ReturnType<typeof usePdvStore>) => pdv.updateItemQty(pdv.cart[0].id, 2),
+      (pdv: ReturnType<typeof usePdvStore>) => { pdv.discountGs = 1 },
+      (pdv: ReturnType<typeof usePdvStore>) => pdv.updateItemOriginalPrice(pdv.cart[0].id, 395, 6500),
+    ]) {
+      login('Lucas'); const pdv = usePdvStore()
+      pdv.clearCart()
+      pdv.addItem({ ...item, unit_price_gs: 2571450, original_price: 395, sale_currency: 'EUR' })
+      const adjustment = pdv.roundCartTotalToPayment({ amount_original: 428.58, exchange_rate: 6000, amount_gs: 2571480 }, 0)
+      expect(adjustment).not.toBeNull()
+      edit(pdv)
+      expect(pdv.undoCartTotalRounding(adjustment!)).toBe(false)
+    }
+  })
+
+  it('does not absorb a cash overpayment outside currency rounding', () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.addItem({ ...item, unit_price_gs: 100 })
+    expect(pdv.roundCartTotalToPayment({ amount_original: 2, exchange_rate: 100, amount_gs: 200 }, 0)).toBeNull()
+    expect(pdv.total).toBe(100)
+  })
+})

@@ -9,8 +9,8 @@
         @click="openRateModal"
         :title="canEditRates ? uiText(`Editar taxas de câmbio`) : uiText(`Taxas de câmbio`)"
       >
-        <span class="pdv-rate-pill">🇺🇸 U$→G$ {{ uiNumber(rateUsd, 0) }}</span>
-        <span class="pdv-rate-pill">🇧🇷 U$→R$ {{ uiNumber(currencyStore.exchangeRates["R$"], 2) }}</span>
+        <span class="pdv-rate-pill"><span class="pdv-rate-label-full">🇺🇸 U$→G$</span><span class="pdv-rate-label-short">🇺🇸→🇵🇾</span> {{ uiNumber(rateUsd, 0) }}</span>
+        <span class="pdv-rate-pill"><span class="pdv-rate-label-full">🇧🇷 U$→R$</span><span class="pdv-rate-label-short">🇺🇸→🇧🇷</span> {{ uiNumber(currencyStore.exchangeRates["R$"], 2) }}</span>
         <svg
           v-if="canEditRates"
           fill="none"
@@ -28,7 +28,6 @@
           />
         </svg>
       </button>
-      <button v-if="auth.isOwner" class="erp-button erp-button--secondary erp-button--sm" :disabled="pdv.loading" @click="showPrinterModal=true" :aria-label="uiText('Impressora de tickets')">🖨 {{ uiText('Tickets') }}</button>
     </ModuleHeader>
     <div v-if="!ratesReady" class="pdv-rates-status" role="status">
       {{ uiText(currencyStore.error ? 'Erro ao carregar taxas de câmbio' : currencyStore.currentRates ? 'Câmbio incompleto. Confira as taxas.' : 'Carregando taxas…') }}
@@ -239,6 +238,7 @@
                 <div class="pay-input-wrap">
                   <span class="pay-currency-prefix">{{ currencySymbol }}</span>
                   <DecimalInput v-model="newAmount" ref="amountInput" :aria-label="uiText('Valor em {0}', {0: currencySymbol})"
+                    @update:model-value="totalIntent = null"
                     class="pay-amount-input" @keydown.enter="addPayment" />
                 </div>
                 <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" style="--button-bg: #f5f3ff; --button-fg: #6d28d9; --button-border: #ddd6fe; --button-hover: #ede9fe" :disabled="!validRate" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
@@ -247,20 +247,21 @@
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
                 <span>{{ $tr("Taxa:") }}</span>
-                <DecimalInput v-model="newRate" class="pay-rate-input" :aria-label="uiText('Câmbio para G$')" />
+                <DecimalInput v-model="newRate" class="pay-rate-input" :aria-label="uiText('Câmbio para G$')" @update:model-value="totalIntent = null" />
                 <span>G$ / {{ currencySymbol }}</span>
                 <span class="pay-converted" aria-live="polite">= {{ fmtGs(Number(newAmount) * Number(newRate)) }}</span>
               </div>
             </div>
             <p v-if="!validRate" class="pay-validation" role="alert">{{ uiText('Informe um câmbio válido para este pagamento.') }}</p>
             <p v-if="newMethod === 'fiado' && !pdv.clienteId" class="pay-validation" role="status">{{ uiText('Selecione o cliente para lançar fiado.') }}</p>
+            <p v-if="invalidNoncashChange" class="pay-validation" role="alert">{{ uiText('O valor acima do total precisa estar em dinheiro para gerar troco. Confira os pagamentos.') }}</p>
 
             <!-- Discount -->
             <div class="pay-discount-row">
               <label class="pay-discount-label" for="pdv-discount">{{ $tr("Desconto (G$)") }}</label>
               <div class="pay-discount-input-wrap">
                 <span class="pay-currency-prefix">G$</span>
-                <DecimalInput id="pdv-discount" :model-value="pdv.discountGs" @update:model-value="pdv.discountGs = $event ?? 0" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
+                <DecimalInput id="pdv-discount" :model-value="pdv.discountGs" @update:model-value="changeGlobalDiscount" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
               </div>
             </div>
 
@@ -270,7 +271,7 @@
                 <span>{{ $tr("Pago") }}</span>
                 <span class="pay-ok">{{ fmtGs(payTotalPaid) }}</span>
               </div>
-              <div v-if="payTroco > 0" class="pay-sum-row pay-troco-row">
+              <div v-if="payTroco > 0 && !invalidNoncashChange" class="pay-sum-row pay-troco-row">
                 <span>{{ $tr("Troco") }}</span><span class="pay-troco">{{ fmtGs(payTroco) }}</span>
               </div>
               <div v-if="payRemaining > 0" class="pay-sum-row pay-remaining-row">
@@ -301,7 +302,6 @@
     <!-- Modals -->
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
     <PDVAvulsoModal v-if="showAvulso" :scanned-code="avulsoCode" :rates="{ PYG: 1, USD: rateUsd, BRL: rateBrl, EUR: rateEur }" @add="onAvulsoAdd" @close="showAvulso = false" />
-    <PDVPrinterModal v-if="showPrinterModal" @close="showPrinterModal=false" />
     <PDVReceiptModal v-if="showReceipt && pdv.lastSale" :sale="pdv.lastSale" @close="showReceipt = false" />
 
     <ExchangeRateModal v-if="showRateModal" @close="showRateModal = false" @saved="showToast(uiText('Taxas atualizadas'))" />
@@ -318,8 +318,6 @@ import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
-import { useAuthStore } from '@/stores/auth'
-import PDVPrinterModal from '@/components/pdv/PDVPrinterModal.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -334,14 +332,12 @@ import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import PDVAvulsoModal from '@/components/pdv/PDVAvulsoModal.vue'
 import PDVCustomerPicker from '@/components/pdv/PDVCustomerPicker.vue'
 import PDVReceiptModal from '@/components/pdv/PDVReceiptModal.vue'
-import type { CartItem, CartPayment } from '@/stores/pdv'
+import type { CartItem, CartPayment, CartRoundingSnapshot } from '@/stores/pdv'
 import { catalogPrice, PdvCartError, type StockLocation } from '@/services/pdvCart'
 import { vPdvActionKeyboard } from '@/directives/pdvKeyboard'
 import { usePdvCartText } from '@/components/pdv/cartMessages'
 const { cartText, cartErrorText } = usePdvCartText()
 
-const auth = useAuthStore()
-const showPrinterModal = ref(false)
 const pdv = usePdvStore()
 const currencyStore = useCurrencyStore()
 
@@ -405,27 +401,70 @@ const newAmount = ref<number | null>(null)
 const newRate = ref<number | null>(0)
 const newReference = ref('')
 const amountInput = ref<InstanceType<typeof DecimalInput>>()
+const totalIntent = ref<{ method: string; amount: number; rate: number; total: number; paid: number } | null>(null)
+const roundingSnapshots = new Map<string, CartRoundingSnapshot>(localPayments.value
+  .filter((payment): payment is CartPayment & { rounding_snapshot: CartRoundingSnapshot } => !!payment.rounding_snapshot)
+  .map(payment => [payment.id, payment.rounding_snapshot]))
+let ratesChangedDuringCheckout = false
+
+function persistPayments() {
+  // Keep draft payments with the Pinia cart when navigating away from the PDV.
+  pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
+}
+
+function undoPaymentRounding() {
+  if (pdv.loading || pdv.checkoutUncertain) return
+  // A new product, negotiated price or edited discount starts from the original
+  // cart value; no old payment may silently change a later basket.
+  for (const snapshot of [...roundingSnapshots.values()].reverse()) pdv.undoCartTotalRounding(snapshot)
+  if (roundingSnapshots.size) {
+    localPayments.value = localPayments.value.map(payment => payment.rounding_snapshot
+      ? { ...payment, rounding_snapshot: undefined } : payment)
+    persistPayments()
+  }
+  roundingSnapshots.clear()
+  totalIntent.value = null
+}
+function changeGlobalDiscount(value: number | null) {
+  undoPaymentRounding()
+  pdv.discountGs = value ?? 0
+}
 
 const PAYMENT_METHODS = computed(() => paymentMethods.map(m => ({ ...m, label: paymentLabel(m.value) })))
 const defaultRate = (currency: string) => paymentRate(currency, currencyStore.exchangeRates)
 const methodLabel = paymentLabel
 
 watch(newMethod, () => {
+  totalIntent.value = null
   newRate.value = defaultRate(newCurrency.value)
   newAmount.value = null
   newReference.value = ''
 })
 watch([rateUsd, rateBrl, rateEur], () => {
+  if (pdv.loading || pdv.checkoutUncertain) {
+    ratesChangedDuringCheckout = true
+    return
+  }
+  undoPaymentRounding()
   newRate.value = defaultRate(newCurrency.value)
   // Reprice the open cart using its original amounts; saved payments keep their agreed rate.
-  if (!pdv.loading && !pdv.checkoutUncertain) {
+  for (const item of pdv.cart) {
+    const rate = getRate(item.sale_currency)
+    if (rate > 0) pdv.updateItemOriginalPrice(item.id, item.original_price, rate)
+  }
+})
+watch(() => pdv.loading, loading => {
+  if (!loading && ratesChangedDuringCheckout && !pdv.checkoutUncertain) {
+    ratesChangedDuringCheckout = false
+    undoPaymentRounding()
+    newRate.value = defaultRate(newCurrency.value)
     for (const item of pdv.cart) {
       const rate = getRate(item.sale_currency)
       if (rate > 0) pdv.updateItemOriginalPrice(item.id, item.original_price, rate)
     }
   }
 })
-watch(() => pdv.cart.length, (len) => { if (len === 0) { resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
+watch(() => pdv.cart.length, (len) => { if (len === 0) { roundingSnapshots.clear(); ratesChangedDuringCheckout = false; totalIntent.value = null; resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
 
 const currencySymbol = computed(() => paymentSymbol(newCurrency.value))
 const showReference = computed(() => !newMethod.value.startsWith('cash_') && newMethod.value !== 'fiado')
@@ -436,24 +475,26 @@ const canAddPayment = computed(() => validPaymentAmount(Number(newAmount.value),
 const payTotalPaid = computed(() => localPayments.value.reduce((s, p) => s + p.amount_gs, 0))
 const payRemaining = computed(() => Math.max(0, pdv.total - payTotalPaid.value))
 const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
+const cashPaid = computed(() => localPayments.value.reduce((sum, payment) =>
+  sum + (payment.method.startsWith('cash_') ? payment.amount_gs : 0), 0))
+const invalidNoncashChange = computed(() => payTroco.value > cashPaid.value + 0.001)
 const remainingInCurrency = computed(() =>
   validRate.value ? payRemaining.value / Number(newRate.value) : 0
 )
-const canConfirmPayment = computed(() => !customerBusy.value && !barcodePending.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
+const canConfirmPayment = computed(() => !customerBusy.value && !barcodePending.value && !invalidNoncashChange.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
 
 function fillTotal() {
   if (!validRate.value) return
-  const rounded = Math.round(remainingInCurrency.value * 100) / 100
-  // Avoid adding a cent solely because a six-decimal rate has a tiny fraction.
-  const covers = Math.round(rounded * Number(newRate.value) * 100) / 100 >= payRemaining.value - 1e-7
-  newAmount.value = covers ? rounded : Math.ceil(remainingInCurrency.value * 100) / 100
+  const rounded = remainingInCurrency.value > 0 ? Math.max(0.01, Math.round(remainingInCurrency.value * 100) / 100) : 0
+  newAmount.value = rounded
+  totalIntent.value = { method: newMethod.value, amount: rounded, rate: Number(newRate.value), total: pdv.total, paid: payTotalPaid.value }
 }
 
 function addPayment() {
   if (!canAddPayment.value) return
   const rate = newCurrency.value === 'GS' ? 1 : Math.round(Number(newRate.value) * 1e6) / 1e6
   const amountGs = newCurrency.value === 'GS' ? Number(newAmount.value) : Number(newAmount.value) * rate
-  localPayments.value.push({
+  const payment: CartPayment = {
     id: crypto.randomUUID(),
     method: newMethod.value,
     currency: newCurrency.value,
@@ -463,13 +504,28 @@ function addPayment() {
     cambista_id: null,
     reference: newReference.value || null,
     label: methodLabel(newMethod.value),
-  })
+  }
+  const intent = totalIntent.value
+  const matchedTotal = intent && intent.method === payment.method && intent.amount === payment.amount_original &&
+    intent.rate === payment.exchange_rate && intent.total === pdv.total && intent.paid === payTotalPaid.value
+  if (matchedTotal || !payment.method.startsWith('cash_')) {
+    const snapshot = pdv.roundCartTotalToPayment(payment, payTotalPaid.value)
+    if (snapshot) {
+      payment.rounding_snapshot = snapshot
+      roundingSnapshots.set(payment.id, snapshot)
+    }
+  }
+  localPayments.value.push(payment)
+  persistPayments()
+  totalIntent.value = null
   newAmount.value = null
   newReference.value = ''
 }
 
 function removePayment(id: string) {
+  undoPaymentRounding()
   localPayments.value = localPayments.value.filter(p => p.id !== id)
+  persistPayments()
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -559,6 +615,7 @@ function canIncrease(item: CartItem) {
 }
 function changeQuantity(item: CartItem, quantity: number) {
   try {
+    undoPaymentRounding()
     pdv.updateItemQty(item.id, quantity)
     delete quantityDrafts[item.id]; delete quantityErrors[item.id]
   } catch (error) { quantityErrors[item.id] = error }
@@ -567,22 +624,25 @@ const itemCurrencies = ['USD', 'BRL', 'PYG', 'EUR']
 function changeItemPrice(item: CartItem, value: number | null) {
   const valid = value !== null && Number.isFinite(value) && value >= 0 && value <= 999999999 && Number.isFinite(getRate(item.sale_currency)) && getRate(item.sale_currency) > 0
   priceErrors[item.id] = !valid
-  if (valid) pdv.updateItemOriginalPrice(item.id, value!, getRate(item.sale_currency))
+  if (valid) { undoPaymentRounding(); pdv.updateItemOriginalPrice(item.id, value!, getRate(item.sale_currency)) }
 }
 function changeItemCurrency(item: CartItem, currency: string) {
   if (!itemCurrencies.includes(currency) || pdv.loading || pdv.checkoutUncertain || getRate(currency) <= 0) return
+  undoPaymentRounding()
   // Preserve the negotiated total when changing its display unit; do not edit the catalog.
   const price = Math.round(item.unit_price_gs / getRate(currency) * 100) / 100
   item.sale_currency = currency
   changeItemPrice(item, price)
 }
 function removeCartItem(id: string) {
+  undoPaymentRounding()
   delete priceErrors[id]
   pdv.removeItem(id); delete quantityDrafts[id]; delete quantityErrors[id]
 }
 function addToCart(item: InventoryItem) {
   if (!ratesReady.value) return
   try {
+    undoPaymentRounding()
     const price = catalogPrice(item.sale_price)
     if (price === null) throw new PdvCartError('invalidPrice')
     const saleCurrency = item.sale_currency || 'PYG'
@@ -613,7 +673,7 @@ function addToCart(item: InventoryItem) {
 }
 function openAvulso(prefill?: string) { avulsoCode.value = prefill || null; showAvulso.value = true }
 function onAvulsoAdd(item: any) {
-  try { pdv.addItem(item) } catch (error) { checkoutError.value = error; showToast(cartErrorText(error), 'error'); return }
+  try { undoPaymentRounding(); pdv.addItem(item) } catch (error) { checkoutError.value = error; showToast(cartErrorText(error), 'error'); return }
   showAvulso.value = false
   showToast(uiText(`{0} adicionado`,{0:item.item_name}))
 }
@@ -743,7 +803,9 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 /* ── Header ───────────────────────────────────────────────────────────────── */
 
 /* Exchange rate button */
+.pdv-rate-btn { min-width: 0; white-space: nowrap; }
 .pdv-rate-pill { font-size: 0.72rem; color: #475569; font-family: monospace; white-space: nowrap; }
+.pdv-rate-label-short { display: none; }
 .pdv-rate-edit-icon { color: #9ca3af; flex-shrink: 0; }
 
 /* ── Mobile tabs ──────────────────────────────────────────────────────────── */
@@ -938,7 +1000,21 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
   .pdv-result-stock { white-space: normal; }
   .pdv-stock-location { cursor: pointer; }
   .pdv-rate-btn { padding: 0.25rem 0.4rem; }
-  .pdv-rate-pill { font-size: 0.65rem; }
+  .pdv-rate-pill { font-size: 0.72rem; }
+}
+@media (max-width: 600px) {
+  /* A single action stays next to "< PDV" even on narrow phones. */
+  .pdv-root :deep(.erp-module-header) { flex-wrap: nowrap; gap: 8px; padding: 10px 12px; margin-bottom: 0; }
+  .pdv-root :deep(.erp-module-header__heading) { flex: 0 0 auto; gap: 4px; }
+  .pdv-root :deep(.erp-module-header__actions) { flex: 1 1 auto; min-width: 0; margin-left: 0; flex-wrap: nowrap; justify-content: flex-start; }
+  :is(#app, body) .pdv-root .pdv-rate-btn { flex: 0 1 auto; min-width: 0; gap: 4px; white-space: nowrap; padding-inline: 6px; }
+}
+@media (max-width: 380px) {
+  .pdv-rate-label-full { display: none; }
+  .pdv-rate-label-short { display: inline; }
+  .pdv-root :deep(.erp-module-header) { gap: 4px; padding-inline: 8px; }
+  .pdv-rate-pill { font-size: 0.64rem; }
+  :is(#app, body) .pdv-root .pdv-rate-btn { gap: 2px; padding-inline: 4px; }
 }
 .pdv-ci-line-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pdv-ci-line-summary .pdv-ci-total { font-size: .78rem; }

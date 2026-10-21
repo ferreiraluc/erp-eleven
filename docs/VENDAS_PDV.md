@@ -2,7 +2,7 @@
 
 ## Ticket automático no caixa
 
-Lucas configura **PDV → Tickets** para o agente Windows/Zebra ou prepara a
+Lucas configura **Configurações → Impressora de tickets** para o agente Windows/Zebra ou prepara a
 **3nStar RPT006W no iMac**, com agente nativo e bobina contínua de 80 mm.
 A troca exige teste físico confirmado e fila antiga concluída; preparar o Mac
 não desativa a Zebra. Instalação e recuperação: [Tickets macOS](IMPRESSAO_MACOS.md).
@@ -18,7 +18,7 @@ apresentadas como uma venda normal. O ticket conserva o snapshot da revisão env
 Alterações posteriores não reimprimem automaticamente.
 
 Filas A4 e tickets permanecem separadas. Para bobina contínua de 80 mm, selecione
-**Bobina contínua** em PDV → Tickets: uma página com altura calculada (até 991 mm),
+**Bobina contínua** em Configurações → Impressora de tickets: uma página com altura calculada (até 991 mm),
 sem separação em etiquetas. Requer agente Windows 2026.10.14.3. Etiquetas fixas
 continuam disponíveis; trocar formato exige fila vazia. Instalação,
 limites e migração futura ao Mac: [Impressão](IMPRESSAO_WINDOWS.md#tickets-do-pdv--zebra-zd220-14102026).
@@ -221,6 +221,22 @@ valor verde; **Faltando** mantém o destaque de pendência.
 
 O botão **Total** preenche o restante na moeda do método. Trocar o método limpa
 o valor ainda não adicionado, para não reinterpretar dólares como reais/guaranis.
+Quando **Total** precisa arredondar a centavos na moeda escolhida, o fechamento
+ajusta o preço em G$ de uma linha do carrinho pela diferença de conversão, limitada
+a meio centavo dessa moeda pela taxa do pagamento. Assim o total da venda e o
+equivalente pago permanecem iguais no registro e no ticket. Quantidades múltiplas
+só recebem o ajuste quando o preço unitário ou desconto da linha consegue
+representá-lo exatamente a G$ 0,01; caso contrário a diferença continua visível
+para conferência. Pagamentos não feitos em dinheiro recebem o mesmo ajuste de
+conversão quando o valor final é digitado manualmente e cabe nesse limite;
+pagamento em dinheiro digitado acima do total continua mostrando o troco real.
+Se o restante for menor que um centavo da moeda estrangeira, **Total** preenche o
+centavo mínimo; em dinheiro, a diferença é mostrada como troco. Rascunhos de
+pagamento e seus ajustes acompanham o carrinho ao sair e voltar ao PDV; removê-los
+restaura o preço anterior, desde que o carrinho não tenha sido alterado.
+No servidor, pagamentos abaixo do total são recusados; excesso só é aceito quando
+há dinheiro suficiente para entregar o troco. Cartão, PIX, transferência, USDT e
+fiado não criam troco sozinhos, e o PDV avisa antes de confirmar.
 O operador pode alterar o câmbio para G$ de um pagamento em moeda estrangeira;
 guaranis usam sempre taxa 1. USDT começa com a mesma cotação de USD (1 USDT = 1 U$),
 por convenção confirmada pela loja, podendo ser ajustado. Não há cotação de cripto

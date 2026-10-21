@@ -8,14 +8,14 @@ continua em `%LOCALAPPDATA%\ElevenPrint`, para Samsung/A4. **Eleven Tickets** us
 Não reutilize a credencial da Samsung na Zebra. Ambos podem funcionar no mesmo Windows.
 
 A mídia atual é **bobina térmica direta contínua de 80 mm**, sem ribbon. Em
-**PDV → Tickets**, selecione **Bobina contínua**, largura **80 mm** e salve com a
+**Configurações → Impressora de tickets**, selecione **Bobina contínua**, largura **80 mm** e salve com a
 fila vazia. A altura é calculada conforme a venda: um PDF de uma página e um único
 trabalho ZPL, sem rodapés de página, cortes intermediários ou inversão de páginas.
 O formato de etiquetas separadas continua disponível explicitamente (altura fixa).
 
 Para atualizar uma instalação existente:
 1. Aguarde o trabalho atual terminar e feche **Eleven Tickets**.
-2. Baixe o agente em **PDV → Tickets**, extraia todo o ZIP e abra `Instalar.cmd`.
+2. Baixe o agente em **Configurações → Impressora de tickets**, extraia todo o ZIP e abra `Instalar.cmd`.
 3. Selecione a fila USB Zebra ZD220; na credencial, **Enter mantém a existente**.
    Não gere outra credencial nem apague `config.json` ou `journal`.
 4. Confira que há bobina contínua de 80 mm na impressora e salve esse formato no ERP.
@@ -85,7 +85,7 @@ antes de imprimir e libera os trabalhos seguintes.
 Somente Lucas configura tickets/credenciais; funcionários imprimem apenas vendas
 que podem consultar. Tickets não entram na agenda de endereços nem nas consultas
 de impressões do bot. O bot/SuperFrete continuam selecionando apenas impressoras A4.
-Credencial perdida pode ser substituída explicitamente em PDV → Tickets; a anterior
+Credencial perdida pode ser substituída explicitamente em Configurações → Impressora de tickets; a anterior
 para de funcionar e o instalador deve receber a nova. Não faça isso com trabalho
 em processamento. ID e histórico do dispositivo são preservados.
 
