@@ -67,7 +67,8 @@
           </button>
         </div>
 
-        <p v-if="!searchQuery.trim() && !loadingSearch && !searchError" class="pdv-results-label">{{ uiText('Produtos recentes') }}</p>
+        <p v-if="!scannedProduct && !searchQuery.trim() && !loadingSearch && !searchError" class="pdv-results-label">{{ uiText('Produtos recentes') }}</p>
+        <p v-if="scannedProduct" class="pdv-results-label">{{ cartText('scanContext') }}</p>
         <p v-if="loadingSearch" class="pdv-search-loading" role="status">{{ uiText('Carregando produtos…') }}</p>
         <div v-if="visibleProducts.length" class="pdv-results" :aria-busy="loadingSearch">
           <div v-for="item in visibleProducts" :key="item.id" class="pdv-result-row" :class="{ 'is-unavailable': !canAddProduct(item) }" @click="addToCart(item)">
@@ -76,6 +77,7 @@
               <div v-else class="pdv-result-no-img">{{ item.name.charAt(0).toUpperCase() }}</div>
             </div>
             <div class="pdv-result-left">
+              <div v-if="scannedProduct" class="pdv-result-relation">{{ cartText(item.id === scannedProduct.id ? 'scanned' : 'related_' + relatedRelations[item.id]) }}</div>
               <div class="pdv-result-name">{{ item.name }}</div>
               <div class="pdv-result-meta">{{ [item.category, item.size, item.color].filter(Boolean).join(' · ') }}</div>
               <div class="pdv-result-sku">{{ item.inventory_code || item.sku_internal }}</div>
@@ -99,7 +101,12 @@
               <button class="pdv-result-add erp-button erp-button--primary erp-button--icon" :disabled="!canAddProduct(item)">+</button>
             </div>
           </div>
-          <div v-if="searchQuery && !loadingSearch && !searchError" class="pdv-result-avulso" @click="openAvulso()">
+          <div v-if="scannedProduct" class="pdv-related-footer">
+            <p v-if="loadingRelated" role="status">{{ cartText('loadingRelated') }}</p>
+            <p v-else-if="relatedError" role="status">{{ cartText('relatedFailed') }}</p>
+            <button v-if="relatedError || relatedCursor" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="loadingRelated" @click="loadRelatedProducts">{{ cartText(relatedError ? 'retryRelated' : 'moreRelated') }}</button>
+          </div>
+          <div v-if="!scannedProduct && searchQuery && !loadingSearch && !searchError" class="pdv-result-avulso" @click="openAvulso()">
             <span>⚠</span> {{ $tr("Produto não encontrado? Adicionar manualmente") }}
           </div>
         </div>
@@ -205,15 +212,6 @@
 
             <div class="pdv-payment-divider">{{ $tr("💳 Pagamento") }}</div>
 
-            <!-- Discount -->
-            <div class="pay-discount-row">
-              <span class="pay-discount-label">{{ $tr("Desconto (G$)") }}</span>
-              <div class="pay-discount-input-wrap">
-                <span class="pay-currency-prefix">G$</span>
-                <DecimalInput :model-value="pdv.discountGs" @update:model-value="pdv.discountGs = $event ?? 0" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
-              </div>
-            </div>
-
             <!-- Payments added -->
             <div class="pay-entries-inline">
               <div v-for="p in localPayments" :key="p.id" class="pay-entry">
@@ -236,10 +234,6 @@
                 <ErpSelect v-model="newMethod" class="pay-select" :aria-label="uiText('Método de pagamento')">
                   <option v-for="m in PAYMENT_METHODS" :key="m.value" :value="m.value">{{ m.label }}</option>
                 </ErpSelect>
-                <ErpSelect compact v-if="newMethod.startsWith('cash_')" class="pay-cash-currency" :value="newCurrency" :aria-label="uiText('Moeda do pagamento')" @change="changeCashCurrency($event)">
-                  <option v-for="method in cashMethods" :key="method.value" :value="method.currency">{{ paymentSymbol(method.currency) }}</option>
-                </ErpSelect>
-                <span v-else class="pay-fixed-currency" :aria-label="uiText('Moeda do pagamento')">{{ currencySymbol }}</span>
               </div>
               <div class="pay-add-row">
                 <div class="pay-input-wrap">
@@ -247,7 +241,7 @@
                   <DecimalInput v-model="newAmount" ref="amountInput" :aria-label="uiText('Valor em {0}', {0: currencySymbol})"
                     class="pay-amount-input" @keydown.enter="addPayment" />
                 </div>
-                <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" :disabled="!validRate" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
+                <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" style="--button-bg: #f5f3ff; --button-fg: #6d28d9; --button-border: #ddd6fe; --button-hover: #ede9fe" :disabled="!validRate" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
                 <button class="pay-btn-add erp-button erp-button--primary erp-button--sm" @click="addPayment" :disabled="!canAddPayment">{{ $tr("+ Add") }}</button>
               </div>
@@ -261,11 +255,20 @@
             <p v-if="!validRate" class="pay-validation" role="alert">{{ uiText('Informe um câmbio válido para este pagamento.') }}</p>
             <p v-if="newMethod === 'fiado' && !pdv.clienteId" class="pay-validation" role="status">{{ uiText('Selecione o cliente para lançar fiado.') }}</p>
 
+            <!-- Discount -->
+            <div class="pay-discount-row">
+              <label class="pay-discount-label" for="pdv-discount">{{ $tr("Desconto (G$)") }}</label>
+              <div class="pay-discount-input-wrap">
+                <span class="pay-currency-prefix">G$</span>
+                <DecimalInput id="pdv-discount" :model-value="pdv.discountGs" @update:model-value="pdv.discountGs = $event ?? 0" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
+              </div>
+            </div>
+
             <!-- Payment summary -->
             <div class="pay-summary-inline">
               <div class="pay-sum-row">
                 <span>{{ $tr("Pago") }}</span>
-                <span :class="payTotalPaid >= pdv.total ? 'pay-ok' : 'pay-short'">{{ fmtGs(payTotalPaid) }}</span>
+                <span class="pay-ok">{{ fmtGs(payTotalPaid) }}</span>
               </div>
               <div v-if="payTroco > 0" class="pay-sum-row pay-troco-row">
                 <span>{{ $tr("Troco") }}</span><span class="pay-troco">{{ fmtGs(payTroco) }}</span>
@@ -322,7 +325,7 @@ import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { usePdvStore } from '@/stores/pdv'
 import { useCurrencyStore } from '@/stores/currency'
-import { inventoryAPI, type InventoryItem } from '@/services/api'
+import { inventoryAPI, type InventoryItem, type ProductRelation, type RelatedProductCursor } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
 import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, validPaymentAmount } from '@/services/pdvPayments'
 import { useInventoryI18n } from '@/components/inventory/i18n'
@@ -349,7 +352,17 @@ const mobileTab = ref<'products' | 'cart'>('products')
 const searchQuery = ref('')
 const searchResults = ref<InventoryItem[]>([])
 const recentProducts = ref<InventoryItem[]>([])
-const visibleProducts = computed(() => searchQuery.value.trim() ? searchResults.value : recentProducts.value)
+const scannedProduct = ref<InventoryItem | null>(null)
+const relatedProducts = ref<InventoryItem[]>([])
+const relatedRelations = ref<Record<string, ProductRelation>>({})
+const relatedCursor = ref<RelatedProductCursor | null>(null)
+const loadingRelated = ref(false)
+const relatedError = ref(false)
+let relatedController: AbortController | undefined
+let choosingBarcodeMatch = false
+const visibleProducts = computed(() => scannedProduct.value
+  ? [scannedProduct.value, ...relatedProducts.value]
+  : searchQuery.value.trim() ? searchResults.value : recentProducts.value)
 let searchGeneration = 0, disposed = false
 let searchController: AbortController | undefined
 const loadingSearch = ref(false)
@@ -396,8 +409,6 @@ const amountInput = ref<InstanceType<typeof DecimalInput>>()
 const PAYMENT_METHODS = computed(() => paymentMethods.map(m => ({ ...m, label: paymentLabel(m.value) })))
 const defaultRate = (currency: string) => paymentRate(currency, currencyStore.exchangeRates)
 const methodLabel = paymentLabel
-const cashMethods = paymentMethods.filter(m => m.value.startsWith('cash_'))
-function changeCashCurrency(currency: string) { const method = cashMethods.find(m => m.currency === currency); if (method) newMethod.value = method.value }
 
 watch(newMethod, () => {
   newRate.value = defaultRate(newCurrency.value)
@@ -499,6 +510,10 @@ function convertKnownPrice(value: number | null | undefined, rate: number): numb
 function invalidateProductSearch() {
   searchGeneration++; searchController?.abort(); clearTimeout(searchTimer)
   loadingSearch.value = false; barcodePending.value = false
+  relatedController?.abort()
+  scannedProduct.value = null; relatedProducts.value = []; relatedRelations.value = {}
+  relatedCursor.value = null; loadingRelated.value = false; relatedError.value = false
+  choosingBarcodeMatch = false
 }
 function onSearchInput() {
   invalidateProductSearch()
@@ -593,8 +608,7 @@ function addToCart(item: InventoryItem) {
       location: productLocation(item),
     })
     showToast(uiText(`{0} adicionado`,{0:item.name}))
-    clearSearch()
-    mobileTab.value = 'cart'
+    if (choosingBarcodeMatch) showScannedProduct(item)
   } catch (error) { checkoutError.value = error; showToast(cartErrorText(error), 'error') }
 }
 function openAvulso(prefill?: string) { avulsoCode.value = prefill || null; showAvulso.value = true }
@@ -602,7 +616,6 @@ function onAvulsoAdd(item: any) {
   try { pdv.addItem(item) } catch (error) { checkoutError.value = error; showToast(cartErrorText(error), 'error'); return }
   showAvulso.value = false
   showToast(uiText(`{0} adicionado`,{0:item.item_name}))
-  mobileTab.value = 'cart'
 }
 function refreshProductsAfterCheckout() {
   // A sale may have changed stock: never reuse the visible list's old snapshots.
@@ -630,12 +643,45 @@ async function onBarcodeDetected(code: string) {
     if (disposed || request !== searchGeneration) return
     pdv.rememberStock(results)
     searchError.value = false
-    if (results.length === 1) addToCart(results[0])
-    else if (results.length > 1) { searchQuery.value = code; searchResults.value = results }
+    if (results.length === 1) {
+      showScannedProduct(results[0])
+      addToCart(results[0])
+    } else if (results.length > 1) { choosingBarcodeMatch = true; searchQuery.value = code; searchResults.value = results }
     else if (/^INV-[A-Z0-9]{6}$/i.test(code.trim())) showToast(cartText('internalCodeMissing'), 'error')
     else openAvulso(code)
   } catch { if (disposed || request !== searchGeneration) return; searchQuery.value = code; searchResults.value = []; searchError.value = true; showToast(cartText('searchFailed'), 'error') }
   finally { if (!disposed && request === searchGeneration) { loadingSearch.value = false; barcodePending.value = false } }
+}
+
+// Suggestions never block adding the scanned item or checkout. A new search,
+// scan, cleared cart or unmount invalidates them before they can replace the list.
+function showScannedProduct(item: InventoryItem) {
+  choosingBarcodeMatch = false
+  scannedProduct.value = item
+  relatedProducts.value = []; relatedRelations.value = {}; relatedCursor.value = null
+  void loadRelatedProducts()
+}
+async function loadRelatedProducts() {
+  const source = scannedProduct.value
+  if (!source || loadingRelated.value) return
+  const request = searchGeneration
+  const controller = new AbortController()
+  relatedController = controller
+  loadingRelated.value = true; relatedError.value = false
+  try {
+    const result = await inventoryAPI.getRelated(source.id, relatedCursor.value, controller.signal)
+    if (disposed || request !== searchGeneration || scannedProduct.value?.id !== source.id) return
+    const seen = new Set([source.id, ...relatedProducts.value.map(item => item.id)])
+    const additions = result.items.filter(({ item }) => !seen.has(item.id))
+    pdv.rememberStock(additions.map(({ item }) => item))
+    relatedProducts.value.push(...additions.map(({ item }) => item))
+    for (const { item, relation } of additions) relatedRelations.value[item.id] = relation
+    relatedCursor.value = result.next_cursor
+  } catch {
+    if (!disposed && request === searchGeneration) relatedError.value = true
+  } finally {
+    if (!disposed && request === searchGeneration) loadingRelated.value = false
+  }
 }
 
 // ── Payment ───────────────────────────────────────────────────────────────────
@@ -679,7 +725,7 @@ onMounted(() => {
   // Read the shared rates; network completion updates the reactive defaults.
   newRate.value = defaultRate(newCurrency.value)
 })
-onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort(); document.removeEventListener('keydown', onKeydown); clearTimeout(toastTimer); clearTimeout(searchTimer) })
+onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort(); relatedController?.abort(); document.removeEventListener('keydown', onKeydown); clearTimeout(toastTimer); clearTimeout(searchTimer) })
 </script>
 
 <style scoped>
@@ -722,6 +768,9 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 .pdv-scan-btn:hover { border-color: #f97316; color: #f97316; }
 
 .pdv-results { flex: 1; overflow-y: auto; }
+.pdv-result-relation { font-size: .65rem; color: #7c3aed; margin-bottom: .15rem; }
+.pdv-related-footer { padding: .5rem .75rem; color: #64748b; font-size: .75rem; }
+.pdv-related-footer p { margin: .25rem 0; }
 .pdv-result-row { display: grid; grid-template-columns: 46px minmax(0, 1fr); align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.1s; }
 .pdv-result-row:hover { background: #fff7ed; }
 .pdv-result-thumb { width: 46px; height: 46px; border-radius: 0.375rem; overflow: hidden; flex-shrink: 0; background: #f3f4f6; border: 1px solid #e5e7eb; }
@@ -817,13 +866,12 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pdv-payment-section { border-top: 2px solid #e5e7eb; margin-top: auto; }
 .pdv-payment-divider { padding: 0.5rem 0.875rem; font-size: 0.78rem; font-weight: 700; color: #374151; background: #f9fafb; border-bottom: 1px solid #f3f4f6; letter-spacing: 0.03em; }
 
-.pay-discount-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.875rem; border-bottom: 1px solid #f3f4f6; background: #fff7ed; }
-.pay-discount-label { font-size: 0.72rem; font-weight: 600; color: #92400e; white-space: nowrap; }
-.pay-discount-input-wrap { display: flex; align-items: center; border: 1.5px solid #fed7aa; border-radius: 0.35rem; overflow: hidden; background: white; }
-.pay-fixed-currency { flex-shrink:0; border-radius:999px; padding:6px 10px; font-size:.78rem; font-weight:700; color:#1d4ed8; background:#eff6ff; align-self:center; }
+.pay-discount-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.875rem; background: #fff; }
+.pay-discount-label { font-size: 0.78rem; color: #64748b; white-space: nowrap; }
+.pay-discount-input-wrap { display: flex; align-items: center; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden; background: white; }
 .pay-validation { margin:4px 14px 8px; color:#b45309; font-size:.75rem; }
 .pay-currency-prefix { padding: 0.2rem 0.3rem; font-size: 0.7rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; }
-.pay-discount-input { border: none; outline: none; width: 80px; padding: 0.2rem 0.35rem; font-size: 0.85rem; }
+.pay-discount-input { color: #047857; font-weight: 600; text-align: right; border: none; outline: none; width: 80px; padding: 0.2rem 0.35rem; font-size: 0.85rem; }
 
 .pay-entries-inline { padding: 0.375rem 0.875rem; }
 .pay-entry { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.4rem; border-radius: 0.4rem; margin-bottom: 0.25rem; background: #f9fafb; }
@@ -845,12 +893,12 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 
 .pay-add-section { padding: 0.5rem 0.875rem; background: #f9fafb; border-top: 1px solid #f3f4f6; }
 .pay-add-row { display: flex; gap: 0.3rem; margin-bottom: 0.3rem; align-items: center; }
-.pay-select { flex: 1; min-width: 0; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; background: white; outline: none; }
-.pay-select-sm { flex: 0 0 54px; }
+.pay-select { flex: 1; min-width: 0; }
+.pay-select :deep(.erp-dropdown__control) { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+.pay-select :deep(.erp-dropdown__value) { color: #9a3412; font-weight: 600; }
 .pay-input-wrap { flex: 1; min-width: 0; display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; overflow: hidden; background: white; }
 .pay-amount-input { flex: 1; border: none; outline: none; padding: 0.35rem; font-size: 0.85rem; min-width: 0; }
-.pay-btn-total { background: #1d4ed8; color: white; border: none; border-radius: 0.4rem; padding: 0.35rem 0.45rem; font-weight: 700; cursor: pointer; font-size: 0.72rem; white-space: nowrap; flex-shrink: 0; }
-.pay-btn-total:hover { background: #1e40af; }
+.pay-btn-total { white-space: nowrap; flex-shrink: 0; }
 .pay-ref-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 0.4rem; padding: 0.35rem; font-size: 0.78rem; outline: none; min-width: 0; }
 .pay-btn-add { background: #111827; color: white; border: none; border-radius: 0.4rem; padding: 0.35rem 0.55rem; font-weight: 700; cursor: pointer; font-size: 0.78rem; white-space: nowrap; }
 .pay-btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -898,7 +946,6 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 .pdv-qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .pdv-qty-stepper input { appearance: textfield; -moz-appearance: textfield; }
 .pdv-results-label { font-size: .75rem; color: #64748b; margin: 0; padding: 10px 12px 4px; }
-.pay-cash-currency { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px; background: #fff; color: #1d4ed8; max-width: 90px; }
 .pay-add-row { flex-wrap: wrap; }
 .pay-ref-input { flex-basis: 100%; order: 2; }
 .pdv-ci-controls .pdv-ci-remove { align-self: center; }

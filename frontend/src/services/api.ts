@@ -596,6 +596,13 @@ export interface InventoryItemList {
   total_pages: number
 }
 
+export type ProductRelation = 'family' | 'brand_category' | 'brand' | 'category'
+export interface RelatedProductCursor { after_rank: number; after_id: string }
+export interface RelatedProducts {
+  items: { item: InventoryItem; relation: ProductRelation }[]
+  next_cursor: RelatedProductCursor | null
+}
+
 export interface AlertSummary {
   unknown_stock_count: number
   low_stock_count: number
@@ -679,6 +686,9 @@ export const inventoryAPI = {
 
   getByBarcode: (code: string, includeImages = true): Promise<InventoryItem[]> =>
     api.get(`/api/inventory/items/barcode/${encodeURIComponent(code)}`, { params: { include_images: includeImages } }).then(res => res.data),
+
+  getRelated: (id: string, cursor?: RelatedProductCursor | null, signal?: AbortSignal): Promise<RelatedProducts> =>
+    api.get(`/api/inventory/items/${id}/related`, { params: { limit: 12, ...cursor }, signal, timeout: 5000 }).then(res => res.data),
 
   quickExit: (id: string, location: string = 'loja'): Promise<{ message: string; new_stock: number; location: string }> =>
     api.post(`/api/inventory/items/${id}/quick-exit`, { location }).then(res => res.data),

@@ -5,9 +5,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import PDVView from './PDVView.vue'
 import { usePdvStore } from '@/stores/pdv'
-import type { InventoryItem, PdvSaleResponse } from '@/services/api'
+import type { InventoryItem, PdvSaleResponse, RelatedProducts } from '@/services/api'
 
-const mocks = vi.hoisted(() => ({ getItems: vi.fn(), getByBarcode: vi.fn(), createSale: vi.fn() }))
+const mocks = vi.hoisted(() => ({ getItems: vi.fn(), getByBarcode: vi.fn(), getRelated: vi.fn(), createSale: vi.fn() }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/services/api', () => ({ inventoryAPI: mocks, pdvAPI: { createSale: mocks.createSale } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: 'fixture-user', role: 'USER' } }) }))
@@ -50,6 +50,7 @@ async function mount() {
 beforeEach(() => {
   vi.useFakeTimers()
   mocks.getItems.mockResolvedValue({ items: [{ ...item }] })
+  mocks.getRelated.mockResolvedValue({ items: [], next_cursor: null })
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 })
 afterEach(() => { app?.unmount(); app = undefined; root?.remove(); vi.clearAllTimers(); vi.useRealTimers(); vi.resetAllMocks() })
@@ -142,5 +143,85 @@ describe('PDV asynchronous product selection', () => {
     expect(root.textContent).not.toContain('Código antigo')
     expect(root.querySelector('.pdv-search-loading')).toBeNull()
     expect(mocks.createSale).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('PDV fast product entry and scan context', () => {
+  it('keeps the products tab and search results when adding several items', async () => {
+    await mount(); await search('Produto')
+    await click('.pdv-result-row'); await click('.pdv-result-add')
+    expect(usePdvStore().cart[0].quantity).toBe(2)
+    expect(root.querySelector('.pdv-panel-products')?.classList.contains('mobile-hidden')).toBe(false)
+    expect(root.querySelector<HTMLInputElement>('.pdv-search-input')?.value).toBe('Produto')
+    expect(root.querySelector('.pdv-toast')?.textContent).toContain('Produto sintético adicionado')
+    expect(mocks.getItems).toHaveBeenCalledTimes(2)
+    expect(mocks.getRelated).not.toHaveBeenCalled()
+  })
+
+  it('adds the scan immediately, keeps it first and pages related items without blocking checkout', async () => {
+    const suggestions = deferred<RelatedProducts>()
+    mocks.getRelated.mockReturnValueOnce(suggestions.promise)
+    mocks.getByBarcode.mockResolvedValueOnce([{ ...item }])
+    await mount(); await scan()
+    expect(usePdvStore().cart[0].item_id).toBe(item.id)
+    expect(root.querySelector('.pdv-panel-products')?.classList.contains('mobile-hidden')).toBe(false)
+    expect(root.querySelector('.pdv-result-row')?.textContent).toContain('Produto lido')
+    expect(root.querySelector('.pdv-search-loading')).toBeNull()
+    expect(root.querySelector('.pdv-related-footer')?.textContent).toContain('Carregando relacionados')
+    await chooseDropdown(root.querySelector('.pay-select'), 'cash_gs'); await flush()
+    await click('.pay-btn-total'); await click('.pay-btn-add')
+    expect(root.querySelector<HTMLButtonElement>('.pay-confirm-btn')!.disabled).toBe(false)
+    suggestions.resolve({items:[{item:{...item,id:'sibling',name:'Outra cor M'},relation:'family'}],next_cursor:{after_rank:0,after_id:'sibling'}}); await flush()
+    expect(Array.from(root.querySelectorAll('.pdv-result-name')).map(el=>el.textContent)).toEqual([item.name,'Outra cor M'])
+    await click('.pdv-related-footer button')
+    expect(mocks.getRelated).toHaveBeenLastCalledWith(item.id,{after_rank:0,after_id:'sibling'},expect.any(AbortSignal))
+    expect(root.querySelectorAll('.pdv-result-row')).toHaveLength(2)
+    expect(mocks.createSale).not.toHaveBeenCalled()
+  })
+
+  it('does not allow late suggestions to replace a new search or its stock snapshot', async () => {
+    const suggestions = deferred<RelatedProducts>()
+    mocks.getRelated.mockReturnValueOnce(suggestions.promise)
+    mocks.getByBarcode.mockResolvedValueOnce([{ ...item }])
+    await mount(); await scan()
+    const signal = mocks.getRelated.mock.calls[0][2] as AbortSignal
+    await search('Nova busca')
+    expect(signal.aborted).toBe(true)
+    suggestions.resolve({items:[{item:{...item,id:'stale',name:'Variação atrasada'},relation:'family'}],next_cursor:null}); await flush()
+    expect(root.textContent).not.toContain('Variação atrasada')
+    expect(root.querySelector('.pdv-related-footer')).toBeNull()
+    expect(usePdvStore().cart).toHaveLength(1)
+  })
+
+  it('recovers a related lookup without adding the scanned product twice', async () => {
+    mocks.getRelated.mockRejectedValueOnce(new Error('offline'))
+    mocks.getByBarcode.mockResolvedValueOnce([{ ...item }])
+    await mount(); await scan()
+    expect(root.querySelector('.pdv-related-footer')?.textContent).toContain('Não foi possível carregar')
+    await click('.pdv-related-footer button')
+    expect(mocks.getRelated).toHaveBeenCalledTimes(2)
+    expect(usePdvStore().cart[0].quantity).toBe(1)
+    expect(root.querySelector('.pdv-result-name')?.textContent).toBe(item.name)
+  })
+
+  it('waits for an explicit choice before fetching context for a shared manufacturer barcode', async () => {
+    mocks.getByBarcode.mockResolvedValueOnce([{ ...item },{...item,id:'other',name:'Outro tamanho'}])
+    await mount(); await scan()
+    expect(mocks.getRelated).not.toHaveBeenCalled()
+    expect(usePdvStore().cart).toEqual([])
+    await click('.pdv-result-row')
+    expect(mocks.getRelated).toHaveBeenCalledOnce()
+    expect(mocks.getRelated.mock.calls[0][0]).toBe(item.id)
+    expect(usePdvStore().cart).toHaveLength(1)
+  })
+
+  it('keeps an out-of-stock scan visible with alternatives and never adds it', async () => {
+    mocks.getByBarcode.mockResolvedValueOnce([{...item,current_stock:0,stock_loja:0}])
+    mocks.getRelated.mockResolvedValueOnce({items:[{item:{...item,id:'available',name:'Disponível M'},relation:'family'}],next_cursor:null})
+    await mount(); await scan()
+    expect(usePdvStore().cart).toEqual([])
+    expect(root.querySelectorAll('.pdv-result-row')).toHaveLength(2)
+    expect(root.querySelector<HTMLButtonElement>('.pdv-result-add')!.disabled).toBe(true)
   })
 })
