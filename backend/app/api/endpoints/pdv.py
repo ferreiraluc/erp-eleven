@@ -177,6 +177,13 @@ def create_sale(
     )
     desconto = float(body.desconto_gs)
     total = max(0.0, subtotal - desconto)
+    total_gs = Decimal(str(round(total, 2)))
+    paid_gs = sum((payment['amount_gs'] for payment in payments), Decimal(0))
+    if paid_gs < total_gs:
+        raise HTTPException(422, 'Os pagamentos não cobrem o total da venda.')
+    cash_gs = sum((payment['amount_gs'] for payment in payments if payment['method'].startswith('cash_')), Decimal(0))
+    if paid_gs - total_gs > cash_gs:
+        raise HTTPException(422, 'Troco só pode vir de pagamento em dinheiro. Confira o valor e o câmbio.')
 
     sale = PdvSale(
         id=uuid.uuid4(),
@@ -185,7 +192,7 @@ def create_sale(
         cliente_nome=customer.nome if customer else body.cliente_nome,
         subtotal_gs=Decimal(str(round(subtotal, 2))),
         desconto_gs=Decimal(str(round(desconto, 2))),
-        total_gs=Decimal(str(round(total, 2))),
+        total_gs=total_gs,
         notas=body.notas,
         status="completed",
         created_by=current_user.id,

@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import RootApp from '@/App.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import SystemSettingsView from '@/views/SystemSettingsView.vue'
 import i18n from '@/i18n'
 import { uiText } from '@/i18n/uiText'
 import { useAuthStore } from '@/stores/auth'
@@ -16,6 +17,7 @@ vi.mock('@/components/RastreamentoCard.vue', () => ({ default: { render: () => n
 vi.mock('@/components/FolgasCard.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/components/dashboard/AddressSummaryCard.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/components/dashboard/SalesSummaryCard.vue', () => ({ default: { render: () => null } }))
+vi.mock('@/components/pdv/PDVPrinterModal.vue', () => ({ default: { template: '<div class="printer-dialog">Ticket printer settings</div>' } }))
 
 let app: App | undefined, element: HTMLElement
 const account = (owner: boolean): User => ({
@@ -29,6 +31,7 @@ async function mount(owner = true, path = '/dashboard') {
   const auth = useAuthStore(); auth.user = account(owner); auth.token = 'fixture-token'; auth.status = 'authenticated'; saveToken('fixture-token')
   const router = createRouter({ history: createMemoryHistory(), routes: [
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
+    { path: '/configuracoes', component: SystemSettingsView, meta: { requiresAuth: true, requiresOwner: true } },
     ...['/conta', '/usuarios', '/auditoria', '/pedidos'].map(path => ({ path, component: { template: '<main>Fixture</main>' }, meta: { requiresAuth: true } })),
     { path: '/login', component: { template: '<main>Login</main>' } },
   ] })
@@ -76,10 +79,23 @@ describe('Account navigation inside the dashboard header', () => {
     expect(nav.querySelector('a[href="/conta"]')).not.toBeNull()
     expect(nav.querySelector('a[href="/usuarios"]')).toBeNull()
     expect(nav.querySelector('a[href="/auditoria"]')).toBeNull()
+    expect(element.querySelector('.dashboard-footer a[href="/configuracoes"]')).toBeNull()
     ;(nav.querySelector('a[href="/conta"]') as HTMLAnchorElement).click()
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/conta'))
     expect(element.querySelectorAll('.account-navigation')).toHaveLength(1)
     expect(element.querySelector('.account-bar a[href="/dashboard"]')).not.toBeNull()
+  })
+
+  it('opens ticket printer settings from the dashboard footer for the owner', async () => {
+    const { router } = await mount()
+    const link = element.querySelector<HTMLAnchorElement>('.dashboard-footer a[href="/configuracoes"]')
+    expect(link?.textContent).toContain('Configurações')
+    link!.click()
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/configuracoes'))
+    expect(element.querySelector('.settings-card h2')?.textContent).toBe('Impressora de tickets')
+    element.querySelector<HTMLButtonElement>('.settings-card button')!.click()
+    await nextTick()
+    expect(element.querySelector('.printer-dialog')).not.toBeNull()
   })
 
   it('changes and persists the language through the header selector', async () => {

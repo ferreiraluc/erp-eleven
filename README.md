@@ -64,7 +64,7 @@ que escrevem ou imprimem passam pelas permissões e confirmações do fluxo. O
 computador da loja busca trabalhos por HTTPS; o laptop de desenvolvimento não é
 servidor de impressão.
 
-O PDV possui uma fila exclusiva de tickets, configurada por Lucas em **PDV → Tickets**.
+O PDV possui uma fila exclusiva de tickets, configurada por Lucas em **Configurações → Impressora de tickets**.
 Há agente Windows/Zebra e agente macOS/ESC-POS para **3nStar RPT006W via Ethernet**,
 com início após login, bobina de 80 mm e reconexão. A preparação do Mac não desativa
 a Zebra: a troca exige teste conferido e fila anterior concluída. Vendas pelo celular

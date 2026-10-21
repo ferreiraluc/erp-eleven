@@ -3704,6 +3704,11 @@
     "es": "Seleccione el cliente para anotar fiado.",
     "en": "Select the customer to record credit."
   },
+  "O valor acima do total precisa estar em dinheiro para gerar troco. Confira os pagamentos.": {
+    "pt": "O valor acima do total precisa estar em dinheiro para gerar troco. Confira os pagamentos.",
+    "es": "El importe que supera el total debe pagarse en efectivo para generar vuelto. Revise los pagos.",
+    "en": "Any amount above the total must be paid in cash to give change. Review the payments."
+  },
   "Para alterar este pagamento antigo, selecione um método atual.": {
     "pt": "Para alterar este pagamento antigo, selecione um método atual.",
     "es": "Para modificar este pago anterior, seleccione un método actual.",
@@ -3808,6 +3813,11 @@
     "pt": "Impressora de tickets",
     "es": "Impresora de tickets",
     "en": "Receipt printer"
+  },
+  "Configurar impressora de tickets": {
+    "pt": "Configurar impressora de tickets",
+    "es": "Configurar impresora de tickets",
+    "en": "Configure receipt printer"
   },
   "Tickets": {
     "pt": "Tickets",
@@ -3924,10 +3934,10 @@
     "es": "Confirmar nueva copia",
     "en": "Confirm another copy"
   },
-  "Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets no PDV.": {
-    "pt": "Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets no PDV.",
-    "es": "Impresora de caja no activada. Imprima desde este dispositivo o configure los tickets en el PDV.",
-    "en": "Checkout printer is not enabled. Print from this device or configure receipts in the POS."
+  "Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets em Configurações.": {
+    "pt": "Impressora do caixa não ativada. Use a impressão neste aparelho ou configure os tickets em Configurações.",
+    "es": "Impresora de caja no activada. Imprima desde este dispositivo o configure los tickets en Configuración.",
+    "en": "Checkout printer is not enabled. Print from this device or configure receipts in Settings."
   },
   "🖨 Neste aparelho": {
     "pt": "🖨 Neste aparelho",

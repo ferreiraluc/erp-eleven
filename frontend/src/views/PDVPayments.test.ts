@@ -11,7 +11,7 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItems: mocks.getItems }, pdvAPI: { createSale: mocks.createSale } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: 'test', role: 'ADMIN' } }) }))
 vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ currentRates: {}, loadCurrentRates: vi.fn().mockResolvedValue(true), exchangeRates: mocks.rates }) }))
-let app: App | undefined, root: HTMLDivElement
+let app: App | undefined, root: HTMLDivElement, pinia: ReturnType<typeof createPinia>
 async function tick() { await nextTick(); await Promise.resolve(); await nextTick() }
 const input = (selector: string) => root.querySelector(selector) as HTMLInputElement
 async function set(selector: string, value: string, event = 'input') { const el = input(selector); if (el.matches('.erp-dropdown')) { await chooseDropdown(el, value); await tick(); return } el.value = value; el.dispatchEvent(new Event(event, { bubbles: true })); await tick() }
@@ -21,7 +21,7 @@ beforeEach(async () => {
   vi.useFakeTimers(); vi.clearAllMocks(); i18n.global.locale.value = 'pt'
   mocks.rates = reactive({ 'G$': 6500, 'R$': 5, EUR: .9 })
   mocks.getItems.mockResolvedValue({items: [{id:'one',name:'Produto sintético',sku_internal:'TEST',sale_price:100,sale_currency:'USD',stock_loja:5,stock_deposito:0,current_stock:5,is_active:true}]})
-  const pinia = createPinia(); setActivePinia(pinia)
+  pinia = createPinia(); setActivePinia(pinia)
   usePdvStore().addItem({item_id:null,item_name:'Peça teste',item_sku:null,item_category:null,item_size:null,item_color:null,quantity:1,unit_price_gs:650000,original_price_gs:650000,original_price:100,sale_currency:'USD',image_data:null,discount_gs:0,is_avulso:true,location:'loja'})
   root = document.createElement('div'); document.body.append(root)
   app = createApp(PDVView).use(pinia).use(i18n); app.config.globalProperties.$tr = (text:string) => text
@@ -169,4 +169,81 @@ it('edits the discount below the rate and before Paid, recalculating the outstan
   button('.pay-btn-total').click(); await tick()
   expect(Number(input('.pay-amount-input').value)).toBe(90)
   expect(mocks.createSale).not.toHaveBeenCalled()
+})
+
+async function setRoundingExample() {
+  mocks.rates['G$'] = 6000
+  await tick()
+  const item = usePdvStore().cart[0]
+  item.unit_price_gs = 2571450
+  item.original_price_gs = 2571450
+  item.original_price = 428.575
+  await tick()
+}
+
+it('closes a Total payment without artificial change and restores the draft after navigating away', async () => {
+  await setRoundingExample()
+  button('.pay-btn-total').click(); await tick()
+  expect(Number(input('.pay-amount-input').value.replace(',', '.'))).toBe(428.58)
+  button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().total).toBe(2571480)
+  expect(root.querySelector('.pay-troco')).toBeNull()
+  expect(usePdvStore().payments).toHaveLength(1)
+
+  app?.unmount()
+  app = createApp(PDVView).use(pinia).use(i18n)
+  app.config.globalProperties.$tr = (text: string) => text
+  app.mount(root); await tick()
+  expect(root.querySelectorAll('.pay-entry')).toHaveLength(1)
+  expect(root.querySelector('.pay-troco')).toBeNull()
+  button('.pay-entry-remove').click(); await tick()
+  expect(usePdvStore().total).toBe(2571450)
+  expect(usePdvStore().payments).toHaveLength(0)
+})
+
+it('rounds a manually entered noncash final amount but preserves genuine cash change', async () => {
+  await setRoundingExample()
+  await method('pix_personal')
+  await set('.pay-amount-input', '2142,88')
+  button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().total).toBe(2571456)
+  expect(root.querySelector('.pay-troco')).toBeNull()
+  button('.pay-entry-remove').click(); await tick()
+  expect(usePdvStore().total).toBe(2571450)
+
+  await method('cash_usd')
+  await set('.pay-amount-input', '428,58')
+  button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().total).toBe(2571450)
+  expect(root.querySelector('.pay-troco')?.textContent).toContain('30')
+})
+
+it('uses the smallest cash cent when the G$ remainder is less than half a foreign cent', async () => {
+  mocks.rates['G$'] = 6000; await tick()
+  usePdvStore().cart[0].unit_price_gs = 20
+  await tick()
+  button('.pay-btn-total').click(); await tick()
+  expect(Number(input('.pay-amount-input').value.replace(',', '.'))).toBe(0.01)
+  button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().total).toBe(20)
+  expect(root.querySelector('.pay-troco')?.textContent).toContain('40')
+})
+
+it('blocks noncash overpayment before checkout and tolerates rates changing during checkout', async () => {
+  await setRoundingExample()
+  button('.pay-btn-total').click(); await tick()
+  button('.pay-btn-add').click(); await tick()
+  usePdvStore().loading = true
+  mocks.rates['G$'] = 7000
+  await tick()
+  usePdvStore().loading = false
+  await tick()
+  expect(usePdvStore().cart[0].unit_price_gs).toBe(Math.round(428.575 * 7000))
+
+  button('.pay-entry-remove').click(); await tick()
+  await method('pix_personal')
+  await set('.pay-amount-input', '3000')
+  button('.pay-btn-add').click(); await tick()
+  expect(root.querySelector('.pay-validation[role="alert"]')?.textContent).toContain('dinheiro')
+  expect(button('.pay-confirm-btn').disabled).toBe(true)
 })

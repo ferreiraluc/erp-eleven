@@ -45,7 +45,7 @@ acima disso o ERP recusa o documento em vez de dividir silenciosamente.
 
 ## Instalar e validar sem substituir a Zebra antecipadamente
 
-1. Entre como Lucas em **PDV → Tickets → Preparar 3nStar no Mac**. Isso cria
+1. Entre como Lucas em **Configurações → Impressora de tickets → Preparar 3nStar no Mac**. Isso cria
    `driver=escpos_tcp`, `purpose=tickets`, 80 mm contínuos, impressão automática
    **desativada**. Repetir a preparação reutiliza o dispositivo, sem duplicá-lo.
 2. Guarde a credencial exibida e baixe o pacote macOS pelo mesmo painel.

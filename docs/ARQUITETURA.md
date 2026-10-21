@@ -18,6 +18,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
   Abas, opções, filtros e cards clicáveis usam `erp-control`, conservando indicação
   de seleção e formato próprios. A navegação de conta e os dropdowns têm estilo próprio.
 - `frontend/src/router/index.ts` declara rotas, autenticação e restrições de ADMIN/GERENTE na navegação.
+- `/configuracoes` reúne os controles de tickets de impressão para Lucas; o link fica no rodapé do dashboard e a rota exige o perfil proprietário.
 - `frontend/src/assets/dialogs.css` e `directives/erpDialog.ts` padronizam as janelas:
   tamanhos, cabeçalho/rodapé, corpo rolável, foco e empilhamento. Os handlers de negócio
   pertencem ao módulo; ver [Modais e formulários](UI_MODAIS.md).
