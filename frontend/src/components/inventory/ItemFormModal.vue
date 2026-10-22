@@ -713,8 +713,34 @@ const gradeTargetOptions = computed(() => [{value:'all',label:tr('Todas as varia
 const gradeItemCount = computed(() => gradeRows.value.length)
 function gradeQuantity(row: { key: string }) { return gradeQuantities.value[row.key] ?? gradeInitialStock.value }
 const gradeModelName = computed(() => {
-  const name = form.name.trim(), suffix = form.size.trim() ? ' ' + canonicalSize(form.size.trim()) : ''
-  return suffix && name.toLowerCase().endsWith(suffix.toLowerCase()) ? name.slice(0, -suffix.length) : name
+  const name = form.name.trim()
+  const sizes = [...new Set([form.size.trim(), canonicalSize(form.size.trim())].filter(Boolean))]
+  let withoutSize = name
+  for (const size of sizes) {
+    const suffix = ` ${size}`
+    if (withoutSize.length > suffix.length && withoutSize.toLocaleLowerCase().endsWith(suffix.toLocaleLowerCase())) {
+      withoutSize = withoutSize.slice(0, -suffix.length).trimEnd()
+      break
+    }
+  }
+  const sourceColor = props.gradeContext?.source.color?.trim() || form.color.trim()
+  const hasOtherColor = sourceColor && [
+    ...gradeRows.value.map(row => row.color),
+    ...(props.gradeContext?.existing || []).map(row => row.color),
+  ].some(color => color && taxonomyKey(color) !== taxonomyKey(sourceColor))
+  if (!hasOtherColor) return withoutSize
+  // Historical names place size and color in either order. Strip only suffixes
+  // backed by the structured fields; the model code and custom name remain.
+  let model = name
+  for (let pass = 0; pass < 2; pass++) {
+    for (const value of [...sizes, sourceColor]) {
+      const ending = value ? ` ${value}` : ''
+      if (ending && model.length > ending.length && model.toLocaleLowerCase().endsWith(ending.toLocaleLowerCase())) {
+        model = model.slice(0, -ending.length).trimEnd()
+      }
+    }
+  }
+  return model
 })
 const gradeTotalStock = computed(() => gradeRows.value.reduce((total, row) => {
   const quantity = gradeQuantity(row)
@@ -1114,6 +1140,7 @@ async function handleSubmit() {
         // Only colors — create one item per color
         const baseSinglePayload = {
           ...form,
+          name: gradeModelName.value,
           supplier_id: form.supplier_id || null,
           image_data: form.image_data || null,
           brand: form.brand || null,

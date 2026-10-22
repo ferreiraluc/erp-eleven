@@ -54,7 +54,7 @@
 
       <!-- Sugestões de agrupamento (visível no modo seleção) -->
       <InventoryGroupingSuggestions
-        v-if="selectionMode && suggestedGroups.length"
+        v-if="selectionMode && canManageGrades && suggestedGroups.length"
         :suggestions="suggestedGroups"
         @select="selectSuggestedGroup"
       />
@@ -155,7 +155,7 @@
             </button>
             <div class="group-title-area">
               <input
-                v-if="editingGroupKey === entry.group.group_key"
+                v-if="canManageGrades && editingGroupKey === entry.group.group_key"
                 v-model="editingGroupName"
                 class="group-name-input"
                 @keydown.enter.prevent="saveGroupName(entry.group.group_key)"
@@ -164,11 +164,12 @@
                 @click.stop
               />
               <span
-                v-else
+                v-else-if="canManageGrades"
                 class="group-name group-name-editable"
                 @click.stop="startEditGroupName(entry.group.group_key)"
                 :title="tr('Clique para renomear o grupo')"
               >{{ groupTitle(entry.group.group_key) }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
+              <span v-else class="group-name">{{ groupTitle(entry.group.group_key) }}</span>
               <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr('Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
               <span v-if="groupAlertLevel(entry.group.items) === 'unknown'" class="alert-badge badge-unknown">{{ tr('Revisar estoque') }}</span>
               <span
@@ -185,13 +186,11 @@
               </span>
             </div>
             <div class="group-btns">
+              <button v-if="canManageGrades" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Peça') }}</button>
               <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                 </svg>
-              </button>
-              <button @click.stop="handleUngroup(entry.group.group_key)" class="action-btn ungroup-btn erp-button erp-button--ghost erp-button--icon" :title="tr('Desagrupar')">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
               </button>
             </div>
           </div>
@@ -204,12 +203,12 @@
               :title="v.name + ' · ' + (v.inventory_code || v.sku_internal)"
             >
               <span class="chip-label" @click.stop="openEdit(v)">
-                {{ v.size || v.name }}&nbsp;
+                {{ v.size || v.name }}<template v-if="groupHasMultipleColors(entry.group.items) && v.color"> · {{ v.color }}</template>&nbsp;
                 <template v-if="hasKnownStock(v) && v.stock_deposito > 0 && v.stock_loja > 0">{{ displayStock(v.stock_loja) }}|{{ displayStock(v.stock_deposito) }}</template>
                 <template v-else>{{ displayStock(v.current_stock) }}</template>
                 <span v-if="!hasKnownStock(v)" :title="tr('Revisar estoque')"> · {{ tr('Não informado') }}</span>
               </span>
-              <div class="chip-remove-wrap">
+              <div v-if="canManageGrades" class="chip-remove-wrap">
                 <button
                   class="chip-remove erp-button erp-button--danger erp-button--icon"
                   :title="tr('Remover do grupo')"
@@ -369,6 +368,7 @@
 
           <!-- Expanded detail section -->
           <div v-if="expandedCardIds.includes(entry.item.id)" class="item-extra" @click.stop>
+            <button v-if="canManageGrades" type="button" class="item-grade-action erp-button erp-button--secondary erp-button--sm" @click.stop="openGradeManagerForItem(entry.item)">{{ entry.item.group_key ? tr('Gerenciar grade') : tr('Vincular à grade') }}</button>
             <div class="item-extra-row">
               <span class="item-extra-label">{{ tr('SKU anterior') }}</span>
               <span class="item-extra-val mono">{{ entry.item.sku_internal }}</span>
@@ -466,7 +466,7 @@
     />
 
     <GroupingSuggestionModal
-      v-if="showSuggestionModal"
+      v-if="showSuggestionModal && canManageGrades"
       :items="suggestionModalItems"
       :suggested-name="suggestionModalName"
       :existing-group-keys="existingGroupKeys"
@@ -491,7 +491,7 @@
         <div class="sel-actions">
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
-          <button @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
+          <button v-if="canManageGrades" @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
             <span class="sel-label-short">{{ tr('Editar') }}</span>
@@ -510,6 +510,16 @@
       </div>
     </transition>
 
+    <GradeMembershipModal
+      v-if="gradeManagerItem || gradeManagerKey"
+      :item="gradeManagerItem"
+      :group-key="gradeManagerKey"
+      :group-name="gradeManagerName"
+      :members="gradeManagerMembers"
+      @close="closeGradeManager"
+      @changed="onGradeMembershipChanged"
+    />
+
     <!-- Modal de nome do grupo -->
     <div v-if="showGroupModal" class="gmodal-overlay erp-dialog-backdrop" @click.self="showGroupModal = false">
       <div v-erp-dialog class="gmodal erp-dialog erp-dialog--sm">
@@ -522,14 +532,18 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
           {{ tr('Itens já agrupados que serão ignorados: {count}.', { count: selectedAlreadyGrouped.length }) }}
         </div>
-        <div v-if="selectedUngrouped.length < 2" class="gmodal-error">
+        <div v-if="selectedUngrouped.length < (selectedExistingGroup ? 1 : 2)" class="gmodal-error">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          {{ tr('Selecione pelo menos 2 itens sem grupo para poder agrupar.') }}
+          {{ selectedExistingGroup ? tr('Selecione ao menos um produto avulso.') : tr('Selecione pelo menos 2 itens sem grupo para poder agrupar.') }}
         </div>
-        <ErpSelect v-if="existingGroupKeys.length" v-model="selectedExistingGroup" class="gmodal-input"
-          :aria-label="tr('Grade de destino')" :disabled="grouping || selectedUngrouped.length < 2">
+        <label class="gmodal-search-label" for="bulk-grade-search">{{ tr('Buscar grade existente') }}</label>
+        <input id="bulk-grade-search" v-model="bulkGroupSearch" type="search" class="gmodal-input" :placeholder="tr('Nome ou referência da grade')" :disabled="grouping || selectedUngrouped.length < 1" />
+        <p v-if="bulkDirectoryLoading" class="gmodal-hint" role="status">{{ tr('Buscando grades...') }}</p>
+        <p v-if="bulkDirectoryError" class="gmodal-error" role="alert">{{ tr('Não foi possível buscar grades. Tente novamente.') }}</p>
+        <ErpSelect v-if="bulkGroupChoices.length" v-model="selectedExistingGroup" class="gmodal-input"
+          :aria-label="tr('Grade de destino')" :disabled="grouping || selectedUngrouped.length < 1">
           <option value="">{{ tr('Criar uma nova grade') }}</option>
-          <option v-for="gk in existingGroupKeys" :key="gk" :value="gk">{{ groupTitle(gk) }}</option>
+          <option v-for="grade in bulkGroupChoices" :key="grade.group_key" :value="grade.group_key">{{ bulkGroupOptionLabel(grade) }}</option>
         </ErpSelect>
         <input v-if="!selectedExistingGroup"
           v-model="groupNameInput"
@@ -544,7 +558,7 @@
         <div class="gmodal-footer erp-dialog__footer">
           <button @click="showGroupModal = false" class="sel-btn erp-button erp-button--secondary erp-button--sm">{{ tr('Cancelar') }}</button>
           <button @click="confirmGroup" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm"
-            :disabled="(!selectedExistingGroup && !groupNameInput.trim()) || grouping || selectedUngrouped.length < 2">
+            :disabled="(!selectedExistingGroup && !groupNameInput.trim()) || grouping || selectedUngrouped.length < (selectedExistingGroup ? 1 : 2)">
             {{ grouping ? tr('Agrupando...') : tr('Agrupar {count}', { count: selectedUngrouped.length }) }}
           </button>
         </div>
@@ -571,7 +585,7 @@ import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
 import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
 import { readPreference, savePreference } from '@/services/inventoryGradeOptions'
-import { inventoryAPI, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
+import { inventoryAPI, type InventoryGradeDirectoryEntry, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import ItemFormModal from '@/components/inventory/ItemFormModal.vue'
 import DeletedProductsModal from '@/components/inventory/DeletedProductsModal.vue'
@@ -583,6 +597,7 @@ import { inventoryGroupName } from '@/services/inventoryGroupNames'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
+import GradeMembershipModal from '@/components/inventory/GradeMembershipModal.vue'
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
 import InventoryDiagnosticsPanel from '@/components/inventory/InventoryDiagnosticsPanel.vue'
 import InventoryFilters from '@/components/inventory/InventoryFilters.vue'
@@ -623,6 +638,7 @@ function filterReceiving(lot:ReceivingLot) {
 function clearReceiving() { receivingFilterName.value=''; inventoryStore.filters.receiving_lot_id=''; reloadItems(); if(groupMode.value) loadGroupsFiltered() }
 
 const auth = useAuthStore()
+const canManageGrades = computed(() => ['ADMIN', 'GERENTE'].includes(auth.userRole))
 
 const searchQuery = ref(inventoryStore.filters.search || '')
 const activeStatus = ref((route.query.status as string) || '')
@@ -642,6 +658,37 @@ const filterBrand = ref('')
 const filterCategory = ref('')
 const expandedCardIds = ref<string[]>([])
 const confirmRemoveChip = ref<string | null>(null)
+const gradeManagerItem = ref<InventoryItem | null>(null)
+const gradeManagerKey = ref<string | null>(null)
+const gradeManagerName = ref('')
+const gradeManagerMembers = ref<InventoryItem[]>([])
+
+function openGradeManagerForItem(item: InventoryItem) {
+  gradeManagerItem.value = item
+  gradeManagerKey.value = null
+  gradeManagerName.value = item.group_key ? groupTitle(item.group_key) : ''
+  gradeManagerMembers.value = []
+}
+
+function openGradeManagerForGroup(group: GroupResponse) {
+  gradeManagerItem.value = null
+  gradeManagerKey.value = group.group_key
+  gradeManagerName.value = groupTitle(group.group_key)
+  gradeManagerMembers.value = group.items
+}
+
+function closeGradeManager() {
+  gradeManagerItem.value = null
+  gradeManagerKey.value = null
+  gradeManagerName.value = ''
+  gradeManagerMembers.value = []
+}
+
+async function onGradeMembershipChanged() {
+  closeGradeManager()
+  showToast('Vínculo da grade atualizado', 'success')
+  await Promise.all([reloadItems(), loadGroupsFiltered(), inventoryStore.loadAlerts()])
+}
 
 const backendGroups = ref<GroupResponse[]>([])
 const backendSuggestions = ref<SuggestionResponse[]>([])
@@ -673,6 +720,12 @@ const selectedIds = ref<string[]>([])
 const showGroupModal = ref(false)
 const groupNameInput = ref('')
 const selectedExistingGroup = ref('')
+const bulkGroupSearch = ref('')
+const bulkGroupChoices = ref<InventoryGradeDirectoryEntry[]>([])
+const bulkDirectoryLoading = ref(false)
+const bulkDirectoryError = ref(false)
+let bulkDirectoryGeneration = 0
+let bulkSearchTimer: ReturnType<typeof setTimeout> | null = null
 const groupNameInputRef = ref<HTMLInputElement | null>(null)
 const editingGroupKey = ref<string | null>(null)
 const editingGroupName = ref('')
@@ -783,7 +836,7 @@ function toggleSelectionMode() {
     showGroupModal.value = false
   } else {
     if (!groupsLoaded.value) void loadGroups()
-    loadSuggestions()
+    if (canManageGrades.value) loadSuggestions()
   }
 }
 
@@ -881,11 +934,11 @@ function toggleSelection(id: string) {
 
 // Items selected that are NOT already in a group — only these can be grouped
 const selectedUngrouped = computed(() =>
-  inventoryStore.items.filter(i => selectedIds.value.includes(i.id) && !i.group_key)
+  selectedIds.value.map(id => allVisibleItems.value.get(id)).filter((item): item is InventoryItem => !!item && !item.group_key)
 )
 // Items selected that ARE already in a group — will be excluded from grouping
 const selectedAlreadyGrouped = computed(() =>
-  inventoryStore.items.filter(i => selectedIds.value.includes(i.id) && !!i.group_key)
+  selectedIds.value.map(id => allVisibleItems.value.get(id)).filter((item): item is InventoryItem => !!item?.group_key)
 )
 
 const groupNameSuggestion = computed(() => {
@@ -909,20 +962,53 @@ watch(showItemForm, (open) => {
 watch(showGroupModal, (val) => {
   if (val) {
     selectedExistingGroup.value = ''
+    bulkGroupSearch.value = ''
     groupNameInput.value = groupNameSuggestion.value
+    void loadBulkGroupDirectory('')
     nextTick(() => groupNameInputRef.value?.focus())
+  } else {
+    ++bulkDirectoryGeneration
+    if (bulkSearchTimer) clearTimeout(bulkSearchTimer)
   }
 })
 
+watch(bulkGroupSearch, term => {
+  if (!showGroupModal.value) return
+  selectedExistingGroup.value = ''
+  if (bulkSearchTimer) clearTimeout(bulkSearchTimer)
+  bulkSearchTimer = setTimeout(() => { void loadBulkGroupDirectory(term) }, 250)
+})
+
+async function loadBulkGroupDirectory(term: string) {
+  const generation = ++bulkDirectoryGeneration
+  bulkDirectoryLoading.value = true
+  bulkDirectoryError.value = false
+  try {
+    const response = await inventoryAPI.getGradeDirectory(term)
+    if (generation === bulkDirectoryGeneration) bulkGroupChoices.value = response.groups
+  } catch {
+    if (generation === bulkDirectoryGeneration) bulkDirectoryError.value = true
+  } finally {
+    if (generation === bulkDirectoryGeneration) bulkDirectoryLoading.value = false
+  }
+}
+
+function bulkGroupOptionLabel(entry: InventoryGradeDirectoryEntry): string {
+  const sameTitle = bulkGroupChoices.value.filter(candidate => candidate.display_name === entry.display_name).length > 1
+  const count = entry.member_count === 1 ? tr('1 item') : tr('{count} itens', { count: entry.member_count })
+  return [entry.display_name, count, sameTitle ? `#${entry.group_key.slice(-6)}` : ''].filter(Boolean).join(' · ')
+}
+
 async function confirmGroup() {
   const key = selectedExistingGroup.value || groupNameInput.value.trim()
-  const name = selectedExistingGroup.value ? groupTitle(key) : key
+  const name = selectedExistingGroup.value ? bulkGroupChoices.value.find(entry => entry.group_key === key)?.display_name || groupTitle(key) : key
   if (!key || grouping.value) return
   const idsToGroup = selectedUngrouped.value.map(i => i.id)
-  if (idsToGroup.length < 2) return
+  if (idsToGroup.length < (selectedExistingGroup.value ? 1 : 2)) return
   grouping.value = true
   try {
-    await inventoryAPI.groupItems(idsToGroup, key)
+    if (selectedExistingGroup.value && idsToGroup.length === 1) await inventoryAPI.attachItemToGrade(idsToGroup[0], key, null)
+    else await inventoryAPI.groupItems(idsToGroup, key)
     showToast('{count} itens agrupados como "{name}"', 'success', { count: idsToGroup.length, name })
     showGroupModal.value = false
     selectionMode.value = false
@@ -1040,6 +1126,9 @@ const groupDisplayNames = computed(() => {
 function groupTitle(key: string): string {
   return groupDisplayNames.value.get(key) || inventoryGroupName(key, [], tr('Grade'))
 }
+function groupHasMultipleColors(items: readonly InventoryItem[]): boolean {
+  return new Set(items.map(item => item.color?.trim().toLocaleLowerCase()).filter(Boolean)).size > 1
+}
 const existingGroupKeys = computed<string[]>(() =>
   backendGroups.value.map(g => g.group_key).sort((a, b) => groupTitle(a).localeCompare(groupTitle(b)))
 )
@@ -1086,6 +1175,7 @@ function sortedByColorThenSize<T extends { size?: string | null; color?: string 
 }
 
 function startEditGroupName(groupKey: string) {
+  if (!canManageGrades.value) return
   editingGroupKey.value = groupKey
   editingGroupName.value = groupTitle(groupKey)
   nextTick(() => {
@@ -1109,21 +1199,10 @@ async function saveGroupName(oldKey: string) {
   }
 }
 
-async function handleUngroup(groupKey: string) {
-  const name = groupTitle(groupKey)
-  try {
-    await inventoryAPI.ungroup(groupKey)
-    showToast('Grupo "{name}" desagrupado', 'success', { name })
-    await Promise.all([reloadItems(), loadGroups()])
-  } catch (e: any) {
-    showToast(e.response?.data?.detail || 'Erro ao desagrupar', 'error')
-  }
-}
-
 async function removeItemFromGroup(itemId: string, groupKey: string) {
   const name = groupTitle(groupKey)
   try {
-    await inventoryAPI.removeFromGroup(itemId)
+    await inventoryAPI.removeFromGroup(itemId, groupKey)
     showToast('Item removido do grupo "{name}"', 'success', { name })
     await Promise.all([reloadItems(), loadGroupsFiltered()])
   } catch (e: any) {
@@ -1192,6 +1271,7 @@ function setFilter(key: 'brand' | 'category', value: string) {
 const suggestedGroups = computed(() => backendSuggestions.value)
 
 function selectSuggestedGroup(sg: SuggestionResponse) {
+  if (!canManageGrades.value) return
   suggestionModalItems.value = sg.items as InventoryItem[]
   suggestionModalName.value = sg.name
   showSuggestionModal.value = true
@@ -1849,6 +1929,7 @@ onMounted(async () => {
 .gmodal-input:focus { border-color: #3b82f6; }
 .gmodal-hint { font-size: 0.75rem; color: #9ca3af; margin: 0 0 1.25rem; }
 .gmodal-hint strong { color: #374151; }
+.gmodal-search-label { display: block; font-size: .78rem; font-weight: 650; color: #374151; margin: .35rem 0; }
 .gmodal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; }
 .gmodal-footer .sel-btn { background: #f3f4f6; color: #374151; }
 .gmodal-footer .sel-btn-primary { background: #3b82f6; color: white; }
@@ -1897,6 +1978,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.18rem;
 }
+.item-grade-action { align-self: flex-start; }
 .view-list .item-extra { margin-top: 0.25rem; padding: 0.25rem 0 0.1rem; }
 .item-extra-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.68rem; }
 .item-extra-label { color: #9ca3af; min-width: 52px; flex-shrink: 0; }

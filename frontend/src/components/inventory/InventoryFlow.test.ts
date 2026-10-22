@@ -167,6 +167,58 @@ describe('Initial stock registration failures', () => {
     expect(Array.from(container.querySelectorAll('.modal-footer button')).map(b => b.textContent?.trim())).toEqual(['Fechar'])
   })
 
+  it('uses the model name without the source color for a new multicolor size grade', async () => {
+    api.createGrade.mockImplementation(async (payload) => {
+      if (payload.color !== 'Preto' && payload.name.endsWith(' Preto')) {
+        throw { response: { status: 409, data: { detail: 'Nome da cor incorreta' } } }
+      }
+      return { items: [item] }
+    })
+    const saved = vi.fn()
+    await mount(ItemFormModal, { onSaved: saved })
+    setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Boné Boss 2001020 Preto')
+    setInput(field('Cor'), 'Preto')
+    await reviewProduct()
+    button('Criar grade deste modelo').click(); await nextTick()
+    button('S → 2XL').click(); button('Preto').click(); button('Navy').click(); await nextTick()
+    expect(container.querySelector('.gp-name')?.textContent).toContain('Boné Boss 2001020 S Preto')
+    button('Criar grade (10 itens)').click()
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce())
+    expect(api.createGrade).toHaveBeenCalledTimes(2)
+    expect(api.createGrade.mock.calls.map(call => [call[0].name, call[0].color])).toEqual([
+      ['Boné Boss 2001020', 'Preto'], ['Boné Boss 2001020', 'Navy'],
+    ])
+  })
+
+  it('keeps the source color in the name of a one-color grade', async () => {
+    api.createGrade.mockResolvedValue({ items: [item] })
+    await mount(ItemFormModal, { onSaved: vi.fn() })
+    setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Boné Boss 2001020 Preto')
+    setInput(field('Cor'), 'Preto')
+    await reviewProduct()
+    button('Criar grade deste modelo').click(); await nextTick()
+    button('S → 2XL').click(); await nextTick()
+    button('Criar grade (5 itens)').click()
+    await vi.waitFor(() => expect(api.createGrade).toHaveBeenCalledOnce())
+    expect(api.createGrade.mock.calls[0][0]).toMatchObject({ name: 'Boné Boss 2001020 Preto', color: 'Preto' })
+  })
+
+  it('removes structured size and color in either order for a multicolor grade', async () => {
+    api.createGrade.mockResolvedValue({ items: [item] })
+    await mount(ItemFormModal, { onSaved: vi.fn() })
+    setInput(field('Tamanho'), 'S')
+    setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Boné Boss 2001020 S Preto')
+    setInput(field('Cor'), 'Preto')
+    await reviewProduct()
+    button('Criar grade deste modelo').click(); await nextTick()
+    button('S → 2XL').click(); button('Preto').click(); button('Navy').click(); await nextTick()
+    button('Criar grade (10 itens)').click()
+    await vi.waitFor(() => expect(api.createGrade).toHaveBeenCalledTimes(2))
+    expect(api.createGrade.mock.calls.map(call => call[0].name)).toEqual([
+      'Boné Boss 2001020', 'Boné Boss 2001020',
+    ])
+  })
+
   it('blocks uncertain network retries until the user checks inventory', async () => {
     api.createItem.mockRejectedValue(new Error('Network timeout'))
     const saved = vi.fn(), partial = vi.fn()

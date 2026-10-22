@@ -654,6 +654,13 @@ export interface SuggestionResponse {
   items: InventoryItem[]
 }
 
+export interface InventoryGradeDirectoryEntry {
+  group_key: string
+  display_name: string
+  member_count: number
+  match_reason?: string
+}
+
 // ─── Inventory API ────────────────────────────────────────────────────────────
 
 export const inventoryAPI = {
@@ -708,8 +715,10 @@ export const inventoryAPI = {
   ungroup: (groupKey: string): Promise<{ message: string; count: number }> =>
     api.post('/api/inventory/items/ungroup', { group_key: groupKey }).then(res => res.data),
 
-  removeFromGroup: (itemId: string): Promise<{ message: string }> =>
-    api.delete(`/api/inventory/items/${itemId}/group`).then(res => res.data),
+  removeFromGroup: (itemId: string, expectedGroupKey?: string): Promise<{ message: string }> =>
+    api.delete(`/api/inventory/items/${encodeURIComponent(itemId)}/group`, {
+      params: expectedGroupKey === undefined ? undefined : { expected_group_key: expectedGroupKey },
+    }).then(res => res.data),
 
   renameGroup: (oldKey: string, newKey: string): Promise<{ message: string; count: number }> =>
     api.patch('/api/inventory/groups', { old_key: oldKey, new_key: newKey }).then(res => res.data),
@@ -723,6 +732,21 @@ export const inventoryAPI = {
 
   getSuggestions: (): Promise<SuggestionResponse[]> =>
     api.get('/api/inventory/suggestions?include_images=false').then(res => res.data),
+
+  getItemGradeSuggestions: (itemId: string): Promise<{ groups: InventoryGradeDirectoryEntry[] }> =>
+    api.get(`/api/inventory/items/${encodeURIComponent(itemId)}/grade-suggestions?limit=8`).then(res => res.data),
+
+  getGradeDirectory: (search = ''): Promise<{ groups: InventoryGradeDirectoryEntry[] }> =>
+    api.get('/api/inventory/groups/directory', { params: { search, limit: 20 } }).then(res => res.data),
+
+  getGroupItemSuggestions: (groupKey: string): Promise<{ items: InventoryItem[] }> =>
+    api.get('/api/inventory/groups/suggestions', { params: { group_key: groupKey, limit: 12 } }).then(res => res.data),
+
+  getGradeMembers: (groupKey: string, page = 1): Promise<{ items: InventoryItem[]; total: number; page: number; limit: number }> =>
+    api.get('/api/inventory/groups/members', { params: { group_key: groupKey, page, limit: 100 } }).then(res => res.data),
+
+  attachItemToGrade: (itemId: string, groupKey: string, expectedGroupKey: string | null): Promise<{ item_id: string; group_key: string; previous_group_key: string | null }> =>
+    api.post(`/api/inventory/items/${encodeURIComponent(itemId)}/grade`, { group_key: groupKey, expected_group_key: expectedGroupKey }).then(res => res.data),
 
   batchEdit: (data: {
     item_ids: string[]

@@ -97,8 +97,70 @@ class RelatedItemsResponse(BaseModel):
 
 
 class GroupItemsRequest(BaseModel):
-    item_ids: List[uuid.UUID]
+    item_ids: List[uuid.UUID] = Field(min_length=1, max_length=2000)
+    group_key: str = Field(min_length=1, max_length=100)
+
+    @field_validator('item_ids')
+    @classmethod
+    def unique_items(cls, value):
+        if len(set(value)) != len(value):
+            raise ValueError('Selecione produtos distintos para agrupar.')
+        return value
+
+    @field_validator('group_key')
+    @classmethod
+    def valid_group_key(cls, value):
+        if not value.strip():
+            raise ValueError('Informe a grade de destino.')
+        return value
+
+
+class GradeAttachRequest(BaseModel):
+    group_key: str = Field(min_length=1, max_length=100)
+    # Required optimistic precondition. Null means the operator saw an avulso.
+    expected_group_key: Optional[str]
+
+    @field_validator('group_key')
+    @classmethod
+    def valid_group_key(cls, value):
+        if not value.strip():
+            raise ValueError('Informe a grade de destino.')
+        return value
+
+
+class GradeMembershipResponse(BaseModel):
+    item_id: uuid.UUID
+    group_key: Optional[str]
+    previous_group_key: Optional[str]
+
+
+class GradeDirectoryEntry(BaseModel):
     group_key: str
+    display_name: str
+    member_count: int
+
+
+class GradeSuggestionEntry(GradeDirectoryEntry):
+    match_reason: str
+
+
+class GradeDirectoryResponse(BaseModel):
+    groups: List[GradeDirectoryEntry]
+
+
+class GradeSuggestionResponse(BaseModel):
+    groups: List[GradeSuggestionEntry]
+
+
+class UngroupedGradeSuggestionsResponse(BaseModel):
+    items: List[ItemResponse]
+
+
+class GradeMembersResponse(BaseModel):
+    items: List[ItemResponse]
+    total: int
+    page: int
+    limit: int
 
 
 class RenameGroupRequest(BaseModel):

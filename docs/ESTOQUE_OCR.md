@@ -925,6 +925,40 @@ da barra para criar uma grade. **Selecionar todos** inclui apenas os produtos da
 visualização atual (e os membros dos cards de grade exibidos), sem adicionar
 grupos ocultos.
 
+### Gerenciar produtos em grades existentes
+
+Uma grade pode reunir tamanhos e cores diferentes do mesmo modelo. No card de uma
+grade, **+ Peça** abre a gestão dos membros: é possível buscar um produto avulso,
+vinculá-lo à grade e remover apenas um membro. No card de um produto avulso,
+**Vincular à grade** mostra grades semelhantes e permite buscar outra pelo nome ou
+referência. Também é possível selecionar um único avulso e usar **Agrupar** para
+colocá-lo em uma grade existente; criar uma grade nova pela seleção continua
+exigindo ao menos dois produtos. A escolha e a confirmação são explícitas.
+
+As sugestões comparam o nome do modelo, marca, categoria e unidade, ignorando
+apenas os sufixos de tamanho/cor que correspondem aos campos do próprio item.
+Em cadastros antigos sem tamanho preenchido, somente letras de tamanho conhecidas
+no fim do nome podem ser retiradas; números permanecem parte do modelo.
+Assim, `Boné Boss 2001020` mantém `2001020` como parte do modelo e pode sugerir
+outra cor. Código de barras igual, sozinho, não cria nem sugere vínculo. A busca
+e as sugestões são limitadas e carregadas ao abrir a gestão, sem consultar cada
+card da listagem. Se não houver sugestão, a busca manual continua disponível.
+As sugestões gerais da barra **Selecionar** consideram até 1.000 avulsos recentes;
+o painel de uma peça ou grade faz busca dirigida no catálogo, e a busca manual
+permite encontrar candidatos fora desse recorte.
+Em grades geradas com o nome da primeira cor, o título passa a mostrar só o modelo
+quando a grade ganhar outras cores; a chave interna não muda.
+No cadastro de uma grade com várias cores, o nome usado para todas as variações
+retira apenas os sufixos de tamanho e cor presentes nos campos da peça inicial,
+mantendo a referência numérica do modelo.
+
+Vincular, transferir para outra grade ou remover o vínculo exige ADMIN/GERENTE.
+O backend confere que a grade de destino existe, que a combinação tamanho/cor
+ainda não está nela e que o vínculo do produto não mudou desde a conferência.
+Uma divergência pede atualização da lista antes de tentar novamente. Essas ações
+alteram somente o `group_key`: não criam produto, não ajustam saldos e não apagam
+vendas, movimentações ou histórico. O SKU e o código interno permanecem os mesmos.
+
 Somente Lucas vê **Excluir** na barra. O modal lista cada SKU/variante, saldos,
 movimentações e vínculos, distinguindo exclusão física de retirada com histórico.
 Uma conferência explícita autoriza as operações indicadas. Cada item usa seu

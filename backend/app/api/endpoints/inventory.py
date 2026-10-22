@@ -28,6 +28,9 @@ from ...schemas.inventory import (
     BatchEditRequest, BatchSizeEntry, BatchProductFields, GradeCreateRequest, GradeCreateResponse,
     BulkTransferRequest,
     RelatedItemsResponse,
+    GradeAttachRequest, GradeMembershipResponse, GradeDirectoryResponse,
+    GradeSuggestionResponse, UngroupedGradeSuggestionsResponse,
+    GradeMembersResponse,
 )
 from ...schemas.inventory_diagnostics import InventoryDiagnostics, IssueFilter
 from ...dependencies import get_current_active_user, require_role, require_owner
@@ -48,6 +51,12 @@ from ...services.inventory_taxonomy import canonical, clean_product_name, vocabu
 from ...services.inventory_search import build_search
 from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail, product_thumbnails
 from ...services.inventory_related import related_products
+from ...services.inventory_grade_management import (
+    group_directory, item_grade_suggestions, ungrouped_grade_suggestions,
+    attach_existing_grade, detach_grade, lock_grade,
+    model_name as grade_model_name, variant_identity, same_model,
+    grade_members,
+)
 
 from .inventory_receiving import router as receiving_router, lot_filter
 from uuid import UUID
@@ -61,6 +70,13 @@ def get_related_products(item_id: UUID, limit: int = Query(12, ge=1, le=24),
                          after_rank: int | None = Query(None, ge=0, le=3), after_id: UUID | None = None,
                          db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user)):
     return related_products(db, item_id, limit=limit, after_rank=after_rank, after_id=after_id)
+
+
+@router.get('/items/{item_id}/grade-suggestions', response_model=GradeSuggestionResponse)
+def get_item_grade_suggestions(item_id: UUID, limit: int = Query(8, ge=1, le=20),
+                               db: Session = Depends(get_db),
+                               current_user: Usuario = Depends(get_current_active_user)):
+    return item_grade_suggestions(db, item_id, limit)
 
 
 @router.post('/items/{item_id}/duplicate', response_model=ItemResponse, status_code=201)
@@ -298,6 +314,21 @@ def create_item(
         sku = _generate_sku()
 
     item_data = _normalize_item(item.dict())
+    group_key = (item_data.get('group_key') or '').strip()
+    if item_data.get('group_key') is not None and (not group_key or len(group_key) > 100):
+        raise HTTPException(422, 'O nome da grade deve ter entre 1 e 100 caracteres.')
+    if group_key:
+        lock_grade(db, group_key)
+        members = db.query(Item).options(defer(Item.image_data, raiseload=True)).filter(
+            Item.deleted_at.is_(None), Item.group_key == group_key
+        ).order_by(Item.id).with_for_update().all()
+        from types import SimpleNamespace
+        proposed = SimpleNamespace(**item_data)
+        if any(not same_model(proposed, member) for member in members):
+            raise HTTPException(409, 'A grade já contém outro modelo. Escolha uma grade diferente.')
+        if any(variant_identity(member.size, member.color) ==
+               variant_identity(item_data.get('size'), item_data.get('color')) for member in members):
+            raise HTTPException(409, 'A grade já contém esta combinação de tamanho e cor.')
     db_item = Item(**item_data, sku_internal=sku, created_by=current_user.id)
     db.add(db_item)
     try:
@@ -443,22 +474,50 @@ def get_groups(
     return result
 
 
+@router.get('/groups/directory', response_model=GradeDirectoryResponse)
+def grade_directory(search: str = Query('', max_length=100), limit: int = Query(20, ge=1, le=50),
+                    db: Session = Depends(get_db),
+                    current_user: Usuario = Depends(get_current_active_user)):
+    return group_directory(db, search, limit)
+
+
+@router.get('/groups/suggestions', response_model=UngroupedGradeSuggestionsResponse)
+def suggest_ungrouped_for_grade(group_key: str = Query(..., min_length=1, max_length=100),
+                                limit: int = Query(12, ge=1, le=30),
+                                db: Session = Depends(get_db),
+                                current_user: Usuario = Depends(get_current_active_user)):
+    return ungrouped_grade_suggestions(db, group_key, limit)
+
+
+@router.get('/groups/members', response_model=GradeMembersResponse)
+def get_grade_members(group_key: str = Query(..., min_length=1, max_length=100),
+                      page: int = Query(1, ge=1), limit: int = Query(100, ge=1, le=200),
+                      db: Session = Depends(get_db),
+                      current_user: Usuario = Depends(get_current_active_user)):
+    return grade_members(db, group_key, page, limit)
+
+
 @router.patch("/groups", status_code=200)
 def rename_group(
     body: RenameGroupRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_active_user),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
     """Rename a group — updates group_key on all items in the group without touching item names"""
     old_key = body.old_key.strip()
     new_key = body.new_key.strip()
-    if not new_key:
-        raise HTTPException(status_code=400, detail="O nome do grupo não pode ser vazio")
+    if not old_key or not new_key or len(new_key) > 100:
+        raise HTTPException(status_code=400, detail="Informe nomes de grade válidos (até 100 caracteres).")
     if new_key == old_key:
         return {"message": "Nenhuma alteração", "count": 0}
-    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key == old_key).all()
+    for key in sorted((old_key, new_key)):
+        lock_grade(db, key)
+    items = db.query(Item).options(defer(Item.image_data, raiseload=True)).filter(
+        Item.deleted_at.is_(None), Item.group_key == old_key).order_by(Item.id).with_for_update().all()
     if not items:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
+    if db.query(Item.id).filter(Item.deleted_at.is_(None), Item.group_key == new_key).first():
+        raise HTTPException(status_code=409, detail="Já existe uma grade com esse nome. Vincule os itens explicitamente.")
     for item in items:
         item.group_key = new_key
     db.commit()
@@ -467,29 +526,30 @@ def rename_group(
 
 @router.get("/suggestions", response_model=List[SuggestionResponse])
 def get_suggestions(
-    include_images: bool = Query(True),
+    include_images: bool = Query(False),
+    limit: int = Query(1000, ge=2, le=2000),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Returns grouping suggestions based on ALL ungrouped active items in DB"""
+    """Suggest recent avulsos, bounded for large catalogs; manual search sees all."""
     items = (
         catalog_query(db.query(Item), include_images).filter(Item.deleted_at.is_(None))
         .filter(Item.group_key == None, Item.is_active == True)
-        .order_by(Item.name)
-        .all()
+        .order_by(Item.created_at.desc(), Item.id.desc())
+        .limit(limit).all()
     )
-    # key = (base_name, normalized_color) so different colors stay as separate groups
+    # A model can span colors; never strip an arbitrary trailing number because
+    # product model codes (e.g. Boss 2001020) are part of its identity.
     map_: dict = {}
     for item, has_image in items:
-        base = re.sub(r'\s+(PP|P|M|G|GG|XG|XGG|XXG|XXX|XXXG|\d+)\s*$', '', item.name, flags=re.IGNORECASE).strip()
+        base = grade_model_name(item.name, item.size, item.color)
         if len(base) < 4:
             continue
-        color_key = (item.color or '').strip().upper()
-        # Suggestion name shown to user: base + color if color is in the separate field
-        suggestion_name = f"{base} {item.color.strip()}".strip() if item.color and item.color.strip() else base
-        group_key = (base, color_key)
+        group_key = (base.casefold(), canonical(item.brand, 'brand') if item.brand else None,
+                     canonical(item.category, 'category') if item.category else None,
+                     (item.unit or '').casefold())
         if group_key not in map_:
-            map_[group_key] = {'name': suggestion_name, 'items': []}
+            map_[group_key] = {'name': base, 'items': []}
         resp = catalog_response(item, has_image, include_images)
         resp.alert_level = _compute_alert_level(item)
         map_[group_key]['items'].append(resp)
@@ -498,7 +558,7 @@ def get_suggestions(
         SuggestionResponse(name=v['name'], items=v['items'])
         for v in sorted(map_.values(), key=lambda x: len(x['items']), reverse=True)
         if len(v['items']) >= 2
-    ]
+    ][:25]
 
 
 @router.get('/items/thumbnails')
@@ -547,11 +607,27 @@ def update_item(
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
     item_uuid = validate_uuid(item_id)
+    original_group = db.query(Item.group_key).filter(Item.deleted_at.is_(None),
+                                                    Item.id == item_uuid).scalar()
+    lock_grade(db, original_group)
     db_item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).with_for_update().populate_existing().first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
+    if db_item.group_key != original_group:
+        raise HTTPException(409, 'A grade do produto mudou. Atualize a listagem e tente novamente.')
 
     update_data = _normalize_item(item_update.dict(exclude_unset=True))
+    if 'group_key' in update_data and update_data['group_key'] != db_item.group_key:
+        raise HTTPException(409, 'Use Gerenciar grade para vincular ou remover o produto.')
+    wanted = variant_identity(update_data.get('size', db_item.size),
+                              update_data.get('color', db_item.color))
+    if db_item.group_key and (wanted != variant_identity(db_item.size, db_item.color) or
+                              (not db_item.is_active and update_data.get('is_active') is True)):
+        peers = db.query(Item.size, Item.color).filter(
+            Item.deleted_at.is_(None), Item.group_key == db_item.group_key,
+            Item.id != db_item.id).all()
+        if any(variant_identity(peer.size, peer.color) == wanted for peer in peers):
+            raise HTTPException(409, 'A grade já contém esta combinação de tamanho e cor.')
     for field, value in update_data.items():
         setattr(db_item, field, value)
 
@@ -568,13 +644,33 @@ def group_items_batch(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
-    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).all()
-    if not items:
-        raise HTTPException(status_code=404, detail="No items found")
+    lock_grade(db, request.group_key)
+    items = db.query(Item).options(defer(Item.image_data, raiseload=True)).filter(
+        Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).with_for_update().all()
+    if len(items) != len(request.item_ids):
+        raise HTTPException(status_code=404, detail="Um dos produtos não foi encontrado.")
+    if any(not item.is_active or item.group_key for item in items):
+        raise HTTPException(status_code=409, detail="Seleção mudou: escolha somente produtos avulsos e ativos.")
+    occupied = {variant_identity(row.size, row.color) for row in db.query(Item.size, Item.color).filter(
+        Item.deleted_at.is_(None),
+        Item.group_key == request.group_key).with_for_update().all()}
+    for item in items:
+        identity = variant_identity(item.size, item.color)
+        if identity in occupied:
+            raise HTTPException(409, 'A grade já contém esta combinação de tamanho e cor.')
+        occupied.add(identity)
     for item in items:
         item.group_key = request.group_key
     db.commit()
     return {"message": f"Grouped {len(items)} items", "count": len(items)}
+
+
+@router.post('/items/{item_id}/grade', response_model=GradeMembershipResponse)
+def attach_item_to_grade(item_id: UUID, request: GradeAttachRequest,
+                         db: Session = Depends(get_db),
+                         current_user: Usuario = Depends(require_role(['ADMIN', 'GERENTE']))):
+    """Attach one reviewed product to an existing grade; never create a product."""
+    return attach_existing_grade(db, item_id, request.group_key, request.expected_group_key)
 
 
 # Separate path prevents older servers from silently ignoring per-size quantities during a rolling deploy.
@@ -601,6 +697,24 @@ def create_grade(
     if not group_key:
         color_part = f" {norm_color}" if norm_color else ""
         group_key = f"{norm_name.strip()}{color_part}"
+    if not group_key or len(group_key) > 100:
+        raise HTTPException(422, 'O nome da grade deve ter entre 1 e 100 caracteres.')
+    lock_grade(db, group_key)
+    # The new-item modal submits one color at a time with the same group key.
+    # Permit that matrix while rejecting a collision or an unrelated model.
+    existing = db.query(Item).options(defer(Item.image_data, raiseload=True)).filter(
+        Item.deleted_at.is_(None), Item.group_key == group_key
+    ).order_by(Item.id).with_for_update().all()
+    if existing:
+        from types import SimpleNamespace
+        proposed = SimpleNamespace(name=norm_name, size=None, color=norm_color,
+                                   brand=norm_brand, category=norm_category,
+                                   unit=grade.unit or 'un')
+        if any(not same_model(proposed, member) for member in existing):
+            raise HTTPException(409, 'A grade já contém outro modelo. Escolha uma grade diferente.')
+        occupied = {variant_identity(member.size, member.color) for member in existing}
+        if any(variant_identity(size, norm_color) in occupied for size in sizes):
+            raise HTTPException(409, 'A grade já contém esta combinação de tamanho e cor.')
 
     created_items: list[Item] = []
     for size in sizes:
@@ -690,9 +804,11 @@ def create_grade(
 def ungroup_items(
     body: UngroupRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_active_user),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
-    items = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key == body.group_key).all()
+    lock_grade(db, body.group_key)
+    items = db.query(Item).options(defer(Item.image_data, raiseload=True)).filter(
+        Item.deleted_at.is_(None), Item.group_key == body.group_key).order_by(Item.id).with_for_update().all()
     if not items:
         raise HTTPException(status_code=404, detail="No items found with this group_key")
     for item in items:
@@ -701,22 +817,15 @@ def ungroup_items(
     return {"message": f"Ungrouped {len(items)} items", "count": len(items)}
 
 
-@router.delete("/items/{item_id}/group", status_code=200)
+@router.delete("/items/{item_id}/group", response_model=GradeMembershipResponse, status_code=200)
 def remove_item_from_group(
     item_id: str,
+    expected_group_key: str | None = Query(None, max_length=100),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_active_user),
+    current_user: Usuario = Depends(require_role(["ADMIN", "GERENTE"])),
 ):
-    """Remove a single item from its group (set group_key to None)"""
-    item_uuid = validate_uuid(item_id)
-    item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-    if not item.group_key:
-        raise HTTPException(status_code=400, detail="Item is not in any group")
-    item.group_key = None
-    db.commit()
-    return {"message": "Item removed from group"}
+    """Remove only this member, preserving its stock and operational history."""
+    return detach_grade(db, validate_uuid(item_id), expected_group_key)
 
 
 @router.patch("/items/batch", status_code=200)
@@ -729,10 +838,28 @@ def batch_edit_items(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Bulk edit shared fields (brand, category, image, prices) and per-item fields (name, color, barcode, prices, stock)"""
+    # The legacy mass editor may still update grade membership. It must share
+    # the same advisory locks as variant creation and the dedicated manager.
+    grade_fields = 'group_key' in request.model_fields_set or any(
+        'group_key' in entry.model_fields_set for entry in request.sizes or [])
+    if grade_fields and current_user.role.value not in ('ADMIN', 'GERENTE'):
+        raise HTTPException(403, 'Alterar grades exige perfil de gestão.')
+    variant_fields = bool({'size', 'color', 'is_active'} & request.model_fields_set or any(
+        {'size', 'color', 'is_active'} & entry.model_fields_set for entry in request.sizes or []))
+    original_groups = {}
+    if grade_fields or variant_fields:
+        original_groups = dict(db.query(Item.id, Item.group_key).filter(
+            Item.id.in_(request.item_ids), Item.deleted_at.is_(None)).all())
+        destination_keys = {request.group_key} if request.group_key else set()
+        destination_keys.update(entry.group_key for entry in request.sizes or [] if entry.group_key)
+        for key in sorted({*original_groups.values(), *destination_keys} - {None, ''}):
+            lock_grade(db, key)
     query = db.query(Item).options(defer(Item.image_data, raiseload=True))
     items = query.filter(Item.deleted_at.is_(None), Item.id.in_(request.item_ids)).order_by(Item.id).populate_existing().with_for_update().all()
     if len(items) != len(request.item_ids):
         raise HTTPException(status_code=409, detail="Um produto selecionado não está mais disponível. Reabra a edição para conferir a seleção.")
+    if original_groups and any(original_groups.get(item.id) != item.group_key for item in items):
+        raise HTTPException(409, 'Uma grade mudou durante a edição. Reabra a seleção para conferir.')
 
     adjustments = {entry.id: entry for entry in request.stock_adjustments or []}
     # Compare all locations under the row locks, before changing any metadata.
@@ -760,12 +887,47 @@ def batch_edit_items(
             if item.updated_at is None or aware(item.updated_at) != aware(entry.expected_updated_at):
                 raise HTTPException(409, 'O cadastro mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra para conferir.')
         values = _normalize_item({**shared, **(metadata(entry) if entry else {})})
+        if 'group_key' in values and values['group_key'] != item.group_key and (
+                not entry or entry.expected_updated_at is None):
+            raise HTTPException(409, 'Reabra a edição para conferir o vínculo atual da grade.')
+        if 'group_key' in values and values['group_key'] is not None and (
+                not values['group_key'].strip() or len(values['group_key']) > 100):
+            raise HTTPException(422, 'O nome da grade deve ter entre 1 e 100 caracteres.')
         if {'min_stock', 'max_stock'} & values.keys():
             minimum = values.get('min_stock', item.min_stock) or 0
             maximum = values.get('max_stock', item.max_stock) or 0
             if maximum and minimum > maximum:
                 raise HTTPException(422, 'Mínimo não pode ser maior que máximo.')
         changes[item.id] = values
+    # Keep the older mass editor safe too: it can still clear, create or change
+    # a grade, but may not introduce two indistinguishable size/color variants.
+    transfers = [(item, changes[item.id]['group_key']) for item in items
+                 if 'group_key' in changes[item.id] and changes[item.id]['group_key'] != item.group_key]
+    if any(target and not item.is_active for item, target in transfers):
+        raise HTTPException(409, 'Ative o produto antes de vinculá-lo a uma grade.')
+    def destination(item):
+        return changes[item.id].get('group_key', item.group_key)
+    affected = [(item, destination(item)) for item in items if destination(item) and (
+        destination(item) != item.group_key or
+        variant_identity(changes[item.id].get('size', item.size),
+                         changes[item.id].get('color', item.color)) != variant_identity(item.size, item.color) or
+        (not item.is_active and changes[item.id].get('is_active') is True))]
+    targets = {target for _, target in affected}
+    if targets:
+        changed_ids = {item.id for item, _ in affected} | {item.id for item, _ in transfers}
+        occupied = {}
+        for row in db.query(Item.id, Item.group_key, Item.size, Item.color).filter(
+                Item.deleted_at.is_(None),
+                Item.group_key.in_(targets)).with_for_update().all():
+            if row.id not in changed_ids:
+                occupied.setdefault(row.group_key, set()).add(variant_identity(row.size, row.color))
+        for item, target in affected:
+            values = changes[item.id]
+            identity = variant_identity(values.get('size', item.size), values.get('color', item.color))
+            slot = occupied.setdefault(target, set())
+            if identity in slot:
+                raise HTTPException(409, 'A grade já contém esta combinação de tamanho e cor.')
+            slot.add(identity)
     suppliers = {values['supplier_id'] for values in changes.values() if values.get('supplier_id')}
     if suppliers:
         existing_suppliers = {row[0] for row in db.query(Supplier.id).filter(Supplier.id.in_(suppliers)).all()}
