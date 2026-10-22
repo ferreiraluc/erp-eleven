@@ -209,7 +209,7 @@ def test_new_layout_snapshots_sale_price_and_optional_barcode(label_env):
     batch = enqueue(client, body)
     with factory() as db:
         snap = db.get(PrintJob, uuid.UUID(batch['jobs'][0]['id'])).snapshot
-    assert snap['layout_version'] == 3
+    assert snap['layout_version'] == 4
     assert snap['sale_price'] == '149.90' and snap['sale_currency'] == 'BRL'
     assert snap['barcode'] == '7891234567890'
     data = labels.render_zpl(snap)
@@ -229,7 +229,7 @@ def test_new_layout_snapshots_sale_price_and_optional_barcode(label_env):
 
 
 def test_new_layout_qr_is_internal_code_with_quiet_zone_and_zpl_is_not_injectable():
-    snap = dict(layout_version=3, code='INV-A7K4P2', copies=7,
+    snap = dict(layout_version=4, code='INV-A7K4P2', copies=7,
                 name='Camiseta ^XZ ~JA _A1 Ç', color='Azul', size='2XL',
                 barcode='7891234567890', sale_price='149.90', sale_currency='BRL')
     data = labels.render_zpl(snap)
@@ -239,9 +239,48 @@ def test_new_layout_qr_is_internal_code_with_quiet_zone_and_zpl_is_not_injectabl
     assert len(data) <= 32768
     image = raster_from_zpl(data)
     assert image.size == (480, 240)
-    for x, y in ((343, 57), (358, 72), (443, 73), (359, 157), (458, 172)):
+    for x, y in ((336, 51), (347, 62), (435, 63), (348, 150), (446, 162)):
         assert image.getpixel((x, y)) == 255
-    qr = QrCodeWidget(snap['code'], barLevel='M')
+    qr = QrCodeWidget(snap['code'], barLevel='M', qrVersion=3)
+    qr.qr.make()
+    assert len(qr.qr.modules) == 29
+    for row, modules in enumerate(qr.qr.modules):
+        for col, dark in enumerate(modules):
+            assert (image.getpixel((348 + col*3, 63 + row*3)) == 0) == bool(dark)
+
+
+def test_new_layout_matches_physical_reference_geometry():
+    snap = dict(layout_version=4, code='INV-G6LVB2', copies=1,
+                name='Boné Boss 50535236', size='UNIC', color='Green',
+                sale_price='72', sale_currency='USD')
+    image = raster_from_zpl(labels.render_zpl(snap))
+
+    def ink_bounds(box):
+        left, top, right, bottom = box
+        ink = [(x, y) for y in range(top, bottom) for x in range(left, right)
+               if image.getpixel((x, y)) == 0]
+        return min(x for x, _ in ink), min(y for _, y in ink), max(x for x, _ in ink), max(y for _, y in ink)
+
+    title = ink_bounds((130, 0, 340, 55))
+    assert 140 <= title[2] - title[0] <= 160  # broad ELEVEN in the center
+    assert abs((title[0] + title[2]) / 2 - 240) <= 5
+    assert (title[1], title[3]) == pytest.approx((21, 49), abs=3)
+    assert (ink_bounds((0, 80, 325, 108))[1], ink_bounds((0, 80, 325, 108))[3]) == pytest.approx((89, 100), abs=3)
+    assert (ink_bounds((0, 108, 325, 137))[1], ink_bounds((0, 108, 325, 137))[3]) == pytest.approx((114, 125), abs=3)
+    assert (ink_bounds((0, 137, 325, 177))[1], ink_bounds((0, 137, 325, 177))[3]) == pytest.approx((145, 156), abs=3)
+    assert ink_bounds((330, 50, 460, 165)) == (348, 63, 434, 149)  # QR
+    # USD follows the reference's '$72'; the source product still stores USD.
+    price = ink_bounds((0, 180, 180, 230))
+    assert 30 <= price[0] <= 35 and 68 <= price[2] <= 80
+    assert (price[1], price[3]) == pytest.approx((192, 212), abs=3)
+
+
+def test_queued_v3_snapshot_still_uses_its_original_qr_layout():
+    old_snapshot = dict(layout_version=3, code='INV-A7K4P2', copies=7,
+                        name='Camiseta ^XZ ~JA _A1 Ç', color='Azul', size='2XL',
+                        barcode='7891234567890', sale_price='149.90', sale_currency='BRL')
+    image = raster_from_zpl(labels.render_zpl(old_snapshot))
+    qr = QrCodeWidget(old_snapshot['code'], barLevel='M')
     qr.qr.make()
     assert len(qr.qr.modules) == 21
     for row, modules in enumerate(qr.qr.modules):
