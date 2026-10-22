@@ -162,6 +162,15 @@
             ><small v-if="mode === 'products'"
               >{{ (entry as LabelProduct).color }} · {{ (entry as LabelProduct).size }} ·
               {{ (entry as LabelProduct).inventory_code }}</small
+            ><small v-if="mode === 'products'"
+              >{{ tr('Preço de venda') }}:
+              {{
+                formatLabelSalePrice(
+                  (entry as LabelProduct).sale_price,
+                  (entry as LabelProduct).sale_currency,
+                  numberLocale(),
+                )
+              }}</small
             ><small v-else-if="mode === 'grades'">{{ (entry as LabelCollection).group_key }}</small
             ><small v-else
               >{{ (entry as LabelCollection).received_on }} ·
@@ -271,6 +280,9 @@
               ><small
                 >{{ tr('Loja') }}: {{ item.stock_loja ?? '—' }} · {{ tr('Depósito') }}:
                 {{ item.stock_deposito ?? '—' }}</small
+              ><small
+                >{{ tr('Preço de venda') }}:
+                {{ formatLabelSalePrice(item.sale_price, item.sale_currency, numberLocale()) }}</small
               >
             </div>
             <div class="row-actions">
@@ -462,6 +474,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 import { useAuthStore } from '@/stores/auth'
 import {
   productLabels as api,
+  formatLabelSalePrice,
   labelRequest,
   mergeLabelSelection,
   type LabelProduct,
@@ -471,7 +484,7 @@ import {
   type LabelBatch,
   type LabelSelection,
 } from '@/services/productLabels'
-const { tr } = useInventoryI18n()
+const { tr, numberLocale } = useInventoryI18n()
 const auth = useAuthStore()
 const panel = ref('catalog'),
   mode = ref<'products' | 'grades' | 'lots'>('products'),
@@ -783,7 +796,20 @@ onMounted(async () => {
     if (saved) {
       const recovered: LabelRequest = JSON.parse(saved)
       attempt.value = recovered
-      selected.value = recovered.items.map(p => ({ id: p.item_id, name: p.name, inventory_code: p.code, color: p.color, size: p.size, copies: p.copies, group_key: null, stock_loja: null, stock_deposito: null, current_stock: null }))
+      selected.value = recovered.items.map((p) => ({
+        id: p.item_id,
+        name: p.name,
+        inventory_code: p.code,
+        color: p.color,
+        size: p.size,
+        copies: p.copies,
+        sale_price: p.sale_price ?? null,
+        sale_currency: p.sale_currency ?? null,
+        group_key: null,
+        stock_loja: null,
+        stock_deposito: null,
+        current_stock: null,
+      }))
       panel.value = 'selection'
     }
     const state = window.history.state?.labelItemIds

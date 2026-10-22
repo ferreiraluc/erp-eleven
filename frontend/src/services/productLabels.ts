@@ -10,6 +10,8 @@ export interface LabelProduct {
   stock_loja: number | null
   stock_deposito: number | null
   current_stock: number | null
+  sale_price: string | null
+  sale_currency: string | null
 }
 export interface LabelCollection {
   id?: string
@@ -31,6 +33,8 @@ export interface LabelLine {
   color: string | null
   size: string | null
   copies: number
+  sale_price?: string | null
+  sale_currency?: string | null
 }
 export interface LabelRequest {
   request_key: string
@@ -113,6 +117,22 @@ export function mergeLabelSelection(
   return [...current, ...incoming.filter((p) => !ids.has(p.id)).map((p) => ({ ...p, copies: 1 }))]
 }
 
+export function formatLabelSalePrice(
+  price: string | null | undefined,
+  currency: string | null | undefined,
+  locale: string,
+): string {
+  if (price == null || !price.trim() || !currency) return '—'
+  const amount = Number(price)
+  if (!Number.isFinite(amount) || amount <= 0) return '—'
+  const symbols: Record<string, string> = { USD: 'U$', BRL: 'R$', PYG: 'G$', EUR: '€' }
+  const fractionDigits = currency === 'PYG' ? 0 : 2
+  return `${symbols[currency] || currency} ${amount.toLocaleString(locale, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: 2,
+  })}`
+}
+
 export function labelRequest(
   rows: (LabelProduct & { copies: number })[],
   key: string,
@@ -143,6 +163,8 @@ export function labelRequest(
       color: p.color,
       size: p.size,
       copies: p.copies,
+      sale_price: p.sale_price,
+      sale_currency: p.sale_currency,
     })),
   }
 }

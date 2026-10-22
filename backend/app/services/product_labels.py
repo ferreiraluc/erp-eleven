@@ -5,6 +5,7 @@ import re
 import secrets
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import or_
@@ -22,7 +23,8 @@ MAX_LABELS = 2000
 MAX_COPIES = 100
 CODE = re.compile(r'^INV-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$')
 FIELDS = (Item.id, Item.name, Item.inventory_code, Item.color, Item.size,
-          Item.group_key, Item.stock_loja, Item.stock_deposito, Item.current_stock)
+          Item.group_key, Item.stock_loja, Item.stock_deposito, Item.current_stock,
+          Item.sale_price, Item.sale_currency, Item.barcode)
 
 
 def items_query(db):
@@ -31,7 +33,10 @@ def items_query(db):
 
 
 def item_view(item):
-    return {field.key: getattr(item, field.key) for field in FIELDS}
+    view = {field.key: getattr(item, field.key) for field in FIELDS}
+    view['sale_price'] = str(Decimal(item.sale_price or 0).quantize(Decimal('0.01')))
+    view['sale_currency'] = (item.sale_currency or 'USD').upper()
+    return view
 
 
 def device_view(device):
@@ -116,10 +121,70 @@ def layout(snapshot):
             (16, 143, 24, size), (16, 174, 20, color), (16, 208, 22, snapshot['code'])]
 
 
+def _compact_text(value, max_width, heights=(16, 14, 12)):
+    """Fit the ZebraDesigner single-line fields without changing product data."""
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    label = clean(value).upper() or '-'
+    for height in heights:
+        if stringWidth(label, 'Helvetica', height) * 1.12 <= max_width:
+            return label, height
+    clipped = label
+    while clipped and stringWidth(clipped + '...', 'Helvetica', heights[-1]) * 1.12 > max_width:
+        clipped = clipped[:-1]
+    return clipped.rstrip() + '...', heights[-1]
+
+
+def _price_parts(snapshot):
+    amount = Decimal(str(snapshot.get('sale_price') or '0'))
+    if amount <= 0:
+        return '', '-'
+    symbol = {'USD': 'U$', 'BRL': 'R$', 'PYG': 'G$', 'EUR': '€'}.get(
+        str(snapshot.get('sale_currency') or 'USD').upper(),
+        str(snapshot.get('sale_currency') or 'USD').upper(),
+    )
+    digits = f'{amount:,.2f}'.replace(',', '#').replace('.', ',').replace('#', '.')
+    if digits.endswith(',00'):
+        digits = digits[:-3]
+    return symbol, digits
+
+
+def layout_v2(snapshot):
+    """ZebraDesigner PADRAO: 60 × 30 mm at 203 dpi, with live ERP fields."""
+    name, name_height = _compact_text(snapshot.get('name'), 292)
+    size, size_height = _compact_text(snapshot.get('size'), 292)
+    color, color_height = _compact_text(snapshot.get('color'), 292)
+    symbol, amount = _price_parts(snapshot)
+    # Coordinates follow the supplied design. Font widths approximate Arial/Bahnschrift
+    # using the ZD220 resident font; the browser preview uses the same positions.
+    fields = [
+        (159, 6, 36, 26, 'ELEVEN'),
+        (28, 60, name_height, round(name_height * .8), name),
+        (28, 79, size_height, round(size_height * .8), size),
+        (28, 105, color_height, round(color_height * .8), color),
+        (28, 126, 16, 13, snapshot['code']),
+    ]
+    if symbol:
+        fields.append((28, 192, 22, 17, symbol))
+    fields.append((28 + (34 if len(symbol) > 1 else 15 if symbol else 0), 188, 27, 19, amount))
+    barcode = clean(snapshot.get('barcode'))
+    if barcode:
+        barcode, barcode_height = _compact_text(barcode, 145, (14, 12, 10))
+        fields.append((324, 202, barcode_height, 10, barcode))
+    return fields
+
+
 def render_zpl(snapshot):
     code, copies = snapshot['code'], snapshot['copies']
     if not CODE.fullmatch(code) or type(copies) is not int or not 1 <= copies <= MAX_COPIES:
         raise ValueError('Invalid label snapshot')
+    if snapshot.get('layout_version') == 2:
+        parts = ['^XA^CI28^MNY^MMT^PW480^LL240^LH0,0^LS0^LT0^PON']
+        for x, y, height, width, value in layout_v2(snapshot):
+            encoded = ''.join(f'_{byte:02X}' for byte in value.encode('utf-8'))
+            parts.append(f'^FO{x},{y}^A0N,{height},{width}^FH_^FD{encoded}^FS')
+        parts.append(f'^FO343,57^BQN,2,5^FDMA,{code}^FS')
+        parts.append(f'^PQ{copies},0,1,N^XZ')
+        return '\n'.join(parts).encode('ascii')
     # Every text byte is ^FH-escaped, including ^, ~, underscores and UTF-8.
     # No product field can inject ZPL or change a printer setting.
     parts = ['^XA^CI28^MNY^MMT^PW480^LL240^LH0,0^LS0^LT0^PON']
@@ -140,9 +205,14 @@ def preview_svg(item):
     snap = snapshot(item, 1)
     drawing = Drawing(480, 240)
     drawing.add(Rect(0, 0, 480, 240, fillColor=colors.white, strokeColor=None))
-    for x, y, height, text in layout(snap):
-        drawing.add(String(x, 240-y-height*.8, text, fontName='Helvetica-Bold' if y == 12 else 'Helvetica', fontSize=height*.83))
-    drawing.add(QrCodeWidget(snap['code'], x=320, y=50, barWidth=145, barHeight=145, barBorder=4, barLevel='M'))
+    for x, y, height, _, value in layout_v2(snap):
+        drawing.add(String(x, 240-y-height*.8, value,
+                           fontName='Helvetica-Bold' if value == 'ELEVEN' else 'Helvetica',
+                           fontSize=height*.83))
+    # ReportLab's dimensions include the four-module quiet zone; ZPL's ^BQN size
+    # describes the active 21-module symbol. Align their visible QR footprints.
+    drawing.add(QrCodeWidget(snap['code'], x=323, y=58, barWidth=145, barHeight=145,
+                             barBorder=4, barLevel='M'))
     return renderSVG.drawToString(drawing)
 
 
@@ -150,7 +220,10 @@ def snapshot(item, copies):
     if not CODE.fullmatch(item.inventory_code or ''):
         raise HTTPException(409, f'O produto {item.name} ainda não possui código interno válido. Atualize o cadastro.')
     return dict(item_id=str(item.id), name=item.name, code=item.inventory_code,
-                size=item.size, color=item.color, copies=copies, width=60, height=30)
+                size=item.size, color=item.color, barcode=item.barcode,
+                sale_price=str(Decimal(item.sale_price or 0).quantize(Decimal('0.01'))),
+                sale_currency=(item.sale_currency or 'USD').upper(),
+                layout_version=2, copies=copies, width=60, height=30)
 
 
 def job_view(job):
@@ -196,7 +269,10 @@ def enqueue(db, user, body):
     start = utcnow()
     for position, row in enumerate(body.items):
         snap = snapshot(products[row.item_id], row.copies)
-        if row.code != snap['code'] or row.name != snap['name'] or row.color != snap['color'] or row.size != snap['size']:
+        if (row.code != snap['code'] or row.name != snap['name'] or row.color != snap['color'] or
+                row.size != snap['size'] or
+                (row.sale_price is not None and row.sale_price != Decimal(snap['sale_price'])) or
+                (row.sale_currency is not None and row.sale_currency.upper() != snap['sale_currency'])):
             raise HTTPException(409, 'Um produto mudou durante a conferência. Atualize a seleção antes de imprimir.')
         snap.update(position=position, fingerprint=fingerprint if position == 0 else None)
         payload = render_zpl(snap)

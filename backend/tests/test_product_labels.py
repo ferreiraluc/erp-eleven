@@ -1,8 +1,10 @@
 """Synthetic products only: no external APIs, real printing or production DB."""
 import hashlib
 import io
+import re
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 from zipfile import ZipFile
 
 import pytest
@@ -29,7 +31,9 @@ def label_env(tickets):
     with factory() as db:
         Base.metadata.create_all(db.get_bind(), tables=[ReceivingLot.__table__, ReceivingLotItem.__table__])
         a = make_item(db); a.name = 'T-shirt Branco S'; a.size = 'S'; a.color = 'Branco'; a.group_key = 'T-shirt'
+        a.sale_price = Decimal('149.90'); a.sale_currency = 'BRL'; a.barcode = '7891234567890'
         b = make_item(db); b.name = 'T-shirt Azul M'; b.size = 'M'; b.color = 'Azul'; b.group_key = 'T-shirt'
+        b.sale_price = Decimal('0.00'); b.sale_currency = 'USD'
         c = make_item(db); c.name = 'Outra peça'; c.image_data = 'not-read' * 1000
         lot = ReceivingLot(name='Leva 1', notes='Synthetic', received_on=utcnow().date(),
                            request_fingerprint='a'*64, created_by=db.query(Usuario).first().id)
@@ -48,8 +52,15 @@ def selection(client, ids):
 
 def payload(client, ids, copies=1):
     return dict(request_key=str(uuid.uuid4()), confirm=True, items=[dict(
-        item_id=p['id'], code=p['inventory_code'], name=p['name'], color=p['color'], size=p['size'], copies=copies)
+        item_id=p['id'], code=p['inventory_code'], name=p['name'], color=p['color'], size=p['size'],
+        sale_price=p['sale_price'], sale_currency=p['sale_currency'], copies=copies)
         for p in selection(client, ids)])
+
+
+def zpl_text_fields(payload):
+    """Read only user-visible UTF-8 fields; QR data is checked separately."""
+    return [bytes.fromhex(value.replace('_', '')).decode('utf-8') for value in
+            re.findall(r'\^FH_\^FD((?:_[0-9A-F]{2})+)\^FS', payload.decode('ascii'))]
 
 
 def setup_device(client):
@@ -169,6 +180,70 @@ def test_zpl_escapes_text_uses_qr_and_fixed_media(label_env):
     assert all(x < 480 and y+h <= 240 for x, y, h, _ in labels.layout(snap))
     preview = client.get('/api/inventory-labels/preview/'+ids[0])
     assert preview.status_code == 200 and '<svg' in preview.text and row['inventory_code'] in preview.text
+
+
+def test_new_layout_snapshots_sale_price_and_optional_barcode(label_env):
+    factory, client, ids, _ = label_env
+    setup_device(client)
+    row = selection(client, ids[:1])[0]
+    assert row['sale_price'] == '149.90' and row['sale_currency'] == 'BRL'
+    body = payload(client, ids[:1], copies=2)
+    batch = enqueue(client, body)
+    with factory() as db:
+        snap = db.get(PrintJob, uuid.UUID(batch['jobs'][0]['id'])).snapshot
+    assert snap['layout_version'] == 2
+    assert snap['sale_price'] == '149.90' and snap['sale_currency'] == 'BRL'
+    assert snap['barcode'] == '7891234567890'
+    data = labels.render_zpl(snap)
+    fields = zpl_text_fields(data)
+    assert data.startswith(b'^XA^CI28^MNY') and b'^PW480^LL240' in data
+    assert data.endswith(b'^XZ') and b'^PQ2,0,1,N' in data
+    assert f"^FDMA,{row['inventory_code']}^FS".encode() in data
+    assert 'ELEVEN' in fields and any('T-SHIRT BRANCO S' in field for field in fields)
+    assert any('BRANCO' in field for field in fields)
+    assert any('149,90' in field for field in fields)
+    assert any('7891234567890' in field for field in fields)
+    assert b'instagram' not in data.lower()
+    preview = client.get('/api/inventory-labels/preview/'+ids[0])
+    assert preview.status_code == 200
+    assert '149,90' in preview.text and row['inventory_code'] in preview.text
+
+
+def test_zero_sale_price_is_a_dash_not_a_fabricated_amount(label_env):
+    factory, client, ids, _ = label_env
+    row = selection(client, ids[1:2])[0]
+    assert row['sale_price'] == '0.00'
+    preview = client.get('/api/inventory-labels/preview/'+ids[1])
+    assert preview.status_code == 200
+    assert '0,00' not in preview.text
+    assert re.search(r'<text[^>]*>\s*[—–-]\s*</text>', preview.text)
+    with factory() as db:
+        snap = labels.snapshot(db.get(Item, uuid.UUID(ids[1])), 1)
+    fields = zpl_text_fields(labels.render_zpl(snap))
+    assert '-' in fields and '0,00' not in fields
+
+
+@pytest.mark.parametrize('changed_field, changed_value', [
+    ('sale_price', Decimal('150.00')),
+    ('sale_currency', 'USD'),
+])
+def test_price_change_after_selection_requires_a_fresh_confirmation(label_env, changed_field, changed_value):
+    factory, client, ids, _ = label_env
+    setup_device(client)
+    body = payload(client, ids[:1])
+    with factory() as db:
+        setattr(db.get(Item, uuid.UUID(ids[0])), changed_field, changed_value)
+        db.commit()
+    response = client.post('/api/inventory-labels/batches', json=body)
+    assert response.status_code == 409, response.text
+    with factory() as db:
+        assert db.query(PrintJob).count() == 0
+
+
+def test_unversioned_snapshot_keeps_identical_legacy_zpl():
+    old_snapshot = dict(code='INV-A7K4P2', copies=2, name='Camiseta Azul', size='M', color='Azul')
+    assert hashlib.sha256(labels.render_zpl(old_snapshot)).hexdigest() == (
+        '8caea4ab7485b1116a617a5f247252ce55f49a454791be64c1f202dd3d86ff23')
 
 
 def test_internal_scan_exact_not_manufacturer_collision_or_deleted_product(label_env):
