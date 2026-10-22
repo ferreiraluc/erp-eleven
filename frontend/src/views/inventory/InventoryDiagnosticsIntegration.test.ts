@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   diagnostics: vi.fn(), getItem: vi.fn(), getGroups: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn(),
   listItems: [] as InventoryItem[], loadItems: vi.fn(), loadAlerts: vi.fn(), listError: null as string | null,
   listFilters: {} as Record<string, string>, owner: false, role: 'GERENTE' as string, renameGroup: vi.fn(), ungroup: vi.fn(), groupItems: vi.fn(),
-  attachItemToGrade: vi.fn(), getGroupItemSuggestions: vi.fn(), getGradeDirectory: vi.fn(), getGradeMembers: vi.fn(),
+  attachItemToGrade: vi.fn(), removeFromGroup: vi.fn(), getItemGradeSuggestions: vi.fn(), getGroupItemSuggestions: vi.fn(), getGradeDirectory: vi.fn(), getGradeMembers: vi.fn(),
 }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: mocks.owner, userRole: mocks.role }) }))
@@ -17,7 +17,8 @@ vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { g
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
   getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues,
   renameGroup: mocks.renameGroup, ungroup: mocks.ungroup, groupItems: mocks.groupItems,
-  attachItemToGrade: mocks.attachItemToGrade, getGroupItemSuggestions: mocks.getGroupItemSuggestions,
+  attachItemToGrade: mocks.attachItemToGrade, removeFromGroup: mocks.removeFromGroup,
+  getItemGradeSuggestions: mocks.getItemGradeSuggestions, getGroupItemSuggestions: mocks.getGroupItemSuggestions,
   getGradeDirectory: mocks.getGradeDirectory, getGradeMembers: mocks.getGradeMembers }, ocrAPI: {} }))
 vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: reactive(mocks.listFilters), alerts: null, loading: false, loadingMore: false, loadMoreError: null, hasLoaded: true, error: mocks.listError,
   pagination: { page: 1, total_pages: 1, total: mocks.listItems.length }, loadItems: mocks.loadItems, loadAlerts: mocks.loadAlerts }) }))
@@ -48,7 +49,9 @@ beforeEach(() => {
   localStorage.clear()
   mocks.owner = false; mocks.role = 'GERENTE'; mocks.listError = null; mocks.listItems = []; mocks.listFilters = {}
   mocks.getGroups.mockResolvedValue([]); mocks.getSuppliers.mockResolvedValue([])
-  mocks.getGroupItemSuggestions.mockResolvedValue({ items: [] }); mocks.attachItemToGrade.mockResolvedValue({ item_id: 'new-1', group_key: 'grade' })
+  mocks.getItemGradeSuggestions.mockResolvedValue({ groups: [] }); mocks.getGroupItemSuggestions.mockResolvedValue({ items: [] })
+  mocks.attachItemToGrade.mockResolvedValue({ item_id: 'new-1', group_key: 'grade' })
+  mocks.removeFromGroup.mockResolvedValue({ message: 'ok' })
   mocks.getGradeDirectory.mockResolvedValue({ groups: [] })
   mocks.getGradeMembers.mockResolvedValue({ items: [], total: 0, page: 1, limit: 100 })
   mocks.getDistinctValues.mockResolvedValue({ brands: [], categories: [] })
@@ -272,7 +275,7 @@ describe('Readable automatic grade names', () => {
     for (const id of ['new-1', 'new-2']) {
       container.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.click(); await nextTick()
     }
-    button('Agrupar').click(); await nextTick()
+    button('+ Peça').click(); await nextTick()
     await vi.waitFor(() => expect(mocks.getGradeDirectory).toHaveBeenCalledWith(''))
     const select = document.querySelector<HTMLButtonElement>('[aria-label="Grade de destino"]')!
     const choices = (await openDropdown(select)).map(option => option.textContent)
@@ -311,25 +314,82 @@ describe('Readable automatic grade names', () => {
     expect(container.querySelector('.group-manage-btn')).toBeNull()
     expect(container.querySelector('.chip-remove')).toBeNull()
     button('Selecionar').click(); await nextTick()
-    expect(Array.from(container.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Agrupar')).toBe(false)
+    expect(Array.from(container.querySelectorAll('button')).some(button => button.textContent?.trim() === '+ Peça')).toBe(false)
     expect(mocks.getGroupItemSuggestions).not.toHaveBeenCalled()
   })
-  it('links one selected standalone item to an existing grade', async () => {
+  it('opens grade management for one selected standalone item and links it to an existing grade', async () => {
     mocks.getGroups.mockResolvedValue([{ group_key: keyA, total_stock: 1, items: [{ ...item, group_key: keyA }] }])
     mocks.getGradeDirectory.mockResolvedValue({ groups: [{ group_key: keyA, display_name: 'Tênis Givenchy DN0281', member_count: 1 }] })
     mocks.listItems = [{ ...item, id: 'new-1', group_key: null }]
     await mount()
     button('Selecionar').click(); await nextTick()
     container.querySelector<HTMLElement>('[data-item-id="new-1"]')!.click(); await nextTick()
-    button('Agrupar').click(); await nextTick()
+    button('+ Peça').click(); await nextTick()
+    expect(document.body.querySelector('.grade-manager')).not.toBeNull()
+    await vi.waitFor(() => expect(mocks.getItemGradeSuggestions).toHaveBeenCalledWith('new-1'))
     await vi.waitFor(() => expect(mocks.getGradeDirectory).toHaveBeenCalledWith(''))
-    expect(document.body.textContent).toContain('Selecione pelo menos 2 itens')
-    const select = document.querySelector<HTMLButtonElement>('[aria-label="Grade de destino"]')!
-    await chooseDropdown(select, keyA)
-    expect(document.body.textContent).not.toContain('Selecione pelo menos 2 itens')
-    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(node => node.textContent?.trim() === 'Agrupar 1')!
+    const destination = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager-option'))
+      .find(node => node.textContent?.includes('Tênis Givenchy DN0281'))!
+    destination.click(); await nextTick()
+    expect(mocks.attachItemToGrade).not.toHaveBeenCalled()
+    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find(node => node.textContent?.trim() === 'Vincular à grade')!
     confirm.click(); await nextTick()
     expect(mocks.attachItemToGrade).toHaveBeenCalledExactlyOnceWith('new-1', keyA, null)
+  })
+  it('opens grade management for one grouped item and confirms removal of its link', async () => {
+    mocks.listItems = [{ ...item, id: 'grouped-1', group_key: keyA }]
+    await mount()
+    button('Selecionar').click(); await nextTick()
+    container.querySelector<HTMLElement>('[data-item-id="grouped-1"]')!.click(); await nextTick()
+    button('+ Peça').click(); await nextTick()
+    expect(document.body.querySelector('.grade-manager')).not.toBeNull()
+    expect(document.body.textContent).toContain('Grade atual:')
+    const remove = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager button'))
+      .find(node => node.textContent?.trim() === 'Remover da grade')!
+    remove.click(); await nextTick()
+    expect(mocks.removeFromGroup).not.toHaveBeenCalled()
+    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager button'))
+      .find(node => node.textContent?.trim() === 'Confirmar')!
+    confirm.click(); await nextTick()
+    expect(mocks.removeFromGroup).toHaveBeenCalledExactlyOnceWith('grouped-1', keyA)
+  })
+  it('confirms transfer from the current grade to a suggested grade', async () => {
+    mocks.listItems = [{ ...item, id: 'grouped-1', group_key: keyA }]
+    mocks.getItemGradeSuggestions.mockResolvedValue({ groups: [
+      { group_key: keyB, display_name: 'Tênis Givenchy DN0281 outra cor', member_count: 2, match_reason: 'same_model' },
+    ] })
+    await mount()
+    button('Selecionar').click(); await nextTick()
+    container.querySelector<HTMLElement>('[data-item-id="grouped-1"]')!.click(); await nextTick()
+    button('+ Peça').click(); await nextTick()
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Tênis Givenchy DN0281 outra cor'))
+    const destination = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager-option'))
+      .find(node => node.textContent?.includes('Tênis Givenchy DN0281 outra cor'))!
+    destination.click(); await nextTick()
+    expect(mocks.attachItemToGrade).not.toHaveBeenCalled()
+    const confirm = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager button'))
+      .find(node => node.textContent?.trim() === 'Confirmar transferência')!
+    confirm.click(); await nextTick()
+    expect(mocks.attachItemToGrade).toHaveBeenCalledExactlyOnceWith('grouped-1', keyB, keyA)
+  })
+  it('opens management of the shared grade when two selected items belong to it', async () => {
+    mocks.listItems = [
+      { ...item, id: 'grouped-1', group_key: keyA },
+      { ...item, id: 'grouped-2', group_key: keyA },
+    ]
+    mocks.getGradeMembers.mockResolvedValue({ items: mocks.listItems, total: 2, page: 1, limit: 100 })
+    await mount()
+    button('Selecionar').click(); await nextTick()
+    for (const id of ['grouped-1', 'grouped-2']) {
+      container.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.click(); await nextTick()
+    }
+    button('+ Peça').click(); await nextTick()
+    expect(document.body.querySelector('.grade-manager')).not.toBeNull()
+    await vi.waitFor(() => expect(mocks.getGradeMembers).toHaveBeenCalledWith(keyA, 1))
+    expect(document.body.textContent).toContain('Peças desta grade')
+    expect(document.body.textContent).toContain('2/2')
+    expect(mocks.groupItems).not.toHaveBeenCalled()
   })
 })
 
