@@ -115,6 +115,27 @@ def test_postgresql_search_matches_sqlite_semantics(pg):
         factory = sessionmaker(bind=isolated)
         with factory() as db:
             seed(db)
+            # The inventory list must accept a printed QR identity on PostgreSQL.
+            # A constant numeric rank in ORDER BY used to be parsed as an
+            # invalid column position, while the PDV barcode route still worked.
+            from app.api.endpoints.inventory import list_items
+            code = db.query(Item.inventory_code).filter(Item.sku_internal == 'BOSS-40').scalar()
+            result = list_items(
+                receiving_lot_id=None, search=code, category=None, brand=None,
+                location=None, size=None, color=None, item_status=None,
+                supplier_id=None, sort_by=None, ungrouped_only=False,
+                location_stock=None, page=1, page_size=50, include_images=False,
+                db=db, current_user=None,
+            )
+            assert result.total == 1
+            assert result.items[0].inventory_code == code
+            from app.api.endpoints.inventory import get_groups
+            matching_groups = get_groups(
+                search=code, brand=None, category=None, item_status=None,
+                location_stock=None, include_images=False, db=db, current_user=None,
+            )
+            assert len(matching_groups) == 1
+            assert matching_groups[0].matching_count == 1
             for term, expected in CASES:
                 rows = db.query(Item.sku_internal).filter(Item.deleted_at.is_(None), search_filter(db, term)).all()
                 assert {row[0] for row in rows} == expected, term
