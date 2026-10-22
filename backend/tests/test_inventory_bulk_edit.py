@@ -4,6 +4,7 @@ import re
 import pytest
 from test_assistant import setup
 from test_inventory_ocr import stock_app, item
+from test_product_intake_grade import manager_stock_app
 from app.models.inventory import Item, StockMovement
 from app.services.inventory_service import create_movement
 
@@ -132,12 +133,16 @@ def test_failure_during_second_adjustment_rolls_back_first_and_metadata(stock_ap
         assert all(row.stock_loja==3 and row.brand is None for row in db.query(Item).all())
 
 
-def test_bulk_all_details_override_clear_and_keep_legacy_identity(stock_app):
-    factory, client, user_id = stock_app
+def test_bulk_all_details_override_clear_and_keep_legacy_identity(manager_stock_app):
+    factory, client, user_id = manager_stock_app
     ids = seed(factory)
     from app.models.inventory import Supplier
     with factory() as db:
         supplier = Supplier(name='Fornecedor teste'); db.add(supplier); db.flush(); supplier_id=str(supplier.id)
+        db.get(Item, uuid.UUID(ids[0])).size = 'S'
+        db.get(Item, uuid.UUID(ids[1])).size = 'M'
+        db.flush()
+        versions = {identity: db.get(Item, uuid.UUID(identity)).updated_at.isoformat() for identity in ids}
         before = [(db.get(Item,uuid.UUID(i)).sku_internal, db.get(Item,uuid.UUID(i)).inventory_code) for i in ids]
         db.commit()
     response = client.patch('/api/inventory/items/batch/details', json={
@@ -145,8 +150,10 @@ def test_bulk_all_details_override_clear_and_keep_legacy_identity(stock_app):
         'unit': 'peça', 'location': 'A3', 'supplier_id': supplier_id, 'group_key': 'Família teste',
         'cost_currency': 'USD', 'sale_currency': 'BRL', 'currency': 'USD', 'min_stock': 2, 'max_stock': 8,
         'is_active': False, 'cost_price': 12.25, 'sale_price': 90,
-        'sizes': [{'id':ids[0], 'description':'Logo emborrachado', 'barcode':'00123S'},
-                  {'id':ids[1], 'supplier_id':None, 'location':'', 'barcode':'00123M'}]})
+        'sizes': [{'id':ids[0], 'expected_updated_at':versions[ids[0]],
+                   'description':'Logo emborrachado', 'barcode':'00123S'},
+                  {'id':ids[1], 'expected_updated_at':versions[ids[1]],
+                   'supplier_id':None, 'location':'', 'barcode':'00123M'}]})
     assert response.status_code == 200, response.text
     with factory() as db:
         rows=[db.get(Item,uuid.UUID(i)) for i in ids]

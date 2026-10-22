@@ -24,6 +24,23 @@ describe('Automatic grade titles', () => {
       expect(inventoryGroupName(key, [source], 'Grade')).toBe(key)
     }
   })
+  it('does not call a multicolor group by the first color of a generated key', () => {
+    const blue = { ...source, name: 'Boné Boss 2001020', size: '', color: 'Azul' }
+    const black = { ...copy, name: 'Boné Boss 2001020', size: '', color: 'Preto' }
+    expect(inventoryGroupName('Boné Boss 2001020 Azul', [blue, black], 'Grade')).toBe('Boné Boss 2001020')
+    expect(inventoryGroupName('Coleção Especial Azul', [blue, black], 'Grade')).toBe('Coleção Especial Azul')
+    expect(inventoryGroupName('Boné Boss 2001020 Azul', [blue], 'Grade')).toBe('Boné Boss 2001020 Azul')
+  })
+  it('removes the source color suffix from an automatic multicolor grade title', () => {
+    const black = { ...source, name: 'Boné Boss 2001020 Preto', size: '', color: 'Preto' }
+    const blue = { ...copy, name: 'Boné Boss 2001020 Azul', size: '', color: 'Azul' }
+    expect(inventoryGroupName(`grade-${uuid}`, [blue, black], 'Grade')).toBe('Boné Boss 2001020')
+    expect(inventoryGroupName(`grade-${uuid}`, [black], 'Grade')).toBe('Boné Boss 2001020 Preto')
+    expect(inventoryGroupName('Coleção Boss Preto', [blue, black], 'Grade')).toBe('Coleção Boss Preto')
+    expect(inventoryGroupName(`grade-${uuid}`, [
+      { ...black, name: 'Boné Boss 2001020 Preto 11', size: '11' }, blue,
+    ], 'Grade')).toBe('Boné Boss 2001020')
+  })
   it('does not expose an internal identifier while members are unavailable', () => {
     expect(inventoryGroupName(`grade-${uuid}`, [], 'Variant group')).toBe('Variant group')
   })

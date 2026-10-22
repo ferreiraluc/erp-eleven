@@ -13,7 +13,8 @@ INTERNAL = {'audit_events', 'activity_spans', 'auth_sessions', 'assistant_messag
 SAFE_VALUES = {'status', 'state', 'ativo', 'active', 'is_active', 'role', 'sales_scope',
                'current_stock', 'stock_loja', 'stock_deposito', 'quantity', 'quantity_before',
                'quantity_after', 'total_gs', 'valor_bruto', 'valor_liquido', 'moeda',
-               'sale_price', 'cost_price', 'label_status', 'tipo', 'aprovada'}
+               'sale_price', 'cost_price', 'label_status', 'tipo', 'aprovada',
+               'group_key'}  # Grade moves retain before/after identities in product history.
 SECRET_FIELDS = {'senha_hash', 'auth_version', 'token_hash', 'token', 'webhook_secret',
                  'document_pdf', 'pdf', 'image_data', 'additional_images', 'snapshot', 'payload', 'response', 'text',
                  'content', 'data', 'raw_data', 'lines', 'config'}
