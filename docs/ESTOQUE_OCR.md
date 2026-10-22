@@ -12,6 +12,15 @@ reconsulta as grades exibidas; o total do card e a quantidade de cada tamanho
 acompanham o saldo confirmado pelo servidor. O botão **+ Grades** abre o gerenciamento
 das peças de uma grade ou dos itens selecionados.
 
+Ao abrir um modal com itens selecionados, a barra flutuante de ações sai da frente
+dos controles. Cancelar ou concluir uma edição, transferência, vínculo a lote ou
+agrupamento devolve a barra com os mesmos itens marcados, para conferência; **Limpar**
+ou desligar **Selecionar** encerra a seleção. Na exclusão, apenas os produtos
+efetivamente excluídos deixam de estar marcados. Se uma edição tirar um item da
+lista filtrada, a seleção ainda o conta e avisa que está fora da lista atual.
+Ajuste os filtros antes de editar, transferir ou gerenciar a grade em lote; essas
+ações não abrem com apenas parte dos itens selecionados.
+
 ## Busca no catálogo
 
 Ao lado de **Selecionar**, a linha **Visualização** mostra o total de produtos

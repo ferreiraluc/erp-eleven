@@ -1478,6 +1478,14 @@
     "Artículos seleccionados: {count}",
     "Selected items: {count}"
   ],
+  "{count} fora da lista atual": [
+    "{count} fuera de la lista actual",
+    "{count} outside the current list"
+  ],
+  "Há itens selecionados fora da lista atual. Ajuste os filtros para usar ações em lote.": [
+    "Hay artículos seleccionados fuera de la lista actual. Ajusta los filtros para usar acciones en lote.",
+    "Some selected items are outside the current list. Adjust the filters to use bulk actions."
+  ],
   "Unidades a transferir: {count}": [
     "Unidades a transferir: {count}",
     "Units to transfer: {count}"
