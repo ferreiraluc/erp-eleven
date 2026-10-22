@@ -920,8 +920,8 @@ SQL externas devem usar as mesmas regras, pois não passam pelo listener ORM.
 
 ### Seleção múltipla e identificação visual de grades
 
-**Selecionar** ativa as ações da seleção; **Agrupar** continua disponível dentro
-da barra para criar uma grade. **Selecionar todos** inclui apenas os produtos da
+**Selecionar** ativa as ações da seleção; **+ Peça** aparece na barra para
+vincular produtos a uma grade existente ou criar uma nova. **Selecionar todos** inclui apenas os produtos da
 visualização atual (e os membros dos cards de grade exibidos), sem adicionar
 grupos ocultos.
 
@@ -931,9 +931,12 @@ Uma grade pode reunir tamanhos e cores diferentes do mesmo modelo. No card de um
 grade, **+ Peça** abre a gestão dos membros: é possível buscar um produto avulso,
 vinculá-lo à grade e remover apenas um membro. No card de um produto avulso,
 **Vincular à grade** mostra grades semelhantes e permite buscar outra pelo nome ou
-referência. Também é possível selecionar um único avulso e usar **Agrupar** para
-colocá-lo em uma grade existente; criar uma grade nova pela seleção continua
-exigindo ao menos dois produtos. A escolha e a confirmação são explícitas.
+referência. Ao selecionar uma peça e tocar em **+ Peça**, a gestão permite
+vinculá-la, transferi-la ou removê-la da grade. Com várias peças avulsas
+selecionadas, **+ Peça** permite vinculá-las a uma grade existente ou criar
+uma nova; a criação exige ao menos duas peças. Se todas as peças selecionadas
+já pertencem à mesma grade, abre-se a gestão dessa grade. A escolha e a
+confirmação são explícitas.
 
 As sugestões comparam o nome do modelo, marca, categoria e unidade, ignorando
 apenas os sufixos de tamanho/cor que correspondem aos campos do próprio item.

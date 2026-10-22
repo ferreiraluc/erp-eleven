@@ -2665,6 +2665,8 @@
   "Gerenciar grade {name}": ["Gestionar grupo {name}", "Manage variant group {name}"],
   "Adicionar ou remover peças da grade": ["Agregar o quitar piezas del grupo", "Add or remove items from the group"],
   "+ Peça": ["+ Pieza", "+ Item"],
+  "Adicionar peças à grade": ["Agregar piezas al grupo", "Add items to group"],
+  "Escolha uma grade existente ou crie uma nova para {count} peças avulsas.": ["Elija un grupo existente o cree uno nuevo para {count} piezas individuales.", "Choose an existing group or create a new one for {count} ungrouped items."],
   "Sugestões não alteram a grade até você confirmar o vínculo.": ["Las sugerencias no cambian el grupo hasta que confirme el vínculo.", "Suggestions do not change the group until you confirm the link."],
   "Grade atual: {name}": ["Grupo actual: {name}", "Current group: {name}"],
   "Remover da grade": ["Quitar del grupo", "Remove from group"],

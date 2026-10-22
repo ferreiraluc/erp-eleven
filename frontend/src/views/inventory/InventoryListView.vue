@@ -491,7 +491,7 @@
         <div class="sel-actions">
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
-          <button v-if="canManageGrades" @click="showGroupModal = true" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('Agrupar') }}</button>
+          <button v-if="canManageGrades" type="button" @click="openSelectionGradeAction" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Peça') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
             <span class="sel-label-short">{{ tr('Editar') }}</span>
@@ -523,9 +523,9 @@
     <!-- Modal de nome do grupo -->
     <div v-if="showGroupModal" class="gmodal-overlay erp-dialog-backdrop" @click.self="showGroupModal = false">
       <div v-erp-dialog class="gmodal erp-dialog erp-dialog--sm">
-        <h3 class="gmodal-title erp-dialog__header">{{ tr('Definir nome do grupo') }}</h3>
+        <h3 class="gmodal-title erp-dialog__header">{{ tr('Adicionar peças à grade') }}</h3>
         <div class="erp-dialog__body"><p class="gmodal-sub">
-          {{ tr('Itens a agrupar: {count}. Defina um código ou nome de modelo:', { count: selectedUngrouped.length }) }}
+          {{ tr('Escolha uma grade existente ou crie uma nova para {count} peças avulsas.', { count: selectedUngrouped.length }) }}
         </p>
         <!-- Warning: some selected items are already in a group -->
         <div v-if="selectedAlreadyGrouped.length > 0" class="gmodal-warn">
@@ -675,6 +675,31 @@ function openGradeManagerForGroup(group: GroupResponse) {
   gradeManagerKey.value = group.group_key
   gradeManagerName.value = groupTitle(group.group_key)
   gradeManagerMembers.value = group.items
+}
+
+function openSelectionGradeAction() {
+  if (!canManageGrades.value) return
+  const selected = selectedIds.value
+    .map(id => allVisibleItems.value.get(id))
+    .filter((item): item is InventoryItem => !!item)
+  if (!selected.length) return
+  if (selected.length === 1) {
+    openGradeManagerForItem(selected[0])
+    return
+  }
+  const sharedKey = selected[0]?.group_key
+  if (selected.length > 1 && sharedKey && selected.every(item => item.group_key === sharedKey)) {
+    const group = backendGroups.value.find(entry => entry.group_key === sharedKey)
+    if (group) openGradeManagerForGroup(group)
+    else {
+      gradeManagerItem.value = null
+      gradeManagerKey.value = sharedKey
+      gradeManagerName.value = groupTitle(sharedKey)
+      gradeManagerMembers.value = []
+    }
+    return
+  }
+  showGroupModal.value = true
 }
 
 function closeGradeManager() {
