@@ -1,12 +1,6 @@
 <template>
   <div class="filter-chips" :aria-label="tr('Filtros de estoque')">
-    <button v-for="chip in statusChips" :key="chip.value" type="button" class="chip desktop-status erp-control"
-      :class="{ active: status === chip.value, 'chip-inactive': chip.value === 'inactive' }"
-      :aria-pressed="status === chip.value" @click="emit('status', chip.value)">
-      {{ tr(chip.label) }}<span v-if="chip.count !== undefined" class="chip-count">{{ chip.count }}</span>
-    </button>
-
-    <ErpSelect class="mobile-only filter-dropdown" compact pill :value="status" :class="{ active: !!status }" :label="tr('Status do estoque')"
+    <ErpSelect class="filter-dropdown status-filter" compact pill :value="status" :class="{ active: !!status }" :label="tr('Status do estoque')"
       :display-label="tr(statusChips.find(chip => chip.value === status)?.label || 'Todos')" @change="emit('status', $event)">
       <option v-for="chip in statusChips" :key="chip.value" :value="chip.value">{{ tr(chip.label) }}{{ chip.count !== undefined ? ` (${chip.count})` : '' }}</option>
     </ErpSelect>
@@ -15,9 +9,10 @@
       <option value="">{{ tr('Todas as marcas') }}</option>
       <option v-for="item in brands" :key="item" :value="item">{{ item }}</option>
     </ErpSelect>
-    <ErpSelect v-if="categories.length" class="filter-dropdown" compact pill searchable :value="category" :class="{ active: !!category }" :label="tr('Categoria')"
+    <ErpSelect class="filter-dropdown" compact pill searchable :value="category" :class="{ active: !!category }" :label="tr('Categoria')"
       :display-label="category ? formatCategory(category) : tr('Categoria')" @change="emit('category', $event)">
       <option value="">{{ tr('Todas as categorias') }}</option>
+      <option value="__uncategorized__">{{ tr('Sem categoria') }}</option>
       <option v-for="item in categories" :key="item" :value="item">{{ formatCategory(item) }}</option>
     </ErpSelect>
 
@@ -76,18 +71,19 @@ const emit = defineEmits<{
   'toggle-groups': []
 }>()
 const { tr } = useInventoryI18n()
-function formatCategory(value: string) { return value ? value.replace('>', ' › ') : '' }
+function formatCategory(value: string) { return value === '__uncategorized__' ? tr('Sem categoria') : value.replace('>', ' › ') }
 </script>
 
 <style scoped>
 .filter-chips{display:flex;gap:.375rem;flex-wrap:wrap;margin-bottom:.5rem}.chip{padding:.375rem .75rem;border-radius:20px;background:#f8fafc;border:1px solid #e5e7eb;font-size:.8rem;cursor:pointer;color:#374151;display:flex;align-items:center;gap:.25rem}.chip.active{background:#eaf1ff;border-color:#93b4ee;color:#1d4ed8;box-shadow:inset 0 1px 0 #ffffff,0 1px 3px #2563eb12}.chip-inactive.active{background:#fee2e2;border-color:#ef4444;color:#b91c1c}.chip-count{background:#bfdbfe;color:#1e40af;border-radius:10px;padding:0 5px;font-size:.7rem;min-width:16px;text-align:center}.chip.active .chip-count{background:var(--color-brand-600);color:#fff}.chip-inactive.active .chip-count{background:#b91c1c}
 .filter-chips>.filter-dropdown{width:auto;max-width:220px;min-width:100px}
+.status-filter :deep(.erp-dropdown__value)::before{content:'☰';font-size:1rem;line-height:1;margin-right:.35rem}
 .filter-dropdown :deep(.erp-dropdown__value){justify-content:center}
 .filter-dropdown.active :deep(.erp-dropdown__control){background:#eaf1ff;border-color:#93b4ee;color:#1d4ed8}
 .mobile-only{display:none}
 @media(max-width:600px){
 .filter-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px}
-.desktop-status,.desktop-location{display:none}.mobile-only{display:block}
+.desktop-location{display:none}.mobile-only{display:block}
 .filter-chips>.filter-dropdown{width:100%;min-width:0;max-width:100%}
 .chip{min-width:0;min-height:32px;padding:4px 7px;border-radius:999px;font-size:.72rem;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip-count{font-size:.65rem;min-width:0}

@@ -97,6 +97,72 @@ def test_pagination_facets_and_groups_require_one_matching_variant(stock_app):
         assert client.get(f'/api/inventory/{path}', params={'search': 'a' * 257}).status_code == 422
 
 
+def test_uncategorized_filter_handles_legacy_blanks_and_group_variant_matching(stock_app):
+    factory, client, _ = stock_app
+    with factory() as db:
+        db.add_all([
+            Item(sku_internal='UNCAT-NULL', name='Sem categoria null', brand='Boss', group_key='no-category'),
+            Item(sku_internal='UNCAT-BLANK', name='Sem categoria vazia', brand='Boss', group_key='no-category'),
+            Item(sku_internal='UNCAT-SPACES', name='Sem categoria espaços', brand='Prada', group_key='mixed'),
+            Item(sku_internal='CAT-ONE', name='Com categoria', brand='Boss', category='Camisetas', group_key='mixed'),
+            Item(sku_internal='UNCAT-DELETED', name='Excluído', deleted_at=datetime(2026, 1, 1)),
+        ])
+        db.commit()
+        # Preserve historical blank categories that normal ORM writes normalize away.
+        db.execute(sa.text("UPDATE inventory_items SET category='' WHERE sku_internal='UNCAT-BLANK'"))
+        db.execute(sa.text("UPDATE inventory_items SET category='   ' WHERE sku_internal='UNCAT-SPACES'"))
+        db.commit()
+
+    uncategorized = {'category': '__uncategorized__', 'include_images': False}
+    listed = client.get('/api/inventory/items', params=uncategorized)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()['total'] == 3
+    assert {item['sku_internal'] for item in listed.json()['items']} == {
+        'UNCAT-NULL', 'UNCAT-BLANK', 'UNCAT-SPACES',
+    }
+    groups = client.get('/api/inventory/groups', params=uncategorized)
+    assert groups.status_code == 200, groups.text
+    by_key = {group['group_key']: group for group in groups.json()}
+    assert {key: group['matching_count'] for key, group in by_key.items()} == {
+        'no-category': 2, 'mixed': 1,
+    }
+    assert {item['sku_internal'] for item in by_key['mixed']['items']} == {'UNCAT-SPACES', 'CAT-ONE'}
+
+    # Category and brand must match the same variant in a grade.
+    boss = {**uncategorized, 'brand': 'Boss'}
+    assert client.get('/api/inventory/items', params=boss).json()['total'] == 2
+    assert {group['group_key'] for group in client.get('/api/inventory/groups', params=boss).json()} == {'no-category'}
+    assert client.get('/api/inventory/items', params={'category': 'Camisetas'}).json()['total'] == 1
+
+
+def test_inactive_group_filter_returns_only_inactive_members(stock_app):
+    factory, client, _ = stock_app
+    with factory() as db:
+        db.add_all([
+            Item(sku_internal='MIX-ACTIVE', name='Misto ativo', group_key='mixed', is_active=True, current_stock=5),
+            Item(sku_internal='MIX-INACTIVE', name='Misto inativo', group_key='mixed', is_active=False, current_stock=2),
+            Item(sku_internal='ONLY-INACTIVE', name='Somente inativo', group_key='inactive', is_active=False, current_stock=3),
+            Item(sku_internal='ONLY-ACTIVE', name='Somente ativo', group_key='active', is_active=True, current_stock=7),
+            Item(sku_internal='DELETED-INACTIVE', name='Excluído', group_key='deleted', is_active=False,
+                 deleted_at=datetime(2026, 1, 1)),
+        ])
+        db.commit()
+
+    response = client.get('/api/inventory/groups', params={'status': 'inactive', 'include_images': False})
+    assert response.status_code == 200, response.text
+    groups = {group['group_key']: group for group in response.json()}
+    assert set(groups) == {'mixed', 'inactive'}
+    assert {key: group['matching_count'] for key, group in groups.items()} == {'mixed': 1, 'inactive': 1}
+    assert {key: [item['sku_internal'] for item in group['items']] for key, group in groups.items()} == {
+        'mixed': ['MIX-INACTIVE'], 'inactive': ['ONLY-INACTIVE'],
+    }
+    assert {key: group['total_stock'] for key, group in groups.items()} == {'mixed': 2, 'inactive': 3}
+
+    normal_groups = {group['group_key']: group for group in client.get('/api/inventory/groups').json()}
+    assert set(normal_groups) == {'mixed', 'active'}
+    assert [item['sku_internal'] for item in normal_groups['mixed']['items']] == ['MIX-ACTIVE']
+
+
 def test_assistant_combines_attributes_without_broadening_stock_totals(stock_app):
     from app.services.assistant_queries import StockArgs, query_stock
     factory, _, _ = stock_app

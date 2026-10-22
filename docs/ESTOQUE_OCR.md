@@ -7,6 +7,10 @@ Os cards, a lista e as peças de uma grade não oferecem mais a saída rápida
 validações e o histórico existentes. A remoção do atalho não altera saldos nem
 apaga movimentos anteriores. **Movimentar** e **Editar** ficam lado a lado nos
 cards, inclusive em Quadrados no celular e no desktop, com espaçamento compacto.
+Com **Ver grades** ativo, salvar uma edição de produto, movimentação ou transferência
+reconsulta as grades exibidas; o total do card e a quantidade de cada tamanho
+acompanham o saldo confirmado pelo servidor. O botão **+ Grades** abre o gerenciamento
+das peças de uma grade ou dos itens selecionados.
 
 ## Busca no catálogo
 
@@ -190,6 +194,14 @@ longos cabem na tag e o nome completo aparece nas opções. Os modos de visualiz
 usam ícones com nomes acessíveis, ao lado de seleção e quantidade de resultados.
 Ações de importação, etiquetas, conferência e histórico continuam disponíveis no
 menu, respeitando o perfil. Desktop preserva filtros visíveis e as mesmas tags.
+O filtro de situação usa um único menu com Todos, Baixo, Sem estoque, Excesso,
+Inativos e Revisar estoque no celular e no desktop; os números do resumo não
+duplicam esses botões. O filtro de categoria inclui **Sem categoria** mesmo quando
+nenhuma categoria foi cadastrada, para localizar e classificar itens antigos;
+categorias vazias ou só com espaços também entram nessa escolha.
+Em **Ver grades**, a grade mostra outras peças como contexto, mas selecionar a
+grade com **Sem categoria** ativo inclui apenas as peças sem categoria na edição
+em massa. **Inativos** mostra somente os membros inativos da grade.
 
 Uma busca ou filtro sem correspondências oferece **Limpar Filtros**, removendo
 texto, status, marca, categoria, local e seleção de itens sem grade. O modo de
@@ -924,7 +936,7 @@ SQL externas devem usar as mesmas regras, pois não passam pelo listener ORM.
 
 ### Seleção múltipla e identificação visual de grades
 
-**Selecionar** ativa as ações da seleção; **+ Peça** aparece na barra para
+**Selecionar** ativa as ações da seleção; **+ Grades** aparece na barra para
 vincular produtos a uma grade existente ou criar uma nova. **Selecionar todos** inclui apenas os produtos da
 visualização atual (e os membros dos cards de grade exibidos), sem adicionar
 grupos ocultos.
@@ -932,12 +944,12 @@ grupos ocultos.
 ### Gerenciar produtos em grades existentes
 
 Uma grade pode reunir tamanhos e cores diferentes do mesmo modelo. No card de uma
-grade, **+ Peça** abre a gestão dos membros: é possível buscar um produto avulso,
+grade, **+ Grades** abre a gestão dos membros: é possível buscar um produto avulso,
 vinculá-lo à grade e remover apenas um membro. No card de um produto avulso,
 **Vincular à grade** mostra grades semelhantes e permite buscar outra pelo nome ou
-referência. Ao selecionar uma peça e tocar em **+ Peça**, a gestão permite
+referência. Ao selecionar uma peça e tocar em **+ Grades**, a gestão permite
 vinculá-la, transferi-la ou removê-la da grade. Com várias peças avulsas
-selecionadas, **+ Peça** permite vinculá-las a uma grade existente ou criar
+selecionadas, **+ Grades** permite vinculá-las a uma grade existente ou criar
 uma nova; a criação exige ao menos duas peças. Se todas as peças selecionadas
 já pertencem à mesma grade, abre-se a gestão dessa grade. A escolha e a
 confirmação são explícitas.

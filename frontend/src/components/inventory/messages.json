@@ -405,6 +405,7 @@
     "Categoría",
     "Category"
   ],
+  "Sem categoria": ["Sin categoría", "Uncategorized"],
   "Preço de custo": [
     "Precio de costo",
     "Cost price"
@@ -2663,8 +2664,9 @@
   "Confira os códigos e quantidades: até 500 produtos, 100 cópias por produto e 2.000 etiquetas por envio.": ["Revise códigos y cantidades: hasta 500 productos, 100 copias por producto y 2.000 etiquetas por envío.", "Check codes and quantities: up to 500 products, 100 copies per product and 2,000 labels per request."],
   "Gerenciar grade": ["Gestionar grupo", "Manage variant group"],
   "Gerenciar grade {name}": ["Gestionar grupo {name}", "Manage variant group {name}"],
+  "Selecionar grade {name}": ["Seleccionar grupo {name}", "Select variant group {name}"],
   "Adicionar ou remover peças da grade": ["Agregar o quitar piezas del grupo", "Add or remove items from the group"],
-  "+ Peça": ["+ Pieza", "+ Item"],
+  "+ Grades": ["+ Grupos", "+ Groups"],
   "Adicionar peças à grade": ["Agregar piezas al grupo", "Add items to group"],
   "Escolha uma grade existente ou crie uma nova para {count} peças avulsas.": ["Elija un grupo existente o cree uno nuevo para {count} piezas individuales.", "Choose an existing group or create a new one for {count} ungrouped items."],
   "Sugestões não alteram a grade até você confirmar o vínculo.": ["Las sugerencias no cambian el grupo hasta que confirme el vínculo.", "Suggestions do not change the group until you confirm the link."],

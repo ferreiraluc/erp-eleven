@@ -23,7 +23,12 @@ vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGr
 vi.mock('@/stores/inventory', () => ({ useInventoryStore: () => ({ items: mocks.listItems, filters: reactive(mocks.listFilters), alerts: null, loading: false, loadingMore: false, loadMoreError: null, hasLoaded: true, error: mocks.listError,
   pagination: { page: 1, total_pages: 1, total: mocks.listItems.length }, loadItems: mocks.loadItems, loadAlerts: mocks.loadAlerts }) }))
 vi.mock('@/components/inventory/ItemFormModal.vue', () => ({ default: {
-  props: ['item'], emits: ['close'], render(this: { item: { id: string; image_data?: string } }) { return h('div', { 'data-editor-id': this.item?.id, 'data-editor-photo': this.item?.image_data }, 'Existing product editor') },
+  props: ['item'], emits: ['close', 'saved'],
+  setup(props: { item?: InventoryItem }, { emit }: { emit: (event: string, item?: InventoryItem) => void }) {
+    return () => h('div', { 'data-editor-id': props.item?.id, 'data-editor-photo': props.item?.image_data }, [
+      'Existing product editor', h('button', { onClick: () => emit('saved', props.item) }, 'Save test item'),
+    ])
+  },
 } }))
 
 let app: App | undefined, container: HTMLDivElement
@@ -94,6 +99,47 @@ describe('Inventory empty search recovery', () => {
     expect(mocks.getGroups).toHaveBeenLastCalledWith({})
     expect(localStorage.getItem('inv_group_mode')).toBe('true')
     await vi.waitFor(() => expect(container.querySelector('.empty-state')?.textContent).not.toContain('Criar primeiro item'))
+  })
+})
+
+describe('Grouped stock refresh', () => {
+  it('updates the grade total and size count after an item edit', async () => {
+    localStorage.setItem('inv_group_mode', 'true')
+    const item = { id: 'size-s', sku_internal: 'INV-ABC123', name: 'Camiseta S', size: 'S', group_key: 'grade-1',
+      current_stock: 1, stock_loja: 1, stock_deposito: 0, sale_price: 0, is_active: true, alert_level: 'ok' } as InventoryItem
+    mocks.getGroups.mockResolvedValueOnce([{ group_key: 'grade-1', total_stock: 1, items: [item] }])
+      .mockResolvedValue([{ group_key: 'grade-1', total_stock: 4, items: [{ ...item, current_stock: 4, stock_loja: 4 }] }])
+    await mount()
+    expect(container.querySelector('.group-total-stock')?.textContent).toContain('1')
+    container.querySelector<HTMLElement>('.size-chip .chip-label')!.click()
+    await nextTick()
+    button('Save test item').click()
+    await vi.waitFor(() => expect(container.querySelector('.group-total-stock')?.textContent).toContain('4'))
+    expect(container.querySelector('.size-chip .chip-label')?.textContent).toContain('4')
+    expect(mocks.getGroups).toHaveBeenCalledTimes(2)
+  })
+
+  it('restores saved category filters and selects only uncategorized grade members for bulk editing', async () => {
+    localStorage.setItem('inv_group_mode', 'true')
+    mocks.listFilters = { category: '__uncategorized__', brand: 'Boss', location_stock: 'loja' }
+    const item = { id: 'uncategorized', sku_internal: 'INV-UNC123', name: 'Camiseta sem categoria',
+      category: undefined, group_key: 'grade-1', current_stock: 1, stock_loja: 1, stock_deposito: 0,
+      sale_price: 0, is_active: true, alert_level: 'ok' } as InventoryItem
+    mocks.getGroups.mockResolvedValue([{ group_key: 'grade-1', total_stock: 2, items: [
+      item, { ...item, id: 'categorized', name: 'Camiseta categorizada', category: 'Camisetas' },
+    ] }])
+    await mount()
+    expect(document.querySelector('[aria-label="Categoria"]')?.textContent).toContain('Sem categoria')
+    expect(mocks.getGroups).toHaveBeenLastCalledWith({ category: '__uncategorized__', brand: 'Boss', location_stock: 'loja' })
+    button('Selecionar').click(); await nextTick()
+    document.querySelector<HTMLButtonElement>('[aria-label^="Selecionar grade"]')!.click(); await nextTick()
+    expect(container.querySelector('.sel-count')?.textContent).toContain('1')
+    Array.from(container.querySelectorAll<HTMLButtonElement>('.selection-bar button')).find(button => button.textContent?.includes('Sel. todos'))!.click(); await nextTick()
+    expect(container.querySelector('.sel-count')?.textContent).toContain('1')
+    Array.from(container.querySelectorAll<HTMLButtonElement>('.selection-bar button')).find(button => button.textContent?.includes('Editar massivo'))!.click(); await nextTick()
+    expect(document.querySelectorAll('.modal-container .items-list .item-card')).toHaveLength(1)
+    expect(document.querySelector('.modal-container .items-list')?.textContent).toContain('Camiseta sem categoria')
+    expect(document.querySelector('.modal-container .items-list')?.textContent).not.toContain('Camiseta categorizada')
   })
 })
 
@@ -275,7 +321,7 @@ describe('Readable automatic grade names', () => {
     for (const id of ['new-1', 'new-2']) {
       container.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.click(); await nextTick()
     }
-    button('+ Peça').click(); await nextTick()
+    button('+ Grades').click(); await nextTick()
     await vi.waitFor(() => expect(mocks.getGradeDirectory).toHaveBeenCalledWith(''))
     const select = document.querySelector<HTMLButtonElement>('[aria-label="Grade de destino"]')!
     const choices = (await openDropdown(select)).map(option => option.textContent)
@@ -314,7 +360,7 @@ describe('Readable automatic grade names', () => {
     expect(container.querySelector('.group-manage-btn')).toBeNull()
     expect(container.querySelector('.chip-remove')).toBeNull()
     button('Selecionar').click(); await nextTick()
-    expect(Array.from(container.querySelectorAll('button')).some(button => button.textContent?.trim() === '+ Peça')).toBe(false)
+    expect(Array.from(container.querySelectorAll('button')).some(button => button.textContent?.trim() === '+ Grades')).toBe(false)
     expect(mocks.getGroupItemSuggestions).not.toHaveBeenCalled()
   })
   it('opens grade management for one selected standalone item and links it to an existing grade', async () => {
@@ -324,7 +370,7 @@ describe('Readable automatic grade names', () => {
     await mount()
     button('Selecionar').click(); await nextTick()
     container.querySelector<HTMLElement>('[data-item-id="new-1"]')!.click(); await nextTick()
-    button('+ Peça').click(); await nextTick()
+    button('+ Grades').click(); await nextTick()
     expect(document.body.querySelector('.grade-manager')).not.toBeNull()
     await vi.waitFor(() => expect(mocks.getItemGradeSuggestions).toHaveBeenCalledWith('new-1'))
     await vi.waitFor(() => expect(mocks.getGradeDirectory).toHaveBeenCalledWith(''))
@@ -342,7 +388,7 @@ describe('Readable automatic grade names', () => {
     await mount()
     button('Selecionar').click(); await nextTick()
     container.querySelector<HTMLElement>('[data-item-id="grouped-1"]')!.click(); await nextTick()
-    button('+ Peça').click(); await nextTick()
+    button('+ Grades').click(); await nextTick()
     expect(document.body.querySelector('.grade-manager')).not.toBeNull()
     expect(document.body.textContent).toContain('Grade atual:')
     const remove = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager button'))
@@ -362,7 +408,7 @@ describe('Readable automatic grade names', () => {
     await mount()
     button('Selecionar').click(); await nextTick()
     container.querySelector<HTMLElement>('[data-item-id="grouped-1"]')!.click(); await nextTick()
-    button('+ Peça').click(); await nextTick()
+    button('+ Grades').click(); await nextTick()
     await vi.waitFor(() => expect(document.body.textContent).toContain('Tênis Givenchy DN0281 outra cor'))
     const destination = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.grade-manager-option'))
       .find(node => node.textContent?.includes('Tênis Givenchy DN0281 outra cor'))!
@@ -384,7 +430,7 @@ describe('Readable automatic grade names', () => {
     for (const id of ['grouped-1', 'grouped-2']) {
       container.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.click(); await nextTick()
     }
-    button('+ Peça').click(); await nextTick()
+    button('+ Grades').click(); await nextTick()
     expect(document.body.querySelector('.grade-manager')).not.toBeNull()
     await vi.waitFor(() => expect(mocks.getGradeMembers).toHaveBeenCalledWith(keyA, 1))
     expect(document.body.textContent).toContain('Peças desta grade')
