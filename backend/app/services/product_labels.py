@@ -177,6 +177,9 @@ def render_zpl(snapshot):
     code, copies = snapshot['code'], snapshot['copies']
     if not CODE.fullmatch(code) or type(copies) is not int or not 1 <= copies <= MAX_COPIES:
         raise ValueError('Invalid label snapshot')
+    if snapshot.get('layout_version') == 3:
+        from .product_label_artwork import zpl
+        return zpl(snapshot, _price_parts(snapshot))
     if snapshot.get('layout_version') == 2:
         parts = ['^XA^CI28^MNY^MMT^PW480^LL240^LH0,0^LS0^LT0^PON']
         for x, y, height, width, value in layout_v2(snapshot):
@@ -197,23 +200,10 @@ def render_zpl(snapshot):
     return '\n'.join(parts).encode('ascii')
 
 
-def preview_svg(item):
-    from reportlab.graphics import renderSVG
-    from reportlab.graphics.shapes import Drawing, Rect, String
-    from reportlab.graphics.barcode.qr import QrCodeWidget
-    from reportlab.lib import colors
+def preview_png(item):
+    from .product_label_artwork import preview_png as artwork_preview_png
     snap = snapshot(item, 1)
-    drawing = Drawing(480, 240)
-    drawing.add(Rect(0, 0, 480, 240, fillColor=colors.white, strokeColor=None))
-    for x, y, height, _, value in layout_v2(snap):
-        drawing.add(String(x, 240-y-height*.8, value,
-                           fontName='Helvetica-Bold' if value == 'ELEVEN' else 'Helvetica',
-                           fontSize=height*.83))
-    # ReportLab's dimensions include the four-module quiet zone; ZPL's ^BQN size
-    # describes the active 21-module symbol. Align their visible QR footprints.
-    drawing.add(QrCodeWidget(snap['code'], x=323, y=58, barWidth=145, barHeight=145,
-                             barBorder=4, barLevel='M'))
-    return renderSVG.drawToString(drawing)
+    return artwork_preview_png(snap, _price_parts(snap))
 
 
 def snapshot(item, copies):
@@ -223,7 +213,7 @@ def snapshot(item, copies):
                 size=item.size, color=item.color, barcode=item.barcode,
                 sale_price=str(Decimal(item.sale_price or 0).quantize(Decimal('0.01'))),
                 sale_currency=(item.sale_currency or 'USD').upper(),
-                layout_version=2, copies=copies, width=60, height=30)
+                layout_version=3, copies=copies, width=60, height=30)
 
 
 def job_view(job):

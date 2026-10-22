@@ -8,6 +8,8 @@ from decimal import Decimal
 from zipfile import ZipFile
 
 import pytest
+from PIL import Image, ImageChops
+from reportlab.graphics.barcode.qr import QrCodeWidget
 from sqlalchemy import event
 
 from app.api.endpoints import inventory_labels, inventory
@@ -61,6 +63,21 @@ def zpl_text_fields(payload):
     """Read only user-visible UTF-8 fields; QR data is checked separately."""
     return [bytes.fromhex(value.replace('_', '')).decode('utf-8') for value in
             re.findall(r'\^FH_\^FD((?:_[0-9A-F]{2})+)\^FS', payload.decode('ascii'))]
+
+
+def raster_from_zpl(payload):
+    match = re.search(rb'\^GFA,(\d+),(\d+),(\d+),([0-9A-F]+)\^FS', payload)
+    assert match, 'Expected Zebra ASCII-hex graphic'
+    total, repeated, stride = map(int, match.group(1, 2, 3))
+    assert (total, repeated, stride) == (14400, 14400, 60)
+    packed = bytes.fromhex(match.group(4).decode('ascii'))
+    assert len(packed) == total
+    return Image.frombytes('1', (480, 240), bytes(byte ^ 0xff for byte in packed))
+
+
+def raster_from_preview(png):
+    assert png.startswith(b'\x89PNG\r\n\x1a\n')
+    return Image.open(io.BytesIO(png)).convert('1')
 
 
 def setup_device(client):
@@ -179,7 +196,8 @@ def test_zpl_escapes_text_uses_qr_and_fixed_media(label_env):
     assert '^PQ7,0,1,N' in data and f"^FDMA,{row['inventory_code']}^FS" in data
     assert all(x < 480 and y+h <= 240 for x, y, h, _ in labels.layout(snap))
     preview = client.get('/api/inventory-labels/preview/'+ids[0])
-    assert preview.status_code == 200 and '<svg' in preview.text and row['inventory_code'] in preview.text
+    assert preview.status_code == 200 and preview.headers['content-type'] == 'image/png'
+    assert raster_from_preview(preview.content).size == (480, 240)
 
 
 def test_new_layout_snapshots_sale_price_and_optional_barcode(label_env):
@@ -191,22 +209,44 @@ def test_new_layout_snapshots_sale_price_and_optional_barcode(label_env):
     batch = enqueue(client, body)
     with factory() as db:
         snap = db.get(PrintJob, uuid.UUID(batch['jobs'][0]['id'])).snapshot
-    assert snap['layout_version'] == 2
+    assert snap['layout_version'] == 3
     assert snap['sale_price'] == '149.90' and snap['sale_currency'] == 'BRL'
     assert snap['barcode'] == '7891234567890'
     data = labels.render_zpl(snap)
     fields = zpl_text_fields(data)
     assert data.startswith(b'^XA^CI28^MNY') and b'^PW480^LL240' in data
     assert data.endswith(b'^XZ') and b'^PQ2,0,1,N' in data
-    assert f"^FDMA,{row['inventory_code']}^FS".encode() in data
-    assert 'ELEVEN' in fields and any('T-SHIRT BRANCO S' in field for field in fields)
-    assert any('BRANCO' in field for field in fields)
-    assert any('149,90' in field for field in fields)
-    assert any('7891234567890' in field for field in fields)
-    assert b'instagram' not in data.lower()
+    assert not fields and b'^A0' not in data and b'^GFA,14400,14400,60,' in data
+    assert len(data) <= 32768  # Windows RAW-agent guard
     preview = client.get('/api/inventory-labels/preview/'+ids[0])
-    assert preview.status_code == 200
-    assert '149,90' in preview.text and row['inventory_code'] in preview.text
+    assert preview.status_code == 200 and preview.headers['content-type'] == 'image/png'
+    image = raster_from_zpl(data)
+    assert image.tobytes() == raster_from_preview(preview.content).tobytes()
+    for field, changed in (('name', 'Outro nome'), ('size', 'XL'), ('color', 'Preto'),
+                           ('barcode', '9876543210'), ('sale_price', '0')):
+        altered = {**snap, field: changed}
+        assert image.tobytes() != raster_from_zpl(labels.render_zpl(altered)).tobytes()
+
+
+def test_new_layout_qr_is_internal_code_with_quiet_zone_and_zpl_is_not_injectable():
+    snap = dict(layout_version=3, code='INV-A7K4P2', copies=7,
+                name='Camiseta ^XZ ~JA _A1 Ç', color='Azul', size='2XL',
+                barcode='7891234567890', sale_price='149.90', sale_currency='BRL')
+    data = labels.render_zpl(snap)
+    assert data.count(b'^XZ') == 1 and b'~JA' not in data
+    assert data.startswith(b'^XA^CI28^MNY') and data.endswith(b'^XZ')
+    assert b'^PW480^LL240' in data and b'^PQ7,0,1,N' in data
+    assert len(data) <= 32768
+    image = raster_from_zpl(data)
+    assert image.size == (480, 240)
+    for x, y in ((343, 57), (358, 72), (443, 73), (359, 157), (458, 172)):
+        assert image.getpixel((x, y)) == 255
+    qr = QrCodeWidget(snap['code'], barLevel='M')
+    qr.qr.make()
+    assert len(qr.qr.modules) == 21
+    for row, modules in enumerate(qr.qr.modules):
+        for col, dark in enumerate(modules):
+            assert (image.getpixel((359 + col*4, 73 + row*4)) == 0) == bool(dark)
 
 
 def test_zero_sale_price_is_a_dash_not_a_fabricated_amount(label_env):
@@ -215,12 +255,13 @@ def test_zero_sale_price_is_a_dash_not_a_fabricated_amount(label_env):
     assert row['sale_price'] == '0.00'
     preview = client.get('/api/inventory-labels/preview/'+ids[1])
     assert preview.status_code == 200
-    assert '0,00' not in preview.text
-    assert re.search(r'<text[^>]*>\s*[—–-]\s*</text>', preview.text)
     with factory() as db:
         snap = labels.snapshot(db.get(Item, uuid.UUID(ids[1])), 1)
-    fields = zpl_text_fields(labels.render_zpl(snap))
-    assert '-' in fields and '0,00' not in fields
+    image = raster_from_preview(preview.content)
+    assert raster_from_zpl(labels.render_zpl(snap)).tobytes() == image.tobytes()
+    # The left price area contains only the small dash, never a fabricated 0,00.
+    ink = ImageChops.invert(image.convert('L').crop((0, 185, 300, 230))).getbbox()
+    assert ink and ink[2] - ink[0] < 15
 
 
 @pytest.mark.parametrize('changed_field, changed_value', [
@@ -244,6 +285,14 @@ def test_unversioned_snapshot_keeps_identical_legacy_zpl():
     old_snapshot = dict(code='INV-A7K4P2', copies=2, name='Camiseta Azul', size='M', color='Azul')
     assert hashlib.sha256(labels.render_zpl(old_snapshot)).hexdigest() == (
         '8caea4ab7485b1116a617a5f247252ce55f49a454791be64c1f202dd3d86ff23')
+
+
+def test_queued_v2_snapshot_keeps_identical_zpl():
+    old_snapshot = dict(layout_version=2, code='INV-A7K4P2', copies=2,
+                        name='Camiseta Azul', size='M', color='Azul',
+                        barcode='7891234567890', sale_price='149.90', sale_currency='BRL')
+    assert hashlib.sha256(labels.render_zpl(old_snapshot)).hexdigest() == (
+        '3f8781cd14c9c805a227242349d7556e404cd78973b05f53389e560421b3ed94')
 
 
 def test_internal_scan_exact_not_manufacturer_collision_or_deleted_product(label_env):
