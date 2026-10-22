@@ -148,6 +148,13 @@ def _price_parts(snapshot):
     return symbol, digits
 
 
+def _artwork_price_parts(snapshot):
+    symbol, amount = _price_parts(snapshot)
+    if snapshot.get('layout_version') == 4 and symbol == 'U$':
+        symbol = '$'  # The supplied ZebraDesigner pattern shows USD this way.
+    return symbol, amount
+
+
 def layout_v2(snapshot):
     """ZebraDesigner PADRAO: 60 × 30 mm at 203 dpi, with live ERP fields."""
     name, name_height = _compact_text(snapshot.get('name'), 292)
@@ -177,9 +184,9 @@ def render_zpl(snapshot):
     code, copies = snapshot['code'], snapshot['copies']
     if not CODE.fullmatch(code) or type(copies) is not int or not 1 <= copies <= MAX_COPIES:
         raise ValueError('Invalid label snapshot')
-    if snapshot.get('layout_version') == 3:
+    if snapshot.get('layout_version') in (3, 4):
         from .product_label_artwork import zpl
-        return zpl(snapshot, _price_parts(snapshot))
+        return zpl(snapshot, _artwork_price_parts(snapshot))
     if snapshot.get('layout_version') == 2:
         parts = ['^XA^CI28^MNY^MMT^PW480^LL240^LH0,0^LS0^LT0^PON']
         for x, y, height, width, value in layout_v2(snapshot):
@@ -203,7 +210,7 @@ def render_zpl(snapshot):
 def preview_png(item):
     from .product_label_artwork import preview_png as artwork_preview_png
     snap = snapshot(item, 1)
-    return artwork_preview_png(snap, _price_parts(snap))
+    return artwork_preview_png(snap, _artwork_price_parts(snap))
 
 
 def snapshot(item, copies):
@@ -213,7 +220,7 @@ def snapshot(item, copies):
                 size=item.size, color=item.color, barcode=item.barcode,
                 sale_price=str(Decimal(item.sale_price or 0).quantize(Decimal('0.01'))),
                 sale_currency=(item.sale_currency or 'USD').upper(),
-                layout_version=3, copies=copies, width=60, height=30)
+                layout_version=4, copies=copies, width=60, height=30)
 
 
 def job_view(job):

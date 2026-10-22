@@ -44,16 +44,18 @@ direito. A etiqueta não inventa país de origem: o exemplo `Made in: IT` do arq
 não é impresso porque o cadastro ainda não contém esse dado. Os campos longos são
 reduzidos/abreviados somente na etiqueta; não alteram o cadastro. A prévia PNG
 usa o mesmo bitmap monocromático de 480 × 240 pontos enviado à Zebra.
-Para os novos trabalhos (layout v3), o servidor desenha os textos com Arimo
-(alternativa livre compatível com Arial) e Barlow Semi Condensed SemiBold
-(alternativa livre próxima de Bahnschrift), então as fontes residentes da Zebra
-não mudam o resultado. As fontes e licenças OFL estão em `backend/app/assets/fonts/`.
-As coordenadas e tamanhos de fonte seguem o projeto `PADRAO.nlbl`; o QR do
-código interno usa módulos de quatro pontos para manter aproximadamente a área
-do QR do exemplo original, cujo conteúdo era mais longo. A impressão física
-ainda deve ser conferida para margens, avanço da mídia, contraste e leitura do QR.
+Para os novos trabalhos (layout v4), o servidor desenha o título em Arimo Bold
+e os detalhes em Arimo; as fontes residentes da Zebra não mudam o resultado.
+As fontes e licenças OFL estão em `backend/app/assets/fonts/`. A posição e o
+espaçamento foram calibrados pela etiqueta física impressa do `PADRAO.nlbl`:
+ELEVEN centralizado com cerca de 150 × 29 pontos, quatro linhas à esquerda mais
+espaçadas e QR de 29 × 29 módulos, 3 pontos por módulo, à direita. O QR continua
+contendo só o código interno. Preço em USD aparece com `$`, como no padrão.
+O arquivo `.nlbl` não é enviado diretamente à Zebra: o agente recebe ZPL RAW
+gerado dos dados de cada produto. A impressão física ainda deve ser conferida
+para margens, avanço da mídia, contraste e leitura do QR.
 
-Trabalhos v1/v2 criados antes desta mudança mantêm seus ZPLs originais ao serem
+Trabalhos v1/v2/v3 criados antes desta mudança mantêm seus ZPLs originais ao serem
 recolhidos ou baixados; alterar seus bytes invalidaria o SHA-256 já registrado.
 Cada novo trabalho guarda a versão do layout e o preço no
 snapshot, para que edições posteriores do produto não modifiquem uma etiqueta já
@@ -116,10 +118,10 @@ recriação pelo configurador legado de tickets.
 - A confirmação web é mantida por usuário em `sessionStorage` até uma resposta
   conclusiva. **Recuperar confirmação** repete a mesma chave/corpo, inclusive após
   recarregar. Não gerar uma nova confirmação para resolver uma resposta perdida.
-- Nos trabalhos v3, textos, QR e valores são pixels de um gráfico `^GFA` gerado
+- Nos trabalhos v3/v4, textos, QR e valores são pixels de um gráfico `^GFA` gerado
   pelo servidor a partir do snapshot: nomes nunca viram comandos ZPL. Trabalhos
   v1/v2 continuam escapando texto byte a byte com `^FH`. O agente segue enviando
-  RAW e aceita o gráfico v3 dentro do seu limite de 32 KiB; não recebe ZPL
+  RAW e aceita o gráfico dentro do seu limite de 32 KiB; não recebe ZPL
   arbitrário de usuários.
 
 Implementação: `services/product_labels.py`, `api/endpoints/inventory_labels.py`,

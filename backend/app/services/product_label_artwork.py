@@ -23,6 +23,13 @@ def _font(path, size):
     return ImageFont.truetype(str(path), size)
 
 
+@lru_cache(maxsize=4)
+def _title_font_v4():
+    font = ImageFont.truetype(str(TEXT_FONT), 38)
+    font.set_variation_by_name('Bold')
+    return font
+
+
 def _fit(draw, value, max_width, sizes=(16, 14, 12)):
     text = ' '.join(str(value or '').split()).upper() or '-'
     for size in sizes:
@@ -47,8 +54,8 @@ def _draw_centered_ink(draw, x, middle_y, value, font):
     draw.text((x, y), value, font=font, fill=0)
 
 
-def bitmap(snapshot, price_parts):
-    """Return exactly the 1-bit image that will be sent as ^GFA to the printer."""
+def _bitmap_v3(snapshot, price_parts):
+    """Keep queued v3 artwork byte-for-byte stable for its recorded SHA-256."""
     image = Image.new('1', (WIDTH, HEIGHT), 1)
     draw = ImageDraw.Draw(image)
     _draw_centered_ink(draw, 159, 24, 'ELEVEN', _font(TITLE_FONT, 36))
@@ -82,6 +89,55 @@ def bitmap(snapshot, price_parts):
         value, font = _fit(draw, barcode, 145, (14, 12, 10))
         _draw_centered_ink(draw, 324, 209, value, font)
     return image
+
+
+def _bitmap_v4(snapshot, price_parts):
+    """Match the physically printed 60 × 30 mm ZebraDesigner reference."""
+    image = Image.new('1', (WIDTH, HEIGHT), 1)
+    draw = ImageDraw.Draw(image)
+    # The reference has a broad, bold 149 × 27-dot wordmark, centered on paper.
+    title_font = _title_font_v4()
+    title_bounds = draw.textbbox((0, 0), 'ELEVEN', font=title_font, stroke_width=1)
+    title_y = round(35 - (title_bounds[3] - title_bounds[1]) / 2 - title_bounds[1])
+    draw.text((165, title_y), 'ELEVEN', font=title_font, fill=0,
+              stroke_width=1, stroke_fill=0)
+    for y, key in ((68, 'name'), (95, 'size'), (120, 'color'), (151, 'code')):
+        value, font = _fit(draw, snapshot.get(key), 292)
+        _draw_centered_ink(draw, 32, y, value, font)
+
+    # The template's QR is denser than the short-code auto-selected v1 symbol.
+    # A fixed v3 matrix keeps the internal code alone in an 87-dot square.
+    qr = QrCodeWidget(snapshot['code'], barLevel='M', qrVersion=3)
+    qr.qr.make()
+    modules = qr.qr.modules
+    if len(modules) != 29:
+        raise ValueError('Unexpected internal-code QR size')
+    module_size = 3
+    active_x, active_y = 348, 63
+    for row, bits in enumerate(modules):
+        for col, dark in enumerate(bits):
+            if dark:
+                x = active_x + col * module_size
+                y = active_y + row * module_size
+                draw.rectangle((x, y, x + module_size - 1, y + module_size - 1), fill=0)
+
+    symbol, amount = price_parts
+    if symbol:
+        _draw_centered_ink(draw, 32, 204, symbol, _font(TEXT_FONT, 22))
+    amount_x = 32 + (34 if len(symbol) > 1 else 15 if symbol else 0)
+    _draw_centered_ink(draw, amount_x, 202, amount, _font(TEXT_FONT, 27))
+    barcode = ' '.join(str(snapshot.get('barcode') or '').split())
+    if barcode:
+        value, font = _fit(draw, barcode, 145, (14, 12, 10))
+        _draw_centered_ink(draw, 324, 209, value, font)
+    return image
+
+
+def bitmap(snapshot, price_parts):
+    """Return exactly the 1-bit image that will be sent as ^GFA to the printer."""
+    if snapshot.get('layout_version') == 4:
+        return _bitmap_v4(snapshot, price_parts)
+    return _bitmap_v3(snapshot, price_parts)
 
 
 def zpl(snapshot, price_parts):
