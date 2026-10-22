@@ -140,7 +140,11 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
     """Words/sizes must match one item; shared model codes can suggest related items."""
     if re.fullmatch(r'INV-[A-Z0-9]{6}', value.strip().upper()) and not size:
         # Internal QR codes are exact identities; never fuzzy-match a different item.
-        return CatalogSearch(Item.inventory_code == value.strip().upper(), literal(-1))
+        code = value.strip().upper()
+        # A bare -1 in ORDER BY is interpreted by PostgreSQL as a column
+        # position, so keep the rank as an expression for catalog pagination.
+        return CatalogSearch(Item.inventory_code == code,
+                             case((Item.inventory_code == code, -1), else_=0))
     terms, sizes = parse(value)
     if size:
         sizes.append(size_key(size))

@@ -22,6 +22,10 @@ busca**. O celular mantém um resumo visível mesmo com os filtros recolhidos.
 Falha de uma página preserva os resultados já carregados e oferece nova tentativa,
 sem afirmar que a busca terminou nem disparar tentativas contínuas. A listagem
 não baixa todas as páginas em segundo plano: usa a rolagem ou **Carregar mais**.
+Se uma nova busca falhar, a tela mostra o erro sem exibir como resultado os cards
+guardados da busca anterior. O QR `INV-XXXXXX` usa a identidade exata do produto;
+a ordenação dessa busca é uma expressão compatível com PostgreSQL, inclusive na
+listagem de estoque e na visualização por grades.
 
 ### Fotos e consumo de memória
 
