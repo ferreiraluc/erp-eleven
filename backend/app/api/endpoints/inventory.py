@@ -160,6 +160,16 @@ def _known_stock_filter():
     return and_(Item.current_stock.isnot(None), Item.stock_loja.isnot(None), Item.stock_deposito.isnot(None))
 
 
+UNCATEGORIZED_FILTER = '__uncategorized__'
+
+
+def _category_filter(category: str, taxonomy_filter):
+    if category == UNCATEGORIZED_FILTER:
+        # Legacy imports can contain either NULL or blank text.
+        return or_(Item.category.is_(None), func.trim(Item.category) == '')
+    return taxonomy_filter(Item.category, category)
+
+
 # --- Suppliers ---------------------------------------------------------------
 
 @router.get("/suppliers", response_model=List[SupplierResponse])
@@ -240,7 +250,7 @@ def list_items(
     if searched:
         query = query.filter(searched.condition)
     if category:
-        query = query.filter(taxonomy_filter(Item.category, category))
+        query = query.filter(_category_filter(category, taxonomy_filter))
     if brand:
         query = query.filter(taxonomy_filter(Item.brand, brand))
     if location:
@@ -409,10 +419,11 @@ def get_groups(
     matching_counts: dict = {}
     taxonomy_filter = facet_filters(db)
     searched = build_search(db, search, taxonomy_filter=taxonomy_filter, brand_context=brand or '') if search else None
+    visible_status = Item.is_active.is_(item_status != 'inactive')
     if search or brand or category or item_status or location_stock or receiving_lot_id:
         kq = db.query(Item.group_key, func.count(Item.id)).filter(Item.deleted_at.is_(None),
             Item.group_key.isnot(None),
-            Item.is_active == True,
+            visible_status,
         )
         if receiving_lot_id:
             kq = kq.filter(lot_filter(receiving_lot_id))
@@ -421,7 +432,7 @@ def get_groups(
         if brand:
             kq = kq.filter(taxonomy_filter(Item.brand, brand))
         if category:
-            kq = kq.filter(taxonomy_filter(Item.category, category))
+            kq = kq.filter(_category_filter(category, taxonomy_filter))
         if item_status in ('low_stock', 'out_of_stock', 'overstocked'):
             kq = kq.filter(_known_stock_filter())
         if item_status == "low_stock":
@@ -445,7 +456,7 @@ def get_groups(
             return []
 
     # Preserve the full grade as context for the matching variant.
-    item_query = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key.isnot(None), Item.is_active == True)
+    item_query = db.query(Item).filter(Item.deleted_at.is_(None), Item.group_key.isnot(None), visible_status)
     if receiving_lot_id:
         item_query = item_query.filter(lot_filter(receiving_lot_id))
     if matching_keys is not None:

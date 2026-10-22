@@ -63,9 +63,7 @@
       <InventorySummaryStats
         v-if="inventoryStore.alerts"
         :summary="inventoryStore.alerts"
-        :status="activeStatus"
         :ungrouped-only="filterUngroupedOnly"
-        @status="setStatusFilter"
         @toggle-ungrouped="toggleUngroupedFilter"
       />
 
@@ -132,7 +130,7 @@
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
-        <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)" @click="toggleExpand(entry.group.group_key)">
+        <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)" @click="selectionMode ? toggleGroupSelection(entry.group) : toggleExpand(entry.group.group_key)">
           <div class="group-header">
             <!-- Imagem do grupo (primeira imagem disponível) -->
             <button
@@ -186,7 +184,12 @@
               </span>
             </div>
             <div class="group-btns">
-              <button v-if="canManageGrades" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Peça') }}</button>
+              <button v-if="selectionMode" type="button" class="action-btn group-select-btn erp-button erp-button--secondary erp-button--sm"
+                :aria-label="tr('Selecionar grade {name}', { name: groupTitle(entry.group.group_key) })"
+                :aria-pressed="groupSelectionComplete(entry.group)" @click.stop="toggleGroupSelection(entry.group)">
+                {{ groupSelectionComplete(entry.group) ? '☑' : '☐' }}
+              </button>
+              <button v-if="canManageGrades" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Grades') }}</button>
               <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
@@ -445,7 +448,7 @@
 
     <ImportModal
       v-if="showImport"
-      @imported="() => { diagnosticsRevision++; reloadItems(); inventoryStore.loadAlerts() }"
+      @imported="() => { diagnosticsRevision++; void refreshVisibleInventory() }"
       @close="showImport = false"
     />
 
@@ -491,7 +494,7 @@
         <div class="sel-actions">
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
-          <button v-if="canManageGrades" type="button" @click="openSelectionGradeAction" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Peça') }}</button>
+          <button v-if="canManageGrades" type="button" @click="openSelectionGradeAction" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Grades') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
             <span class="sel-label-short">{{ tr('Editar') }}</span>
@@ -641,7 +644,7 @@ const auth = useAuthStore()
 const canManageGrades = computed(() => ['ADMIN', 'GERENTE'].includes(auth.userRole))
 
 const searchQuery = ref(inventoryStore.filters.search || '')
-const activeStatus = ref((route.query.status as string) || '')
+const activeStatus = ref((route.query.status as string) || inventoryStore.filters.status || '')
 const showScanner = ref(false)
 const showItemForm = ref(false)
 const showDeletedHistory = ref(false)
@@ -654,8 +657,8 @@ const suppliers = ref<Array<{ id: string; name: string }>>([])
 const toast = ref<{ message: string; type: string; params?: Record<string, string | number> } | null>(null)
 const distinctBrands = ref<string[]>([])
 const distinctCategories = ref<string[]>([])
-const filterBrand = ref('')
-const filterCategory = ref('')
+const filterBrand = ref(inventoryStore.filters.brand || '')
+const filterCategory = ref(inventoryStore.filters.category || '')
 const expandedCardIds = ref<string[]>([])
 const confirmRemoveChip = ref<string | null>(null)
 const gradeManagerItem = ref<InventoryItem | null>(null)
@@ -757,7 +760,7 @@ const editingGroupName = ref('')
 const grouping = ref(false)
 const showBulkEdit = ref(false)
 const showBulkTransfer = ref(false)
-const filterLocation = ref('')
+const filterLocation = ref(inventoryStore.filters.location_stock || '')
 const isDragSelecting = ref(false)
 const showSuggestionModal = ref(false)
 const suggestionModalItems = ref<InventoryItem[]>([])
@@ -846,6 +849,14 @@ function loadGroupsFiltered() {
   return loadGroups(groupFilterParams())
 }
 
+function refreshVisibleInventory() {
+  return Promise.all([
+    reloadItems(),
+    groupMode.value ? loadGroupsFiltered() : Promise.resolve(),
+    inventoryStore.loadAlerts(),
+  ])
+}
+
 async function loadSuggestions() {
   const generation = ++suggestionLoadGeneration
   try {
@@ -875,11 +886,34 @@ function onItemPointerDown(itemId: string, event: PointerEvent) {
 }
 watch(selectionMode, () => stopDragSelection())
 
+function selectableGroupItems(group: GroupEntry) {
+  return filterCategory.value === '__uncategorized__'
+    ? group.items.filter(item => !item.category?.trim())
+    : group.items
+}
+
+function groupSelectionComplete(group: GroupEntry) {
+  const items = selectableGroupItems(group)
+  return items.length > 0 && items.every(item => selectedIds.value.includes(item.id))
+}
+
+function toggleGroupSelection(group: GroupEntry) {
+  const items = selectableGroupItems(group)
+  if (groupSelectionComplete(group)) {
+    const groupIds = new Set(items.map(item => item.id))
+    selectedIds.value = selectedIds.value.filter(id => !groupIds.has(id))
+  } else {
+    selectedIds.value = [...new Set([...selectedIds.value, ...items.map(item => item.id)])]
+  }
+}
+
 function selectAll() {
   const all = new Set<string>()
   for (const entry of flatList.value) {
-    if (entry.type === 'item') all.add(entry.item.id)
-    else for (const item of entry.group.items) all.add(item.id)
+    if (entry.type === 'item') {
+      if (filterCategory.value !== '__uncategorized__' || !entry.item.category?.trim()) all.add(entry.item.id)
+    }
+    else for (const item of selectableGroupItems(entry.group)) all.add(item.id)
   }
   selectedIds.value = [...all]
 }
@@ -1285,7 +1319,15 @@ function setStatusFilter(status: string) {
 
 function setFilter(key: 'brand' | 'category', value: string) {
   if (key === 'brand') filterBrand.value = value
-  else filterCategory.value = value
+  else {
+    filterCategory.value = value
+    if (value === '__uncategorized__') {
+      selectedIds.value = selectedIds.value.filter(id => {
+        const item = allVisibleItems.value.get(id)
+        return !!item && !item.category?.trim()
+      })
+    }
+  }
   inventoryStore.filters.brand = filterBrand.value
   inventoryStore.filters.category = filterCategory.value
   inventoryStore.loadItems(1, false, groupMode.value)
@@ -1444,7 +1486,7 @@ function onItemSaved(item: InventoryItem) {
   diagnosticsRevision.value++
   showItemForm.value = false
   showToast('Item "{name}" salvo com sucesso', 'success', { name: item.name })
-  reloadItems()
+  void refreshVisibleInventory()
 }
 
 function onItemPartiallySaved() {
@@ -1459,7 +1501,7 @@ function onMovementSaved() {
   diagnosticsRevision.value++
   showMovementModal.value = false
   showToast('Movimentação registrada', 'success')
-  reloadItems()
+  void refreshVisibleInventory()
 }
 
 async function onBulkEditSaved() {
@@ -1468,7 +1510,7 @@ async function onBulkEditSaved() {
   selectionMode.value = false
   selectedIds.value = []
   showToast('Itens atualizados com sucesso', 'success')
-  await Promise.all([reloadItems(), loadGroupsFiltered()])
+  await refreshVisibleInventory()
 }
 
 async function onBulkTransferSaved() {
@@ -1477,7 +1519,7 @@ async function onBulkTransferSaved() {
   selectionMode.value = false
   selectedIds.value = []
   showToast('Transferência realizada com sucesso', 'success')
-  reloadItems()
+  await refreshVisibleInventory()
 }
 
 function alertLabel(level: string | undefined) {
@@ -1806,6 +1848,8 @@ onMounted(async () => {
 .badge-mixed { background: #e0f2fe; color: #0369a1; }
 .group-barcode { font-family: monospace; font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
 .group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.group-select-btn { min-width: 32px; padding-inline: .35rem; font-size: 1rem; }
+.group-select-btn[aria-pressed='true'] { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
 .size-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .size-chip { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.35rem 0.18rem 0.55rem; border-radius: 20px; border: 1px solid transparent; white-space: nowrap; }
 .chip-label { cursor: pointer; }
