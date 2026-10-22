@@ -487,9 +487,10 @@
 
     <!-- Barra flutuante de seleção -->
     <transition name="sel-bar">
-      <div v-if="selectionMode && selectedIds.length > 0 && !showBulkEdit && !showBulkDelete" class="selection-bar">
+      <div v-if="selectionMode && selectedIds.length > 0 && !selectionDialogOpen" class="selection-bar">
         <div class="sel-summary"><span class="sel-count">{{ tr('Itens selecionados: {count}', { count: selectedIds.length }) }}</span>
           <span class="sel-stock-summary">{{ tr('{grades} grades · {pieces} peças na seleção', { grades: selectedStockSummary.grades ?? tr('Não informado'), pieces: selectedStockSummary.pieces ?? tr('Não informado') }) }}</span>
+          <span v-if="selectedOutsideViewCount" class="sel-outside-view">{{ tr('{count} fora da lista atual', { count: selectedOutsideViewCount }) }}</span>
         </div>
         <div class="sel-actions">
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
@@ -635,7 +636,7 @@ function openReceiving(manual:boolean) {
 }
 function filterReceiving(lot:ReceivingLot) {
   receivingFilterName.value=lot.name; inventoryStore.filters.receiving_lot_id=lot.id
-  showReceiving.value=false; selectedIds.value=[]
+  showReceiving.value=false
   reloadItems(); if(groupMode.value) loadGroupsFiltered()
 }
 function clearReceiving() { receivingFilterName.value=''; inventoryStore.filters.receiving_lot_id=''; reloadItems(); if(groupMode.value) loadGroupsFiltered() }
@@ -682,10 +683,8 @@ function openGradeManagerForGroup(group: GroupResponse) {
 
 function openSelectionGradeAction() {
   if (!canManageGrades.value) return
-  const selected = selectedIds.value
-    .map(id => allVisibleItems.value.get(id))
-    .filter((item): item is InventoryItem => !!item)
-  if (!selected.length) return
+  const selected = selectedItemsInView()
+  if (!selected) return
   if (selected.length === 1) {
     openGradeManagerForItem(selected[0])
     return
@@ -764,6 +763,13 @@ const filterLocation = ref(inventoryStore.filters.location_stock || '')
 const isDragSelecting = ref(false)
 const showSuggestionModal = ref(false)
 const suggestionModalItems = ref<InventoryItem[]>([])
+const selectionDialogOpen = computed(() =>
+  showReceiving.value || showDiagnostics.value || showScanner.value || showDeletedHistory.value ||
+  showItemForm.value || showMovementModal.value || showImport.value || showBulkEdit.value ||
+  showBulkTransfer.value || showBulkDelete.value || showSuggestionModal.value ||
+  showLabelTemplates.value || showGroupModal.value || !!gradeManagerItem.value ||
+  !!gradeManagerKey.value || !!imageModalItem.value
+)
 const suggestionModalName = ref('')
 const scrollSentinel = ref<HTMLElement | null>(null)
 let scrollObserver: IntersectionObserver | null = null
@@ -919,11 +925,20 @@ function selectAll() {
 }
 
 const selectedStockSummary = computed(() => {
-  const rows = selectedIds.value.map(id => allVisibleItems.value.get(id))
+  const rows = selectedIds.value.map(id => itemsInCurrentList.value.get(id))
   const known = rows.every(item => item && hasKnownStock(item))
   return { grades: rows.every(Boolean) ? new Set(rows.map(item => item?.group_key).filter(Boolean)).size : null,
     pieces: known ? rows.reduce((total, item) => total + (item?.current_stock || 0), 0) : null }
 })
+const selectedOutsideViewCount = computed(() => selectedIds.value.filter(id => !itemsInCurrentList.value.has(id)).length)
+function selectedItemsInView(): InventoryItem[] | null {
+  const items = selectedIds.value.map(id => itemsInCurrentList.value.get(id))
+  if (!items.length || items.some(item => !item)) {
+    showToast('Há itens selecionados fora da lista atual. Ajuste os filtros para usar ações em lote.', 'warning')
+    return null
+  }
+  return items as InventoryItem[]
+}
 const selectedItemsForBulkEdit = ref<InventoryItem[]>([])
 const showBulkDelete = ref(false), itemsForDeletion = ref<Array<{ id: string; name: string }>>([])
 function openBulkDelete() {
@@ -938,20 +953,18 @@ function refreshAfterDeletion() { return Promise.all([reloadItems(), loadGroupsF
 function openBulkEdit() {
   // Capture items eagerly at click time to avoid reactivity timing issues.
   // backendGroups may reload while the modal is open, so we snapshot now.
-  const map = allVisibleItems.value
-  selectedItemsForBulkEdit.value = selectedIds.value
-    .map(id => map.get(id))
-    .filter(Boolean) as InventoryItem[]
+  const items = selectedItemsInView()
+  if (!items) return
+  selectedItemsForBulkEdit.value = items
   showBulkEdit.value = true
 }
 
 const selectedItemsForTransfer = ref<InventoryItem[]>([])
 
 function openBulkTransfer() {
-  const map = allVisibleItems.value
-  selectedItemsForTransfer.value = selectedIds.value
-    .map(id => map.get(id))
-    .filter(Boolean) as InventoryItem[]
+  const items = selectedItemsInView()
+  if (!items) return
+  selectedItemsForTransfer.value = items
   showBulkTransfer.value = true
 }
 
@@ -1070,8 +1083,6 @@ async function confirmGroup() {
     else await inventoryAPI.groupItems(idsToGroup, key)
     showToast('{count} itens agrupados como "{name}"', 'success', { count: idsToGroup.length, name })
     showGroupModal.value = false
-    selectionMode.value = false
-    selectedIds.value = []
     groupNameInput.value = ''
     groupMode.value = true
     localStorage.setItem('inv_group_mode', 'true')
@@ -1137,6 +1148,15 @@ const flatList = computed<FlatEntry[]>(() => {
       (a.type === 'item' ? a.item.id : a.group.group_key).localeCompare(b.type === 'item' ? b.item.id : b.group.group_key))
   }
   return result
+})
+
+const itemsInCurrentList = computed(() => {
+  const items = new Map<string, InventoryItem>()
+  for (const entry of flatList.value) {
+    if (entry.type === 'item') items.set(entry.item.id, entry.item)
+    else for (const item of selectableGroupItems(entry.group)) items.set(item.id, item)
+  }
+  return items
 })
 
 const itemsContainer = ref<HTMLElement>()
@@ -1507,8 +1527,6 @@ function onMovementSaved() {
 async function onBulkEditSaved() {
   diagnosticsRevision.value++
   showBulkEdit.value = false
-  selectionMode.value = false
-  selectedIds.value = []
   showToast('Itens atualizados com sucesso', 'success')
   await refreshVisibleInventory()
 }
@@ -1516,8 +1534,6 @@ async function onBulkEditSaved() {
 async function onBulkTransferSaved() {
   diagnosticsRevision.value++
   showBulkTransfer.value = false
-  selectionMode.value = false
-  selectedIds.value = []
   showToast('Transferência realizada com sucesso', 'success')
   await refreshVisibleInventory()
 }
@@ -1964,6 +1980,7 @@ onMounted(async () => {
 }
 .sel-summary { display:flex; flex-direction:column; gap:3px; min-width:0; }
 .sel-stock-summary { font-size:.75rem; color:#cbd5e1; }
+.sel-outside-view { font-size:.75rem; color:#fcd34d; }
 .sel-count { font-size: 0.82rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 .sel-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .sel-btn { padding: 0.38rem 0.75rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.78rem; font-weight: 600; background: rgba(255,255,255,0.15); color: white; white-space: nowrap; }
@@ -1974,7 +1991,8 @@ onMounted(async () => {
 .sel-btn-transfer:hover { background: #6d28d9; }
 .sel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .sel-label-short { display: none; }
-.sel-bar-enter-active, .sel-bar-leave-active { transition: all 0.25s ease; }
+.sel-bar-enter-active { transition: all 0.25s ease; }
+.sel-bar-leave-active { pointer-events: none; }
 .sel-bar-enter-from, .sel-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(1rem); }
 @media (max-width: 500px) {
   .selection-bar {

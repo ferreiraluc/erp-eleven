@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   diagnostics: vi.fn(), getItem: vi.fn(), getGroups: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn(),
   listItems: [] as InventoryItem[], loadItems: vi.fn(), loadAlerts: vi.fn(), listError: null as string | null,
   listFilters: {} as Record<string, string>, owner: false, role: 'GERENTE' as string, renameGroup: vi.fn(), ungroup: vi.fn(), groupItems: vi.fn(),
+  transferBulk: vi.fn(), batchEdit: vi.fn(),
   attachItemToGrade: vi.fn(), removeFromGroup: vi.fn(), getItemGradeSuggestions: vi.fn(), getGroupItemSuggestions: vi.fn(), getGradeDirectory: vi.fn(), getGradeMembers: vi.fn(),
 }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
@@ -17,6 +18,7 @@ vi.mock('@/services/inventoryDiagnostics', () => ({ inventoryDiagnosticsAPI: { g
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItem: mocks.getItem, getGroups: mocks.getGroups,
   getSuppliers: mocks.getSuppliers, getDistinctValues: mocks.getDistinctValues,
   renameGroup: mocks.renameGroup, ungroup: mocks.ungroup, groupItems: mocks.groupItems,
+  transferBulk: mocks.transferBulk, batchEdit: mocks.batchEdit,
   attachItemToGrade: mocks.attachItemToGrade, removeFromGroup: mocks.removeFromGroup,
   getItemGradeSuggestions: mocks.getItemGradeSuggestions, getGroupItemSuggestions: mocks.getGroupItemSuggestions,
   getGradeDirectory: mocks.getGradeDirectory, getGradeMembers: mocks.getGradeMembers }, ocrAPI: {} }))
@@ -61,6 +63,7 @@ beforeEach(() => {
   mocks.getGradeMembers.mockResolvedValue({ items: [], total: 0, page: 1, limit: 100 })
   mocks.getDistinctValues.mockResolvedValue({ brands: [], categories: [] })
   mocks.loadItems.mockResolvedValue(undefined); mocks.loadAlerts.mockResolvedValue(undefined)
+  mocks.transferBulk.mockResolvedValue({}); mocks.batchEdit.mockResolvedValue({})
   mocks.getItem.mockResolvedValue({ id: 'known-item', name: 'Fixture', is_active: true })
   mocks.diagnostics.mockResolvedValue({ checked_at: '2026-10-01T10:15:00-03:00', total_active_items: 1, affected_items: 1,
     counts: { stock_mismatch: 1, negative_stock: 0, missing_stock: 0, duplicate_barcode: 0, duplicate_barcode_groups: 0 }, total_items: 1, page: 1, page_size: 25,
@@ -249,6 +252,92 @@ describe('Unknown stock list and group rendering', () => {
 describe('Inventory selection', () => {
   const item = { id: 'visible', name: 'Produto visível', current_stock: 1, stock_loja: 1, stock_deposito: 0,
     sale_price: 0, is_active: true, alert_level: 'ok', group_key: 'grade-real' } as InventoryItem
+  async function selectVisibleItem() {
+    button('Selecionar').click(); await nextTick()
+    container.querySelector<HTMLElement>('[data-item-id="visible"]')!.click(); await nextTick()
+    expect(container.querySelector('.card-selected')).not.toBeNull()
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+  }
+  function selectionAction(label: string) {
+    const action = Array.from(container.querySelectorAll<HTMLButtonElement>('.selection-bar button'))
+      .find(node => node.textContent?.includes(label))
+    if (!action) throw new Error(`Selection action missing: ${label}`)
+    return action
+  }
+
+  it('hides the selection actions during transfer, then retains the selected product after cancel and save', async () => {
+    mocks.listItems = [{ ...item, current_stock: 3, stock_loja: 1, stock_deposito: 2 }]
+    await mount(); await selectVisibleItem()
+
+    selectionAction('Transferir').click(); await nextTick()
+    expect(container.querySelector('.modal-overlay .modal-footer')).not.toBeNull()
+    await vi.waitFor(() => expect(container.querySelector('.selection-bar')).toBeNull())
+    expect(container.querySelector('.card-selected')?.getAttribute('data-item-id')).toBe('visible')
+
+    container.querySelector<HTMLButtonElement>('.modal-footer .btn-secondary')!.click(); await nextTick()
+    await vi.waitFor(() => expect(container.querySelector('.selection-bar')).not.toBeNull())
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+
+    const previousLoads = mocks.loadItems.mock.calls.length
+    const previousAlerts = mocks.loadAlerts.mock.calls.length
+    selectionAction('Transferir').click(); await nextTick()
+    await vi.waitFor(() => expect(container.querySelector('.selection-bar')).toBeNull())
+    container.querySelector<HTMLButtonElement>('.modal-footer .btn-primary')!.click()
+    await vi.waitFor(() => expect(mocks.transferBulk).toHaveBeenCalledWith(expect.objectContaining({
+      direction: 'deposito_to_loja', items: [{ item_id: 'visible', quantity: 1 }],
+    })))
+    await vi.waitFor(() => expect(mocks.loadItems.mock.calls.length).toBeGreaterThan(previousLoads))
+    expect(mocks.loadAlerts.mock.calls.length).toBeGreaterThan(previousAlerts)
+    expect(container.querySelector('.card-selected')?.getAttribute('data-item-id')).toBe('visible')
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+  })
+
+  it('hides selection actions during bulk edit and retains the selected product after saving', async () => {
+    mocks.listItems = [item]
+    await mount(); await selectVisibleItem()
+
+    const previousLoads = mocks.loadItems.mock.calls.length
+    selectionAction('Editar massivo').click(); await nextTick()
+    expect(container.querySelector('.modal-overlay .items-list .item-card')).not.toBeNull()
+    await vi.waitFor(() => expect(container.querySelector('.selection-bar')).toBeNull())
+    const name = container.querySelector<HTMLInputElement>('.modal-overlay .items-list .item-card .field-input')!
+    name.value = 'Produto corrigido'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+    container.querySelector<HTMLButtonElement>('.modal-footer .btn-primary')!.click()
+
+    await vi.waitFor(() => expect(mocks.batchEdit).toHaveBeenCalledWith(expect.objectContaining({
+      item_ids: ['visible'], sizes: [expect.objectContaining({ id: 'visible', name: 'Produto corrigido' })],
+    })))
+    await vi.waitFor(() => expect(mocks.loadItems.mock.calls.length).toBeGreaterThan(previousLoads))
+    expect(container.querySelector('.card-selected')?.getAttribute('data-item-id')).toBe('visible')
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+  })
+
+  it('ignores a stale grade member when an edited selection leaves the visible list', async () => {
+    mocks.listItems = reactive([item])
+    // Selection loads the grade directory even in the normal view. A stale group
+    // response must not make an item filtered out of the list transferable.
+    mocks.getGroups.mockResolvedValue([{ group_key: 'grade-real', total_stock: 1, items: [item] }])
+    mocks.loadItems.mockImplementation(async () => {
+      if (mocks.batchEdit.mock.calls.length) mocks.listItems.splice(0)
+    })
+    await mount(); await selectVisibleItem()
+    await vi.waitFor(() => expect(mocks.getGroups).toHaveBeenCalled())
+    selectionAction('Editar massivo').click(); await nextTick()
+    const name = container.querySelector<HTMLInputElement>('.modal-overlay .items-list .item-card .field-input')!
+    name.value = 'Produto fora do filtro'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+    container.querySelector<HTMLButtonElement>('.modal-footer .btn-primary')!.click()
+
+    await vi.waitFor(() => expect(mocks.batchEdit).toHaveBeenCalled())
+    await vi.waitFor(() => expect(container.querySelector('[data-item-id="visible"]')).toBeNull())
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+    expect(container.querySelector('.selection-bar')?.textContent).toContain('fora da lista')
+
+    selectionAction('Transferir').click(); await nextTick()
+    expect(container.querySelector('.modal-overlay')).toBeNull()
+    expect(mocks.transferBulk).not.toHaveBeenCalled()
+    expect(container.querySelector('.sel-count')?.textContent).toContain('Itens selecionados: 1')
+  })
+
   it.each([false, true])('exposes deletion only for owner=%s and selects only the visible catalog', async owner => {
     mocks.owner = owner
     mocks.listItems = [item]
