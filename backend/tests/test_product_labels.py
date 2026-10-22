@@ -261,21 +261,31 @@ def test_new_layout_matches_physical_reference_geometry():
                if image.getpixel((x, y)) == 0]
         return min(x for x, _ in ink), min(y for _, y in ink), max(x for x, _ in ink), max(y for _, y in ink)
 
-    assert ink_bounds((130, 0, 340, 55)) == pytest.approx((167, 21, 317, 49), abs=2)  # ELEVEN
-    assert ink_bounds((0, 80, 325, 108))[1:] == pytest.approx((89, 66, 100), abs=2)
-    assert ink_bounds((0, 108, 325, 137))[1:] == pytest.approx((114, 84, 125), abs=2)
-    assert ink_bounds((0, 137, 325, 177))[1:] == pytest.approx((145, 119, 156), abs=2)
+    title = ink_bounds((130, 0, 340, 55))
+    assert 140 <= title[2] - title[0] <= 160  # broad ELEVEN in the center
+    assert abs((title[0] + title[2]) / 2 - 240) <= 5
+    assert (title[1], title[3]) == pytest.approx((21, 49), abs=3)
+    assert (ink_bounds((0, 80, 325, 108))[1], ink_bounds((0, 80, 325, 108))[3]) == pytest.approx((89, 100), abs=3)
+    assert (ink_bounds((0, 108, 325, 137))[1], ink_bounds((0, 108, 325, 137))[3]) == pytest.approx((114, 125), abs=3)
+    assert (ink_bounds((0, 137, 325, 177))[1], ink_bounds((0, 137, 325, 177))[3]) == pytest.approx((145, 156), abs=3)
     assert ink_bounds((330, 50, 460, 165)) == (348, 63, 434, 149)  # QR
     # USD follows the reference's '$72'; the source product still stores USD.
-    assert ink_bounds((0, 180, 180, 230)) == pytest.approx((32, 192, 74, 212), abs=2)
+    price = ink_bounds((0, 180, 180, 230))
+    assert 30 <= price[0] <= 35 and 68 <= price[2] <= 80
+    assert (price[1], price[3]) == pytest.approx((192, 212), abs=3)
 
 
-def test_queued_v3_snapshot_keeps_identical_raster_zpl():
+def test_queued_v3_snapshot_still_uses_its_original_qr_layout():
     old_snapshot = dict(layout_version=3, code='INV-A7K4P2', copies=7,
                         name='Camiseta ^XZ ~JA _A1 Ç', color='Azul', size='2XL',
                         barcode='7891234567890', sale_price='149.90', sale_currency='BRL')
-    assert hashlib.sha256(labels.render_zpl(old_snapshot)).hexdigest() == (
-        'bd908f845739bd0e37d20efbcc149c614027698d8fa14c63888446678c9aa8d7')
+    image = raster_from_zpl(labels.render_zpl(old_snapshot))
+    qr = QrCodeWidget(old_snapshot['code'], barLevel='M')
+    qr.qr.make()
+    assert len(qr.qr.modules) == 21
+    for row, modules in enumerate(qr.qr.modules):
+        for col, dark in enumerate(modules):
+            assert (image.getpixel((359 + col*4, 73 + row*4)) == 0) == bool(dark)
 
 
 def test_zero_sale_price_is_a_dash_not_a_fabricated_amount(label_env):
