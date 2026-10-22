@@ -90,7 +90,7 @@ def preview(item_id: UUID, db: Session = Depends(get_db), user=Depends(get_curre
     item = labels.items_query(db).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(404, 'Produto não encontrado.')
-    return Response(labels.preview_svg(item), media_type='image/svg+xml', headers={'Cache-Control': 'no-store'})
+    return Response(labels.preview_png(item), media_type='image/png', headers={'Cache-Control': 'no-store'})
 
 
 class LabelLine(BaseModel):

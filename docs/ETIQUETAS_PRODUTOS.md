@@ -42,12 +42,20 @@ produto (U$, R$, G$ ou €); sem valor positivo aparece apenas `-`. Quando exist
 código de barras cadastrado, ele aparece em texto pequeno no canto inferior
 direito. A etiqueta não inventa país de origem: o exemplo `Made in: IT` do arquivo
 não é impresso porque o cadastro ainda não contém esse dado. Os campos longos são
-reduzidos/abreviados somente na etiqueta; não alteram o cadastro. A prévia SVG
-reproduz posições e QR; as fontes residentes da Zebra aproximam Arial/Bahnschrift
-do arquivo e devem ser conferidas no papel.
+reduzidos/abreviados somente na etiqueta; não alteram o cadastro. A prévia PNG
+usa o mesmo bitmap monocromático de 480 × 240 pontos enviado à Zebra.
+Para os novos trabalhos (layout v3), o servidor desenha os textos com Arimo
+(alternativa livre compatível com Arial) e Barlow Semi Condensed SemiBold
+(alternativa livre próxima de Bahnschrift), então as fontes residentes da Zebra
+não mudam o resultado. As fontes e licenças OFL estão em `backend/app/assets/fonts/`.
+As coordenadas e tamanhos de fonte seguem o projeto `PADRAO.nlbl`; o QR do
+código interno usa módulos de quatro pontos para manter aproximadamente a área
+do QR do exemplo original, cujo conteúdo era mais longo. A impressão física
+ainda deve ser conferida para margens, avanço da mídia, contraste e leitura do QR.
 
-Trabalhos criados antes desta mudança continuam com o layout antigo ao serem
-recolhidos ou baixados. Cada novo trabalho guarda a versão do layout e o preço no
+Trabalhos v1/v2 criados antes desta mudança mantêm seus ZPLs originais ao serem
+recolhidos ou baixados; alterar seus bytes invalidaria o SHA-256 já registrado.
+Cada novo trabalho guarda a versão do layout e o preço no
 snapshot, para que edições posteriores do produto não modifiquem uma etiqueta já
 confirmada. Se preço ou moeda mudar entre a seleção e a confirmação, o ERP pede
 para atualizar a seleção antes de imprimir.
@@ -108,8 +116,11 @@ recriação pelo configurador legado de tickets.
 - A confirmação web é mantida por usuário em `sessionStorage` até uma resposta
   conclusiva. **Recuperar confirmação** repete a mesma chave/corpo, inclusive após
   recarregar. Não gerar uma nova confirmação para resolver uma resposta perdida.
-- Texto é escapado byte a byte com `^FH`; nomes nunca viram comandos ZPL. Não recebe
-  ZPL arbitrário de usuários. O payload é gerado pelo servidor a partir do snapshot.
+- Nos trabalhos v3, textos, QR e valores são pixels de um gráfico `^GFA` gerado
+  pelo servidor a partir do snapshot: nomes nunca viram comandos ZPL. Trabalhos
+  v1/v2 continuam escapando texto byte a byte com `^FH`. O agente segue enviando
+  RAW e aceita o gráfico v3 dentro do seu limite de 32 KiB; não recebe ZPL
+  arbitrário de usuários.
 
 Implementação: `services/product_labels.py`, `api/endpoints/inventory_labels.py`,
 extensões do agente em `api/endpoints/printing.py`, `ProductLabelsView.vue` e
