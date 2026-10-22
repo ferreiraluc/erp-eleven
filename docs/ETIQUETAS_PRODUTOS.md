@@ -35,10 +35,22 @@ para bobina contínua de tickets, etiquetas em duas colunas ou mídia de marca p
 Calibre a mídia no driver/Zebra ao trocar a bobina; o agente não faz calibração
 automática nem grava configurações na memória flash.
 
-Layout: ELEVEN, nome (até três linhas), tamanho, cor, código interno e QR. Nomes
-extensos são abreviados somente na impressão; não alteram o cadastro. A prévia SVG
-reproduz a disposição e o QR; a fonte residente da Zebra pode diferir ligeiramente
-da fonte da prévia e deve ser conferida no papel.
+O layout dos novos trabalhos segue o arquivo `PADRAO.nlbl` recebido em 22/10/2026:
+**ELEVEN** centralizado no alto; nome, tamanho, cor e código interno à esquerda;
+QR do produto à direita; preço de venda abaixo. O preço usa a moeda cadastrada no
+produto (U$, R$, G$ ou €); sem valor positivo aparece apenas `-`. Quando existe
+código de barras cadastrado, ele aparece em texto pequeno no canto inferior
+direito. A etiqueta não inventa país de origem: o exemplo `Made in: IT` do arquivo
+não é impresso porque o cadastro ainda não contém esse dado. Os campos longos são
+reduzidos/abreviados somente na etiqueta; não alteram o cadastro. A prévia SVG
+reproduz posições e QR; as fontes residentes da Zebra aproximam Arial/Bahnschrift
+do arquivo e devem ser conferidas no papel.
+
+Trabalhos criados antes desta mudança continuam com o layout antigo ao serem
+recolhidos ou baixados. Cada novo trabalho guarda a versão do layout e o preço no
+snapshot, para que edições posteriores do produto não modifiquem uma etiqueta já
+confirmada. Se preço ou moeda mudar entre a seleção e a confirmação, o ERP pede
+para atualizar a seleção antes de imprimir.
 
 O QR contém **somente `inventory_code`**, por exemplo `INV-A7K4P2`. Cada tamanho/cor
 é um cadastro diferente e tem seu próprio código. Várias unidades desse cadastro

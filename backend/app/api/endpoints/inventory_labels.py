@@ -1,4 +1,5 @@
 """Internal product labels, isolated from shipping labels and sale receipts."""
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -100,6 +101,8 @@ class LabelLine(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     size: str | None = Field(default=None, max_length=50)
     color: str | None = Field(default=None, max_length=50)
+    sale_price: Decimal | None = Field(default=None, ge=0)
+    sale_currency: str | None = Field(default=None, max_length=10)
 
 
 class BatchInput(Confirmation):

@@ -3,7 +3,7 @@ import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import ProductLabelsView from './ProductLabelsView.vue'
-import { labelRequest, mergeLabelSelection, type LabelProduct } from '@/services/productLabels'
+import { formatLabelSalePrice, labelRequest, mergeLabelSelection, type LabelProduct } from '@/services/productLabels'
 import { chooseDropdown } from '@/test/dropdown'
 
 const mocks = vi.hoisted(() => ({
@@ -35,6 +35,8 @@ const product: LabelProduct = {
   stock_loja: 4,
   stock_deposito: 2,
   current_stock: 6,
+  sale_price: '149.90',
+  sale_currency: 'USD',
 }
 const other = {
   ...product,
@@ -43,6 +45,8 @@ const other = {
   inventory_code: 'INV-B7K4P2',
   size: 'M',
   color: 'Azul',
+  sale_price: null,
+  sale_currency: null,
 }
 const batch = {
   id: 'batch',
@@ -108,13 +112,35 @@ it('merges grades/lots without multiplying quantities for overlapping products',
   expect(labelRequest([{ ...product, copies: 3 }], 'key').items[0]).toMatchObject({
     code: 'INV-A7K4P2',
     copies: 3,
+    sale_price: '149.90',
+    sale_currency: 'USD',
   })
+  expect(labelRequest([{ ...other, copies: 1 }], 'key').items[0]).toMatchObject({
+    sale_price: null,
+    sale_currency: null,
+  })
+})
+
+it('formats sale prices in the product currency and preserves absent prices', () => {
+  expect(formatLabelSalePrice('150.25', 'USD', 'pt-BR')).toBe('U$ 150,25')
+  expect(formatLabelSalePrice('150.25', 'BRL', 'pt-BR')).toBe('R$ 150,25')
+  expect(formatLabelSalePrice('150.25', 'EUR', 'pt-BR')).toBe('€ 150,25')
+  expect(formatLabelSalePrice('150000', 'PYG', 'pt-BR')).toBe('G$ 150.000')
+  expect(formatLabelSalePrice('0.00', 'USD', 'pt-BR')).toBe('—')
+  expect(formatLabelSalePrice('-1.00', 'USD', 'pt-BR')).toBe('—')
+  expect(formatLabelSalePrice('', 'USD', 'pt-BR')).toBe('—')
+  expect(formatLabelSalePrice('invalid', 'USD', 'pt-BR')).toBe('—')
+  expect(formatLabelSalePrice(null, 'USD', 'pt-BR')).toBe('—')
+  expect(formatLabelSalePrice('150', null, 'pt-BR')).toBe('—')
 })
 
 it('opens selected inventory products, adjusts quantities by color, and requires confirmation', async () => {
   window.history.replaceState({ labelItemIds: ['p1', 'p2'] }, '')
   await mount()
   expect(mocks.selection).toHaveBeenCalledWith({ item_ids: ['p1', 'p2'] })
+  const selectedRows = root.querySelectorAll('.selected-row')
+  expect(selectedRows[0]?.textContent).toContain('Preço de venda: U$ 149,90')
+  expect(selectedRows[1]?.textContent).toContain('Preço de venda: —')
   const dropdowns = root.querySelectorAll('.quantity-toolbar .erp-dropdown')
   await chooseDropdown(dropdowns[0], 'color:Azul')
   await flush()
@@ -132,6 +158,10 @@ it('opens selected inventory products, adjusts quantities by color, and requires
   expect(mocks.enqueue).toHaveBeenCalledTimes(1)
   expect(mocks.enqueue.mock.calls[0][0].items.map((i: { copies: number }) => i.copies)).toEqual([
     1, 8,
+  ])
+  expect(mocks.enqueue.mock.calls[0][0].items).toEqual([
+    expect.objectContaining({ sale_price: '149.90', sale_currency: 'USD' }),
+    expect.objectContaining({ sale_price: null, sale_currency: null }),
   ])
   expect(root.textContent).toContain('Fila de etiquetas')
 })
@@ -156,6 +186,7 @@ it('lost response locks editing and persists the same confirmation across a relo
 
 it('adds a full grade through the selector without creating or printing products', async () => {
   await mount()
+  expect(root.querySelector('.catalog-row')?.textContent).toContain('Preço de venda: U$ 149,90')
   mocks.catalog.mockResolvedValue({
     items: [{ group_key: 'Camiseta', name: 'Camiseta', count: 2 }],
     total: 1,
