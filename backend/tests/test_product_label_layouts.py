@@ -100,6 +100,8 @@ def test_design_preview_matches_queued_graphic_and_model_edits_do_not_change_job
     assert enqueue(client, body)['id'] == batch['id']
     assert client.delete('/api/inventory-labels/layouts/' + model['id'], params={'version': 2}).status_code == 200
     assert enqueue(client, body)['id'] == batch['id']
+    missing_model = client.post('/api/inventory-labels/batches', json={**body, 'request_key': str(uuid.uuid4())})
+    assert missing_model.status_code == 409  # definitive rejection releases the browser confirmation
     with factory() as db:
         assert labels.render_zpl(db.get(PrintJob, uuid.UUID(batch['id'])).snapshot) == raw
         assert db.query(PrintJob).count() == 1

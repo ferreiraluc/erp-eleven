@@ -269,8 +269,15 @@ def enqueue(db, user, body):
     design = None
     if layout_id:
         from . import product_label_layouts
-        design = product_label_layouts.view(product_label_layouts.find(
-            db, layout_id, body.layout_revision, lock=True))
+        try:
+            design = product_label_layouts.view(product_label_layouts.find(
+                db, layout_id, body.layout_revision, lock=True))
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                # A definitive pre-enqueue rejection must release the browser's
+                # pending confirmation, instead of leaving it retrying forever.
+                raise HTTPException(409, 'O modelo de etiqueta mudou. Atualize os modelos e confira a prévia.') from None
+            raise
     ids = [row.item_id for row in body.items]
     # Consistent lock order protects the snapshot against edits/deletion during confirmation.
     products = {item.id: item for item in items_query(db).filter(Item.id.in_(ids)).order_by(Item.id).with_for_update().all()}
