@@ -4,7 +4,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,8 @@ from ...models.inventory_receiving import ReceivingLot, ReceivingLotItem
 from ...models.printing import PrintJob
 from ...models.assistant import utcnow
 from ...services import product_labels as labels
+from ...services import product_label_layouts as layouts
+from ...schemas.product_label_layout import DesignPreview, LayoutInput
 from ...services.inventory_search import build_search
 
 router = APIRouter()
@@ -86,11 +88,50 @@ def selection(body: Selection, db: Session = Depends(get_db), user=Depends(get_c
 
 
 @router.get('/preview/{item_id}')
-def preview(item_id: UUID, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+def preview(item_id: UUID, layout_id: str | None = Query(None, max_length=30),
+            layout_revision: int | None = Query(None, ge=1),
+            db: Session = Depends(get_db), user=Depends(get_current_active_user)):
     item = labels.items_query(db).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(404, 'Produto não encontrado.')
-    return Response(labels.preview_png(item), media_type='image/png', headers={'Cache-Control': 'no-store'})
+    if bool(layout_id) != bool(layout_revision):
+        raise HTTPException(422, 'Informe o modelo e sua versão para conferir a etiqueta.')
+    design = layouts.view(layouts.find(db, layout_id, layout_revision)) if layout_id else None
+    return Response(labels.preview_png(item, design), media_type='image/png', headers={'Cache-Control': 'no-store'})
+
+
+@router.get('/layouts')
+def label_layouts(response: Response, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+    response.headers['Cache-Control'] = 'no-store'
+    return layouts.listing(db)
+
+
+@router.post('/layouts/preview')
+def design_preview(body: DesignPreview, db: Session = Depends(get_db), user=Depends(get_current_active_user)):
+    if body.item_id:
+        item = labels.items_query(db).filter(Item.id == body.item_id).first()
+        if not item:
+            raise HTTPException(404, 'Produto não encontrado.')
+    else:
+        from types import SimpleNamespace
+        item = SimpleNamespace(id=UUID(int=0), name='Camiseta ELEVEN', inventory_code='INV-A7K4P2',
+                               size='L', color='Navy', barcode='7891234567890',
+                               sale_price=Decimal('72'), sale_currency='USD')
+    try:
+        image = labels.preview_png(item, dict(config=body.config.model_dump()))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    return Response(image, media_type='image/png', headers={'Cache-Control': 'no-store'})
+
+
+@router.put('/layouts/{key}')
+def save_design(key: str, body: LayoutInput, db: Session = Depends(get_db), user=Depends(operator)):
+    return layouts.save(db, key, body)
+
+
+@router.delete('/layouts/{key}')
+def delete_design(key: str, version: int = Query(ge=1), db: Session = Depends(get_db), user=Depends(operator)):
+    return layouts.delete(db, key, version)
 
 
 class LabelLine(BaseModel):
@@ -108,6 +149,14 @@ class LabelLine(BaseModel):
 class BatchInput(Confirmation):
     request_key: UUID
     items: list[LabelLine] = Field(min_length=1, max_length=labels.MAX_ITEMS)
+    layout_id: str | None = Field(default=None, pattern=r'^product-[a-f0-9]{20}$')
+    layout_revision: int | None = Field(default=None, ge=1, strict=True)
+
+    @model_validator(mode='after')
+    def layout_reference(self):
+        if bool(self.layout_id) != bool(self.layout_revision):
+            raise ValueError('Informe o modelo e sua versão para conferir a etiqueta.')
+        return self
 
 
 @router.post('/batches')

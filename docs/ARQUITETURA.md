@@ -113,6 +113,10 @@ projeção de metadados sem fotos; confirmação cria jobs/snapshots por variaç
 `purpose=product_labels` isola a Zebra de tickets e A4. Coleta usa chave persistente,
 ZPL 60 × 30 mm gerado no servidor e envio RAW USB pelo agente Windows, sem Sumatra.
 Falhas incertas não são reenviadas. Ver [guia](ETIQUETAS_PRODUTOS.md).
+O editor visual usa desenhos validados em `print_layouts` (`product-<id>`), com
+revisão concorrente e snapshot completo por job v5. Rascunhos/prévias não enfileiram
+impressões. Papel, área branca do QR e identidade são validados no backend;
+gráficos continuam limitados aos mesmos 480 × 240 pontos do agente existente.
 
 **Frete:** `freight_orders` registra cotação/compra/etiqueta. Webhooks assinados apenas
 agendam consulta autenticada. `freight_labels` recupera PDFs atrasados, persiste o documento,

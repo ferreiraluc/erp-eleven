@@ -150,7 +150,7 @@ def _price_parts(snapshot):
 
 def _artwork_price_parts(snapshot):
     symbol, amount = _price_parts(snapshot)
-    if snapshot.get('layout_version') == 4 and symbol == 'U$':
+    if snapshot.get('layout_version') in (4, 5) and symbol == 'U$':
         symbol = '$'  # The supplied ZebraDesigner pattern shows USD this way.
     return symbol, amount
 
@@ -184,7 +184,7 @@ def render_zpl(snapshot):
     code, copies = snapshot['code'], snapshot['copies']
     if not CODE.fullmatch(code) or type(copies) is not int or not 1 <= copies <= MAX_COPIES:
         raise ValueError('Invalid label snapshot')
-    if snapshot.get('layout_version') in (3, 4):
+    if snapshot.get('layout_version') in (3, 4, 5):
         from .product_label_artwork import zpl
         return zpl(snapshot, _artwork_price_parts(snapshot))
     if snapshot.get('layout_version') == 2:
@@ -207,20 +207,25 @@ def render_zpl(snapshot):
     return '\n'.join(parts).encode('ascii')
 
 
-def preview_png(item):
+def preview_png(item, design=None):
     from .product_label_artwork import preview_png as artwork_preview_png
-    snap = snapshot(item, 1)
+    snap = snapshot(item, 1, design)
     return artwork_preview_png(snap, _artwork_price_parts(snap))
 
 
-def snapshot(item, copies):
+def snapshot(item, copies, design=None):
     if not CODE.fullmatch(item.inventory_code or ''):
         raise HTTPException(409, f'O produto {item.name} ainda não possui código interno válido. Atualize o cadastro.')
-    return dict(item_id=str(item.id), name=item.name, code=item.inventory_code,
+    result = dict(item_id=str(item.id), name=item.name, code=item.inventory_code,
                 size=item.size, color=item.color, barcode=item.barcode,
                 sale_price=str(Decimal(item.sale_price or 0).quantize(Decimal('0.01'))),
                 sale_currency=(item.sale_currency or 'USD').upper(),
                 layout_version=4, copies=copies, width=60, height=30)
+    if design:
+        result.update(layout_version=5, layout_config=design['config'],
+                      layout_id=design.get('id'), layout_name=design.get('name'),
+                      layout_revision=design.get('version'))
+    return result
 
 
 def job_view(job):
@@ -246,8 +251,12 @@ def enqueue(db, user, body):
         raise HTTPException(422, 'Há produtos repetidos na seleção. Ajuste a quantidade na mesma linha.')
     if sum(row.copies for row in body.items) > MAX_LABELS:
         raise HTTPException(422, f'Envie até {MAX_LABELS} etiquetas por confirmação.')
-    fingerprint = hashlib.sha256(json.dumps([row.model_dump(mode='json') for row in body.items],
-                                          sort_keys=True).encode()).hexdigest()
+    fingerprint_data = [row.model_dump(mode='json') for row in body.items]
+    layout_id = getattr(body, 'layout_id', None)
+    if layout_id:
+        fingerprint_data = dict(items=fingerprint_data, layout_id=layout_id,
+                                layout_revision=body.layout_revision)
+    fingerprint = hashlib.sha256(json.dumps(fingerprint_data, sort_keys=True).encode()).hexdigest()
     device = destination(db, lock=True)
     if not device:
         raise HTTPException(409, 'Configure primeiro a Zebra em Etiquetas de produtos.')
@@ -257,6 +266,11 @@ def enqueue(db, user, body):
                 (previous.snapshot or {}).get('fingerprint') != fingerprint):
             raise HTTPException(409, 'Esta confirmação já foi usada com outros produtos ou quantidades.')
         return batch_view(db, previous)
+    design = None
+    if layout_id:
+        from . import product_label_layouts
+        design = product_label_layouts.view(product_label_layouts.find(
+            db, layout_id, body.layout_revision, lock=True))
     ids = [row.item_id for row in body.items]
     # Consistent lock order protects the snapshot against edits/deletion during confirmation.
     products = {item.id: item for item in items_query(db).filter(Item.id.in_(ids)).order_by(Item.id).with_for_update().all()}
@@ -265,7 +279,7 @@ def enqueue(db, user, body):
     batch_id = uuid.uuid4()
     start = utcnow()
     for position, row in enumerate(body.items):
-        snap = snapshot(products[row.item_id], row.copies)
+        snap = snapshot(products[row.item_id], row.copies, design)
         if (row.code != snap['code'] or row.name != snap['name'] or row.color != snap['color'] or
                 row.size != snap['size'] or
                 (row.sale_price is not None and row.sale_price != Decimal(snap['sale_price'])) or

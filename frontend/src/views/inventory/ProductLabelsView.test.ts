@@ -3,8 +3,14 @@ import { createApp, nextTick, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import ProductLabelsView from './ProductLabelsView.vue'
-import { formatLabelSalePrice, labelRequest, mergeLabelSelection, type LabelProduct } from '@/services/productLabels'
+import {
+  formatLabelSalePrice,
+  labelRequest,
+  mergeLabelSelection,
+  type LabelProduct,
+} from '@/services/productLabels'
 import { chooseDropdown } from '@/test/dropdown'
+import { standardLabelLayout } from '@/test/productLabelDesign'
 
 const mocks = vi.hoisted(() => ({
   device: vi.fn(),
@@ -17,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   history: vi.fn(),
   cancel: vi.fn(),
   installer: vi.fn(),
+  layouts: vi.fn(),
 }))
 vi.mock('@/services/productLabels', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/productLabels')>()),
@@ -65,7 +72,12 @@ async function flush() {
 }
 beforeEach(() => {
   vi.resetAllMocks()
+  vi.stubGlobal('URL', {
+    createObjectURL: vi.fn(() => 'blob:local-preview'),
+    revokeObjectURL: vi.fn(),
+  })
   sessionStorage.clear()
+  localStorage.clear()
   window.history.replaceState({}, '')
   mocks.device.mockResolvedValue({ device: { id: 'zebra', name: 'Zebra ZD220' } })
   mocks.catalog.mockResolvedValue({ items: [product, other], total: 2 })
@@ -73,10 +85,12 @@ beforeEach(() => {
   mocks.history.mockResolvedValue([])
   mocks.batch.mockResolvedValue(batch)
   mocks.enqueue.mockResolvedValue(batch)
+  mocks.layouts.mockResolvedValue([standardLabelLayout()])
 })
 afterEach(() => {
   app?.unmount()
   root?.remove()
+  vi.unstubAllGlobals()
 })
 async function mount() {
   root = document.createElement('div')
@@ -182,6 +196,51 @@ it('lost response locks editing and persists the same confirmation across a relo
   await click('Recuperar confirmação')
   expect(mocks.enqueue.mock.calls[1][0]).toEqual(original)
   expect(sessionStorage.getItem('eleven-label-confirmation:owner')).toBeNull()
+})
+
+it('pins the chosen layout revision to preview, confirmation and recovery', async () => {
+  const custom = {
+    ...standardLabelLayout(),
+    id: `product-${'b'.repeat(20)}`,
+    name: 'Calçados',
+    builtin: false,
+    version: 3,
+  }
+  mocks.layouts.mockResolvedValue([standardLabelLayout(), custom])
+  window.history.replaceState({ labelItemIds: ['p1'] }, '')
+  mocks.selection.mockResolvedValue([product])
+  mocks.enqueue.mockRejectedValueOnce(new Error('Network error'))
+  await mount()
+  await checked('.labels-confirm input[type=checkbox]')
+  await chooseDropdown(root.querySelector('.label-layout-choice .erp-dropdown'), custom.id)
+  await flush()
+  expect(
+    root.querySelector<HTMLInputElement>('.labels-confirm input[type=checkbox]')!.checked,
+  ).toBe(false)
+  mocks.preview.mockResolvedValue(new Blob(['local-preview'], { type: 'image/png' }))
+  root.querySelector<HTMLButtonElement>(`button[aria-label="Prévia ${product.name}"]`)!.click()
+  await flush()
+  expect(mocks.preview).toHaveBeenCalledWith(product.id, {
+    layout_id: custom.id,
+    layout_revision: 3,
+  })
+  document.querySelector<HTMLButtonElement>('[data-dialog-close]')!.click()
+  await flush()
+  expect(labelRequest([{ ...product, copies: 1 }], 'key', custom)).toMatchObject({
+    layout_id: custom.id,
+    layout_revision: 3,
+  })
+  await checked('.labels-confirm input[type=checkbox]')
+  await click('Imprimir 1 etiquetas')
+  const original = mocks.enqueue.mock.calls[0][0]
+  expect(original).toMatchObject({ layout_id: custom.id, layout_revision: 3 })
+  app.unmount()
+  root.remove()
+  // Even if the saved model changes while the response is lost, recovery replays the original request.
+  mocks.layouts.mockResolvedValue([standardLabelLayout(), { ...custom, version: 4 }])
+  await mount()
+  await click('Recuperar confirmação')
+  expect(mocks.enqueue.mock.calls[1][0]).toEqual(original)
 })
 
 it('adds a full grade through the selector without creating or printing products', async () => {
