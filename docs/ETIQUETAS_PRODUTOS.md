@@ -46,6 +46,9 @@ no seletor. Ela é um PNG monocromático gerado pelo mesmo renderizador da impre
 não cria jobs nem imprime. A atualização é agrupada enquanto os controles mudam.
 **Salvar como novo** cria modelos como “Roupas”, “Calçados” ou “Acessórios”.
 **Salvar alterações** atualiza um modelo próprio; **Padrão ELEVEN** fica preservado.
+Ao abrir o padrão no editor, trabalha-se em uma base editável para uma **nova
+cópia**, que precisa ser salva antes de usar. O padrão fixo original continua
+disponível diretamente na conferência e na sua prévia de impressão.
 Os modelos são compartilhados entre aparelhos e geridos por ADMIN/GERENTE.
 Se houver edição concorrente, a API recusa a versão antiga; atualize os modelos
 e descarte a edição antiga explicitamente, ou salve-a como uma nova cópia.

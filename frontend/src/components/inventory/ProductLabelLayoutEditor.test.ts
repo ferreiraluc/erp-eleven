@@ -94,6 +94,7 @@ it('keeps moves inside the paper and reserves the complete QR quiet zone', () =>
 it('previews selected product data, moves by keyboard, undoes, and saves a new shared model', async () => {
   await mount()
   expect(mocks.designPreview.mock.calls[0][1]).toBe('product-1')
+  expect(button('Usar este modelo').disabled).toBe(true) // the editable standard is a new copy
   const name = root.querySelector<HTMLButtonElement>('[aria-label="Mover campo: Nome do produto"]')!
   name.dispatchEvent(
     new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }),

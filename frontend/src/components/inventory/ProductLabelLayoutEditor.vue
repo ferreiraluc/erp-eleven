@@ -374,11 +374,17 @@
       </aside>
     </div>
     <footer class="design-footer">
-      <span>{{ dirty ? tr('Alterações não salvas') : tr('Modelo salvo') }}</span>
+      <span>{{
+        editingId === 'standard'
+          ? tr('Cópia do padrão — salve para usar este desenho.')
+          : dirty
+            ? tr('Alterações não salvas')
+            : tr('Modelo salvo')
+      }}</span>
       <button
         type="button"
         class="erp-button erp-button--primary erp-button--sm"
-        :disabled="dirty || disabled || working || remoteChanged"
+        :disabled="editingId === 'standard' || dirty || disabled || working || remoteChanged"
         @click="emit('use', editingId)"
       >
         {{ tr('Usar este modelo') }}
