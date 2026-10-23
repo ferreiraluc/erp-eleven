@@ -375,11 +375,11 @@
     </div>
     <footer class="design-footer">
       <span>{{
-        editingId === 'standard'
-          ? tr('Cópia do padrão — salve para usar este desenho.')
-          : dirty
+          dirty
             ? tr('Alterações não salvas')
-            : tr('Modelo salvo')
+            : editingId === 'standard'
+              ? tr('Cópia do padrão — salve para usar este desenho.')
+              : tr('Modelo salvo')
       }}</span>
       <button
         type="button"
