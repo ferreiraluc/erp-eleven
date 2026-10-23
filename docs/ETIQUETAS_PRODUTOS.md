@@ -26,6 +26,50 @@ etiquetas no total**. Um trabalho por variação conserva a ordem da conferênci
 Os jobs pendentes deste perfil não expiram automaticamente. O Windows pode receber
 vários trabalhos autorizados e mantê-los no spooler quando a USB estiver desligada.
 
+## Editor visual de layouts
+
+A aba **Layout** oferece edição visual para a mesma mídia **60 × 30 mm**. Selecione
+um campo no desenho ou na lista lateral; arraste-o com mouse/toque ou ajuste X/Y,
+largura e altura em milímetros. As setas movem um ponto; Shift + seta move 1 mm.
+O zoom amplia a área de trabalho, sem mudar o tamanho impresso.
+
+Textos permitem Arimo ou Barlow Semi Condensed, tamanho, negrito, alinhamento,
+maiúsculas e até quatro linhas. É possível ocultar informações opcionais,
+adicionar texto livre/linhas divisórias, mudar o tamanho do QR, desfazer/refazer
+e restaurar o desenho inicial. Textos longos são ajustados ao espaço sem editar
+o cadastro. O QR inclui uma margem branca protegida: outros campos não podem
+cobri-la. QR e código interno visível são obrigatórios; o QR continua contendo
+somente o código do produto.
+
+A prévia usa os dados de um produto selecionado ou um **exemplo fictício** indicado
+no seletor. Ela é um PNG monocromático gerado pelo mesmo renderizador da impressão;
+não cria jobs nem imprime. A atualização é agrupada enquanto os controles mudam.
+**Salvar como novo** cria modelos como “Roupas”, “Calçados” ou “Acessórios”.
+**Salvar alterações** atualiza um modelo próprio; **Padrão ELEVEN** fica preservado.
+Ao abrir o padrão no editor, trabalha-se em uma base editável para uma **nova
+cópia**, que precisa ser salva antes de usar. O padrão fixo original continua
+disponível diretamente na conferência e na sua prévia de impressão.
+Os modelos são compartilhados entre aparelhos e geridos por ADMIN/GERENTE.
+Se houver edição concorrente, a API recusa a versão antiga; atualize os modelos
+e descarte a edição antiga explicitamente, ou salve-a como uma nova cópia.
+
+Em **Conferir → Modelo deste envio**, escolha um modelo salvo para todas as
+etiquetas daquele envio. **Usar este modelo** no editor abre essa conferência.
+Mudar o modelo exige conferir novamente a confirmação. Edições não salvas não
+entram na impressão; o editor conserva o rascunho ao alternar as abas e pede
+descarte explícito ao abrir outro modelo. Sair da tela/recarregar descarta rascunhos
+não salvos. A escolha do modelo fica como preferência do usuário neste navegador.
+
+Cada trabalho com modelo próprio (layout v5) armazena o desenho completo, nome e
+revisão no snapshot. Alterar ou excluir o modelo depois não modifica jobs existentes,
+seu SHA-256 ou a recuperação de uma confirmação com resposta perdida. A prévia e a
+confirmação recusam modelos que mudaram desde a seleção. O desenho fixo atual
+continua sendo usado quando **Padrão ELEVEN** está selecionado.
+
+Este editor não importa arquivos `.nlbl`, fontes externas ou imagens e não muda o
+formato físico da mídia. A Zebra térmica imprime preto e branco. A conferência da
+primeira etiqueta física continua necessária para calibragem/contraste/alinhamento.
+
 ## Papel e identificação
 
 Zebra ZD220 **203 dpi**, etiquetas adesivas de **60 mm de largura × 30 mm de
@@ -124,10 +168,13 @@ recriação pelo configurador legado de tickets.
   RAW e aceita o gráfico dentro do seu limite de 32 KiB; não recebe ZPL
   arbitrário de usuários.
 
-Implementação: `services/product_labels.py`, `api/endpoints/inventory_labels.py`,
+Implementação: `services/product_labels.py`, `services/product_label_layouts.py`,
+`schemas/product_label_layout.py`, `services/product_label_design_artwork.py`, `api/endpoints/inventory_labels.py`,
 extensões do agente em `api/endpoints/printing.py`, `ProductLabelsView.vue` e
 `tools/eleven-print-agent/{AgenteEtiquetas,Etiquetas}.ps1`. Não exige nova migração:
-reutiliza as colunas de perfil, snapshot, parent_id e claim_key existentes.
+reutiliza as colunas de perfil, snapshot, parent_id e claim_key existentes. Modelos
+visuais usam a tabela genérica `print_layouts` no namespace `product-<id>`;
+endpoints de etiquetas não acessam os modelos de endereços `br`/`py` nem exemplos OCR.
 
 Validação: seleção de lotes/grades, limites, permissões, snapshots, rollback,
 idempotência, cancelamento e coleta concorrente em PostgreSQL isolado; frontend com

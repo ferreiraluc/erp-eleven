@@ -235,6 +235,36 @@
             )
           }}
         </p>
+        <div class="label-layout-choice">
+          <ErpDropdown
+            v-if="layouts.length"
+            v-model="selectedLayoutId"
+            :options="
+              layouts.map((layout) => ({
+                value: layout.id,
+                label: layout.builtin ? tr(layout.name) : layout.name,
+              }))
+            "
+            :label="tr('Modelo deste envio')"
+            :disabled="locked || busy"
+          />
+          <button
+            type="button"
+            class="erp-button erp-button--secondary erp-button--sm"
+            :disabled="locked || busy"
+            @click="panel = 'layout'"
+          >
+            {{ tr('Editar layout') }}
+          </button>
+          <button
+            type="button"
+            class="erp-button erp-button--ghost erp-button--sm"
+            :disabled="locked || busy"
+            @click="loadLayouts"
+          >
+            {{ tr('Atualizar modelos') }}
+          </button>
+        </div>
         <div v-if="attempt" class="labels-actions">
           <button
             type="button"
@@ -282,7 +312,9 @@
                 {{ item.stock_deposito ?? '—' }}</small
               ><small
                 >{{ tr('Preço de venda') }}:
-                {{ formatLabelSalePrice(item.sale_price, item.sale_currency, numberLocale()) }}</small
+                {{
+                  formatLabelSalePrice(item.sale_price, item.sale_currency, numberLocale())
+                }}</small
               >
             </div>
             <div class="row-actions">
@@ -361,7 +393,7 @@
           </button>
         </div>
       </section>
-      <section v-else class="labels-panel">
+      <section v-else-if="panel === 'queue'" class="labels-panel">
         <div class="labels-actions">
           <h2>{{ tr('Fila de etiquetas') }}</h2>
           <button
@@ -424,6 +456,28 @@
           >
         </template>
       </section>
+      <ProductLabelLayoutEditor
+        v-if="editorOpened && layouts.length"
+        v-show="panel === 'layout'"
+        :layouts="layouts"
+        :products="selected"
+        :active-id="selectedLayoutId"
+        :disabled="locked || busy"
+        @saved="layoutSaved"
+        @deleted="layoutDeleted"
+        @use="useLayout"
+        @refresh="loadLayouts"
+      />
+      <section v-else-if="panel === 'layout'" class="labels-panel">
+        <p>{{ tr('Carregando modelos...') }}</p>
+        <button
+          type="button"
+          class="erp-button erp-button--secondary erp-button--sm"
+          @click="loadLayouts"
+        >
+          {{ tr('Tentar novamente') }}
+        </button>
+      </section>
     </main>
     <BarcodeScanner v-if="scannerOpen" @close="scannerOpen = false" @barcode-detected="scan" />
     <Teleport to="body"
@@ -464,7 +518,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Camera, Eye, Printer } from 'lucide-vue-next'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
@@ -472,6 +526,10 @@ import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 import { useAuthStore } from '@/stores/auth'
+import { labelLayoutReference, type ProductLabelLayout } from '@/services/productLabelDesign'
+const ProductLabelLayoutEditor = defineAsyncComponent(
+  () => import('@/components/inventory/ProductLabelLayoutEditor.vue'),
+)
 import {
   productLabels as api,
   formatLabelSalePrice,
@@ -513,14 +571,23 @@ const previewOpen = ref(false),
 const history = ref<{ id: string; name: string; created_at: string }[]>([]),
   attempt = ref<LabelRequest | null>(null)
 const storageKey = `eleven-label-confirmation:${auth.user?.id || ''}`
+const layoutStorageKey = `eleven-label-layout:${auth.user?.id || ''}`
+const layouts = ref<ProductLabelLayout[]>([]),
+  selectedLayoutId = ref('standard'),
+  editorOpened = ref(false)
+const activeLayout = computed(() =>
+  layouts.value.find((layout) => layout.id === selectedLayoutId.value),
+)
 let generation = 0,
   disposed = false,
-  previewGeneration = 0
+  previewGeneration = 0,
+  layoutsGeneration = 0
 const locked = computed(() => !!attempt.value)
 const copies = computed(() => selected.value.reduce((n, p) => n + (Number(p.copies) || 0), 0))
 const validSelection = computed(() => {
   try {
-    labelRequest(selected.value, 'preview')
+    if (selectedLayoutId.value !== 'standard' && !activeLayout.value) return false
+    labelRequest(selected.value, 'preview', activeLayout.value)
     return true
   } catch {
     return false
@@ -529,6 +596,7 @@ const validSelection = computed(() => {
 const tabs = computed(() => [
   { value: 'catalog', label: tr('Selecionar') },
   { value: 'selection', label: tr('Conferir') },
+  { value: 'layout', label: tr('Layout') },
   { value: 'queue', label: tr('Fila') },
 ])
 const modes = computed(() => [
@@ -563,6 +631,49 @@ function failure(e: unknown) {
         : 'Não foi possível concluir. Tente novamente.',
   )
 }
+async function loadLayouts() {
+  const request = ++layoutsGeneration
+  try {
+    const result = await api.layouts()
+    if (disposed || request !== layoutsGeneration) return
+    layouts.value = result
+    if (!attempt.value && !layouts.value.some((layout) => layout.id === selectedLayoutId.value)) {
+      selectedLayoutId.value = 'standard'
+      error.value = tr('Modelo indisponível. Padrão ELEVEN selecionado; confira a prévia.')
+    }
+  } catch (e) {
+    if (!disposed && request === layoutsGeneration) failure(e)
+  }
+}
+function layoutSaved(layout: ProductLabelLayout) {
+  layoutsGeneration++
+  layouts.value = [...layouts.value.filter((entry) => entry.id !== layout.id), layout]
+  if (!locked.value) selectedLayoutId.value = layout.id
+  confirmed.value = false
+}
+function layoutDeleted(id: string) {
+  layoutsGeneration++
+  layouts.value = layouts.value.filter((layout) => layout.id !== id)
+  if (!locked.value && selectedLayoutId.value === id) selectedLayoutId.value = 'standard'
+}
+function useLayout(id: string) {
+  selectedLayoutId.value = id
+  confirmed.value = false
+  panel.value = 'selection'
+}
+watch(
+  () => `${selectedLayoutId.value}:${activeLayout.value?.version}`,
+  () => {
+    confirmed.value = false
+    if (!attempt.value) {
+      try {
+        localStorage.setItem(layoutStorageKey, selectedLayoutId.value)
+      } catch {
+        /* Preference only. */
+      }
+    }
+  },
+)
 async function loadCatalog() {
   const request = ++generation
   loading.value = true
@@ -661,7 +772,7 @@ async function submit() {
   error.value = ''
   try {
     if (!attempt.value) {
-      const body = labelRequest(selected.value, crypto.randomUUID())
+      const body = labelRequest(selected.value, crypto.randomUUID(), activeLayout.value)
       sessionStorage.setItem(storageKey, JSON.stringify(body))
       attempt.value = body
     }
@@ -698,6 +809,7 @@ async function refreshQueue() {
 }
 watch(panel, (value) => {
   if (value === 'queue') void refreshQueue()
+  if (value === 'layout') editorOpened.value = true
 })
 watch(batchId, async (value) => {
   if (!value) return
@@ -770,7 +882,7 @@ async function showPreview(item: LabelProduct) {
   previewOpen.value = true
   const request = ++previewGeneration
   try {
-    const blob = await api.preview(item.id)
+    const blob = await api.preview(item.id, labelLayoutReference(activeLayout.value))
     if (previewOpen.value && request === previewGeneration && !disposed)
       previewUrl.value = URL.createObjectURL(blob)
   } catch (e) {
@@ -792,10 +904,16 @@ function scan(code: string) {
 }
 onMounted(async () => {
   try {
+    try {
+      selectedLayoutId.value = localStorage.getItem(layoutStorageKey) || 'standard'
+    } catch {
+      /* Preference only. */
+    }
     const saved = sessionStorage.getItem(storageKey)
     if (saved) {
       const recovered: LabelRequest = JSON.parse(saved)
       attempt.value = recovered
+      selectedLayoutId.value = recovered.layout_id || 'standard'
       selected.value = recovered.items.map((p) => ({
         id: p.item_id,
         name: p.name,
@@ -819,6 +937,7 @@ onMounted(async () => {
       window.history.replaceState({ ...window.history.state, labelItemIds: undefined }, '')
     }
     device.value = (await api.device()).device
+    await loadLayouts()
     await loadCatalog()
   } catch (e) {
     failure(e)
@@ -898,6 +1017,7 @@ onUnmounted(() => {
   color: #1d4ed8;
 }
 .labels-search,
+.label-layout-choice,
 .labels-actions,
 .quantity-toolbar,
 .pagination {
@@ -905,6 +1025,17 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.label-layout-choice {
+  margin: 14px 0;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+.label-layout-choice > .erp-dropdown {
+  flex: 1;
+  min-width: 180px;
 }
 .labels-search {
   margin-bottom: 14px;

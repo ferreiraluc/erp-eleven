@@ -1,4 +1,10 @@
 import api from './api'
+import {
+  labelLayoutReference,
+  type LabelDesign,
+  type ProductLabelLayout,
+  type LabelLayoutReference,
+} from './productLabelDesign'
 
 export interface LabelProduct {
   id: string
@@ -40,6 +46,8 @@ export interface LabelRequest {
   request_key: string
   confirm: true
   items: LabelLine[]
+  layout_id?: string
+  layout_revision?: number
 }
 export interface LabelJob {
   id: string
@@ -84,9 +92,22 @@ export const productLabels = {
     api
       .post<{ items: LabelProduct[] }>('/api/inventory-labels/selection', body)
       .then((r) => r.data.items),
-  preview: (id: string) =>
+  preview: (id: string, layout?: LabelLayoutReference) =>
     api
-      .get<Blob>(`/api/inventory-labels/preview/${id}`, { responseType: 'blob' })
+      .get<Blob>(`/api/inventory-labels/preview/${id}`, { responseType: 'blob', params: layout })
+      .then((r) => r.data),
+  layouts: () => api.get<ProductLabelLayout[]>('/api/inventory-labels/layouts').then((r) => r.data),
+  saveLayout: (id: string, body: { name: string; version: number; config: LabelDesign }) =>
+    api.put<ProductLabelLayout>(`/api/inventory-labels/layouts/${id}`, body).then((r) => r.data),
+  deleteLayout: (id: string, version: number) =>
+    api.delete(`/api/inventory-labels/layouts/${id}`, { params: { version } }).then((r) => r.data),
+  designPreview: (config: LabelDesign, itemId?: string) =>
+    api
+      .post<Blob>(
+        '/api/inventory-labels/layouts/preview',
+        { config, item_id: itemId || null },
+        { responseType: 'blob' },
+      )
       .then((r) => r.data),
   enqueue: (body: LabelRequest) =>
     api.post<LabelBatch>('/api/inventory-labels/batches', body).then((r) => r.data),
@@ -136,6 +157,7 @@ export function formatLabelSalePrice(
 export function labelRequest(
   rows: (LabelProduct & { copies: number })[],
   key: string,
+  layout?: ProductLabelLayout,
 ): LabelRequest {
   if (
     !rows.length ||
@@ -156,6 +178,7 @@ export function labelRequest(
   return {
     request_key: key,
     confirm: true,
+    ...labelLayoutReference(layout),
     items: rows.map((p) => ({
       item_id: p.id,
       code: p.inventory_code!,

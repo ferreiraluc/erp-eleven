@@ -1,4 +1,309 @@
 {
+  "Cópia do padrão — salve para usar este desenho.": ["Copia del diseño original — guarda para usar este diseño.", "Copy of the standard — save to use this design."],
+  "Editor de etiquetas": [
+    "Editor de etiquetas",
+    "Label editor"
+  ],
+  "Arraste os campos ou ajuste as medidas. A prévia usa o mesmo desenho enviado à Zebra.": [
+    "Arrastra los campos o ajusta las medidas. La vista previa usa el mismo diseño enviado a la Zebra.",
+    "Drag fields or adjust measurements. The preview uses the same artwork sent to the Zebra."
+  ],
+  "Preto e branco": [
+    "Blanco y negro",
+    "Black and white"
+  ],
+  "Modelo de etiqueta": [
+    "Modelo de etiqueta",
+    "Label template"
+  ],
+  "Modelo deste envio": [
+    "Modelo de este envío",
+    "Template for this batch"
+  ],
+  "Ex.: Roupas, calçados, acessórios": [
+    "Ej.: Ropa, calzado, accesorios",
+    "E.g. Clothing, shoes, accessories"
+  ],
+  "Salvar alterações": [
+    "Guardar cambios",
+    "Save changes"
+  ],
+  "Salvar como novo": [
+    "Guardar como nuevo",
+    "Save as new"
+  ],
+  "Atualizar modelos": [
+    "Actualizar modelos",
+    "Refresh templates"
+  ],
+  "Este modelo foi alterado ou removido em outro aparelho. Você pode salvar sua edição como novo modelo.": [
+    "Este modelo fue modificado o eliminado en otro dispositivo. Puedes guardar tu edición como un modelo nuevo.",
+    "This template changed or was removed on another device. You can save your edits as a new template."
+  ],
+  "Descartar alterações e atualizar": [
+    "Descartar cambios y actualizar",
+    "Discard changes and refresh"
+  ],
+  "Há alterações não salvas neste modelo.": [
+    "Hay cambios sin guardar en este modelo.",
+    "This template has unsaved changes."
+  ],
+  "Descartar e abrir": [
+    "Descartar y abrir",
+    "Discard and open"
+  ],
+  "Continuar editando": [
+    "Continuar editando",
+    "Keep editing"
+  ],
+  "Conclua a confirmação pendente antes de alterar o modelo deste envio.": [
+    "Completa la confirmación pendiente antes de cambiar el modelo de este envío.",
+    "Resolve the pending confirmation before changing this batch’s template."
+  ],
+  "Produto da prévia": [
+    "Producto de la vista previa",
+    "Preview product"
+  ],
+  "Zoom da prévia": [
+    "Zoom de la vista previa",
+    "Preview zoom"
+  ],
+  "Desfazer": [
+    "Deshacer",
+    "Undo"
+  ],
+  "Refazer": [
+    "Rehacer",
+    "Redo"
+  ],
+  "Área da etiqueta": [
+    "Área de la etiqueta",
+    "Label canvas"
+  ],
+  "Preparando prévia...": [
+    "Preparando vista previa...",
+    "Preparing preview..."
+  ],
+  "Mover campo": [
+    "Mover campo",
+    "Move field"
+  ],
+  "QR e código interno identificam o produto e permanecem na etiqueta.": [
+    "El QR y el código interno identifican el producto y permanecen en la etiqueta.",
+    "The QR and internal code identify the product and stay on the label."
+  ],
+  "Atualizando prévia...": [
+    "Actualizando vista previa...",
+    "Updating preview..."
+  ],
+  "Adicionar campo": [
+    "Agregar campo",
+    "Add field"
+  ],
+  "Restaurar padrão": [
+    "Restaurar diseño original",
+    "Restore original design"
+  ],
+  "Use as setas do teclado para mover o campo selecionado. Shift move 1 mm. O contorno do QR inclui a margem branca necessária para leitura.": [
+    "Usa las flechas del teclado para mover el campo seleccionado. Shift mueve 1 mm. El contorno del QR incluye el margen blanco necesario para leerlo.",
+    "Use arrow keys to move the selected field. Shift moves 1 mm. The QR outline includes the white margin required for scanning."
+  ],
+  "Campo selecionado": [
+    "Campo seleccionado",
+    "Selected field"
+  ],
+  "Largura (mm)": [
+    "Ancho (mm)",
+    "Width (mm)"
+  ],
+  "Altura (mm)": [
+    "Alto (mm)",
+    "Height (mm)"
+  ],
+  "Texto": [
+    "Texto",
+    "Text"
+  ],
+  "Fonte": [
+    "Fuente",
+    "Font"
+  ],
+  "Tamanho (pt)": [
+    "Tamaño (pt)",
+    "Size (pt)"
+  ],
+  "Linhas": [
+    "Líneas",
+    "Lines"
+  ],
+  "Alinhamento": [
+    "Alineación",
+    "Alignment"
+  ],
+  "Negrito": [
+    "Negrita",
+    "Bold"
+  ],
+  "Maiúsculas": [
+    "Mayúsculas",
+    "Uppercase"
+  ],
+  "Tamanho do QR": [
+    "Tamaño del QR",
+    "QR size"
+  ],
+  "Exibir na etiqueta": [
+    "Mostrar en la etiqueta",
+    "Show on label"
+  ],
+  "Remover campo": [
+    "Quitar campo",
+    "Remove field"
+  ],
+  "Textos longos são reduzidos para caber no espaço. O cadastro do produto permanece igual.": [
+    "Los textos largos se reducen para caber en el espacio. El registro del producto permanece igual.",
+    "Long text shrinks to fit the space. The product record stays the same."
+  ],
+  "Alterações não salvas": [
+    "Cambios sin guardar",
+    "Unsaved changes"
+  ],
+  "Modelo salvo": [
+    "Modelo guardado",
+    "Template saved"
+  ],
+  "Usar este modelo": [
+    "Usar este modelo",
+    "Use this template"
+  ],
+  "Excluir modelo": [
+    "Eliminar modelo",
+    "Delete template"
+  ],
+  "Excluir somente este modelo salvo? Impressões anteriores serão preservadas.": [
+    "¿Eliminar solo este modelo guardado? Se conservarán las impresiones anteriores.",
+    "Delete only this saved template? Previous print jobs will be preserved."
+  ],
+  "Confirmar exclusão": [
+    "Confirmar eliminación",
+    "Confirm deletion"
+  ],
+  "Cópia": [
+    "Copia",
+    "Copy"
+  ],
+  "Título ELEVEN": [
+    "Título ELEVEN",
+    "ELEVEN title"
+  ],
+  "Código interno": [
+    "Código interno",
+    "Internal code"
+  ],
+  "Código do fabricante": [
+    "Código del fabricante",
+    "Manufacturer code"
+  ],
+  "Texto livre": [
+    "Texto libre",
+    "Custom text"
+  ],
+  "QR do produto": [
+    "QR del producto",
+    "Product QR"
+  ],
+  "Linha divisória": [
+    "Línea divisoria",
+    "Divider line"
+  ],
+  "Esquerda": [
+    "Izquierda",
+    "Left"
+  ],
+  "Centro": [
+    "Centro",
+    "Center"
+  ],
+  "Direita": [
+    "Derecha",
+    "Right"
+  ],
+  "Exemplo fictício": [
+    "Ejemplo ficticio",
+    "Sample data"
+  ],
+  "Seu texto": [
+    "Tu texto",
+    "Your text"
+  ],
+  "Modelo salvo. Ele está disponível nos outros aparelhos.": [
+    "Modelo guardado. Está disponible en los demás dispositivos.",
+    "Template saved. It is available on other devices."
+  ],
+  "Padrão ELEVEN": [
+    "Estándar ELEVEN",
+    "ELEVEN standard"
+  ],
+  "Editar layout": [
+    "Editar diseño",
+    "Edit layout"
+  ],
+  "Carregando modelos...": [
+    "Cargando modelos...",
+    "Loading templates..."
+  ],
+  "Modelo indisponível. Padrão ELEVEN selecionado; confira a prévia.": [
+    "Modelo no disponible. Se seleccionó Estándar ELEVEN; revisa la vista previa.",
+    "Template unavailable. ELEVEN standard selected; check the preview."
+  ],
+  "Cada campo precisa de uma identificação diferente.": [
+    "Cada campo necesita una identificación distinta.",
+    "Each field needs a different ID."
+  ],
+  "Mantenha um QR e um código interno visível na etiqueta.": [
+    "Mantén un QR y un código interno visible en la etiqueta.",
+    "Keep one QR and one visible internal code on the label."
+  ],
+  "O código interno precisa de uma linha com pelo menos 11,25 × 1,5 mm.": [
+    "El código interno necesita una línea de al menos 11,25 × 1,5 mm.",
+    "The internal code needs a line of at least 11.25 × 1.5 mm."
+  ],
+  "Todos os campos devem ficar dentro do papel de 60 × 30 mm.": [
+    "Todos los campos deben quedar dentro del papel de 60 × 30 mm.",
+    "All fields must stay inside the 60 × 30 mm paper."
+  ],
+  "Os campos não podem cobrir a área de leitura do QR.": [
+    "Los campos no pueden cubrir el área de lectura del QR.",
+    "Fields cannot cover the QR scanning area."
+  ],
+  "Modelo de etiqueta não encontrado.": [
+    "Modelo de etiqueta no encontrado.",
+    "Label template not found."
+  ],
+  "O modelo de etiqueta mudou. Atualize os modelos e confira a prévia.": [
+    "El modelo de etiqueta cambió. Actualiza los modelos y revisa la vista previa.",
+    "The label template changed. Refresh templates and check the preview."
+  ],
+  "Identificação de modelo inválida. Salve uma cópia do padrão.": [
+    "Identificación de modelo no válida. Guarda una copia del diseño original.",
+    "Invalid template ID. Save a copy of the standard template."
+  ],
+  "Modelo removido. Salve uma nova cópia.": [
+    "Modelo eliminado. Guarda una copia nueva.",
+    "Template removed. Save a new copy."
+  ],
+  "Informe o modelo e sua versão para conferir a etiqueta.": [
+    "Indica el modelo y su versión para revisar la etiqueta.",
+    "Provide the template and its revision to check the label."
+  ],
+  "Aumente o espaço reservado para o código interno.": [
+    "Aumenta el espacio reservado para el código interno.",
+    "Increase the space reserved for the internal code."
+  ],
+  "Informe o nome do modelo.": [
+    "Indica el nombre del modelo.",
+    "Enter a template name."
+  ],
   "Mais ações": ["Más acciones", "More actions"],
   "Status do estoque": ["Estado del inventario", "Stock status"],
   "Local do estoque": ["Ubicación del inventario", "Stock location"],

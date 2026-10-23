@@ -135,6 +135,9 @@ def _bitmap_v4(snapshot, price_parts):
 
 def bitmap(snapshot, price_parts):
     """Return exactly the 1-bit image that will be sent as ^GFA to the printer."""
+    if snapshot.get('layout_version') == 5:
+        from .product_label_design_artwork import bitmap as design_bitmap
+        return design_bitmap(snapshot, price_parts)
     if snapshot.get('layout_version') == 4:
         return _bitmap_v4(snapshot, price_parts)
     return _bitmap_v3(snapshot, price_parts)
