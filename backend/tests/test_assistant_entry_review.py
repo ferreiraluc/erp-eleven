@@ -29,3 +29,22 @@ def test_entry_requires_a_new_preview_after_variant_identity_changes(stock_app,f
         assert 'Nenhuma entrada registrada' in response
         assert action.status=='cancelled' and db.query(StockMovement).count()==0
         assert (product.stock_loja,product.stock_deposito,product.current_stock)==(3,7,10)
+
+
+def test_confirmation_refreshes_an_identity_already_loaded_in_the_session(stock_app):
+    factory,client,uid=stock_app
+    with factory() as db:
+        db.get(Usuario,uid).role=UsuarioRole.GERENTE
+        product=item(db,loja=3,deposito=7,size='M',color='Azul')
+        message=incoming(db,uid,'Entrada M azul',channel='telegram')
+        identity=authorized_identity(db,'telegram','123')
+        prepare_inventory(db,message,identity,'preparar_entrada_estoque',EntryArgs(item_id=product.id,quantidade=2,local='loja'))
+        action=db.query(AssistantAction).one();db.commit()
+        assert product.color=='Azul'  # Keep this identity in the session cache.
+        edited=client.put(f'/api/inventory/items/{product.id}',json={'color':'Preto'})
+        assert edited.status_code==200,edited.text
+        assert product.color=='Azul'  # A concurrent request doesn't expire this ORM object.
+        confirm=incoming(db,uid,'confirmo',channel='telegram')
+        response=confirm_action(db,confirm,identity,action)
+        assert 'Nenhuma entrada registrada' in response
+        assert db.query(StockMovement).count()==0

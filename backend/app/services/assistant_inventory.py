@@ -126,7 +126,7 @@ def confirm_inventory(db,message,action):
     if db.bind.dialect.name=='postgresql':db.execute(text('SELECT pg_advisory_xact_lock(711006)'))
     p=action.payload
     if action.kind=='estoque_entrada':
-        item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True,deleted_at=None).with_for_update().first()
+        item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True,deleted_at=None).populate_existing().with_for_update().first()
         if not item:return 'Produto inativo ou removido. Nenhuma entrada registrada.'
         reviewed=p.get('reviewed_identity')
         if reviewed != reviewed_item_identity(item):
