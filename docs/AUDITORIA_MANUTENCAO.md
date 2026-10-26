@@ -154,3 +154,10 @@ metadados de vendas sem fotos, conflitos de identidade e duas confirmações
 concorrentes da mesma consolidação em PostgreSQL. Revisão visual no Safari em
 largura de desktop e área de 412 px, usando somente dados fictícios, sem checkout,
 impressão física, limpeza de produção ou chamadas pagas aos modelos.
+
+O gate do frontend apontou o alerta recém-publicado
+[GHSA-27r3-jxmh-p828 do body-parser](https://github.com/advisories/GHSA-27r3-jxmh-p828).
+O lockfile recebeu somente a correção compatível **1.20.8 → 1.20.9**, mantendo o
+Express e as demais dependências. `npm audit --omit=dev --audit-level=high` passou
+com zero alertas de produção. Isso não afirma ausência de alertas nas ferramentas
+de desenvolvimento nem altera a política de segurança do CI.
