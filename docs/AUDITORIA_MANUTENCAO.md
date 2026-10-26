@@ -83,3 +83,81 @@ compras SuperFrete, impressões físicas ou testes de mensagens externas nesta l
 Novas revisões devem atualizar este registro quando resolverem uma pendência. Os comandos
 reproduzíveis estão em [Desenvolvimento](DESENVOLVIMENTO.md); a rotina de publicação e
 diagnóstico está em [Operação](OPERACAO.md).
+
+## Evolução de usabilidade e consulta — 26/10/2026
+
+Esta revisão separa entregas verificáveis de propostas. Não instala monitoramento
+contínuo, não treina modelos com dados de clientes e não modifica registros reais
+durante testes. As evidências usam fixtures e PostgreSQL isolado com 50 mil produtos.
+
+| Entregue nesta revisão | Uso e limite |
+| --- | --- |
+| Menos campos repetidos | Marca/categoria apenas no editor de dados em lote; códigos apenas no editor de barras. Quantidade digitada é reaproveitada ao iniciar a grade. |
+| Cores PT/EN/ES | Comparação explícita em consultas e escopos por cor, mantendo tonalidades e cadastros. Não é um tradutor genérico. |
+| Continuação após QR | Resultado exato separado dos relacionados; mesma grade/cor primeiro, leitura pequena e cancelável, sem contagem ou IA no caminho crítico. |
+| Miniaturas em vendas | Metadados em lote e cache existente; snapshots comerciais preservados. |
+| Revisão de duplicados | Tela exclusiva do proprietário, prévia versionada e confirmação; referências e históricos conservados. Nenhuma fusão por IA ou durante publicação. |
+| Identidade na confirmação da IA | Entrada sugerida pelo assistente registra nome/SKU/marca/tamanho/cor/código/grade revisados. Mudança exige nova prévia; prévias antigas sem identidade são recusadas. Movimentos continuam auditados e idempotentes. |
+
+### Referências pesquisadas e decisões
+
+O [PostgreSQL documenta índices trigramas GIN/GiST para LIKE/ILIKE e similaridade](https://www.postgresql.org/docs/current/pgtrgm.html).
+O ERP já possui esses índices, além do índice único da referência interna.
+A decisão foi medir as expressões existentes e reutilizá-las, evitando adicionar
+índices redundantes e aumentar o custo de cada cadastro sem evidência.
+O [Vue recomenda medir atualizações e virtualizar listas grandes](https://vuejs.org/guide/best-practices/performance.html).
+Mantemos paginação no servidor, miniaturas sob demanda e consultas canceláveis;
+virtualização com grades expansíveis fica condicionada à medição abaixo.
+
+O [Odoo mantém estoque e registros próprios por variante](https://www.odoo.com/documentation/19.0/applications/sales/sales/products_prices/products/variants.html).
+Aplicamos essa referência preservando a identidade de cada tamanho/cor, com a
+família como navegação e contexto. A [Shopify documenta a consolidação de perfis de cliente](https://help.shopify.com/en/manual/customers/manage-customers?lang=en-US);
+aqui a consolidação também é uma ação explícita revisada, com o histórico preservado.
+Estas são referências de produto, não promessa de paridade com essas plataformas.
+
+### Plano de melhoria contínua
+
+| Prioridade | Próxima entrega proposta | Critério para liberar |
+| --- | --- | --- |
+| P1 | Medição de busca por classe: QR exato, nome/modelo, descrição, cor/tamanho e sem resultado | Instrumentação agregada sem texto de clientes, contagem de queries, p50/p95 e tamanho das respostas. Comparar em 50 mil itens; meta inicial de SQL seletivo abaixo de 100 ms e QR abaixo de 50 ms em ambiente controlado, não SLA de rede/produção. |
+| P1 | Sugestões de cadastro com as IAs existentes | Foto/etiqueta propõem tipo, material e palavras-chave; conservar fonte e divergências, comparar com vocabulário existente, operador aplica. Não inferir saldo/preço/identidade. Testar 100 exemplos revisados com erros conhecidos antes de mudar prompts/provedores. |
+| P1 | Preferências e atalhos de ações frequentes | Usar inicialmente escolhas locais por usuário: local de estoque, moeda, última grade e filtros favoritos; botão para limpar. Sugerir sem preencher silenciosamente produto, cliente ou quantidade. Medir redução de cliques e abandono antes/depois. Não usar o log de auditoria como rastreador de navegação. |
+| P1 | Consolidar cadastros reconhecidos como duplicados | Proprietário confere os pares na nova tela, corrige conflitos e escolhe o principal. Conferir históricos antes/depois, sem excluir fisicamente pessoas ou endereços consolidados. |
+| P2 | Memória factual com validade | Guardar somente preferências/dicionários aprovados, com autor, fonte, versão, escopo e opção de remover. Reler estoque, preços, permissões e impressoras antes de qualquer confirmação; contexto antigo não substitui consulta atual. |
+| P2 | Assistência contextual de consulta | Quando a busca literal não resolver, oferecer interpretação por IA em ação explícita e com timeout; sugestões estruturadas passam pelos mesmos filtros/permissões. Medir acerto no conjunto revisado, latência e custo; falha do provedor mantém a busca SQL disponível. |
+| P2 | Prévias e diagnóstico de impressão mais claros | Exibir destino, papel/layout e estado confirmado/incerto; oferecer consulta do trabalho antes de outra cópia. Testar fila/reconexão com transporte local isolado, preservando confirmação e idempotência de Zebra e 3nStar. |
+| P2 | Virtualização de listas/grupos muito grandes | Provar ganho de rolagem e memória em S24/iPad com centenas de cards carregados, sem quebrar seleção, teclado, miniaturas ou grupos expansíveis. Só então substituir a renderização atual. |
+
+As [ferramentas da Anthropic usam contratos de entrada definidos pela aplicação](https://platform.claude.com/docs/claude/docs/tool-use).
+O uso das duas integrações deve continuar limitado a contratos validados no backend:
+uma extrai/propõe e outra pode revisar casos ambíguos sob solicitação, sem duplicar
+chamadas pagas em toda busca. Reaproveitar a resposta revisada pelo hash da imagem,
+versão do prompt e escopo antes de considerar outra chamada. Não houve alteração
+de modelo, novas chamadas pagas ou envio de clientes aos provedores nesta revisão.
+
+### Evidência desta rodada
+
+Em PostgreSQL 17 local, com 50 mil produtos sintéticos e cores equivalentes,
+a primeira página de relacionados levou **36,81 ms** no serviço; a consulta de
+IDs da família executou em **0,018 ms**, usando o índice existente. Duas páginas
+usaram dez consultas pequenas, incluindo a leitura do vocabulário de cores e dos
+metadados, sem COUNT, originais de fotos ou consultas por card.
+Consultas seletivas de modelo/descrição levaram **0,043–0,266 ms** de execução SQL;
+o termo curto `Y 26` levou **16,047 ms**. Planejamento, rede, API e renderização
+são custos adicionais; estes valores não medem produção nem prometem latência
+fixa. O teste antes/depois das migrações comprova os índices já existentes, não
+um ganho novo de centenas de vezes nesta versão.
+
+Foram exercitados: confirmação de identidade após mudança de tamanho/cor,
+respostas antigas, paginação e cancelamento de relacionados, escopos por cor,
+metadados de vendas sem fotos, conflitos de identidade e duas confirmações
+concorrentes da mesma consolidação em PostgreSQL. Revisão visual no Safari em
+largura de desktop e área de 412 px, usando somente dados fictícios, sem checkout,
+impressão física, limpeza de produção ou chamadas pagas aos modelos.
+
+O gate do frontend apontou o alerta recém-publicado
+[GHSA-27r3-jxmh-p828 do body-parser](https://github.com/advisories/GHSA-27r3-jxmh-p828).
+O lockfile recebeu somente a correção compatível **1.20.8 → 1.20.9**, mantendo o
+Express e as demais dependências. `npm audit --omit=dev --audit-level=high` passou
+com zero alertas de produção. Isso não afirma ausência de alertas nas ferramentas
+de desenvolvimento nem altera a política de segurança do CI.

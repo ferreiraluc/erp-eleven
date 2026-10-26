@@ -58,7 +58,7 @@ def test_related_validation_authentication_and_missing_sources(stock_app):
     with factory() as db:
         ids = seed(db)
     path = f'/api/inventory/items/{ids[0]}/related'
-    for params in ({'limit': 0}, {'limit': 25}, {'after_rank': 4}, {'after_rank': 0}, {'after_id': ids[1]}, {'after_id': 'bad'}):
+    for params in ({'limit': 0}, {'limit': 25}, {'after_rank': 6}, {'after_rank': 0}, {'after_id': ids[1]}, {'after_id': 'bad'}):
         assert client.get(path, params=params).status_code == 422
     for id in (ids[7], ids[8], str(uuid.uuid4())):
         assert client.get(f'/api/inventory/items/{id}/related').status_code == 404
@@ -81,6 +81,6 @@ def test_related_does_not_count_catalog_or_materialize_gallery(stock_app):
     finally:
         sa.event.remove(engine, 'before_cursor_execute', capture)
     selects = [sql for sql in statements if 'SELECT' in sql and 'inventory_items' in sql]
-    assert len(selects) == 3  # source, bounded family IDs, one metadata batch
+    assert len(selects) == 4  # source, color vocabulary, bounded IDs, metadata batch
     assert all('count(' not in sql.lower() and 'additional_images' not in sql and 'thumbnail_data' not in sql for sql in selects)
     assert all('inventory_items.image_data AS' not in sql for sql in selects)

@@ -19,8 +19,10 @@ from ...services.customer_purchases import customer_purchases
 from ...services.address_book import lock_addresses
 from ...dependencies import get_current_active_user, require_role
 from ..validators import validate_uuid
+from .directory_duplicates import router as duplicates_router
 
 router = APIRouter()
+router.include_router(duplicates_router)
 
 
 def _customer(db, customer_id, *, write=False):

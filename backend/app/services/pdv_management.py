@@ -62,6 +62,14 @@ def get_sale(db, sid, user, lock=False):
         db.expire(sale, ['items','payments'])
     return sale
 
+def catalog_previews(db, item_ids):
+    """One metadata batch after sale scoping; never select photo/gallery contents."""
+    return {str(row.id): {'id': str(row.id), 'has_image': bool(row.has_image),
+                         'updated_at': row.updated_at.isoformat(), 'image_data': None}
+            for row in db.query(Item.id, Item.updated_at,
+                (Item.image_data.isnot(None) & (Item.image_data != '')).label('has_image'))
+            .filter(Item.id.in_(item_ids), Item.deleted_at.is_(None))}
+
 def detail(db,sid,user):
     sale=get_sale(db,sid,user)
     data=snapshot(sale)
@@ -69,7 +77,9 @@ def detail(db,sid,user):
     people=dict(db.query(Usuario.id,Usuario.nome).filter(Usuario.id.in_([sale.vendedor_id,sale.created_by])).all())
     data.update(seller=people.get(sale.vendedor_id),actor=people.get(sale.created_by),can_manage=is_owner(user))
     removed=dict(db.query(Item.id,Item.name).filter(Item.id.in_([r.item_id for r in sale.items if r.item_id]),Item.deleted_at.isnot(None)).all())
+    previews=catalog_previews(db, [r.item_id for r in sale.items if r.item_id])
     for line in data['items']:
+        line['catalog_preview']=previews.get(line['item_id'])
         line['product_deleted']=uuid.UUID(line['item_id']) in removed if line['item_id'] else False
         if line['product_deleted']:line['item_name']='Produto excluído — '+line['item_name']
     data['events']=[]
@@ -108,10 +118,13 @@ def listing(db,user,*,page=1,page_size=25,q='',status=None,date_from=None,date_t
     refunds=sum((r[3] or 0) for r in grouped)
     effective_refunds=sum((r[3] or 0) for r in grouped if r[0]!='cancelled')
     rows=query.options(joinedload(PdvSale.vendedor),joinedload(PdvSale.items),joinedload(PdvSale.payments)).order_by(PdvSale.created_at.desc(),PdvSale.id.desc()).offset((page-1)*page_size).limit(page_size).all()
+    visible_lines={s.id: sorted(s.items, key=lambda line: str(line.id))[:3] for s in rows}
+    previews=catalog_previews(db, {line.item_id for lines in visible_lines.values() for line in lines if line.item_id})
     return serial({'page':page,'page_size':page_size,'total':count,'own_sales_only':own_sales(user),'can_manage':is_owner(user),
         'summary':{'gross_gs':gross,'refunded_gs':refunds,'net_gs':gross-effective_refunds,'cancelled':sum(r[1] for r in grouped if r[0]=='cancelled')},
         'items':[{'id':s.id,'ticket_code':ticket_code(s.id),'created_at':s.created_at,'cliente_nome':s.cliente_nome,'seller':s.vendedor.nome if s.vendedor else None,
                   'total_gs':s.total_gs,'refunded_gs':s.refunded_gs,'status':s.status,'items_count':len(s.items),
+                  'products':[{'name':line.item_name,'preview':previews.get(str(line.item_id))} for line in visible_lines[s.id]],
                   'payment_methods':sorted({p.method for p in s.payments}),'deleted_at':s.deleted_at,'version':s.version} for s in rows]})
 
 def _debt(db,sale):

@@ -62,6 +62,10 @@ def identity(data):
             normalized(data.get('tamanho') or ''), taxonomy_key(data.get('cor'), 'color'))
 
 
+def reviewed_item_identity(item):
+    return {field: getattr(item, field) for field in ('name','sku_internal','brand','size','color','barcode','group_key')}
+
+
 def duplicate_items(db,items):
     existing=db.query(Item.id,Item.name,Item.brand,Item.size,Item.color,Item.barcode,Item.sku_internal,Item.is_active).filter(Item.deleted_at.is_(None)).all()
     seen=set();seen_barcodes=set();duplicates=[]
@@ -82,7 +86,8 @@ def duplicate_items(db,items):
 def inventory_preview(action):
     p=action.payload
     if action.kind=='estoque_entrada':
-        content=f"Registrar entrada: {p['item_name']} ({p['sku']})\nQuantidade: +{p['quantidade']} unidade(s) no local {p['local']}.\nO saldo será aumentado e a movimentação ficará no histórico do estoque."
+        variant=p.get('reviewed_identity') or {}
+        content=f"Registrar entrada: {p['item_name']} ({p['sku']})\nVariante: {' · '.join(variant.get(field) or '—' for field in ('brand','size','color'))}\nQuantidade: +{p['quantidade']} unidade(s) no local {p['local']}.\nO saldo será aumentado e a movimentação ficará no histórico do estoque."
     else:
         lines=['Cadastrar produtos no estoque:']
         for i in p['itens']:
@@ -110,7 +115,8 @@ def prepare_inventory(db,message,identity_record,name,args):
             if result.get('total')!=1:return {'erro':'Escolha o produto/variante para a entrada.','candidatos':result.get('resultados',[])}
             item=db.get(Item,uuid.UUID(result['resultados'][0]['id']))
         if not item or not item.is_active or item.deleted_at:return {'erro':'Produto não encontrado ou inativo.'}
-        payload={'item_id':str(item.id),'item_name':item.name,'sku':item.sku_internal,'quantidade':args.quantidade,'local':args.local};kind='estoque_entrada'
+        payload={'item_id':str(item.id),'item_name':item.name,'sku':item.sku_internal,'quantidade':args.quantidade,'local':args.local,
+                 'reviewed_identity': reviewed_item_identity(item)};kind='estoque_entrada'
     action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind=kind,payload=payload)
     db.add(action);db.flush()
     return {'confirmacao':inventory_preview(action)}
@@ -120,8 +126,12 @@ def confirm_inventory(db,message,action):
     if db.bind.dialect.name=='postgresql':db.execute(text('SELECT pg_advisory_xact_lock(711006)'))
     p=action.payload
     if action.kind=='estoque_entrada':
-        item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True,deleted_at=None).with_for_update().first()
+        item=db.query(Item).filter_by(id=uuid.UUID(p['item_id']),is_active=True,deleted_at=None).populate_existing().with_for_update().first()
         if not item:return 'Produto inativo ou removido. Nenhuma entrada registrada.'
+        reviewed=p.get('reviewed_identity')
+        if reviewed != reviewed_item_identity(item):
+            action.status='cancelled'
+            return 'A identificação do produto mudou desde a prévia. Nenhuma entrada registrada. Peça uma nova prévia e confira tamanho, cor e código.'
         from .inventory_service import StockMovementError
         try:
             move=create_movement(db,item.id,'entry',p['quantidade'],message.user_id,location=p['local'],reason='Entrada pelo assistente',reference_type='assistant_action',reference_id=str(action.id))

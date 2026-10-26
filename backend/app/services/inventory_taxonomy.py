@@ -1,6 +1,11 @@
 """Shared persistence and filter rules; never change product identity or balances."""
 from sqlalchemy import inspect
-from .inventory_taxonomy_v2 import FIELDS, canonical, key, text_key, vocabulary, canonical_size, normalized_size_name
+from .inventory_taxonomy_v2 import FIELDS, canonical, key as legacy_key, text_key, vocabulary, canonical_size, normalized_size_name
+from .inventory_colors import color_key, color_search_text
+
+
+def key(value, field):
+    return color_key(value) if field == 'color' else legacy_key(value, field)
 
 
 def clean_product_name(value):
@@ -38,6 +43,8 @@ def facet_filter(db, column, value, *, partial=False, values=None):
         values = [row[0] for row in db.query(column).filter(Item.deleted_at.is_(None)).distinct() if row[0]]
     def matches(raw):
         candidate = key(raw, field)
+        if partial and field == 'color':
+            return wanted in color_search_text(raw)
         return (wanted in candidate) if partial else (candidate == wanted or
             (field == 'category' and candidate.startswith(wanted + ' > ')))
     return column.in_([raw for raw in values if matches(raw)])

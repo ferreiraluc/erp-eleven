@@ -15,7 +15,7 @@ it('rejects an incomplete size or an oversized code before applying any row', ()
 })
 it('scopes by canonical size/color, preserves multiline details and rejects invalid stock limits', () => {
   expect(inScope(items[0],'size:S')).toBe(true)
-  expect(inScope(items[1],'color:branca')).toBe(true)
+  expect(inScope(items[1],'color:branco')).toBe(true)
   const draft=setDetail({},items[0],'description','Metal\nBordado')
   expect(draft.a.description).toBe('Metal\nBordado')
   expect(setDetail(draft,items[0],'description','')).toEqual({})

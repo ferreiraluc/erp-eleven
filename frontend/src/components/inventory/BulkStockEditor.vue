@@ -36,11 +36,12 @@
 </template>
 
 <script setup lang="ts">
+import { colorKey } from '@/services/inventoryColors'
 import { computed, ref, watch } from 'vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import StockQuantityInput from './StockQuantityInput.vue'
 import type { InventoryItem } from '@/services/api'
-import { canonicalSize, taxonomyKey } from '@/services/inventoryTaxonomy'
+import { canonicalSize } from '@/services/inventoryTaxonomy'
 import { displayStock, hasKnownStock } from '@/services/inventoryStock'
 import { changedStock, validStockCount, validStockDraft, MAX_STOCK, type StockDraft, type StockLocation } from '@/services/inventoryBulkStock'
 import { useInventoryI18n } from './i18n'
@@ -52,7 +53,7 @@ const applyError = ref(''), applied = ref(0)
 const locationOptions = computed(() => [{ value: 'loja', label: tr('Loja') }, { value: 'deposito', label: tr('Depósito') }])
 const operationOptions = computed(() => [{ value: 'set', label: tr('Definir quantidade') }, { value: 'add', label: tr('Somar ou retirar') }])
 function identity(item: InventoryItem, field: 'color' | 'size') {
-  return field === 'color' ? taxonomyKey(item.color || '') : canonicalSize(item.size || '').toLowerCase()
+  return field === 'color' ? colorKey(item.color || '') : canonicalSize(item.size || '').toLowerCase()
 }
 const targetOptions = computed(() => {
   const result = [{ value: 'all', label: tr('Todos os selecionados') }]

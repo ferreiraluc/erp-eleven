@@ -143,7 +143,7 @@ async function photoScope(value: string) {
 
 it('stages one cover per color, includes every size and only saves the selected IDs once', async () => {
   await mount()
-  await photoScope('color:branca'); await uploadPhoto('white.jpg')
+  await photoScope('color:branco'); await uploadPhoto('white.jpg')
   await photoScope('color:azul'); await uploadPhoto('blue.jpg')
   expect(api.batchEdit).not.toHaveBeenCalled()
   expect(root.querySelectorAll('.photo-draft')).toHaveLength(2)
@@ -175,7 +175,7 @@ it('lets a color override a shared photo and undo preserves other drafts', async
 })
 
 it('keeps photo membership by ID when color changes and ignores file failure without losing drafts', async () => {
-  await mount(); await photoScope('color:branca'); await uploadPhoto('white.jpg')
+  await mount(); await photoScope('color:branco'); await uploadPhoto('white.jpg')
   await input('input[aria-label="Cor para vários itens"]', 'Bege')
   button('Aplicar cor a todos').click(); await tick()
   expect(root.querySelector('.photo-draft')?.textContent).toContain('Bege')
@@ -192,7 +192,7 @@ it('blocks Save while preparing an image and translates the photo controls', asy
   const i18n = await mount()
   let finish!: (value: string) => void
   photos.prepareGalleryFile.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
-  await input('input[aria-label="Marca"]', 'Boss')
+  await input('textarea[aria-label="Valor para aplicar"]', 'Placa'); button('Preparar alteração · 3').click(); await tick()
   await uploadPhoto('slow.jpg')
   expect(button('Salvar 3 itens').disabled).toBe(true)
   i18n.global.locale.value = 'es'; await tick()
@@ -203,7 +203,7 @@ it('blocks Save while preparing an image and translates the photo controls', asy
 
 it('appends descriptions by color, permits individual edits and saves only after review', async () => {
   await mount(items.map((item, i) => ({ ...item, description: `Original ${i}` })))
-  await chooseDropdown(root.querySelector('button[aria-label="Aplicar dados a"]'), 'color:branca')
+  await chooseDropdown(root.querySelector('button[aria-label="Aplicar dados a"]'), 'color:branco')
   await chooseDropdown(root.querySelector('button[aria-label="Operação dos dados"]'), 'append')
   await input('textarea[aria-label="Valor para aplicar"]', 'Placa de metal')
   button('Preparar alteração · 2').click(); await tick()
