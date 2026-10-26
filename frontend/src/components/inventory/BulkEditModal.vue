@@ -11,7 +11,7 @@
       </div>
 
       <div class="modal-body erp-dialog__body" :inert="saving || undefined">
-        <BulkDetailsEditor v-model="detailsDraft" :items="stockBaseline" :brands="distinctBrands" :categories="distinctCategories" :disabled="saving" />
+        <BulkDetailsEditor v-model="detailsDraft" :items="previewItems" :brands="distinctBrands" :categories="distinctCategories" :disabled="saving" />
         <BulkBarcodeEditor :model-value="itemBarcodes" :items="previewItems" :disabled="saving" @update:model-value="Object.assign(itemBarcodes, $event)" />
         <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.') }}</p>
         <BulkStockEditor v-model="stockDraft" :items="previewItems" :disabled="saving" />
@@ -25,18 +25,6 @@
         <section class="section">
           <h3 class="section-title">{{ tr('Campos compartilhados') }}</h3>
           <p class="section-hint">{{ tr('Deixe em branco para não alterar. Aplica a todos os itens selecionados.') }}</p>
-
-          <!-- Brand + Category -->
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ tr('Marca') }}</label>
-              <ErpDropdown v-model="sharedBrand" editable :label="tr('Marca')" :placeholder="tr('Vazio = não alterar')" :options="(distinctBrands || []).map(value => ({ value, label: value }))" />
-            </div>
-            <div class="form-group">
-              <label>{{ tr('Categoria') }}</label>
-              <ErpDropdown v-model="sharedCategory" editable :label="tr('Categoria')" :placeholder="tr('Vazio = não alterar')" :options="(distinctCategories || []).map(value => ({ value, label: value }))" />
-            </div>
-          </div>
 
           <!-- Shared prices -->
           <div class="form-row">
@@ -122,16 +110,6 @@
                     :placeholder="item.size || ''"
                   />
                 </div>
-                <div class="field-group field-group-wide">
-                  <label>{{ tr('Código de barras') }}</label>
-                  <input
-                    v-model="itemBarcodes[item.id]"
-                    type="text"
-                    class="field-input"
-                    :class="{ modified: itemBarcodes[item.id] !== (item.barcode || '') }"
-                  />
-                </div>
-
                 <!-- Per-item prices -->
                 <div class="field-group">
                   <label>{{ tr('Custo') }} <span class="label-current">{{ tr('atual:') }} {{ formatPrice(item.cost_price) }}</span></label>
@@ -190,7 +168,7 @@ import { detailsError, type DetailDraft } from '@/services/inventoryBulkDetails'
 import { photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
 import BulkStockEditor from './BulkStockEditor.vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
-import { uniqueLabels } from '@/services/inventoryTaxonomy'
+import { uniqueColors } from '@/services/inventoryColors'
 import { initialStockDraft, changedStock, validStockDraft } from '@/services/inventoryBulkStock'
 import { replaceProductName } from '@/services/inventoryNameReplace'
 import ProductThumbnail from './ProductThumbnail.vue'
@@ -211,8 +189,6 @@ const emit = defineEmits<{
 const photoDraft = ref<PhotoDraft>({})
 const detailsDraft = ref<DetailDraft>({})
 const photoBusy = ref(false)
-const sharedBrand = ref('')
-const sharedCategory = ref('')
 const sharedCostPrice = ref<string>('')
 const sharedSalePrice = ref<string>('')
 const sharedColor = ref('')
@@ -237,7 +213,7 @@ const itemStockReasons = reactive<Record<string, string>>({})
 const previewItems = computed(() => stockBaseline.map(item => ({ ...item,
   name: itemNames[item.id], color: itemColors[item.id], size: itemSizes[item.id] || item.size,
 })))
-const colorOptions = computed(() => uniqueLabels(Object.values(itemColors)).map(color => ({ value: color, label: color })))
+const colorOptions = computed(() => uniqueColors(Object.values(itemColors)).map(color => ({ value: color, label: color })))
 function applyColor() {
   if (saving.value || !sharedColor.value.trim()) return
   for (const item of props.items) itemColors[item.id] = sharedColor.value.trim()
@@ -261,7 +237,7 @@ function formatPrice(val: any): string {
 
 const hasChanges = computed(() => {
   if (Object.keys(detailsDraft.value).length) return true
-  if (Object.keys(photoDraft.value).length || sharedBrand.value || sharedCategory.value) return true
+  if (Object.keys(photoDraft.value).length) return true
   if (sharedCostPrice.value !== '' || sharedSalePrice.value !== '') return true
   if (changedStock(stockBaseline, stockDraft.value).length) return true
   return props.items.some(item => {
@@ -315,8 +291,6 @@ async function save() {
     await inventoryAPI.batchEdit({
       item_ids:    props.items.map(i => i.id),
       details: true,
-      brand:       sharedBrand.value    || undefined,
-      category:    sharedCategory.value || undefined,
       image_groups: photoAssignments(photoDraft.value, props.items.map(item => item.id)),
       cost_price:  sharedCostPrice.value !== '' ? Number(sharedCostPrice.value) : undefined,
       sale_price:  sharedSalePrice.value !== '' ? Number(sharedSalePrice.value) : undefined,

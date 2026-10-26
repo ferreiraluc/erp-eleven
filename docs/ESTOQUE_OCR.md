@@ -23,6 +23,35 @@ ações não abrem com apenas parte dos itens selecionados.
 
 ## Busca no catálogo
 
+Ao consultar um QR interno `INV-XXXXXX`, o produto exato continua sendo o resultado
+da busca. Abaixo, **Continue por este produto** apresenta sugestões paginadas: mesma
+grade e cor primeiro, demais cores da grade, marca/categoria e suas cores, depois
+marca e categoria. Esta seção reutiliza o serviço do PDV, não aumenta o contador,
+não inclui os sugeridos na seleção e não altera os filtros. Abrir uma sugestão
+usa o editor normal; limpar/trocar a busca cancela a leitura de relacionados.
+As sugestões são contexto, podendo estar fora dos filtros aplicados ao resultado
+exato; a interface informa essa diferença. Não há consulta de IA neste caminho.
+
+Cores equivalentes em português, inglês e espanhol participam da busca, filtro
+da API e seleções por cor de foto/dados/quantidades: `Black/Preto/Negro`,
+`White/Branco/Blanco`, `Grey/Cinza/Gris`, `Brown/Marrom/Marrón`,
+`Navy/Azul marinho/Azul marino`, entre outras regras explícitas. Combinações
+como `Black + White` e `Branco e Preto` usam o mesmo escopo; azul comum, marinho
+e off-white continuam distinguíveis nos filtros exatos. Buscar uma cor ampla
+pode incluir tons cujo alias contém aquela palavra. Não há tradução automática
+de nomes, marcas ou modelos (`Black Label` permanece pesquisável).
+Valores gravados, IDs, saldos e grades existentes permanecem intactos. Repetir uma
+cor equivalente no novo cadastro reutiliza a escolha, evitando variações duplicadas.
+
+Na edição massiva, marca e categoria ficam somente em **Dados do produto em lote**,
+com aplicação por grupo e revisão individual. Código de barras fica no editor
+dedicado, incluindo leitura por item; foi retirado o segundo campo repetido no
+card. A conferência individual dos dados começa recolhida e abre ao preparar uma
+alteração, deixando os controles de estoque mais próximos no celular.
+Preços/cor compartilhados e individuais têm escopos distintos e permanecem.
+Ao ativar a grade de um novo produto, a quantidade inicial já digitada passa a ser
+o padrão das variações, preservando os ajustes individuais posteriores.
+
 Ao lado de **Selecionar**, a linha **Visualização** mostra o total de produtos
 que correspondem à busca e aos filtros, mesmo antes de terminar a paginação.
 **Ver grades** conta somente as peças correspondentes; os outros tamanhos

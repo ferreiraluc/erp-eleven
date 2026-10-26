@@ -262,6 +262,15 @@ integralmente; para alterá-lo, selecione um método atual e confira valor e moe
 
 ## Consulta e acesso
 
+A listagem mostra até três miniaturas dos produtos por venda; **Ver venda** mostra
+a miniatura ao lado de cada item. São imagens atuais do catálogo, não fotografias
+históricas da venda. Nome, tamanho, cor e valores continuam sendo os snapshots
+registrados na operação. Produtos removidos/avulsos não recebem uma associação
+inferida por nome ou código de barras. Metadados são consultados em um único lote
+após o filtro de acesso; as fotos usam a fila/cache de miniaturas do estoque,
+carregando somente perto da área visível. Fotos originais e galerias não são
+incluídas nas respostas de vendas.
+
 Filtros por período inclusivo em Brasília, vendedor, pagamento, situação e busca
 por cliente, produto, SKU ou UUID. Paginação no servidor, totais do filtro completo
 e exportação CSV da página visível. As datas originais de criação são preservadas.

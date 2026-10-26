@@ -67,7 +67,7 @@ router.include_router(receiving_router)
 
 @router.get('/items/{item_id}/related', response_model=RelatedItemsResponse)
 def get_related_products(item_id: UUID, limit: int = Query(12, ge=1, le=24),
-                         after_rank: int | None = Query(None, ge=0, le=3), after_id: UUID | None = None,
+                         after_rank: int | None = Query(None, ge=0, le=5), after_id: UUID | None = None,
                          db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user)):
     return related_products(db, item_id, limit=limit, after_rank=after_rank, after_id=after_id)
 

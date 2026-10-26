@@ -33,10 +33,10 @@
 </template>
 
 <script setup lang="ts">
+import { colorKey, uniqueColors } from '@/services/inventoryColors'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import type { InventoryItem } from '@/services/api'
-import { taxonomyKey, uniqueLabels } from '@/services/inventoryTaxonomy'
 import { galleryPreview, prepareGalleryFile } from '@/services/productGallery'
 import { MAX_BATCH_PHOTOS, photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
 import { useInventoryI18n } from './i18n'
@@ -52,7 +52,7 @@ onUnmounted(() => { disposed = true; emit('busy', false) })
 const options = computed(() => {
   const colors = new Map<string, { label: string; count: number }>()
   for (const item of props.items) {
-    const key = taxonomyKey(item.color || '')
+    const key = colorKey(item.color || '')
     const group = colors.get(key) || { label: item.color?.trim() || tr('Sem cor'), count: 0 }
     group.count++; colors.set(key, group)
   }
@@ -60,11 +60,11 @@ const options = computed(() => {
     ...[...colors].map(([key, color]) => ({ value: `color:${key}`, label: color.label, description: tr('{count} itens selecionados', { count: color.count }) }))]
 })
 watch(options, values => { if (!values.some(option => option.value === target.value)) target.value = 'all' })
-const targets = computed(() => props.items.filter(item => target.value === 'all' || `color:${taxonomyKey(item.color || '')}` === target.value))
+const targets = computed(() => props.items.filter(item => target.value === 'all' || `color:${colorKey(item.color || '')}` === target.value))
 const groups = computed(() => photoAssignments(props.modelValue, props.items.map(item => item.id)).map(group => {
   const ids = new Set(group.item_ids)
   const items = props.items.filter(item => ids.has(item.id))
-  return { ...group, items, colors: uniqueLabels(items.map(item => item.color || tr('Sem cor'))).join(' · ') }
+  return { ...group, items, colors: uniqueColors(items.map(item => item.color || tr('Sem cor'))).join(' · ') }
 }))
 const changedCount = computed(() => groups.value.reduce((total, group) => total + group.item_ids.length, 0))
 function undo(ids: string[]) {

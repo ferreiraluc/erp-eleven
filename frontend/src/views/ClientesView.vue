@@ -1,6 +1,7 @@
 <template>
   <div class="clientes-view">
     <ModuleHeader :title="uiText('Clientes')">
+      <button v-if="auth.isOwner" class="erp-button erp-button--secondary" @click="showDuplicates=true">{{ uiText('Conferir duplicidades') }}</button>
       <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -115,6 +116,8 @@
       <button @click="changePage(page + 1)" class="erp-button erp-button--secondary" :disabled="loading || page >= totalPages">{{ uiText('Próxima') }}</button>
     </nav>
 
+    <DirectoryDuplicatesModal v-if="showDuplicates && auth.isOwner" @close="showDuplicates=false" @changed="reload" />
+
     <!-- Form Modal -->
     <ClienteFormModal
       :is-visible="showForm"
@@ -132,11 +135,14 @@
 
 <script setup lang="ts">
 import ModuleHeader from '@/components/ModuleHeader.vue'
+import DirectoryDuplicatesModal from '@/components/clientes/DirectoryDuplicatesModal.vue'
+import { useAuthStore } from '@/stores/auth'
 import { uiText } from '@/i18n/uiText'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { clientesAPI, type Cliente } from '@/services/api'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
 import CustomerLogisticsPanel from '@/components/logistics/CustomerLogisticsPanel.vue'
+const auth = useAuthStore(), showDuplicates = ref(false)
 
 type CustomerStatusFilter = 'active' | 'inactive' | 'all'
 const clientes = ref<Cliente[]>([])

@@ -140,6 +140,28 @@ não chama provedores e não dispensa a confirmação dos fluxos do assistente.
 
 ## Consolidação de clientes duplicados
 
+O proprietário pode usar **Clientes → Conferir duplicidades** ou o mesmo botão em
+**Endereços e envios**. A ferramenta apresenta pares candidatos, permite escolher
+o principal, exige uma prévia e uma confirmação da identidade antes de unir.
+Nomes normalizados iguais são apenas candidatos; CPF/contatos ou vínculos
+divergentes bloqueiam a união. O usuário deve conferir os dados, inclusive em
+homônimos. Clientes PDV/fiado permanecem contas distintas, com os vínculos
+explícitos já implementados, sem soma automática de saldos.
+
+Para endereços, a comparação conservadora já usada no cadastro deve reconhecer o
+mesmo destinatário/local. O duplicado vira uma referência inativa ao principal;
+jobs, fretes, PDFs e snapshots permanecem nos IDs originais e o histórico segue
+as referências. Dados divergentes de documentos/clientes não são mesclados.
+Uma alteração após a prévia invalida o token; a confirmação pode ser repetida
+após falha de rede sem repetir a consolidação. Nenhuma união roda no deploy.
+
+A revisão é solicitada manualmente e limitada a 10 mil cadastros e 25 pares por
+consulta (até 20 registros por nome); o aviso de revisão parcial pede refinar a
+busca. Nomes incompletos, grafias diferentes não reconhecidas ou nomes únicos não
+são detectados como duplicados por esta tela. Ausência de candidatos não comprova
+unicidade. A API aplica a autorização do proprietário em consulta, prévia e
+confirmação; nenhuma lista de contatos é enviada a IA.
+
 A revisão `e1f2a3b4c5d6` permite conservar um cliente antigo como referência ao
 principal (`clientes.merged_into_id`). Não consolida pessoas durante o deploy.
 Uma manutenção explícita pode reunir pedidos, rastreios e endereços de um par

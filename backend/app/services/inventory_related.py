@@ -1,13 +1,14 @@
 """Small, paginated suggestions for the PDV. Relationships never imply identity."""
 from fastapi import HTTPException
-from sqlalchemy import and_, false, or_
+from sqlalchemy import and_, false, or_, func
 
 from ..models.inventory import Item
 from .inventory_images import catalog_query, catalog_response
+from .inventory_taxonomy import facet_filters
 
 
 def related_products(db, item_id, *, limit=12, after_rank=None, after_id=None):
-    source = db.query(Item.id, Item.group_key, Item.brand, Item.category).filter(
+    source = db.query(Item.id, Item.group_key, Item.brand, Item.category, Item.color).filter(
         Item.id == item_id, Item.is_active.is_(True), Item.deleted_at.is_(None)).first()
     if source is None:
         raise HTTPException(404, 'Produto não encontrado ou inativo.')
@@ -19,17 +20,22 @@ def related_products(db, item_id, *, limit=12, after_rank=None, after_id=None):
     group = Item.group_key == source.group_key if source.group_key else false()
     brand = Item.brand == source.brand if source.brand else false()
     category = Item.category == source.category if source.category else false()
+    color = func.coalesce(facet_filters(db)(Item.color, source.color), False) if source.color else false()
     outside_group = or_(Item.group_key.is_(None), Item.group_key != source.group_key) if source.group_key else True
     outside_brand = or_(Item.brand.is_(None), Item.brand != source.brand) if source.brand else True
     outside_category = or_(Item.category.is_(None), Item.category != source.category) if source.category else True
     tiers = [
-        ('family', group),
-        ('brand_category', and_(outside_group, brand, category)),
+        ('family', and_(group, color)),
+        ('family', and_(group, ~color)),
+        ('brand_category', and_(outside_group, brand, category, color)),
+        ('brand_category', and_(outside_group, brand, category, ~color)),
         ('brand', and_(outside_group, brand, outside_category)),
         ('category', and_(outside_group, outside_brand, category)),
     ]
     selected = []
     for rank, (relation, condition) in enumerate(tiers):
+        if not source.color and rank in (0, 2):
+            continue  # No empty color query; keep cursor tier numbers stable.
         if after_rank is not None and rank < after_rank:
             continue
         query = db.query(Item.id).filter(Item.is_active.is_(True), Item.deleted_at.is_(None),

@@ -1,5 +1,6 @@
+import { colorKey } from './inventoryColors'
 import type { InventoryItem } from './api'
-import { canonicalSize, taxonomyKey } from './inventoryTaxonomy'
+import { canonicalSize } from './inventoryTaxonomy'
 
 export const detailFields = [
   { key: 'description', label: 'Descrição', kind: 'text', clear: true },
@@ -36,13 +37,13 @@ export function setDetail(draft: DetailDraft, item: InventoryItem, field: Detail
 export function scopeOptions(items: InventoryItem[]) {
   const values = new Map<string, string>()
   for (const item of items) {
-    if (item.color) values.set(`color:${taxonomyKey(item.color)}`, item.color)
+    if (item.color) values.set(`color:${colorKey(item.color)}`, item.color)
     if (item.size) values.set(`size:${canonicalSize(item.size)}`, canonicalSize(item.size))
   }
   return [...values].map(([value, label]) => ({ value, label, kind: value.startsWith('color:') ? 'Cor' : 'Tamanho' }))
 }
 export function inScope(item: InventoryItem, scope: string): boolean {
-  return scope === 'all' || scope === `color:${taxonomyKey(item.color || '')}` || scope === `size:${canonicalSize(item.size || '')}`
+  return scope === 'all' || scope === `color:${colorKey(item.color || '')}` || scope === `size:${canonicalSize(item.size || '')}`
 }
 export function detailsError(draft: DetailDraft): string {
   for (const values of Object.values(draft)) for (const field of detailFields) {

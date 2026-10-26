@@ -14,6 +14,40 @@ from app.models.address_book import SavedAddress
 from app.models.access import AuditEvent
 from app.services.customer_maintenance import merge_customers
 from app.services.address_book import save_or_reuse
+from app.services.user_audit import bind_actor
+
+
+def test_reviewed_address_merge_serializes_retries_and_preserves_alias(pg, monkeypatch):
+    from app.config import settings
+    from app.services.directory_duplicates import merge_pair
+    monkeypatch.setattr(settings, 'ASSISTANT_ENABLED', False)
+    engine,schema=pg
+    isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
+    try:
+        Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,PdvCliente,SavedAddress,AuditEvent)])
+        factory=sessionmaker(bind=isolated,autoflush=False)
+        uid=uuid.uuid4()
+        with factory() as db:
+            db.add(Usuario(id=uid,nome='Fixture',email='fixture@example.test',senha_hash='unused'));db.flush()
+            data={'pais':'BR','nome':'Ana Correia','cidade':'São Paulo','estado':'SP','cep':'01310000','numero':'100'}
+            target=SavedAddress(label='Principal',data={**data,'endereco':'Avenida Paulista'},created_by=uid)
+            source=SavedAddress(label='Duplicado',data={**data,'endereco':'Av. Paulista'},created_by=uid)
+            db.add_all([target,source]);db.commit()
+            ids=(target.id,source.id)
+            token=merge_pair(db,'addresses',*ids)['plan_token'];db.rollback()
+        def apply():
+            with factory() as db:
+                bind_actor(db,db.get(Usuario,uid))
+                result=merge_pair(db,'addresses',*ids,apply=True,expected_plan=token)
+                db.commit();return result['state']
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results=list(executor.map(lambda _:apply(),range(2)))
+        assert sorted(results)==['already_merged','merged']
+        with factory() as db:
+            assert db.query(SavedAddress).count()==2
+            assert db.get(SavedAddress,ids[1]).merged_into_id==ids[0]
+            assert db.get(SavedAddress,ids[1]).data['endereco']=='Av. Paulista'
+    finally:isolated.dispose()
 
 
 def test_customer_alias_migration_preserves_rows_and_enforces_references(pg):

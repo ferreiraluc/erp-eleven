@@ -149,6 +149,21 @@ describe('Initial stock registration failures', () => {
     expect(api.createMovement).toHaveBeenCalledWith(expect.objectContaining({ item_id: 'item-1', quantity: 3, location: 'loja' }))
   })
 
+  it('reuses the typed starting quantity when enabling a grade and keeps individual overrides', async () => {
+    await mount(ItemFormModal)
+    setInput(container.querySelector('input[placeholder="Nome do produto"]') as HTMLInputElement, 'Camiseta')
+    await reviewProduct(); setInput(field('Estoque inicial'), '3')
+    button('Criar grade deste modelo').click(); await nextTick()
+    button('Navy').click(); await nextTick()
+    expect(field('Estoque inicial por tamanho').value).toBe('3')
+    const quantity = container.querySelector<HTMLInputElement>('.gp-quantity input')!
+    expect(quantity.value).toBe('3')
+    setInput(quantity, '8'); await nextTick()
+    setInput(field('Estoque inicial por tamanho'), '4'); await nextTick()
+    expect(quantity.value).toBe('8')
+    expect(api.createItem).not.toHaveBeenCalled()
+  })
+
   it('retains the already created color when a later variant fails', async () => {
     api.createItem.mockReset().mockResolvedValueOnce(item).mockRejectedValueOnce({ response: { status: 409, data: { detail: 'Erro ao salvar' } } })
     const saved = vi.fn(), partial = vi.fn()

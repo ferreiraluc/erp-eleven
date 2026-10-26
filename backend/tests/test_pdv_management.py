@@ -21,6 +21,29 @@ def sold(fixture, quantity=2, method='cash_gs'):
     return rid,sid,client.get('/api/pdv/management/'+sid).json()
 
 
+def test_sold_product_previews_use_current_photo_metadata_and_preserve_snapshot(pdv_app):
+    import sqlalchemy as sa
+    factory,client,_=pdv_app
+    rid,sid,original=sold(pdv_app)
+    with factory() as db:
+        item=db.get(Item,rid);item.image_data='ORIGINAL-PHOTO-CONTENT';item.name='Nome novo no catálogo';db.commit()
+        engine=db.bind
+    statements=[]
+    def capture(conn,cursor,sql,params,context,many):statements.append(sql)
+    sa.event.listen(engine,'before_cursor_execute',capture)
+    try:
+        detail=client.get('/api/pdv/management/'+sid)
+        listing=client.get('/api/pdv/management')
+    finally:sa.event.remove(engine,'before_cursor_execute',capture)
+    assert detail.status_code==listing.status_code==200
+    assert 'ORIGINAL-PHOTO-CONTENT' not in detail.text+listing.text
+    assert detail.json()['items'][0]['item_name']==original['items'][0]['item_name']
+    preview=detail.json()['items'][0]['catalog_preview']
+    assert preview['id']==str(rid) and preview['has_image'] and preview['image_data'] is None
+    assert listing.json()['items'][0]['products'][0]['preview']==preview
+    assert not any('additional_images' in sql or 'inventory_items.image_data AS' in sql for sql in statements)
+
+
 def command(operation,**fields):return {'operation':operation,'reason':'Conferência da venda de teste',**fields}
 
 def review(client,sid,body):

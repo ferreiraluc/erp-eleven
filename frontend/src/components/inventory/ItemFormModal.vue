@@ -358,12 +358,12 @@
               <span v-for="c in allColors" :key="c" class="color-option">
                 <button class="erp-control"
                   @click="toggleQuickColor(c)"
-                  :class="['quick-color-btn', { active: gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) }]"
-                  :title="gradeColors.some(x => x.toLowerCase() === c.toLowerCase()) ? tr('Já adicionada (remova pelo ×)') : tr('Adicionar')"
-                  :aria-pressed="gradeColors.some(x => x.toLowerCase() === c.toLowerCase())"
+                  :class="['quick-color-btn', { active: gradeColors.some(x => colorKey(x) === colorKey(c)) }]"
+                  :title="gradeColors.some(x => colorKey(x) === colorKey(c)) ? tr('Já adicionada (remova pelo ×)') : tr('Adicionar')"
+                  :aria-pressed="gradeColors.some(x => colorKey(x) === colorKey(c))"
                   type="button"
                 >
-                  <span v-if="gradeColors.includes(c)" class="quick-check">✓</span>
+                  <span v-if="gradeColors.some(x => colorKey(x) === colorKey(c))" class="quick-check">✓</span>
                   {{ tr(c) }}
                 </button>
                 <button v-if="editingGradeOptions" type="button" class="option-remove erp-control"
@@ -505,9 +505,10 @@
 </template>
 
 <script setup lang="ts">
+import { colorKey, uniqueColors } from '@/services/inventoryColors'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import StockQuantityInput from './StockQuantityInput.vue'
-import { canonicalSize, canonicalBrand, taxonomyKey } from '@/services/inventoryTaxonomy'
+import { canonicalSize, canonicalBrand } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import ProductVariantsModal from './ProductVariantsModal.vue'
 import { inventoryVariantsAPI, type VariantResult, type VariantContext, type DuplicateRequest } from '@/services/inventoryVariants'
@@ -640,11 +641,18 @@ const validGradeQuantity = (quantity: unknown): quantity is number =>
   typeof quantity === 'number' && Number.isInteger(quantity) && quantity >= 0 && quantity <= (props.gradeContext ? 1_000_000 : 2_147_483_647)
 const gradeLocked = computed(() => saving.value || uncertainSave.value || !!partialItems.value.length)
 const initialStock = ref(0)
+// Keep the quantity already typed when switching a single product to a grade.
+watch(gradeEnabled, enabled => {
+  if (enabled && !props.gradeContext && !props.duplicateContext) {
+    gradeInitialStock.value = initialStock.value
+    bulkGradeQuantity.value = initialStock.value
+  }
+})
 
 // ── Color grade state ─────────────────────────────────────────────────────────
 const customColors = ref(readCustomColors())
 const hiddenColors = ref(readHiddenOptions(HIDDEN_COLORS_KEY, QUICK_COLORS))
-const allColors = computed(() => [...QUICK_COLORS.filter(c => !hiddenColors.value.includes(optionKey(c))), ...customColors.value])
+const allColors = computed(() => uniqueColors([...QUICK_COLORS.filter(c => !hiddenColors.value.includes(optionKey(c))), ...customColors.value]))
 const colorStorageError = ref('')
 const gradeColors = ref<string[]>([])
 const colorInput = ref('')
@@ -660,7 +668,7 @@ function closeColorInput() {
 function addGradeColor() {
   const c = toTitleCase(colorInput.value)
   if (!c) return
-  const existing = [...QUICK_COLORS, ...customColors.value].find(x => optionKey(x) === optionKey(c))
+  const existing = [...QUICK_COLORS, ...customColors.value].find(x => colorKey(x) === colorKey(c))
   if (existing && hiddenColors.value.includes(optionKey(existing))) {
     const hidden = hiddenColors.value.filter(key => key !== optionKey(existing))
     if (!savePreference(HIDDEN_COLORS_KEY, JSON.stringify(hidden))) { colorStorageError.value = STORAGE_ERROR; return }
@@ -691,7 +699,7 @@ function removeColor(color: string) {
   nextTick(() => (colorAddButtonRef.value || colorInputRef.value)?.focus())
 }
 function toggleQuickColor(c: string) {
-  if (!gradeColors.value.some(x => x.toLowerCase() === c.toLowerCase())) {
+  if (!gradeColors.value.some(x => colorKey(x) === colorKey(c))) {
     gradeColors.value.push(c)
   }
   // To remove, use × on the chip
@@ -703,7 +711,7 @@ const allGradeRows = computed(() => {
   return colors.flatMap(color => sizes.map(size => ({ size, color, key: JSON.stringify([size, color]) })))
     .filter(row => !excludedGradeRows.value.includes(row.key))
 })
-const gradeIdentity = (size: string, color: string) => JSON.stringify([canonicalSize(size).toLowerCase(), taxonomyKey(color)])
+const gradeIdentity = (size: string, color: string) => JSON.stringify([canonicalSize(size).toLowerCase(), colorKey(color)])
 const existingVariantKeys = computed(() => new Set((props.gradeContext?.existing || []).map(row => gradeIdentity(row.size || '', row.color || ''))))
 const existingGradeRows = computed(() => allGradeRows.value.filter(row => existingVariantKeys.value.has(gradeIdentity(row.size, row.color))))
 const gradeRows = computed(() => allGradeRows.value.filter(row => !props.gradeContext || !existingVariantKeys.value.has(gradeIdentity(row.size, row.color))))
@@ -727,7 +735,7 @@ const gradeModelName = computed(() => {
   const hasOtherColor = sourceColor && [
     ...gradeRows.value.map(row => row.color),
     ...(props.gradeContext?.existing || []).map(row => row.color),
-  ].some(color => color && taxonomyKey(color) !== taxonomyKey(sourceColor))
+  ].some(color => color && colorKey(color) !== colorKey(sourceColor))
   if (!hasOtherColor) return withoutSize
   // Historical names place size and color in either order. Strip only suffixes
   // backed by the structured fields; the model code and custom name remain.

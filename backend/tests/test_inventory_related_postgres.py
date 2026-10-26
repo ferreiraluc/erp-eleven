@@ -18,10 +18,11 @@ def test_related_catalog_stays_bounded_on_50000_products(pg):
         Base.metadata.create_all(isolated, tables=[model.__table__ for model in TABLES])
         with isolated.begin() as conn:
             conn.exec_driver_sql('''INSERT INTO inventory_items
-                (id,name,sku_internal,brand,category,group_key,is_active,
+                (id,name,sku_internal,brand,category,group_key,color,is_active,
                  current_stock,stock_loja,stock_deposito,created_at,updated_at)
                 SELECT md5(g::text)::uuid, 'Produto sintético '||g, 'PERF-'||g,
-                    'Marca '||mod(g,100), 'Categoria '||mod(g,50), 'Grade '||(g/20), true,
+                    'Marca '||mod(g,100), 'Categoria '||mod(g,50), 'Grade '||(g/20),
+                    CASE WHEN mod(g,2)=0 THEN 'Black' ELSE 'Preto' END, true,
                     10,10,0,now(),now() FROM generate_series(1,50000) g''')
             # These indexes already exist in production migrations; no new DDL is shipped.
             for column in ('brand', 'category'):
@@ -42,10 +43,10 @@ def test_related_catalog_stays_bounded_on_50000_products(pg):
         assert all(row['relation'] == 'family' for row in first['items'])
         assert any(row['relation'] == 'brand_category' for row in second['items'])
         assert not ({row['item'].id for row in first['items']} & {row['item'].id for row in second['items']})
-        assert len(statements) <= 8  # two pages, not one query per product
+        assert len(statements) <= 12  # two pages + color vocabulary, never per product
         assert all('count(' not in sql.lower() and 'additional_images' not in sql for sql, _ in statements)
         with isolated.connect() as conn:
-            sql, params = statements[1]
+            sql, params = next((sql, params) for sql, params in statements if 'ORDER BY inventory_items.id' in sql and 'LIMIT' in sql)
             plan = conn.exec_driver_sql('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + sql, params).scalar()[0]
             assert 'ix_inventory_items_group_key' in json.dumps(plan)
             assert plan['Plan']['Actual Rows'] <= 13

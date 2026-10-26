@@ -414,6 +414,8 @@
       </template>
     </div>
 
+    <InventoryRelatedProducts v-if="qrProduct" :key="qrProduct.id + ':' + qrProduct.updated_at" :source="qrProduct" @open="openEdit" />
+
     <!-- Image modal -->
     <ProductGalleryModal v-if="imageModalItem" :item="imageModalItem" @close="imageModalItem = null" />
 
@@ -586,6 +588,7 @@ import type { ReceivingCandidate, ReceivingLot } from '@/services/inventoryRecei
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
+import InventoryRelatedProducts from '@/components/inventory/InventoryRelatedProducts.vue'
 import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
 import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
 import { readPreference, savePreference } from '@/services/inventoryGradeOptions'
@@ -1111,6 +1114,14 @@ interface GroupEntry {
 }
 
 type FlatEntry = { type: 'group'; group: GroupEntry } | { type: 'item'; item: InventoryItem }
+
+// Exact identity first. Related suggestions never change totals, filters or selection.
+const qrProduct = computed(() => {
+  const query = searchQuery.value.trim().toUpperCase()
+  if (!/^INV-[A-Z0-9]{6}$/.test(query) || searchBusy.value || searchError.value || !resultsReady.value) return null
+  const candidates = [...inventoryStore.items, ...backendGroups.value.flatMap(group => group.items)]
+  return candidates.find(item => item.inventory_code === query && item.is_active) || null
+})
 
 const flatList = computed<FlatEntry[]>(() => {
   if (!groupMode.value) {

@@ -13,7 +13,7 @@
     <p v-if="supplierError" role="alert">{{ tr('Não foi possível carregar os fornecedores.') }} <button class="erp-button erp-button--secondary erp-button--sm" type="button" @click="loadSuppliers">{{ tr('Tentar novamente') }}</button></p>
     <button type="button" class="erp-button erp-button--secondary erp-button--sm apply-details" :disabled="disabled || !targets.length || (field === 'supplier_id' && supplierError)" @click="apply">{{ tr('Preparar alteração') }} · {{ targets.length }}</button>
     <p v-if="error" role="alert" class="detail-error">{{ tr(error) }}</p>
-    <details class="detail-review" :open="field === 'description'">
+    <details class="detail-review" :open="Object.keys(modelValue).length > 0">
       <summary>{{ tr('Conferir e editar por item') }} · {{ items.length }}</summary>
       <div class="detail-rows">
         <label v-for="item in items" :key="item.id" :data-detail-item="item.id">

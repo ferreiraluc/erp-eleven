@@ -4196,5 +4196,165 @@
     "pt": "Os trabalhos já confirmados continuam na fila.",
     "es": "Los trabajos ya confirmados permanecen en cola.",
     "en": "Previously confirmed jobs remain queued."
+  },
+  "Conferir duplicidades": {
+    "pt": "Conferir duplicidades",
+    "es": "Revisar duplicados",
+    "en": "Review duplicates"
+  },
+  "Confira a pessoa e o local antes de unir. O cadastro principal permanece visível; históricos e referências antigas são preservados.": {
+    "pt": "Confira a pessoa e o local antes de unir. O cadastro principal permanece visível; históricos e referências antigas são preservados.",
+    "es": "Revise la persona y el lugar antes de unir. El registro principal permanece visible; se conservan los historiales y referencias anteriores.",
+    "en": "Check the person and location before merging. The primary record stays visible; history and old references are preserved."
+  },
+  "Tipo de cadastro": {
+    "pt": "Tipo de cadastro",
+    "es": "Tipo de registro",
+    "en": "Record type"
+  },
+  "Buscar por nome": {
+    "pt": "Buscar por nome",
+    "es": "Buscar por nombre",
+    "en": "Search by name"
+  },
+  "Buscar duplicidades": {
+    "pt": "Buscar duplicidades",
+    "es": "Buscar duplicados",
+    "en": "Find duplicates"
+  },
+  "Conferindo...": {
+    "pt": "Conferindo...",
+    "es": "Revisando...",
+    "en": "Reviewing..."
+  },
+  "Cadastro principal": {
+    "pt": "Cadastro principal",
+    "es": "Registro principal",
+    "en": "Primary record"
+  },
+  "Cadastro duplicado": {
+    "pt": "Cadastro duplicado",
+    "es": "Registro duplicado",
+    "en": "Duplicate record"
+  },
+  "Inverter principal": {
+    "pt": "Inverter principal",
+    "es": "Cambiar principal",
+    "en": "Swap primary"
+  },
+  "Dados divergentes impedem a união. Corrija os cadastros e confira novamente.": {
+    "pt": "Dados divergentes impedem a união. Corrija os cadastros e confira novamente.",
+    "es": "Los datos en conflicto impiden la unión. Corrija los registros y revise nuevamente.",
+    "en": "Conflicting details block the merge. Correct the records and review again."
+  },
+  "Vínculos a reunir no principal": {
+    "pt": "Vínculos a reunir no principal",
+    "es": "Vínculos a reunir en el principal",
+    "en": "Links to move to the primary record"
+  },
+  "Histórico do endereço por referência": {
+    "pt": "Histórico do endereço por referência",
+    "es": "Historial de la dirección por referencia",
+    "en": "Address history through references"
+  },
+  "Conferi a identidade, os dados e o cadastro principal. Quero unir este par.": {
+    "pt": "Conferi a identidade, os dados e o cadastro principal. Quero unir este par.",
+    "es": "Revisé la identidad, los datos y el registro principal. Quiero unir este par.",
+    "en": "I checked the identity, details and primary record. I want to merge this pair."
+  },
+  "Revisão parcial: refine a busca ou una os pares conferidos e busque novamente. São mostrados até 25 pares por consulta.": {
+    "pt": "Revisão parcial: refine a busca ou una os pares conferidos e busque novamente. São mostrados até 25 pares por consulta.",
+    "es": "Revisión parcial: refine la búsqueda o una los pares revisados y busque nuevamente. Se muestran hasta 25 pares por consulta.",
+    "en": "Partial review: narrow the search or merge reviewed pairs and search again. Up to 25 pairs are shown per query."
+  },
+  "Nenhuma duplicidade reconhecida nesta consulta. Isso não comprova que todos os cadastros são únicos.": {
+    "pt": "Nenhuma duplicidade reconhecida nesta consulta. Isso não comprova que todos os cadastros são únicos.",
+    "es": "No se reconocieron duplicados en esta consulta. Esto no demuestra que todos los registros sean únicos.",
+    "en": "No duplicates recognized in this query. This does not prove all records are unique."
+  },
+  "Conferir par": {
+    "pt": "Conferir par",
+    "es": "Revisar par",
+    "en": "Review pair"
+  },
+  "Revisar união": {
+    "pt": "Revisar união",
+    "es": "Revisar unión",
+    "en": "Preview merge"
+  },
+  "Unir cadastros conferidos": {
+    "pt": "Unir cadastros conferidos",
+    "es": "Unir registros revisados",
+    "en": "Merge reviewed records"
+  },
+  "Cadastros unidos. Históricos preservados.": {
+    "pt": "Cadastros unidos. Históricos preservados.",
+    "es": "Registros unidos. Historiales conservados.",
+    "en": "Records merged. History preserved."
+  },
+  "Não foi possível concluir. Confira a conexão e tente novamente.": {
+    "pt": "Não foi possível concluir. Confira a conexão e tente novamente.",
+    "es": "No se pudo completar. Compruebe la conexión e inténtelo nuevamente.",
+    "en": "Could not complete. Check the connection and try again."
+  },
+  "Produtos relacionados": {
+    "pt": "Produtos relacionados",
+    "es": "Productos relacionados",
+    "en": "Related products"
+  },
+  "Continue por este produto": {
+    "pt": "Continue por este produto",
+    "es": "Continúe con este producto",
+    "en": "Continue from this product"
+  },
+  "Sugestões de grade, cor, marca e categoria. Os filtros da busca acima continuam preservados.": {
+    "pt": "Sugestões de grade, cor, marca e categoria. Os filtros da busca acima continuam preservados.",
+    "es": "Sugerencias por familia, color, marca y categoría. Se conservan los filtros de la búsqueda anterior.",
+    "en": "Suggestions by family, color, brand and category. The search filters above stay in place."
+  },
+  "Mesma cor": {
+    "pt": "Mesma cor",
+    "es": "Mismo color",
+    "en": "Same color"
+  },
+  "Mesma grade": {
+    "pt": "Mesma grade",
+    "es": "Misma familia",
+    "en": "Same family"
+  },
+  "Mesma marca e categoria": {
+    "pt": "Mesma marca e categoria",
+    "es": "Misma marca y categoría",
+    "en": "Same brand and category"
+  },
+  "Mesma marca": {
+    "pt": "Mesma marca",
+    "es": "Misma marca",
+    "en": "Same brand"
+  },
+  "Mesma categoria": {
+    "pt": "Mesma categoria",
+    "es": "Misma categoría",
+    "en": "Same category"
+  },
+  "Buscando relacionados...": {
+    "pt": "Buscando relacionados...",
+    "es": "Buscando relacionados...",
+    "en": "Finding related products..."
+  },
+  "Não foi possível buscar os relacionados. O produto encontrado continua disponível.": {
+    "pt": "Não foi possível buscar os relacionados. O produto encontrado continua disponível.",
+    "es": "No se pudieron buscar los relacionados. El producto encontrado sigue disponible.",
+    "en": "Could not load related products. The matched product is still available."
+  },
+  "Nenhum relacionado disponível.": {
+    "pt": "Nenhum relacionado disponível.",
+    "es": "No hay relacionados disponibles.",
+    "en": "No related products available."
+  },
+  "Ver mais relacionados": {
+    "pt": "Ver mais relacionados",
+    "es": "Ver más relacionados",
+    "en": "More related products"
   }
 }
