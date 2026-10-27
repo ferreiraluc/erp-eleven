@@ -230,6 +230,7 @@ class BatchStockAdjustment(BaseModel):
 class BatchPhotoAssignment(BaseModel):
     item_ids: List[uuid.UUID] = Field(min_length=1, max_length=2000)
     image_data: str = Field(max_length=340000)
+    operation: Literal['replace', 'add'] = 'replace'
 
     @field_validator('image_data')
     @classmethod

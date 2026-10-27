@@ -102,6 +102,17 @@ próximas aos dados, fora do rodapé de conclusão do formulário.
 - **Remetente gerado:** o botão persistente aponta para o formulário de revisão;
   o aceite manual obrigatório permanece no formulário e não é contornado.
 
+## Edição massiva unificada (26/10/2026)
+
+O modal tem um único seletor de campo, aplicação por todos/cor/tamanho e uma única
+lista de conferência. A lista conserva o estilo das antigas linhas de estoque,
+acrescenta miniatura/nome/descrição e mostra os controles individuais do campo
+escolhido. Quantidade e local permanecem acessíveis. Preços têm moeda ao lado;
+categoria e subcategoria ficam juntas. Fotos, códigos e correção de nomes usam
+esse mesmo painel, sem outro conjunto de campos por item. Trocar de campo não
+salva nem descarta alterações. A preparação de fotos permanece montada ao trocar
+de campo; salvar/fechar ficam bloqueados enquanto o arquivo é processado.
+
 ## Validação e manutenção
 
 1. Rodar `npm --prefix frontend test`, `run type-check` e `run build`.

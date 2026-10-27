@@ -96,3 +96,64 @@ def test_photo_groups_wait_for_locks_and_preserve_concurrent_gallery_edit(pg):
             assert db.query(StockMovement).count() == 0
     finally:
         isolated.dispose()
+
+
+def test_concurrent_gallery_additions_respect_five_photo_limit_and_roll_back_metadata(pg):
+    engine, schema = pg
+    isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
+    try:
+        Base.metadata.create_all(isolated, tables=[m.__table__ for m in (Usuario, Vendedor, Supplier, Item, StockMovement)])
+        factory = sessionmaker(bind=isolated, autoflush=False)
+        item_id = uuid.uuid4()
+        cover, extra = picture('JPEG', (225, 120)), picture('JPEG', (226, 120))
+        with factory() as db:
+            db.add(Item(id=item_id, name='Branco S', sku_internal=str(item_id), image_data=cover,
+                        additional_images=[extra] * 3, current_stock=0, stock_loja=0, stock_deposito=0))
+            db.commit()
+        ready = Barrier(2)
+        def append(width):
+            photo = picture('JPEG', (width, 120))
+            with factory() as db:
+                # A stale ORM identity must not bypass the locked current gallery count.
+                db.get(Item, item_id)
+                ready.wait(timeout=10)
+                try:
+                    batch_edit_items(BatchEditRequest(item_ids=[item_id], description=f'Winner {width}', image_groups=[{
+                        'item_ids': [item_id], 'image_data': photo, 'operation': 'add'}]), db, SimpleNamespace(id=uuid.uuid4()))
+                    return 200, width, photo
+                except HTTPException as error:
+                    db.rollback()
+                    return error.status_code, width, photo
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(append, [230, 235]))
+        assert sorted(status for status, _, _ in results) == [200, 422]
+        _, width, photo = next(result for result in results if result[0] == 200)
+        with factory() as db:
+            row = db.get(Item, item_id)
+            assert row.image_data == cover and row.additional_images == [extra] * 3 + [photo]
+            assert row.description == f'Winner {width}'
+    finally:
+        isolated.dispose()
+
+
+@pytest.mark.parametrize('has_primary,gallery', [(True, None), (True, []), (False, None), (False, [])])
+def test_postgres_append_initializes_gallery_or_primary_without_losing_existing_photos(pg, has_primary, gallery):
+    engine, schema = pg
+    isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
+    try:
+        Base.metadata.create_all(isolated, tables=[m.__table__ for m in (Usuario, Vendedor, Supplier, Item, StockMovement)])
+        factory = sessionmaker(bind=isolated)
+        item_id = uuid.uuid4()
+        cover, extra = picture('JPEG', (230, 125)), picture('JPEG', (240, 125))
+        with factory() as db:
+            db.add(Item(id=item_id, name='Azul M', sku_internal=str(item_id), image_data=cover if has_primary else None,
+                        additional_images=gallery, current_stock=0, stock_loja=0, stock_deposito=0))
+            db.commit()
+            batch_edit_items(BatchEditRequest(item_ids=[item_id], image_groups=[{
+                'item_ids': [item_id], 'image_data': extra, 'operation': 'add'}]), db, SimpleNamespace(id=uuid.uuid4()))
+        with factory() as db:
+            row = db.get(Item, item_id)
+            assert row.image_data == (cover if has_primary else extra)
+            assert row.additional_images == ([extra] if has_primary else gallery)
+    finally:
+        isolated.dispose()

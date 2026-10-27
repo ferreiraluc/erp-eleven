@@ -140,9 +140,9 @@ describe('Grouped stock refresh', () => {
     Array.from(container.querySelectorAll<HTMLButtonElement>('.selection-bar button')).find(button => button.textContent?.includes('Sel. todos'))!.click(); await nextTick()
     expect(container.querySelector('.sel-count')?.textContent).toContain('1')
     Array.from(container.querySelectorAll<HTMLButtonElement>('.selection-bar button')).find(button => button.textContent?.includes('Editar massivo'))!.click(); await nextTick()
-    expect(document.querySelectorAll('.modal-container .items-list .item-card')).toHaveLength(1)
-    expect(document.querySelector('.modal-container .items-list')?.textContent).toContain('Camiseta sem categoria')
-    expect(document.querySelector('.modal-container .items-list')?.textContent).not.toContain('Camiseta categorizada')
+    expect(document.querySelectorAll('.modal-container .product-rows .product-row')).toHaveLength(1)
+    expect(document.querySelector('.modal-container .product-rows')?.textContent).toContain('Camiseta sem categoria')
+    expect(document.querySelector('.modal-container .product-rows')?.textContent).not.toContain('Camiseta categorizada')
   })
 })
 
@@ -298,11 +298,12 @@ describe('Inventory selection', () => {
 
     const previousLoads = mocks.loadItems.mock.calls.length
     selectionAction('Editar massivo').click(); await nextTick()
-    expect(container.querySelector('.modal-overlay .items-list .item-card')).not.toBeNull()
+    expect(container.querySelector('.modal-overlay .product-rows .product-row')).not.toBeNull()
     await vi.waitFor(() => expect(container.querySelector('.selection-bar')).toBeNull())
-    const name = container.querySelector<HTMLInputElement>('.modal-overlay .items-list .item-card .field-input')!
+    await chooseDropdown(container.querySelector('button[aria-label="Campo para editar"]'), 'name_replace')
+    const name = container.querySelector<HTMLInputElement>('.modal-overlay input[aria-label^="Nome de"]')!
     name.value = 'Produto corrigido'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
-    container.querySelector<HTMLButtonElement>('.modal-footer .btn-primary')!.click()
+    container.querySelector<HTMLButtonElement>('.modal-footer .erp-button--primary')!.click()
 
     await vi.waitFor(() => expect(mocks.batchEdit).toHaveBeenCalledWith(expect.objectContaining({
       item_ids: ['visible'], sizes: [expect.objectContaining({ id: 'visible', name: 'Produto corrigido' })],
@@ -323,9 +324,10 @@ describe('Inventory selection', () => {
     await mount(); await selectVisibleItem()
     await vi.waitFor(() => expect(mocks.getGroups).toHaveBeenCalled())
     selectionAction('Editar massivo').click(); await nextTick()
-    const name = container.querySelector<HTMLInputElement>('.modal-overlay .items-list .item-card .field-input')!
+    await chooseDropdown(container.querySelector('button[aria-label="Campo para editar"]'), 'name_replace')
+    const name = container.querySelector<HTMLInputElement>('.modal-overlay input[aria-label^="Nome de"]')!
     name.value = 'Produto fora do filtro'; name.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
-    container.querySelector<HTMLButtonElement>('.modal-footer .btn-primary')!.click()
+    container.querySelector<HTMLButtonElement>('.modal-footer .erp-button--primary')!.click()
 
     await vi.waitFor(() => expect(mocks.batchEdit).toHaveBeenCalled())
     await vi.waitFor(() => expect(container.querySelector('[data-item-id="visible"]')).toBeNull())

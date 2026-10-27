@@ -108,3 +108,64 @@ def test_bulk_photo_write_requires_auth(stock_app):
     del client.app.dependency_overrides[get_current_active_user]
     assert client.patch('/api/inventory/items/batch/photos', json={
         'item_ids': [str(uuid.uuid4())]}).status_code == 401
+
+
+def test_add_photo_preserves_cover_gallery_and_thumbnail_without_loading_originals(stock_app):
+    factory, client, _ = stock_app
+    ids, original, extra = seed_photos(factory)
+    new = picture('JPEG', (215, 120))
+    with factory() as db:
+        db.get(Item, uuid.UUID(ids[1])).image_data = None
+        db.commit()
+        engine = db.bind
+    statements = []
+    def capture(conn, cursor, sql, *args): statements.append(sql)
+    sa.event.listen(engine, 'before_cursor_execute', capture)
+    try:
+        response = client.patch('/api/inventory/items/batch/editor', json={
+            'item_ids': ids[:3], 'image_groups': [{'item_ids': ids[:2], 'image_data': new, 'operation': 'add'}]})
+    finally:
+        sa.event.remove(engine, 'before_cursor_execute', capture)
+    assert response.status_code == 200, response.text
+    assert all('additional_images' not in sql or 'json_array_length' in sql for sql in statements if sql.startswith('SELECT'))
+    with factory() as db:
+        first, empty, untouched = [db.get(Item, uuid.UUID(identity)) for identity in ids[:3]]
+        assert first.image_data == original and first.additional_images == [extra, new]
+        assert first.thumbnail_ready is True and first.thumbnail_data == 'old-preview'
+        assert empty.image_data == new and empty.additional_images == [extra]
+        assert empty.thumbnail_ready is False and empty.thumbnail_data is None
+        assert untouched.image_data == original and untouched.additional_images == [extra]
+
+
+def test_full_gallery_rejects_entire_combined_edit_before_stock_or_metadata_changes(stock_app):
+    factory, client, _ = stock_app
+    ids, original, extra = seed_photos(factory)
+    with factory() as db:
+        db.get(Item, uuid.UUID(ids[1])).additional_images = [extra] * 4
+        db.commit()
+    response = client.patch('/api/inventory/items/batch/editor', json={
+        'item_ids': ids[:2], 'brand': 'Must not persist',
+        'stock_adjustments': [adjustment(ids[0])],
+        'image_groups': [{'item_ids': ids[:2], 'image_data': picture('JPEG', (220, 100)), 'operation': 'add'}]})
+    assert response.status_code == 422, response.text
+    assert '5 fotos' in response.json()['detail']
+    with factory() as db:
+        assert all(row.brand is None and row.image_data == original and row.current_stock == 5 for row in db.query(Item))
+        assert db.get(Item, uuid.UUID(ids[0])).additional_images == [extra]
+        assert db.query(StockMovement).count() == 0
+
+
+@pytest.mark.parametrize('gallery', [None, []])
+def test_add_initializes_empty_gallery(stock_app, gallery):
+    factory, client, _ = stock_app
+    ids, original, _ = seed_photos(factory)
+    with factory() as db:
+        db.get(Item, uuid.UUID(ids[0])).additional_images = gallery
+        db.commit()
+    new = picture('JPEG', (218, 100))
+    response = client.patch('/api/inventory/items/batch/editor', json={
+        'item_ids': [ids[0]], 'image_groups': [{'item_ids': [ids[0]], 'image_data': new, 'operation': 'add'}]})
+    assert response.status_code == 200, response.text
+    with factory() as db:
+        row = db.get(Item, uuid.UUID(ids[0]))
+        assert row.image_data == original and row.additional_images == [new]

@@ -50,6 +50,7 @@ from ...services.inventory_variants import variant_context, create_variants
 from ...services.inventory_taxonomy import canonical, clean_product_name, vocabulary, facet_filters
 from ...services.inventory_search import build_search
 from ...services.inventory_images import catalog_query, catalog_response, product_thumbnail, product_thumbnails
+from ...services.inventory_bulk_photos import validate_photo_additions, apply_photo_groups
 from ...services.inventory_related import related_products
 from ...services.inventory_grade_management import (
     group_directory, item_grade_suggestions, ungrouped_grade_suggestions,
@@ -843,6 +844,7 @@ def remove_item_from_group(
 @router.patch("/items/batch/quantities", status_code=200)
 @router.patch("/items/batch/photos", status_code=200)
 @router.patch("/items/batch/details", status_code=200)
+@router.patch("/items/batch/editor", status_code=200)
 def batch_edit_items(
     request: BatchEditRequest,
     db: Session = Depends(get_db),
@@ -944,6 +946,7 @@ def batch_edit_items(
         existing_suppliers = {row[0] for row in db.query(Supplier.id).filter(Supplier.id.in_(suppliers)).all()}
         if suppliers != existing_suppliers:
             raise HTTPException(422, 'Fornecedor não encontrado.')
+    photo_primary = validate_photo_additions(db, request.image_groups)
     # All metadata is validated before changing any product or recording a movement.
     for item in items:
         for field, value in changes[item.id].items():
@@ -1002,22 +1005,12 @@ def batch_edit_items(
         # Flush metadata/stock before set-based photo writes. One bound image per
         # group avoids multiplying large driver buffers by the number of sizes.
         db.flush()
-        from ...services.user_audit import record
-        for group in request.image_groups:
-            db.query(Item).filter(Item.id.in_(group.item_ids)).update({
-                Item.image_data: group.image_data,
-                Item.thumbnail_data: None,
-                Item.thumbnail_ready: False,
-            }, synchronize_session=False)
-            if db.info.get('audit_enabled') and db.info.get('audit_actor'):
-                for identity in group.item_ids:
-                    record(db, 'update', 'inventory', entity='inventory_items', entity_id=str(identity),
-                           changes={'image_data': {'changed': True}})
+        apply_photo_groups(db, request.image_groups, photo_primary)
         # Keep preloaded identities coherent without loading their old photos.
         photo_ids = {identity for group in request.image_groups for identity in group.item_ids}
         for item in items:
             if item.id in photo_ids:
-                db.expire(item, ['image_data', 'thumbnail_data', 'thumbnail_ready', 'updated_at'])
+                db.expire(item, ['image_data', 'additional_images', 'thumbnail_data', 'thumbnail_ready', 'updated_at'])
     db.commit()
 
     return {"message": f"Updated {len(items)} items", "count": len(items)}

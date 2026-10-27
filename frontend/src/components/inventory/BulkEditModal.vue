@@ -1,409 +1,241 @@
 <template>
-  <div class="modal-overlay erp-dialog-backdrop" @click.self="!saving && emit('close')">
-    <div v-erp-dialog class="modal-container erp-dialog">
+  <div
+    class="modal-overlay erp-dialog-backdrop"
+    @click.self="!saving && !photoBusy && emit('close')"
+  >
+    <div v-erp-dialog class="modal-container erp-dialog erp-dialog--lg">
       <div class="modal-header erp-dialog__header">
-        <h2>{{ tr('Editar Massivo') }} <span class="item-count">({{ items.length }} {{ tr('itens)') }}</span></h2>
-        <button :disabled="saving" data-dialog-close :aria-label="tr('Fechar')" @click="emit('close')" class="close-btn erp-button erp-button--secondary erp-button--icon">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+        <h2>
+          {{ tr('Editar Massivo') }} <span>({{ items.length }} {{ tr('itens)') }}</span>
+        </h2>
+        <button
+          type="button"
+          :disabled="saving || photoBusy"
+          data-dialog-close
+          :aria-label="tr('Fechar')"
+          @click="emit('close')"
+          class="erp-button erp-button--secondary erp-button--icon"
+        >
+          ×
         </button>
       </div>
-
       <div class="modal-body erp-dialog__body" :inert="saving || undefined">
-        <BulkDetailsEditor v-model="detailsDraft" :items="previewItems" :brands="distinctBrands" :categories="distinctCategories" :disabled="saving" />
-        <BulkBarcodeEditor :model-value="itemBarcodes" :items="previewItems" :disabled="saving" @update:model-value="Object.assign(itemBarcodes, $event)" />
-        <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.') }}</p>
-        <BulkStockEditor v-model="stockDraft" :items="previewItems" :disabled="saving" />
-        <label class="form-group shared-stock-reason">
-          {{ tr('Motivo do ajuste (opcional)') }}
-          <input v-model="sharedStockReason" class="form-input" :placeholder="tr('O histórico registra o ajuste mesmo sem preencher.')" />
-        </label>
-        <p v-if="stockError" role="alert" class="error-msg">{{ tr(stockError) }}</p>
-        <BulkPhotoEditor v-model="photoDraft" :items="previewItems" :disabled="saving" @busy="photoBusy = $event" />
-        <!-- ── Shared fields ── -->
-        <section class="section">
-          <h3 class="section-title">{{ tr('Campos compartilhados') }}</h3>
-          <p class="section-hint">{{ tr('Deixe em branco para não alterar. Aplica a todos os itens selecionados.') }}</p>
-
-          <!-- Shared prices -->
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ tr('Preço de custo') }}</label>
-              <input v-model="sharedCostPrice" type="number" min="0" step="any" class="form-input" :placeholder="tr('Vazio = não alterar')" />
-            </div>
-            <div class="form-group">
-              <label>{{ tr('Preço de venda') }}</label>
-              <input v-model="sharedSalePrice" type="number" min="0" step="any" class="form-input" :placeholder="tr('Vazio = não alterar')" />
-            </div>
-          </div>
-
-          <div class="shared-color">
-            <div class="form-group">
-              <span>{{ tr('Cor para vários itens') }}</span>
-              <ErpDropdown v-model="sharedColor" :options="colorOptions" editable :label="tr('Cor para vários itens')" :placeholder="tr('Digite ou escolha uma cor')" />
-            </div>
-            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving || !sharedColor.trim()" @click="applyColor">{{ tr('Aplicar cor a todos') }}</button>
-          </div>
-          <p class="section-hint">{{ tr('A cor preenche os itens abaixo. Você ainda pode alterar cada um antes de salvar.') }}</p>
-        </section>
-
-        <section class="section name-replace">
-          <h3 class="section-title">{{ tr('Corrigir nomes em lote') }}</h3>
-          <p class="section-hint">{{ tr('Substitua uma palavra ou trecho. O restante do nome e os tamanhos são preservados.') }}</p>
-          <div class="form-row">
-            <label class="form-group">{{ tr('Localizar no nome') }}<input v-model="nameFind" class="form-input" placeholder="Biss" :disabled="saving" /></label>
-            <label class="form-group">{{ tr('Substituir por') }}<input v-model="nameReplacement" class="form-input" placeholder="Boss" :disabled="saving" /></label>
-          </div>
-          <div v-if="nameFind.trim() && nameReplacement.trim()" class="name-preview" aria-live="polite">
-            <p>{{ namePreview.length }} {{ tr('nomes serão alterados') }}</p>
-            <ul><li v-for="row in namePreview.slice(0, 20)" :key="row.id"><del>{{ row.before }}</del><span>→ {{ row.after }}</span></li></ul>
-            <p v-if="namePreview.length > 20">{{ tr('A prévia mostra os primeiros 20. A correção será aplicada a todos os correspondentes.') }}</p>
-          </div>
-          <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="saving || !namePreview.length" @click="applyNameReplacement">{{ tr('Aplicar correção aos nomes') }}</button>
-          <p v-if="nameApplied" class="section-hint" role="status">{{ tr('Nomes preparados. Confira os itens e clique em Salvar para concluir.') }}</p>
-        </section>
-
-        <!-- ── Per-item fields ── -->
-        <section class="section">
-          <h3 class="section-title">{{ tr('Campos por item') }}</h3>
-          <p class="section-hint">{{ tr('Os campos de texto mostram o valor atual — edite apenas o que precisa alterar.') }}</p>
-          <div class="items-list">
-            <div v-for="item in items" :key="item.id" class="item-card">
-              <!-- Item header -->
-              <div class="item-card-header">
-                <img v-if="photoDraft[item.id]" :src="photoDraft[item.id].preview" class="card-thumb" alt="" />
-                <ProductThumbnail v-else-if="item.image_data || item.has_image" :item="item" class="card-thumb" />
-                <div v-else class="card-thumb-placeholder"></div>
-                <div class="card-header-info">
-                  <span class="card-original-name">{{ item.name }}</span>
-                  <span class="card-stock-badge">{{ tr('Estoque:') }} {{ displayStock(item.current_stock) }}<span v-if="!hasKnownStock(item)"> · {{ tr('Revisar estoque') }}</span></span>
-                </div>
-              </div>
-
-              <!-- Text fields (pre-populated) -->
-              <div class="item-fields">
-                <div class="field-group field-group-wide">
-                  <label>{{ tr('Nome') }}</label>
-                  <input
-                    v-model="itemNames[item.id]"
-                    type="text"
-                    class="field-input"
-                    :class="{ modified: itemNames[item.id] !== item.name }"
-                  />
-                </div>
-                <div class="field-group">
-                  <label>{{ tr('Cor') }}</label>
-                  <input
-                    v-model="itemColors[item.id]"
-                    type="text"
-                    class="field-input"
-                    :class="{ modified: itemColors[item.id] !== (item.color || '') }"
-                  />
-                </div>
-                <div class="field-group">
-                  <label>{{ tr('Tamanho') }}</label>
-                  <input
-                    v-model="itemSizes[item.id]"
-                    type="text"
-                    class="field-input"
-                    :placeholder="item.size || ''"
-                  />
-                </div>
-                <!-- Per-item prices -->
-                <div class="field-group">
-                  <label>{{ tr('Custo') }} <span class="label-current">{{ tr('atual:') }} {{ formatPrice(item.cost_price) }}</span></label>
-                  <input
-                    v-model="itemCostPrices[item.id]"
-                    type="number"
-                    min="0"
-                    step="any"
-                    class="field-input"
-                    :placeholder="tr('Vazio = não alterar')"
-                  />
-                </div>
-                <div class="field-group">
-                  <label>{{ tr('Venda') }} <span class="label-current">{{ tr('atual:') }} {{ formatPrice(item.sale_price) }}</span></label>
-                  <input
-                    v-model="itemSalePrices[item.id]"
-                    type="number"
-                    min="0"
-                    step="any"
-                    class="field-input"
-                    :placeholder="tr('Vazio = não alterar')"
-                  />
-                </div>
-
-                <div class="field-group field-group-wide">
-                  <label>{{ tr('Motivo do ajuste (opcional)') }}</label>
-                  <input v-model="itemStockReasons[item.id]" class="field-input" :disabled="!hasKnownStock(item)" :placeholder="tr('Usar motivo compartilhado ou registro automático')" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <p v-if="unknownStock" role="alert" class="stock-warning">
+          {{
+            tr(
+              'Ajustes de saldo estão bloqueados nos itens não informados; a edição dos dados do produto continua disponível.',
+            )
+          }}
+        </p>
+        <BulkDetailsEditor
+          v-model="detailsDraft"
+          v-model:stock="stockDraft"
+          v-model:photos="photoDraft"
+          v-model:reason="stockReason"
+          :items="baseline"
+          :brands="distinctBrands"
+          :categories="distinctCategories"
+          :disabled="saving"
+          @busy="photoBusy = $event"
+        />
       </div>
-
       <p v-if="saveError" role="alert" class="save-error">{{ tr(saveError) }}</p>
       <div class="modal-footer erp-dialog__footer">
-        <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary" :disabled="saving">{{ tr('Cancelar') }}</button>
-        <button @click="save" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || photoBusy || !hasChanges">
-          <span v-if="saving">{{ tr('Salvando...') }}</span>
-          <span v-else>{{ tr('Salvar') }} {{ items.length }} {{ tr('itens') }}</span>
+        <button
+          type="button"
+          @click="emit('close')"
+          class="erp-button erp-button--secondary"
+          :disabled="saving || photoBusy"
+        >
+          {{ tr('Cancelar') }}
+        </button>
+        <button
+          type="button"
+          @click="save"
+          class="erp-button erp-button--primary"
+          :disabled="saving || photoBusy || !hasChanges"
+        >
+          <span v-if="saving">{{ tr('Salvando...') }}</span
+          ><span v-else>{{ tr('Salvar') }} {{ items.length }} {{ tr('itens') }}</span>
         </button>
       </div>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { vErpDialog } from '@/directives/erpDialog'
-import { useInventoryI18n } from '@/components/inventory/i18n'
-const { tr, numberLocale } = useInventoryI18n()
-import { ref, computed, reactive } from 'vue'
-import BulkPhotoEditor from './BulkPhotoEditor.vue'
+import { useInventoryI18n } from './i18n'
 import BulkDetailsEditor from './BulkDetailsEditor.vue'
-import BulkBarcodeEditor from './BulkBarcodeEditor.vue'
 import { detailsError, type DetailDraft } from '@/services/inventoryBulkDetails'
 import { photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
-import BulkStockEditor from './BulkStockEditor.vue'
-import ErpDropdown from '@/components/ui/ErpDropdown.vue'
-import { uniqueColors } from '@/services/inventoryColors'
 import { initialStockDraft, changedStock, validStockDraft } from '@/services/inventoryBulkStock'
-import { replaceProductName } from '@/services/inventoryNameReplace'
-import ProductThumbnail from './ProductThumbnail.vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
-import { displayStock, hasKnownStock } from '@/services/inventoryStock'
-
+import { hasKnownStock } from '@/services/inventoryStock'
+const { tr } = useInventoryI18n()
 const props = defineProps<{
   items: InventoryItem[]
   distinctBrands?: string[]
   distinctCategories?: string[]
 }>()
-
-const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'saved'): void
-}>()
-
-const photoDraft = ref<PhotoDraft>({})
-const detailsDraft = ref<DetailDraft>({})
-const photoBusy = ref(false)
-const sharedCostPrice = ref<string>('')
-const sharedSalePrice = ref<string>('')
-const sharedColor = ref('')
-// Keep the reviewed baseline stable even if the parent refreshes the list.
-const stockBaseline = props.items.map(item => ({ ...item }))
-const stockDraft = ref(initialStockDraft(stockBaseline))
-const stockError = ref(''), saveError = ref('')
-const sharedStockReason = ref('')
-const saving = ref(false)
-const unknownStock = computed(() => stockBaseline.some(item => !hasKnownStock(item)))
-
-// Per-item maps — pre-populated with current values for text fields
-const itemNames     = reactive<Record<string, string>>(Object.fromEntries(props.items.map(i => [i.id, i.name])))
-const itemColors    = reactive<Record<string, string>>(Object.fromEntries(props.items.map(i => [i.id, i.color || ''])))
-const itemSizes     = reactive<Record<string, string>>({})
-const itemBarcodes  = reactive<Record<string, string>>(Object.fromEntries(props.items.map(i => [i.id, i.barcode || ''])))
-const itemCostPrices  = reactive<Record<string, string>>({})
-const itemSalePrices  = reactive<Record<string, string>>({})
-
-const itemStockReasons = reactive<Record<string, string>>({})
-
-const previewItems = computed(() => stockBaseline.map(item => ({ ...item,
-  name: itemNames[item.id], color: itemColors[item.id], size: itemSizes[item.id] || item.size,
-})))
-const colorOptions = computed(() => uniqueColors(Object.values(itemColors)).map(color => ({ value: color, label: color })))
-function applyColor() {
-  if (saving.value || !sharedColor.value.trim()) return
-  for (const item of props.items) itemColors[item.id] = sharedColor.value.trim()
-}
-
-const nameFind = ref(''), nameReplacement = ref(''), nameApplied = ref(false)
-const namePreview = computed(() => props.items.flatMap(item => {
-  const before = itemNames[item.id], after = replaceProductName(before, nameFind.value, nameReplacement.value)
-  return before !== after ? [{ id: item.id, before, after }] : []
-}))
-function applyNameReplacement() {
-  for (const row of namePreview.value) itemNames[row.id] = row.after
-  nameApplied.value = true
-  nameFind.value = ''; nameReplacement.value = ''
-}
-
-function formatPrice(val: any): string {
-  if (val === null || val === undefined || val === '' || val === 0) return '—'
-  return Number(val).toLocaleString(numberLocale())
-}
-
-const hasChanges = computed(() => {
-  if (Object.keys(detailsDraft.value).length) return true
-  if (Object.keys(photoDraft.value).length) return true
-  if (sharedCostPrice.value !== '' || sharedSalePrice.value !== '') return true
-  if (changedStock(stockBaseline, stockDraft.value).length) return true
-  return props.items.some(item => {
-    if (itemNames[item.id] !== item.name) return true
-    if (itemColors[item.id] !== (item.color || '')) return true
-    if (itemSizes[item.id]) return true
-    if (itemBarcodes[item.id] !== (item.barcode || '')) return true
-    if (itemCostPrices[item.id] !== '' && itemCostPrices[item.id] !== undefined) return true
-    if (itemSalePrices[item.id] !== '' && itemSalePrices[item.id] !== undefined) return true
-    return false
-  })
-})
-
+const emit = defineEmits<{ close: []; saved: [] }>()
+// A background refresh must never replace the values the operator reviewed.
+const baseline = props.items.map((item) => ({ ...item }))
+const detailsDraft = ref<DetailDraft>({}),
+  photoDraft = ref<PhotoDraft>({})
+const stockDraft = ref(initialStockDraft(baseline)),
+  stockReason = ref('')
+const saving = ref(false),
+  photoBusy = ref(false),
+  saveError = ref('')
+const unknownStock = computed(() => baseline.some((item) => !hasKnownStock(item)))
+const hasChanges = computed(
+  () =>
+    Object.keys(detailsDraft.value).length > 0 ||
+    Object.keys(photoDraft.value).length > 0 ||
+    changedStock(baseline, stockDraft.value).length > 0,
+)
 async function save() {
   if (!hasChanges.value || saving.value || photoBusy.value) return
-  stockError.value = ''
-  if (!validStockDraft(stockBaseline, stockDraft.value)) {
-    stockError.value = 'Confira as quantidades: use inteiros a partir de zero, dentro do limite de estoque.'
-    return
-  }
-  saveError.value = ''
-  saveError.value = detailsError(detailsDraft.value)
+  saveError.value =
+    detailsError(detailsDraft.value, baseline) ||
+    (!validStockDraft(baseline, stockDraft.value)
+      ? 'Confira as quantidades: use inteiros a partir de zero, dentro do limite de estoque.'
+      : '')
   if (saveError.value) return
-
   saving.value = true
   try {
     const perItems: NonNullable<Parameters<typeof inventoryAPI.batchEdit>[0]['sizes']> = []
-
-    for (const item of props.items) {
-      const entry: typeof perItems[0] = { id: item.id }
-      let changed = false
-
-      if (itemSizes[item.id])                               { entry.size    = itemSizes[item.id];    changed = true }
-      if (itemNames[item.id] !== item.name)                  { entry.name    = itemNames[item.id];    changed = true }
-      if (itemColors[item.id] !== (item.color || ''))        { entry.color   = itemColors[item.id];   changed = true }
-      if (itemBarcodes[item.id] !== (item.barcode || ''))    { entry.barcode = itemBarcodes[item.id]; changed = true }
-
-      const cp = itemCostPrices[item.id]
-      const sp = itemSalePrices[item.id]
-      if (cp !== '' && cp !== undefined)  { entry.cost_price = Number(cp); changed = true }
-      if (sp !== '' && sp !== undefined)  { entry.sale_price = Number(sp); changed = true }
-
-      if (detailsDraft.value[item.id]) {
-        Object.assign(entry, detailsDraft.value[item.id]); changed = true
+    for (const item of baseline) {
+      if (!detailsDraft.value[item.id] && !photoDraft.value[item.id]) continue
+      const entry = {
+        id: item.id,
+        ...detailsDraft.value[item.id],
+        ...(item.updated_at ? { expected_updated_at: item.updated_at } : {}),
       }
-      if (changed && stockBaseline.find(row => row.id === item.id)?.updated_at) entry.expected_updated_at = stockBaseline.find(row => row.id === item.id)!.updated_at
-
-      if (changed) perItems.push(entry)
+      perItems.push(entry as (typeof perItems)[number])
     }
-
     await inventoryAPI.batchEdit({
-      item_ids:    props.items.map(i => i.id),
+      item_ids: baseline.map((item) => item.id),
       details: true,
-      image_groups: photoAssignments(photoDraft.value, props.items.map(item => item.id)),
-      cost_price:  sharedCostPrice.value !== '' ? Number(sharedCostPrice.value) : undefined,
-      sale_price:  sharedSalePrice.value !== '' ? Number(sharedSalePrice.value) : undefined,
-      stock_adjustments: changedStock(stockBaseline, stockDraft.value).map(item => ({
+      image_groups: photoAssignments(
+        photoDraft.value,
+        baseline.map((item) => item.id),
+      ),
+      stock_adjustments: changedStock(baseline, stockDraft.value).map((item) => ({
         id: item.id,
         stock_loja: stockDraft.value[item.id].loja,
         stock_deposito: stockDraft.value[item.id].deposito,
-        expected_loja: item.stock_loja!, expected_deposito: item.stock_deposito!, expected_total: item.current_stock!,
-        reason: itemStockReasons[item.id]?.trim() || undefined,
+        expected_loja: item.stock_loja!,
+        expected_deposito: item.stock_deposito!,
+        expected_total: item.current_stock!,
       })),
-      stock_reason: sharedStockReason.value || undefined,
+      stock_reason: stockReason.value.trim() || undefined,
       sizes: perItems.length ? perItems : undefined,
     })
-
     emit('saved')
-  } catch (e: any) {
-    console.error('Bulk edit error:', e.response?.status, e.response?.data, e.message)
-    const detail = e.response?.data?.detail
-    const msg = typeof detail === 'string'
-      ? detail
-      : Array.isArray(detail)
-        ? detail.map((d: any) => d.msg || d.loc?.join('.') || JSON.stringify(d)).join('\n')
-        : e.message || 'Erro ao salvar'
-    saveError.value = msg
+  } catch (e: unknown) {
+    const error = e as {
+      response?: { data?: { detail?: string | Array<{ msg?: string }> } }
+      message?: string
+    }
+    const detail = error.response?.data?.detail
+    saveError.value =
+      typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d) => d.msg || tr('Erro ao salvar')).join('\n')
+          : error.message || 'Erro ao salvar'
   } finally {
     saving.value = false
   }
 }
 </script>
-
 <style scoped>
-.name-preview{padding:10px;background:#f8fafc;border-radius:10px;margin-bottom:12px;font-size:13px}.name-preview ul{padding:0;list-style:none;max-height:180px;overflow:auto}.name-preview li{display:flex;flex-wrap:wrap;gap:4px 12px;padding:4px 0}.name-preview del{color:#64748b}.name-preview span{color:#166534}.name-replace label{display:flex;flex-direction:column;align-items:stretch;gap:6px}
-.stock-warning { margin: 0; padding: .75rem; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: .85rem; }
-input:disabled { background: #f3f4f6; cursor: not-allowed; }
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 2500; padding: 1rem;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+  padding: 1rem;
 }
-.shared-color{display:flex;align-items:end;gap:10px}.shared-color .form-group{min-width:0;margin:0}.shared-color .erp-button{min-height:40px}.save-error{margin:0;padding:12px 20px;background:#fef2f2;color:#b91c1c;font-size:13px}
 .modal-container {
-  background: white; border-radius: 12px; width: 100%;
-  max-width: 620px; max-height: 92vh;
-  display: flex; flex-direction: column; overflow: hidden;
+  background: white;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 840px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
-.modal-header h2 { font-size: 1rem; font-weight: 700; color: #111827; margin: 0; }
-.item-count { font-weight: 400; color: #6b7280; font-size: 0.875rem; }
-.close-btn { background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; }
-.modal-body { overflow-y: auto; padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 1.25rem; }
-.section { display: flex; flex-direction: column; gap: 0.6rem; }
-.section-title { font-size: 0.875rem; font-weight: 600; color: #374151; margin: 0; }
-.section-hint { font-size: 0.72rem; color: #9ca3af; margin: 0; }
-.form-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
-.form-group label { font-size: 0.78rem; font-weight: 500; color: #374151; display: flex; align-items: center; gap: 0.3rem; }
-.form-row { display: flex; gap: 0.75rem; }
-.form-input { padding: 0.42rem 0.7rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.85rem; }
-.form-input:focus { outline: none; border-color: #3b82f6; }
-.form-input.error { border-color: #ef4444; }
-
-/* Labels helpers */
-.label-hint { font-size: 0.68rem; font-weight: 400; color: #9ca3af; }
-.label-current { font-size: 0.65rem; font-weight: 400; color: #9ca3af; }
-.error-msg { font-size: 0.72rem; color: #ef4444; }
-
-/* Per-item list */
-.items-list { display: flex; flex-direction: column; gap: 0.6rem; max-height: 420px; overflow-y: auto; }
-.item-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.6rem 0.75rem; background: #fafafa; display: flex; flex-direction: column; gap: 0.5rem; }
-.item-card-header { display: flex; align-items: center; gap: 0.5rem; }
-.card-thumb { width: 28px; height: 28px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
-.card-thumb-placeholder { width: 28px; height: 28px; background: #e5e7eb; border-radius: 4px; flex-shrink: 0; }
-.card-header-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; }
-.card-original-name { font-size: 0.78rem; font-weight: 600; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.card-stock-badge { font-size: 0.68rem; color: #64748b; background: #f1f5f9; border-radius: 4px; padding: 0.1rem 0.4rem; white-space: nowrap; flex-shrink: 0; }
-
-/* Fields grid inside card */
-.item-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 0.6rem; }
-.field-group { display: flex; flex-direction: column; gap: 0.15rem; }
-.field-group-wide { grid-column: 1 / -1; }
-.field-group label { font-size: 0.68rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; gap: 0.25rem; }
-.field-input { padding: 0.3rem 0.5rem; border: 1px solid #e5e7eb; border-radius: 5px; font-size: 0.82rem; background: white; }
-.field-input:focus { outline: none; border-color: #3b82f6; background: #eff6ff; }
-.field-input.modified { border-color: #f59e0b; background: #fffbeb; }
-
-/* Footer */
-.modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 0.875rem 1.25rem; border-top: 1px solid #e5e7eb; flex-shrink: 0; }
-.btn { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; }
-.btn-primary { background: #3b82f6; color: white; }
-.btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-.btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
-.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
-
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+.modal-header h2 span {
+  font-size: 14px;
+  font-weight: 400;
+  color: #64748b;
+}
+.modal-header button {
+  font-size: 24px;
+}
+.modal-body {
+  overflow-y: auto;
+  padding: 20px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.stock-warning {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+}
+.save-error {
+  margin: 0;
+  padding: 12px 20px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  white-space: pre-line;
+}
 @media (max-width: 600px) {
-  .modal-overlay { padding: 0; align-items: flex-end; }
-  .modal-container {
-    max-height: 88vh;
-    border-radius: 14px 14px 0 0;
-    max-width: 100%;
+  .modal-body {
+    padding: 14px;
   }
-  .modal-header { padding: 0.65rem 1rem; }
-  .modal-header h2 { font-size: 0.9rem; }
-  .modal-body { padding: 0.65rem 1rem; gap: 0.75rem; }
-  .modal-footer { padding: 0.6rem 1rem; }
-  .section-title { font-size: 0.8rem; }
-  .form-input { padding: 0.35rem 0.6rem; font-size: 0.82rem; }
-  .form-row { flex-direction: column; gap: 0.4rem; }
-  .item-card { padding: 0.45rem 0.6rem; gap: 0.35rem; }
-  .item-fields { grid-template-columns: 1fr 1fr; gap: 0.3rem 0.45rem; }
-  .field-input { padding: 0.25rem 0.4rem; font-size: 0.78rem; }
-  .items-list { gap: 0.4rem; max-height: none; }
-  .btn { padding: 0.42rem 0.85rem; font-size: 0.82rem; }
+  .modal-header,
+  .modal-footer {
+    padding: 12px 14px;
+  }
 }
 </style>
