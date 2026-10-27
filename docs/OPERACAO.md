@@ -109,6 +109,12 @@ compartilhados configurados para leitura. Dados de remetentes ficam no banco, n�
 
 ## Processos contínuos
 
+`quality_worker` executa a conferência diária às 08h30 de Brasília e pedidos
+manuais de Lucas. Consome somente consultas limitadas e, opcionalmente, as chaves
+DeepSeek/Anthropic já presentes no ambiente; não exige outro serviço Render.
+O limite é global de duas chamadas de IA por dia. Estado, fila e falhas ficam no
+banco e em `/health`. Ver [Conferência do sistema](QUALIDADE_SISTEMA.md).
+
 O worker de notificações roda junto à API e informa seu estado em `/health`.
 Chaves VAPID são criadas automaticamente e cifradas no banco com derivação da
 `SECRET_KEY`; preservar ambos nos backups. O novo service worker não intercepta

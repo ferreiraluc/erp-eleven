@@ -7,6 +7,7 @@
     </ModuleHeader>
     <p class="notice">{{ $t('access.auditNotice') }}</p><p v-if="error" class="notice error" role="alert">{{ error }}</p>
     <details class="access-card audit-notifications" @toggle="notificationsOpen=($event.target as HTMLDetailsElement).open"><summary>{{ notificationText('admin') }}</summary><NotificationAdmin v-if="notificationsOpen" embedded /></details>
+    <QualityPanel :run-id="typeof route.query.quality_run === 'string' ? route.query.quality_run : null" />
     <section class="access-card filters">
       <label>{{ $t('access.period') }}<ErpSelect :label="($t('access.period'))" v-model.number="days" @change="filter"><option :value="1">{{ $t('access.lastDay') }}</option><option :value="7">{{ $t('access.lastWeek') }}</option><option :value="30">{{ $t('access.lastMonth') }}</option><option :value="90">{{ $t('access.lastQuarter') }}</option></ErpSelect></label>
       <label>{{ $t('access.user') }}<ErpSelect :label="($t('access.user'))" v-model="userId" @change="filter"><option value="">{{ $t('access.allUsers') }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }}</option></ErpSelect></label>
@@ -37,11 +38,14 @@ import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { accessAPI, type AuditResult } from '@/services/access'
 import type { User } from '@/services/api'
 import NotificationAdmin from '@/components/notifications/NotificationAdmin.vue'
+import QualityPanel from '@/components/notifications/QualityPanel.vue'
 import { notificationText } from '@/services/notificationText'
 const notificationsOpen=ref(false)
+const route=useRoute()
 const {t,te,locale}=useI18n()
 const days=ref(7),userId=ref(''),module=ref(''),action=ref(''),offset=ref(0),loading=ref(false),error=ref(''),data=ref<AuditResult|null>(null),users=ref<User[]>([])
 let requestId=0
