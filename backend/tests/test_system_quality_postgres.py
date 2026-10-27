@@ -162,11 +162,21 @@ def test_migration_preserves_rows_and_recent_window_uses_index_with_50000_items(
     spec.loader.exec_module(migration)
     with engine.connect() as conn:
         conn.exec_driver_sql(f'SET search_path TO {schema}')
-        conn.exec_driver_sql('CREATE TABLE inventory_items (id uuid PRIMARY KEY, updated_at timestamp NOT NULL, is_active boolean, deleted_at timestamptz)')
+        conn.exec_driver_sql('CREATE TABLE inventory_items (id uuid PRIMARY KEY, updated_at timestamp NOT NULL, is_active boolean, deleted_at timestamptz, name varchar(200), color varchar(50), size varchar(50))')
         conn.exec_driver_sql('CREATE TABLE clientes (id uuid PRIMARY KEY, updated_at timestamp, merged_into_id uuid)')
         conn.exec_driver_sql('CREATE TABLE saved_addresses (id uuid PRIMARY KEY, updated_at timestamptz, merged_into_id uuid)')
         conn.exec_driver_sql('CREATE TABLE print_jobs (id uuid PRIMARY KEY, status varchar(20), created_at timestamptz)')
-        conn.execute(sa.text("INSERT INTO inventory_items SELECT md5(n::text)::uuid, :recent - CASE WHEN n > 49980 THEN INTERVAL '1 hour' ELSE INTERVAL '30 days' END, true, NULL FROM generate_series(1,50000) n"), {'recent': MOMENT})
+        conn.execute(sa.text("""INSERT INTO inventory_items SELECT md5(n::text)::uuid,
+            :recent - CASE WHEN n > 49980 THEN INTERVAL '1 hour' ELSE INTERVAL '30 days' END, true, NULL,
+            'Modelo ' || lpad(mod(n,1000)::text,4,'0'),
+            CASE WHEN mod(n,10)=0 THEN NULL WHEN mod(n,2)=0 THEN 'Preto' ELSE 'Branco' END,
+            CASE WHEN mod(n,7)=0 THEN NULL WHEN mod(n,3)=0 THEN 'L' ELSE 'M' END
+            FROM generate_series(1,50000) n"""), {'recent': MOMENT})
+        conn.exec_driver_sql('ANALYZE inventory_items')
+        catalog_sql = ('SELECT id,name,color,size FROM inventory_items WHERE deleted_at IS NULL '
+                       'ORDER BY name,color,size,id OFFSET 0 LIMIT 50')
+        before_ids = [row.id for row in conn.exec_driver_sql(catalog_sql)]
+        before_catalog = conn.exec_driver_sql('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + catalog_sql).scalar()[0]
         conn.commit()
         context = MigrationContext.configure(conn)
         with Operations.context(context):
@@ -183,6 +193,29 @@ def test_migration_preserves_rows_and_recent_window_uses_index_with_50000_items(
         walk(plan['Plan'])
         assert 'ix_quality_inventory_recent' in indexes
         assert plan['Plan']['Actual Rows'] == 20
+        after_catalog = conn.exec_driver_sql('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ' + catalog_sql).scalar()[0]
+        assert before_ids == [row.id for row in conn.exec_driver_sql(catalog_sql)]
+        def nodes(node):
+            yield node
+            for child in node.get('Plans', []):
+                yield from nodes(child)
+        before_nodes = list(nodes(before_catalog['Plan']))
+        after_nodes = list(nodes(after_catalog['Plan']))
+        assert any(node['Node Type'] == 'Sort' for node in before_nodes)
+        assert sum(node['Actual Rows'] * node['Actual Loops'] for node in before_nodes
+                   if 'Seq Scan' in node['Node Type']) >= 50000
+        assert any(node.get('Index Name') == 'ix_inventory_catalog_order' for node in after_nodes)
+        assert not any(node['Node Type'] == 'Sort' for node in after_nodes)
+        assert after_catalog['Plan']['Actual Rows'] == 50
+        print(f"Catalog 50k fixture default order: before={before_catalog['Execution Time']:.3f} ms, "
+              f"after={after_catalog['Execution Time']:.3f} ms, 50 identical IDs")
+        # Retry after a separately committed concurrent index build preserves both
+        # existing rows and the same deterministic ordering, including NULL facets.
+        conn.commit()
+        with Operations.context(context), context.begin_transaction():
+            migration.upgrade()
+        assert conn.exec_driver_sql('SELECT count(*) FROM inventory_items').scalar() == 50000
+        assert before_ids == [row.id for row in conn.exec_driver_sql(catalog_sql)]
         # Do not turn local fixture timings into a production SLA.
         print(f"Quality 50k fixture recent IDs: {plan['Execution Time']:.3f} ms, 20 rows, index={indexes[0]}")
 

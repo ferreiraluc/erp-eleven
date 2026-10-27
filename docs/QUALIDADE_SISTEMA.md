@@ -94,6 +94,12 @@ bloqueiam normalmente as escritas durante a construção; um índice incompleto
 desta migração é reparado ao repetir o deploy. Validar PostgreSQL isolado antes
 de publicar, preservando os cadastros e históricos anteriores.
 
+A mesma revisão adiciona um índice parcial para a ordenação padrão do estoque
+por nome, cor, tamanho e ID, excluindo os produtos removidos. A primeira página
+pode usar esse índice sem ordenar o catálogo inteiro; filtros, ordem e contadores
+permanecem iguais. O teste isolado com 50 mil produtos compara os mesmos IDs antes
+e depois, incluindo cores e tamanhos ausentes, sem prometer latência em produção.
+
 `quality_checks.FUNCTIONS` é o ponto de extensão para novas verificações modulares.
 Ao acrescentar uma, definir limites, cobertura e gravidade; incluir a chave nas
 listas permitidas do resumo/API e nas traduções. Selecionar projeções pequenas,

@@ -8,6 +8,7 @@ branch_labels = None
 depends_on = None
 
 INDEXES = {
+    'ix_inventory_catalog_order': 'inventory_items (name, color, size, id) WHERE deleted_at IS NULL',
     'ix_quality_inventory_recent': 'inventory_items (updated_at, id) WHERE deleted_at IS NULL AND is_active IS true',
     'ix_quality_customers_recent': 'clientes (updated_at, id) WHERE merged_into_id IS NULL',
     'ix_quality_addresses_recent': 'saved_addresses (updated_at, id) WHERE merged_into_id IS NULL',
