@@ -159,6 +159,12 @@ Regras e limitações: [Gestor de Vendas](VENDAS_PDV.md).
 
 ## Confiabilidade operacional
 
+A central de [Notificações](NOTIFICACOES.md) reúne caixa pessoal, leitura,
+confirmações, respostas e Web Push por aparelho. Lucas administra mensagens,
+modelos e regras pela Auditoria. Eventos novos do PDV, falhas de tickets e mudanças
+de rastreio são transacionais; saudações seguem horários de Brasília. Permissão,
+som e entrega em segundo plano dependem do navegador e do sistema operacional.
+
 A aplicação tem verificação real de saúde, limites de banco, limitação compartilhada
 de login e proteção de publicações por CI. O procedimento de backup cifrado e
 restauração isolada está em [Operação](OPERACAO.md). Isso não elimina os pontos únicos

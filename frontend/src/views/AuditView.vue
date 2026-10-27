@@ -6,6 +6,7 @@
       </button>
     </ModuleHeader>
     <p class="notice">{{ $t('access.auditNotice') }}</p><p v-if="error" class="notice error" role="alert">{{ error }}</p>
+    <details class="access-card audit-notifications" @toggle="notificationsOpen=($event.target as HTMLDetailsElement).open"><summary>{{ notificationText('admin') }}</summary><NotificationAdmin v-if="notificationsOpen" embedded /></details>
     <section class="access-card filters">
       <label>{{ $t('access.period') }}<ErpSelect :label="($t('access.period'))" v-model.number="days" @change="filter"><option :value="1">{{ $t('access.lastDay') }}</option><option :value="7">{{ $t('access.lastWeek') }}</option><option :value="30">{{ $t('access.lastMonth') }}</option><option :value="90">{{ $t('access.lastQuarter') }}</option></ErpSelect></label>
       <label>{{ $t('access.user') }}<ErpSelect :label="($t('access.user'))" v-model="userId" @change="filter"><option value="">{{ $t('access.allUsers') }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }}</option></ErpSelect></label>
@@ -38,6 +39,9 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { accessAPI, type AuditResult } from '@/services/access'
 import type { User } from '@/services/api'
+import NotificationAdmin from '@/components/notifications/NotificationAdmin.vue'
+import { notificationText } from '@/services/notificationText'
+const notificationsOpen=ref(false)
 const {t,te,locale}=useI18n()
 const days=ref(7),userId=ref(''),module=ref(''),action=ref(''),offset=ref(0),loading=ref(false),error=ref(''),data=ref<AuditResult|null>(null),users=ref<User[]>([])
 let requestId=0
@@ -54,4 +58,4 @@ function exportPage(){if(!data.value)return;const cell=(v:unknown)=>'"'+String(v
 onMounted(async()=>{await load();try{users.value=await accessAPI.users()}catch{error.value=t('access.connectionError')}})
 </script>
 <style scoped src="@/components/access/access.css"></style>
-<style scoped>.audit-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.block{display:block;margin-top:4px}li{margin:6px 0}details{min-width:140px;max-width:340px}</style>
+<style scoped>.audit-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.block{display:block;margin-top:4px}li{margin:6px 0}details{min-width:140px;max-width:340px}.audit-notifications{max-width:none;min-width:0}.audit-notifications>summary{font-size:16px;font-weight:700;color:#1d4ed8;cursor:pointer}.audit-notifications[open]>summary{margin-bottom:20px}</style>

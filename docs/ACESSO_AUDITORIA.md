@@ -101,6 +101,13 @@ preserva senhas individuais nas reexecuções. Não contém senha padrão no có
 
 ## Eventos de auditoria
 
+Lucas também administra **Notificações** dentro da Auditoria. Mensagens pessoais,
+respostas, regras e modelos têm validação de acesso no servidor. A ativação no
+celular exige consentimento por aparelho; o sino abre a caixa pessoal para todas
+as contas. Leituras e tentativas de push ficam fora do log genérico; alterações
+administrativas geram eventos explícitos, sem copiar o corpo da mensagem.
+Detalhes: [Notificações](NOTIFICACOES.md).
+
 Somente Lucas acessa `/auditoria` e `/api/access/audit`. O painel combina:
 
 - Login, falhas, logout, mudanças de senha e permissões.

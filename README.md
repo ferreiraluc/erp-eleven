@@ -22,6 +22,7 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | Visão de vendas | Resultados salvos das planilhas OneDrive, comparações, moedas e rankings | `/bi-vendas` |
 | Assistente IA | Vínculos de funcionários, ações confirmadas, memória, consultas e filas | `/assistente` |
 | Acesso e auditoria | Conta individual, troca de senha, vendas pessoais e auditoria de alterações | `/conta`, `/usuarios`, `/auditoria` |
+| Notificações | Caixa pessoal, respostas e avisos no celular; administração de Lucas na Auditoria | `/notificacoes` |
 
 **As vendas da operação são lançadas no Excel.** O BI lê os resultados corrigidos
 salvos nas planilhas, não altera células e não cria vendas no ERP. A sincronização

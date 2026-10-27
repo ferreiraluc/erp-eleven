@@ -74,7 +74,7 @@ def audit_flush(db, context):
         for obj in list(objects):
             state = inspect(obj)
             table = state.mapper.local_table.name
-            if table in INTERNAL:
+            if table in INTERNAL or table.startswith('notification'):
                 continue
             if table == 'usuarios' and action == 'update':
                 changed = {col.key for col in state.mapper.column_attrs if state.attrs[col.key].history.has_changes()}
@@ -105,7 +105,7 @@ def audit_bulk(state):
     db = state.session
     if (state.is_update or state.is_delete) and db.info.get('audit_enabled') and db.info.get('audit_actor'):
         table = getattr(getattr(state.statement, 'table', None), 'name', '')
-        if table and table not in INTERNAL:
+        if table and table not in INTERNAL and not table.startswith('notification'):
             db.connection().execute(AuditEvent.__table__.insert().values(
                 id=uuid.uuid4(), occurred_at=now(), **db.info['audit_actor'],
                 action='bulk_update' if state.is_update else 'bulk_delete', module=module_name(table),
