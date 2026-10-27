@@ -3016,5 +3016,137 @@
   "Vínculo da grade atualizado": ["Vínculo del grupo actualizado", "Group link updated"],
   "Selecione ao menos um produto avulso.": ["Seleccione al menos un producto individual.", "Select at least one ungrouped product."],
   "Desagrupar toda a grade": ["Desagrupar todo el grupo", "Ungroup all items"],
-  "Confirme para remover {count} vínculos desta grade. Os produtos e saldos permanecem.": ["Confirme para quitar {count} vínculos de este grupo. Los productos y saldos permanecen.", "Confirm to remove {count} links from this group. Products and stock stay unchanged."]
+  "Confirme para remover {count} vínculos desta grade. Os produtos e saldos permanecem.": ["Confirme para quitar {count} vínculos de este grupo. Los productos y saldos permanecen.", "Confirm to remove {count} links from this group. Products and stock stay unchanged."],
+  "Categoria e subcategoria": [
+    "Categoría y subcategoría",
+    "Category and subcategory"
+  ],
+  "Moeda e preço de custo": [
+    "Moneda y precio de costo",
+    "Cost currency and price"
+  ],
+  "Moeda e preço de venda": [
+    "Moneda y precio de venta",
+    "Sale currency and price"
+  ],
+  "Estoque: quantidade, mínimo e máximo": [
+    "Stock: cantidad, mínimo y máximo",
+    "Stock: quantity, minimum and maximum"
+  ],
+  "Corrigir nomes com substituição": [
+    "Corregir nombres por sustitución",
+    "Correct names with find and replace"
+  ],
+  "Moeda para aplicar": [
+    "Moneda a aplicar",
+    "Currency to apply"
+  ],
+  "Preço para aplicar": [
+    "Precio a aplicar",
+    "Price to apply"
+  ],
+  "Manter moeda de cada item": [
+    "Mantener la moneda de cada producto",
+    "Keep each product’s currency"
+  ],
+  "Preço em branco mantém o valor de cada item.": [
+    "Un precio vacío mantiene el valor de cada producto.",
+    "A blank price keeps each product’s current price."
+  ],
+  "Categoria para aplicar": [
+    "Categoría a aplicar",
+    "Category to apply"
+  ],
+  "Mínimo para aplicar": [
+    "Mínimo a aplicar",
+    "Minimum to apply"
+  ],
+  "Máximo para aplicar": [
+    "Máximo a aplicar",
+    "Maximum to apply"
+  ],
+  "Limites em branco mantêm os valores atuais. Máximo zero significa sem limite.": [
+    "Los límites vacíos mantienen los valores actuales. Máximo cero significa sin límite.",
+    "Blank limits keep the current values. A maximum of zero means no limit."
+  ],
+  "Manter quantidade": [
+    "Mantener cantidad",
+    "Keep quantity"
+  ],
+  "{count} nomes serão alterados": [
+    "Se cambiarán {count} nombres",
+    "{count} names will change"
+  ],
+  "Alterações preparadas. Confira os itens e salve para concluir.": [
+    "Cambios preparados. Revise los productos y guarde para finalizar.",
+    "Changes prepared. Review the products and save to finish."
+  ],
+  "A quantidade pode ser ajustada em cada linha. O outro local é preservado. Trocar o campo conserva todas as alterações preparadas.": [
+    "Puede ajustar la cantidad en cada fila. Se conserva la otra ubicación. Cambiar de campo mantiene todos los cambios preparados.",
+    "Adjust the quantity in each row. The other location is preserved. Switching fields keeps all prepared changes."
+  ],
+  "Foto a adicionar": [
+    "Foto a agregar",
+    "Photo to add"
+  ],
+  "Adicionar à galeria": [
+    "Agregar a la galería",
+    "Add to gallery"
+  ],
+  "Substituir foto principal": [
+    "Reemplazar foto principal",
+    "Replace primary photo"
+  ],
+  "Operação da foto": [
+    "Operación de foto",
+    "Photo operation"
+  ],
+  "Adicione uma foto à galeria dos itens escolhidos, com até 5 fotos por produto. Se não houver foto principal, a nova foto será a principal.": [
+    "Agregue una foto a la galería de los productos elegidos, hasta 5 fotos por producto. Si no hay foto principal, la nueva foto será la principal.",
+    "Add a photo to the selected products’ galleries, up to 5 photos per product. If there is no primary photo, the new photo becomes the primary."
+  ],
+  "Alterado": [
+    "Modificado",
+    "Changed"
+  ],
+  "Sem descrição": [
+    "Sin descripción",
+    "No description"
+  ],
+  "Nome de {name}": [
+    "Nombre de {name}",
+    "Name for {name}"
+  ],
+  "Moeda de {name}": [
+    "Moneda de {name}",
+    "Currency for {name}"
+  ],
+  "Preço de {name}": [
+    "Precio de {name}",
+    "Price for {name}"
+  ],
+  "Mínimo de {name}": [
+    "Mínimo de {name}",
+    "Minimum for {name}"
+  ],
+  "Máximo de {name}": [
+    "Máximo de {name}",
+    "Maximum for {name}"
+  ],
+  "{field} de {name}": [
+    "{field} de {name}",
+    "{field} for {name}"
+  ],
+  "{count} produtos com alterações": [
+    "{count} productos con cambios",
+    "{count} products with changes"
+  ],
+  "Confira os preços: use valores a partir de zero, dentro do limite permitido.": [
+    "Revise los precios: use valores desde cero, dentro del límite permitido.",
+    "Check prices: use values from zero within the allowed limit."
+  ],
+  "Um dos produtos já tem 5 fotos. Nenhuma alteração foi salva. Substitua a foto principal ou remova uma foto na edição do produto antes de adicionar.": [
+    "Uno de los productos ya tiene 5 fotos. No se guardaron cambios. Reemplace la foto principal o elimine una foto en la edición del producto antes de agregar otra.",
+    "One product already has 5 photos. No changes were saved. Replace the primary photo or remove a photo in the product editor before adding another."
+  ]
 }

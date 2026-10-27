@@ -673,31 +673,33 @@ a conferência de versão detecta mudança nas fotos. Grades usam uma escrita da
 coleção com um único parâmetro de imagens, evitando um buffer grande por variante.
 A exclusão do catálogo limpa a galeria e preserva o histórico existente.
 
-### Foto principal por cor na edição em lote
+### Fotos por cor na edição em lote
 
-Em **Selecionar → Editar Massivo → Fotos por cor**, escolha uma cor no dropdown
-**Aplicar foto a** e use **Enviar foto** ou **Câmera**. Todos os tamanhos daquela
-cor dentro da seleção recebem a mesma foto principal. Maiúsculas, acentos e espaços
-não separam as cores. **Todos os selecionados** mantém a troca compartilhada.
-É possível preparar fotos para várias cores e conferir os produtos de cada foto
-antes de **Salvar**; desfazer uma foto preparada mantém a foto já salva no banco.
-Enviar novamente para a mesma seleção substitui a preparação anterior.
+Em **Selecionar → Editar Massivo → Dados do produto em lote**, escolha
+**Fotos por cor** e o grupo em **Aplicar dados a** (todos, cor ou tamanho).
+Use **Enviar foto** ou **Câmera**. **Substituir foto principal** conserva as fotos
+adicionais; **Adicionar à galeria** conserva a principal e acrescenta uma foto,
+respeitando cinco imagens por produto. Se não houver principal, a imagem enviada
+passa a ser a principal. Cada envio prepara uma foto por item; outro envio para
+os mesmos IDs substitui a preparação anterior. Para adicionar várias fotos ao
+mesmo produto, salve uma por vez ou use a galeria do editor individual.
 
-As fotos ficam vinculadas aos IDs selecionados no momento do envio. Renomear uma
-cor depois não transfere sua foto para outros produtos. O editor mostra a cor e os
-itens atuais na conferência. Produtos fora da seleção, fotos adicionais, família,
-estoque e preços são preservados, salvo outras alterações explícitas no mesmo modal.
-A troca substitui a principal; não acrescenta a imagem antiga à galeria.
+É possível preparar fotos para várias cores antes de **Salvar**. A lista única
+mostra a imagem preparada e se será uma substituição ou adição. Desfazer uma foto
+preparada conserva o cadastro salvo. As fotos ficam vinculadas aos IDs no momento
+do envio: editar a cor ou trocar o campo durante o processamento não muda os
+destinatários nem interrompe a preparação. Salvar e fechar aguardam o processamento.
 
-As imagens são preparadas sequencialmente com os limites da galeria, sem IA,
-e o botão Salvar aguarda o processamento. São até 20 fotos distintas por edição;
-cada foto atende até 2.000 IDs. `PATCH /api/inventory/items/batch/photos` valida os
-grupos, não aceita IDs repetidos ou fora da seleção e usa a mesma transação/locks
-dos metadados e ajustes de estoque. O caminho próprio impede que um servidor ainda
-antigo ignore as novas fotos durante um deploy. Nenhum original ou galeria é lido
-para substituir as capas; cada arquivo é enviado e vinculado uma vez por grupo,
-invalidando as miniaturas. A auditoria registra os IDs e a troca, sem guardar a
-imagem no evento. O armazenamento final continua sendo por produto, como no cadastro.
+São até 20 fotos/operações diferentes por edição, cada uma para até 2.000 IDs.
+Os arquivos seguem os limites da galeria, sem IA. A nova UI usa
+`PATCH /api/inventory/items/batch/editor`, na mesma transação dos metadados e
+quantidades. A rota nova evita que um backend antigo ignore a operação de adição
+em um deploy. Rotas antigas são preservadas para os clientes anteriores.
+Substituir não lê originais; adicionar consulta somente presença da principal e
+contagem das adicionais e faz append no banco, sem carregar galerias em memória.
+Os locks e a contagem atual impedem ultrapassar cinco fotos em envios concorrentes.
+Uma galeria cheia recusa o lote inteiro, incluindo preços e estoque. A auditoria
+registra os IDs e o campo alterado, sem o arquivo. O armazenamento continua por produto.
 
 A migração `k3f4a5b6c7d8` acrescenta uma coluna nullable, sem regravar as imagens
 anteriores. Não existe armazenamento separado da foto original em alta resolução;
@@ -1160,31 +1162,33 @@ dos cards em tablets/desktop preservam seus controles anteriores; o zoom é
 exclusivo dos quadrados individuais no celular.
 
 
-## Edição em lote: cor e conferência de estoque (17/10/2026)
+## Edição em lote: painel unificado (26/10/2026)
 
-Em **Selecionar → Editar Massivo**, a seção **Estoque por item** abre com os saldos
-atuais e controles **− / quantidade / +**, também no computador. Escolha **Loja** ou
-**Depósito**; as alterações feitas em cada local permanecem na prévia ao alternar.
-Cada linha informa a **quantidade final** naquele local, e o resumo soma as peças
-selecionadas dos dois locais. Zero é um saldo válido; saldo desconhecido permanece
-bloqueado e nunca vira zero automaticamente.
+Em **Selecionar → Editar Massivo**, todas as operações ficam em **Dados do produto
+em lote**. Escolha o campo, o grupo (todos, cor ou tamanho) e prepare a alteração.
+Uma única lista **Conferir itens**, com miniatura, nome, descrição, tamanho, cor,
+código interno e quantidades, permite as exceções individuais no mesmo formato.
+Não há seções separadas de campos compartilhados, códigos ou campos por item.
+Trocar o campo mantém as alterações já preparadas; somente **Salvar** grava o lote.
+As linhas alteradas mostram quais campos foram preparados, inclusive fora do campo
+atualmente aberto. Nome, cor e tamanho continuam editáveis individualmente.
 
-**Aplicar quantidade a** prepara todos os selecionados, somente uma cor ou somente
-um tamanho. **Definir quantidade** substitui o saldo na prévia; **Somar ou retirar**
-modifica a quantidade que está na prévia. Um resultado negativo/inválido recusa a
-aplicação inteira, sem recortar saldos para zero. É possível conferir e ajustar
-qualquer linha depois. **Aplicar** não salva: somente **Salvar** confirma o lote.
+Os controles **− / quantidade / +** permanecem em cada linha, também no computador.
+**Local do ajuste** alterna Loja/Depósito sem perder os dois saldos preparados.
+O resumo soma as peças dos dois locais. Zero é válido; saldo desconhecido fica
+bloqueado e nunca vira zero automaticamente. Em **Estoque: quantidade, mínimo e
+máximo**, **Manter quantidade** é o padrão para editar limites sem zerar o saldo.
+Limites em branco preservam os valores; máximo zero significa sem limite.
+**Definir quantidade** substitui o saldo na prévia; **Somar ou retirar** modifica a
+quantidade preparada. Um resultado negativo, fracionário, acima do limite ou
+mínimo maior que máximo recusa a aplicação inteira, sem alterar parte das linhas.
 
-Em **Campos compartilhados → Cor para vários itens**, digite/escolha a cor e clique
-em **Aplicar cor a todos**. A cor preenche os campos individuais, que ainda aceitam
-exceções antes de salvar. Cores e tamanhos continuam usando as equivalências do
-catálogo; nomes, fotos, códigos e vínculos de grade não são recriados.
-
-O motivo de estoque é **opcional**, tanto compartilhado quanto por item. Quando
-omitido, o movimento registra **Conferência de estoque — edição em lote**, com ator,
-data, local e saldos antes/depois. Não é necessário preencher um motivo para cada
-produto. O endpoint anterior de entrada/saída em lote também aceita motivo vazio e
-continua disponível para versões antigas; seus movimentos usam motivo contextual.
+**Cor** usa o mesmo dropdown editável do cadastro. **Corrigir nomes com substituição**
+troca apenas o trecho informado, conservando tamanhos e restante do nome; as linhas
+permitem conferir e corrigir cada nome. O motivo de estoque é opcional, compartilhado.
+Quando omitido, registra **Conferência de estoque — edição em lote**, ator, data,
+local e saldos antes/depois. O backend conserva o contrato anterior de motivos
+individuais para clientes antigos, sem exigir esse campo no novo fluxo.
 
 A API **PATCH /api/inventory/items/batch/quantities** recebe `stock_adjustments`,
 com quantidades finais de loja/depósito e os três saldos vistos na abertura.
@@ -1207,15 +1211,13 @@ Validação: `test_inventory_bulk_edit.py`, `test_inventory_bulk_edit_postgres.p
 
 ### Edição completa em lote e referências curtas
 
-Em **Selecionar → Editar Massivo**, **Dados do produto em lote** permite substituir
-ou limpar descrições e acrescentar texto ao final, preservando as descrições
-individuais. O campo escolhido pode ser aplicado a todos os selecionados, por cor
-ou tamanho, com revisão individual antes de Salvar. Também estão disponíveis
-marca, categoria, unidade, localização, fornecedor, família/grade, moedas,
-limites de estoque e situação ativo/inativo. Os controles existentes continuam
-responsáveis por nomes (inclusive substituição de trechos), tamanhos, cores,
-preços, foto principal por cor e saldos por local. Alterar a moeda **não converte**
-o valor. Galerias adicionais continuam no editor individual.
+O painel unificado inclui descrição (substituir, acrescentar ao final ou limpar),
+marca, **categoria e subcategoria juntas**, unidade, localização, fornecedor,
+família/grade, cor, tamanho e situação. **Moeda e preço de custo** e **Moeda e preço
+de venda** têm moeda e valor juntos, no lote e na revisão individual. Preço em
+branco e **Manter moeda de cada item** preservam esses dados, sem converter valores.
+A moeda de referência legada continua disponível. Limites e quantidade ficam em
+**Estoque**; fotos e códigos usam o mesmo seletor e a mesma lista de conferência.
 
 **Códigos de barras em lote** oferece digitação/leitor USB por item (Enter avança),
 câmera e prévia de preenchimento com o mesmo código base ou base + tamanho
@@ -1237,7 +1239,7 @@ sequência e permutação sem colisões dentro de 32^6 posições; códigos não
 reciclados quando produtos são excluídos. Um índice único atende à busca pela referência curta. SQLite local usa geração aleatória com verificação; os
 testes de concorrência e migração são executados em PostgreSQL isolado.
 
-`PATCH /api/inventory/items/batch/details` usa o mesmo processamento transacional
+`PATCH /api/inventory/items/batch/editor` usa o mesmo processamento transacional
 com bloqueio de linhas das outras edições em lote. Valida campos, fornecedor,
 limites e comparação de versão enviada por item antes de aplicar mudanças.
 Se um cadastro mudou durante a conferência, retorna 409 sem salvar o lote.

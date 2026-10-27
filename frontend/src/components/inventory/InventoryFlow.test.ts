@@ -6,6 +6,7 @@ import ItemFormModal from './ItemFormModal.vue'
 import BulkTransferModal from './BulkTransferModal.vue'
 import BulkEditModal from './BulkEditModal.vue'
 import { inventoryMessages, useInventoryI18n } from './i18n'
+import { chooseDropdown } from '@/test/dropdown'
 
 const api = vi.hoisted(() => ({ createMovement: vi.fn(), createBatchMovement: vi.fn(), transferBulk: vi.fn(),
   batchEdit: vi.fn(), createItem: vi.fn(), updateItem: vi.fn(), createGrade: vi.fn(), getByBarcode: vi.fn() }))
@@ -304,10 +305,13 @@ describe('Unknown balances remain unknown during product operations', () => {
     api.batchEdit.mockResolvedValue({})
     const saved = vi.fn()
     await mount(BulkEditModal, { items: [incomplete], onSaved: saved })
+    await chooseDropdown(container.querySelector('button[aria-label="Campo para editar"]'), 'stock')
+    await chooseDropdown(container.querySelector('button[aria-label="Operação de quantidade"]'), 'set')
     expect((container.querySelector('input[aria-label="Quantidade para aplicar"]') as HTMLInputElement).disabled).toBe(true)
     expect((container.querySelector('[data-stock-item] input[type="number"]') as HTMLInputElement).disabled).toBe(true)
-    expect(container.querySelector('.card-stock-badge')?.textContent).toContain('Estoque: —')
-    setInput(container.querySelector('.item-fields input') as HTMLInputElement, 'Nome corrigido')
+    expect(container.querySelector('.product-row')?.textContent).toContain('Revisar estoque')
+    await chooseDropdown(container.querySelector('button[aria-label="Campo para editar"]'), 'name_replace')
+    setInput(container.querySelector('input[aria-label^="Nome de"]') as HTMLInputElement, 'Nome corrigido')
     await nextTick(); button('Salvar 1 itens').click()
     await vi.waitFor(() => expect(saved).toHaveBeenCalled())
     const payload = api.batchEdit.mock.calls[0][0]
@@ -323,10 +327,12 @@ it('previews a bulk word correction and sends distinct complete names only on Sa
     { ...item, id: 's', name: 'T-shirt Biss Y-26-09 S', size: 'S' },
     { ...item, id: 'm', name: 'T-shirt Biss Y-26-09 M', size: 'M' },
   ] })
-  const fields = container.querySelectorAll<HTMLInputElement>('.name-replace input')
+  await chooseDropdown(container.querySelector('button[aria-label="Campo para editar"]'), 'name_replace')
+  const fields = container.querySelectorAll<HTMLInputElement>('.name-controls input')
   setInput(fields[0]!, 'Biss'); setInput(fields[1]!, 'Boss'); await nextTick()
-  expect(container.querySelector('.name-preview')?.textContent).toContain('T-shirt Boss Y-26-09 M')
-  button('Aplicar correção aos nomes').click(); await nextTick()
+  expect(container.querySelector('.name-controls')?.textContent).toContain('2 nomes serão alterados')
+  button('Preparar alteração · 2').click(); await nextTick()
+  expect(container.querySelector<HTMLInputElement>('input[aria-label="Nome de T-shirt Biss Y-26-09 M"]')?.value).toBe('T-shirt Boss Y-26-09 M')
   expect(api.batchEdit).not.toHaveBeenCalled()
   button('Salvar 2 itens').click(); await nextTick(); await nextTick()
   expect(api.batchEdit.mock.calls[0]![0].sizes).toEqual([

@@ -1,12 +1,13 @@
 <template>
-  <section class="bulk-photos" :aria-busy="busy">
-    <h3>{{ tr('Fotos por cor') }}</h3>
-    <p>{{ tr('Troque a foto principal dos itens escolhidos. As fotos adicionais da galeria são preservadas.') }}</p>
+  <section class="bulk-photos" :class="{ embedded }" :aria-busy="busy">
+    <h3 v-if="!embedded">{{ tr('Fotos por cor') }}</h3>
+    <p>{{ tr(operation === 'add' ? 'Adicione uma foto à galeria dos itens escolhidos, com até 5 fotos por produto. Se não houver foto principal, a nova foto será a principal.' : 'Troque a foto principal dos itens escolhidos. As fotos adicionais da galeria são preservadas.') }}</p>
     <div class="photo-controls">
-      <div class="photo-target">
+      <div v-if="!embedded" class="photo-target">
         <span>{{ tr('Aplicar foto a') }}</span>
         <ErpDropdown v-model="target" :options="options" :label="tr('Aplicar foto a')" :disabled="locked" />
       </div>
+      <div class="photo-target"><span>{{ tr('Operação da foto') }}</span><ErpDropdown v-model="operation" :options="[{ value: 'replace', label: tr('Substituir foto principal') }, { value: 'add', label: tr('Adicionar à galeria') }]" :label="tr('Operação da foto')" :disabled="locked" /></div>
       <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="fileInput?.click()">{{ tr('Enviar foto') }}</button>
       <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="cameraInput?.click()">{{ tr('Câmera') }}</button>
     </div>
@@ -21,7 +22,8 @@
         <div class="photo-summary">
           <strong>{{ group.colors }}</strong>
           <span>{{ tr('{count} itens selecionados', { count: group.item_ids.length }) }}</span>
-          <details><summary>{{ tr('Conferir itens') }}</summary>
+          <span>{{ tr(group.operation === 'add' ? 'Adicionar à galeria' : 'Substituir foto principal') }}</span>
+          <details v-if="!embedded"><summary>{{ tr('Conferir itens') }}</summary>
             <ul><li v-for="item in group.items" :key="item.id">{{ item.name }} · {{ item.size || tr('Sem tamanho') }}</li></ul>
           </details>
         </div>
@@ -37,13 +39,15 @@ import { colorKey, uniqueColors } from '@/services/inventoryColors'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import type { InventoryItem } from '@/services/api'
+import { inScope } from '@/services/inventoryBulkDetails'
 import { galleryPreview, prepareGalleryFile } from '@/services/productGallery'
 import { MAX_BATCH_PHOTOS, photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
 import { useInventoryI18n } from './i18n'
 const { tr } = useInventoryI18n()
-const props = defineProps<{ items: InventoryItem[]; modelValue: PhotoDraft; disabled?: boolean }>()
+const props = defineProps<{ items: InventoryItem[]; modelValue: PhotoDraft; disabled?: boolean; embedded?: boolean; selectedScope?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: PhotoDraft]; busy: [value: boolean] }>()
 const target = ref('all'), busy = ref(false), error = ref('')
+const operation = ref<'replace' | 'add'>('replace')
 const fileInput = ref<HTMLInputElement>(), cameraInput = ref<HTMLInputElement>()
 const locked = computed(() => props.disabled || busy.value)
 let disposed = false
@@ -60,7 +64,7 @@ const options = computed(() => {
     ...[...colors].map(([key, color]) => ({ value: `color:${key}`, label: color.label, description: tr('{count} itens selecionados', { count: color.count }) }))]
 })
 watch(options, values => { if (!values.some(option => option.value === target.value)) target.value = 'all' })
-const targets = computed(() => props.items.filter(item => target.value === 'all' || `color:${colorKey(item.color || '')}` === target.value))
+const targets = computed(() => props.items.filter(item => inScope(item, props.selectedScope ?? target.value)))
 const groups = computed(() => photoAssignments(props.modelValue, props.items.map(item => item.id)).map(group => {
   const ids = new Set(group.item_ids)
   const items = props.items.filter(item => ids.has(item.id))
@@ -79,6 +83,7 @@ async function prepare(event: Event) {
   if (locked.value || !file || !targets.value.length) return
   // Snapshot membership before asynchronous decoding; later color edits never move a photo to another product.
   const ids = targets.value.map(item => item.id)
+  const selectedOperation = operation.value
   busy.value = true; error.value = ''
   try {
     const image = await prepareGalleryFile(file)
@@ -86,7 +91,7 @@ async function prepare(event: Event) {
     const preview = await galleryPreview(image)
     if (disposed) return
     const next = { ...props.modelValue }
-    const photo = { image, preview }
+    const photo = { image, preview, operation: selectedOperation }
     ids.forEach(id => { next[id] = photo })
     if (photoAssignments(next, props.items.map(item => item.id)).length > MAX_BATCH_PHOTOS) {
       error.value = 'Prepare até 20 fotos diferentes por edição. Salve este lote antes de continuar.'
@@ -101,6 +106,7 @@ async function prepare(event: Event) {
 
 <style scoped>
 .bulk-photos{min-width:0;display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #dbe3ef;border-radius:14px;background:#f8fafc}
+.bulk-photos.embedded{padding:0;border:0;background:transparent}
 h3,p{margin:0}h3{font-size:14px;color:#334155}p,.photo-target>span{font-size:12px;color:#64748b;line-height:1.5}
 .photo-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.photo-target{flex:1 1 180px;min-width:0;display:grid;gap:5px}
 .photo-drafts{display:grid;gap:10px}.photo-draft{display:flex;align-items:start;gap:10px;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:10px;min-width:0}
