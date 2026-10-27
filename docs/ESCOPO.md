@@ -159,6 +159,11 @@ Regras e limitações: [Gestor de Vendas](VENDAS_PDV.md).
 
 ## Confiabilidade operacional
 
+A [conferência diária do sistema](QUALIDADE_SISTEMA.md) analisa dados recentes e
+filas ativas com limites explícitos, mantém relatórios para Lucas e pode resumir
+contagens anônimas com IA. Não altera a operação automaticamente nem cobre todo
+o histórico ou catálogo de uma vez. O horário, pausa e uso de IA são editáveis.
+
 A central de [Notificações](NOTIFICACOES.md) reúne caixa pessoal, leitura,
 confirmações, respostas e Web Push por aparelho. Lucas administra mensagens,
 modelos e regras pela Auditoria. Eventos novos do PDV, falhas de tickets e mudanças

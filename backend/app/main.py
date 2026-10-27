@@ -20,6 +20,7 @@ from .api.endpoints import user_admin, product_photo
 from .services import user_audit
 from .services import notification_events  # register transactional operational notifications
 from .api.endpoints import notifications, notification_push
+from .api.endpoints import system_quality
 
 # Main
 # Setup logging
@@ -118,6 +119,20 @@ async def lifespan(app: FastAPI):
         app.state.assistant_worker.start()
         logger.info("[ASSISTANT] Embedded worker started")
 
+    from .services.quality_worker import main as run_quality_worker
+    from .services.worker_health import state as worker_state
+    def quality_health():
+        return {
+            'assistant': worker_state('assistant', app.state.assistant_worker)
+                if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER else 'disabled',
+            'freight_labels': worker_state('labels', app.state.label_worker),
+            'sales_bi': worker_state('sales_bi', app.state.sales_bi_worker),
+            'notifications': worker_state('notifications', app.state.notification_worker),
+        }
+    app.state.quality_worker = threading.Thread(target=run_quality_worker, args=(worker_stop, quality_health),
+                                              name="quality-worker", daemon=True)
+    app.state.quality_worker.start()
+
     try:
         yield
     finally:
@@ -125,6 +140,7 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(app.state.label_worker.join, 5)
         await asyncio.to_thread(app.state.sales_bi_worker.join, 5)
         await asyncio.to_thread(app.state.notification_worker.join, 5)
+        await asyncio.to_thread(app.state.quality_worker.join, 5)
         if app.state.assistant_worker:
             await asyncio.to_thread(app.state.assistant_worker.join, 5)
         scheduler.shutdown(wait=False)
@@ -159,6 +175,7 @@ app.add_middleware(
 app.include_router(user_admin.router, prefix="/api/access", tags=["access"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(notification_push.router)
+app.include_router(system_quality.router, prefix="/api/quality", tags=["quality"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(vendas.router, prefix="/api/vendas", tags=["vendas"])
 app.include_router(vendedores.router, prefix="/api/vendedores", tags=["vendedores"])
@@ -275,7 +292,9 @@ def health_check():
     sales_bi = state('sales_bi',getattr(app.state,'sales_bi_worker',None))
     notification_thread = getattr(app.state, 'notification_worker', None)
     notification_status = state('notifications', notification_thread) if notification_thread else 'not_started'
+    quality_thread = getattr(app.state, 'quality_worker', None)
+    quality_status = state('quality', quality_thread) if quality_thread else 'not_started'
     healthy = database=='online' and assistant in ('disabled','online') and labels=='online' and sales_bi=='online'
     return JSONResponse(status_code=200 if healthy else 503,headers={'Cache-Control':'no-store'},content={
         'api':'online','database':database,'assistant_worker':assistant,'label_worker':labels,
-        'sales_bi_worker':sales_bi,'notification_worker':notification_status,'timestamp':time.time()})
+        'sales_bi_worker':sales_bi,'notification_worker':notification_status,'quality_worker':quality_status,'timestamp':time.time()})
