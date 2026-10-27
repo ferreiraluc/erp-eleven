@@ -38,6 +38,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Login | `LoginView`, `stores/auth` | `auth` | `models/usuario`, `dependencies` |
 | Acesso/auditoria | `AccountView`, `UserManagementView`, `AuditView`, `services/activity` | `auth`, `access` | `access_policy`, `user_sessions`, `user_audit`, `models/access`, CLI `user_access_setup` |
 | Notificações | `NotificationsView`, `components/notifications`, `stores/notificationCenter`, `notifications-sw.js` | `notifications`, `notifications/push` | `notifications`, `notification_events`, `notification_push`, `notification_worker`, modelos de caixa/fila |
+| Conferência diária | `QualityPanel`, `QualityReport`, `services/systemQuality` na Auditoria | `quality` | `quality_checks`, `quality_summary`, `system_quality`, `quality_worker`, modelos próprios |
 | Dashboard | `DashboardView`, `components/dashboard/*` | Resumos dos módulos | API de cada card; BI usa snapshots |
 | Estoque | `views/inventory/`, `components/inventory/`, `stores/inventory` | `inventory`, `ocr`, `product-photo` | `product_photo`, `inventory_service`, `inventory_history`, `inventory_deletion`, `inventory_diagnostics`, `ocr_service`, `models/inventory`, `label_template` |
 | Etiquetas internas | `ProductLabelsView`, `services/productLabels` | `inventory-labels`, agente `printing` | `product_labels`, `PrintDevice`/`PrintJob`, `AgenteEtiquetas.ps1` RAW/ZPL |
@@ -67,6 +68,7 @@ não houver uma migração explícita de seus consumidores.
 | BI | `services.sales_bi_sync.main` | Thread da API; leitura às 18h Brasília ou pedido manual no banco |
 | Atualização de rastreios | `_job_atualizar_rastreamentos` | APScheduler, às 19h Brasília |
 | Notificações | `services.notification_worker.main` | Thread com agendamentos Brasília e fila persistida de Web Push |
+| Conferência do sistema | `services.quality_worker.main` | Thread com leitura limitada às 08h30 Brasília e pedidos de Lucas |
 | Impressão | `tools/eleven-print-agent/Agente.ps1` | PowerShell na sessão do Windows da loja |
 | Tickets macOS | `tools/eleven-ticket-agent-macos/main.swift` | LaunchAgent na sessão do iMac; HTTPS → TCP local ESC/POS |
 
