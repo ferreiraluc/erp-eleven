@@ -9,7 +9,8 @@
 
 O repositório é publicado pela branch `main`, com auto-deploy **After CI Checks Pass**
 configurado no frontend e backend. Falhas de testes ou auditoria de dependências de
-execução bloqueiam novas publicações automáticas. Deploy manual continua sendo um bypass
+execução e ferramentas de desenvolvimento bloqueiam novas publicações automáticas
+quando atingem o nível configurado (alto/crítico no Node). Deploy manual continua sendo um bypass
 operacional: use apenas para uma revisão previamente validada.
 `main` exige PR e os checks `backend`, `frontend`, `print-agent` e `python-security`,
 inclusive para administradores; force-push e exclusão da branch estão bloqueados.
