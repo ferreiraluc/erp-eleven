@@ -22,3 +22,7 @@ from .access import AuthSession, AuditEvent, ActivitySpan
 from .operations import LoginThrottle, ScheduledRun
 
 from .inventory_receiving import ReceivingLot, ReceivingLotItem
+
+from .notification import (Notification, NotificationPreference, NotificationRecipient,
+                           NotificationRevision, NotificationRule, NotificationTemplate)
+from .notification_push import NotificationPushSetting, NotificationPushSubscription, NotificationPushDelivery

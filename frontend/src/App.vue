@@ -5,6 +5,7 @@
       v-if="!route.matched.some(record => record.path === '/dashboard') || !auth.isAuthenticated"
       :class="{ 'operational-account-bar': route.meta.requiresAuth }"
     />
+    <NotificationInvitation v-if="auth.isAuthenticated" />
     <div v-if="auth.status === 'checking'" class="session-state" role="status">{{ $t('access.checking') }}</div>
     <section v-else-if="auth.status === 'error' && route.meta.requiresAuth" class="session-state session-error" role="alert">
       <p>{{ $t('access.connectionError') }}</p>
@@ -17,14 +18,28 @@
   </div>
 </template>
 <script setup lang="ts">
-import { watch } from 'vue'
+import { onBeforeUnmount, watch } from 'vue'
 import { useCurrencyStore } from '@/stores/currency'
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import NotificationToast from '@/components/NotificationToast.vue'
 import AccountNavigation from '@/components/AccountNavigation.vue'
 import { logoutToLogin } from '@/services/logoutNavigation'
+import NotificationInvitation from '@/components/notifications/NotificationInvitation.vue'
+import { useNotificationCenter } from '@/stores/notificationCenter'
+import { safeNotificationPath } from '@/services/notifications'
 const auth = useAuthStore(), router = useRouter(), route = useRoute()
+const notificationCenter = useNotificationCenter()
+function notificationMessage(event: MessageEvent) {
+  if (!auth.isAuthenticated || event.data?.user_id !== auth.user?.id) return
+  if (event.data.type === 'eleven-notification-refresh') void notificationCenter.load()
+  if (event.data.type === 'eleven-notification-open') {
+    const path = safeNotificationPath(event.data.action_path)
+    if (path) void router.push(path)
+  }
+}
+navigator.serviceWorker?.addEventListener('message', notificationMessage)
+onBeforeUnmount(() => navigator.serviceWorker?.removeEventListener('message', notificationMessage))
 const currency = useCurrencyStore()
 watch(() => auth.isAuthenticated && auth.user?.id, id => { if (id) void currency.loadCurrentRates() }, { immediate: true })
 async function retrySession() {

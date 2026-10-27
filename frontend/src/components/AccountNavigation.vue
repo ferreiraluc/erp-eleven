@@ -12,6 +12,7 @@
           <RouterLink to="/auditoria"><ShieldCheck aria-hidden="true" />{{ $t('access.audit') }}</RouterLink>
         </template>
         <button type="button" @click="logoutToLogin(auth, router)"><LogOut aria-hidden="true" />{{ $t('common.logout') }}</button>
+        <NotificationBell />
       </div>
     </template>
     <LanguageSelector v-if="!hideLanguage" compact align="end" />
@@ -23,6 +24,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { LogOut, ShieldCheck, UserRound, UsersRound } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import LanguageSelector from '@/components/LanguageSelector.vue'
+import NotificationBell from '@/components/notifications/NotificationBell.vue'
 import { logoutToLogin } from '@/services/logoutNavigation'
 
 defineProps<{ embedded?: boolean; hideLanguage?: boolean }>()
@@ -38,6 +40,7 @@ const auth = useAuthStore(), router = useRouter()
 .account-links a, .account-links button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 36px; padding: .45rem .6rem; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #475569; cursor: pointer; font: inherit; font-weight: 500; text-decoration: none; white-space: nowrap; }
 .account-links a:hover, .account-links button:hover { color: #1d4ed8; background: #eff6ff; }
 .account-links a.router-link-active { color: #1d4ed8; background: #eff6ff; border-color: #dbeafe; }
+.account-links :deep(a.notification-bell) { flex:0 0 34px; width:34px; min-width:34px; min-height:34px; padding:0; border:1px solid #dbe4ef; border-radius:50%; background:#fff; }
 .account-links a:focus-visible, .account-links button:focus-visible, select:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .account-navigation svg { width: 15px; height: 15px; flex: 0 0 15px; }
 .account-navigation-embedded { justify-content: center; gap: .75rem; }
@@ -50,5 +53,6 @@ const auth = useAuthStore(), router = useRouter()
   .account-navigation-embedded .account-links a,
   .account-navigation-embedded .account-links button { min-height: 36px; padding: .35rem .25rem; }
   .account-navigation-embedded .account-links svg { display: none; }
+  .account-navigation-embedded .account-links :deep(.notification-bell svg) { display:block; }
 }
 </style>

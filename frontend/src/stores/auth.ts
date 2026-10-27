@@ -5,6 +5,7 @@ import { authAPI, type LoginRequest, type User } from '@/services/api'
 import { clearSession, saveToken, storedToken, tokenIsCurrent } from '@/services/sessionStorage'
 import i18n from '@/i18n'
 import { AuthOperationSuperseded, isAuthOperationSuperseded } from '@/services/authOperation'
+import { clearNotificationDevice } from '@/services/notificationPush'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -24,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.nome || '')
 
   function expire() {
+    clearNotificationDevice()
     operationEpoch++
     generation++
     checking = null

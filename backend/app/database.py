@@ -21,7 +21,8 @@ def engine_options(url):
     return options
 
 engine = create_engine(settings.DATABASE_URL, **engine_options(settings.DATABASE_URL))
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, info={"audit_enabled": True})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine,
+                           info={"audit_enabled": True, "notification_events": True})
 
 Base = declarative_base()
 

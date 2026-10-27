@@ -18,6 +18,8 @@ from .api.endpoints import assistant, printing, inventory_labels, address_manage
 from .services import assistant_events  # register atomic tracking outbox listener
 from .api.endpoints import user_admin, product_photo
 from .services import user_audit
+from .services import notification_events  # register transactional operational notifications
+from .api.endpoints import notifications, notification_push
 
 # Main
 # Setup logging
@@ -99,6 +101,9 @@ async def lifespan(app: FastAPI):
     from .services.sales_bi_sync import main as run_sales_bi_worker
     app.state.sales_bi_worker = threading.Thread(target=run_sales_bi_worker, args=(worker_stop,), name="sales-bi-worker", daemon=True)
     app.state.sales_bi_worker.start()
+    from .services.notification_worker import main as run_notification_worker
+    app.state.notification_worker = threading.Thread(target=run_notification_worker, args=(worker_stop,), name="notification-worker", daemon=True)
+    app.state.notification_worker.start()
     app.state.assistant_worker = None
     if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER:
         # Dedicated thread: provider requests never block the API event loop.
@@ -119,6 +124,7 @@ async def lifespan(app: FastAPI):
         worker_stop.set()
         await asyncio.to_thread(app.state.label_worker.join, 5)
         await asyncio.to_thread(app.state.sales_bi_worker.join, 5)
+        await asyncio.to_thread(app.state.notification_worker.join, 5)
         if app.state.assistant_worker:
             await asyncio.to_thread(app.state.assistant_worker.join, 5)
         scheduler.shutdown(wait=False)
@@ -151,6 +157,8 @@ app.add_middleware(
 )
 
 app.include_router(user_admin.router, prefix="/api/access", tags=["access"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(notification_push.router)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(vendas.router, prefix="/api/vendas", tags=["vendas"])
 app.include_router(vendedores.router, prefix="/api/vendedores", tags=["vendedores"])
@@ -265,7 +273,9 @@ def health_check():
     assistant = state('assistant',getattr(app.state,'assistant_worker',None)) if settings.ASSISTANT_ENABLED and settings.ASSISTANT_EMBEDDED_WORKER else 'disabled'
     labels = state('labels',getattr(app.state,'label_worker',None))
     sales_bi = state('sales_bi',getattr(app.state,'sales_bi_worker',None))
+    notification_thread = getattr(app.state, 'notification_worker', None)
+    notification_status = state('notifications', notification_thread) if notification_thread else 'not_started'
     healthy = database=='online' and assistant in ('disabled','online') and labels=='online' and sales_bi=='online'
     return JSONResponse(status_code=200 if healthy else 503,headers={'Cache-Control':'no-store'},content={
         'api':'online','database':database,'assistant_worker':assistant,'label_worker':labels,
-        'sales_bi_worker':sales_bi,'timestamp':time.time()})
+        'sales_bi_worker':sales_bi,'notification_worker':notification_status,'timestamp':time.time()})

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { Script } from 'node:vm'
 
 const root = resolve(process.argv[2] || 'dist')
 const html = readFileSync(resolve(root, 'index.html'), 'utf8')
@@ -17,4 +18,7 @@ for (const asset of assets) {
   assert(existsSync(resolve(root, asset[1].slice(1))), `Missing asset: ${asset[1]}`)
 }
 assert(!existsSync(resolve(root, '_redirects')), 'Do not rewrite missing assets to HTML')
+const pushWorker = resolve(root, 'notifications-sw.js')
+assert(existsSync(pushWorker), 'Missing notification service worker')
+new Script(readFileSync(pushWorker, 'utf8'), { filename: 'notifications-sw.js' })
 console.log(`Build ${release}: versioned bootstrap and ${assets.length} entry assets verified`)

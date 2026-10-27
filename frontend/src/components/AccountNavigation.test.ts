@@ -1,7 +1,7 @@
 import { chooseDropdown } from '@/test/dropdown'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, type App } from 'vue'
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia, disposePinia, setActivePinia, type Pinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import RootApp from '@/App.vue'
 import DashboardView from '@/views/DashboardView.vue'
@@ -11,6 +11,7 @@ import { uiText } from '@/i18n/uiText'
 import { useAuthStore } from '@/stores/auth'
 import { authAPI, exchangeRateAPI, healthAPI, inventoryAPI, type User } from '@/services/api'
 import { saveToken } from '@/services/sessionStorage'
+import { notificationsAPI } from '@/services/notifications'
 
 vi.mock('@/components/NotificationToast.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/components/RastreamentoCard.vue', () => ({ default: { render: () => null } }))
@@ -19,7 +20,7 @@ vi.mock('@/components/dashboard/AddressSummaryCard.vue', () => ({ default: { ren
 vi.mock('@/components/dashboard/SalesSummaryCard.vue', () => ({ default: { render: () => null } }))
 vi.mock('@/components/pdv/PDVPrinterModal.vue', () => ({ default: { template: '<div class="printer-dialog">Ticket printer settings</div>' } }))
 
-let app: App | undefined, element: HTMLElement
+let app: App | undefined, element: HTMLElement, testPinia: Pinia
 const account = (owner: boolean): User => ({
   id: owner ? 'owner' : 'employee', nome: owner ? 'Lucas' : 'Sol',
   email: owner ? 'lucas@eleven.com' : 'sol@eleven.com', role: owner ? 'ADMIN' : 'GERENTE',
@@ -28,11 +29,12 @@ const account = (owner: boolean): User => ({
 })
 async function mount(owner = true, path = '/dashboard') {
   const pinia = createPinia(); setActivePinia(pinia)
+  testPinia = pinia
   const auth = useAuthStore(); auth.user = account(owner); auth.token = 'fixture-token'; auth.status = 'authenticated'; saveToken('fixture-token')
   const router = createRouter({ history: createMemoryHistory(), routes: [
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/configuracoes', component: SystemSettingsView, meta: { requiresAuth: true, requiresOwner: true } },
-    ...['/conta', '/usuarios', '/auditoria', '/pedidos'].map(path => ({ path, component: { template: '<main>Fixture</main>' }, meta: { requiresAuth: true } })),
+    ...['/conta', '/usuarios', '/auditoria', '/pedidos', '/notificacoes'].map(path => ({ path, component: { template: '<main>Fixture</main>' }, meta: { requiresAuth: true } })),
     { path: '/login', component: { template: '<main>Login</main>' } },
   ] })
   await router.push(path); await router.isReady()
@@ -48,8 +50,10 @@ beforeEach(() => {
   vi.spyOn(inventoryAPI, 'getAlertsSummary').mockResolvedValue({} as never)
   vi.spyOn(inventoryAPI, 'getItems').mockResolvedValue({ items: [] } as never)
   vi.spyOn(healthAPI, 'check').mockResolvedValue({ api: 'online', database: 'online', timestamp: 0 })
+  vi.spyOn(notificationsAPI, 'inbox').mockResolvedValue({ items: [], total: 0, unread_count: 0 })
+  vi.spyOn(notificationsAPI, 'preferences').mockResolvedValue({ push_enabled: true, sound_enabled: false, categories: ['manual', 'sales', 'tracking', 'reminder', 'greeting'] })
 })
-afterEach(() => { app?.unmount(); element?.remove() })
+afterEach(() => { app?.unmount(); element?.remove(); if (testPinia) disposePinia(testPinia) })
 
 describe('Account navigation inside the dashboard header', () => {
   it('shows one navigation within the personalized header, including owner actions', async () => {
@@ -60,7 +64,7 @@ describe('Account navigation inside the dashboard header', () => {
     expect(header.querySelector('.app-title')?.textContent).toBe('ERP Eleven, Lucas')
     const nav = header.querySelector('nav')!
     expect(nav.getAttribute('aria-label')).toBe(i18n.global.t('access.navigation'))
-    expect(Array.from(nav.querySelectorAll('a')).map(a => a.getAttribute('href'))).toEqual(['/conta', '/usuarios', '/auditoria'])
+    expect(Array.from(nav.querySelectorAll('a')).map(a => a.getAttribute('href'))).toEqual(['/conta', '/usuarios', '/auditoria', '/notificacoes'])
     expect(nav.querySelector('button')?.textContent).toContain('Sair')
     expect(header.querySelector('.header-preferences .currency-selector-group')).not.toBeNull()
     expect(header.querySelector('.current-time')?.textContent?.trim()).not.toBe('')

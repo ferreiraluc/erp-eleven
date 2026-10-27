@@ -44,6 +44,9 @@ services:
       - path: /loading-fallback.js
         name: Cache-Control
         value: "no-store, max-age=0, s-maxage=0"
+      - path: /notifications-sw.js
+        name: Cache-Control
+        value: "no-store, max-age=0, s-maxage=0"
       - path: /*
         name: Strict-Transport-Security
         value: "max-age=31536000"

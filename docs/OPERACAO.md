@@ -53,7 +53,7 @@ de `RENDER_GIT_COMMIT`, `GITHUB_SHA` ou Git local; arquivos de fonte sem Git usa
 `frontend/scripts/check-build.mjs` valida essa organização e a existência dos
 arquivos depois do build, inclusive no CI.
 
-Em **Headers** do frontend no Render, `/`, `/index.html` e `/loading-fallback.js`
+Em **Headers** do frontend no Render, `/`, `/index.html`, `/loading-fallback.js` e `/notifications-sw.js`
 devem retornar `Cache-Control: no-store, max-age=0, s-maxage=0`. As mesmas regras
 estão em `render.yaml`; em serviços existentes, conferir o painel, pois editar o
 arquivo não garante que o Blueprint seja reaplicado. Preservar os headers de
@@ -107,6 +107,12 @@ Não há `MSAL_CLIENT_ID` ou OAuth Microsoft implementado nesse conector. Ele us
 compartilhados configurados para leitura. Dados de remetentes ficam no banco, não no código.
 
 ## Processos contínuos
+
+O worker de notificações roda junto à API e informa seu estado em `/health`.
+Chaves VAPID são criadas automaticamente e cifradas no banco com derivação da
+`SECRET_KEY`; preservar ambos nos backups. O novo service worker não intercepta
+requisições e não armazena páginas offline. Ver [Notificações](NOTIFICACOES.md)
+para consentimento por aparelho, fila, horários, privacidade e limites de entrega.
 
 No modo atual, `ASSISTANT_EMBEDDED_WORKER=true` inicia o bot em thread da API.
 A recuperação de etiquetas e o agendador BI iniciam independentemente dessa flag.

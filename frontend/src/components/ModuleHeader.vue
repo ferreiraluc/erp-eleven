@@ -16,13 +16,14 @@
         <div v-if="$slots.meta" class="erp-module-header__meta"><slot name="meta" /></div>
       </div>
     </div>
-    <div v-if="$slots.default" class="erp-module-header__actions"><slot /></div>
+    <div class="erp-module-header__actions"><slot /><NotificationBell class="module-notification-bell" /></div>
   </header>
 </template>
 
 <script setup lang="ts">
 import { ArrowLeft } from 'lucide-vue-next'
 import { uiText } from '@/i18n/uiText'
+import NotificationBell from '@/components/notifications/NotificationBell.vue'
 
 withDefaults(defineProps<{ title: string; showBack?: boolean }>(), { showBack: true })
 </script>
@@ -74,6 +75,7 @@ withDefaults(defineProps<{ title: string; showBack?: boolean }>(), { showBack: t
   max-width: 100%;
   margin-left: auto;
 }
+@media (min-width: 769px) { .module-notification-bell { display:none; } }
 /* Header density is shared; each page retains action visibility and permissions. */
 :is(#app, body) .erp-module-header :deep(.erp-button) {
   min-height: 34px;

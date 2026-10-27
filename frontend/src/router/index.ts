@@ -24,6 +24,7 @@ const router = createRouter({
     { path: '/configuracoes', name: 'configuracoes', component: () => import('@/views/SystemSettingsView.vue'), meta: { requiresAuth: true, requiresOwner: true } },
     { path: '/usuarios', name: 'usuarios', component: () => import('@/views/UserManagementView.vue'), meta: { requiresAuth: true, requiresOwner: true } },
     { path: '/auditoria', name: 'auditoria', component: () => import('@/views/AuditView.vue'), meta: { requiresAuth: true, requiresOwner: true } },
+    { path: '/notificacoes', name: 'notificacoes', component: () => import('@/views/NotificationsView.vue'), meta: { requiresAuth: true } },
     {path:'/bi-vendas',name:'bi-vendas',component:()=>import('@/views/SalesBiView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {path:'/enderecos',name:'enderecos',component:()=>import('@/views/AddressesView.vue'),meta:{requiresAuth:true,requiresManager:true}},
     {
