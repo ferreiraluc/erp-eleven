@@ -2,9 +2,13 @@
 
 ## Uso por aparelho
 
-O sino abre **Notificações** (`/notificacoes`), com mensagens pessoais, pendências,
-confirmação de leitura, respostas e preferências de categorias e som. A central
-continua disponível mesmo quando o aparelho não permite notificações externas.
+O sino fica somente no menu inicial/dashboard, à direita do cabeçalho. Abre um
+balão com mensagens pessoais, pendências, confirmação de leitura e respostas,
+sem sair da tela. A lista tem rolagem e carrega mais mensagens quando solicitado.
+O balão também dá acesso ao histórico e às preferências de categorias e som.
+**Notificações** (`/notificacoes`) continua sendo a central completa e o destino
+de abertura do push externo. Ler e responder no ERP funciona mesmo quando o
+aparelho não permite notificações externas.
 
 Na próxima abertura autenticada de cada aparelho, aparece o convite **Ativar
 notificações**. O usuário precisa tocar nesse botão e aceitar a permissão do
@@ -48,6 +52,40 @@ permitidos ao destinatário. Uma resposta confirmada permanece registrada; não
 se altera silenciosamente ao editar a mensagem. A confirmação identifica a versão
 lida/respondida. Para pedir outra resposta a quem já confirmou, criar novo aviso.
 Editar uma mensagem publicada não dispara outro push para a mesma inscrição.
+
+### Avisar a partir de uma venda ou produto
+
+Em **Vendas**, Lucas encontra **Notificar vendedor** tanto na listagem quanto
+nos detalhes. O formulário já traz o código da venda e o vendedor como
+destinatário; abrir ou cancelar não envia mensagem. Cada produto vinculado nos
+detalhes também oferece **Notificar sobre produto**. Antes de enviar, Lucas
+confere o texto, o destinatário e o destino: **Venda** ou **Produto de referência**.
+O destino Produto abre a ficha de consulta do item no estoque, inclusive quando
+ele não está na página ou nos filtros atuais da listagem.
+
+O produto de referência pode ser escolhido no catálogo mesmo em uma venda com
+avulsos. Isso apenas orienta a conferência: não vincula a peça à venda, não
+converte avulsos em produtos cadastrados e não modifica estoque ou valores.
+Itens excluídos ou inativos não podem ser escolhidos como nova referência.
+Na administração central, é possível buscar uma venda por código e reutilizar
+o mesmo fluxo, sem copiar o endereço da página.
+
+Modelos manuais mostram uma prévia com os campos preenchidos. `{user_name}` usa
+o vendedor da venda vinculada ou o nome do único destinatário (com vários,
+“equipe”); `{sale_code}` exige escolher uma venda. `{date}` e `{time}` usam
+Brasília. O servidor resolve e valida novamente os campos antes de salvar.
+Variáveis que precisam de um contexto ausente impedem o envio com uma explicação,
+em vez de entregar os códigos literais. Mensagens antigas com campos sem preencher
+ganham uma apresentação legível; quando não existe vínculo suficiente, o sistema
+informa que a venda não foi vinculada e preserva o histórico original.
+
+As permissões da venda são conferidas também ao listar, ler, responder e entregar
+o push. Trocar o escopo de vendas de uma conta não permite que uma mensagem antiga
+exponha uma venda que saiu desse escopo. O atalho de produto respeita o acesso
+atual ao catálogo.
+Avisos antigos com atalhos de venda ambíguos ficam ocultos para contas com vendas
+pessoais. Lucas pode escolher novamente a venda na edição para gerar um atalho
+válido, preservando as revisões anteriores.
 
 **Aceito pelo serviço de push** não significa entregue fisicamente no telefone.
 Leitura e confirmação são registros distintos, realizados no ERP. Não há recibo

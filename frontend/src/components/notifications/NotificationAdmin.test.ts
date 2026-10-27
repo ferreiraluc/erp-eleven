@@ -106,14 +106,28 @@ describe('Owner notification editor', () => {
     await vi.waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(2))
     expect(mocks.create.mock.calls[1][0].request_id).toBe(original.request_id)
   })
-  it('rejects external destinations locally', async () => {
+  it('uses labelled destinations without asking the owner to copy a URL', async () => {
     await mount()
     const form = await compose()
-    input(form.querySelector('input[maxlength="500"]')!, 'https://evil.test')
+    expect(form.querySelector('input[maxlength="500"]')).toBeNull()
+    expect(form.querySelector('button[aria-label="Ao abrir o aviso"]')).toBeTruthy()
+  })
+  it('keeps the current draft mounted and locks authoring navigation during a slow send', async () => {
+    let finish!: (value: unknown) => void
+    mocks.create.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    await mount()
+    const form = await compose()
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await vi.waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1))
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('button[role=tab]'))
+    expect(tabs.every(tab => tab.disabled)).toBe(true)
+    tabs[1].click()
     await nextTick()
-    expect(mocks.create).not.toHaveBeenCalled()
-    expect(root.textContent).toContain('Links externos não são permitidos')
+    expect(root.querySelector('form')).toBe(form)
+    expect(form.querySelector<HTMLTextAreaElement>('textarea')!.value).toContain('lançamento avulso')
+    finish({})
+    await vi.waitFor(() => expect(root.querySelector('form')).toBeNull())
+    expect(tabs.every(tab => !tab.disabled)).toBe(true)
   })
   it('makes a mandatory response also require acknowledgement', async () => {
     await mount()

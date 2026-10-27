@@ -7,7 +7,7 @@ import { saleError, type ManagedSale, type SaleListing } from '@/services/pdvMan
 const mocks=vi.hoisted(()=>({ detail:vi.fn(),preview:vi.fn(),commit:vi.fn(),list:vi.fn(),options:vi.fn(), auth:{isOwner:true,ownSales:false} }))
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>mocks.auth}))
 vi.mock('@/services/pdvManagement',async original=>({...await original<object>(),pdvManagementAPI:mocks}))
-vi.mock('vue-router',()=>({useRouter:()=>({push:vi.fn(),replace:vi.fn()}),useRoute:()=>({query:{}})}))
+vi.mock('vue-router',()=>({useRouter:()=>({push:vi.fn(),replace:vi.fn()}),useRoute:()=>({query:{}}),RouterLink:{props:['to'],template:'<a><slot /></a>'}}))
 vi.mock('@/services/api',()=>({default:{},inventoryAPI:{},pdvAPI:{}}))
 let app:App|null=null,root:HTMLElement|null=null
 const fixture=():ManagedSale=>({id:'sale-1',vendedor_id:'user-1',cliente_id:null,cliente_nome:'Cliente exemplo',subtotal_gs:'300',desconto_gs:'0',total_gs:'300',refunded_gs:'0',fiado_reversed_gs:'0',status:'completed',stock_applied:true,notas:null,version:1,created_at:'2026-10-07T13:00:00-03:00',deleted_at:null,seller:'Lucas',actor:'Lucas',can_manage:true,payments:[],events:[],payment_difference_gs:'0',items:[{id:'line-1',item_id:'product-1',item_name:'Camiseta',item_sku:'SKU-P',item_category:null,item_color:'Azul',item_size:'P',quantity:3,returned_quantity:'0',unit_price_gs:100,original_price_gs:null,discount_gs:0,total_gs:300,is_avulso:false,location:'loja'}]})

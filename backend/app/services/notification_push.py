@@ -171,6 +171,9 @@ def _eligible(db, delivery, moment):
             or session.revoked_at or session.user_id != user.id or aware(session.expires_at) <= moment):
         sub.active = False
         return None
+    from .notification_context import notification_allowed
+    if not notification_allowed(db, user, notice):
+        return None
     pref = db.get(NotificationPreference, user.id)
     if (recipient.user_id != user.id or recipient.notification_id != notice.id
             or recipient.read_at or recipient.removed_at or notice.cancelled_at or not notice.published_at

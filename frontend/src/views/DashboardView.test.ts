@@ -17,6 +17,7 @@ vi.mock('@/services/api',()=>({
 }))
 vi.mock('@/components/RastreamentoCard.vue',()=>({default:{render:()=>null}}))
 vi.mock('@/components/FolgasCard.vue',()=>({default:{render:()=>null}}))
+vi.mock('@/components/notifications/NotificationBell.vue',()=>({default:{render:()=>null}}))
 vi.mock('@/components/dashboard/AddressSummaryCard.vue',()=>({default:{render:()=>null}}))
 vi.mock('@/components/dashboard/SalesSummaryCard.vue',()=>({default:{render:()=>null}}))
 

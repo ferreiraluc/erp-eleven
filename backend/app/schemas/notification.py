@@ -12,6 +12,8 @@ Category = Literal['manual', 'sales', 'tracking', 'reminder', 'greeting']
 Severity = Literal['info', 'success', 'warning', 'urgent']
 CATEGORIES = ['manual', 'sales', 'tracking', 'reminder', 'greeting']
 TEMPLATE_VARIABLES = {'user_name', 'sale_code', 'tracking_code', 'status', 'date', 'time'}
+MANUAL_TOKEN = re.compile(r'\{\{|\}\}|\{([^{}]*)\}')
+MANUAL_VARIABLE_START = re.compile(r'\{(' + '|'.join(sorted(TEMPLATE_VARIABLES)) + r')(?=[^A-Za-z0-9_]|$)')
 ALLOWED_PATHS = {'/notificacoes', '/dashboard', '/inventory', '/inventory/labels', '/pdv', '/vendas-pdv',
                  '/rastreamento', '/clientes', '/pedidos', '/conta', '/auditoria', '/configuracoes',
                  '/vendors', '/vendas', '/bi-vendas', '/enderecos', '/fiado', '/assistente', '/usuarios'}
@@ -39,6 +41,16 @@ def validate_template(value):
     return value
 
 
+def validate_manual_template(value):
+    # Plain manual messages historically accepted braces (sizes, JSON, etc.).
+    # Only recognized variables have template semantics; escaped braces remain
+    # literal and known variables cannot use Python attributes/specifiers.
+    unescaped = value.replace('{{', '').replace('}}', '')
+    if any(unescaped[match.end():match.end() + 1] != '}' for match in MANUAL_VARIABLE_START.finditer(unescaped)):
+        raise ValueError('Use as variáveis disponíveis sem atributos, formatos ou conversões.')
+    return value
+
+
 class NotificationFields(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     title: str = Field(min_length=1, max_length=120)
@@ -57,7 +69,26 @@ class NotificationFields(BaseModel):
         return self
 
 
+class NotificationContext(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    sale_id: uuid.UUID | None = None
+    item_id: uuid.UUID | None = None
+    target: Literal['sale', 'product'] | None = None
+
+    @model_validator(mode='after')
+    def valid_target(self):
+        self.target = self.target or ('product' if self.item_id else 'sale')
+        if self.target == 'sale' and self.sale_id is None:
+            raise ValueError('Selecione a venda para esse atalho.')
+        if self.target == 'product' and self.item_id is None:
+            raise ValueError('Selecione o produto de referência para esse atalho.')
+        return self
+
+
 class NotificationCreate(NotificationFields):
+    context: NotificationContext | None = None
+    _title = field_validator('title')(validate_manual_template)
+    _body = field_validator('body')(validate_manual_template)
     request_id: uuid.UUID
     user_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
     scheduled_at: datetime | None = None
@@ -74,6 +105,9 @@ class NotificationCreate(NotificationFields):
 
 
 class NotificationUpdate(NotificationFields):
+    context: NotificationContext | None = None
+    _title = field_validator('title')(validate_manual_template)
+    _body = field_validator('body')(validate_manual_template)
     expected_version: int = Field(ge=1)
     user_ids: list[uuid.UUID] = Field(min_length=1, max_length=100)
     scheduled_at: datetime | None = None

@@ -21,6 +21,7 @@
         class="erp-control"
         :aria-selected="tab === key"
         :class="{ active: tab === key }"
+        :disabled="busy"
         @click="changeTab(key)"
       >
         {{ n(key) }}
@@ -33,6 +34,7 @@
       <button
         v-if="tab !== 'rules' && !formMode"
         class="erp-button erp-button--primary erp-button--sm"
+        :disabled="busy"
         @click="newForm()"
       >
         ＋ {{ n(tab === 'messages' ? 'newMessage' : 'newTemplate') }}
@@ -46,6 +48,9 @@
             :is-template="formMode === 'template'"
             :templates="data.templates"
             :users="data.users"
+            :token="auth.token"
+            :disabled="busy"
+            @validity="composerError = $event"
           />
         </fieldset>
         <p v-if="formError" class="notification-admin__error" role="alert">{{ formError }}</p>
@@ -57,7 +62,7 @@
             @click="formMode = null"
           >
             {{ n('cancel') }}</button
-          ><button class="erp-button erp-button--primary" type="submit" :disabled="busy">
+          ><button class="erp-button erp-button--primary" type="submit" :disabled="busy || !!composerError">
             {{ n(busy ? 'loading' : editId || formMode === 'template' ? 'save' : 'send') }}
           </button>
         </div>
@@ -152,14 +157,14 @@
           <button
             v-if="offset"
             class="erp-button erp-button--secondary erp-button--sm"
-            :disabled="loading"
+            :disabled="loading || busy"
             @click="paginate(-20)"
           >
             ←</button
           ><button
             v-if="offset + data.items.length < data.total"
             class="erp-button erp-button--secondary erp-button--sm"
-            :disabled="loading"
+            :disabled="loading || busy"
             @click="paginate(20)"
           >
             {{ n('more') }}
@@ -222,6 +227,7 @@ const data = ref<NotificationAdminResult | null>(null),
   busy = ref(false),
   error = ref(''),
   formError = ref(''),
+  composerError = ref(''),
   success = ref(''),
   offset = ref(0),
   cancelId = ref('')
@@ -241,10 +247,11 @@ const blank = (): NotificationForm => ({
   requires_response: false,
   user_ids: [],
   scheduled_at: '',
+  context: null,
 })
 const form = ref<NotificationForm>(blank())
-function changeTab(value: typeof tabs[number]) { tab.value = value; formMode.value = null }
-function paginate(change: number) { offset.value = Math.max(0, offset.value + change); void load() }
+function changeTab(value: typeof tabs[number]) { if (busy.value) return; tab.value = value; formMode.value = null }
+function paginate(change: number) { if (busy.value) return; offset.value = Math.max(0, offset.value + change); void load() }
 let generation = 0,
   read = 0,
   saveEpoch = 0
@@ -295,11 +302,13 @@ async function load() {
   }
 }
 function newForm() {
+  if (busy.value) return
   editId.value = ''
   version.value = 0
   form.value = blank()
   formMode.value = tab.value === 'templates' ? 'template' : 'message'
   formError.value = ''
+  composerError.value = ''
   success.value = ''
   formKey.value++
 }
@@ -309,9 +318,12 @@ function localDate(value: string | null) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 }
 function editMessage(item: AdminNotification) {
+  if (busy.value) return
   form.value = {
     ...blank(),
     ...item,
+    title: item.authored_title ?? item.title,
+    body: item.authored_body ?? item.body,
     action_path: item.action_path || '',
     user_ids: [...item.user_ids],
     scheduled_at: localDate(item.scheduled_at),
@@ -323,6 +335,7 @@ function editMessage(item: AdminNotification) {
   formKey.value++
 }
 function editTemplate(template: NotificationTemplate) {
+  if (busy.value) return
   form.value = { ...blank(), ...template, action_path: template.action_path || '' }
   editId.value = template.id
   version.value = template.version
@@ -333,6 +346,7 @@ function editTemplate(template: NotificationTemplate) {
 async function save() {
   if (!auth.isOwner || !auth.token || busy.value || !formMode.value) return
   const value = form.value
+  if (formMode.value === 'message' && composerError.value) { formError.value = composerError.value; return }
   if (
     !value.title.trim() ||
     !value.body.trim() ||
@@ -342,7 +356,7 @@ async function save() {
     formError.value = n('validation')
     return
   }
-  if (value.action_path && !safeNotificationPath(value.action_path)) {
+  if (!value.context && value.action_path && !safeNotificationPath(value.action_path)) {
     formError.value = n('invalidPath')
     return
   }
@@ -361,7 +375,7 @@ async function save() {
     severity: value.severity,
     requires_ack: value.requires_ack || value.requires_response,
     requires_response: value.requires_response,
-    action_path: value.action_path || null,
+    action_path: value.context ? null : value.action_path || null,
   }
   const own = generation,
     current = ++saveEpoch,
@@ -385,6 +399,7 @@ async function save() {
           expected_version: version.value,
           user_ids: [...value.user_ids],
           scheduled_at: schedule?.toISOString() || null,
+          context: value.context || null,
         },
         token,
       )
@@ -395,6 +410,7 @@ async function save() {
           request_id: requestId.value,
           user_ids: [...value.user_ids],
           scheduled_at: schedule?.toISOString() || null,
+          context: value.context || null,
         },
         token,
       )
@@ -403,12 +419,14 @@ async function save() {
     success.value = n('saved')
     await load()
   } catch (reason) {
-    if (own === generation && current === saveEpoch)
-      formError.value = n(
+    if (own === generation && current === saveEpoch) {
+      const detail = (reason as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
+      formError.value = typeof detail === 'string' ? detail.slice(0, 400) : n(
         (reason as { response?: { status?: number } }).response?.status === 409
           ? 'conflict'
           : 'saveError',
       )
+    }
   } finally {
     if (own === generation && current === saveEpoch) busy.value = false
   }

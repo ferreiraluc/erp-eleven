@@ -673,14 +673,14 @@ export const inventoryAPI = {
   createItem: (item: Partial<InventoryItem>): Promise<InventoryItem> =>
     api.post('/api/inventory/items', item).then(res => res.data),
 
-  getItem: (id: string): Promise<InventoryItem> =>
-    api.get(`/api/inventory/items/${id}`).then(res => res.data),
+  getItem: (id: string, signal?: AbortSignal): Promise<InventoryItem> =>
+    api.get(`/api/inventory/items/${id}`, { signal }).then(res => res.data),
 
   getThumbnail: (id: string): Promise<{ image_data: string | null }> =>
     api.get(`/api/inventory/items/${id}/thumbnail`).then(res => res.data),
 
-  getItemPhotos: (id: string): Promise<{ additional_images: string[] }> =>
-    api.get(`/api/inventory/items/${id}/photos`).then(res => res.data),
+  getItemPhotos: (id: string, signal?: AbortSignal): Promise<{ additional_images: string[] }> =>
+    api.get(`/api/inventory/items/${id}/photos`, { signal }).then(res => res.data),
 
   getThumbnails: (ids: string[]): Promise<{ thumbnails: Record<string, { image_data: string | null }>; retry_ids: string[] }> =>
     api.get('/api/inventory/items/thumbnails', { params: { ids }, paramsSerializer: { indexes: null } }).then(res => res.data),

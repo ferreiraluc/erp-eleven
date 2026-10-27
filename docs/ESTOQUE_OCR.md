@@ -23,6 +23,14 @@ ações não abrem com apenas parte dos itens selecionados.
 
 ## Busca no catálogo
 
+O atalho `/inventory?item_id=UUID`, usado pelas notificações e pelos detalhes de
+venda, abre uma ficha de consulta do produto com fotos, descrição, atributos,
+preço de venda e saldos. Busca somente aquele cadastro, independentemente da
+paginação e dos filtros ativos; fechar preserva esses filtros e a seleção.
+Não abre edição nem altera o estoque. Produto indisponível ou erro de conexão
+aparece com uma mensagem e tentativa manual. Navegar para outro item ou trocar
+de conta descarta respostas pendentes; saldo desconhecido não é exibido como zero.
+
 Ao consultar um QR interno `INV-XXXXXX`, o produto exato continua sendo o resultado
 da busca. Abaixo, **Continue por este produto** apresenta sugestões paginadas: mesma
 grade e cor primeiro, demais cores da grade, marca/categoria e suas cores, depois

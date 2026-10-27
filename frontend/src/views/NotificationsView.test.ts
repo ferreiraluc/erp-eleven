@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick, reactive, type App } from 'vue'
+import { createPinia, disposePinia, setActivePinia, type Pinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import NotificationsView from './NotificationsView.vue'
 import type { NotificationItem } from '@/services/notifications'
 const mocks = vi.hoisted(() => ({
   center: {} as Record<string, unknown>,
+  auth: {} as Record<string, unknown>,
   act: vi.fn(),
   load: vi.fn(),
 }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => mocks.auth }))
 vi.mock('@/stores/notificationCenter', () => ({ useNotificationCenter: () => mocks.center }))
 vi.mock('@/components/ModuleHeader.vue', () => ({
   default: { template: '<header><slot /></header>' },
@@ -15,7 +18,7 @@ vi.mock('@/components/ModuleHeader.vue', () => ({
 vi.mock('@/components/notifications/NotificationPreferences.vue', () => ({
   default: { template: '<aside>Preferências</aside>' },
 }))
-let app: App | undefined, root: HTMLElement
+let app: App | undefined, root: HTMLElement, pinia: Pinia
 const item: NotificationItem = {
   id: 'notice',
   title: 'Conferir venda',
@@ -35,6 +38,9 @@ const item: NotificationItem = {
 }
 beforeEach(() => {
   vi.resetAllMocks()
+  pinia = createPinia()
+  setActivePinia(pinia)
+  mocks.auth = reactive({ user: { id: 'lucas' }, token: 'first-session', status: 'authenticated' })
   mocks.act.mockResolvedValue(true)
   mocks.center = reactive({
     items: [{ ...item }],
@@ -52,6 +58,7 @@ beforeEach(() => {
 afterEach(() => {
   app?.unmount()
   root?.remove()
+  disposePinia(pinia)
 })
 async function mount() {
   root = document.createElement('div')
@@ -64,11 +71,36 @@ async function mount() {
     ],
   })
   await router.push('/')
-  app = createApp(NotificationsView).use(router)
+  app = createApp(NotificationsView).use(pinia).use(router)
   app.mount(root)
   await nextTick()
 }
 describe('User notification inbox', () => {
+  it('clears a private draft and its validation error on account or session changes even for the same notice', async () => {
+    await mount()
+    const respond = Array.from(root.querySelectorAll('button')).find((node) =>
+      node.textContent?.includes('Enviar resposta'),
+    )!
+    respond.click()
+    await nextTick()
+    expect(root.textContent).toContain('Informe o motivo antes de confirmar')
+    const textarea = root.querySelector('textarea')!
+    textarea.value = 'Rascunho privado de Lucas'
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick()
+    mocks.auth.user = { id: 'sol' }
+    mocks.auth.token = 'second-session'
+    await nextTick()
+    expect(root.querySelector('textarea')?.value).toBe('')
+    expect(root.textContent).not.toContain('Informe o motivo antes de confirmar')
+    textarea.value = 'Rascunho privado de Sol'
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    await nextTick()
+    mocks.auth.token = 'third-session'
+    await nextTick()
+    expect(root.querySelector('textarea')?.value).toBe('')
+  })
+
   it('requires a response before acknowledging a review request and sends the displayed revision', async () => {
     await mount()
     const respond = Array.from(root.querySelectorAll('button')).find((node) =>

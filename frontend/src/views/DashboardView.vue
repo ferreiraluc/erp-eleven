@@ -3,6 +3,7 @@
     <!-- Header -->
     <header class="dashboard-header">
       <div class="header-content">
+        <NotificationBell class="dashboard-notification" />
         <div class="header-left">
           <div class="app-logo">
             <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -319,6 +320,7 @@ import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions.
 import AddressSummaryCard from '@/components/dashboard/AddressSummaryCard.vue'
 import SalesSummaryCard from '@/components/dashboard/SalesSummaryCard.vue'
 import AccountNavigation from '@/components/AccountNavigation.vue'
+import NotificationBell from '@/components/notifications/NotificationBell.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import { inventoryAPI, healthAPI, type AlertSummary, type InventoryItem } from '@/services/api'
 import { displayStock, hasKnownStock, stockAlertLevel } from '@/services/inventoryStock'
@@ -753,12 +755,15 @@ onUnmounted(() => {
 }
 
 .header-content {
-  padding: .75rem 1.5rem;
+  position: relative;
+  padding: .75rem 4.25rem .75rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
+
+.dashboard-notification { position: absolute; right: 1.5rem; top: .875rem; }
 
 .header-left {
   display: flex;
@@ -1060,7 +1065,8 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
   /* Account navigation wraps while the compact preference controls stay together. */
-  .header-content { padding: .75rem; align-items: flex-start; flex-wrap: wrap; }
+  .header-content { padding: .75rem 3.5rem .75rem .75rem; align-items: flex-start; flex-wrap: wrap; }
+  .dashboard-notification { right: .75rem; top: .75rem; }
   .app-logo { width: 2rem; height: 2rem; border-radius: .5rem; }
   .logo-icon { width: 1.15rem; height: 1.15rem; }
   .app-title { font-size: 1rem; }
@@ -2103,7 +2109,7 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .header-content { padding: .5rem .75rem; gap: .25rem; }
-  .header-left { flex-shrink: 1; max-width: 100%; }
+  .header-left { flex-shrink: 1; max-width: calc(100% - 42px); }
   .header-left .app-logo { flex-shrink: 0; }
   .app-info { min-width: 0; }
   .app-title { overflow-wrap: anywhere; }

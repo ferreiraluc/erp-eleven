@@ -205,3 +205,104 @@ def test_owner_template_unavailable_variable_does_not_block_sale_commit(factory)
         notice = db.query(Notification).one()
         assert notice.title.startswith('Venda #') and notice.title.endswith(' concluída')
         assert notice.body == 'Lucas fixture concluiu uma venda. Abra o sistema para conferir.'
+
+
+def test_context_inbox_uuid_scoping_and_legacy_links_work_in_postgresql(factory):
+    from app.api.endpoints import notifications as api
+    from app.models.pdv import PdvSale
+    from app.schemas.notification import NotificationCreate
+    from test_notifications import context_fixtures
+    with factory() as db:
+        ids = {}
+        for name in ['Lucas', 'Sol', 'Junior']:
+            account = Usuario(id=uuid.uuid4(), nome=name, email=name.lower() + '@eleven.com', senha_hash='unused', ativo=True,
+                role=UsuarioRole.ADMIN if name == 'Lucas' else UsuarioRole.GERENTE, sales_scope='all' if name == 'Lucas' else 'own')
+            db.add(account)
+            ids[name] = account.id
+        db.commit()
+    sale_id, _, reference_id = context_fixtures(factory, ids)
+    with factory() as db:
+        owner = db.get(Usuario, ids['Lucas'])
+        body = NotificationCreate(request_id=uuid.uuid4(), title='Venda {sale_code}', body='Olá {user_name}.', user_ids=[ids['Sol']],
+            context={'sale_id': sale_id, 'item_id': reference_id, 'target': 'product'})
+        result = api.create(body, owner=owner, db=db)
+        assert result['title'] == 'Venda 8B316EBBCA'
+        service.emit_notification(db, title='Legacy {sale_code}', body='Olá {user_name}.', user_ids=[ids['Sol']],
+            action_path='/vendas-pdv?sale_id=' + str(sale_id))
+        db.commit()
+        sol = db.get(Usuario, ids['Sol'])
+        junior = db.get(Usuario, ids['Junior'])
+        assert api.inbox(user=sol, db=db, offset=0, limit=30)['total'] == 2
+        assert api.inbox(user=junior, db=db, offset=0, limit=30)['total'] == 0
+        db.get(PdvSale, sale_id).vendedor_id = ids['Junior']
+        db.commit()
+        result = api.inbox(user=sol, db=db, offset=0, limit=30)
+        assert result['items'] == [] and result['total'] == result['unread_count'] == 0
+
+
+def test_legacy_ambiguous_sale_queries_fail_closed_before_postgresql_pagination(factory):
+    from app.api.endpoints import notifications as api
+    from app.models.pdv import PdvSale
+    from app.services.notification_context import notification_allowed
+    from test_notifications import context_fixtures
+    with factory() as db:
+        ids = {}
+        for name in ['Sol', 'Junior']:
+            account = Usuario(id=uuid.uuid4(), nome=name, email=name.lower() + '@eleven.com', senha_hash='unused',
+                ativo=True, role=UsuarioRole.GERENTE, sales_scope='own')
+            db.add(account)
+            ids[name] = account.id
+        db.commit()
+    sale_id, _, _ = context_fixtures(factory, ids)
+    with factory() as db:
+        own_sale = PdvSale(id=uuid.uuid4(), vendedor_id=ids['Junior'], status='completed')
+        db.add(own_sale)
+        db.flush()
+        queries = [f'sale_id={sale_id}&sale_id={own_sale.id}', f'sale%5Fid={sale_id}', f'sale_id={own_sale.id}&sale_id=']
+        notices = [service.emit_notification(db, title='Privado Sol', body='Não divulgar.', user_ids=[ids['Junior']],
+            action_path='/vendas-pdv?' + query) for query in queries]
+        allowed = service.emit_notification(db, title='Própria', body='Consulta permitida.', user_ids=[ids['Junior']],
+            action_path='/vendas-pdv?sale_id=' + str(own_sale.id))
+        db.commit()
+        junior = db.get(Usuario, ids['Junior'])
+        assert all(not notification_allowed(db, junior, row) for row in notices)
+        assert notification_allowed(db, junior, allowed)
+        page = api.inbox(user=junior, db=db, offset=0, limit=1)
+        assert page['total'] == page['unread_count'] == 1 and page['items'][0]['id'] == allowed.id
+
+
+def test_concurrent_context_request_id_preserves_frozen_authoring(factory):
+    from app.api.endpoints import notifications as api
+    from app.models.pdv import PdvSale
+    from app.schemas.notification import NotificationCreate
+    from test_notifications import context_fixtures
+    with factory() as db:
+        ids = {}
+        for name in ['Lucas', 'Sol']:
+            account = Usuario(id=uuid.uuid4(), nome=name, email=name.lower() + '@eleven.com', senha_hash='unused', ativo=True,
+                role=UsuarioRole.ADMIN if name == 'Lucas' else UsuarioRole.GERENTE, sales_scope='all' if name == 'Lucas' else 'own')
+            db.add(account)
+            ids[name] = account.id
+        db.commit()
+    sale_id, _, _ = context_fixtures(factory, ids)
+    request_id = uuid.uuid4()
+    ready = Barrier(2)
+    def submit(_):
+        with factory() as db:
+            ready.wait(timeout=10)
+            body = NotificationCreate(request_id=request_id, title='Venda {sale_code}', body='Olá {user_name}: {time}.',
+                user_ids=[ids['Sol']], context={'sale_id': sale_id, 'target': 'sale'})
+            return api.create(body, owner=db.get(Usuario, ids['Lucas']), db=db)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(submit, range(2)))
+    assert results[0]['id'] == results[1]['id'] and results[0]['body'] == results[1]['body']
+    with factory() as db:
+        assert db.query(Notification).count() == 1
+        assert db.query(NotificationRevision).one().snapshot['authoring']['body'] == 'Olá {user_name}: {time}.'
+        db.get(Usuario, ids['Sol']).nome = 'Renamed'
+        db.get(PdvSale, sale_id).deleted_at = service.utcnow()
+        db.commit()
+        body = NotificationCreate(request_id=request_id, title='Venda {sale_code}', body='Olá {user_name}: {time}.',
+            user_ids=[ids['Sol']], context={'sale_id': sale_id, 'target': 'sale'})
+        replay = api.create(body, owner=db.get(Usuario, ids['Lucas']), db=db)
+        assert replay['body'] == results[0]['body']
