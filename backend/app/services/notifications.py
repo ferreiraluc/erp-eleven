@@ -93,15 +93,27 @@ def action_allowed(db, user, path):
         return False
     if parts.path == '/fiado' and own_sales(user):
         return False
-    query = parse_qs(parts.query)
+    query = parse_qs(parts.query, keep_blank_values=True)
     if parts.path == '/vendas-pdv' and query.get('sale_id'):
+        if len(query['sale_id']) != 1:
+            return False
         from ..models.pdv import PdvSale
         try:
             sale_id = uuid.UUID(query['sale_id'][0])
         except (ValueError, TypeError):
             return False
         sale = db.get(PdvSale, sale_id)
-        if not sale or (own_sales(user) and sale.vendedor_id != user.id):
+        if not sale or (sale.deleted_at and not is_owner(user)) or (own_sales(user) and sale.vendedor_id != user.id):
+            return False
+    if parts.path == '/inventory' and query.get('item_id'):
+        from ..models.inventory import Item
+        if len(query['item_id']) != 1:
+            return False
+        try:
+            item_id = uuid.UUID(query['item_id'][0])
+        except (ValueError, TypeError):
+            return False
+        if not db.query(Item.id).filter(Item.id == item_id, Item.deleted_at.is_(None), Item.is_active.is_(True)).first():
             return False
     return True
 
@@ -124,10 +136,17 @@ def notification_snapshot(db, notice):
     return result
 
 
-def record_revision(db, notice, actor_id=None):
+def record_revision(db, notice, actor_id=None, extra=None):
     db.flush()
+    snapshot = notification_snapshot(db, notice)
+    if extra is None and notice.version > 1:
+        previous = db.query(NotificationRevision).filter_by(notification_id=notice.id, version=notice.version - 1).first()
+        if previous:
+            snapshot.update({key: previous.snapshot[key] for key in ('authoring', 'context') if key in previous.snapshot})
+    elif extra:
+        snapshot.update(extra)
     db.add(NotificationRevision(notification_id=notice.id, version=notice.version,
-                                snapshot=notification_snapshot(db, notice), changed_by=actor_id))
+                                snapshot=snapshot, changed_by=actor_id))
     db.flush()
 
 
@@ -151,7 +170,7 @@ def _queue_push(db, notice, recipients, moment):
 
 def emit_notification(db, *, title, body, user_ids, category='manual', severity='info',
                       action_path=None, requires_ack=False, requires_response=False, dedupe_key=None,
-                      entity_type=None, entity_id=None, scheduled_at=None, created_by=None, request_id=None):
+                      entity_type=None, entity_id=None, scheduled_at=None, created_by=None, request_id=None, revision_extra=None):
     fields = NotificationFields(title=title, body=body, category=category, severity=severity,
         action_path=action_path, requires_ack=requires_ack, requires_response=requires_response)
     if dedupe_key is not None and not 1 <= len(dedupe_key) <= 200:
@@ -176,7 +195,7 @@ def emit_notification(db, *, title, body, user_ids, category='manual', severity=
             recipients = [NotificationRecipient(id=uuid.uuid4(), notification_id=notice.id, user_id=user.id) for user in users]
             db.add_all(recipients)
             db.flush()
-            record_revision(db, notice, created_by)
+            record_revision(db, notice, created_by, extra=revision_extra)
             if scheduled_at is None or aware(scheduled_at) <= moment:
                 notice.published_at = moment
                 _queue_push(db, notice, recipients, moment)

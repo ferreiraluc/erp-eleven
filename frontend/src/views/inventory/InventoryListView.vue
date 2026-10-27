@@ -418,6 +418,7 @@
 
     <!-- Image modal -->
     <ProductGalleryModal v-if="imageModalItem" :item="imageModalItem" @close="imageModalItem = null" />
+    <InventoryProductLink v-if="Object.hasOwn(route.query, 'item_id')" />
 
     <!-- Toast -->
     <div v-if="toast" class="toast" :class="'toast-' + toast.type">{{ tr(toast.message, toast.params) }}</div>
@@ -590,6 +591,7 @@ import { useAuthStore } from '@/stores/auth'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import InventoryRelatedProducts from '@/components/inventory/InventoryRelatedProducts.vue'
 import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
+import InventoryProductLink from '@/components/inventory/InventoryProductLink.vue'
 import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
 import { readPreference, savePreference } from '@/services/inventoryGradeOptions'
 import { inventoryAPI, type InventoryGradeDirectoryEntry, type InventoryItem, type GroupResponse, type SuggestionResponse } from '@/services/api'
@@ -771,7 +773,7 @@ const selectionDialogOpen = computed(() =>
   showItemForm.value || showMovementModal.value || showImport.value || showBulkEdit.value ||
   showBulkTransfer.value || showBulkDelete.value || showSuggestionModal.value ||
   showLabelTemplates.value || showGroupModal.value || !!gradeManagerItem.value ||
-  !!gradeManagerKey.value || !!imageModalItem.value
+  !!gradeManagerKey.value || !!imageModalItem.value || Object.hasOwn(route.query, 'item_id')
 )
 const suggestionModalName = ref('')
 const scrollSentinel = ref<HTMLElement | null>(null)

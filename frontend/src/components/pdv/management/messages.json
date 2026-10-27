@@ -538,5 +538,17 @@
   "Ler ticket": [
     "Leer ticket",
     "Scan receipt"
+  ],
+  "Notificar vendedor": [
+    "Notificar al vendedor",
+    "Notify salesperson"
+  ],
+  "Notificar sobre produto": [
+    "Notificar sobre el producto",
+    "Notify about product"
+  ],
+  "Ver produto": [
+    "Ver producto",
+    "View product"
   ]
 }

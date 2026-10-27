@@ -64,8 +64,11 @@ describe('Account navigation inside the dashboard header', () => {
     expect(header.querySelector('.app-title')?.textContent).toBe('ERP Eleven, Lucas')
     const nav = header.querySelector('nav')!
     expect(nav.getAttribute('aria-label')).toBe(i18n.global.t('access.navigation'))
-    expect(Array.from(nav.querySelectorAll('a')).map(a => a.getAttribute('href'))).toEqual(['/conta', '/usuarios', '/auditoria', '/notificacoes'])
+    expect(Array.from(nav.querySelectorAll('a')).map(a => a.getAttribute('href'))).toEqual(['/conta', '/usuarios', '/auditoria'])
     expect(nav.querySelector('button')?.textContent).toContain('Sair')
+    expect(header.querySelectorAll('.notification-bell')).toHaveLength(1)
+    expect(header.querySelector('.notification-bell')?.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(nav.querySelector('.notification-bell')).toBeNull()
     expect(header.querySelector('.header-preferences .currency-selector-group')).not.toBeNull()
     expect(header.querySelector('.current-time')?.textContent?.trim()).not.toBe('')
   })
@@ -88,6 +91,7 @@ describe('Account navigation inside the dashboard header', () => {
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/conta'))
     expect(element.querySelectorAll('.account-navigation')).toHaveLength(1)
     expect(element.querySelector('.account-bar a[href="/dashboard"]')).not.toBeNull()
+    expect(element.querySelector('.notification-bell')).toBeNull()
   })
 
   it('opens ticket printer settings from the dashboard footer for the owner', async () => {
@@ -119,6 +123,7 @@ describe('Account navigation inside the dashboard header', () => {
     expect(element.querySelector('.account-bar a[href="/usuarios"]')).not.toBeNull()
     expect(element.querySelector('.account-bar .locale-control .erp-dropdown__value')).not.toBeNull()
     expect(element.querySelector('.account-bar')?.classList.contains('operational-account-bar')).toBe(true)
+    expect(element.querySelector('.notification-bell')).toBeNull()
   })
 
   it('supports keyboard selection and closes the language menu on Escape or outside click', async () => {

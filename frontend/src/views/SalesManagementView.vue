@@ -36,13 +36,14 @@
             <td :data-label="tr('Pagamento')">{{ sale.payment_methods.map(paymentText).join(' · ') || '—' }}</td>
             <td :data-label="tr('Situação')"><span class="status" :class="sale.status">{{ statusText(sale.status) }}</span></td>
             <td :data-label="tr('Valor líquido')"><strong>{{ gs(sale.status === 'cancelled' ? 0 : Number(sale.total_gs) - Number(sale.refunded_gs)) }}</strong><small v-if="Number(sale.refunded_gs)">{{ tr('Estorno') }}: {{ gs(sale.refunded_gs) }}</small></td>
-            <td><button class="erp-button erp-button--secondary erp-button--sm" @click="openSale(sale.id)">{{ tr('Ver venda') }}</button></td>
+            <td><div class="sale-actions"><button class="erp-button erp-button--secondary erp-button--sm" @click="openSale(sale.id)">{{ tr('Ver venda') }}</button><button v-if="auth.isOwner && !sale.deleted_at" class="erp-button erp-button--ghost erp-button--sm" @click="notificationSaleId = sale.id">{{ tr('Notificar vendedor') }}</button></div></td>
           </tr></tbody></table></div>
         <footer v-if="data.total > data.page_size" class="pagination"><button class="erp-button erp-button--secondary" :disabled="page === 1" @click="page--; load()">{{ tr('Anterior') }}</button><span>{{ page }} / {{ Math.ceil(data.total / data.page_size) }}</span><button class="erp-button erp-button--secondary" :disabled="page * data.page_size >= data.total" @click="page++; load()">{{ tr('Próxima') }}</button></footer>
       </section>
     </main>
     <BarcodeScanner v-if="showScanner" @barcode-detected="findTicket" @close="showScanner=false" />
     <SaleManagerModal v-if="selected" :key="selected" :sale-id="selected" :sellers="sellers" @close="closeSale" @changed="load" />
+    <SaleNotificationModal v-if="notificationSaleId && auth.isOwner" :sale-id="notificationSaleId" @close="notificationSaleId = ''" @sent="notificationSaleId = ''" />
   </div>
 </template>
 <script setup lang="ts">
@@ -53,6 +54,7 @@ import { useAuthStore } from '@/stores/auth'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import SaleManagerModal from '@/components/pdv/management/SaleManagerModal.vue'
+import SaleNotificationModal from '@/components/notifications/SaleNotificationModal.vue'
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import { pdvManagementAPI, saleError, type SaleListing } from '@/services/pdvManagement'
 import { allPaymentFilters } from '@/services/pdvPayments'
@@ -62,6 +64,8 @@ const blank = () => ({ q: '', date_from: '', date_to: '', status: '', seller_id:
 const filters = ref(blank()), page = ref(1), loading = ref(false), error = ref(''), selected = ref('')
 const data = ref<SaleListing | null>(null), sellers = ref<Array<{ id: string; name: string }>>([])
 const optionsError = ref(false), showScanner = ref(false)
+const notificationSaleId = ref('')
+watch(() => auth.isOwner, owner => { if (!owner) notificationSaleId.value = '' })
 function findTicket(code: string) { showScanner.value = false; filters.value = { ...blank(), q: code.trim() }; page.value = 1; void load() }
 const statuses = ['completed', 'partially_refunded', 'refunded', 'cancelled']
 let sequence = 0, mounted = true
@@ -92,6 +96,7 @@ onUnmounted(() => { sequence++; mounted = false })
 </script>
 <style scoped>
 .sold-previews{display:flex;gap:5px;margin-top:8px}.sold-preview{width:38px;height:38px;object-fit:contain;border:1px solid #e2e8f0;border-radius:6px;background:white}
+.sale-actions{display:flex;flex-wrap:wrap;gap:6px}
 
 .sales-manager{min-height:100vh;background:#f8fafc;color:#1e293b}.sales-manager>main{max-width:1440px;margin:auto;padding:0 24px 32px}.scope-note{font-size:13px;color:#64748b;line-height:1.5}.sale-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.sale-summary article{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;display:grid;gap:10px}.sale-summary span{font-size:12px;color:#64748b}.sale-summary strong{font-size:22px;color:#1d4ed8;overflow-wrap:anywhere}.sales-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:20px}label{display:grid;gap:6px;font-size:12px;font-weight:600}input,select{width:100%;min-width:0;box-sizing:border-box;font-size:14px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:#334155}.search-field{grid-column:span 2;grid-template-columns:minmax(0,1fr) auto}.search-field input{grid-column:1;grid-row:2}.scan-ticket{grid-column:2;grid-row:2;align-self:stretch}.filter-actions{display:flex;align-items:end;gap:8px}.sales-results{background:white;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}.result-toolbar,.pagination{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px;font-size:13px}.sales-table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th{font-size:11px;text-transform:uppercase;background:#f8fafc;color:#64748b;padding:12px}td{padding:16px 12px;border-top:1px solid #e2e8f0;font-size:13px}td strong,td small{display:block}td small{margin-top:5px;font-size:11px;color:#64748b}.status{display:inline-block;padding:5px 8px;border-radius:6px;background:#f1f5f9;font-size:11px;font-weight:600}.completed{background:#dcfce7;color:#166534}.partially_refunded{background:#fef3c7;color:#92400e}.cancelled,.refunded{background:#fee2e2;color:#991b1b}.state-box{text-align:center;padding:40px 16px;color:#64748b}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 @media(max-width:900px){.sales-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.sale-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.sale-summary strong{font-size:18px}}

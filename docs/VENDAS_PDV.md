@@ -28,6 +28,15 @@ Nova Venda. Consulta exclusivamente `PdvSale`. `/vendas` conserva os lançamento
 operacionais antigos; `/bi-vendas` conserva as planilhas. Nenhuma destas operações
 altera Excel, cria conciliações automáticas ou soma receitas entre fontes.
 
+Lucas pode usar **Notificar vendedor** na listagem ou nos detalhes de uma venda.
+O código e o vendedor são preenchidos no formulário de aviso, com prévia antes
+do envio. **Notificar sobre produto** nos itens vinculados sugere a ficha daquele
+produto como destino; **Ver produto** abre essa consulta diretamente. Para uma
+venda com avulsos, o formulário permite escolher um produto de referência do
+catálogo, sem vincular nem alterar a venda. Respostas e motivos desses avisos
+ficam na notificação; correções financeiras continuam no fluxo confirmado da
+venda. Detalhes e permissões: [Notificações](NOTIFICACOES.md).
+
 **Ver venda** no histórico do cliente abre os detalhes no gestor por um vínculo
 `/vendas-pdv?sale_id=…`, inclusive para vendas fora da página atual. Fechar o modal
 remove apenas esse parâmetro; voltar/avançar no navegador acompanha a seleção.

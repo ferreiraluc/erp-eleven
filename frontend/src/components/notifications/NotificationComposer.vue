@@ -1,5 +1,6 @@
 <template>
   <div class="notification-composer">
+    <NotificationContextSelector v-if="!isTemplate" :model-value="form.context" :token="token" :initial-sale="initialSale" :locked-sale="lockedSale" :disabled="disabled" @update:model-value="setContext" @loaded="sale = $event" @selected="selectSeller" @validity="contextIssue = $event" />
     <label v-if="isTemplate"
       >{{ n('name') }}<input v-model="form.name" maxlength="100" required
     /></label>
@@ -28,9 +29,7 @@
         }}<ErpDropdown v-model="form.severity" :options="severityOptions" :label="n('severity')"
       /></label>
     </div>
-    <label
-      >{{ n('path') }}<input v-model="form.action_path" maxlength="500" placeholder="/notificacoes"
-    /></label>
+    <label>{{ n('contextDestination') }}<ErpDropdown :model-value="destination" :options="destinationOptions" :label="n('contextDestination')" :disabled="disabled" @update:model-value="setDestination(String($event))" /></label>
     <label class="check"
       ><input
         v-model="form.requires_ack"
@@ -65,11 +64,17 @@
       </fieldset>
       <label>{{ n('schedule') }}<input v-model="form.scheduled_at" type="datetime-local" /></label>
       <p class="muted">{{ n('scheduleHelp') }}</p>
+      <section v-if="form.title || form.body" class="notification-preview" aria-live="polite">
+        <h4>{{ n('contextPreview') }}</h4><strong>{{ preview.title }}</strong><p>{{ preview.body }}</p>
+        <small v-if="destinationLabel">{{ n('contextDestination') }}: {{ destinationLabel }}</small>
+        <p v-if="preview.problem" class="notification-preview__error" role="alert">{{ n(preview.problem) }}</p>
+        <small>{{ n('contextPreviewHelp') }}</small>
+      </section>
     </template>
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import {
   notificationCategories,
@@ -77,8 +82,13 @@ import {
   type NotificationCategory,
   type NotificationSeverity,
   type NotificationTemplate,
+  type NotificationContext,
+  type NotificationSaleDetail,
+  type NotificationSaleSummary,
 } from '@/services/notifications'
 import { notificationText as n } from '@/services/notificationText'
+import { notificationPreview } from '@/services/notificationAuthoring'
+import NotificationContextSelector from './NotificationContextSelector.vue'
 export interface NotificationForm {
   name: string
   title: string
@@ -90,6 +100,7 @@ export interface NotificationForm {
   requires_response: boolean
   user_ids: string[]
   scheduled_at: string
+  context?: NotificationContext | null
 }
 const form = defineModel<NotificationForm>({ required: true })
 const props = withDefaults(
@@ -97,9 +108,16 @@ const props = withDefaults(
     isTemplate?: boolean
     templates?: NotificationTemplate[]
     users?: { id: string; nome: string }[]
+    token?: string | null
+    initialSale?: NotificationSaleDetail | null
+    lockedSale?: boolean
+    disabled?: boolean
   }>(),
-  { isTemplate: false, templates: () => [], users: () => [] },
+  { isTemplate: false, templates: () => [], users: () => [], token: null, initialSale: null, lockedSale: false, disabled: false },
 )
+const emit = defineEmits<{ validity: [message: string] }>()
+const sale = ref<NotificationSaleDetail | null>(props.initialSale)
+const contextIssue = ref('')
 const templateId = ref('')
 const categoryOptions = computed(() =>
   notificationCategories.map((value) => ({ value, label: n(value) })),
@@ -111,6 +129,26 @@ const templateOptions = computed(() => [
   { value: '', label: n('none') },
   ...props.templates.map((template) => ({ value: template.id, label: template.name })),
 ])
+const destination = computed(() => form.value.context?.target || form.value.action_path)
+const destinationOptions = computed(() => {
+  if (props.lockedSale && !props.isTemplate) return [{ value: 'sale', label: n('contextSale') }, { value: 'product', label: n('contextProduct') }]
+  const options = [{ value: '', label: n('contextNoDestination') }, { value: '/notificacoes', label: n('title') },
+    ...(props.isTemplate ? [{ value: '/vendas-pdv', label: n('sales') }] : [{ value: 'sale', label: n('contextSale') }, { value: 'product', label: n('contextProduct') }]),
+    { value: '/inventory', label: n('contextInventory') }, { value: '/rastreamento', label: n('tracking') }]
+  if (form.value.action_path && !options.some(option => option.value === form.value.action_path)) options.push({ value: form.value.action_path, label: n('contextCurrentDestination') })
+  return options
+})
+const destinationLabel = computed(() => destinationOptions.value.find(option => option.value === destination.value)?.label || '')
+const preview = computed(() => notificationPreview(form.value, props.users, sale.value))
+watch(() => props.isTemplate ? '' : contextIssue.value || (preview.value.problem ? n(preview.value.problem) : ''), value => emit('validity', value), { immediate: true, flush: 'sync' })
+function setContext(value: NotificationContext | null) { form.value.context = value; form.value.action_path = '' }
+function selectSeller(value: NotificationSaleSummary) {
+  if (value.seller_id && props.users.some(user => user.id === value.seller_id)) form.value.user_ids = [value.seller_id]
+}
+function setDestination(value: string) {
+  if (value === 'sale' || value === 'product') setContext({ ...form.value.context, target: value })
+  else { form.value.context = null; form.value.action_path = value }
+}
 function applyTemplate(id: string) {
   templateId.value = id
   const template = props.templates.find((item) => item.id === id)
@@ -196,6 +234,7 @@ function applyTemplate(id: string) {
   flex-wrap: wrap;
   margin-top: 8px;
 }
+.notification-preview{display:grid;gap:9px;padding:14px;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;overflow-wrap:anywhere}.notification-preview h4{margin:0;font-size:12px;color:#1d4ed8}.notification-preview>strong{font-size:15px;color:#0f172a}.notification-preview p{margin:0;white-space:pre-wrap;line-height:1.55;font-size:14px}.notification-preview small{font-size:12px;color:#64748b;line-height:1.5}.notification-preview .notification-preview__error{color:#b91c1c;font-size:13px}
 @media (max-width: 500px) {
   .notification-form-grid {
     grid-template-columns: 1fr;

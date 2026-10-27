@@ -42,6 +42,43 @@ export interface NotificationReceipt {
 export interface AdminNotification extends NotificationItem {
   user_ids: string[]
   receipts: NotificationReceipt[]
+  context?: NotificationContext | null
+  authored_title?: string
+  authored_body?: string
+}
+export interface NotificationContext {
+  sale_id?: string
+  item_id?: string
+  target: 'sale' | 'product'
+}
+export interface NotificationSaleSummary {
+  id: string
+  code: string
+  created_at: string
+  seller_id: string | null
+  seller_name: string | null
+  status?: string
+}
+export interface NotificationProductReference {
+  id: string
+  name: string
+  inventory_code: string | null
+  size: string | null
+  color: string | null
+}
+export interface NotificationSaleItem {
+  id: string
+  item_id: string | null
+  item_name: string
+  size: string | null
+  color: string | null
+  is_avulso: boolean
+  product_available: boolean
+}
+export interface NotificationSaleDetail extends NotificationSaleSummary {
+  items: NotificationSaleItem[]
+  items_total: number
+  items_truncated: boolean
 }
 export interface NotificationTemplate {
   id: string
@@ -131,6 +168,18 @@ export function safeNotificationPath(path: string | null | undefined): string | 
   return allowed.includes(route) ? path : null
 }
 export const notificationsAPI = {
+  contextSales: (search: string, token = storedToken(), signal?: AbortSignal) =>
+    api.get<{ items: NotificationSaleSummary[]; has_more: boolean }>(`${root}/context/sales`, {
+      params: { search, limit: 20 }, headers: headers(token), signal, timeout: 5000,
+    }).then((r) => r.data),
+  contextSale: (id: string, token = storedToken(), signal?: AbortSignal) =>
+    api.get<NotificationSaleDetail>(`${root}/context/sales/${encodeURIComponent(id)}`, {
+      headers: headers(token), signal, timeout: 5000,
+    }).then((r) => r.data),
+  contextProduct: (id: string, token = storedToken(), signal?: AbortSignal) =>
+    api.get<NotificationProductReference>(`${root}/context/products/${encodeURIComponent(id)}`, {
+      headers: headers(token), signal, timeout: 5000,
+    }).then((r) => r.data),
   inbox: (
     params: { offset?: number; limit?: number; unread_only?: boolean } = {},
     token = storedToken(),
@@ -171,6 +220,7 @@ export const notificationsAPI = {
       request_id: string
       user_ids: string[]
       scheduled_at: string | null
+      context?: NotificationContext | null
     },
     token = storedToken(),
   ) =>
@@ -183,6 +233,7 @@ export const notificationsAPI = {
       expected_version: number
       user_ids: string[]
       scheduled_at: string | null
+      context?: NotificationContext | null
     },
     token = storedToken(),
   ) =>

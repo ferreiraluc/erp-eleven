@@ -3148,5 +3148,25 @@
   "Um dos produtos já tem 5 fotos. Nenhuma alteração foi salva. Substitua a foto principal ou remova uma foto na edição do produto antes de adicionar.": [
     "Uno de los productos ya tiene 5 fotos. No se guardaron cambios. Reemplace la foto principal o elimine una foto en la edición del producto antes de agregar otra.",
     "One product already has 5 photos. No changes were saved. Replace the primary photo or remove a photo in the product editor before adding another."
+  ],
+  "Ficha do produto": [
+    "Ficha del producto",
+    "Product details"
+  ],
+  "O link do produto é inválido.": [
+    "El enlace del producto no es válido.",
+    "The product link is invalid."
+  ],
+  "Este produto não está disponível para sua conta.": [
+    "Este producto no está disponible para su cuenta.",
+    "This product is not available to your account."
+  ],
+  "Não foi possível carregar as fotos.": [
+    "No se pudieron cargar las fotos.",
+    "Could not load photos."
+  ],
+  "Há saldo desconhecido. Confira o estoque antes de movimentar.": [
+    "Hay existencias sin confirmar. Revise el inventario antes de moverlas.",
+    "Some stock is unconfirmed. Check inventory before making a movement."
   ]
 }
