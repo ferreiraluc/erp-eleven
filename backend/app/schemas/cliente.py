@@ -35,8 +35,25 @@ class ClienteResponse(ClienteBase):
         from_attributes = True
 
 
+class CustomerActivity(BaseModel):
+    purchase_count: int = 0
+    order_count: int = 0
+    shipment_count: int = 0
+    print_count: int = 0
+    submitted_print_count: int = 0
+    pending_print_count: int = 0
+    uncertain_print_count: int = 0
+    last_purchase_at: Optional[datetime] = None
+    last_print_at: Optional[datetime] = None
+    own_sales_only: bool = False
+
+
+class ClienteDirectoryEntry(ClienteResponse):
+    activity: CustomerActivity
+
+
 class ClientePage(BaseModel):
-    items: list[ClienteResponse]
+    items: list[ClienteDirectoryEntry]
     total: int
     page: int
     page_size: int

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from sqlalchemy.exc import IntegrityError
-from typing import List, Optional
+from typing import List, Optional, Literal
 from ...database import get_db
 from ...models.cliente import Cliente
 from ...models.pedido import Pedido
@@ -10,14 +10,17 @@ from ...models.rastreamento import Rastreamento, RastreamentoStatus
 from ...models.usuario import Usuario
 from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate, ClientePage
 from ...schemas.pedido import PedidoResponse
-from ...schemas.customer_links import CustomerLinkRequest, CustomerLogisticsResponse, CustomerPurchasesResponse
+from ...schemas.customer_links import (
+    CustomerLinkRequest, CustomerLogisticsResponse, CustomerPurchasesResponse, CustomerHistoryConfirmation,
+)
 from ...schemas.rastreamento import RastreamentoComPedido
 from ...services.customer_links import customer_shipments, inherit_order_customer, validate_tracking_links, lock_tracking_row
 from ...services.customer_maintenance import resolve_customer
 from ...services.customer_identity import find_customer
 from ...services.customer_purchases import customer_purchases
+from ...services.customer_activity import customer_activity, order_customer_directory
 from ...services.address_book import lock_addresses
-from ...dependencies import get_current_active_user, require_role
+from ...dependencies import get_current_active_user, require_role, require_owner
 from ..validators import validate_uuid
 from .directory_duplicates import router as duplicates_router
 
@@ -69,6 +72,7 @@ def listar_pagina_clientes(
     search: str = Query('', max_length=200),
     ativo: Optional[bool] = Query(True),
     include_inactive: bool = Query(False),
+    sort: Literal['nome', 'ultima_compra', 'ultima_impressao'] = Query('nome'),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
@@ -83,8 +87,10 @@ def listar_pagina_clientes(
             Cliente.nome, Cliente.email, Cliente.telefone, Cliente.cpf, Cliente.endereco,
         ))))
     total = query.count()
-    rows = query.order_by(Cliente.nome, Cliente.id).offset((page - 1) * page_size).limit(page_size).all()
-    return {'items': rows, 'total': total, 'page': page, 'page_size': page_size}
+    rows = order_customer_directory(query, db, current_user, sort).offset((page - 1) * page_size).limit(page_size).all()
+    activity = customer_activity(db, [row.id for row in rows], current_user)
+    items = [{**ClienteResponse.model_validate(row).model_dump(), 'activity': activity[row.id]} for row in rows]
+    return {'items': items, 'total': total, 'page': page, 'page_size': page_size}
 
 
 @router.post("/", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)
@@ -271,6 +277,30 @@ def vincular_ao_cliente(
         row.cliente_id = customer_id
     db.commit()
     return {"linked": True, "kind": link.kind, "target_id": link.target_id, "cliente_id": customer_id}
+
+
+@router.post('/{cliente_id}/conciliacao/previa')
+def previa_associacoes_cliente(
+    cliente_id: str,
+    db: Session = Depends(get_db), owner: Usuario = Depends(require_owner),
+):
+    from ...services.customer_reconciliation import preview_customer_links
+    customer = _customer(db, validate_uuid(cliente_id), write=True)
+    if not customer.ativo:
+        raise HTTPException(409, 'Ative o cliente antes de associar o histórico.')
+    return preview_customer_links(db, customer)
+
+
+@router.post('/{cliente_id}/conciliacao')
+def confirmar_associacoes_cliente(
+    cliente_id: str, body: CustomerHistoryConfirmation,
+    db: Session = Depends(get_db), owner: Usuario = Depends(require_owner),
+):
+    from ...services.customer_reconciliation import apply_customer_links
+    customer = _customer(db, validate_uuid(cliente_id), write=True)
+    result = apply_customer_links(db, customer, body.expected_token, owner)
+    db.commit()
+    return result
 
 
 @router.get("/{cliente_id}/compras-pdv", response_model=CustomerPurchasesResponse)

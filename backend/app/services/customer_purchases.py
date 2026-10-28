@@ -9,6 +9,18 @@ from ..models.pdv import PdvCliente, PdvSale
 from .access_policy import own_sales, sales_query
 
 
+def _payment_difference(sale):
+    return sum((payment.amount_gs for payment in sale.payments), Decimal('0.00')) - sale.total_gs
+
+
+def _cash_change(sale):
+    difference = _payment_difference(sale)
+    cash = sum((payment.amount_gs for payment in sale.payments if payment.method.startswith('cash_')), Decimal('0.00'))
+    # Historical records may predate checkout validation. An excess card/fiado
+    # payment is a discrepancy, not evidence that cash change was handed over.
+    return difference if sale.status == 'completed' and 0 < difference <= cash else None
+
+
 def customer_purchases(db, customer_id, user, *, page=1, page_size=20):
     query = sales_query(db.query(PdvSale), PdvSale, user, pdv=True).join(
         PdvCliente, PdvCliente.id == PdvSale.cliente_id,
@@ -28,6 +40,7 @@ def customer_purchases(db, customer_id, user, *, page=1, page_size=20):
                for status, _, gross, refunds in grouped if status != 'cancelled'), zero)
     rows = query.options(
         joinedload(PdvSale.cliente), joinedload(PdvSale.vendedor), selectinload(PdvSale.items),
+        selectinload(PdvSale.payments),
     ).order_by(PdvSale.created_at.desc(), PdvSale.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
     return {
         'page': page, 'page_size': page_size, 'total': total,
@@ -46,6 +59,13 @@ def customer_purchases(db, customer_id, user, *, page=1, page_size=20):
             'status': sale.status, 'total_gs': sale.total_gs,
             'refunded_gs': sale.refunded_gs,
             'net_gs': zero if sale.status == 'cancelled' else sale.total_gs - sale.refunded_gs,
+            'payments': [{
+                'id': payment.id, 'method': payment.method, 'currency': payment.currency,
+                'amount_original': payment.amount_original, 'exchange_rate': payment.exchange_rate,
+                'amount_gs': payment.amount_gs,
+            } for payment in sorted(sale.payments, key=lambda row: str(row.id))],
+            'payment_difference_gs': _payment_difference(sale),
+            'change_gs': _cash_change(sale),
             'lines': [{
                 'id': line.id, 'name': line.item_name, 'quantity': line.quantity,
                 'returned_quantity': line.returned_quantity,

@@ -1,5 +1,5 @@
 <template>
-  <div class="usage-history">
+  <div class="usage-history" :class="{ 'usage-history--compact': compact }">
     <p class="intro"><strong>{{ address?.label || customer?.nome }}</strong><br/>{{ tr('Endereços A4 e etiquetas aparecem juntos, com a data e o responsável por cada utilização.') }}</p>
     <p v-if="customer" class="intro"><RouterLink :to="{path:'/enderecos',query:{customer_id:customer.id}}">{{ tr('Endereços salvos') }}: {{ result.addresses?.length || 0 }}</RouterLink></p>
     <div class="usage-metrics">
@@ -17,10 +17,10 @@
     <div v-else class="usage-table">
       <table><thead><tr><th>{{ tr('Data / responsável') }}</th><th>{{ tr('Utilização') }}</th><th>{{ tr('Situação') }}</th><th>{{ tr('Detalhes') }}</th></tr></thead><tbody>
         <tr v-for="entry in result.items" :key="entry.kind+entry.id">
-          <td>{{ date(entry.finished_at || entry.created_at) }}<small>{{ entry.user }}</small><small v-if="entry.finished_at">{{ tr('Solicitada em') }} {{ date(entry.created_at) }}</small></td>
-          <td><strong>{{ entry.kind==='frete'?tr('Frete SuperFrete'):entry.source==='superfrete'?tr('Impressão de etiqueta'):tr('Endereço A4 · modelo simples') }}</strong><small>{{ entry.environment==='sandbox'?tr('Ambiente de testes'):entry.source==='bot'?tr('Solicitada pelo bot'):entry.source==='erp'?tr('Solicitada pelo ERP'):'' }}</small></td>
-          <td><span class="usage-badge">{{ entry.kind==='impressao' && entry.status==='pending'?tr('Na fila de impressão'):tr(states[entry.status] || entry.status) }}</span><small v-if="entry.price">{{ money(entry.price) }}</small><code v-if="entry.tracking">{{ entry.tracking }}</code></td>
-          <td><details><summary>{{ entry.recipient || tr('Ver endereço utilizado') }}</summary><p>{{ entry.address_text || tr('Sem detalhes de rua informados.') }}</p></details><button class="erp-button erp-button--secondary erp-button--sm" @click="entry.kind==='frete'?$emit('freight',entry.id):$emit('print',entry.id)">{{ entry.kind==='frete'?tr('Abrir frete'):tr('Ver PDF') }}</button></td>
+          <td :data-label="tr('Data / responsável')">{{ date(entry.finished_at || entry.created_at) }}<small>{{ entry.user }}</small><small v-if="entry.finished_at">{{ tr('Solicitada em') }} {{ date(entry.created_at) }}</small></td>
+          <td :data-label="tr('Utilização')"><strong>{{ entry.kind==='frete'?tr('Frete SuperFrete'):entry.source==='superfrete'?tr('Impressão de etiqueta'):tr('Endereço A4 · modelo simples') }}</strong><small>{{ entry.environment==='sandbox'?tr('Ambiente de testes'):entry.source==='bot'?tr('Solicitada pelo bot'):entry.source==='erp'?tr('Solicitada pelo ERP'):'' }}</small></td>
+          <td :data-label="tr('Situação')"><span class="usage-badge">{{ entry.kind==='impressao' && entry.status==='pending'?tr('Na fila de impressão'):tr(states[entry.status] || entry.status) }}</span><small v-if="entry.price">{{ money(entry.price) }}</small><code v-if="entry.tracking">{{ entry.tracking }}</code></td>
+          <td :data-label="tr('Detalhes')"><details><summary>{{ entry.recipient || tr('Ver endereço utilizado') }}</summary><p>{{ entry.address_text || tr('Sem detalhes de rua informados.') }}</p></details><button class="erp-button erp-button--secondary erp-button--sm" @click="entry.kind==='frete'?$emit('freight',entry.id):$emit('print',entry.id)">{{ entry.kind==='frete'?tr('Abrir frete'):tr('Ver PDF') }}</button></td>
         </tr>
         <tr v-if="!result.items.length"><td colspan="4" class="usage-empty">{{ kind==='all'?tr('Nenhuma utilização registrada. O histórico aparecerá ao cotar um frete ou enviar uma impressão.'):tr('Nenhuma utilização deste tipo.') }}</td></tr>
       </tbody></table>
@@ -36,7 +36,7 @@ import api from '@/services/api'
 import { useAddressI18n } from './i18n'
 import type { SavedAddress, AddressUsage } from './types'
 const {tr,date,money,errorKey}=useAddressI18n()
-const props=defineProps<{address?:SavedAddress;customer?:{id:string;nome:string}}>()
+const props=defineProps<{address?:SavedAddress;customer?:{id:string;nome:string};compact?:boolean}>()
 defineEmits<{freight:[id:string];print:[id:string]}>()
 const result=ref<AddressUsage>({total:0,summary:{total:0,quotes:0,labels:0,prints:0,completed_prints:0,address_prints:0,label_prints:0,last_used_at:null,last_printed_at:null},items:[]})
 const kind=ref('all'),offset=ref(0),loading=ref(false),error=ref('')
@@ -51,4 +51,17 @@ onUnmounted(()=>{sequence++})
 .usage-note{color:#64748b;font-size:12px;line-height:1.6;margin:12px 0}.usage-note strong{display:block;margin-top:6px;color:#475569}
 .intro{color:#64748b;font-size:13px;line-height:1.6;margin:18px 0}.intro strong{color:#172033;font-size:16px}.usage-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.usage-metrics>div{border:1px solid #e2e8f0;background:#f8fafc;border-radius:12px;padding:16px}.usage-metrics strong{display:block;font-size:25px;color:#172033}.usage-metrics span,small{display:block;color:#64748b;font-size:12px;margin-top:5px}.usage-toolbar,footer,footer>div{display:flex;align-items:center;justify-content:space-between;gap:10px}.usage-toolbar{margin:18px 0}.usage-toolbar label{font-size:12px;color:#475569;display:flex;gap:10px;align-items:center}select,button{border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;background:white;color:#334155;font:inherit;font-size:12px}button{font-weight:600;cursor:pointer}button:hover{background:#f1f5f9}button:disabled{opacity:.5;cursor:not-allowed}.usage-table{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}th{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;padding:12px}td{padding:15px 12px;border-bottom:1px solid #edf1f5;vertical-align:top}details{margin-bottom:10px}summary{cursor:pointer;color:#2563eb}details p{max-width:250px;line-height:1.5;font-size:12px;color:#64748b;overflow-wrap:anywhere}.usage-badge{display:inline-block;padding:5px 8px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:11px}.usage-empty{text-align:center;color:#64748b;padding:30px 12px}.usage-error{background:#fff1f2;color:#9f1239;padding:12px;border-radius:8px}code{display:block;font-size:12px;margin-top:8px}footer{margin-top:20px;color:#64748b;font-size:12px}@media(max-width:600px){.usage-metrics{gap:6px}.usage-metrics>div{padding:11px}.usage-metrics span{font-size:11px}.usage-toolbar label{display:block}select{display:block;margin-top:5px}}
 .usage-toolbar .erp-dropdown{width:160px;max-width:100%}
+@media(max-width:600px){
+.usage-history--compact .usage-table{overflow:visible}
+.usage-history--compact table,.usage-history--compact tbody{display:block}
+.usage-history--compact thead{display:none}
+.usage-history--compact tbody{display:grid;gap:12px}
+.usage-history--compact tr{display:block;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px}
+.usage-history--compact td{display:block;padding:8px 0;border:0;overflow-wrap:anywhere}
+.usage-history--compact td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:600;text-transform:uppercase;color:#64748b;margin-bottom:5px}
+.usage-history--compact details p{max-width:none}
+.usage-history--compact footer{flex-wrap:wrap;align-items:start}
+.usage-history--compact footer>span{flex:1 1 180px}
+.usage-history--compact footer>div{flex-wrap:wrap}
+}
 </style>

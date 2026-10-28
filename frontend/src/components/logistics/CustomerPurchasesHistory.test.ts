@@ -14,6 +14,7 @@ const result = (page = 1, name = 'Camisa sintética'): CustomerPurchases => ({
   items: [{ id: `sale-${page}`, created_at: '2026-10-14T14:00:00-03:00',
     account_id: 'account-one', account_name: 'Conta revisada', customer_name: 'Nome histórico',
     seller: 'Vendedor sintético', status: page === 1 ? 'partially_refunded' : 'cancelled',
+    payments: [{ id: 'payment-one', method: 'cash_usd', currency: 'USD', amount_original: '20', exchange_rate: '6', amount_gs: '120' }], payment_difference_gs: '20', change_gs: page === 1 ? '20' : null,
     total_gs: '100.00', refunded_gs: '25.00', net_gs: page === 1 ? '75.00' : '0.00',
     lines: [{ id: 'line-one', name, quantity: '2.000', returned_quantity: '1.000' }],
   }],
@@ -49,6 +50,11 @@ describe('Customer POS history', () => {
     expect(container.textContent).toContain('2 × Camisa sintética')
     expect(container.textContent).toContain('Devolvido: 1')
     expect(container.textContent).toContain('Devolução parcial')
+    expect(container.textContent).toContain('Pagamentos registrados · 1')
+    expect(container.textContent).toContain('Dinheiro U$')
+    expect(container.textContent).toContain('U$ 20,00')
+    expect(container.textContent).toContain('Troco registrado: G$ 20,00')
+    expect(container.textContent).toContain('podem incluir troco ou fiado')
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/vendas-pdv?sale_id=sale-1')
     expect(button('Anterior').disabled).toBe(true)
     button('Próxima').click(); await settle()

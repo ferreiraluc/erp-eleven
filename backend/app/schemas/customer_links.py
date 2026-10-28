@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .pedido import PedidoResponse
 from .rastreamento import RastreamentoComPedido
@@ -13,6 +13,12 @@ class CustomerLinkRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["pedido", "rastreamento"]
     target_id: UUID
+
+
+class CustomerHistoryConfirmation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    expected_token: str = Field(pattern=r'^[a-f0-9]{64}$')
+    confirm: Literal[True]
 
 
 class CustomerLogisticsResponse(BaseModel):
@@ -31,6 +37,15 @@ class CustomerPurchaseLine(BaseModel):
     returned_quantity: Decimal
 
 
+class CustomerPurchasePayment(BaseModel):
+    id: UUID
+    method: str
+    currency: str
+    amount_original: Decimal
+    exchange_rate: Decimal
+    amount_gs: Decimal
+
+
 class CustomerPurchase(BaseModel):
     id: UUID
     created_at: datetime
@@ -43,6 +58,9 @@ class CustomerPurchase(BaseModel):
     refunded_gs: Decimal
     net_gs: Decimal
     lines: list[CustomerPurchaseLine]
+    payments: list[CustomerPurchasePayment] = Field(default_factory=list)
+    payment_difference_gs: Decimal = Decimal('0')
+    change_gs: Decimal | None = None
 
 
 class CustomerPurchaseSummary(BaseModel):

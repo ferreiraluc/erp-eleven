@@ -42,11 +42,60 @@ def compatible_person(customer, data):
     return not (doc and old_doc and doc != old_doc)
 
 
+def email_key(value):
+    value = str(value or '').strip().casefold()
+    return value if re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', value) else ''
+
+
+def address_key(value):
+    """Full location evidence, never a city/CEP/name alone."""
+    key = name_key(value)
+    key = re.sub(r'^av\s+', 'avenida ', key)
+    key = re.sub(r'^r\s+', 'rua ', key)
+    key = re.sub(r'\b(?:apto|apt|ap)\s+(?=[0-9])', 'apartamento ', key)
+    parts = [name_key(part) for part in re.split(r'[,;\n]', str(value or '')) if name_key(part)]
+    street = parts[0] if parts else ''
+    street = re.sub(r'^av\s+', 'avenida ', street)
+    street = re.sub(r'^r\s+', 'rua ', street)
+    kind = r'(?:rua|avenida|calle|alameda|travessa|estrada|rodovia|ruta|pasaje|callejon|boulevard|carrera)'
+    if not re.match(r'^' + kind + r'\s+\S', street):
+        return ''
+    # The house number must be anchored to the street. Digits in a city name or
+    # in the CEP at the end of a free-form block are not delivery-location proof.
+    number = r'(?:nro\s+|numero\s+|n\s+)?\d+[a-z]?'
+    separate_number = len(parts) > 1 and re.fullmatch(number, parts[1])
+    embedded_number = re.match(r'^' + kind + r'\s+.*[a-z].*\s+\d+[a-z]?$', street)
+    return key if separate_number or embedded_number else ''
+
+
+def corroboration(customer, data):
+    """Return strong identity evidence without replacing contacts/snapshots."""
+    if not compatible_person(customer, data):
+        return None
+    phone, old_phone = phone_key(data.get('telefone'), data.get('pais')), phone_key(customer.telefone)
+    email, old_email = email_key(data.get('email')), email_key(customer.email)
+    # An otherwise matching address cannot choose between conflicting identities.
+    if (phone and old_phone and phone != old_phone) or (email and old_email and email != old_email):
+        return None
+    doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
+    if doc and doc == document_key(customer.cpf):
+        return 'document'
+    if phone and phone == old_phone:
+        return 'name_phone'
+    if email and email == old_email:
+        return 'name_email'
+    location = address_key(data.get('endereco_livre') or address_text(data)) if (
+        data.get('endereco_livre') or data.get('endereco')) else ''
+    if location and location == address_key(customer.endereco):
+        return 'name_address'
+    return None
+
+
 def find_customer(db, data, *, customers=None):
     name = name_key(data.get('nome'))
     phone = phone_key(data.get('telefone'), data.get('pais'))
     doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
-    customers = db.query(Cliente).all() if customers is None else customers
+    customers = db.query(Cliente).populate_existing().all() if customers is None else customers
     by_id = {c.id: c for c in customers}
     names = {c.id: {name_key(c.nome)} for c in customers if not c.merged_into_id}
     # Only explicitly consolidated aliases can supply another known name. Old
@@ -64,6 +113,12 @@ def find_customer(db, data, *, customers=None):
     documented = [c for c in customers if doc and document_key(c.cpf) == doc]
     if documented and not any(same_person(c) for c in documented):
         return None, 'document_name_conflict', documented
+    corroborated = [(c, corroboration(c, data)) for c in named if full_name(name)]
+    corroborated = [(c, reason) for c, reason in corroborated if reason]
+    if len(corroborated) == 1:
+        return corroborated[0][0], corroborated[0][1], []
+    if len(corroborated) > 1:
+        return None, 'ambiguous', [c for c, _ in corroborated]
     strong = [c for c in customers if compatible_person(c, data) and (
         (doc and document_key(c.cpf) == doc and same_person(c)) or
         (phone and phone_key(c.telefone) == phone and same_person(c)))]
@@ -115,6 +170,7 @@ def ensure_customer(db, row):
     return True
 
 
-def match_recipient(db, name, phone=None, email=None, *, customers=None):
-    customer, reason, _ = find_customer(db, {'nome': name, 'telefone': phone, 'email': email}, customers=customers)
+def match_recipient(db, name, phone=None, email=None, *, address=None, customers=None):
+    customer, reason, _ = find_customer(db, {'nome': name, 'telefone': phone, 'email': email,
+        'endereco_livre': address}, customers=customers)
     return customer if customer and customer.ativo else None

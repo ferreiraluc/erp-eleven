@@ -22,6 +22,7 @@
         <button v-for="filter in statusFilters" :key="filter.value" class="erp-control" :class="['chip', { active: statusFilter === filter.value }]" :aria-pressed="statusFilter === filter.value" @click="statusFilter = filter.value">
           {{ uiText(filter.label) }}
         </button>
+        <div class="customer-sort"><ErpSelect v-model="sort" :label="customerText('sort')"><option value="nome">{{ customerText('name') }}</option><option value="ultima_compra">{{ customerText('latestPurchase') }}</option><option value="ultima_impressao">{{ customerText('latestPrint') }}</option></ErpSelect></div>
         <span v-if="!loading && !loadError" class="total-count">{{ total === 1 ? uiText('{0} cliente',{0:total}) : uiText('{0} clientes',{0:total}) }}</span>
       </div>
     </div>
@@ -47,67 +48,13 @@
       <button v-else @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem">{{ uiText(`Novo cliente`) }}</button>
     </div>
 
-    <!-- List -->
     <div v-else class="clientes-list">
-      <div
-        v-for="c in clientes"
-        :key="c.id"
-        class="cliente-wrap"
+      <CustomerActivityCard
+        v-for="c in clientes" :key="c.id" :customer="c" :expanded="expandedId === c.id"
+        @toggle="toggleHistory(c.id)" @edit="openEdit(c)" @deactivate="confirmDelete(c)"
       >
-        <!-- Card principal -->
-        <div class="cliente-card" :class="{ inactive: !c.ativo }">
-          <div class="cliente-avatar">
-            {{ c.nome.charAt(0).toUpperCase() }}
-          </div>
-          <div class="cliente-info">
-            <div class="cliente-name-row">
-              <span class="cliente-name">{{ c.nome }}</span>
-              <span v-if="!c.ativo" class="badge-inactive">{{ uiText(`Inativo`) }}</span>
-            </div>
-            <div class="cliente-details">
-              <span v-if="c.telefone" class="detail-item">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                {{ c.telefone }}
-              </span>
-              <span v-if="c.email" class="detail-item">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                {{ c.email }}
-              </span>
-              <span v-if="c.cpf" class="detail-item">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
-                {{ c.cpf }}
-              </span>
-              <span v-if="c.endereco" class="detail-item detail-endereco">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                {{ c.endereco.length > 60 ? c.endereco.slice(0, 60) + '…' : c.endereco }}
-              </span>
-            </div>
-          </div>
-          <div class="cliente-actions">
-            <RouterLink :to="{path:'/enderecos',query:{customer_id:c.id}}" class="action-btn edit-btn erp-button erp-button--secondary erp-button--sm" :title="uiText(`Endereços deste cliente`)">{{ uiText(`Endereços`) }}</RouterLink>
-            <!-- Histórico toggle -->
-            <button class="erp-button erp-button--ghost erp-button--icon"
-              @click="toggleHistory(c.id)"
-              :class="['action-btn', 'hist-btn', { active: expandedId === c.id }]"
-              :title="uiText(`Histórico de pedidos`)"
-            >
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </button>
-            <button @click="openEdit(c)" class="action-btn edit-btn erp-button erp-button--ghost erp-button--icon" :title="uiText(`Editar`)">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-            </button>
-            <button v-if="c.ativo" @click="confirmDelete(c)" class="action-btn delete-btn erp-button erp-button--danger erp-button--icon" :title="uiText(`Inativar`)">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="expandedId === c.id" class="historico-section">
-          <CustomerLogisticsPanel :customer="c" />
-        </div>
-      </div>
+        <CustomerLogisticsPanel v-if="expandedId === c.id" :customer="c" @changed="refreshActivity" />
+      </CustomerActivityCard>
     </div>
 
     <nav v-if="!loadError && totalPages > 1" class="customer-pagination" :aria-label="uiText('Página')">
@@ -142,10 +89,17 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { clientesAPI, type Cliente } from '@/services/api'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
 import CustomerLogisticsPanel from '@/components/logistics/CustomerLogisticsPanel.vue'
+import CustomerActivityCard from '@/components/clientes/CustomerActivityCard.vue'
+import ErpSelect from '@/components/ui/ErpSelect.vue'
+import { useI18n } from 'vue-i18n'
+import { customerMessages } from '@/components/clientes/customerMessages'
+import type { CustomerSort, CustomerWithActivity } from '@/services/customerLogistics'
+const { t: customerText } = useI18n({ useScope: 'local', messages: customerMessages })
 const auth = useAuthStore(), showDuplicates = ref(false)
 
 type CustomerStatusFilter = 'active' | 'inactive' | 'all'
-const clientes = ref<Cliente[]>([])
+const clientes = ref<CustomerWithActivity[]>([])
+const sort = ref<CustomerSort>('nome')
 const loading = ref(true), loadError = ref(false), total = ref(0)
 const searchQuery = ref('')
 const statusFilter = ref<CustomerStatusFilter>('active')
@@ -172,35 +126,51 @@ watch(searchQuery, () => {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => reload(), 300)
 }, { flush: 'sync' })
-watch(statusFilter, () => reload(), { flush: 'sync' })
+watch([statusFilter, sort], () => reload(), { flush: 'sync' })
+watch(() => auth.token, () => {
+  requestVersion++
+  if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
+  clientes.value = []; total.value = 0; expandedId.value = null
+  showForm.value = false; editingCliente.value = null; showDuplicates.value = false
+  loadError.value = false
+  if (auth.token) void loadPage(1)
+  else loading.value = false
+}, { flush: 'sync' })
 
 function reload() {
   expandedId.value = null
   return loadPage(1)
 }
 
-async function loadPage(targetPage: number) {
+async function loadPage(targetPage: number, background = false) {
   if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
-  const version = ++requestVersion
+  const version = ++requestVersion, token = auth.token
   page.value = targetPage
-  loading.value = true; loadError.value = false
+  if (!background) loading.value = true
+  loadError.value = false
   try {
     const result = await clientesAPI.getPage({
       page: targetPage, page_size: pageSize,
       search: searchQuery.value.trim() || undefined,
-      ativo: statusFilter.value !== 'inactive', include_inactive: statusFilter.value === 'all',
+      sort: sort.value, ativo: statusFilter.value !== 'inactive', include_inactive: statusFilter.value === 'all',
     })
-    if (version !== requestVersion) return
+    if (version !== requestVersion || token !== auth.token) return
     total.value = result.total
     if (targetPage > totalPages.value) {
       await loadPage(totalPages.value)
       return
     }
     clientes.value = result.items
+    if (expandedId.value && !clientes.value.some(customer => customer.id === expandedId.value)) expandedId.value = null
   } catch {
-    if (version !== requestVersion) return
+    if (version !== requestVersion || token !== auth.token) return
     loadError.value = true; clientes.value = []
   } finally { if (version === requestVersion) loading.value = false }
+}
+
+function refreshActivity() {
+  // Keep the expanded, independently paginated history mounted while its summary refreshes.
+  void loadPage(page.value, true)
 }
 
 function clearFilters() {
@@ -232,12 +202,14 @@ function onSaved() {
 
 async function confirmDelete(c: Cliente) {
   if (!confirm(uiText(`Inativar cliente "{0}"?`,{0:c.nome}))) return
+  const token = auth.token
   try {
     await clientesAPI.delete(c.id)
+    if (token !== auth.token) return
     await loadPage(page.value)
     showToast(uiText(`Cliente inativado.`), 'success')
   } catch {
-    showToast(uiText(`Erro ao inativar cliente.`), 'error')
+    if (token === auth.token) showToast(uiText(`Erro ao inativar cliente.`), 'error')
   }
 }
 
@@ -257,53 +229,21 @@ onUnmounted(() => { requestVersion++; if (searchTimer) clearTimeout(searchTimer)
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
 
-.search-section { padding: 1rem; max-width: 1000px; margin: 0 auto; }
+.search-section { padding: 1.2rem 1rem 1rem; max-width: 1040px; margin: 0 auto; }
 .search-box { position: relative; margin-bottom: .6rem; }
 .search-icon { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: #9ca3af; width: 1rem; height: 1rem; }
 .search-input { width: 100%; padding: .6rem .75rem .6rem 2.25rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: .875rem; outline: none; box-sizing: border-box; }
-.filter-row { display: flex; align-items: center; gap: .75rem; }
+.filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
 .chip { padding: .25rem .75rem; border-radius: 20px; font-size: .78rem; font-weight: 600; cursor: pointer; border: 1px solid #d1d5db; background: white; color: #6b7280; }
 .chip.active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
-.total-count { font-size: .78rem; color: #9ca3af; margin-left: auto; }
+.total-count { font-size: .76rem; color: #64748b; white-space: nowrap; }
 
 .loading-state, .empty-state { display: flex; flex-direction: column; align-items: center; gap: .75rem; padding: 3rem 1rem; color: #9ca3af; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── Lista ─────────────────────────────────────────── */
-.clientes-list { padding: 0 1rem 2rem; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: .5rem; }
-
-.cliente-wrap { display: flex; flex-direction: column; }
-
-.cliente-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: .75rem 1rem; display: flex; align-items: center; gap: .85rem; transition: box-shadow .15s; }
-.cliente-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
-.cliente-card.inactive { opacity: .6; }
-.cliente-avatar { width: 38px; height: 38px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
-.cliente-info { flex: 1; min-width: 0; }
-.cliente-name-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .2rem; }
-.cliente-name { font-weight: 600; font-size: .9rem; color: #111827; }
-.badge-inactive { font-size: .68rem; background: #fee2e2; color: #dc2626; border-radius: 4px; padding: .1rem .35rem; font-weight: 600; }
-.cliente-details { display: flex; flex-wrap: wrap; gap: .5rem .9rem; }
-.detail-item { display: flex; align-items: center; gap: .25rem; font-size: .75rem; color: #6b7280; }
-.cliente-actions { display: flex; gap: .35rem; flex-shrink: 0; }
-.action-btn { padding: .3rem .4rem; border-radius: 6px; border: none; cursor: pointer; }
-.hist-btn { background: #f0fdf4; color: #15803d; }
-.hist-btn:hover { background: #dcfce7; }
-.hist-btn.active { background: #dcfce7; color: #166534; }
-.edit-btn { background: #f3f4f6; color: #374151; }
-.edit-btn:hover { background: #e5e7eb; }
-.delete-btn { background: #fee2e2; color: #dc2626; }
-.delete-btn:hover { background: #fecaca; }
-
-/* ─── Histórico ─────────────────────────────────────── */
-.historico-section {
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-  padding: .75rem 1rem;
-}
-
+.clientes-list { padding: .3rem 1rem 2rem; max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: .85rem; }
+.customer-sort { width: 210px; margin-left: auto; max-width: 100%; }
 /* ─── Misc ─────────────────────────────────────────── */
 .customer-pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 0 1rem 2rem; color: #6b7280; font-size: .8rem; }
 
@@ -315,6 +255,8 @@ onUnmounted(() => { requestVersion++; if (searchTimer) clearTimeout(searchTimer)
 
 @media (max-width: 600px) {
   .btn { padding: .35rem .65rem; font-size: .75rem; }
-  .cliente-details { gap: .35rem .6rem; }
+  .customer-sort { width: 100%; order: 2; }
+  .total-count { margin-left: auto; }
+  .clientes-list { padding-left: .7rem; padding-right: .7rem; }
 }
 </style>

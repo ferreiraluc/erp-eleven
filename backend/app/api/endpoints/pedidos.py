@@ -132,7 +132,8 @@ def criar_pedido(
 
     if not cliente_obj:
         from ...services.customer_identity import match_recipient
-        matched = match_recipient(db, db_pedido.cliente_nome, db_pedido.cliente_telefone, db_pedido.cliente_email)
+        matched = match_recipient(db, db_pedido.cliente_nome, db_pedido.cliente_telefone, db_pedido.cliente_email,
+            address=db_pedido.endereco_entrega)
         if matched: db_pedido.cliente_id = matched.id
 
     if cliente_obj:
@@ -234,6 +235,14 @@ def atualizar_pedido(
     # Update fields
     for field, value in update_data.items():
         setattr(db_pedido, field, value)
+    if not db_pedido.cliente_id and 'cliente_id' not in update_data:
+        from ...services.customer_identity import match_recipient
+        matched = match_recipient(db, db_pedido.cliente_nome, db_pedido.cliente_telefone, db_pedido.cliente_email,
+            address=db_pedido.endereco_entrega)
+        if matched:
+            validate_order_customer(db, db_pedido, matched.id)
+            db_pedido.cliente_id = matched.id
+            inherit_order_customer(db, db_pedido)
     if cliente_obj:
         _sync_cliente_fields(db_pedido, cliente_obj)
     if "cliente_id" in update_data:

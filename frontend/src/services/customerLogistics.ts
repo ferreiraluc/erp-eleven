@@ -1,4 +1,27 @@
-import api, { type Pedido } from './api'
+import api, { type Cliente, type Pedido } from './api'
+
+export type CustomerSort = 'nome' | 'ultima_compra' | 'ultima_impressao'
+export interface CustomerActivity {
+  purchase_count: number
+  shipment_count: number
+  order_count: number
+  print_count: number
+  submitted_print_count: number
+  pending_print_count: number
+  uncertain_print_count: number
+  last_purchase_at: string | null
+  last_print_at: string | null
+  own_sales_only: boolean
+}
+export interface CustomerWithActivity extends Cliente { activity?: CustomerActivity }
+export interface CustomerPurchasePayment {
+  id: string
+  method: string
+  currency: string
+  amount_original: string
+  exchange_rate: string
+  amount_gs: string
+}
 
 export interface CustomerParcel {
   id: string
@@ -29,6 +52,9 @@ export interface CustomerPurchases {
     id: string; created_at: string; account_id: string; account_name: string
     customer_name: string | null; seller: string | null; status: string
     total_gs: string; refunded_gs: string; net_gs: string
+    payment_difference_gs: string
+    change_gs: string | null
+    payments: CustomerPurchasePayment[]
     lines: Array<{ id: string; name: string; quantity: string; returned_quantity: string }>
   }>
 }
