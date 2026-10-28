@@ -194,23 +194,47 @@ async function saveSubscription(
 }
 async function registerGrantedDevice(userId: string, token: string, current: number) {
   assertCurrent(current)
-  const config = await notificationsAPI.pushConfig(token)
-  if (!config.available || !config.public_key) throw new Error('unavailable')
-  assertCurrent(current)
-  const registered = await registration()
   const binding = await readBinding()
   const hint = await readDeviceRecord<SubscriptionHint>('subscription-owner')
   const fingerprint = await sessionKey(token)
   assertCurrent(current)
-  let subscription = await registered.pushManager.getSubscription()
   const sameAccount = (hint?.user_id || binding?.user_id) === userId
   const sameSession =
     sameAccount && hint?.session_key === fingerprint && binding?.user_id === userId
-  if (!sameSession) {
-    await writeBinding(null)
-    activeBinding = null
-    registered.active?.postMessage({ type: 'eleven-notification-clear', binding })
+  if (binding && binding.user_id !== userId) {
+    const removed = await clearBindingFor(
+      binding.user_id,
+      hint?.session_key ? Promise.resolve(hint.session_key) : null,
+      binding,
+    )
+    if (removed)
+      navigator.serviceWorker.controller?.postMessage({
+        type: 'eleven-notification-clear',
+        binding: removed,
+      })
   }
+  // A previous account is invalidated before any network wait on a cold start.
+  assertCurrent(current)
+  const config = await notificationsAPI.pushConfig(token)
+  if (!config.available || !config.public_key) throw new Error('unavailable')
+  assertCurrent(current)
+  if (!sameSession) {
+    const removed = binding
+      ? await clearBindingFor(
+          binding.user_id,
+          hint?.session_key ? Promise.resolve(hint.session_key) : null,
+          binding,
+        )
+      : null
+    activeBinding = null
+    if (removed)
+      navigator.serviceWorker.controller?.postMessage({
+        type: 'eleven-notification-clear',
+        binding: removed,
+      })
+  }
+  const registered = await registration()
+  let subscription = await registered.pushManager.getSubscription()
   if (subscription && !sameAccount) {
     await subscription.unsubscribe()
     subscription = null

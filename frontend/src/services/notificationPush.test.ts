@@ -206,6 +206,11 @@ describe('Explicit device push permission', () => {
   it('revokes a persisted cold-start binding immediately while restore is blocked by network', async () => {
     vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
     database.values.set('current', { user_id: 'sol', device_token: 'previous-page-binding' })
+    const digest = await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode('token-sol'))
+    database.values.set('subscription-owner', {
+      user_id: 'sol',
+      session_key: Buffer.from(digest).toString('hex'),
+    })
     let finish!: (value: unknown) => void
     mocks.config.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -215,6 +220,7 @@ describe('Explicit device push permission', () => {
     const push = await import('./notificationPush')
     const pending = push.restoreNotificationDevice('sol', 'token-sol')
     await vi.waitFor(() => expect(mocks.config).toHaveBeenCalled())
+    expect(database.values.has('current')).toBe(true)
     push.clearNotificationDevice()
     await vi.waitFor(() => expect(database.values.has('current')).toBe(false))
     await vi.waitFor(() =>
@@ -227,6 +233,25 @@ describe('Explicit device push permission', () => {
     await expect(pending).rejects.toThrow('notification-session-changed')
     expect(database.values.has('current')).toBe(false)
     expect(nativeSubscribe).not.toHaveBeenCalled()
+  })
+  it('invalidates a different stored account before waiting for configuration on a cold start', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
+    database.values.set('current', { user_id: 'lucas', device_token: 'previous-account-binding' })
+    database.values.set('subscription-owner', { user_id: 'lucas', session_key: 'older-session' })
+    let finish!: (value: unknown) => void
+    mocks.config.mockImplementationOnce(() => {
+      expect(database.values.has('current')).toBe(false)
+      return new Promise((resolve) => {
+        finish = resolve
+      })
+    })
+    const push = await import('./notificationPush')
+    const pending = push.restoreNotificationDevice('sol', 'token-sol')
+    await vi.waitFor(() => expect(mocks.config).toHaveBeenCalled())
+    expect(database.values.has('current')).toBe(false)
+    finish({ available: true, public_key: 'AQID' })
+    expect(await pending).toBe(true)
+    expect(database.values.get('current')).toMatchObject({ user_id: 'sol' })
   })
   it('does not let a previous cold-start logout erase a newer login of the same account', async () => {
     vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
