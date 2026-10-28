@@ -77,6 +77,10 @@ Veja [macOS/3nStar](docs/IMPRESSAO_MACOS.md) e [Windows/Zebra](docs/IMPRESSAO_WI
 
 O histórico de Clientes reúne também compras do PDV vinculadas explicitamente,
 com itens, devoluções, atalho aos detalhes da venda e valores separados do BI.
+Os cards expansíveis exibem contadores de compras, rastreios e solicitações de
+impressão, com organização pelas últimas compras ou impressões. Lucas pode conferir
+e associar históricos ainda sem vínculo por identidade corroborada, preservando
+os registros originais; novos fluxos aproveitam nomes, endereços e contatos compatíveis.
 O acesso pessoal dos vendedores é aplicado antes dos resumos e da paginação.
 Clientes e Pedidos usam busca e paginação no servidor, incluindo registros antigos
 além da primeira página. Criação de grades e duplicação preservam os locks e leem

@@ -28,6 +28,13 @@
           <summary>{{ t('items', { count: sale.lines.length }) }}</summary>
           <ul><li v-for="line in sale.lines" :key="line.id">{{ quantity(line.quantity) }} × {{ line.name }}<span v-if="Number(line.returned_quantity)" class="muted"> · {{ t('returned', { count: quantity(line.returned_quantity) }) }}</span></li></ul>
         </details>
+        <details v-if="sale.payments?.length" class="purchase-payments">
+          <summary>{{ t('payments') }} · {{ sale.payments.length }}</summary>
+          <ul><li v-for="payment in sale.payments" :key="payment.id"><span>{{ paymentLabel(payment.method) }}</span><strong>{{ paymentMoney(payment.amount_original, payment.currency) }}</strong><small v-if="payment.currency !== 'GS' && payment.currency !== 'PYG'">{{ t('equivalent') }}: {{ money(payment.amount_gs) }}</small></li></ul>
+          <p v-if="sale.change_gs !== null && Number(sale.change_gs) > 0">{{ t('change') }}: {{ money(sale.change_gs) }}</p>
+          <p v-else-if="Number(sale.payment_difference_gs)" class="muted">{{ t('paymentDifference') }}: {{ money(sale.payment_difference_gs) }}</p>
+          <p class="muted">{{ t('paymentNote') }}</p>
+        </details>
         <RouterLink class="erp-button erp-button--secondary erp-button--sm purchase-sale-link" :to="{ name: 'vendas-pdv', query: { sale_id: sale.id } }">{{ t('openSale') }}</RouterLink>
       </article>
       <footer v-if="data.total > data.page_size" class="row-top">
@@ -44,6 +51,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { customerLogisticsAPI, type CustomerPurchases } from '@/services/customerLogistics'
+import { paymentLabel, paymentSymbol } from '@/services/pdvPayments'
 import { purchaseMessages } from './purchaseMessages'
 
 const props = defineProps<{ customerId: string }>()
@@ -52,6 +60,7 @@ const data = ref<CustomerPurchases | null>(null)
 const loading = ref(false), error = ref(false), requestedPage = ref(1)
 let sequence = 0
 const money = (value: string) => `G$ ${Number(value).toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const paymentMoney = (value: string, currency: string) => `${paymentSymbol(currency)} ${Number(value).toLocaleString(locale.value, { minimumFractionDigits: currency === 'GS' || currency === 'PYG' ? 0 : 2, maximumFractionDigits: 2 })}`
 const quantity = (value: string) => Number(value).toLocaleString(locale.value, { maximumFractionDigits: 3 })
 const date = (value: string) => new Date(value).toLocaleString(locale.value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
 const status = (value: string) => te(`states.${value}`) ? t(`states.${value}`) : value
@@ -71,13 +80,17 @@ onUnmounted(() => { sequence++ })
 
 <style scoped src="./logistics.css"></style>
 <style scoped>
-.purchase-history { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
+.purchase-history { margin-top: 0; }
 .purchase-heading h4 { margin: 0; }
 .purchase-stats strong { font-size: 1.05rem; overflow-wrap: anywhere; }
 .purchase-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .purchase-row { overflow-wrap: anywhere; }
 .purchase-row summary { cursor: pointer; color: #2563eb; margin-top: .6rem; }
 .purchase-row ul { margin-bottom: 0; padding-left: 1.2rem; line-height: 1.6; }
+.purchase-payments ul { list-style: none; padding: 0; }
+.purchase-payments li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem .75rem; padding: .5rem 0; border-bottom: 1px solid #edf1f5; }
+.purchase-payments li small { width: 100%; }
+.purchase-payments .muted { font-size: .75rem; line-height: 1.6; }
 .purchase-sale-link { margin-top: .75rem; text-decoration: none; }
 @media(max-width:800px) { .purchase-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

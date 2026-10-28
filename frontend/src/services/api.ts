@@ -1,3 +1,4 @@
+import type { CustomerSort, CustomerWithActivity } from './customerLogistics'
 import type { OcrParsedLabel } from './ocr'
 import axios from 'axios'
 import { storedToken, clearSession } from './sessionStorage'
@@ -515,14 +516,14 @@ export const pedidoAnexosAPI = {
 // ─── Clientes API ──────────────────────────────────────────────────────────────
 
 export interface ClientePage {
-  items: Cliente[]
+  items: CustomerWithActivity[]
   total: number
   page: number
   page_size: number
 }
 
 export const clientesAPI = {
-  getPage: (params: { page: number; page_size?: number; search?: string; ativo?: boolean; include_inactive?: boolean }): Promise<ClientePage> =>
+  getPage: (params: { page: number; page_size?: number; search?: string; ativo?: boolean; include_inactive?: boolean; sort?: CustomerSort }): Promise<ClientePage> =>
     api.get('/api/clientes/pagina', { params }).then(r => r.data),
   getAll: (params?: { search?: string; ativo?: boolean; include_inactive?: boolean; skip?: number; limit?: number }): Promise<Cliente[]> => {
     const p = new URLSearchParams()

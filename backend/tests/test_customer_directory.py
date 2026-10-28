@@ -6,6 +6,16 @@ import pytest
 from test_assistant import setup
 from test_customer_links import logistics
 from app.models import Cliente
+from app.database import Base
+from app.models.address_book import SavedAddress
+from app.models.printing import PrintDevice, PrintJob
+
+
+@pytest.fixture(autouse=True)
+def activity_tables(logistics):
+    factory, _, _ = logistics
+    with factory() as db:
+        Base.metadata.create_all(db.bind, tables=[SavedAddress.__table__, PrintDevice.__table__, PrintJob.__table__])
 
 
 def seed(factory):

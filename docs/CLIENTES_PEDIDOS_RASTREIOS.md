@@ -7,6 +7,69 @@ no módulo de vendas operacionais ou no PDV.
 
 ## No ERP
 
+### Cards e atividade do cliente
+
+Em **Clientes**, cada cadastro usa um card expansível com o mesmo acabamento dos
+cards de rastreamento: contorno, acento lateral, fundo suave e informações compactas.
+O cabeçalho mostra nome, contato, compras do PDV, rastreios e solicitações de
+impressão, além das datas da última compra e da última solicitação. Pedidos aparecem
+separadamente quando existem; seu valor não é somado ao total de compras do PDV.
+Clientes inativos mantêm o histórico e têm indicação visual própria.
+
+O seletor **Organizar clientes** permite ordenar por nome, últimas compras ou
+últimas impressões. A ordenação ocorre no servidor antes da paginação, respeitando
+busca e estado; clientes sem a atividade escolhida aparecem ao final, com desempate
+por nome e ID. Os resumos da página são carregados em conjunto, sem consultar o
+histórico de cada cliente individualmente nem trazer PDFs ou snapshots de impressão.
+O escopo pessoal de vendas é aplicado antes da contagem e da ordenação por compra.
+
+Ao expandir, as abas **Compras PDV**, **Pedidos e pacotes** e **Endereços e impressões**
+carregam seus detalhes somente quando acessadas. As listas conservam paginação
+própria; datas novas de atividade e compras usam o horário de Brasília. Uma associação
+concluída atualiza o resumo sem recolher o card. Falhas de consulta continuam distintas
+de um histórico vazio.
+
+O contador de compras exclui vendas canceladas ou retiradas da listagem. A seção de
+compras mantém os cancelamentos visíveis no histórico permitido e mostra valor
+líquido, devoluções e pagamentos registrados com método, moeda, valor original e
+equivalente. Pagamentos originais de uma venda cancelada não são recebimentos novos;
+fiado, troco e estornos não são somados novamente como faturamento. As contas de
+fiado permanecem separadas, assim como vendas operacionais e resultados do BI.
+
+**Impressões solicitadas** conta os trabalhos persistidos ligados aos endereços do
+cliente, incluindo referências antigas consolidadas. Uma tentativa de rede do mesmo
+trabalho não cria outra solicitação; uma nova cópia confirmada é outro trabalho.
+O card distingue fila pendente e envio incerto; `submitted` continua significando
+entrega à conexão/spooler, sem sensor que confirme o papel. Documentos avulsos
+temporários do bot e trabalhos sem endereço vinculado não são atribuídos por nome.
+
+### Associação automática e conferência de históricos
+
+Novos pedidos e rastreios aproveitam o endereço compatível ao resolver o cliente,
+além dos vínculos explícitos e contatos já reconhecidos. Ao selecionar uma conta PDV
+sem vínculo no checkout, uma identidade corroborada por documento ou contato pode
+associá-la ao diretório sem unir contas ou modificar saldos e snapshots. Homônimos,
+dados conflitantes e cadastros inativos não são escolhidos apenas pela semelhança.
+
+Lucas pode abrir **Associar histórico existente** no card expandido para conferir
+registros antigos ainda sem vínculo. A prévia considera nome completo normalizado
+com endereço compatível e número, documento ou contato corroborado; rastreios também
+podem herdar o cliente de um pedido explicitamente vinculado. Nome igual sozinho
+não basta nessa conferência. Registros já vinculados a outra pessoa são preservados.
+
+A consulta é somente leitura. A confirmação associa apenas os registros da prévia,
+confere novamente seu estado sob locks e registra o responsável na auditoria.
+Mudanças desde a prévia exigem outra conferência; repetir a mesma confirmação não
+duplica o efeito. Não ocorre varredura ou associação global ao abrir a lista ou
+durante o deploy. Limites da consulta são explícitos: até 200 registros por fonte e
+10 mil identidades de clientes. Uma consulta parcial é sinalizada; um conjunto de
+identidades incompleto não é usado para provar que não há homônimos.
+
+As rotas dessa ação são exclusivas do proprietário:
+`POST /api/clientes/{id}/conciliacao/previa` e
+`POST /api/clientes/{id}/conciliacao`, com `expected_token` da prévia e `confirm: true`.
+Não imprimem, não criam compras e não fundem pessoas.
+
 Os cards de rastreamento no dashboard e na página de encomendas compartilham
 fundo opaco levemente tonalizado, contorno completo, acento lateral por status e
 sombra curta, definidos em `frontend/src/assets/trackingCards.css`. Amarelo indica

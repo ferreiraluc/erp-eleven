@@ -98,12 +98,19 @@ def search(db, query, limit=20):
 
 
 def select(db, selection, user):
+    # Directory consolidation and historical reconciliation acquire this lock
+    # before identity rows. Re-read after it: a cached customer may now be an alias.
+    from .address_book import lock_addresses
+    lock_addresses(db)
     if selection.source == 'pdv':
-        customer = db.get(PdvCliente, selection.id)
+        customer = db.query(PdvCliente).filter(PdvCliente.id == selection.id).populate_existing().with_for_update().first()
         if not customer or not customer.ativo:
             raise HTTPException(409, 'Cliente não encontrado ou inativo. Busque novamente.')
+        if not customer.cadastro_cliente_id:
+            from .customer_reconciliation import auto_link_pdv_customer
+            auto_link_pdv_customer(db, customer)
         if customer.cadastro_cliente_id:
-            main = db.get(Cliente, customer.cadastro_cliente_id)
+            main = db.query(Cliente).filter(Cliente.id == customer.cadastro_cliente_id).populate_existing().first()
             if not main or not main.ativo or main.merged_into_id:
                 raise HTTPException(409, 'O cadastro do cliente mudou. Busque novamente.')
         return customer

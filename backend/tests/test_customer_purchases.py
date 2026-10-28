@@ -10,14 +10,14 @@ from test_assistant import setup
 from test_customer_links import logistics, customer
 from app.database import Base
 from app.models import Usuario
-from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem
+from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment
 
 
 @pytest.fixture
 def purchases(logistics):
     factory, client, user_id = logistics
     with factory() as db:
-        Base.metadata.create_all(db.bind, tables=[PdvSaleItem.__table__])
+        Base.metadata.create_all(db.bind, tables=[PdvSaleItem.__table__, PdvPayment.__table__])
     return factory, client, user_id
 
 

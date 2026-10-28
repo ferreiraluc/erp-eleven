@@ -260,6 +260,9 @@ def atualizar_rastreamento(
     previous_code = db_rastreamento.codigo_rastreio
     for field, value in update_data.items():
         setattr(db_rastreamento, field, value)
+    if not db_rastreamento.cliente_id and 'cliente_id' not in update_data:
+        from ...services.customer_reconciliation import auto_link_tracking
+        auto_link_tracking(db, db_rastreamento)
     try:
         db.flush()
         if previous_pedido_id and (previous_pedido_id != db_rastreamento.pedido_id or previous_code != db_rastreamento.codigo_rastreio):

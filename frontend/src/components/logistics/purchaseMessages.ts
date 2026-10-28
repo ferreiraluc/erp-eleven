@@ -1,5 +1,10 @@
 export const purchaseMessages = {
   pt: {
+    payments: 'Pagamentos registrados',
+    equivalent: 'Equivalente registrado',
+    change: 'Troco registrado',
+    paymentDifference: 'Diferença dos pagamentos no lançamento',
+    paymentNote: 'Valores do lançamento original; podem incluir troco ou fiado. Estornos aparecem separadamente e não são somados às compras.',
     title: 'Compras no PDV', refresh: 'Atualizar', intro: 'Compras das contas PDV vinculadas a este cliente. Cada conta conserva seu próprio saldo de fiado.',
     loading: 'Carregando compras...', error: 'Não foi possível carregar as compras.', retry: 'Tentar novamente',
     own: 'Você está consultando apenas suas vendas.', sales: 'Vendas registradas', net: 'Valor líquido no ERP',
@@ -9,6 +14,11 @@ export const purchaseMessages = {
     states: { completed: 'Concluída', partially_refunded: 'Devolução parcial', refunded: 'Estornada', cancelled: 'Cancelada' },
   },
   es: {
+    payments: 'Pagos registrados',
+    equivalent: 'Equivalente registrado',
+    change: 'Cambio registrado',
+    paymentDifference: 'Diferencia de los pagos al registrar',
+    paymentNote: 'Importes del registro original; pueden incluir cambio o crédito. Las reversiones se muestran por separado y no se suman a las compras.',
     title: 'Compras en el PDV', refresh: 'Actualizar', intro: 'Compras de las cuentas PDV vinculadas a este cliente. Cada cuenta conserva su propio saldo de crédito.',
     loading: 'Cargando compras...', error: 'No se pudieron cargar las compras.', retry: 'Reintentar',
     own: 'Está consultando solo sus ventas.', sales: 'Ventas registradas', net: 'Valor neto en el ERP',
@@ -18,6 +28,11 @@ export const purchaseMessages = {
     states: { completed: 'Completada', partially_refunded: 'Devolución parcial', refunded: 'Revertida', cancelled: 'Cancelada' },
   },
   en: {
+    payments: 'Recorded payments',
+    equivalent: 'Recorded equivalent',
+    change: 'Recorded change',
+    paymentDifference: 'Payment difference when recorded',
+    paymentNote: 'Original entries may include change or store credit. Reversals are shown separately and are not added to purchases.',
     title: 'POS purchases', refresh: 'Refresh', intro: 'Purchases from POS accounts linked to this customer. Each account keeps its own credit balance.',
     loading: 'Loading purchases...', error: 'Unable to load purchases.', retry: 'Try again',
     own: 'You are viewing only your sales.', sales: 'Recorded sales', net: 'Net amount in ERP',

@@ -1,5 +1,6 @@
 export const messages = {
   pt: {
+    customerHistory: 'Histórico do cliente', purchases: 'Compras no PDV', prints: 'Endereços e impressões',
     title: 'Pedidos e pacotes', orders: 'Pedidos', parcels: 'Pacotes', transit: 'Em trânsito', delivered: 'Entregues',
     loading: 'Carregando vínculos...', error: 'Não foi possível carregar os vínculos.', retry: 'Tentar novamente',
     emptyOrders: 'Nenhum pedido vinculado.', emptyParcels: 'Nenhum pacote vinculado.', more: 'Carregar mais',
@@ -15,6 +16,7 @@ export const messages = {
     states: { PENDENTE: 'Pendente', PROCESSANDO: 'Processando', ENVIADO: 'Enviado', EM_TRANSITO: 'Em trânsito', ENTREGUE: 'Entregue', CANCELADO: 'Cancelado', ERRO: 'Erro na consulta', NAO_ENCONTRADO: 'Não encontrado' },
   },
   es: {
+    customerHistory: 'Historial del cliente', purchases: 'Compras en el PDV', prints: 'Direcciones e impresiones',
     title: 'Pedidos y paquetes', orders: 'Pedidos', parcels: 'Paquetes', transit: 'En tránsito', delivered: 'Entregados',
     loading: 'Cargando vínculos...', error: 'No se pudieron cargar los vínculos.', retry: 'Reintentar',
     emptyOrders: 'No hay pedidos vinculados.', emptyParcels: 'No hay paquetes vinculados.', more: 'Cargar más',
@@ -30,6 +32,7 @@ export const messages = {
     states: { PENDENTE: 'Pendiente', PROCESSANDO: 'Procesando', ENVIADO: 'Enviado', EM_TRANSITO: 'En tránsito', ENTREGUE: 'Entregado', CANCELADO: 'Cancelado', ERRO: 'Error de consulta', NAO_ENCONTRADO: 'No encontrado' },
   },
   en: {
+    customerHistory: 'Customer history', purchases: 'POS purchases', prints: 'Addresses and printing',
     title: 'Orders and parcels', orders: 'Orders', parcels: 'Parcels', transit: 'In transit', delivered: 'Delivered',
     loading: 'Loading links...', error: 'Unable to load links.', retry: 'Try again',
     emptyOrders: 'No linked orders.', emptyParcels: 'No linked parcels.', more: 'Load more',
