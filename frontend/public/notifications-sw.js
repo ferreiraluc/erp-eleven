@@ -9,10 +9,13 @@ function bindingStore(action) {
       const db = open.result,
         transaction = db.transaction('binding', action ? 'readwrite' : 'readonly')
       const store = transaction.objectStore('binding'),
-        request = action ? store.delete('current') : store.get('current')
+        request = store.get('current')
       let value = null
       request.onsuccess = () => {
         value = request.result || null
+        // Scoped logout messages may arrive after another login. They may only
+        // clear the binding that was captured by the account being closed.
+        if (action === true || (action && matches(value, action))) store.delete('current')
       }
       transaction.oncomplete = () => {
         db.close()
@@ -34,9 +37,16 @@ function matches(binding, data) {
     binding.device_token === data.device_token
   )
 }
+function expired(data) {
+  return (
+    typeof data?.expires_at === 'number' &&
+    (!Number.isFinite(data.expires_at) || data.expires_at <= Date.now())
+  )
+}
 function safePath(path) {
   if (
     typeof path !== 'string' ||
+    path.length > 500 ||
     !path.startsWith('/') ||
     path.startsWith('//') ||
     /[\\#\s\u0000-\u001f]/.test(path) ||
@@ -74,10 +84,16 @@ self.addEventListener('activate', (event) => {
 })
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'eleven-notification-clear') {
+    const scoped = Object.prototype.hasOwnProperty.call(event.data, 'binding')
+    const binding = event.data.binding
     event.waitUntil(
       Promise.all([
-        bindingStore(true),
-        self.registration.getNotifications().then((items) => items.forEach((item) => item.close())),
+        bindingStore(scoped ? binding || false : true),
+        self.registration.getNotifications().then((items) =>
+          items.forEach((item) => {
+            if (!binding || matches(binding, item.data)) item.close()
+          }),
+        ),
       ]),
     )
   }
@@ -92,8 +108,12 @@ self.addEventListener('push', (event) => {
         return
       }
       const binding = await bindingStore(false)
-      if (!matches(binding, data) || typeof data.notification_id !== 'string') return
+      if (!matches(binding, data) || expired(data) || typeof data.notification_id !== 'string')
+        return
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      // Logout/account changes can finish while the browser enumerates clients.
+      // Recheck immediately before displaying private notification content.
+      if (!matches(await bindingStore(false), data) || expired(data)) return
       windows.forEach((client) =>
         client.postMessage({
           type: 'eleven-notification-refresh',
@@ -101,8 +121,15 @@ self.addEventListener('push', (event) => {
           device_token: data.device_token,
         }),
       )
-      await self.registration.showNotification('ELEVEN', {
-        body: 'Você tem uma nova notificação no sistema.',
+      // Legacy payloads had no deadline and contained only a generic alert.
+      // Show actual content only when the server supplied a live session cap.
+      const liveContent = typeof data.expires_at === 'number'
+      const title =
+        liveContent && typeof data.title === 'string' ? data.title.trim().slice(0, 120) : ''
+      const body =
+        liveContent && typeof data.body === 'string' ? data.body.trim().slice(0, 1000) : ''
+      await self.registration.showNotification(title || 'ELEVEN', {
+        body: body || 'Você tem uma nova notificação no sistema.',
         icon: '/icons/eleven-midnight-v3-192.png',
         badge: '/icons/eleven-midnight-v3-48.png',
         tag: `eleven-${data.notification_id}`,
@@ -114,6 +141,7 @@ self.addEventListener('push', (event) => {
           device_token: data.device_token,
           notification_id: data.notification_id,
           action_path: safePath(data.action_path),
+          expires_at: data.expires_at,
         },
       })
     })().catch(() => undefined),
@@ -125,7 +153,7 @@ self.addEventListener('notificationclick', (event) => {
     (async () => {
       const data = event.notification.data,
         binding = await bindingStore(false)
-      if (!matches(binding, data)) return
+      if (!matches(binding, data) || expired(data)) return
       const path = safePath(data.action_path),
         windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const client = windows.find((item) => new URL(item.url).origin === self.location.origin)

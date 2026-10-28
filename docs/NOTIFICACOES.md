@@ -4,17 +4,33 @@
 
 O sino fica somente no menu inicial/dashboard, à direita do cabeçalho. Abre um
 balão com mensagens pessoais, pendências, confirmação de leitura e respostas,
-sem sair da tela. A lista tem rolagem e carrega mais mensagens quando solicitado.
-O balão também dá acesso ao histórico e às preferências de categorias e som.
+sem sair da tela. No celular ocupa cerca de 70% da largura, ancorado no canto
+direito; no desktop tem limite de 440 px. A lista tem rolagem e carrega mais
+mensagens quando solicitado. O balão também dá acesso ao histórico.
 **Notificações** (`/notificacoes`) continua sendo a central completa e o destino
 de abertura do push externo. Ler e responder no ERP funciona mesmo quando o
 aparelho não permite notificações externas.
 
 Na próxima abertura autenticada de cada aparelho, aparece o convite **Ativar
-notificações**. O usuário precisa tocar nesse botão e aceitar a permissão do
-navegador. Adiar oculta o convite por 24 horas naquele aparelho/conta. O ERP não
+notificações**, quando ainda não existe autorização. O usuário precisa tocar
+nesse botão e aceitar a permissão do navegador. Fechar o aviso oculta apenas o
+convite da sessão atual; não desliga notificações nem grava uma preferência no aparelho. O ERP não
 pode aceitar a permissão por ninguém nem desfazer uma recusa nas configurações
 do navegador. Contas com senha temporária precisam primeiro concluir a troca.
+
+As categorias, o envio externo e o som são habilitados por padrão para todas as
+contas pela política da empresa. Não existe mais o painel de preferências por
+aparelho, seleção de categorias ou botão de desativação no ERP. Preferências
+antigas são preservadas no histórico, mas não desabilitam os avisos da política
+atual. Isso não concede uma permissão que o sistema operacional recusou.
+
+Com permissão já concedida, abrir, entrar novamente ou retomar a conexão tenta
+revalidar a inscrição automaticamente, com limite de tentativas por intervalo.
+Sair remove o vínculo ativo e fecha avisos desse login; uma indicação local de
+propriedade permite reutilizar a inscrição nativa no próximo login da mesma
+conta. Outra conta exige novo vínculo. Quando o navegador perde uma inscrição
+ou exige um gesto para recriá-la, o ERP mostra o botão de ativação; não pede de
+novo uma permissão que ainda está concedida.
 
 No iPhone/iPad, instalar o ERP em **Adicionar à Tela de Início** e abrir por esse
 ícone; Web Push requer iOS/iPadOS 16.4 ou superior. Android, Samsung Internet e
@@ -28,11 +44,21 @@ externos obedecem ao modo silencioso e às preferências do sistema; o som dentr
 do ERP precisa de uma interação anterior e da opção habilitada. Não há promessa
 de aviso sonoro em todos os aparelhos.
 
-O aviso externo contém texto genérico, sem valores de venda, nomes de clientes ou
-corpo da mensagem. Para ver os detalhes, o usuário abre o ERP e se autentica.
+O aviso externo mostra o título e o texto da notificação, respeitando o limite
+do payload e o espaço disponível no celular. O sistema operacional pode ocultar
+a prévia na tela bloqueada. O conteúdo completo e as respostas ficam no ERP.
+O envio e o clique respeitam o destinatário, o vínculo do aparelho, o acesso
+atual ao destino e a validade da sessão. Ao abrir, é necessário estar autenticado.
 Sair, trocar de conta, revogar a sessão ou desativar o usuário impede novas
-entregas por aquela sessão. A sessão continua com o prazo existente de sete dias;
-abrir novamente revalida a conta e restaura a inscrição quando permitido.
+entregas por aquela sessão. A sessão vence às **21h de Brasília**, e mensagens
+do push recebidas após seu vencimento são descartadas. Entrar às 21h ou depois
+gera uma sessão válida até o próximo dia às 21h. Na atualização inicial, sessões
+antigas ficam limitadas ao primeiro corte após a migração, preservando o turno
+atual e vencimentos/revogações anteriores. Abrir novamente revalida a conta e
+restaura a inscrição quando permitido.
+Depois do corte, é necessário entrar novamente para voltar a receber avisos
+vinculados à conta. A autorização já concedida no navegador é reaproveitada;
+o novo login não deve pedir uma nova permissão nativa.
 
 ## Administração por Lucas
 
@@ -74,6 +100,15 @@ Modelos manuais mostram uma prévia com os campos preenchidos. `{user_name}` usa
 o vendedor da venda vinculada ou o nome do único destinatário (com vários,
 “equipe”); `{sale_code}` exige escolher uma venda. `{date}` e `{time}` usam
 Brasília. O servidor resolve e valida novamente os campos antes de salvar.
+Em rastreios, `{cliente_username}` representa o nome do destinatário do pacote;
+`{tracking_code}` e `{status}` usam aquele rastreio. Nas mensagens manuais, escolha
+**Rastreamento** como destino e informe um código cadastrado para conferir a
+prévia. Na regra automática, os valores são preenchidos no evento. O nome do
+pacote é prioritário; somente quando ausente entram vínculos explícitos de pedido
+ou cliente. Sem um nome disponível, aparece **destinatário não informado**.
+Não há inferência por nomes parecidos nem preenchimento de CPF com zeros.
+O modelo inicial intacto passa a incluir o destinatário; modelos personalizados
+por Lucas permanecem como foram salvos e podem usar a nova variável.
 Variáveis que precisam de um contexto ausente impedem o envio com uma explicação,
 em vez de entregar os códigos literais. Mensagens antigas com campos sem preencher
 ganham uma apresentação legível; quando não existe vínculo suficiente, o sistema
@@ -137,7 +172,7 @@ validados contra provedores de push conhecidos, sem redirects arbitrários.
 
 O frontend consulta a caixa somente com sessão válida, janela visível e conexão,
 descartando respostas de contas anteriores. `notifications-sw.js` recebe push e
-abre a central; não intercepta requisições nem mantém cache de HTML, JS ou APIs.
+abre o destino interno autorizado; não intercepta requisições nem mantém cache de HTML, JS ou APIs.
 Publicar esse arquivo como JavaScript e com `Cache-Control: no-store`, sem
 redirecioná-lo ao HTML. Não inserir chaves privadas em `VITE_*`.
 

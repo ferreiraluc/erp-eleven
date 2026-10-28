@@ -1,6 +1,6 @@
 <template>
   <div class="notification-composer">
-    <NotificationContextSelector v-if="!isTemplate" :model-value="form.context" :token="token" :initial-sale="initialSale" :locked-sale="lockedSale" :disabled="disabled" @update:model-value="setContext" @loaded="sale = $event" @selected="selectSeller" @validity="contextIssue = $event" />
+    <NotificationContextSelector v-if="!isTemplate && (form.context || lockedSale || form.category === 'sales')" :model-value="form.context" :token="token" :initial-sale="initialSale" :locked-sale="lockedSale" :disabled="disabled" @update:model-value="setContext" @loaded="sale = $event" @selected="selectSeller" @validity="contextIssue = $event" />
     <label v-if="isTemplate"
       >{{ n('name') }}<input v-model="form.name" maxlength="100" required
     /></label>
@@ -30,6 +30,7 @@
       /></label>
     </div>
     <label>{{ n('contextDestination') }}<ErpDropdown :model-value="destination" :options="destinationOptions" :label="n('contextDestination')" :disabled="disabled" @update:model-value="setDestination(String($event))" /></label>
+    <NotificationTrackingSelector v-if="!isTemplate && destination === '/rastreamento'" v-model="form.action_path" :token="token" :disabled="disabled" @loaded="tracking = $event" @validity="trackingIssue = $event" />
     <label class="check"
       ><input
         v-model="form.requires_ack"
@@ -85,10 +86,12 @@ import {
   type NotificationContext,
   type NotificationSaleDetail,
   type NotificationSaleSummary,
+  type NotificationTrackingDetail,
 } from '@/services/notifications'
 import { notificationText as n } from '@/services/notificationText'
 import { notificationPreview } from '@/services/notificationAuthoring'
 import NotificationContextSelector from './NotificationContextSelector.vue'
+import NotificationTrackingSelector from './NotificationTrackingSelector.vue'
 export interface NotificationForm {
   name: string
   title: string
@@ -118,6 +121,8 @@ const props = withDefaults(
 const emit = defineEmits<{ validity: [message: string] }>()
 const sale = ref<NotificationSaleDetail | null>(props.initialSale)
 const contextIssue = ref('')
+const trackingIssue = ref(''), tracking = ref<NotificationTrackingDetail | null>(null)
+watch(() => form.value.context, value => { if (!value) contextIssue.value = '' })
 const templateId = ref('')
 const categoryOptions = computed(() =>
   notificationCategories.map((value) => ({ value, label: n(value) })),
@@ -129,7 +134,7 @@ const templateOptions = computed(() => [
   { value: '', label: n('none') },
   ...props.templates.map((template) => ({ value: template.id, label: template.name })),
 ])
-const destination = computed(() => form.value.context?.target || form.value.action_path)
+const destination = computed(() => form.value.context?.target || (form.value.action_path.startsWith('/rastreamento?') ? '/rastreamento' : form.value.action_path))
 const destinationOptions = computed(() => {
   if (props.lockedSale && !props.isTemplate) return [{ value: 'sale', label: n('contextSale') }, { value: 'product', label: n('contextProduct') }]
   const options = [{ value: '', label: n('contextNoDestination') }, { value: '/notificacoes', label: n('title') },
@@ -139,8 +144,8 @@ const destinationOptions = computed(() => {
   return options
 })
 const destinationLabel = computed(() => destinationOptions.value.find(option => option.value === destination.value)?.label || '')
-const preview = computed(() => notificationPreview(form.value, props.users, sale.value))
-watch(() => props.isTemplate ? '' : contextIssue.value || (preview.value.problem ? n(preview.value.problem) : ''), value => emit('validity', value), { immediate: true, flush: 'sync' })
+const preview = computed(() => notificationPreview(form.value, props.users, sale.value, new Date(), tracking.value))
+watch(() => props.isTemplate ? '' : contextIssue.value || trackingIssue.value || (preview.value.problem ? n(preview.value.problem) : ''), value => emit('validity', value), { immediate: true, flush: 'sync' })
 function setContext(value: NotificationContext | null) { form.value.context = value; form.value.action_path = '' }
 function selectSeller(value: NotificationSaleSummary) {
   if (value.seller_id && props.users.some(user => user.id === value.seller_id)) form.value.user_ids = [value.seller_id]

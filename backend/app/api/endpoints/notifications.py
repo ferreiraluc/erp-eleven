@@ -125,17 +125,10 @@ def preferences(user=Depends(get_current_active_user), db: Session = Depends(get
 
 @router.put('/preferences')
 def update_preferences(body: PreferenceUpdate, user=Depends(get_current_active_user), db: Session = Depends(get_db)):
-    # Serialize first-write races using the existing user row rather than relying on an in-memory setting.
-    db.query(Usuario).filter_by(id=user.id).with_for_update().first()
-    preference = db.get(NotificationPreference, user.id)
-    if not preference:
-        preference = NotificationPreference(user_id=user.id)
-        db.add(preference)
-    for field, value in body.model_dump().items():
-        setattr(preference, field, sorted(set(value)) if field == 'categories' else value)
-    preference.updated_at = utcnow()
-    db.commit()
-    return service.preference_dict(preference)
+    # Compatibility for an older open browser tab. Institutional delivery is
+    # enabled for every account; preserve historical settings without rewriting
+    # them or offering a personal opt-out through this legacy endpoint.
+    return service.preference_dict(db.get(NotificationPreference, user.id))
 
 
 @router.post('/read-all')
@@ -394,3 +387,16 @@ def product_context_detail(item_id: uuid.UUID, owner=Depends(require_owner), db:
     if not row:
         raise HTTPException(404, 'Produto de referência não encontrado ou inativo.')
     return dict(row._mapping)
+
+
+@router.get('/context/tracking/{code}')
+def tracking_context_detail(code: str, owner=Depends(require_owner), db: Session = Depends(get_db)):
+    if len(code) > 80:
+        raise HTTPException(422, 'Código de rastreio inválido.')
+    row = context_service.find_tracking_metadata(db, code)
+    if not row:
+        raise HTTPException(404, 'Rastreamento não encontrado ou inativo.')
+    status = getattr(row.status, 'value', row.status)
+    return {'id': row.id, 'code': row.codigo_rastreio,
+            'cliente_username': context_service.tracking_recipient_name(db, row),
+            'status': context_service.TRACKING_LABELS.get(status, status)}

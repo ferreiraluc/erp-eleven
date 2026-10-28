@@ -26,7 +26,7 @@
         :disabled="center.pushBusy"
         @click="center.deferInvitation"
       >
-        {{ n('later') }}
+        {{ n('dismissInvitation') }}
       </button>
     </div>
   </aside>

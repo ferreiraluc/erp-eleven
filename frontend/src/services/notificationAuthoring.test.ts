@@ -18,6 +18,13 @@ const users = [
 ]
 const moment = new Date('2026-10-27T13:15:00Z')
 describe('Owner notification preview', () => {
+  it('fills a real tracking recipient only for the chosen code and blocks an absent tracking context', () => {
+    const source = { title: 'Pacote de {cliente_username}', body: '{tracking_code} · {status}', user_ids: ['sol'], action_path: '/rastreamento?search=AA123456789BR' }
+    const tracking = { id: 'fixture', code: 'AA123456789BR', cliente_username: 'Cliente destinatário', status: 'Em trânsito' }
+    expect(notificationPreview(source, users, null, moment, tracking)).toMatchObject({ title: 'Pacote de Cliente destinatário', body: 'AA123456789BR · Em trânsito', problem: null })
+    expect(notificationPreview(source, users, null, moment, { ...tracking, code: 'OUTRO' }).problem).toBe('contextVariablesMissing')
+    expect(notificationPreview({ ...source, action_path: '/rastreamento?search=A&search=B' }, users, null, moment, tracking).problem).toBe('contextVariablesMissing')
+  })
   it('fills the selected sale, seller, BRT clock and status without changing authored text', () => {
     const source = {
       title: 'Conferir #{sale_code}',

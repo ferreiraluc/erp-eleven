@@ -73,6 +73,7 @@ export interface Sale {
 }
 
 export interface User {
+  session_expires_at?: string
   must_change_password: boolean
   sales_scope: 'all' | 'own'
   sales_seller: string | null

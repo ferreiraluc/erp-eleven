@@ -7,7 +7,7 @@ from .database import get_db
 from .models.usuario import Usuario
 from .models.access import AuthSession, now
 from .config import settings
-from .services.user_sessions import aware
+from .services.user_sessions import effective_session_expiry
 from .services.user_audit import bind_actor
 from .services.access_policy import is_owner
 
@@ -33,13 +33,14 @@ def get_current_user(
     user = db.get(Usuario, user_id)
     session = db.get(AuthSession, session_id)
     if (not user or not user.ativo or version != user.auth_version or not session
-            or session.user_id != user.id or session.revoked_at or aware(session.expires_at) <= now()):
+            or session.user_id != user.id or session.revoked_at or effective_session_expiry(session) <= now()):
         raise invalid
     if user.role.value == 'ADMIN' and not is_owner(user):
         raise invalid
     route = getattr(request.scope.get('route'), 'path', request.url.path)
     request.state.audit_actor = bind_actor(db, user, request_id=getattr(request.state,'request_id',str(uuid.uuid4())), route=route, method=request.method)
     request.state.auth_session_id = session.id
+    request.state.auth_session_expires_at = effective_session_expiry(session)
     if user.must_change_password and request.url.path not in ('/api/auth/me', '/api/auth/password', '/api/auth/logout'):
         raise HTTPException(403, 'PASSWORD_CHANGE_REQUIRED')
     return user

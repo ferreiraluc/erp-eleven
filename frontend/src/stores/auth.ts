@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, onScopeDispose } from 'vue'
 import axios from 'axios'
 import { authAPI, type LoginRequest, type User } from '@/services/api'
-import { clearSession, saveToken, storedToken, tokenIsCurrent } from '@/services/sessionStorage'
+import { clearSession, saveToken, saveSessionExpiry, sessionExpiry, storedToken, tokenIsCurrent } from '@/services/sessionStorage'
 import i18n from '@/i18n'
 import { AuthOperationSuperseded, isAuthOperationSuperseded } from '@/services/authOperation'
 import { clearNotificationDevice } from '@/services/notificationPush'
@@ -18,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   let checkingToken: string | null = null
   let generation = 0
   let operationEpoch = 0
+  let expiryTimer: ReturnType<typeof setTimeout> | null = null
   const isAuthenticated = computed(() => status.value === 'authenticated' && !!user.value)
   const isOwner = computed(() => user.value?.role === 'ADMIN' && user.value?.email.toLowerCase() === 'lucas@eleven.com')
   const ownSales = computed(() => user.value?.sales_scope === 'own')
@@ -25,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.nome || '')
 
   function expire() {
+    cancelExpiryTimer()
     clearNotificationDevice()
     operationEpoch++
     generation++
@@ -39,6 +41,24 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  function cancelExpiryTimer() {
+    if (expiryTimer !== null) clearTimeout(expiryTimer)
+    expiryTimer = null
+  }
+
+  function scheduleExpiry(ownerToken: string) {
+    cancelExpiryTimer()
+    const deadline = sessionExpiry(ownerToken)
+    if (deadline === null) return
+    expiryTimer = setTimeout(() => {
+      expiryTimer = null
+      // A timer from a former login must never sign the next user out.
+      if (storedToken() !== ownerToken || token.value !== ownerToken) return
+      if (tokenIsCurrent(ownerToken)) { scheduleExpiry(ownerToken); return }
+      window.dispatchEvent(new Event('erp:session-expired'))
+    }, Math.min(Math.max(0, deadline - Date.now()), 2147483647))
+  }
+
   async function ensureSession(force = false): Promise<boolean> {
     const saved = storedToken()
     if (!saved || !tokenIsCurrent(saved)) { expire(); return false }
@@ -49,11 +69,18 @@ export const useAuthStore = defineStore('auth', () => {
     // ordinary window focus does not discard an in-progress form.
     if (!isAuthenticated.value || token.value !== saved) status.value = 'checking'
     token.value = saved
+    scheduleExpiry(saved)
     checkingToken = saved
     checking = (async () => {
       try {
         const verified = await authAPI.getCurrentUser(saved)
         if (current !== generation || saved !== storedToken()) return false
+        saveSessionExpiry(saved, verified.session_expires_at)
+        if (!tokenIsCurrent(saved)) {
+          window.dispatchEvent(new Event('erp:session-expired'))
+          return false
+        }
+        scheduleExpiry(saved)
         user.value = verified
         status.value = 'authenticated'
         checkedAt = Date.now()
@@ -133,6 +160,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   window.addEventListener('erp:session-expired', expire)
+  onScopeDispose(() => {
+    cancelExpiryTimer()
+    window.removeEventListener('erp:session-expired', expire)
+  })
   return { user, token, status, isLoading, error, isAuthenticated, isOwner, ownSales, userRole, userName,
            login, logout, expire, ensureSession, changePassword, clearError: () => { error.value = null } }
 })

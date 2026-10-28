@@ -100,8 +100,12 @@ que já tenha a configuração principal. O backend também lê o Secret File
 | Frontend | `VITE_API_BASE_URL` | URL pública da API, incorporada no build |
 
 `ACCESS_TOKEN_EXPIRE_MINUTES` era uma configuração antiga sem uso na criação do token.
-O login aplica a regra implementada em `user_sessions`: meia-noite local sete dias à
-frente, convertida para UTC. Alterar um valor antigo do ambiente não muda essa regra.
+O login aplica a regra implementada em `user_sessions`: próximo corte às **21h de
+America/Sao_Paulo**, convertido para UTC. Login às 21h ou depois vence às 21h do
+dia seguinte. O limite efetivo é o menor entre o vencimento original e o corte
+diário persistido; a migração aditiva limita sessões legadas ao primeiro corte
+após sua aplicação, sem revogar o turno atual. Alterar um valor antigo do ambiente
+não muda essa regra. A inscrição de push é revalidada após entrar novamente.
 
 A configuração OneDrive fica em `sales_bi_config`, pelo painel **Fontes**, somente ADMIN.
 Não há `MSAL_CLIENT_ID` ou OAuth Microsoft implementado nesse conector. Ele usa os links

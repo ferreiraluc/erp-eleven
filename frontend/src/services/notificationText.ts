@@ -1,6 +1,14 @@
 import i18n from '@/i18n'
 
 const copy = {
+  deliveryStatus: ['Avisos da Eleven', 'Avisos de Eleven', 'Eleven alerts'],
+  reconnecting: ['Conectando às notificações…', 'Conectando las notificaciones…', 'Connecting notifications…'],
+  companyDelivery: ['Os avisos da equipe estão habilitados por padrão. Autorize o navegador uma vez para recebê-los neste aparelho.', 'Los avisos del equipo están habilitados por defecto. Autorice el navegador una vez para recibirlos en este dispositivo.', 'Team alerts are enabled by default. Allow your browser once to receive them on this device.'],
+  restoreError: ['Não foi possível reconectar os avisos. Confira a internet e tente novamente.', 'No se pudieron reconectar los avisos. Revise internet e inténtelo de nuevo.', 'Could not reconnect alerts. Check your internet connection and retry.'],
+  dismissInvitation: ['Fechar aviso', 'Cerrar aviso', 'Dismiss notice'],
+  trackingCode: ['Código do rastreio', 'Código de seguimiento', 'Tracking code'],
+  trackingCodeHelp: ['Informe o código cadastrado para preencher o destinatário e a situação na prévia.', 'Indique el código registrado para completar el destinatario y el estado en la vista previa.', 'Enter a registered code to fill the recipient and status in the preview.'],
+  trackingLookupError: ['Rastreio indisponível. Confira o código e a conexão.', 'Seguimiento no disponible. Revise el código y la conexión.', 'Tracking unavailable. Check the code and connection.'],
   title: ['Notificações', 'Notificaciones', 'Notifications'],
   unread: ['{count} não lidas', '{count} sin leer', '{count} unread'],
   all: ['Todas', 'Todas', 'All'],
@@ -189,9 +197,9 @@ const copy = {
   ],
   saved: ['Alteração salva.', 'Cambio guardado.', 'Change saved.'],
   templateHelp: [
-    'Variáveis permitidas: {user_name}, {sale_code}, {tracking_code}, {status}, {date}, {time}. Use somente as disponíveis para o evento.',
-    'Variables permitidas: {user_name}, {sale_code}, {tracking_code}, {status}, {date}, {time}. Use solo las disponibles para el evento.',
-    'Allowed variables: {user_name}, {sale_code}, {tracking_code}, {status}, {date}, {time}. Use only those available for the event.',
+    'Variáveis permitidas: {user_name}, {sale_code}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use somente as disponíveis para o evento.',
+    'Variables permitidas: {user_name}, {sale_code}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use solo las disponibles para el evento.',
+    'Allowed variables: {user_name}, {sale_code}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use only those available for the event.',
   ],
   chooseTemplate: ['Escolha um modelo', 'Elija una plantilla', 'Choose a template'],
   none: ['Nenhum', 'Ninguno', 'None'],
@@ -279,7 +287,7 @@ const copy = {
   contextProductNeeded: ['Escolha um produto disponível no estoque para referência.', 'Elija un producto disponible en inventario como referencia.', 'Choose an available inventory product as a reference.'],
   contextProductSearch: ['Buscar produto no estoque', 'Buscar producto en inventario', 'Find an inventory product'],
   contextProductHelp: ['Esta referência é apenas um atalho para conferência. Não vincula nem altera os itens da venda.', 'Esta referencia es solo un acceso para revisión. No vincula ni modifica los artículos de la venta.', 'This reference is only a review shortcut. It does not link or change the sale items.'],
-  contextVariablesMissing: ['O modelo precisa de informações que ainda não foram selecionadas. Vincule a venda ou ajuste o texto.', 'La plantilla necesita información que aún no se seleccionó. Vincule la venta o ajuste el texto.', 'This template needs information that has not been selected. Link the sale or edit the text.'],
+  contextVariablesMissing: ['O modelo precisa de informações que ainda não foram selecionadas. Vincule a venda ou informe o rastreio para esse modelo.', 'La plantilla necesita información que aún no se seleccionó. Vincule la venta o indique el seguimiento para esta plantilla.', 'This template needs information that has not been selected. Link the sale or enter the tracking code for this template.'],
   contextUnknownVariable: ['Uma variável está incompleta ou com formato inválido. Confira o modelo antes de enviar.', 'Una variable está incompleta o tiene un formato inválido. Revise la plantilla antes de enviar.', 'A variable is incomplete or has an invalid format. Review the template before sending.'],
   contextTooLong: ['A mensagem preenchida ficou longa. Encurte o título ou o texto antes de enviar.', 'El mensaje completo es demasiado largo. Acorte el título o el texto antes de enviar.', 'The filled message is too long. Shorten the title or message before sending.'],
   contextPreview: ['Prévia do recado', 'Vista previa del mensaje', 'Message preview'],

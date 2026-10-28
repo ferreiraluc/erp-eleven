@@ -10,7 +10,6 @@ import { notificationText as n } from '@/services/notificationText'
 import {
   allowNotificationSound,
   clearNotificationDevice,
-  disableNotificationDevice,
   enableNotificationDevice,
   playNotificationSound,
   pushSupport,
@@ -18,23 +17,21 @@ import {
 } from '@/services/notificationPush'
 
 export const useNotificationCenter = defineStore('notification-center', () => {
+  const defaults = (): NotificationPreferences => ({ push_enabled: true, sound_enabled: true,
+    categories: ['manual', 'sales', 'tracking', 'reminder', 'greeting'] })
   const auth = useAuthStore()
   const items = ref<NotificationItem[]>([]),
     total = ref(0),
     unread = ref(0),
     loading = ref(false),
     error = ref('')
-  const prefs = ref<NotificationPreferences>({
-    push_enabled: true,
-    sound_enabled: false,
-    categories: ['manual', 'sales', 'tracking', 'reminder', 'greeting'],
-  })
+  const prefs = ref<NotificationPreferences>(defaults())
   const pending = ref<string[]>([]),
     unreadOnly = ref(false),
     pushActive = ref(false),
     pushBusy = ref(false),
     pushError = ref(''),
-    invitation = ref(false)
+    invitation = ref(false), restoring = ref(false)
   const support = ref(pushSupport()),
     online = ref(navigator.onLine),
     preferencesBusy = ref(false)
@@ -48,28 +45,17 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     interval: ReturnType<typeof setInterval> | undefined
   let seen = new Set<string>(),
     initialized = false,
-    prefsReady = false
+    prefsReady = true
+  let pushAttempt = 0, lastRestoreAt = -Infinity, invitationDismissed = false
   function current(id: number) {
     return id === generation && !!owner.value
   }
-  function invitationKey() {
-    return `eleven-push-invite-v1:${auth.user?.id}`
-  }
   function showInvitation() {
-    if (!owner.value || pushActive.value) return
-    try {
-      invitation.value = Number(localStorage.getItem(invitationKey()) || 0) <= Date.now()
-    } catch {
-      invitation.value = true
-    }
+    invitation.value = !!owner.value && !pushActive.value && !invitationDismissed && !restoring.value
   }
   function deferInvitation() {
     invitation.value = false
-    try {
-      localStorage.setItem(invitationKey(), String(Date.now() + 86400000))
-    } catch {
-      /* memory-only dismissal */
-    }
+    invitationDismissed = true
   }
   async function load(append = false) {
     if (!owner.value || !online.value || document.visibilityState === 'hidden') return
@@ -129,16 +115,16 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       if (current(own)) pending.value = pending.value.filter((value) => value !== id)
     }
   }
-  async function preferences(value: NotificationPreferences) {
+  async function preferences(_value: NotificationPreferences) {
     if (!owner.value || preferencesBusy.value) return
     const own = generation,
       token = auth.token
     preferencesBusy.value = true
     error.value = ''
-    if (value.sound_enabled) allowNotificationSound()
+    allowNotificationSound()
     try {
-      const result = await notificationsAPI.savePreferences(value, token)
-      if (current(own)) prefs.value = result
+      await notificationsAPI.savePreferences(defaults(), token)
+      if (current(own)) prefs.value = defaults()
     } catch {
       if (current(own)) error.value = n('saveError')
     } finally {
@@ -146,8 +132,8 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     }
   }
   function enablePush() {
-    if (!owner.value || !auth.token || !auth.user || pushBusy.value) return
-    const own = generation
+    if (!owner.value || !auth.token || !auth.user || pushBusy.value || restoring.value) return
+    const own = generation, attempt = ++pushAttempt
     pushBusy.value = true
     pushError.value = ''
     support.value = pushSupport()
@@ -156,13 +142,13 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     const activation = enableNotificationDevice(auth.user.id, auth.token)
     void activation
       .then(async () => {
-        if (!current(own)) return
+        if (!current(own) || attempt !== pushAttempt) return
         pushActive.value = true
         invitation.value = false
         await preferences({ ...prefs.value, push_enabled: true })
       })
       .catch((reason) => {
-        if (!current(own)) return
+        if (!current(own) || attempt !== pushAttempt) return
         support.value = pushSupport()
         pushError.value = n(
           reason instanceof Error && reason.message === 'unavailable'
@@ -173,28 +159,26 @@ export const useNotificationCenter = defineStore('notification-center', () => {
         )
       })
       .finally(() => {
-        if (current(own)) pushBusy.value = false
+        if (current(own) && attempt === pushAttempt) pushBusy.value = false
       })
   }
-  async function disablePush() {
-    if (!owner.value || !auth.token || pushBusy.value) return
-    const own = generation,
-      token = auth.token
-    pushBusy.value = true
-    pushError.value = ''
+  async function restorePush(force = false) {
+    if (!owner.value || !auth.user || !auth.token || !online.value || document.visibilityState === 'hidden' ||
+        restoring.value || pushBusy.value || pushActive.value && !force || Date.now() - lastRestoreAt < 30000) return
+    const own = generation, attempt = ++pushAttempt, userId = auth.user.id, token = auth.token
+    lastRestoreAt = Date.now(); restoring.value = true; support.value = pushSupport()
     try {
-      await disableNotificationDevice(token)
-      if (current(own)) {
-        pushActive.value = false
-        deferInvitation()
+      const active = await restoreNotificationDevice(userId, token)
+      if (current(own) && attempt === pushAttempt) {
+        pushActive.value = active; pushError.value = ''
       }
     } catch {
-      if (current(own)) {
+      if (current(own) && attempt === pushAttempt) {
         pushActive.value = false
-        pushError.value = n('saveError')
+        pushError.value = n('restoreError')
       }
     } finally {
-      if (current(own)) pushBusy.value = false
+      if (current(own) && attempt === pushAttempt) { restoring.value = false; showInvitation() }
     }
   }
   function start() {
@@ -202,8 +186,10 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     interval = undefined
     if (owner.value && online.value && document.visibilityState !== 'hidden') {
       void load()
+      void restorePush()
       interval = setInterval(() => {
         if (!loading.value) void load()
+        void restorePush()
       }, 45000)
     }
   }
@@ -212,6 +198,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     (value, previous) => {
       generation++
       request++
+      pushAttempt++; lastRestoreAt = -Infinity; invitationDismissed = false; restoring.value = false
       items.value = []
       total.value = 0
       unread.value = 0
@@ -223,13 +210,9 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       pushError.value = ''
       preferencesBusy.value = false
       invitation.value = false
-      prefs.value = {
-        push_enabled: true,
-        sound_enabled: false,
-        categories: ['manual', 'sales', 'tracking', 'reminder', 'greeting'],
-      }
+      prefs.value = defaults()
       initialized = false
-      prefsReady = false
+      prefsReady = true
       seen = new Set()
       if (previous && previous.split(':', 1)[0] !== value.split(':', 1)[0])
         clearNotificationDevice()
@@ -238,24 +221,14 @@ export const useNotificationCenter = defineStore('notification-center', () => {
           token = auth.token
         void notificationsAPI
           .preferences(token)
-          .then((result) => {
+          .then(() => {
             if (current(own)) {
-              prefs.value = result
+              prefs.value = defaults()
               prefsReady = true
             }
           })
           .catch(() => {
             if (current(own)) error.value = n('error')
-          })
-        void restoreNotificationDevice(auth.user.id, token)
-          .then((active) => {
-            if (current(own)) {
-              pushActive.value = active
-              showInvitation()
-            }
-          })
-          .catch(() => {
-            if (current(own)) showInvitation()
           })
       }
       start()
@@ -268,10 +241,12 @@ export const useNotificationCenter = defineStore('notification-center', () => {
   const visibility = () => {
     support.value = pushSupport()
     start()
+    if (document.visibilityState !== 'hidden') void restorePush(true)
   }
   const connectivity = () => {
     online.value = navigator.onLine
     start()
+    if (online.value) void restorePush(true)
   }
   let soundUnlocked = false
   const unlockSound = () => {
@@ -283,6 +258,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
   window.addEventListener('online', connectivity)
   window.addEventListener('offline', connectivity)
   onScopeDispose(() => {
+    generation++; request++; pushAttempt++
     if (interval) clearInterval(interval)
     document.removeEventListener('visibilitychange', visibility)
     document.removeEventListener('pointerdown', unlockSound)
@@ -301,6 +277,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     pushActive,
     pushBusy,
     pushError,
+    restoring,
     invitation,
     support,
     online,
@@ -309,7 +286,6 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     act,
     preferences,
     enablePush,
-    disablePush,
     deferInvitation,
   }
 })

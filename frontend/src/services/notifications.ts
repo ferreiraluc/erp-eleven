@@ -59,6 +59,12 @@ export interface NotificationSaleSummary {
   seller_name: string | null
   status?: string
 }
+export interface NotificationTrackingDetail {
+  id: string
+  code: string
+  cliente_username: string
+  status: string
+}
 export interface NotificationProductReference {
   id: string
   name: string
@@ -168,6 +174,10 @@ export function safeNotificationPath(path: string | null | undefined): string | 
   return allowed.includes(route) ? path : null
 }
 export const notificationsAPI = {
+  contextTracking: (code: string, token = storedToken(), signal?: AbortSignal) =>
+    api.get<NotificationTrackingDetail>(`${root}/context/tracking/${encodeURIComponent(code)}`, {
+      headers: headers(token), signal, timeout: 5000,
+    }).then(r => r.data),
   contextSales: (search: string, token = storedToken(), signal?: AbortSignal) =>
     api.get<{ items: NotificationSaleSummary[]; has_more: boolean }>(`${root}/context/sales`, {
       params: { search, limit: 20 }, headers: headers(token), signal, timeout: 5000,

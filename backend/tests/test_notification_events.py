@@ -10,6 +10,8 @@ from app.database import Base
 from app.models import Usuario
 from app.models.usuario import UsuarioRole
 from app.models.notification import Notification, NotificationRecipient, NotificationRule
+from app.models.cliente import Cliente
+from app.models.pedido import Pedido
 from app.models.pdv import PdvSale, PdvSaleItem
 from app.models.printing import PrintDevice, PrintJob
 from app.models.rastreamento import Rastreamento, RastreamentoStatus
@@ -136,6 +138,45 @@ def test_tracking_known_transition_only_with_final_status_and_rollback(factory):
         row.status = RastreamentoStatus.ENTREGUE
         db.commit()
         assert db.query(Notification).count() == 1
+
+
+@pytest.mark.parametrize('snapshot_name,order_name,expected', [
+    ('Destinatário do pacote', 'Nome posterior no pedido', 'Destinatário do pacote'),
+    (None, 'Nome histórico do pedido', 'Nome histórico do pedido'),
+    (None, None, 'Cliente vinculado'),
+])
+def test_tracking_recipient_variable_is_real_and_transactional_in_postgresql(factory, snapshot_name, order_name, expected):
+    with factory() as db:
+        ids = users(db)
+        customer = Cliente(nome='Cliente vinculado', cpf=None)
+        db.add(customer)
+        db.flush()
+        order = Pedido(numero_pedido=uuid.uuid4().hex, descricao='Local fixture only', valor_total=1,
+            cliente_nome=order_name, cliente_id=customer.id)
+        db.add(order)
+        db.flush()
+        row = Rastreamento(codigo_rastreio='FIXTURE-CLIENTE-' + uuid.uuid4().hex[:10],
+            destinatario=snapshot_name, pedido_id=order.id, created_by=ids['Sol'], status=RastreamentoStatus.PENDENTE)
+        db.add(row)
+        db.commit()
+        row.status = RastreamentoStatus.ENTREGUE
+        db.commit()
+        notice = db.query(Notification).one()
+        assert f'Destinatário: {expected}.' in notice.body and 'Entregue' in notice.body
+        assert '{cliente_username}' not in notice.body and '00000000000' not in notice.body
+        assert {receipt.user_id for receipt in db.query(NotificationRecipient)} == {ids['Lucas'], ids['Sol']}
+        assert notice.entity_type == 'tracking' and notice.entity_id == str(row.id)
+        # A retry never adopts a changed recipient or adds another delivery.
+        previous = notice.body
+        customer.nome = 'Nome alterado depois'
+        row.destinatario = 'Outro nome posterior'
+        db.commit()
+        retried = notifications.emit_event(db, 'tracking_status_changed',
+            context={'cliente_username': 'Outro nome posterior', 'tracking_code': row.codigo_rastreio, 'status': 'Entregue'},
+            user_ids=[ids['Lucas'], ids['Sol']], dedupe_key=notice.dedupe_key,
+            action_path=notice.action_path, entity_type='tracking', entity_id=str(row.id))
+        db.commit()
+        assert retried.id == notice.id and retried.body == previous and db.query(Notification).count() == 1
 
 
 def test_receipt_problem_is_context_only_and_cannot_reprint(factory):

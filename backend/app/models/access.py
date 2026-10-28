@@ -16,6 +16,9 @@ class AuthSession(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     expires_at = Column(DateTime(timezone=True), nullable=False)
+    # Legacy JWTs keep their signature/expiry; this persisted limit activates the
+    # daily policy without ending an in-progress shift during deployment.
+    daily_expires_at = Column(DateTime(timezone=True))
     revoked_at = Column(DateTime(timezone=True))
     activity_credit_at = Column(DateTime(timezone=True))
 

@@ -27,7 +27,7 @@ from ..config import settings
 from ..models.access import AuthSession, now
 from ..models.notification_push import NotificationPushDelivery, NotificationPushSetting, NotificationPushSubscription
 from ..models.usuario import Usuario
-from .user_sessions import aware
+from .user_sessions import aware, effective_session_expiry
 
 VAPID_SETTING = "vapid-v1"
 MAX_ATTEMPTS = 8
@@ -120,7 +120,7 @@ def subscribe(db, user, session_id, *, endpoint, p256dh, auth, device_token, dev
         db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key})
     db.query(Usuario).filter(Usuario.id == user.id).with_for_update().one()
     session = db.get(AuthSession, session_id)
-    if not session or session.user_id != user.id or session.revoked_at or aware(session.expires_at) <= now():
+    if not session or session.user_id != user.id or session.revoked_at or effective_session_expiry(session) <= now():
         raise HTTPException(401, "Sessão expirada. Entre novamente.")
     row = db.query(NotificationPushSubscription).filter_by(endpoint_hash=endpoint_hash(endpoint)).with_for_update().one_or_none()
     if row and row.user_id != user.id:
@@ -160,7 +160,7 @@ def revoke_session_subscriptions(db, session_id):
 
 
 def _eligible(db, delivery, moment):
-    from ..models.notification import Notification, NotificationPreference, NotificationRecipient
+    from ..models.notification import Notification, NotificationRecipient
     sub = db.get(NotificationPushSubscription, delivery.subscription_id)
     recipient = db.get(NotificationRecipient, delivery.recipient_id)
     notice = db.get(Notification, delivery.notification_id)
@@ -168,19 +168,17 @@ def _eligible(db, delivery, moment):
         return None
     user, session = db.get(Usuario, sub.user_id), db.get(AuthSession, sub.auth_session_id)
     if (not user or not user.ativo or user.auth_version != sub.auth_version or not session
-            or session.revoked_at or session.user_id != user.id or aware(session.expires_at) <= moment):
+            or session.revoked_at or session.user_id != user.id or effective_session_expiry(session) <= moment):
         sub.active = False
         return None
     from .notification_context import notification_allowed
     if not notification_allowed(db, user, notice):
         return None
-    pref = db.get(NotificationPreference, user.id)
     if (recipient.user_id != user.id or recipient.notification_id != notice.id
             or recipient.read_at or recipient.removed_at or notice.cancelled_at or not notice.published_at
-            or aware(delivery.created_at) + MAX_DELIVERY_AGE <= moment
-            or pref and (not pref.push_enabled or notice.category not in (pref.categories or []))):
+            or aware(delivery.created_at) + MAX_DELIVERY_AGE <= moment):
         return None
-    return sub, user, notice, pref
+    return sub, user, notice, session
 
 
 @dataclass(frozen=True)
@@ -193,6 +191,7 @@ class PushClaim:
     private_key: str
     payload: str
     attempts: int
+    expires_at: int
 
 
 def claim_delivery(db, moment=None):
@@ -210,7 +209,7 @@ def claim_delivery(db, moment=None):
         delivery.status, delivery.last_error = "dead", "expired_or_disabled"
         delivery.lease_until, delivery.lease_token = None, None
         return None
-    sub, user, notice, pref = eligible
+    sub, user, notice, session = eligible
     _, private = vapid_keys(db)
     try:
         device_token = _decrypt(sub.device_token_encrypted)
@@ -223,14 +222,37 @@ def claim_delivery(db, moment=None):
     delivery.status, delivery.lease_token = "sending", token
     delivery.lease_until = moment + timedelta(seconds=LEASE_SECONDS)
     delivery.attempts += 1
-    payload = json.dumps({
+    from .notification_context import presented_fields
+    from .notifications import action_allowed
+    from ..schemas.notification import validate_action_path
+    presented = presented_fields(db, [notice])[notice.id]
+    path = notice.action_path
+    try:
+        path = validate_action_path(path)
+        if not path or len(path.encode('utf-8')) > 500 or not action_allowed(db, user, path):
+            path = '/notificacoes'
+    except ValueError:
+        path = '/notificacoes'
+    # Leave room for encryption overhead under push providers' payload limits,
+    # including multibyte names and emoji. The inbox retains the complete text.
+    def bounded(value, length, byte_limit):
+        value = re.sub(r'[\x00-\x1f\x7f]', ' ', str(value or '')).strip()[:length]
+        return value.encode('utf-8')[:byte_limit].decode('utf-8', errors='ignore')
+    expires_at = int(effective_session_expiry(session).timestamp() * 1000)
+    content = {
         "notification_id": str(notice.id), "version": notice.version,
         "device_token": device_token, "user_id": str(user.id),
-        "title": "ELEVEN", "body": "Você tem uma nova notificação no sistema.",
-        "action_path": "/notificacoes", "severity": notice.severity,
-        "sound": bool(pref is None or pref.sound_enabled),
-    }, ensure_ascii=False)
-    return PushClaim(delivery.id, token, sub.endpoint, sub.p256dh, sub.auth, private, payload, delivery.attempts)
+        "title": bounded(presented['title'], 120, 300) or 'ELEVEN',
+        "body": bounded(presented['body'], 1000, 1600) or 'Você tem uma nova notificação no sistema.',
+        "action_path": path, "severity": notice.severity, "sound": True, "expires_at": expires_at,
+    }
+    payload = json.dumps(content, ensure_ascii=False)
+    # JSON escaping can expand otherwise short quotes/control characters.
+    # Keep a hard byte cap regardless of the author's alphabet or formatting.
+    while len(payload.encode('utf-8')) > 3072 and len(content['body']) > 128:
+        content['body'] = content['body'][:-128]
+        payload = json.dumps(content, ensure_ascii=False)
+    return PushClaim(delivery.id, token, sub.endpoint, sub.p256dh, sub.auth, private, payload, delivery.attempts, expires_at)
 
 
 class _ProviderSession(requests.Session):
@@ -257,13 +279,16 @@ def _retry_seconds(value, moment):
 def send_claim(claim):
     """Return normalized provider outcome. Never log capability URLs or bodies."""
     from pywebpush import WebPushException, webpush
+    remaining = (claim.expires_at - int(now().timestamp() * 1000)) // 1000
+    if remaining <= 0:
+        return "dead", "session_expired", None
     try:
         with _ProviderSession() as session:
             response = webpush(
                 subscription_info={"endpoint": claim.endpoint, "keys": {"p256dh": claim.p256dh, "auth": claim.auth}},
                 data=claim.payload, vapid_private_key=claim.private_key,
                 vapid_claims={"sub": "mailto:contato@elevenparispy.com"},
-                ttl=86400, timeout=(2, 3), requests_session=session,
+                ttl=min(86400, remaining), timeout=(2, 3), requests_session=session,
                 headers={"Topic": str(claim.id).replace("-", ""), "Urgency": "normal"},
             )
         return "delivered", None, None

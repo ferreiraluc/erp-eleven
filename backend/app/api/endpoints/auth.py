@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ...database import get_db
 from ...models.usuario import Usuario, UsuarioRole
 from ...models.access import AuthSession, now
-from ...schemas.usuario import UsuarioLogin, Token, UsuarioResponse, UsuarioCreate
+from ...schemas.usuario import UsuarioLogin, Token, UsuarioResponse, UsuarioCreate, SessionUserResponse
 from ...dependencies import get_current_active_user, require_owner
 from ...services.access_policy import OWNER_EMAIL
 from ...services.login_throttle import login_limit
@@ -40,9 +40,10 @@ def login(body: UsuarioLogin, request: Request, db: Session = Depends(get_db)):
     return result
 
 
-@router.get('/me', response_model=UsuarioResponse)
-def me(user: Usuario = Depends(get_current_active_user)):
-    return user
+@router.get('/me', response_model=SessionUserResponse)
+def me(request: Request, user: Usuario = Depends(get_current_active_user)):
+    return {**UsuarioResponse.model_validate(user).model_dump(),
+            'session_expires_at': request.state.auth_session_expires_at}
 
 
 class PasswordChange(BaseModel):
