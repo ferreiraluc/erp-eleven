@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { notificationDeviceDB } from '@/test/notificationDevice'
+import { webcrypto } from 'node:crypto'
 const mocks = vi.hoisted(() => ({ config: vi.fn(), subscribe: vi.fn(), unsubscribe: vi.fn() }))
 vi.mock('./notifications', () => ({
   notificationsAPI: {
@@ -11,12 +12,19 @@ vi.mock('./notifications', () => ({
 let requestPermission: ReturnType<typeof vi.fn>,
   nativeSubscribe: ReturnType<typeof vi.fn>,
   nativeUnsubscribe: ReturnType<typeof vi.fn>,
+  getSubscription: ReturnType<typeof vi.fn>,
+  subscription: PushSubscription,
   database: ReturnType<typeof notificationDeviceDB>
 beforeEach(() => {
   vi.resetModules()
   vi.resetAllMocks()
   database = notificationDeviceDB()
   vi.stubGlobal('indexedDB', database.factory)
+  vi.stubGlobal('crypto', webcrypto)
+  Object.defineProperty(navigator, 'userActivation', {
+    configurable: true,
+    value: { isActive: true },
+  })
   Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true })
   Object.defineProperty(navigator, 'userAgent', {
     configurable: true,
@@ -29,26 +37,25 @@ beforeEach(() => {
   vi.stubGlobal('PushManager', class {})
   window.matchMedia = vi.fn().mockReturnValue({ matches: false })
   nativeUnsubscribe = vi.fn().mockResolvedValue(true)
-  const subscription = {
+  subscription = {
     toJSON: () => ({
       endpoint: 'https://fcm.googleapis.com/fcm/send/device',
       keys: { p256dh: 'key', auth: 'auth' },
     }),
     unsubscribe: nativeUnsubscribe,
-  }
+  } as unknown as PushSubscription
+  getSubscription = vi.fn().mockResolvedValue(null)
   nativeSubscribe = vi.fn().mockResolvedValue(subscription)
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
     value: {
-      register: vi
-        .fn()
-        .mockResolvedValue({
-          active: { postMessage: vi.fn() },
-          pushManager: {
-            getSubscription: vi.fn().mockResolvedValue(null),
-            subscribe: nativeSubscribe,
-          },
-        }),
+      register: vi.fn().mockResolvedValue({
+        active: { postMessage: vi.fn() },
+        pushManager: {
+          getSubscription,
+          subscribe: nativeSubscribe,
+        },
+      }),
       getRegistration: vi.fn().mockResolvedValue(undefined),
       controller: { postMessage: vi.fn() },
     },
@@ -100,13 +107,81 @@ describe('Explicit device push permission', () => {
     Object.defineProperty(window, 'isSecureContext', { value: false })
     expect(push.pushSupport()).toBe('unsupported')
   })
-  it('does not silently subscribe a fresh endpoint when reopening the system', async () => {
+  it('restores already granted permission even when a native subscription must be recreated', async () => {
     vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
     const push = await import('./notificationPush')
+    expect(await push.restoreNotificationDevice('sol', 'token-sol')).toBe(true)
+    expect(requestPermission).not.toHaveBeenCalled()
+    expect(nativeSubscribe).toHaveBeenCalledOnce()
+    expect(mocks.subscribe).toHaveBeenCalledOnce()
+  })
+  it('does not request permission or create an endpoint automatically for default or denied consent', async () => {
+    const push = await import('./notificationPush')
+    expect(await push.restoreNotificationDevice('sol', 'token-sol')).toBe(false)
+    vi.stubGlobal('Notification', { permission: 'denied', requestPermission })
     expect(await push.restoreNotificationDevice('sol', 'token-sol')).toBe(false)
     expect(requestPermission).not.toHaveBeenCalled()
     expect(nativeSubscribe).not.toHaveBeenCalled()
-    expect(mocks.subscribe).not.toHaveBeenCalled()
+    expect(mocks.config).not.toHaveBeenCalled()
+  })
+  it('does not invoke the native consent prompt without a current user gesture', async () => {
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { isActive: false },
+    })
+    const push = await import('./notificationPush')
+    await expect(push.enableNotificationDevice('sol', 'token-sol')).rejects.toThrow(
+      'gesture-required',
+    )
+    expect(requestPermission).not.toHaveBeenCalled()
+  })
+  it('reuses a native endpoint and active binding across a reload of the same session', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
+    const push = await import('./notificationPush')
+    await push.restoreNotificationDevice('sol', 'token-sol')
+    const binding = database.values.get('current')
+    getSubscription.mockResolvedValue(subscription)
+    vi.resetModules()
+    const reloaded = await import('./notificationPush')
+    expect(await reloaded.restoreNotificationDevice('sol', 'token-sol')).toBe(true)
+    expect(database.values.get('current')).toEqual(binding)
+    expect(nativeSubscribe).toHaveBeenCalledOnce()
+    expect(requestPermission).not.toHaveBeenCalled()
+  })
+  it('clears display authorization on logout but rebinds the same account next login without new consent', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
+    const push = await import('./notificationPush')
+    await push.restoreNotificationDevice('sol', 'first-session')
+    const before = database.values.get('current') as { device_token: string }
+    getSubscription.mockResolvedValue(subscription)
+    push.clearNotificationDevice()
+    await vi.waitFor(() => expect(database.values.has('current')).toBe(false))
+    expect(database.values.get('subscription-owner')).toMatchObject({ user_id: 'sol' })
+    expect(JSON.stringify([...database.values])).not.toContain('first-session')
+    expect(await push.restoreNotificationDevice('sol', 'next-session')).toBe(true)
+    expect(database.values.get('current')).toMatchObject({ user_id: 'sol' })
+    expect((database.values.get('current') as { device_token: string }).device_token).not.toBe(
+      before.device_token,
+    )
+    expect(nativeUnsubscribe).not.toHaveBeenCalled()
+    expect(nativeSubscribe).toHaveBeenCalledOnce()
+    expect(requestPermission).not.toHaveBeenCalled()
+  })
+  it('renews the native endpoint and nonce before binding a different account', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
+    const push = await import('./notificationPush')
+    await push.restoreNotificationDevice('sol', 'token-sol')
+    getSubscription.mockResolvedValue(subscription)
+    mocks.subscribe.mockImplementation(async (value) => ({
+      user_id: 'lucas',
+      device_token: value.device_token,
+      active: true,
+    }))
+    expect(await push.restoreNotificationDevice('lucas', 'token-lucas')).toBe(true)
+    expect(nativeUnsubscribe).toHaveBeenCalledOnce()
+    expect(nativeSubscribe).toHaveBeenCalledTimes(2)
+    expect(database.values.get('current')).toMatchObject({ user_id: 'lucas' })
+    expect(requestPermission).not.toHaveBeenCalled()
   })
   it('clears stale device identity and rejects an activation that completed after logout', async () => {
     let finish!: (value: unknown) => void
@@ -123,8 +198,63 @@ describe('Explicit device push permission', () => {
     finish({ id: 'sub', user_id: 'sol', device_token: value.device_token, active: true })
     await expect(pending).rejects.toThrow('notification-session-changed')
     await vi.waitFor(() => expect(database.values.has('current')).toBe(false))
-    expect(navigator.serviceWorker.controller?.postMessage).toHaveBeenCalledWith({
+    expect(navigator.serviceWorker.controller?.postMessage).not.toHaveBeenCalledWith({
       type: 'eleven-notification-clear',
+      binding: null,
+    })
+  })
+  it('revokes a persisted cold-start binding immediately while restore is blocked by network', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
+    database.values.set('current', { user_id: 'sol', device_token: 'previous-page-binding' })
+    let finish!: (value: unknown) => void
+    mocks.config.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const push = await import('./notificationPush')
+    const pending = push.restoreNotificationDevice('sol', 'token-sol')
+    await vi.waitFor(() => expect(mocks.config).toHaveBeenCalled())
+    push.clearNotificationDevice()
+    await vi.waitFor(() => expect(database.values.has('current')).toBe(false))
+    await vi.waitFor(() =>
+      expect(navigator.serviceWorker.controller?.postMessage).toHaveBeenCalledWith({
+        type: 'eleven-notification-clear',
+        binding: { user_id: 'sol', device_token: 'previous-page-binding' },
+      }),
+    )
+    finish({ available: true, public_key: 'AQID' })
+    await expect(pending).rejects.toThrow('notification-session-changed')
+    expect(database.values.has('current')).toBe(false)
+    expect(nativeSubscribe).not.toHaveBeenCalled()
+  })
+  it('does not let a previous cold-start logout erase a newer login of the same account', async () => {
+    vi.stubGlobal('Notification', { permission: 'granted', requestPermission })
+    const digest = await webcrypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode('newer-session'),
+    )
+    database.values.set('subscription-owner', {
+      user_id: 'sol',
+      session_key: Buffer.from(digest).toString('hex'),
+    })
+    database.values.set('current', { user_id: 'sol', device_token: 'newer-login-nonce' })
+    let finish!: (value: unknown) => void
+    mocks.config.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const push = await import('./notificationPush')
+    const pending = push.restoreNotificationDevice('sol', 'old-session')
+    await vi.waitFor(() => expect(mocks.config).toHaveBeenCalled())
+    push.clearNotificationDevice()
+    finish({ available: true, public_key: 'AQID' })
+    await expect(pending).rejects.toThrow('notification-session-changed')
+    await vi.waitFor(() => expect(navigator.serviceWorker.getRegistration).toHaveBeenCalled())
+    expect(database.values.get('current')).toEqual({
+      user_id: 'sol',
+      device_token: 'newer-login-nonce',
     })
   })
   it('reports missing server configuration instead of claiming successful activation', async () => {

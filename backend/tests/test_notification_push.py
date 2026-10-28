@@ -143,35 +143,46 @@ def test_new_login_same_user_rebinds_and_rotates_device_token(db):
     assert db.query(NotificationPushDelivery).count() == 0  # No historical replay.
 
 
-@pytest.mark.parametrize("change", ["revoked", "expired", "version", "inactive", "read", "cancelled", "preferences", "category", "old"])
-def test_worker_rechecks_identity_preferences_and_expiry_before_send(db, change):
+def test_registration_refuses_a_session_past_daily_deadline_even_with_a_long_legacy_jwt(db):
+    user, session = user_session(db)
+    session.daily_expires_at = now() - timedelta(seconds=1)
+    db.commit()
+    with pytest.raises(HTTPException) as failure:
+        subscription(db, user, session)
+    assert failure.value.status_code == 401
+    assert db.query(NotificationPushSubscription).count() == 0
+
+
+@pytest.mark.parametrize("change", ["revoked", "expired", "daily_expired", "version", "inactive", "read", "cancelled", "old"])
+def test_worker_rechecks_identity_and_effective_expiry_before_send(db, change):
     user, session, sub, notice, recipient, delivery = queued(db)
     if change == "revoked": session.revoked_at = now()
     if change == "expired": session.expires_at = now() - timedelta(seconds=1)
+    if change == "daily_expired": session.daily_expires_at = now() - timedelta(seconds=1)
     if change == "version": user.auth_version += 1
     if change == "inactive": user.ativo = False
     if change == "read": recipient.read_at = now()
     if change == "cancelled": notice.cancelled_at = now()
-    if change in ("preferences", "category"):
-        db.add(NotificationPreference(user_id=user.id, push_enabled=change != "preferences", categories=["manual"]))
     if change == "old": delivery.created_at = now() - timedelta(days=2)
     db.commit()
     assert push.claim_delivery(db) is None
     assert delivery.status == "dead"
 
 
-def test_push_payload_is_generic_and_device_bound_and_network_has_no_transaction(db, monkeypatch):
+def test_push_payload_contains_real_content_device_binding_and_network_has_no_transaction(db, monkeypatch):
     user, session, sub, notice, recipient, delivery = queued(db)
     claim = push.claim_delivery(db)
     assert claim and delivery.status == "sending"
     db.commit()
     assert not db.in_transaction()
     payload = json.loads(claim.payload)
-    assert notice.title not in claim.payload and notice.body not in claim.payload
+    assert payload['title'] == notice.title and payload['body'] == notice.body
     assert payload["user_id"] == str(user.id)
     assert payload["device_token"] == "local_device_binding_token_0123456789"
     assert payload["notification_id"] == str(notice.id)
     assert payload["action_path"] == "/notificacoes"
+    assert payload['expires_at'] == claim.expires_at
+    assert payload['sound'] is True
     calls = []
     def fake(**kwargs):
         calls.append(kwargs)
@@ -180,9 +191,70 @@ def test_push_payload_is_generic_and_device_bound_and_network_has_no_transaction
     monkeypatch.setattr("pywebpush.webpush", fake)
     assert push.send_claim(claim) == ("delivered", None, None)
     assert calls[0]["timeout"] == (2, 3)
+    assert 0 < calls[0]['ttl'] <= 86400
     assert calls[0]["headers"]["Topic"] == str(claim.id).replace("-", "")
     push.finish_delivery(db, claim, ("delivered", None, None))
     assert delivery.status == "delivered"
+
+
+def test_institutional_delivery_ignores_stored_personal_optouts_without_rewriting_them(db):
+    user, _, _, _, _, _ = queued(db)
+    db.add(NotificationPreference(user_id=user.id, push_enabled=False, sound_enabled=False, categories=[]))
+    db.commit()
+    claim = push.claim_delivery(db)
+    assert claim and json.loads(claim.payload)['sound'] is True
+    saved = db.get(NotificationPreference, user.id)
+    assert saved.push_enabled is False and saved.sound_enabled is False and saved.categories == []
+
+
+@pytest.mark.parametrize('path,expected', [('/inventory', '/inventory'), ('/auditoria', '/notificacoes'), ('https://evil.test', '/notificacoes')])
+def test_push_shortcut_is_validated_and_authorized_for_recipient(db, path, expected):
+    _, _, _, notice, _, _ = queued(db)
+    notice.action_path = path
+    db.commit()
+    claim = push.claim_delivery(db)
+    assert json.loads(claim.payload)['action_path'] == expected
+
+
+def test_multibyte_push_content_is_bounded_under_provider_payload_limit(db):
+    _, _, _, notice, _, _ = queued(db)
+    notice.title, notice.body = '👕' * 120, '😀' * 2000
+    db.commit()
+    claim = push.claim_delivery(db)
+    value = json.loads(claim.payload)
+    assert value['title'] and value['body']
+    assert len(claim.payload.encode('utf8')) < 3072
+    assert len(value['title']) <= 120 and len(value['body']) <= 1000
+
+
+@pytest.mark.parametrize('character', ['"', '\\', '\x00', '😀'])
+def test_json_escape_expansion_cannot_overflow_push_payload(db, character):
+    _, _, _, notice, _, _ = queued(db)
+    notice.title, notice.body = character * 120, character * 2000
+    notice.action_path = '/inventory?q=' + '"' * 450
+    db.commit()
+    claim = push.claim_delivery(db)
+    assert len(claim.payload.encode('utf8')) <= 3072
+
+
+def test_multibyte_long_shortcut_falls_back_without_exceeding_payload_budget(db):
+    _, _, _, notice, _, _ = queued(db)
+    notice.action_path = '/inventory?q=' + '衣' * 300
+    db.commit()
+    claim = push.claim_delivery(db)
+    assert json.loads(claim.payload)['action_path'] == '/notificacoes'
+
+
+def test_claimed_push_cannot_start_network_after_daily_expiry(db, monkeypatch):
+    queued(db)
+    claim = push.claim_delivery(db)
+    db.commit()
+    from datetime import datetime, timezone
+    monkeypatch.setattr(push, 'now', lambda: datetime.fromtimestamp(claim.expires_at / 1000, timezone.utc))
+    send = []
+    monkeypatch.setattr('pywebpush.webpush', lambda **kwargs: send.append(kwargs))
+    assert push.send_claim(claim) == ('dead', 'session_expired', None)
+    assert send == []
 
 
 def test_provider_session_refuses_redirects_and_ignores_environment_proxy(monkeypatch):

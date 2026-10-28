@@ -616,7 +616,7 @@ import '@/assets/trackingCards.css'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useRastreamentoStore } from '@/stores/rastreamento'
 import type { Rastreamento, RastreamentoCreate } from '@/stores/rastreamento'
@@ -1039,13 +1039,14 @@ function trackingProgressStep(rastreamento: Rastreamento): number {
   return 1
 }
 
+// Notification links also update the search when this page is already open.
+watch(() => route.query.search, value => {
+  if (typeof value === 'string') filtros.value.busca = value
+}, { immediate: true })
+
 // Lifecycle
 onMounted(async () => {
   await carregarDados()
-  // Pré-filtrar se veio com ?search= na URL (ex: clique no badge de pedido)
-  if (route.query.search) {
-    filtros.value.busca = String(route.query.search)
-  }
 })
 function hideOrderSuggestions() {
   setTimeout(() => { showPedidoSuggestions.value = false }, 180)

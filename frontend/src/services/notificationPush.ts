@@ -5,10 +5,17 @@ export interface PushBinding {
   user_id: string
   device_token: string
 }
+interface SubscriptionHint {
+  user_id: string
+  session_key: string
+}
 const databaseName = 'eleven-notification-device'
 let epoch = 0
 let work: Promise<unknown> = Promise.resolve()
 let audio: AudioContext | null = null
+let activeBinding: PushBinding | null = null
+let deviceOwner: string | null = null
+let deviceSession: Promise<string> | null = null
 
 function serial<T>(action: () => Promise<T>): Promise<T> {
   const next = work.catch(() => undefined).then(action)
@@ -40,14 +47,14 @@ function deviceDB(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error)
   })
 }
-async function writeBinding(binding: PushBinding | null) {
+async function writeDeviceRecord(key: string, value: unknown) {
   const db = await deviceDB()
   try {
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction('binding', 'readwrite')
       const store = transaction.objectStore('binding')
-      if (binding) store.put(binding, 'current')
-      else store.delete('current')
+      if (value) store.put(value, key)
+      else store.delete(key)
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(transaction.error)
       transaction.onabort = () => reject(transaction.error)
@@ -56,11 +63,11 @@ async function writeBinding(binding: PushBinding | null) {
     db.close()
   }
 }
-async function readBinding(): Promise<PushBinding | null> {
+async function readDeviceRecord<T>(key: string): Promise<T | null> {
   const db = await deviceDB()
   try {
     return await new Promise((resolve, reject) => {
-      const request = db.transaction('binding').objectStore('binding').get('current')
+      const request = db.transaction('binding').objectStore('binding').get(key)
       request.onsuccess = () => resolve(request.result || null)
       request.onerror = () => reject(request.error)
     })
@@ -68,8 +75,56 @@ async function readBinding(): Promise<PushBinding | null> {
     db.close()
   }
 }
+const writeBinding = (binding: PushBinding | null) => writeDeviceRecord('current', binding)
+const readBinding = () => readDeviceRecord<PushBinding>('current')
+async function clearBindingFor(
+  userId: string | null,
+  session: Promise<string> | null,
+  known: PushBinding | null,
+): Promise<PushBinding | null> {
+  const fingerprint = session ? await session.catch(() => null) : null
+  const db = await deviceDB()
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction('binding', 'readwrite')
+      const store = transaction.objectStore('binding')
+      const ownerRequest = store.get('subscription-owner')
+      let removed: PushBinding | null = null
+      ownerRequest.onsuccess = () => {
+        const hint = ownerRequest.result as SubscriptionHint | undefined
+        const request = store.get('current')
+        request.onsuccess = () => {
+          const binding = request.result as PushBinding | undefined
+          if (
+            binding &&
+            (!userId || binding.user_id === userId) &&
+            (!known || binding.device_token === known.device_token) &&
+            (!fingerprint || !hint?.session_key || hint.session_key === fingerprint)
+          ) {
+            removed = binding
+            store.delete('current')
+          }
+        }
+      }
+      transaction.oncomplete = () => resolve(removed)
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error)
+    })
+  } finally {
+    db.close()
+  }
+}
+async function sessionKey(token: string) {
+  // An irreversible fingerprint identifies reload versus a new login without
+  // persisting the access token in the service worker's database.
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
 async function registration() {
-  const registered = await navigator.serviceWorker.register('/notifications-sw.js', { scope: '/', updateViaCache:'none' })
+  const registered = await navigator.serviceWorker.register('/notifications-sw.js', {
+    scope: '/',
+    updateViaCache: 'none',
+  })
   if (!registered.active) {
     const worker = registered.installing || registered.waiting
     if (worker)
@@ -111,6 +166,7 @@ async function saveSubscription(
   subscription: PushSubscription,
   deviceToken: string,
   current: number,
+  fingerprint: string,
 ) {
   assertCurrent(current)
   const payload = subscription.toJSON()
@@ -129,85 +185,149 @@ async function saveSubscription(
   if (result.user_id !== userId || result.device_token !== deviceToken || !result.active)
     throw new Error('invalid-subscription-owner')
   const binding = { user_id: userId, device_token: deviceToken }
+  await writeDeviceRecord('subscription-owner', { user_id: userId, session_key: fingerprint })
+  assertCurrent(current)
   await writeBinding(binding)
   assertCurrent(current)
+  activeBinding = binding
   registered.active?.postMessage({ type: 'eleven-notification-binding', binding })
+}
+async function registerGrantedDevice(userId: string, token: string, current: number) {
+  assertCurrent(current)
+  const config = await notificationsAPI.pushConfig(token)
+  if (!config.available || !config.public_key) throw new Error('unavailable')
+  assertCurrent(current)
+  const registered = await registration()
+  const binding = await readBinding()
+  const hint = await readDeviceRecord<SubscriptionHint>('subscription-owner')
+  const fingerprint = await sessionKey(token)
+  assertCurrent(current)
+  let subscription = await registered.pushManager.getSubscription()
+  const sameAccount = (hint?.user_id || binding?.user_id) === userId
+  const sameSession =
+    sameAccount && hint?.session_key === fingerprint && binding?.user_id === userId
+  if (!sameSession) {
+    await writeBinding(null)
+    activeBinding = null
+    registered.active?.postMessage({ type: 'eleven-notification-clear', binding })
+  }
+  if (subscription && !sameAccount) {
+    await subscription.unsubscribe()
+    subscription = null
+  }
+  assertCurrent(current)
+  subscription ||= await registered.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: keyBytes(config.public_key),
+  })
+  const deviceToken = sameSession ? binding.device_token : randomToken()
+  try {
+    await saveSubscription(
+      userId,
+      token,
+      registered,
+      subscription,
+      deviceToken,
+      current,
+      fingerprint,
+    )
+  } catch (error) {
+    // A provider endpoint owned by another account is never transferred, even
+    // after local storage was cleared. Renew it and let the server revalidate.
+    if ((error as { response?: { status?: number } }).response?.status !== 409) throw error
+    assertCurrent(current)
+    await writeBinding(null)
+    activeBinding = null
+    await subscription.unsubscribe()
+    subscription = await registered.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: keyBytes(config.public_key),
+    })
+    await saveSubscription(
+      userId,
+      token,
+      registered,
+      subscription,
+      randomToken(),
+      current,
+      fingerprint,
+    )
+  }
 }
 /** Permission is requested synchronously from the user's trusted click, before any network await. */
 export function enableNotificationDevice(userId: string, token: string): Promise<void> {
   if (pushSupport() !== 'ready') return Promise.reject(new Error(pushSupport()))
+  if (Notification.permission !== 'granted' && navigator.userActivation?.isActive === false)
+    return Promise.reject(new Error('gesture-required'))
   const permission =
     Notification.permission === 'granted'
       ? Promise.resolve('granted' as NotificationPermission)
       : Notification.requestPermission()
+  deviceOwner = userId
+  deviceSession = sessionKey(token)
   const current = epoch
   return serial(async () => {
     if ((await permission) !== 'granted') throw new Error('denied')
     assertCurrent(current)
-    const config = await notificationsAPI.pushConfig(token)
-    if (!config.available || !config.public_key) throw new Error('unavailable')
-    assertCurrent(current)
-    const registered = await registration()
-    const oldBinding = await readBinding()
-    let subscription = await registered.pushManager.getSubscription()
-    if (subscription && oldBinding?.user_id !== userId) {
-      await subscription.unsubscribe()
-      subscription = null
-    }
-    assertCurrent(current)
-    subscription ||= await registered.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: keyBytes(config.public_key),
-    })
-    const deviceToken = oldBinding?.user_id === userId ? oldBinding.device_token : randomToken()
-    try {
-      await saveSubscription(userId, token, registered, subscription, deviceToken, current)
-    } catch (error) {
-      // An endpoint from a different account is never reassigned. A new native
-      // subscription is only requested within this explicit activation flow.
-      if ((error as { response?: { status?: number } }).response?.status !== 409) throw error
-      assertCurrent(current)
-      await subscription.unsubscribe()
-      subscription = await registered.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: keyBytes(config.public_key),
-      })
-      await saveSubscription(userId, token, registered, subscription, randomToken(), current)
-    }
+    await registerGrantedDevice(userId, token, current)
   })
 }
 export function restoreNotificationDevice(userId: string, token: string): Promise<boolean> {
+  deviceOwner = userId
+  deviceSession = sessionKey(token)
   const current = epoch
   return serial(async () => {
     if (pushSupport() !== 'ready' || Notification.permission !== 'granted') return false
-    const binding = await readBinding()
-    assertCurrent(current)
-    if (binding?.user_id !== userId) return false
-    const registered = await registration()
-    const subscription = await registered.pushManager.getSubscription()
-    if (!subscription) {
-      await writeBinding(null)
-      return false
-    }
-    await saveSubscription(userId, token, registered, subscription, binding.device_token, current)
+    // Persisted OS consent is reused. This function never invokes the native
+    // permission prompt; browsers that require a tap for renewal can reject it.
+    await registerGrantedDevice(userId, token, current)
     return true
   })
 }
 /** Clear display permission before asynchronous logout/session revocation can finish. */
 export function clearNotificationDevice(): void {
   epoch++
+  const knownBinding = activeBinding
+  const userId = deviceOwner || knownBinding?.user_id || null
+  const session = deviceSession
+  activeBinding = null
+  deviceOwner = null
+  deviceSession = null
+  // Do not wait for a slow config/subscribe request before revoking display
+  // authorization left by a previous page load on this same device.
+  const invalidation =
+    typeof indexedDB !== 'undefined'
+      ? clearBindingFor(userId, session, knownBinding).catch(() => null)
+      : Promise.resolve(null)
   try {
-    navigator.serviceWorker?.controller?.postMessage({ type: 'eleven-notification-clear' })
+    if (knownBinding)
+      navigator.serviceWorker?.controller?.postMessage({
+        type: 'eleven-notification-clear',
+        binding: knownBinding,
+      })
   } catch {
     /* unsupported */
   }
+  // Once the immediate IDB transaction captures the old nonce, the worker can
+  // also close its alerts safely. A delayed message cannot clear a new login.
+  void invalidation
+    .then((binding) => {
+      if (binding)
+        navigator.serviceWorker?.controller?.postMessage({
+          type: 'eleven-notification-clear',
+          binding,
+        })
+    })
+    .catch(() => undefined)
   void serial(async () => {
-    if (typeof indexedDB !== 'undefined') await writeBinding(null)
+    const binding = await invalidation
+    if (typeof indexedDB !== 'undefined') await clearBindingFor(userId, session, knownBinding)
     if (!('serviceWorker' in navigator)) return
     const registered = await navigator.serviceWorker.getRegistration('/notifications-sw.js')
-    registered?.active?.postMessage({ type: 'eleven-notification-clear' })
-    const subscription = await registered?.pushManager.getSubscription()
-    if (subscription) await subscription.unsubscribe()
+    if (binding) registered?.active?.postMessage({ type: 'eleven-notification-clear', binding })
+    // Keep the native subscription and its ownership hint. The server revokes
+    // the session; no payload can be displayed without the cleared binding.
+    // Reusing this endpoint on the same account avoids a fresh Safari consent.
   }).catch(() => undefined)
 }
 export async function disableNotificationDevice(token: string): Promise<void> {

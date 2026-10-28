@@ -1,10 +1,11 @@
-import type { NotificationContext, NotificationSaleDetail } from './notifications'
+import type { NotificationContext, NotificationSaleDetail, NotificationTrackingDetail } from './notifications'
 
 export interface NotificationPreviewSource {
   title: string
   body: string
   user_ids: string[]
   context?: NotificationContext | null
+  action_path?: string | null
 }
 export type AuthoringProblem =
   | 'contextSaleNeeded'
@@ -19,6 +20,7 @@ export function notificationPreview(
   users: { id: string; nome: string }[],
   sale: NotificationSaleDetail | null,
   moment = new Date(),
+  tracking: NotificationTrackingDetail | null = null,
 ): { title: string; body: string; problem: AuthoringProblem | null } {
   const context = source.context
   const matches = !!context?.sale_id && sale?.id === context.sale_id
@@ -51,11 +53,16 @@ export function notificationPreview(
           refunded: 'estornada',
         } as Record<string, string>
       )[sale.status] || sale.status
+  if (tracking && tracking.code === trackingCodeFromPath(source.action_path)) {
+    values.tracking_code = tracking.code
+    values.cliente_username = tracking.cliente_username
+    if (!matches) values.status = tracking.status
+  }
   function render(value: string) {
     // Match the manual renderer's one-pass brace handling. Literal JSON or
     // product details such as {P,M,L} are ordinary text, not template fields.
     const validationText = value.replace(/\{\{|\}\}/g, '')
-    const knownStart = /\{(date|sale_code|status|time|tracking_code|user_name)(?=[^A-Za-z0-9_]|$)/g
+    const knownStart = /\{(cliente_username|date|sale_code|status|time|tracking_code|user_name)(?=[^A-Za-z0-9_]|$)/g
     for (const match of validationText.matchAll(knownStart)) {
       if (validationText[match.index! + match[0].length] !== '}')
         problem ||= 'contextUnknownVariable'
@@ -65,7 +72,7 @@ export function notificationPreview(
       if (token === '}}') return '}'
       if (!name) return token
       if (Object.hasOwn(values, name)) return values[name]!
-      if (['sale_code', 'tracking_code', 'status'].includes(name))
+      if (['sale_code', 'tracking_code', 'cliente_username', 'status'].includes(name))
         problem ||= 'contextVariablesMissing'
       else return token
       return '…'
@@ -75,6 +82,14 @@ export function notificationPreview(
     body = render(source.body)
   if (title.length > 120 || body.length > 2000) problem ||= 'contextTooLong'
   return { title, body, problem }
+}
+
+export function trackingCodeFromPath(path: string | null | undefined) {
+  if (!path?.startsWith('/rastreamento?')) return ''
+  const query = new URLSearchParams(path.slice(path.indexOf('?') + 1))
+  const codes = query.getAll('search')
+  if (codes.length !== 1) return ''
+  return codes[0].trim().replace(/[\s-]+/g, '').toUpperCase()
 }
 
 export function notificationDestination(

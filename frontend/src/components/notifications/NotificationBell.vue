@@ -115,7 +115,7 @@ function place() {
   const below = top + height - rect.bottom - 12,
     above = rect.top - top - 12
   const up = below < 220 && above > below,
-    popupWidth = Math.min(440, width - 16)
+    popupWidth = Math.min(440, width * 0.7, width - 16)
   position.value = {
     left: `${Math.max(left + 8, Math.min(rect.right - popupWidth, left + width - popupWidth - 8))}px`,
     width: `${popupWidth}px`,

@@ -71,10 +71,10 @@ def _tracking_event(db, row, before, owners, emit):
     status = _value(row.status)
     if not row.ativo or before == status:
         return
-    labels = {'PENDENTE': 'Pendente', 'EM_TRANSITO': 'Em trânsito', 'ENTREGUE': 'Entregue',
-              'ERRO': 'Precisa de conferência', 'NAO_ENCONTRADO': 'Não encontrado no provedor'}
+    from .notification_context import TRACKING_LABELS, tracking_recipient_name
     stamp = row.updated_at.isoformat() if row.updated_at else str(uuid.uuid4())
-    emit(db, 'tracking_status_changed', context={'tracking_code': row.codigo_rastreio, 'status': labels.get(status, status)},
+    emit(db, 'tracking_status_changed', context={'tracking_code': row.codigo_rastreio, 'status': TRACKING_LABELS.get(status, status),
+         'cliente_username': tracking_recipient_name(db, row)},
          user_ids=[*owners, *([row.created_by] if row.created_by else [])],
          action_path='/rastreamento?' + urlencode({'search': row.codigo_rastreio}),
          dedupe_key=f'tracking:{row.id}:{status}:{stamp}', entity_type='tracking', entity_id=str(row.id))

@@ -181,16 +181,24 @@ def test_scheduled_notice_visibility_and_bounded_publication(setup):
     assert client.get('/api/notifications/inbox').json()['total'] == 0
 
 
-def test_preferences_are_per_user_and_inbox_is_never_silently_dropped(setup):
-    client, _, _ = setup
+def test_institutional_preferences_keep_categories_enabled_and_preserve_historical_rows(setup):
+    client, factory, ids = setup
     prefs = {'push_enabled': False, 'sound_enabled': False, 'categories': ['manual']}
-    assert client.put('/api/notifications/preferences', json=prefs).json() == prefs
+    with factory() as db:
+        db.add(NotificationPreference(user_id=ids['Sol'], **prefs))
+        db.commit()
+    effective = client.get('/api/notifications/preferences').json()
+    assert effective['push_enabled'] and effective['sound_enabled']
+    assert set(effective['categories']) == set(service.CATEGORIES)
     assert client.get('/api/notifications/preferences', headers={'X-User': 'Junior'}).json()['push_enabled'] is True
     create(setup)
     assert client.get('/api/notifications/inbox').json()['unread_count'] == 1
     assert client.post('/api/notifications/read-all').status_code == 200
     assert client.get('/api/notifications/inbox').json()['unread_count'] == 0
     assert client.get('/api/notifications/inbox?unread_only=true').json()['items'] == []
+    with factory() as db:
+        historical = db.get(NotificationPreference, ids['Sol'])
+        assert historical.push_enabled is False and historical.sound_enabled is False and historical.categories == ['manual']
 
 
 def test_templates_allow_only_safe_variables_and_edits_are_versioned(setup):
@@ -250,7 +258,7 @@ def test_event_transaction_rollback_and_idempotency(setup):
         assert db.query(NotificationRecipient).count() == 0
 
 
-def test_outbox_respects_preferences_keeps_durable_inbox_and_does_not_resend_on_edit(setup):
+def test_outbox_enables_all_categories_keeps_durable_inbox_and_does_not_resend_on_edit(setup):
     client, factory, ids = setup
     with factory() as db:
         for name in ['Sol', 'Junior']:
@@ -265,15 +273,15 @@ def test_outbox_respects_preferences_keeps_durable_inbox_and_does_not_resend_on_
     notice = create(setup, user_ids=[str(ids['Sol']), str(ids['Junior'])])
     with factory() as db:
         assert db.query(NotificationRecipient).count() == 2
-        assert db.query(NotificationPushDelivery).count() == 1
+        assert db.query(NotificationPushDelivery).count() == 2
     body = payload(ids, user_ids=[str(ids['Sol']), str(ids['Junior'])], title='Corrigido', expected_version=1)
     body.pop('request_id')
     assert client.patch(f"/api/notifications/admin/{notice['id']}", headers=owner(), json=body).status_code == 200
     with factory() as db:
-        assert db.query(NotificationPushDelivery).count() == 1
+        assert db.query(NotificationPushDelivery).count() == 2
     assert client.post(f"/api/notifications/admin/{notice['id']}/cancel", headers=owner(), json={'expected_version': 2}).status_code == 200
     with factory() as db:
-        assert db.query(NotificationPushDelivery).one().status == 'dead'
+        assert all(row.status == 'dead' for row in db.query(NotificationPushDelivery))
 
 
 def test_reusable_template_with_unavailable_values_keeps_event_message_valid(setup):

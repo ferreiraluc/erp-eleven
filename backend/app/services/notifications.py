@@ -26,7 +26,7 @@ DEFAULTS = {
     'sale_receipt_problem': ('Conferir impressão do ticket', 'Ticket da venda #{sale_code}: conferir impressão',
                              'Situação da impressão: {status}. Confira a fila antes de pedir outra cópia.', 'sales', 'warning', False, False, '09:00'),
     'tracking_status_changed': ('Atualização de rastreio', 'Rastreio {tracking_code} atualizado',
-                                'Situação atual: {status}. Abra o rastreamento para conferir.', 'tracking', 'info', False, False, '09:00'),
+                                'Destinatário: {cliente_username}. Situação atual: {status}. Abra o rastreamento para conferir.', 'tracking', 'info', False, False, '09:00'),
     'daily_greeting': ('Lembrete diário', 'Seu lembrete da Eleven',
                         'Confira as suas notificações e pendências do dia.', 'reminder', 'info', False, False, '09:00'),
     'morning_greeting': ('Bom dia', 'Bom dia, equipe Eleven!',
@@ -49,6 +49,21 @@ def _savepoint(db):
 def ensure_defaults(db):
     """Forward-only defaults. Existing owner edits are never overwritten on startup."""
     existing = {key for (key,) in db.query(NotificationRule.event_key).all()}
+    tracking_id = uuid.uuid5(uuid.NAMESPACE_URL, 'erp-eleven/notification-template/tracking_status_changed')
+    pending_tracking_edit = any(isinstance(row, NotificationTemplate) and row.id == tracking_id for row in db.dirty)
+    if 'tracking_status_changed' in existing and not pending_tracking_edit:
+        # Only the untouched built-in copy advances. Owner edits (including a
+        # reverted version) and all previously sent message snapshots remain.
+        tracking = DEFAULTS['tracking_status_changed']
+        query = db.query(NotificationTemplate).filter(
+            NotificationTemplate.id == tracking_id,
+            NotificationTemplate.version == 1, NotificationTemplate.created_by.is_(None),
+            NotificationTemplate.name == tracking[0], NotificationTemplate.title == tracking[1],
+            NotificationTemplate.body == 'Situação atual: {status}. Abra o rastreamento para conferir.',
+            NotificationTemplate.category == tracking[3], NotificationTemplate.severity == tracking[4],
+            NotificationTemplate.requires_ack.is_(False), NotificationTemplate.requires_response.is_(False),
+            NotificationTemplate.action_path.is_(None))
+        query.update({'body': tracking[2], 'version': 2, 'updated_at': utcnow()}, synchronize_session='fetch')
     for key, values in DEFAULTS.items():
         if key in existing:
             continue
@@ -155,15 +170,10 @@ def _queue_push(db, notice, recipients, moment):
     by_user = {row.user_id: row for row in recipients}
     if not by_user:
         return
-    preferences = {row.user_id: row for row in db.query(NotificationPreference)
-                   .filter(NotificationPreference.user_id.in_(by_user)).all()}
     subscriptions = db.query(NotificationPushSubscription).join(Usuario, Usuario.id == NotificationPushSubscription.user_id).filter(
         NotificationPushSubscription.user_id.in_(by_user), NotificationPushSubscription.active.is_(True),
         Usuario.ativo.is_(True)).all()
     for subscription in subscriptions:
-        pref = preferences.get(subscription.user_id)
-        if pref and (not pref.push_enabled or notice.category not in pref.categories):
-            continue
         db.add(NotificationPushDelivery(notification_id=notice.id, recipient_id=by_user[subscription.user_id].id,
             subscription_id=subscription.id, version=notice.version, status='queued', attempts=0, next_attempt_at=moment))
 
@@ -228,7 +238,7 @@ def emit_event(db, event_key, *, context, user_ids, dedupe_key, action_path=None
         return None
     template = db.get(NotificationTemplate, rule.template_id)
     moment = utcnow().astimezone(BRT)
-    values = {'user_name': 'equipe', 'sale_code': '', 'tracking_code': '', 'status': '',
+    values = {'user_name': 'equipe', 'cliente_username': 'destinatário não informado', 'sale_code': '', 'tracking_code': '', 'status': '',
               'date': moment.strftime('%d/%m/%Y'), 'time': moment.strftime('%H:%M')}
     # No nested lookups, formatting operations or arbitrary object attributes.
     values.update({key: str(value)[:500] for key, value in context.items() if key in values and value is not None})
@@ -284,6 +294,6 @@ def run_notification_rules(db, now=None):
 
 
 def preference_dict(preference):
-    return {'push_enabled': preference.push_enabled if preference else True,
-            'sound_enabled': preference.sound_enabled if preference else True,
-            'categories': preference.categories if preference else list(CATEGORIES)}
+    # Historical personal settings remain stored; the current ERP policy enables
+    # every category. Browser/OS permission is still explicit and external.
+    return {'push_enabled': True, 'sound_enabled': True, 'categories': list(CATEGORIES)}

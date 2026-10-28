@@ -52,6 +52,10 @@ class UsuarioLogin(BaseModel):
             raise ValueError('Senha excede o limite de 72 bytes.')
         return value
 
+
+class SessionUserResponse(UsuarioResponse):
+    session_expires_at: datetime
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

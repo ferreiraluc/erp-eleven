@@ -90,6 +90,28 @@ afterEach(() => {
   vi.useRealTimers()
 })
 describe('Notification center', () => {
+  it('reconnects an already permitted device on each login without invoking a permission prompt', async () => {
+    mocks.restore.mockResolvedValue(true)
+    store = useNotificationCenter(); await tick()
+    expect(store.pushActive).toBe(true); expect(store.invitation).toBe(false)
+    mocks.auth.token = 'next-login-token'; await tick()
+    expect(mocks.restore).toHaveBeenLastCalledWith('sol', 'next-login-token')
+    expect(store.pushActive).toBe(true); expect(mocks.enable).not.toHaveBeenCalled()
+  })
+  it('retries a failed restoration after reconnecting while retaining company defaults', async () => {
+    vi.useFakeTimers()
+    mocks.restore.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(true)
+    mocks.preferences.mockResolvedValue({ push_enabled: false, sound_enabled: false, categories: [] })
+    store = useNotificationCenter(); await tick()
+    expect(store.pushActive).toBe(false); expect(store.pushError).toContain('reconectar')
+    expect(store.prefs).toMatchObject({ push_enabled: true, sound_enabled: true, categories: preferences.categories })
+    Object.defineProperty(navigator, 'onLine', { value: false }); window.dispatchEvent(new Event('offline'))
+    await vi.advanceTimersByTimeAsync(45000)
+    expect(mocks.restore).toHaveBeenCalledOnce()
+    Object.defineProperty(navigator, 'onLine', { value: true }); window.dispatchEvent(new Event('online')); await tick()
+    expect(store.pushActive).toBe(true); expect(store.pushError).toBe(''); expect(store.invitation).toBe(false)
+    expect(mocks.enable).not.toHaveBeenCalled()
+  })
   it('invites on the next opening and only activates permission after an explicit enable action', async () => {
     store = useNotificationCenter()
     await tick()
@@ -101,13 +123,12 @@ describe('Notification center', () => {
     expect(store.pushActive).toBe(true)
     expect(store.invitation).toBe(false)
   })
-  it('defers invitation for one day per user without blocking another user', async () => {
+  it('dismisses only the current invitation without creating a device opt-out, and prompts a new session', async () => {
     store = useNotificationCenter()
     await tick()
     store.deferInvitation()
-    expect(Number(localStorage.getItem('eleven-push-invite-v1:sol'))).toBeGreaterThan(Date.now())
-    mocks.auth.user = { id: 'lucas' }
-    mocks.auth.token = 'token-lucas'
+    expect(localStorage.getItem('eleven-push-invite-v1:sol')).toBeNull()
+    mocks.auth.token = 'new-token-sol'
     await tick()
     expect(store.invitation).toBe(true)
   })
@@ -141,7 +162,7 @@ describe('Notification center', () => {
     expect(store.items.map((value) => value.id)).toEqual(['one'])
     expect(store.unread).toBe(1)
     expect(store.pushActive).toBe(false)
-    expect(store.prefs.sound_enabled).toBe(false)
+    expect(store.prefs.sound_enabled).toBe(true)
     expect(mocks.clear).toHaveBeenCalled()
   })
   it('never polls while hidden or offline and resumes once visible', async () => {
@@ -186,7 +207,7 @@ describe('Notification center', () => {
     expect(store.pushError).toContain('bloqueadas')
     mocks.savePreferences.mockRejectedValueOnce(new Error('offline'))
     await store.preferences({ ...store.prefs, sound_enabled: true })
-    expect(store.prefs.sound_enabled).toBe(false)
+    expect(store.prefs.sound_enabled).toBe(true)
     expect(store.error).toContain('Não foi possível salvar')
   })
   it('does not play a startup sound, only for newly arriving unread notifications after initialization', async () => {

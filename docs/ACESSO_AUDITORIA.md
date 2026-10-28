@@ -66,6 +66,24 @@ O JWT usa PyJWT com HS256 fixo e exige `exp`, `iat`, `sub`, `sid` e `ver`.
 Identifica usuário, sessão e versão de autenticação. `auth_sessions` permite
 revogar sessões sem esperar a expiração do token. Logout revoga a sessão atual;
 troca/redefinição de senha e alteração de acesso revogam as sessões anteriores.
+
+**Todas as contas encerram a sessão diariamente às 21h de Brasília**
+(`America/Sao_Paulo`). Um login feito às 21h ou depois vence às 21h do dia
+seguinte. Marcar para lembrar o login não prolonga esse prazo. O servidor aplica
+a expiração em cada requisição e informa o limite efetivo em
+`/api/auth/me.session_expires_at`; o aplicativo aberto agenda a saída e confere
+novamente ao retomar a janela, inclusive quando o celular suspendeu os timers.
+Não é necessário um processo agendado para invalidar o token.
+
+A migração aditiva `r0a1b2c3d4e5` conserva usuários, tokens assinados, datas
+originais de expiração e revogações. Sessões antigas recebem
+`auth_sessions.daily_expires_at` com a primeira ocorrência de 21h após a
+ativação, evitando encerrar o expediente no meio do deploy. Novas sessões e
+tokens já usam esse limite diário. `effective_session_expiry` considera sempre
+o menor prazo; a mesma regra limita entregas de push vinculadas à sessão.
+O frontend guarda o prazo verificado junto à identidade exata do token, sem
+aceitar respostas atrasadas de outra conta para prolongar ou encerrar a sessão.
+
 Ao entrar com outra conta, o frontend reinicia para descartar estados em memória.
 O PDV também limpa carrinho, cliente e resultados ao mudar usuário, sessão ou
 escopo; respostas pendentes da identidade anterior são descartadas. Retomar a
@@ -151,6 +169,10 @@ migrações e concorrência entre abas. Testes frontend verificam sessão expira
 respostas atrasadas de outra conta e troca de senha durante validação em segundo plano.
 `authConcurrency.test.ts` e `authRequests.test.ts` exercitam respostas fora de ordem
 e a associação da requisição ao token original, sem consultar contas reais.
+`test_daily_sessions.py`, `test_daily_sessions_postgres.py`,
+`authDailyExpiry.test.ts` e `sessionStorage.test.ts` cobrem a virada das 21h,
+logins após o fechamento, atualização de sessões legadas em PostgreSQL isolado,
+aplicativo aberto, retomada após suspensão e isolamento de respostas antigas.
 
 ## Domínio próprio
 
