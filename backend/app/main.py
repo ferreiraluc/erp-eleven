@@ -21,6 +21,7 @@ from .services import user_audit
 from .services import notification_events  # register transactional operational notifications
 from .api.endpoints import notifications, notification_push
 from .api.endpoints import system_quality
+from .api.endpoints import wonca
 
 # Main
 # Setup logging
@@ -96,6 +97,9 @@ async def lifespan(app: FastAPI):
         catalog_db.commit()
 
     worker_stop = threading.Event()
+    from .services.wonca_monitoring import main as run_wonca_worker
+    app.state.wonca_worker = threading.Thread(target=run_wonca_worker, args=(worker_stop,), name='wonca-worker', daemon=True)
+    app.state.wonca_worker.start()
     from .services.freight_labels import main as run_label_worker
     app.state.label_worker = threading.Thread(target=run_label_worker, args=(worker_stop,), name="freight-label-worker", daemon=True)
     app.state.label_worker.start()
@@ -141,6 +145,7 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(app.state.sales_bi_worker.join, 5)
         await asyncio.to_thread(app.state.notification_worker.join, 5)
         await asyncio.to_thread(app.state.quality_worker.join, 5)
+        await asyncio.to_thread(app.state.wonca_worker.join, 5)
         if app.state.assistant_worker:
             await asyncio.to_thread(app.state.assistant_worker.join, 5)
         scheduler.shutdown(wait=False)
@@ -176,6 +181,7 @@ app.include_router(user_admin.router, prefix="/api/access", tags=["access"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(notification_push.router)
 app.include_router(system_quality.router, prefix="/api/quality", tags=["quality"])
+app.include_router(wonca.router, prefix='/api/tracking-monitor', tags=['tracking-monitor'])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(vendas.router, prefix="/api/vendas", tags=["vendas"])
 app.include_router(vendedores.router, prefix="/api/vendedores", tags=["vendedores"])
@@ -294,7 +300,10 @@ def health_check():
     notification_status = state('notifications', notification_thread) if notification_thread else 'not_started'
     quality_thread = getattr(app.state, 'quality_worker', None)
     quality_status = state('quality', quality_thread) if quality_thread else 'not_started'
+    wonca_thread = getattr(app.state, 'wonca_worker', None)
+    wonca_status = state('wonca', wonca_thread) if wonca_thread else 'not_started'
     healthy = database=='online' and assistant in ('disabled','online') and labels=='online' and sales_bi=='online'
     return JSONResponse(status_code=200 if healthy else 503,headers={'Cache-Control':'no-store'},content={
         'api':'online','database':database,'assistant_worker':assistant,'label_worker':labels,
-        'sales_bi_worker':sales_bi,'notification_worker':notification_status,'quality_worker':quality_status,'timestamp':time.time()})
+        'sales_bi_worker':sales_bi,'notification_worker':notification_status,'quality_worker':quality_status,
+        'wonca_worker':wonca_status,'timestamp':time.time()})

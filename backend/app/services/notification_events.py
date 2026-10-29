@@ -5,6 +5,8 @@ before the outer commit covers API, provider refreshes and agents without turnin
 historical reads or maintenance sessions into notification broadcasts.
 """
 import uuid
+import hashlib
+import json
 from urllib.parse import urlencode
 
 from sqlalchemy import event, inspect, func
@@ -36,8 +38,14 @@ def capture_business_events(db, flush_context, instances):
         state = inspect(row)
         if isinstance(row, Rastreamento):
             history = state.attrs.status.history
-            if history.has_changes() and history.deleted:
-                pending.setdefault(('tracking', id(row)), {'row': row, 'before': _value(history.deleted[0])})
+            events = state.attrs.historico_eventos.history
+            old_events = events.deleted[0] if events.deleted else []
+            latest = lambda values: values[0] if isinstance(values, list) and values else None
+            event_changed = events.has_changes() and latest(old_events) != latest(row.historico_eventos)
+            if (history.has_changes() and history.deleted) or (event_changed and old_events):
+                pending.setdefault(('tracking', id(row)), {'row': row,
+                    'before': _value(history.deleted[0]) if history.deleted else _value(row.status),
+                    'event_changed': bool(event_changed)})
         elif isinstance(row, PrintJob) and row.source == 'pdv_receipt':
             history = state.attrs.status.history
             if history.has_changes() and row.status in {'failed', 'uncertain'}:
@@ -67,13 +75,15 @@ def _sale_event(db, sale, owners, emit):
              dedupe_key=f'sale-avulso:{sale.id}', entity_type='pdv_sale', entity_id=str(sale.id))
 
 
-def _tracking_event(db, row, before, owners, emit):
+def _tracking_event(db, row, before, owners, emit, event_changed=False):
     status = _value(row.status)
-    if not row.ativo or before == status:
+    if not row.ativo or (before == status and not event_changed):
         return
     from .notification_context import TRACKING_LABELS, tracking_recipient_name
-    stamp = row.updated_at.isoformat() if row.updated_at else str(uuid.uuid4())
-    emit(db, 'tracking_status_changed', context={'tracking_code': row.codigo_rastreio, 'status': TRACKING_LABELS.get(status, status),
+    latest = row.historico_eventos[0] if row.historico_eventos else None
+    stamp = hashlib.sha256(json.dumps([status, latest], sort_keys=True, default=str).encode()).hexdigest()[:24]
+    label = latest.get('situacao') if before == status and isinstance(latest, dict) else None
+    emit(db, 'tracking_status_changed', context={'tracking_code': row.codigo_rastreio, 'status': label or TRACKING_LABELS.get(status, status),
          'cliente_username': tracking_recipient_name(db, row)},
          user_ids=[*owners, *([row.created_by] if row.created_by else [])],
          action_path='/rastreamento?' + urlencode({'search': row.codigo_rastreio}),
@@ -117,7 +127,7 @@ def publish_business_events(db):
             if kind == 'sale':
                 _sale_event(db, row, owners, emit_event)
             elif kind == 'tracking':
-                _tracking_event(db, row, entry['before'], owners, emit_event)
+                _tracking_event(db, row, entry['before'], owners, emit_event, entry.get('event_changed', False))
             elif kind == 'receipt':
                 _receipt_event(db, row, owners, emit_event)
         db.flush()

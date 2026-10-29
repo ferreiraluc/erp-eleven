@@ -190,3 +190,9 @@ transfere apenas vínculos; contas PDV e saldos continuam separados. A busca SQL
 `customer_search` inclui documentos e aliases sem trazer o diretório inteiro à memória. A CLI
 `app.customer_maintenance` exige simulação e token do plano antes de aplicar; não
 participa do deploy nem realiza fusão automática por nomes semelhantes.
+
+O worker `wonca` mantém uma inbox durável de webhooks assinados e reconcilia somente
+as inscrições próprias no provedor, com pausa noturna e prazo de 30 dias. É separado
+do job diário de rastreio, que ignora esses códigos. A ativação é exclusiva de Lucas
+em Configurações; migração e inicialização não geram consumo. Veja
+[Monitoramento Wonca](RASTREAMENTO_WONCA.md).

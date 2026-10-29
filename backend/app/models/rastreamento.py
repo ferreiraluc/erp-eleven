@@ -26,6 +26,7 @@ class Rastreamento(Base):
     status = Column(ENUM(RastreamentoStatus, name="rastreamento_status"), default=RastreamentoStatus.PENDENTE)
     servico_provedor = Column(String(100))
     ultima_atualizacao = Column(DateTime)
+    provedor_verificado_em = Column(DateTime(timezone=True))
     
     # Dados do objeto
     descricao = Column(Text)

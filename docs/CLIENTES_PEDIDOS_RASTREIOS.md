@@ -319,3 +319,11 @@ clientes; desconhecidos e ambiguidades permanecem sem vínculo. O comando conser
 snapshots, valores, códigos e auditoria, e pode ser repetido sem recriar operações.
 A regra atual exige evidência além do nome para vincular uma identidade existente;
 nome único não é identificação infalível. Essa CLI não faz parte do deploy.
+
+## Atualizações por webhook
+
+O monitoramento opcional Wonca usa perfil de 2h e pausa de 21h a 07h (Brasília),
+com janela local de 30 dias sem renovação diária. Lucas administra a configuração
+no painel de Configurações. Históricos e vínculos com pedidos/clientes permanecem
+os mesmos; eventos novos podem avisar o destinatário responsável mesmo sem mudar
+Em trânsito para outro status. [Configuração, consumo e limites](RASTREAMENTO_WONCA.md).

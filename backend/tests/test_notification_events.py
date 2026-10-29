@@ -216,3 +216,23 @@ def test_pdv_api_creates_notices_only_after_successful_operation(pdv_app):
     assert response.status_code == 201, response.text
     with factory() as db:
         assert db.query(PdvSale).count() == db.query(Notification).count() == 1
+
+
+def test_new_tracking_event_with_same_status_notifies_once_with_recipient(factory):
+    with factory() as db:
+        ids=users(db)
+        row=Rastreamento(codigo_rastreio='AA123456789BR',status=RastreamentoStatus.EM_TRANSITO,
+            destinatario='Destinatário sintético',created_by=ids['Sol'],
+            historico_eventos=[{'situacao':'Objeto postado','data':'28/10/2026 08:00'}])
+        db.add(row); db.commit()
+        assert db.query(Notification).count()==0
+        row.historico_eventos=[{'situacao':'Objeto saiu para entrega','data':'28/10/2026 12:00'}]
+        db.commit()
+        notice=db.query(Notification).one()
+        assert 'Destinatário sintético' in notice.body and 'Objeto saiu para entrega' in notice.body
+        from app.config import settings
+        row.ultima_atualizacao=settings.now(); db.commit()
+        assert db.query(Notification).count()==1
+        row.historico_eventos=[{'situacao':'Em outra unidade','data':'28/10/2026 13:00'}]
+        db.flush(); db.rollback()
+        assert db.query(Notification).count()==1
