@@ -56,6 +56,7 @@ export interface NotificationSaleSummary {
   code: string
   created_at: string
   seller_id: string | null
+  sale_total?: string
   seller_name: string | null
   status?: string
 }

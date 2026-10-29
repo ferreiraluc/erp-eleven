@@ -20,6 +20,8 @@ def test_every_method_persists_its_unit_rate_and_original_amount(pdv_app, method
     body = sale_payload([None], cid, avulso=True)
     body['items'][0]['unit_price_gs'] = 100 * rate
     body['payments'] = [payload(method, currency, rate)]
+    if method in ('card_credit_py', 'card_debit_py'):
+        body['payments'][0].update(amount_original=107, card_fee_gs=7, card_fee_percent=6)
     response = client.post('/api/pdv/sales', json=body)
     assert response.status_code == 201, response.text
     payment = response.json()['payments'][0]

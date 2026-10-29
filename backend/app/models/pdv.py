@@ -116,6 +116,8 @@ class PdvPayment(Base):
     amount_original = Column(Numeric(15, 2), nullable=False)
     exchange_rate = Column(Numeric(15, 6), default=1)
     amount_gs = Column(Numeric(15, 2), nullable=False)
+    card_fee_gs = Column(Numeric(15, 2), nullable=False, default=0, server_default='0')
+    card_fee_percent = Column(Numeric(5, 2), nullable=False, default=0, server_default='0')
     reference = Column(String(200), nullable=True)   # últimos 4 cartão, chave PIX, etc.
 
     created_at = Column(DateTime, default=lambda: settings.now())

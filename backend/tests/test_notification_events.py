@@ -60,6 +60,8 @@ def test_new_sale_reaches_owner_and_unexplained_avulso_only_its_seller(factory):
     with factory() as db:
         ids = users(db)
         row = sale(db)
+        row.total_gs = row.subtotal_gs = 4800000
+        row.usd_rate_gs = 6000
         # API flushes before financial processing; notices wait until the outer commit.
         db.flush()
         assert db.query(Notification).count() == 0
@@ -68,6 +70,9 @@ def test_new_sale_reaches_owner_and_unexplained_avulso_only_its_seller(factory):
         assert set(notices) == {f'sale-completed:{row.id}', f'sale-avulso:{row.id}'}
         completed = notices[f'sale-completed:{row.id}']
         review = notices[f'sale-avulso:{row.id}']
+        assert completed.title == 'Venda U$ 800 concluída'
+        assert completed.body == 'Sol concluiu uma venda. Abra o sistema para conferir.'
+        assert completed.action_path == f'/vendas-pdv?sale_id={row.id}'
         assert review.requires_ack and review.requires_response
         assert {r.user_id for r in db.query(NotificationRecipient).filter_by(notification_id=completed.id)} == {ids['Lucas']}
         assert {r.user_id for r in db.query(NotificationRecipient).filter_by(notification_id=review.id)} == {ids['Lucas'], ids['Sol']}

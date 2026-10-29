@@ -33,9 +33,10 @@
       <div class="form-grid quantities">
         <label>{{ tr('Pagamento') }}<ErpSelect :label="(tr('Pagamento'))" v-model="p.method" @change="changePaymentMethod(p)"><option v-for="method in [...new Set([...paymentMethods,p.method])]" :key="method" :value="method">{{ paymentText(method) }}</option></ErpSelect></label>
         <label>{{ tr('Moeda') }}<input :value="paymentSymbol(p.currency)" readonly /></label>
-        <label>{{ tr('Valor na moeda') }}<input v-model.number="p.amount_original" :disabled="!paymentCurrency(p.method)" type="number" step=".01" min="0" @input="recalculate(p)" /></label>
+        <label>{{ tr(isCardPayment(p.method) ? 'Valor na máquina (G$)' : 'Valor na moeda') }}<input v-model.number="p.amount_original" :disabled="!paymentCurrency(p.method)" type="number" step=".01" min="0" @input="recalculate(p)" /></label>
         <label>{{ tr('Câmbio para G$') }}<input v-model.number="p.exchange_rate" :disabled="!paymentCurrency(p.method) || p.currency === 'GS'" type="number" step=".000001" min=".000001" @input="recalculate(p)" /></label>
       </div>
+      <p v-if="p.card_fee_gs" class="hint">{{ tr('Acréscimo cartão') }}: {{ gs(p.card_fee_gs) }} · 6% (÷ 0,94). {{ tr('Aplicado à venda') }}: {{ gs(p.amount_gs) }}</p>
       <p v-if="!paymentCurrency(p.method)" class="hint">{{ tr('Para alterar este pagamento antigo, selecione um método atual.') }}</p>
       <div class="line-heading"><strong>{{ gs(p.amount_gs) }}</strong><button type="button" class="erp-button erp-button--danger erp-button--sm" @click="model.payments.splice(index,1)">{{ tr('Remover pagamento') }}</button></div>
       <label>{{ tr('Referência do pagamento') }}<input v-model="p.reference" :disabled="!paymentCurrency(p.method)" maxlength="200" /></label>
@@ -49,7 +50,7 @@
 <script setup lang="ts">
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { useCurrencyStore } from '@/stores/currency'
-import { paymentCurrency, paymentSymbol, paymentRate } from '@/services/pdvPayments'
+import { paymentCurrency, paymentSymbol, paymentRate, isCardPayment, cardPaymentAmounts } from '@/services/pdvPayments'
 import { computed, onUnmounted, ref } from 'vue'
 import { inventoryAPI, pdvAPI, type InventoryItem, type PdvClienteResponse, type PdvSaleCreate, type PdvPaymentCreate } from '@/services/api'
 import { saleError } from '@/services/pdvManagement'
@@ -79,9 +80,14 @@ function changePaymentMethod(p: PdvPaymentCreate) {
   const currency = paymentCurrency(p.method)
   if (!currency) return
   p.currency = currency; p.exchange_rate = paymentRate(currency, currencyStore.exchangeRates)
-  p.amount_original = 0; p.amount_gs = 0
+  p.amount_original = 0; p.amount_gs = 0; p.card_fee_gs = 0; p.card_fee_percent = isCardPayment(p.method) ? 6 : 0
 }
-function recalculate(p: PdvPaymentCreate) { p.amount_gs=Math.round(Number(p.amount_original)*Number(p.exchange_rate)*100)/100 }
+function recalculate(p: PdvPaymentCreate) {
+  if (isCardPayment(p.method)) {
+    const remaining = Math.round((total.value - model.value.payments.filter(other => other !== p).reduce((sum, other) => sum + Number(other.amount_gs), 0)) * 100) / 100
+    Object.assign(p, cardPaymentAmounts(Number(p.amount_original), remaining))
+  } else { p.amount_gs=Math.round(Number(p.amount_original)*Number(p.exchange_rate)*100)/100; p.card_fee_gs=0; p.card_fee_percent=0 }
+}
 onUnmounted(()=>{productRequest++;clientRequest++})
 </script>
 <style scoped>

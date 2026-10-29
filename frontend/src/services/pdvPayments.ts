@@ -27,6 +27,20 @@ export const allPaymentFilters = [...paymentMethods.map(m => m.value), ...Object
 export function paymentLabel(method: string) {
   return uiText(paymentMethods.find(m => m.value === method)?.label || legacyLabels[method] || method)
 }
+export function isCardPayment(method: string) {
+  return method === 'card_credit_py' || method === 'card_debit_py'
+}
+/** Whole-guarani charge that leaves the requested merchandise amount after 6%. */
+export function cardCharge(netGs: number) {
+  return Math.ceil(Math.round(netGs * 100) / 94)
+}
+export function cardPaymentAmounts(grossGs: number, remainingGs?: number) {
+  let net = Math.round(grossGs * 94) / 100
+  // The Total button's rounding must not change a product's price or create change.
+  if (remainingGs !== undefined && remainingGs > 0 && cardCharge(remainingGs) === grossGs)
+    net = Math.round(remainingGs * 100) / 100
+  return { amount_gs: net, card_fee_gs: Math.round((grossGs - net) * 100) / 100, card_fee_percent: 6 }
+}
 export function paymentCurrency(method: string): PaymentCurrency | undefined {
   return paymentMethods.find(m => m.value === method)?.currency
 }

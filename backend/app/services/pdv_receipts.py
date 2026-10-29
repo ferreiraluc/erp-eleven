@@ -97,7 +97,7 @@ def build_snapshot(sale, device=None, *, copy=False):
                             quantity=str(i.quantity), unit=str(i.unit_price_gs),
                             discount=str(i.discount_gs), total=str(i.total_gs), returned=str(i.returned_quantity or 0)) for i in sale.items],
                 payments=[dict(method=p.method, currency=p.currency, amount=str(p.amount_original),
-                               total=str(p.amount_gs)) for p in sale.payments], copy=copy)
+                               total=str(p.amount_gs), card_fee=str(p.card_fee_gs or 0), card_fee_percent=str(p.card_fee_percent or 0)) for p in sale.payments], copy=copy)
 
 
 def snapshot_for_view(db, sale):

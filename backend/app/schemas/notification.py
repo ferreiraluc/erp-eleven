@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 Category = Literal['manual', 'sales', 'tracking', 'reminder', 'greeting']
 Severity = Literal['info', 'success', 'warning', 'urgent']
 CATEGORIES = ['manual', 'sales', 'tracking', 'reminder', 'greeting']
-TEMPLATE_VARIABLES = {'user_name', 'cliente_username', 'sale_code', 'tracking_code', 'status', 'date', 'time'}
+TEMPLATE_VARIABLES = {'user_name', 'cliente_username', 'sale_code', 'sale_total', 'tracking_code', 'status', 'date', 'time'}
 MANUAL_TOKEN = re.compile(r'\{\{|\}\}|\{([^{}]*)\}')
 MANUAL_VARIABLE_START = re.compile(r'\{(' + '|'.join(sorted(TEMPLATE_VARIABLES)) + r')(?=[^A-Za-z0-9_]|$)')
 ALLOWED_PATHS = {'/notificacoes', '/dashboard', '/inventory', '/inventory/labels', '/pdv', '/vendas-pdv',

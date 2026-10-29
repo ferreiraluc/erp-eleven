@@ -14,6 +14,14 @@ def current_rate(db, expected=None):
     return rate
 
 
+def notification_amount(value, rate):
+    amount = convert(value, rate)
+    if amount is None:
+        return '—'  # Never invent a historical quote.
+    rendered = f'{amount:,.2f}'.replace(',', '_').replace('.', ',').replace('_', '.')
+    return rendered.removesuffix(',00')
+
+
 def convert(value, rate):
     if rate is None or not Decimal(str(rate)).is_finite() or Decimal(str(rate))<=0:
         return None

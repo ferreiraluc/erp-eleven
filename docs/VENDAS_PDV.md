@@ -437,3 +437,29 @@ registros. O operador pode pausar a automação e usar o editor manual existente
 Se editar manualmente com a automação ativa, a próxima sincronização válida aplica
 novamente Jebai/Venta. Ativação e pausa são auditadas. Migração e deploy não ativam
 consumo ou mudança de câmbio automaticamente.
+
+### Cartão PY: recuperação integral dos 6%
+
+Crédito e débito PY cobram a parte paga no cartão dividida por **0,94**,
+arredondando para cima ao guarani inteiro. Não se aplica a dinheiro, QR, PIX,
+transferência ou fiado. Exemplo: US$80 × G$5.850 = G$468.000 de mercadorias;
+**G$497.873 na máquina**, acréscimo de G$29.873. A cotação geral e os preços do
+catálogo são preservados. Em pagamento dividido, somente a parcela do cartão
+recebe o acréscimo. Escolher o método mostra o câmbio efetivo e o total restante
+na máquina; **Total** preenche esse valor. Uma quantia parcial digitada representa
+o bruto na máquina e aplica 94% às mercadorias. Cartão não gera troco.
+
+`amount_original` registra o bruto; `amount_gs` continua sendo o valor aplicado às
+mercadorias. `card_fee_gs` e `card_fee_percent` registram o acréscimo e seus 6%.
+G$ mantém `exchange_rate=1`. O backend exige a relação bruto=ceil(líquido/0,94),
+acréscimo=bruto−líquido e percentual 6; rejeita valores fracionários na máquina,
+métodos indevidos ou omissão da taxa em novos cartões. O arredondamento pode
+reter menos de G$1 adicional. A migração preserva pagamentos antigos com taxa
+zero; correções podem mantê-los intactos, mas não criar novas cópias sem taxa.
+
+O ticket em espanhol discrimina **Recargo tarjeta (6%)**, total bruto em dólares
+e a cobrança original em guaranis. Vendas/relatórios continuam contabilizando
+mercadorias, sem tratar o ressarcimento da operadora como receita de produtos.
+Estornos existentes continuam sobre mercadorias; a prévia alerta que uma eventual
+devolução da taxa precisa ser conferida com a operadora. O ERP não executa
+estorno bancário nem decide automaticamente a devolução dessa taxa.

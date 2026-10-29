@@ -62,7 +62,8 @@ def _sale_event(db, sale, owners, emit):
     if sale.deleted_at or sale.status != 'completed':
         return
     seller = db.get(Usuario, sale.vendedor_id) if sale.vendedor_id else None
-    context = {'sale_code': ticket_code(sale.id), 'user_name': seller.nome if seller else 'Equipe Eleven'}
+    from .pdv_usd import notification_amount
+    context = {'sale_total': notification_amount(sale.total_gs, sale.usd_rate_gs), 'sale_code': ticket_code(sale.id), 'user_name': seller.nome if seller else 'Equipe Eleven'}
     path = '/vendas-pdv?' + urlencode({'sale_id': str(sale.id)})
     emit(db, 'sale_completed', context=context, user_ids=owners, action_path=path,
          dedupe_key=f'sale-completed:{sale.id}', entity_type='pdv_sale', entity_id=str(sale.id))

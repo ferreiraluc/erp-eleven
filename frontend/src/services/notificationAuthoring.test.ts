@@ -157,3 +157,12 @@ describe('Owner notification preview', () => {
     ).toBe('contextTooLong')
   })
 })
+
+
+it('previews the frozen sale amount and requires a matching sale for the variable', () => {
+  const users = [{id:'lucas',nome:'Lucas'}], moment = new Date('2026-10-27T13:15:00Z')
+  const sale = {id:'sale-value',code:'TEST',created_at:'',seller_id:'sol',seller_name:'Sol',status:'completed',items:[],items_total:0,items_truncated:false}
+  const source = {title:'Venda U$ {sale_total} concluída',body:'{user_name} concluiu a venda.',user_ids:['lucas'],context:{sale_id:sale.id,target:'sale' as const}}
+  expect(notificationPreview(source,users,{...sale,sale_total:'800'},moment)).toMatchObject({title:'Venda U$ 800 concluída',body:'Sol concluiu a venda.',problem:null})
+  expect(notificationPreview({...source,context:undefined},users,null,moment).problem).toBe('contextVariablesMissing')
+})

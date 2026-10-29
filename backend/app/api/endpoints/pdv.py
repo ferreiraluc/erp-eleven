@@ -545,6 +545,7 @@ def _sale_to_response(sale: PdvSale) -> PdvSaleResponse:
                 amount_original=float(p.amount_original),
                 exchange_rate=float(p.exchange_rate),
                 amount_gs=float(p.amount_gs),
+                card_fee_gs=float(p.card_fee_gs), card_fee_percent=float(p.card_fee_percent),
                 cambista_id=p.cambista_id, reference=p.reference,
                 created_at=p.created_at,
             )

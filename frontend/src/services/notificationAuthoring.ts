@@ -42,7 +42,7 @@ export function notificationPreview(
     date: formatter({ day: '2-digit', month: '2-digit', year: 'numeric' }),
     time: formatter({ hour: '2-digit', minute: '2-digit', hour12: false }),
   }
-  if (matches) values.sale_code = sale.code
+  if (matches) { values.sale_code = sale.code; values.sale_total = sale.sale_total || '—' }
   if (matches && sale.status)
     values.status =
       (
@@ -62,7 +62,7 @@ export function notificationPreview(
     // Match the manual renderer's one-pass brace handling. Literal JSON or
     // product details such as {P,M,L} are ordinary text, not template fields.
     const validationText = value.replace(/\{\{|\}\}/g, '')
-    const knownStart = /\{(cliente_username|date|sale_code|status|time|tracking_code|user_name)(?=[^A-Za-z0-9_]|$)/g
+    const knownStart = /\{(cliente_username|date|sale_code|sale_total|status|time|tracking_code|user_name)(?=[^A-Za-z0-9_]|$)/g
     for (const match of validationText.matchAll(knownStart)) {
       if (validationText[match.index! + match[0].length] !== '}')
         problem ||= 'contextUnknownVariable'
@@ -72,7 +72,7 @@ export function notificationPreview(
       if (token === '}}') return '}'
       if (!name) return token
       if (Object.hasOwn(values, name)) return values[name]!
-      if (['sale_code', 'tracking_code', 'cliente_username', 'status'].includes(name))
+      if (['sale_code', 'sale_total', 'tracking_code', 'cliente_username', 'status'].includes(name))
         problem ||= 'contextVariablesMissing'
       else return token
       return '…'

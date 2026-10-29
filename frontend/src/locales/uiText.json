@@ -4356,5 +4356,12 @@
     "pt": "Ver mais relacionados",
     "es": "Ver más relacionados",
     "en": "More related products"
-  }
+  },
+  "Valor na máquina (G$)": {"pt": "Valor na máquina (G$)", "es": "Valor en la máquina (G$)", "en": "Terminal amount (G$)"},
+  "Valor na máquina": {"pt": "Valor na máquina", "es": "Valor en la máquina", "en": "Terminal amount"},
+  "Câmbio cartão": {"pt": "Câmbio cartão", "es": "Cambio tarjeta", "en": "Card exchange rate"},
+  "Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.": {"pt": "Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.", "es": "Operación 6%: importe ÷ 0,94. Recargo solo en la parte pagada con tarjeta.", "en": "Processing 6%: amount ÷ 0.94. Surcharge only on the card portion."},
+  "Acréscimo cartão": {"pt": "Acréscimo cartão", "es": "Recargo tarjeta", "en": "Card surcharge"},
+  "Aplicado à venda": {"pt": "Aplicado à venda", "es": "Aplicado a la venta", "en": "Applied to sale"},
+  "Total a cobrar": {"pt": "Total a cobrar", "es": "Total a cobrar", "en": "Total to charge"}
 }
