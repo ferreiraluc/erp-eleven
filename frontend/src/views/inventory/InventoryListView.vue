@@ -109,8 +109,7 @@
     <p v-if="showDeviceResults" class="local-search-notice" role="status">{{ tr('Consulta local · saldos e alterações aguardam confirmação online.') }}</p>
     <!-- Loading -->
     <div v-if="searchBusy && flatList.length === 0" class="loading-state">
-      <div class="spinner"></div>
-      <p>{{ tr('Carregando itens...') }}</p>
+      <ErpLoadingState :label="tr('Carregando itens...')" />
     </div>
 
     <!-- Empty state -->
@@ -589,6 +588,7 @@ import { startInventoryDrag } from '@/services/inventoryDragSelection'
 import { displayStock, hasKnownStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
+import ErpLoadingState from '@/components/ui/ErpLoadingState.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import ReceivingLotsModal from '@/components/inventory/ReceivingLotsModal.vue'

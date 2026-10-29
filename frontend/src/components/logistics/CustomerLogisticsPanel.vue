@@ -42,7 +42,7 @@
       <form @submit.prevent="find">
         <label>{{ t('kind') }}<ErpSelect :label="(t('kind'))" v-model="kind" :disabled="saving" @change="candidate = null"><option value="rastreamento">{{ t('parcel') }}</option><option value="pedido">{{ t('order') }}</option></ErpSelect></label>
         <label class="identifier">{{ t('identifier') }}<input v-model="identifier" required maxlength="100" :disabled="saving" @input="candidate = null" /></label>
-        <button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !identifier.trim()">{{ t('find') }}</button>
+        <button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !identifier.trim()" type="submit">{{ t('find') }}</button>
       </form>
       <div v-if="candidate" class="link-preview">
         <strong>{{ candidate.title }}</strong><p>{{ candidate.description }}</p><p>{{ t('confirmTo', { name: customer.nome }) }}</p>

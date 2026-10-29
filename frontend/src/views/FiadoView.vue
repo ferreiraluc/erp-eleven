@@ -142,7 +142,7 @@
       <div v-erp-dialog class="fiado-new-modal erp-dialog erp-dialog--sm">
         <div class="fiado-new-header erp-dialog__header">
           <h3>{{ $tr("Novo cliente") }}</h3>
-          <button class="erp-button erp-button--ghost erp-button--icon" @click="showNewClient = false">×</button>
+          <button class="erp-button erp-button--ghost erp-button--icon" @click="showNewClient = false" :aria-label="$tr('Fechar')">×</button>
         </div>
         <div class="fiado-new-body erp-dialog__body">
           <div class="fiado-field">

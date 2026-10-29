@@ -145,7 +145,7 @@
   <!-- Image preview lightbox -->
   <div v-if="previewImage" class="lt-lightbox" @click="previewImage = null">
     <img :src="previewImage" class="lt-lightbox-img" :alt="tr('etiqueta')" />
-    <button class="lt-lightbox-close erp-button erp-button--ghost erp-button--icon" @click="previewImage = null">
+    <button class="lt-lightbox-close erp-button erp-button--ghost erp-button--icon" @click="previewImage = null" :aria-label="tr('Fechar')">
       <svg fill="none" viewBox="0 0 24 24" stroke="white" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>

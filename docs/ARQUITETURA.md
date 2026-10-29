@@ -196,3 +196,9 @@ as inscrições próprias no provedor, com pausa noturna e prazo de 30 dias. É 
 do job diário de rastreio, que ignora esses códigos. A ativação é exclusiva de Lucas
 em Configurações; migração e inicialização não geram consumo. Veja
 [Monitoramento Wonca](RASTREAMENTO_WONCA.md).
+
+## Padrão da interface
+
+Tokens, controles, modais, carregamentos, referências e contratos de evolução estão
+no [guia de design e interação](DESIGN_SYSTEM.md). O frontend verifica todos os
+templates com `npm run audit:ui`, além dos testes, tipos e build.

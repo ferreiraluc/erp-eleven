@@ -22,7 +22,7 @@
         <label v-if="!auth.ownSales">{{ tr('Vendedor') }}<ErpSelect :label="(tr('Vendedor'))" v-model="filters.seller_id"><option value="">{{ tr('Todos') }}</option><option v-for="s in sellers" :key="s.id" :value="s.id">{{ s.name }}</option></ErpSelect></label>
         <label>{{ tr('Pagamento') }}<ErpSelect :label="(tr('Pagamento'))" v-model="filters.payment"><option value="">{{ tr('Todos') }}</option><option v-for="method in allPaymentFilters" :key="method" :value="method">{{ paymentText(method) }}</option></ErpSelect></label>
         <label v-if="auth.isOwner">{{ tr('Listagem') }}<ErpSelect :label="(tr('Listagem'))" v-model="filters.deleted"><option :value="false">{{ tr('Vendas visíveis') }}</option><option :value="true">{{ tr('Histórico de excluídas') }}</option></ErpSelect></label>
-        <div class="filter-actions"><button class="erp-button erp-button--primary" :disabled="loading">{{ tr('Filtrar') }}</button><button type="button" class="erp-button erp-button--secondary" @click="clear">{{ tr('Limpar') }}</button></div>
+        <div class="filter-actions"><button class="erp-button erp-button--primary" :disabled="loading" type="submit">{{ tr('Filtrar') }}</button><button type="button" class="erp-button erp-button--secondary" @click="clear">{{ tr('Limpar') }}</button></div>
       </form>
       <p v-if="optionsError" role="alert" class="scope-note">{{ tr('Não foi possível carregar os vendedores.') }} <button class="erp-button erp-button--ghost erp-button--sm" @click="loadOptions">{{ tr('Tentar novamente') }}</button></p>
       <p v-if="loading" class="state-box" role="status">{{ tr('Carregando vendas...') }}</p>

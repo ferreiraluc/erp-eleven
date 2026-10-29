@@ -96,7 +96,7 @@
               <input v-model="line.item_id" type="text" class="form-input" :placeholder="tr('ID do item')" />
               <StockQuantityInput v-model.number="line.quantity" type="number" :min="1" class="form-input small" :placeholder="tr('Qtd')" />
               <input v-model.number="line.unit_cost" type="number" step="0.01" min="0" class="form-input small" :placeholder="tr('Custo')" />
-              <button @click="batchLines.splice(idx, 1)" class="remove-btn erp-button erp-button--danger erp-button--icon" type="button">×</button>
+              <button @click="batchLines.splice(idx, 1)" class="remove-btn erp-button erp-button--danger erp-button--icon" type="button" :aria-label="tr('Remover item')">×</button>
             </div>
             <button @click="batchLines.push({ item_id: '', quantity: 1, unit_cost: 0 })" class="add-line-btn erp-button erp-button--primary" type="button">
               {{ tr('+ Adicionar linha') }}

@@ -15,7 +15,7 @@
   position: relative;
   min-height: 40px;
   border: 1px solid #d1d5db;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   background: #f9fafb;
   color: #475569;
   transition: border-color 0.15s;
@@ -114,9 +114,10 @@ body .erp-dropdown__menu {
   overflow: hidden;
   box-sizing: border-box;
   border: 1px solid #d1d5db;
-  border-radius: 12px;
+  border-radius: var(--radius-popover, 14px);
   background: #fff;
-  box-shadow: 0 8px 24px #0f172a24;
+  box-shadow: var(--shadow-popover, 0 8px 24px #0f172a24);
+  animation: erp-dropdown-appear 130ms var(--ease-interface, ease);
   color: #334155;
   font-family: inherit;
 }
@@ -244,4 +245,11 @@ body .erp-dropdown__search input {
   .erp-dropdown__chevron {
     transition: none;
   }
+}
+
+@keyframes erp-dropdown-appear { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body .erp-dropdown__menu { animation: none; } }
+@media (forced-colors: active) {
+  body .erp-dropdown__menu { border-color: CanvasText; box-shadow: none; }
+  body .erp-dropdown__options > button:is(:focus-visible,.active) { outline: 2px solid Highlight; outline-offset: -2px; }
 }

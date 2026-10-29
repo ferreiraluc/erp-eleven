@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div class="erp-dialog-backdrop printer-backdrop" @click.self="close">
       <form v-erp-dialog class="erp-dialog erp-dialog--sm printer-dialog" :aria-label="uiText('Impressora de tickets')" @submit.prevent="save">
-        <header class="erp-dialog__header"><h2>{{ uiText('Impressora de tickets') }}</h2><button type="button" data-dialog-close class="erp-button erp-button--ghost" @click="close">×</button></header>
+        <header class="erp-dialog__header"><h2>{{ uiText('Impressora de tickets') }}</h2><button type="button" data-dialog-close class="erp-button erp-button--ghost" @click="close" :aria-label="uiText('Fechar')">×</button></header>
         <div class="erp-dialog__body printer-fields">
           <p>{{ uiText('Tickets do PDV em uma fila própria. A impressora de endereços A4 continua separada.') }}</p>
           <p v-if="loading" role="status">{{ uiText('Carregando…') }}</p>
@@ -38,7 +38,7 @@
           </template>
           <p v-if="error" role="alert">{{ error }}</p><p v-if="saved" role="status">{{ uiText('Configuração salva.') }}</p>
         </div>
-        <footer class="erp-dialog__footer"><button type="button" class="erp-button erp-button--secondary" @click="close">{{ uiText('Fechar') }}</button><button v-if="device?.driver !== 'escpos_tcp'" class="erp-button erp-button--primary" :disabled="busy || loading">{{ uiText('Salvar') }}</button></footer>
+        <footer class="erp-dialog__footer"><button type="button" class="erp-button erp-button--secondary" @click="close" :aria-label="uiText('Fechar')">{{ uiText('Fechar') }}</button><button v-if="device?.driver !== 'escpos_tcp'" class="erp-button erp-button--primary" :disabled="busy || loading" type="submit">{{ uiText('Salvar') }}</button></footer>
       </form>
     </div>
   </Teleport>

@@ -11,7 +11,7 @@
     <button class="erp-button erp-button--secondary erp-button--sm" v-if="hasMore" :disabled="loading" @click="load(true)">{{ t('more') }}</button>
     <details class="link-form">
       <summary>{{ t('addParcel') }}</summary><p class="muted">{{ t('hint') }}</p>
-      <form @submit.prevent="find"><label class="identifier">{{ t('code') }}<input v-model="code" required maxlength="100" :disabled="saving" @input="candidate = null" /></label><button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !code.trim()">{{ t('find') }}</button></form>
+      <form @submit.prevent="find"><label class="identifier">{{ t('code') }}<input v-model="code" required maxlength="100" :disabled="saving" @input="candidate = null" /></label><button class="erp-button erp-button--secondary erp-button--sm" :disabled="finding || saving || !code.trim()" type="submit">{{ t('find') }}</button></form>
       <div v-if="candidate" class="link-preview">
         <strong class="tracking-code">{{ candidate.codigo_rastreio }}</strong><p>{{ candidate.destinatario || t('noName') }}</p><p>{{ t('confirmOrder', { number: order.numero_pedido }) }}</p>
         <button class="primary erp-button erp-button--primary erp-button--sm" :disabled="saving" @click="confirmLink">{{ t('confirm') }}</button><button class="erp-button erp-button--secondary erp-button--sm" :disabled="saving" @click="candidate = null">{{ t('cancel') }}</button>

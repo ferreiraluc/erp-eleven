@@ -326,7 +326,7 @@
             <div class="grade-chips" @click="focusChipInput">
               <span v-for="(size, i) in gradeSizes" :key="i" class="grade-chip">
                 {{ size }}
-                <button @click.stop="removeGradeSize(i)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
+                <button @click.stop="removeGradeSize(i)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button" :aria-label="tr('Remover tamanho')">×</button>
               </span>
               <input
                 ref="chipInputRef"
@@ -398,7 +398,7 @@
             <div v-if="gradeColors.length" class="selected-colors">
               <span v-for="(color, i) in gradeColors" :key="i" class="grade-chip grade-chip-color">
                 {{ color }}
-                <button @click.stop="gradeColors.splice(i, 1)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button">×</button>
+                <button @click.stop="gradeColors.splice(i, 1)" class="chip-x erp-button erp-button--danger erp-button--icon" type="button" :aria-label="tr('Remover cor')">×</button>
               </span>
             </div>
             <span class="form-hint">

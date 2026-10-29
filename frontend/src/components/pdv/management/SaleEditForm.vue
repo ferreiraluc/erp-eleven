@@ -22,7 +22,7 @@
       <strong class="line-total">{{ gs(Number(line.quantity) * Number(line.unit_price_gs) - Number(line.discount_gs)) }}</strong>
     </article>
     <div v-if="productIndex !== null" class="product-search" role="region" :aria-label="tr('Selecionar produto')">
-      <form @submit.prevent="searchProducts"><label>{{ tr('Buscar produto por nome, SKU ou código') }}<input v-model="productSearch" maxlength="150" /></label><button class="erp-button erp-button--secondary erp-button--sm" :disabled="searching">{{ tr('Buscar') }}</button><button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="productIndex = null">{{ tr('Fechar') }}</button></form>
+      <form @submit.prevent="searchProducts"><label>{{ tr('Buscar produto por nome, SKU ou código') }}<input v-model="productSearch" maxlength="150" /></label><button class="erp-button erp-button--secondary erp-button--sm" :disabled="searching" type="submit">{{ tr('Buscar') }}</button><button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="productIndex = null">{{ tr('Fechar') }}</button></form>
       <p v-if="searching" role="status">{{ tr('Buscando...') }}</p>
       <div class="search-results"><button v-for="p in products" :key="p.id" type="button" class="erp-control" @click="chooseProduct(p)"><strong>{{ p.name }}</strong><small>{{ p.sku_internal }} · {{ [p.size,p.color].filter(Boolean).join(' · ') }}</small></button></div>
     </div>
