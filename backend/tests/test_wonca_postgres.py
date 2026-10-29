@@ -78,3 +78,49 @@ def test_only_one_subscription_reconciler_can_contact_provider(pg,monkeypatch):
             assert monitor.sync_subscriptions(second,provider,MOMENT)['added']==1; second.commit()
             assert len(provider.calls)==1
     finally: isolated.dispose()
+
+
+def test_crash_after_remote_acceptance_leaves_a_durable_intent_for_cleanup(pg,monkeypatch):
+    monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
+    monkeypatch.setattr(settings,'WONCA_API_KEY','synthetic')
+    isolated,factory=isolated_factory(pg); provider=Provider()
+    try:
+        with factory() as db:
+            db.add(WoncaConfig(id='main',endpoint_id=ENDPOINT,profile_id=PROFILE,enabled=True,
+                secret_encrypted=monitor.cipher().encrypt(SIGNING.encode()).decode()))
+            parcel(db,CODE); db.commit()
+        def crash(method,data):
+            provider(method,data)
+            raise SystemExit('synthetic abrupt stop after remote acceptance')
+        import pytest
+        with pytest.raises(SystemExit): monitor.reconcile(factory,crash,MOMENT)
+        with factory() as db:
+            pending=db.get(WoncaSubscription,CODE)
+            assert pending and pending.attempts>0 and pending.remote_id is None
+            db.query(Rastreamento).one().ativo=False; db.commit()
+        result=monitor.reconcile(factory,provider,MOMENT+timedelta(minutes=1))
+        assert result=={'added':1,'removed':1}
+        with factory() as db: assert db.get(WoncaSubscription,CODE).state=='stopped'
+    finally: isolated.dispose()
+
+
+def test_first_callback_can_arrive_before_upsert_response_is_committed(pg,monkeypatch):
+    monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
+    monkeypatch.setattr(settings,'WONCA_API_KEY','synthetic')
+    isolated,factory=isolated_factory(pg); provider=Provider()
+    try:
+        with factory() as db:
+            db.add(WoncaConfig(id='main',endpoint_id=ENDPOINT,profile_id=PROFILE,enabled=True,
+                secret_encrypted=monitor.cipher().encrypt(SIGNING.encode()).decode()))
+            parcel(db,CODE); db.commit()
+        def callback_before_response(method,data):
+            with factory() as db:
+                assert db.get(WoncaSubscription,CODE).remote_id is None
+                body,headers=signed();monitor.receive(db,body,headers,MOMENT);db.commit()
+            return provider(method,data)
+        monitor.reconcile(factory,callback_before_response,MOMENT)
+        with factory() as db:
+            assert db.query(WoncaEvent).one().status=='pending'
+            assert monitor.process_safely(db);db.commit()
+            assert db.query(WoncaEvent).one().status=='processed'
+    finally: isolated.dispose()

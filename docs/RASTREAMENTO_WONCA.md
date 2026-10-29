@@ -31,8 +31,10 @@ atrasar o encerramento; o estado **removing** e o contador de falhas permanecem
 visíveis e novas tentativas usam espera progressiva. Silenciar notificações ou
 pausar o endpoint não interromperia a cobrança das consultas do provedor. Não
 prometer uma garantia absoluta de zero consultas durante falhas externas.
-Uma inscrição cujo envio teve resposta perdida é recuperada pelo upsert e
-cancelada quando necessário, evitando deixar monitoramento remoto órfão.
+A intenção de inscrição é confirmada no banco antes do envio ao provedor, sob um
+lock separado. Uma resposta perdida ou reinício após aceite remoto pode ser
+recuperado pelo upsert e cancelado quando necessário. O primeiro webhook também
+é aceito se chegar antes da confirmação local do ID remoto.
 
 Cada verificação automática consome uma consulta mesmo sem alterações, usando
 primeiro a franquia e depois os créditos Wonca. Sem pausa, 2h permite até 12
