@@ -124,6 +124,9 @@ def test_postgres_tolerance_matches_sqlite_and_ranking(pg):
                 searched = build_search(db, term)
                 rows = db.query(Item.sku_internal).filter(Item.deleted_at.is_(None), searched.condition).order_by(searched.rank).all()
                 assert {r[0] for r in rows} == expected, term
+            db.add(Item(name='Camiseta 1JRGZ',sku_internal='TYPO-MODEL'));db.commit()
+            similar=build_search(db,'1HRGZ')
+            assert db.query(Item.sku_internal).filter(similar.condition).one()[0]=='TYPO-MODEL'
             searched = build_search(db, 'AF16548 UB102')
             assert db.query(Item.sku_internal).filter(Item.deleted_at.is_(None), searched.condition).order_by(searched.rank).first()[0] == 'FULL'
     finally:

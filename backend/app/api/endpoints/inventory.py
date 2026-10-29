@@ -66,6 +66,23 @@ router = APIRouter()
 router.include_router(receiving_router)
 
 
+@router.get('/search-index')
+def local_search_index(after_id: UUID | None = None, limit: int = Query(500, ge=1, le=500),
+                       db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user)):
+    """Bounded primary-key walk for a read-only device index. Never export stock/cost/photos."""
+    columns = [Item.id, Item.name, Item.inventory_code, Item.sku_internal, Item.barcode,
+               Item.brand, Item.category, Item.size, Item.color, Item.group_key, Item.location,
+               Item.sale_price, Item.sale_currency, Item.is_active, Item.created_at, Item.updated_at,
+               func.substr(Item.description, 1, 512).label('description'),
+               (Item.image_data.isnot(None) & (Item.image_data != '')).label('has_image')]
+    query = db.query(*columns).filter(Item.deleted_at.is_(None))
+    if after_id:
+        query = query.filter(Item.id > after_id)
+    rows = query.order_by(Item.id).limit(limit + 1).all()
+    return {'items': [dict(row._mapping) for row in rows[:limit]],
+            'next_cursor': str(rows[limit - 1].id) if len(rows) > limit else None}
+
+
 @router.get('/items/{item_id}/related', response_model=RelatedItemsResponse)
 def get_related_products(item_id: UUID, limit: int = Query(12, ge=1, le=24),
                          after_rank: int | None = Query(None, ge=0, le=5), after_id: UUID | None = None,
@@ -599,14 +616,16 @@ def get_item_photos(item_id: str, db: Session = Depends(get_db),
 @router.get("/items/{item_id}", response_model=ItemResponse)
 def get_item(
     item_id: str,
+    include_images: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     item_uuid = validate_uuid(item_id)
-    item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).first()
-    if not item:
+    row = catalog_query(db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid), include_images).first()
+    if not row:
         raise HTTPException(status_code=404, detail="Item not found")
-    resp = ItemResponse.model_validate(item)
+    item, has_image = row
+    resp = catalog_response(item, has_image, include_images)
     resp.alert_level = _compute_alert_level(item)
     return resp
 

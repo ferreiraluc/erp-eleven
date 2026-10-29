@@ -84,7 +84,7 @@
             <div class="pdv-result-right">
               <div class="pdv-result-stock" :class="productAvailable(item) === null ? 'stock-unknown' : productAvailable(item) === 0 ? 'stock-out' : 'stock-ok'">
                 {{ cartText('available', { quantity: displayStock(productAvailable(item)) }) }} {{ $tr("un") }}
-                <span v-if="productAvailable(item) === null"> · {{ inventoryText('Revisar estoque') }}</span>
+                <span v-if="item.catalog_cached"> · {{ uiText('Consulta local · conferir saldo online') }}</span><span v-else-if="productAvailable(item) === null"> · {{ inventoryText('Revisar estoque') }}</span>
               </div>
               <label class="pdv-stock-location" @click.stop>
                 {{ cartText('location') }}
@@ -97,7 +97,7 @@
                 <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(catalogPrice(item.sale_price)) }}</span>
                 <span v-for="price in productEquivalents(catalogPrice(item.sale_price), item.sale_currency)" :key="price.currency" class="pdv-price-gs">≈ {{ currencyLabel(price.currency) }} {{ fmtNum(price.amount) }}</span>
               </div>
-              <button class="pdv-result-add erp-button erp-button--primary erp-button--icon" :disabled="!canAddProduct(item)">+</button>
+              <button class="pdv-result-add erp-button erp-button--primary erp-button--icon" :disabled="item.catalog_cached ? barcodePending || pdv.loading : !canAddProduct(item)">{{ item.catalog_cached ? '↻' : '+' }}</button>
             </div>
           </div>
           <div v-if="scannedProduct" class="pdv-related-footer">
@@ -331,8 +331,10 @@ import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import { usePdvStore } from '@/stores/pdv'
 import { useCurrencyStore } from '@/stores/currency'
+import { prepareCatalogIndex, searchDeviceCatalog } from '@/services/catalogIndex'
 import { saleUsd } from '@/services/saleUsd'
 import { inventoryAPI, type InventoryItem, type ProductRelation, type RelatedProductCursor } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
@@ -349,6 +351,7 @@ import { vPdvActionKeyboard } from '@/directives/pdvKeyboard'
 import { usePdvCartText } from '@/components/pdv/cartMessages'
 const { cartText, cartErrorText } = usePdvCartText()
 
+const auth = useAuthStore()
 const pdv = usePdvStore()
 const currencyStore = useCurrencyStore()
 
@@ -598,6 +601,10 @@ async function doSearch() {
   const request = searchGeneration, query = searchQuery.value.trim()
   searchController = new AbortController()
   loadingSearch.value = true; searchError.value = false
+  void prepareCatalogIndex(auth.user?.id).then(()=>searchDeviceCatalog(query,{status:'active'})).then(rows=>{
+    if(disposed || request!==searchGeneration || !loadingSearch.value || !rows.length)return
+    if(query)searchResults.value=rows;else recentProducts.value=rows
+  })
   try {
     const res = await inventoryAPI.getItems({ search: query || undefined, page_size: query ? 20 : 8, status: 'active', sort_by: query ? undefined : 'created_at', include_images: false }, searchController.signal)
     if (disposed || request !== searchGeneration) return
@@ -605,7 +612,7 @@ async function doSearch() {
     if (query) searchResults.value = res.items
     else recentProducts.value = res.items
   } catch {
-    if (!disposed && request === searchGeneration) { searchResults.value = []; searchError.value = true }
+    if (!disposed && request === searchGeneration) { if(!searchResults.value.some(item=>item.catalog_cached))searchResults.value = []; searchError.value = true }
   } finally { if (!disposed && request === searchGeneration) loadingSearch.value = false }
 }
 function onSearchEnter() {
@@ -621,7 +628,7 @@ function clearSearch() {
 function productLocation(item: InventoryItem): StockLocation {
   return selectedLocations[item.id] || (item.stock_loja !== null && item.stock_loja > 0 ? 'loja' : 'deposito')
 }
-function productAvailable(item: InventoryItem) { return pdv.availableStock(item.id, productLocation(item)) }
+function productAvailable(item: InventoryItem) { if(item.catalog_cached)return null; return pdv.availableStock(item.id, productLocation(item)) }
 function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return catalogPrice(item.sale_price) !== null && ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && available !== null && available >= 1 }
 function canIncrease(item: CartItem) {
   if (item.is_avulso) return item.quantity + 1 <= 9_999_999.999
@@ -654,7 +661,23 @@ function removeCartItem(id: string) {
   delete priceErrors[id]
   pdv.removeItem(id); delete quantityDrafts[id]; delete quantityErrors[id]
 }
-function addToCart(item: InventoryItem) {
+async function addToCart(item: InventoryItem) {
+  if(item.catalog_cached) {
+    if(barcodePending.value || pdv.loading || pdv.checkoutUncertain)return
+    const request=searchGeneration
+    barcodePending.value=true
+    try {
+      const fresh=await inventoryAPI.getItemForSale(item.id)
+      if(disposed || request!==searchGeneration)return
+      if(!fresh.is_active){showToast(uiText('Produto indisponível no catálogo.'),'error');return}
+      pdv.rememberStock([fresh])
+      searchResults.value=searchResults.value.map(row=>row.id===fresh.id ? fresh : row)
+      recentProducts.value=recentProducts.value.map(row=>row.id===fresh.id ? fresh : row)
+      await addToCart(fresh)
+    }catch {if(!disposed && request===searchGeneration)showToast(uiText('Não foi possível confirmar o saldo. Tente novamente online.'),'error')}
+    finally{if(!disposed && request===searchGeneration)barcodePending.value=false}
+    return
+  }
   if (!ratesReady.value) return
   try {
     undoPaymentRounding()
@@ -795,6 +818,7 @@ function onKeydown(e: KeyboardEvent) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 onMounted(() => {
+  void prepareCatalogIndex(auth.user?.id)
   document.addEventListener('keydown', onKeydown)
   void currencyStore.loadCurrentRates()
   void doSearch()

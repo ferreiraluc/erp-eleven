@@ -31,14 +31,16 @@ Não abre edição nem altera o estoque. Produto indisponível ou erro de conex�
 aparece com uma mensagem e tentativa manual. Navegar para outro item ou trocar
 de conta descarta respostas pendentes; saldo desconhecido não é exibido como zero.
 
-Ao consultar um QR interno `INV-XXXXXX`, o produto exato continua sendo o resultado
-da busca. Abaixo, **Continue por este produto** apresenta sugestões paginadas: mesma
-grade e cor primeiro, demais cores da grade, marca/categoria e suas cores, depois
-marca e categoria. Esta seção reutiliza o serviço do PDV, não aumenta o contador,
-não inclui os sugeridos na seleção e não altera os filtros. Abrir uma sugestão
-usa o editor normal; limpar/trocar a busca cancela a leitura de relacionados.
-As sugestões são contexto, podendo estar fora dos filtros aplicados ao resultado
-exato; a interface informa essa diferença. Não há consulta de IA neste caminho.
+Ao consultar um QR interno `INV-XXXXXX`, o produto exato aparece primeiro,
+destacado com contorno azul, e os relacionados ocupam **os mesmos cards da
+listagem**, lado a lado, sem uma seção adicional. Mesma grade e cor vêm primeiro,
+seguidas das outras cores, marca/categoria e demais relações existentes. O contador
+indica os itens exibidos (QR e relacionados), não o total de produtos daquela marca.
+**Ver mais relacionados** mantém a paginação limitada. A identidade do QR permanece
+exata; relacionados são contexto e podem estar fora dos filtros do resultado
+original. Podem ser selecionados explicitamente na mesma listagem; isto não
+vincula nem agrupa cadastros automaticamente. Alterar/limpar a busca, editar ou
+sair cancela as consultas anteriores. Não há IA no caminho de busca.
 
 Cores equivalentes em português, inglês e espanhol participam da busca, filtro
 da API e seleções por cor de foto/dados/quantidades: `Black/Preto/Negro`,
@@ -1263,3 +1265,49 @@ QR + código interno na Zebra USB/Windows, em etiquetas de 60 × 30 mm. Não alt
 estoque e não depende do Sumatra. Tickets ficam na 3nStar; a configuração exclusiva
 da Zebra exige fila anterior concluída e preserva histórico.
 Instalação, limites, reconexão e teste físico: [guia de etiquetas](ETIQUETAS_PRODUTOS.md).
+
+### Erro de digitação em modelos e consulta local
+
+Modelos alfanuméricos de 5–24 caracteres aceitam **uma letra substituída** como
+sugestão, com o literal primeiro: `1HRGZ` encontra `1JRGZ`. Os dígitos, códigos
+numéricos de barras e identidades `INV-XXXXXX` permanecem exatos. Regex são geradas
+com caracteres escapados e limites de palavra; filtros e paginação continuam no
+SQL, usando os índices de catálogo existentes. Não há alteração de SKU/modelo.
+
+O estoque e o PDV preparam automaticamente um índice local após alguns segundos
+de uso autenticado, quando a página está visível e a conexão permite. A cópia é
+feita em páginas de até 500, por cursor da chave primária, sem COUNT/offset,
+fotos, saldos, custos, documentos ou fornecedores. A descrição local contém até
+512 caracteres; buscas longas/avançadas continuam sendo reconciliadas pelo servidor.
+A cópia completa fica em IndexedDB; busca e persistência executam em Web Worker.
+Cada índice comporta até 75 mil registros/64 MiB de dados serializados, sujeito à
+quota real do navegador. O worker libera sua memória após cinco minutos sem uso.
+
+A lista local é **provisória e somente leitura**, identificada na tela. Quantidades
+aparecem como desconhecidas. Ao tocar um item local no PDV, o ERP confirma o cadastro,
+preço e saldo online, em uma consulta sem fotos, antes de adicioná-lo ao carrinho;
+a conclusão mantém todos os locks e validações existentes. Filtros que exigem
+saldo atual ou associação a lote não são inferidos localmente. Ao chegar a resposta
+online, ela substitui os resultados locais. Nenhuma venda/baixa/impressão funciona
+sem a confirmação habitual do servidor. O cache não transforma o ERP em um PDV
+inteiramente offline nem contorna a verificação de sessão ao reabrir o aplicativo.
+
+Atualização completa a cada seis horas ao usar um desses módulos; em
+**Configurações → Busca rápida neste aparelho**, é possível atualizar ou limpar.
+Busca tem prioridade e pausa/cancela a requisição de fundo sem reiniciar as páginas
+já copiadas. A cópia anterior só é trocada ao completar todas as páginas; falha de
+conexão/quota preserva a última completa. Retentativas têm espera crescente e limite;
+uma falha persistente exige ação manual. Economia de dados, página oculta ou falta de
+conexão adiam a preparação. A cópia é isolada pela conta/sessão e apagada ao sair;
+expiração/troca de conta descarta respostas pendentes. O navegador pode remover o
+armazenamento; nesse caso a consulta online continua disponível e o índice é refeito.
+Registros alterados/excluídos depois da cópia podem aparecer provisoriamente até a
+confirmação online ou a próxima cópia completa; não autorizam alterações no estoque.
+
+Validação local em navegador real com **50.000 produtos sintéticos**: 18,14 MiB
+serializados, construção/persistência em 1.834 ms, consulta aproximada em 18 ms e
+reabertura em 372 ms neste computador. Não são garantias de tempo/RAM no Samsung
+ou iPad; memória inclui a representação dos objetos do worker e os custos do
+navegador. Fotos não participam desse índice. A persistência e a execução em worker
+seguem as APIs [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+e [Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).

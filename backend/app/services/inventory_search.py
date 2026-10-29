@@ -130,6 +130,18 @@ def spelling_variants(term, vocabulary):
     return [term, *candidates[:8]]
 
 
+def code_typo_pattern(term):
+    """One mistyped model letter, with digits and complete token boundaries intact."""
+    compact = re.sub(r'[-_./]', '', term)
+    if not re.fullmatch(r'[a-z0-9]{5,24}', compact) or not re.search(r'\d', compact) or len(re.findall('[a-z]', compact)) < 2:
+        return None
+    variants = []
+    for index, letter in enumerate(compact):
+        if letter.isalpha():
+            variants.append('[-_./ ]*'.join('[a-z]' if i == index else re.escape(c) for i, c in enumerate(compact)))
+    return r'(^|[^a-z0-9])(?:' + '|'.join(variants) + r')([^a-z0-9]|$)'
+
+
 @dataclass
 class CatalogSearch:
     condition: object
@@ -187,6 +199,9 @@ def build_search(db, value, *, taxonomy_filter=None, brand_context='', size=None
         strict_predicates.append(strict)
         pattern = code_pattern(term)
         if pattern:
+            typo = code_typo_pattern(term)
+            if typo:
+                pattern = '(?:' + pattern + '|' + typo + ')'
             code_predicates.append(or_(strict, *(normalize(column).regexp_match(pattern)
                 for column in (Item.name, Item.group_key, Item.sku_internal, Item.barcode, Item.description))))
         else:

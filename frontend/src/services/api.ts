@@ -564,6 +564,8 @@ export const clientesAPI = {
 // ─── Inventory Types ──────────────────────────────────────────────────────────
 
 export interface InventoryItem {
+  /** Read-only device index: balances must be confirmed online before adding. */
+  catalog_cached?: boolean
   id: string
   name: string
   description?: string
@@ -686,6 +688,9 @@ export const inventoryAPI = {
 
   getItem: (id: string, signal?: AbortSignal): Promise<InventoryItem> =>
     api.get(`/api/inventory/items/${id}`, { signal }).then(res => res.data),
+
+  getItemForSale: (id: string, signal?: AbortSignal): Promise<InventoryItem> =>
+    api.get(`/api/inventory/items/${id}`, {params:{include_images:false}, signal}).then(r=>r.data),
 
   getThumbnail: (id: string): Promise<{ image_data: string | null }> =>
     api.get(`/api/inventory/items/${id}/thumbnail`).then(res => res.data),
