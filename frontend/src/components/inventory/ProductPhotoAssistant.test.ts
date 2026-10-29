@@ -33,6 +33,27 @@ beforeEach(() => {
 })
 afterEach(() => { app?.unmount(); root?.remove(); vi.clearAllMocks() })
 describe('Photo-assisted product form', () => {
+  it('edits only the image without product fields or paid requests and supports all locales', async () => {
+    const { result, i18n } = await mount({ photoOnly: true, initialImage: 'data:image/jpeg;base64,saved', applyHint: 'Aplicar a 4 itens.' }, false)
+    expect(document.querySelector('.photo-fields')).toBeNull()
+    expect(document.querySelector('.photo-reviewed')).toBeNull()
+    expect(document.body.textContent).toContain('Aplicar a 4 itens.')
+    expect(mock.analyzePhoto).not.toHaveBeenCalled()
+    expect(mock.generateCatalog).not.toHaveBeenCalled()
+    button('Remover fundo · grátis').click(); await nextTick(); await nextTick()
+    expect(mock.cutoutPhoto).toHaveBeenCalledWith('data:image/jpeg;base64,saved', expect.any(AbortSignal))
+    button('Usar foto').click(); await nextTick(); await nextTick()
+    expect(mock.catalogForStorage).toHaveBeenCalledWith('data:image/jpeg;base64,cutout')
+    expect(result).toHaveBeenCalledWith(expect.objectContaining({ name: '', image_data: 'data:image/jpeg;base64,stored' }))
+    expect(mock.generateCatalog).not.toHaveBeenCalled()
+    i18n.global.locale.value = 'es'; await nextTick()
+    expect(document.querySelector('h2')?.textContent).toBe('Editar foto')
+    expect(button('Quitar fondo · gratis')).toBeDefined()
+    i18n.global.locale.value = 'en'; await nextTick()
+    expect(document.querySelector('h2')?.textContent).toBe('Edit photo')
+    expect(button('Use photo')).toBeDefined()
+  })
+
   it('can add only a photo to the unified review without inventing a name or calling AI', async () => {
     const { result } = await mount({ draft: true })
     expect(document.querySelector('input[type=checkbox]')).toBeNull()

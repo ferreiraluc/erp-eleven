@@ -1,5 +1,7 @@
 export const productPhotoMessages = {
   pt: {
+    photoTitle: 'Editar foto', photoIntro: 'Remova o fundo e compare com a original antes de usar a foto.',
+    photoUse: 'Usar foto', photoNext: 'Confira a imagem escolhida. As alterações serão gravadas ao salvar o formulário.',
     chooseForHanger: 'Escolha ou tire uma foto da peça para gerar a imagem no cabide e usar como foto do produto.',
     draftUse: 'Adicionar à conferência', draftNext: 'A foto e a etiqueta serão reunidas no formulário para uma conferência única antes de criar o produto.', reviewExample: 'Conferi os dados para salvar como exemplo de etiqueta.',
     title: 'Cadastrar por foto', intro: 'Uma peça estendida, inteira e bem iluminada. Você confere tudo antes de salvar.',
@@ -28,6 +30,8 @@ export const productPhotoMessages = {
     manual: 'Você também pode preencher os campos sem consultar a IA.', download: 'Baixar foto escolhida',
   },
   es: {
+    photoTitle: 'Editar foto', photoIntro: 'Quite el fondo y compare con la original antes de usar la foto.',
+    photoUse: 'Usar foto', photoNext: 'Revise la imagen elegida. Los cambios se guardarán al guardar el formulario.',
     chooseForHanger: 'Elija o tome una foto de la prenda para generar la imagen en percha y usarla como foto del producto.',
     draftUse: 'Agregar a la revisión', draftNext: 'La foto y la etiqueta se reunirán en el formulario para una revisión conjunta antes de crear el producto.', reviewExample: 'Revisé los datos para guardar como ejemplo de etiqueta.',
     title: 'Registrar por foto', intro: 'Una prenda extendida, completa y bien iluminada. Revise todo antes de guardar.',
@@ -56,6 +60,8 @@ export const productPhotoMessages = {
     manual: 'También puede completar los campos sin consultar la IA.', download: 'Descargar foto elegida',
   },
   en: {
+    photoTitle: 'Edit photo', photoIntro: 'Remove the background and compare with the original before using the photo.',
+    photoUse: 'Use photo', photoNext: 'Check the selected image. Changes will be saved when you save the form.',
     chooseForHanger: 'Choose or take a garment photo to generate a hanger image and use it as the product photo.',
     draftUse: 'Add to review', draftNext: 'The photo and label will be combined in the form for one review before creating the product.', reviewExample: 'I checked the details to save as a label example.',
     title: 'Register from photo', intro: 'One flat, fully visible, well-lit garment. Review everything before saving.',
