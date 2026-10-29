@@ -71,7 +71,7 @@
       <InventoryViewControls
         :mode="viewMode"
         v-model:grid-zoom="mobileGridZoom"
-        :zoom-enabled="!groupMode"
+        :zoom-enabled="inlineProducts"
         :selection-mode="selectionMode"
         :busy="searchBusy"
         :ready="resultsReady"
@@ -98,7 +98,7 @@
       @open-item="openDiagnosticItem"
     />
 
-    <div v-if="searchError" class="list-load-error" role="alert">
+    <div v-if="searchError && !showDeviceResults" class="list-load-error" role="alert">
       <div>
         <strong>{{ tr('Não foi possível carregar a lista de produtos.') }}</strong>
         <p>{{ tr('Os dados do estoque não foram confirmados. Tente novamente ou abra a conferência de estoque.') }}</p>
@@ -106,6 +106,7 @@
       <button @click="retrySearch" class="btn btn-secondary erp-button erp-button--secondary" :disabled="searchBusy">{{ tr('Tentar novamente') }}</button>
     </div>
 
+    <p v-if="showDeviceResults" class="local-search-notice" role="status">{{ tr('Consulta local · saldos e alterações aguardam confirmação online.') }}</p>
     <!-- Loading -->
     <div v-if="searchBusy && flatList.length === 0" class="loading-state">
       <div class="spinner"></div>
@@ -123,8 +124,8 @@
     </div>
 
     <!-- Items list -->
-    <div v-else-if="flatList.length > 0 && !searchError" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, !groupMode && `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
-      <svg v-if="!groupMode && gradeConnections.length" class="grade-connections" aria-hidden="true">
+    <div v-else-if="flatList.length > 0 && (!searchError || showDeviceResults)" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, inlineProducts && `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
+      <svg v-if="inlineProducts && gradeConnections.length" class="grade-connections" aria-hidden="true">
         <path v-for="connection in gradeConnections" :key="connection.id" :d="connection.path" />
       </svg>
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
@@ -261,11 +262,13 @@
           class="item-card"
           :data-item-id="entry.item.id"
           :data-grade-key="entry.item.group_key || undefined"
-          :class="['alert-' + stockAlertLevel(entry.item), { 'sub-item': groupMode && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id), 'card-expanded': expandedCardIds.includes(entry.item.id) }]"
+          :class="['alert-' + stockAlertLevel(entry.item), { 'sub-item': !inlineProducts && entry.item.group_key, 'card-selected': selectedIds.includes(entry.item.id), 'card-expanded': expandedCardIds.includes(entry.item.id), 'card-scanned': qrProduct?.id === entry.item.id, 'card-cached': entry.item.catalog_cached }]"
+          @click.capture="entry.item.catalog_cached && guardCached($event,entry.item)"
+          @keydown.capture="entry.item.catalog_cached && ['Enter',' '].includes($event.key) && guardCached($event,entry.item)"
           @click="onCardClick(entry.item.id, $event)"
-          @pointerdown="onItemPointerDown(entry.item.id, $event)"
+          @pointerdown="!entry.item.catalog_cached && onItemPointerDown(entry.item.id, $event)"
         >
-          <div v-if="!groupMode && entry.item.group_key" class="card-grade-label" :title="groupTitle(entry.item.group_key)">
+          <div v-if="inlineProducts && entry.item.group_key" class="card-grade-label" :title="groupTitle(entry.item.group_key)">
             <span aria-hidden="true">↔</span><span class="grade-label-full">{{ tr('Grade {number}', { number: visibleGradeNumbers.get(entry.item.group_key)! }) }}</span><span class="grade-label-short" aria-hidden="true">{{ visibleGradeNumbers.get(entry.item.group_key)! }}</span>
           </div>
           <!-- Checkbox de seleção -->
@@ -414,7 +417,11 @@
       </template>
     </div>
 
-    <InventoryRelatedProducts v-if="qrProduct" :key="qrProduct.id + ':' + qrProduct.updated_at" :source="qrProduct" @open="openEdit" />
+    <div v-if="qrProduct && (relatedLoading || relatedError || relatedCursor)" class="related-inline-status">
+      <span v-if="relatedLoading" role="status">{{ tr('Buscando relacionados...') }}</span>
+      <span v-if="relatedError" role="alert">{{ tr('Não foi possível buscar os relacionados. O produto encontrado continua disponível.') }}</span>
+      <button v-if="relatedError || relatedCursor" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="relatedLoading" @click="loadRelatedItems">{{ tr(relatedError ? 'Tentar novamente' : 'Ver mais relacionados') }}</button>
+    </div>
 
     <!-- Image modal -->
     <ProductGalleryModal v-if="imageModalItem" :item="imageModalItem" @close="imageModalItem = null" />
@@ -588,8 +595,9 @@ import ReceivingLotsModal from '@/components/inventory/ReceivingLotsModal.vue'
 import type { ReceivingCandidate, ReceivingLot } from '@/services/inventoryReceiving'
 import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
+import { prepareCatalogIndex, searchDeviceCatalog } from '@/services/catalogIndex'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
-import InventoryRelatedProducts from '@/components/inventory/InventoryRelatedProducts.vue'
+import { type RelatedProductCursor } from '@/services/api'
 import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
 import InventoryProductLink from '@/components/inventory/InventoryProductLink.vue'
 import { ArrowUpDown, Pencil, Package } from 'lucide-vue-next'
@@ -1117,7 +1125,7 @@ interface GroupEntry {
 
 type FlatEntry = { type: 'group'; group: GroupEntry } | { type: 'item'; item: InventoryItem }
 
-// Exact identity first. Related suggestions never change totals, filters or selection.
+// Exact scan first; related products use the same cards and explicit selection.
 const qrProduct = computed(() => {
   const query = searchQuery.value.trim().toUpperCase()
   if (!/^INV-[A-Z0-9]{6}$/.test(query) || searchBusy.value || searchError.value || !resultsReady.value) return null
@@ -1125,7 +1133,48 @@ const qrProduct = computed(() => {
   return candidates.find(item => item.inventory_code === query && item.is_active) || null
 })
 
+const relatedItems = ref<InventoryItem[]>([])
+const relatedCursor = ref<RelatedProductCursor | null>(null)
+const relatedLoading = ref(false), relatedError = ref(false)
+let relatedController: AbortController | undefined, relatedGeneration = 0
+watch(() => qrProduct.value?.id + ':' + qrProduct.value?.updated_at, () => {
+  deviceGeneration++; relatedGeneration++; relatedController?.abort(); relatedItems.value = []; relatedCursor.value = null
+  relatedLoading.value = false; relatedError.value = false
+  if (qrProduct.value) void loadRelatedItems()
+})
+async function loadRelatedItems() {
+  const source = qrProduct.value
+  if (!source || relatedLoading.value) return
+  const generation = relatedGeneration
+  relatedController = new AbortController(); relatedLoading.value = true; relatedError.value = false
+  try {
+    const result = await inventoryAPI.getRelated(source.id, relatedCursor.value, relatedController.signal)
+    if (generation !== relatedGeneration || qrProduct.value?.id !== source.id) return
+    const seen = new Set([source.id, ...relatedItems.value.map(item => item.id)])
+    relatedItems.value.push(...result.items.map(row => row.item).filter(item => !seen.has(item.id)))
+    relatedCursor.value = result.next_cursor
+  } catch { if (generation === relatedGeneration) relatedError.value = true }
+  finally { if (generation === relatedGeneration) relatedLoading.value = false }
+}
+
+const deviceItems = ref<InventoryItem[]>([])
+let deviceGeneration=0
+const showDeviceResults = computed(() => deviceItems.value.length>0 && !!(searchBusy.value || searchError.value))
+async function searchLocalProducts(value:string) {
+  const generation=++deviceGeneration
+  deviceItems.value=[]
+  await prepareCatalogIndex(auth.user?.id)
+  const rows=await searchDeviceCatalog(value,{...inventoryStore.filters})
+  if(generation===deviceGeneration)deviceItems.value=rows
+}
+function guardCached(event:Event,item:InventoryItem) {
+  if(!item.catalog_cached)return
+  event.preventDefault();event.stopImmediatePropagation()
+}
+const inlineProducts=computed(()=>!groupMode.value || !!qrProduct.value || !!showDeviceResults.value)
 const flatList = computed<FlatEntry[]>(() => {
+  if(showDeviceResults.value)return deviceItems.value.map(item=>({type:'item' as const,item}))
+  if (qrProduct.value) return [qrProduct.value, ...relatedItems.value].map(item => ({type:'item' as const,item}))
   if (!groupMode.value) {
     return inventoryStore.items.map(item => ({ type: 'item' as const, item }))
   }
@@ -1180,7 +1229,7 @@ const visibleGradeNumbers = computed(() => {
   }
   return groups
 })
-const gradeConnections = useInventoryGradeLinks(itemsContainer, computed(() => [flatList.value, viewMode.value, mobileGridZoom.value]), computed(() => !groupMode.value))
+const gradeConnections = useInventoryGradeLinks(itemsContainer, computed(() => [flatList.value, viewMode.value, mobileGridZoom.value]), inlineProducts)
 
 function groupAlertLevel(items: InventoryItem[]): string {
   if (items.some(item => !hasKnownStock(item))) return 'unknown'
@@ -1313,6 +1362,7 @@ const statusChips = computed(() => [
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(searchQuery, (val) => {
+  void searchLocalProducts(val)
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     const trimmed = val.trim()
@@ -1325,6 +1375,8 @@ watch(searchQuery, (val) => {
     }
   }, 300)
 })
+
+watch(() => JSON.stringify(inventoryStore.filters), () => {void searchLocalProducts(searchQuery.value)})
 
 function clearSearch() {
   if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
@@ -1394,12 +1446,13 @@ const matchingGroupItems = computed(() => groupMode.value
   ? backendGroups.value.reduce((total, group) => total + (group.matching_count ?? group.items.length), 0) : 0)
 const resultTotal = computed(() => inventoryStore.pagination.total + matchingGroupItems.value)
 const loadedResultCount = computed(() => inventoryStore.items.length + matchingGroupItems.value)
-const resultCountText = computed(() => resultTotal.value === 1 ? tr('1 item') : tr('{count} itens', { count: resultTotal.value.toLocaleString(numberLocale()) }))
+const resultCountText = computed(() => qrProduct.value && relatedItems.value.length ? tr('{count} itens exibidos · QR e relacionados',{count:1+relatedItems.value.length}) : resultTotal.value === 1 ? tr('1 item') : tr('{count} itens', { count: resultTotal.value.toLocaleString(numberLocale()) }))
 const loadedCountText = computed(() => tr('{loaded} de {total} itens carregados', {
   loaded: loadedResultCount.value.toLocaleString(numberLocale()), total: resultTotal.value.toLocaleString(numberLocale()),
 }))
 const hasMoreResults = computed(() => resultsReady.value && inventoryStore.pagination.page < inventoryStore.pagination.total_pages)
 const searchProgressText = computed(() => {
+  if(showDeviceResults.value)return tr('Consulta local · {count} produtos. Saldos a confirmar.',{count:deviceItems.value.length})
   if (searchBusy.value) return tr('Buscando...')
   if (inventoryStore.loadingMore) return tr('Carregando mais itens...')
   if (!resultsReady.value) return tr('Busca não concluída. Tente novamente.')
@@ -1571,6 +1624,7 @@ function onDocClick(e: MouseEvent) {
 }
 
 onUnmounted(() => {
+  deviceGeneration++; relatedGeneration++; relatedController?.abort()
   editOpenGeneration++
   imageOpenGeneration++
   stopDragSelection()
@@ -1581,6 +1635,7 @@ onUnmounted(() => {
 })
 
 onMounted(async () => {
+  void searchLocalProducts(searchQuery.value)
   if (route.query.status) {
     inventoryStore.filters.status = route.query.status as string
     activeStatus.value = route.query.status as string
@@ -1618,6 +1673,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.local-search-notice{margin:8px 16px;color:#475569;font-size:12px}.card-cached .action-btn,.card-cached .card-check{opacity:.4}.card-scanned{outline:2px solid #2563eb;outline-offset:-2px}.related-inline-status{display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;font-size:12px;color:#64748b}
 .receiving-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:.85rem}
 .stock-unknown { color: #92400e; }
 .badge-unknown, .chip-alert-unknown { background: #fffbeb; color: #92400e; border-color: #f59e0b; }

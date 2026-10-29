@@ -7,7 +7,7 @@ import InventoryListView from './InventoryListView.vue'
 import { useInventoryStore } from '@/stores/inventory'
 import type { InventoryItem } from '@/services/api'
 
-const api = vi.hoisted(() => ({ getItems: vi.fn(), getGroups: vi.fn(), getAlertsSummary: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn() }))
+const api = vi.hoisted(() => ({ getItems: vi.fn(), getGroups: vi.fn(), getAlertsSummary: vi.fn(), getSuppliers: vi.fn(), getDistinctValues: vi.fn(), getRelated:vi.fn() }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { ...api, getItemPhotos: async () => ({ additional_images: [] }) }, ocrAPI: {} }))
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ isOwner: false }) }))
@@ -222,4 +222,19 @@ it('opens the matching photo from the compact list thumbnail without selecting t
   document.body.querySelector<HTMLButtonElement>('[data-dialog-close]')!.click(); await nextTick()
   expect(document.body.querySelector('[role="dialog"]')).toBeNull()
   expect(document.body.style.overflow).toBe('')
+})
+
+
+it('places QR relatives beside the scanned product in the normal cards, without an additional list',async()=>{
+ const source={...item('a'),inventory_code:'INV-ABC234',group_key:'Grade A'}
+ api.getItems.mockResolvedValue({items:[source],page:1,page_size:50,total:1,total_pages:1})
+ api.getRelated.mockResolvedValue({items:[{item:item('b'),relation:'family'},{item:item('c'),relation:'brand'}],next_cursor:null})
+ await mount();search('INV-ABC234')
+ await vi.waitFor(()=>expect(root.querySelectorAll('.item-card')).toHaveLength(3))
+ expect(Array.from(root.querySelectorAll('.item-card')).map(el=>el.getAttribute('data-item-id'))).toEqual(['a','b','c'])
+ expect(root.querySelector('.related-products')).toBeNull()
+ expect(root.querySelector('.card-scanned')?.getAttribute('data-item-id')).toBe('a')
+ search('outro')
+ await nextTick()
+ expect(root.querySelectorAll('.card-scanned')).toHaveLength(0)
 })

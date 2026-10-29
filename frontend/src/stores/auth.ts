@@ -5,6 +5,7 @@ import { authAPI, type LoginRequest, type User } from '@/services/api'
 import { clearSession, saveToken, saveSessionExpiry, sessionExpiry, storedToken, tokenIsCurrent } from '@/services/sessionStorage'
 import i18n from '@/i18n'
 import { AuthOperationSuperseded, isAuthOperationSuperseded } from '@/services/authOperation'
+import { clearCatalogIndex } from '@/services/catalogIndex'
 import { clearNotificationDevice } from '@/services/notificationPush'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -28,6 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
   function expire() {
     cancelExpiryTimer()
     clearNotificationDevice()
+    clearCatalogIndex()
     operationEpoch++
     generation++
     checking = null

@@ -6,9 +6,10 @@ import i18n from '@/i18n'
 import PDVView from './PDVView.vue'
 import { usePdvStore } from '@/stores/pdv'
 import { paymentMethods, paymentSymbol } from '@/services/pdvPayments'
-const mocks = vi.hoisted(() => ({ rates: {} as Record<string, number>, getItems: vi.fn(), createSale: vi.fn() }))
+const mocks = vi.hoisted(() => ({ rates: {} as Record<string, number>, getItems: vi.fn(), createSale: vi.fn(), indexSearch:vi.fn(), getItemForSale:vi.fn() }))
+vi.mock('@/services/catalogIndex',()=>({prepareCatalogIndex:vi.fn().mockResolvedValue(undefined),searchDeviceCatalog:mocks.indexSearch}))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
-vi.mock('@/services/api', () => ({ inventoryAPI: { getItems: mocks.getItems }, pdvAPI: { createSale: mocks.createSale } }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { getItems: mocks.getItems, getItemForSale:mocks.getItemForSale }, pdvAPI: { createSale: mocks.createSale } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: 'test', role: 'ADMIN' } }) }))
 vi.mock('@/stores/currency', () => ({ useCurrencyStore: () => ({ currentRates: {}, loadCurrentRates: vi.fn().mockResolvedValue(true), exchangeRates: mocks.rates }) }))
 let app: App | undefined, root: HTMLDivElement, pinia: ReturnType<typeof createPinia>
@@ -19,6 +20,7 @@ async function method(value: string) { await set('.pay-select', value, 'change')
 const button = (selector: string) => root.querySelector(selector) as HTMLButtonElement
 beforeEach(async () => {
   vi.useFakeTimers(); vi.clearAllMocks(); i18n.global.locale.value = 'pt'
+  mocks.indexSearch.mockResolvedValue([])
   mocks.rates = reactive({ 'G$': 6500, 'R$': 5, EUR: .9 })
   mocks.getItems.mockResolvedValue({items: [{id:'one',name:'Produto sintético',sku_internal:'TEST',sale_price:100,sale_currency:'USD',stock_loja:5,stock_deposito:0,current_stock:5,is_active:true}]})
   pinia = createPinia(); setActivePinia(pinia)
@@ -294,4 +296,18 @@ it('uses net value for a manual partial card charge, rejects fractional guaranis
   button('.pay-btn-add').click(); await tick()
   expect(usePdvStore().total).toBe(650000)
   expect(usePdvStore().payments.reduce((sum,p)=>sum+(p.card_fee_gs||0),0)).toBe(12000)
+})
+
+
+it('shows a local result during slow Wi-Fi and confirms current stock and price before adding it',async()=>{
+ const cached={id:'local',name:'Local cached product',sku_internal:'LOCAL',sale_price:80,sale_currency:'USD',is_active:true,current_stock:null,stock_loja:null,stock_deposito:null,catalog_cached:true}
+ mocks.indexSearch.mockResolvedValue([cached]);mocks.getItems.mockReturnValueOnce(new Promise(()=>{}))
+ await set('.pdv-search-input','Local');await vi.advanceTimersByTimeAsync(310);await tick()
+ expect(root.textContent).toContain('Consulta local · conferir saldo online')
+ expect(usePdvStore().cart).toHaveLength(1)
+ mocks.getItemForSale.mockResolvedValue({...cached,catalog_cached:undefined,sale_price:90,current_stock:3,stock_loja:3,stock_deposito:0})
+ button('.pdv-result-add').click();await tick()
+ expect(mocks.getItemForSale).toHaveBeenCalledWith('local')
+ expect(usePdvStore().cart).toHaveLength(2)
+ expect(usePdvStore().cart[1]).toMatchObject({item_id:'local',unit_price_gs:585000})
 })
