@@ -222,9 +222,12 @@ def test_templates_allow_only_safe_variables_and_edits_are_versioned(setup):
         assert db.get(NotificationTemplate, uuid.UUID(template['id'])).body == body['body']
         rule = db.get(NotificationRule, 'sale_avulso_without_reason')
         rule.user_ids = [str(ids['Junior']), str(ids['Sol'])]
+        sale = PdvSale(id=uuid.uuid4(), vendedor_id=ids['Sol'], status='completed', total_gs=100)
+        db.add(sale)
         db.commit()
         notification = service.emit_event(db, 'sale_avulso_without_reason', context={'user_name': 'Sol', 'sale_code': 'ABC', '__class__': 'x'},
-            user_ids=[ids['Sol'], ids['Lucas']], dedupe_key='sale:abc:review')
+            user_ids=[ids['Sol'], ids['Lucas']], dedupe_key='sale:abc:review',
+            action_path=f'/vendas-pdv?sale_id={sale.id}', entity_type='pdv_sale', entity_id=sale.id)
         db.commit()
         assert notification.body == 'Olá Sol: confira ABC.'
         assert [row.user_id for row in db.query(NotificationRecipient).filter_by(notification_id=notification.id)] == [ids['Sol']]

@@ -205,9 +205,34 @@ const copy = {
   none: ['Nenhum', 'Ninguno', 'None'],
   enabledRule: ['Ativo', 'Activo', 'Enabled'],
   automaticRecipients: [
-    'Sem seleção: destinatários definidos pelo evento; saudações para todos os ativos.',
-    'Sin selección: destinatarios del evento; saludos para todos los usuarios activos.',
-    'No selection: recipients are set by the event; greetings go to all active users.',
+    'Os usuários marcados substituem os destinatários padrão. Salve a regra para aplicar a seleção aos próximos avisos.',
+    'Los usuarios marcados sustituyen a los destinatarios predeterminados. Guarde la regla para aplicar la selección a los próximos avisos.',
+    'Selected users replace the default recipients. Save the rule to apply your selection to future alerts.',
+  ],
+  defaultSaleRecipients: [
+    'Sem seleção: somente Lucas recebe os avisos de venda concluída.',
+    'Sin selección: solo Lucas recibe los avisos de venta completada.',
+    'With no selection, only Lucas receives completed sale alerts.',
+  ],
+  defaultSaleProblemRecipients: [
+    'Sem seleção: Lucas e o vendedor daquela venda recebem o aviso.',
+    'Sin selección: Lucas y el vendedor de esa venta reciben el aviso.',
+    'With no selection, Lucas and the seller for that sale receive the alert.',
+  ],
+  defaultTrackingRecipients: [
+    'Sem seleção: Lucas e quem cadastrou o rastreio recebem o aviso. Com seleção, os usuários marcados recebem as próximas atualizações de rastreio.',
+    'Sin selección: Lucas y quien registró el seguimiento reciben el aviso. Con selección, los usuarios marcados reciben las próximas actualizaciones de seguimiento.',
+    'With no selection, Lucas and the tracking creator receive the alert. Selected users receive future tracking updates.',
+  ],
+  defaultGreetingRecipients: [
+    'Sem seleção: todos os usuários ativos recebem o aviso no horário configurado.',
+    'Sin selección: todos los usuarios activos reciben el aviso a la hora configurada.',
+    'With no selection, all active users receive the alert at the configured time.',
+  ],
+  salesRecipientsScope: [
+    'A seleção respeita o acesso às vendas: quem consulta apenas as próprias vendas recebe somente os avisos delas; quem tem acesso geral pode receber avisos de todos os vendedores. Marcar um usuário não altera suas permissões.',
+    'La selección respeta el acceso a las ventas: quien consulta solo sus propias ventas recibe únicamente sus avisos; quien tiene acceso general puede recibir avisos de todos los vendedores. Marcar un usuario no cambia sus permisos.',
+    'Selection respects sales access: users limited to their own sales receive only those alerts; users with access to all sales can receive alerts for all sellers. Selecting a user does not change their permissions.',
   ],
   defaultRecipients: ['Padrão do evento', 'Según el evento', 'Event default'],
   time: ['Horário de Brasília', 'Hora de Brasilia', 'Brasília time'],

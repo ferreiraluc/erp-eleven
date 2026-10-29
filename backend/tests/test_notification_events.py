@@ -8,8 +8,10 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
 from app.models import Usuario
+from app.models.access import AuthSession
 from app.models.usuario import UsuarioRole
 from app.models.notification import Notification, NotificationRecipient, NotificationRule
+from app.models.notification_push import NotificationPushDelivery
 from app.models.cliente import Cliente
 from app.models.pedido import Pedido
 from app.models.pdv import PdvSale, PdvSaleItem
@@ -17,8 +19,10 @@ from app.models.printing import PrintDevice, PrintJob
 from app.models.rastreamento import Rastreamento, RastreamentoStatus
 from app.services import notification_events  # register transactional listeners
 from app.services import notifications
+from app.services import notification_push
 from test_access_postgres import pg
 from test_notifications import MODELS
+from test_notification_push import keys
 from test_pdv_unknown_stock import pdv_app, make_item, sale_payload
 
 
@@ -54,6 +58,104 @@ def sale(db, *, reason=None, avulso=True):
     db.add(PdvSaleItem(sale_id=row.id, item_name='Synthetic fixture', is_avulso=avulso,
                       quantity=1, unit_price_gs=100, total_gs=100))
     return row
+
+
+def synthetic_devices(db):
+    """One local-only subscription per account; never contact a push provider."""
+    devices = {}
+    for user in db.query(Usuario).all():
+        session = AuthSession(id=uuid.uuid4(), user_id=user.id,
+                              expires_at=notifications.utcnow() + timedelta(hours=1))
+        db.add(session)
+        db.flush()
+        devices[user.id] = notification_push.subscribe(
+            db, user, session.id, endpoint=f'https://fcm.googleapis.com/local-only/{user.id}',
+            **keys(), device_token=uuid.uuid4().hex,
+        ).id
+    return devices
+
+
+def assert_recipient_devices(db, notice, expected, devices):
+    recipients = {row.id: row.user_id for row in db.query(NotificationRecipient)
+                  .filter_by(notification_id=notice.id)}
+    assert set(recipients.values()) == expected
+    deliveries = db.query(NotificationPushDelivery).filter_by(notification_id=notice.id).all()
+    assert len(deliveries) == len(expected)
+    assert {row.subscription_id for row in deliveries} == {devices[user_id] for user_id in expected}
+    assert all(row.status == 'queued' and row.attempts == 0 and
+               row.subscription_id == devices[recipients[row.recipient_id]] for row in deliveries)
+
+
+def test_selected_sale_audience_reaches_seller_and_general_manager_with_own_device_jobs(factory):
+    with factory() as db:
+        for name in ('General', 'Inactive'):
+            db.add(Usuario(id=uuid.uuid4(), nome=name, email=f'{name.lower()}@fixture.local',
+                           senha_hash='unused', role=UsuarioRole.GERENTE, sales_scope='all', ativo=True))
+        db.flush()
+        ids = users(db)
+        devices = synthetic_devices(db)
+        db.get(Usuario, ids['Inactive']).ativo = False
+        notifications.ensure_defaults(db)
+        db.get(NotificationRule, 'sale_completed').user_ids = [str(value) for value in ids.values()]
+        db.commit()
+
+        row = sale(db, avulso=False)
+        db.flush()
+        assert db.query(Notification).count() == db.query(NotificationPushDelivery).count() == 0
+        db.commit()
+
+        notice = db.query(Notification).one()
+        expected = {ids['Lucas'], ids['Sol'], ids['General']}
+        assert_recipient_devices(db, notice, expected, devices)
+        assert notice.entity_type == 'pdv_sale' and notice.entity_id == str(row.id)
+        assert notice.action_path == f'/vendas-pdv?sale_id={row.id}'
+        # Selected Other still has personal sales only; an inactive account is
+        # excluded even though its device was registered before deactivation.
+        row.notas = 'Historical correction, no new sale'
+        db.commit()
+        assert db.query(Notification).count() == 1
+        assert_recipient_devices(db, notice, expected, devices)
+
+
+@pytest.mark.parametrize('mode', ['selected', 'default', 'disabled'])
+def test_tracking_audience_uses_selected_users_instead_of_creator_and_preserves_rule_semantics(factory, mode):
+    with factory() as db:
+        ids = users(db)
+        devices = synthetic_devices(db)
+        notifications.ensure_defaults(db)
+        rule = db.get(NotificationRule, 'tracking_status_changed')
+        rule.user_ids = [] if mode == 'default' else [str(ids['Sol']), str(ids['Other'])]
+        rule.enabled = mode != 'disabled'
+        row = Rastreamento(codigo_rastreio='SELECTED123BR', destinatario='Cliente sintético',
+                          status=RastreamentoStatus.PENDENTE, created_by=ids['Lucas'])
+        db.add(row)
+        db.commit()
+        assert db.query(Notification).count() == 0
+
+        row.status = RastreamentoStatus.EM_TRANSITO
+        db.flush()
+        assert db.query(Notification).count() == db.query(NotificationPushDelivery).count() == 0
+        db.commit()
+        if mode == 'disabled':
+            assert db.query(Notification).count() == db.query(NotificationPushDelivery).count() == 0
+            return
+
+        notice = db.query(Notification).one()
+        expected = {ids['Lucas']} if mode == 'default' else {ids['Sol'], ids['Other']}
+        assert_recipient_devices(db, notice, expected, devices)
+        assert notice.entity_type == 'tracking' and notice.entity_id == str(row.id)
+        assert notice.action_path == f'/rastreamento?search={row.codigo_rastreio}'
+        # Provider retries reuse the existing message and device jobs. They do
+        # not add the creator back to an explicitly selected audience.
+        repeated = notifications.emit_event(
+            db, 'tracking_status_changed', context={'tracking_code': row.codigo_rastreio,
+                'status': 'Em trânsito', 'cliente_username': row.destinatario},
+            user_ids=[ids['Lucas']], dedupe_key=notice.dedupe_key,
+            action_path=notice.action_path, entity_type='tracking', entity_id=str(row.id),
+        )
+        db.commit()
+        assert repeated.id == notice.id and db.query(Notification).count() == 1
+        assert_recipient_devices(db, notice, expected, devices)
 
 
 def test_new_sale_reaches_owner_and_unexplained_avulso_only_its_seller(factory):
