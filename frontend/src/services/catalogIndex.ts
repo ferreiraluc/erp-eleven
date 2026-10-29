@@ -95,6 +95,7 @@ export async function prepareCatalogIndex(userId?: string) {
       loading: false,
     })
   }
+  const preparingEpoch = epoch
   if (!worker) {
     try {
       worker = new Worker(new URL('./catalogIndex.worker.ts', import.meta.url), { type: 'module' })
@@ -112,7 +113,9 @@ export async function prepareCatalogIndex(userId?: string) {
         ? waiter.reject(new Error(event.data.error))
         : waiter.resolve(event.data.result)
     }
+    const createdWorker = worker
     worker.onerror = () => {
+      if (worker !== createdWorker) return
       catalogCacheState.error = true
       stopWorker()
     }
@@ -123,13 +126,15 @@ export async function prepareCatalogIndex(userId?: string) {
   }
   try {
     await ready
-    if (!current()) return
+    if (preparingEpoch !== epoch || !current()) return
     releaseWhenIdle()
     if (Date.now() - catalogCacheState.syncedAt > 6 * 60 * 60 * 1000 && !syncing && failures < 3)
       scheduleSync(Math.max(5000, nextAttempt - Date.now()))
   } catch {
-    catalogCacheState.error = true
-    stopWorker()
+    if (preparingEpoch === epoch) {
+      catalogCacheState.error = true
+      stopWorker()
+    }
   }
 }
 export async function refreshCatalogIndex(manual = false) {
