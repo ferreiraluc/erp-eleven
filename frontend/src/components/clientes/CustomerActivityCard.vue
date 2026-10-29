@@ -1,6 +1,8 @@
 <template>
-  <article class="cliente-wrap tracking-surface" data-tracking-status="" :class="{ 'is-expanded': expanded, 'is-inactive': !customer.ativo }">
+  <article class="cliente-wrap tracking-surface" data-tracking-status="" :class="{ 'is-expanded': expanded, 'is-inactive': !customer.ativo, 'is-selected': selected }">
     <div class="cliente-card" :class="{ inactive: !customer.ativo }">
+      <div class="customer-top-row">
+      <label v-if="selectable" class="customer-select"><input type="checkbox" :checked="selected" :disabled="selectionDisabled && !selected" :aria-label="mergeText('selectCustomer', { name: customer.nome })" @change="$emit('select')" /></label>
       <button type="button" class="customer-expand" :aria-expanded="expanded" :aria-controls="panelId" :aria-label="t(expanded ? 'collapse' : 'expand', { name: customer.nome })" @click="$emit('toggle')">
         <span class="cliente-avatar" aria-hidden="true">{{ initials }}</span>
         <span class="customer-heading">
@@ -9,6 +11,7 @@
         </span>
         <svg class="expand-chevron" :class="{ rotated: expanded }" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" /></svg>
       </button>
+      </div>
 
       <div class="customer-overview">
         <div v-if="customer.activity" class="customer-movements">
@@ -40,7 +43,7 @@
 
     <section v-if="expanded" :id="panelId" class="historico-section" :aria-label="t('history')">
       <div class="customer-expanded-top">
-        <dl class="customer-identity"><dt>{{ t('contact') }}</dt><dd v-if="customer.telefone">{{ customer.telefone }}</dd><dd v-if="customer.email">{{ customer.email }}</dd><dd v-if="customer.cpf">{{ customer.cpf }}</dd><dd v-if="customer.endereco">{{ customer.endereco }}</dd><dd v-if="!customer.telefone && !customer.email && !customer.cpf && !customer.endereco">—</dd></dl>
+        <dl class="customer-identity"><dt>{{ t('contact') }}</dt><dd v-if="customer.telefone">{{ customer.telefone }}</dd><dd v-if="customer.email">{{ customer.email }}</dd><dd v-for="(document, index) in customer.documentos || []" :key="index">{{ document.tipo }} · {{ document.pais }}: {{ document.numero }}<template v-if="document.emissor"> · {{ document.emissor }}</template></dd><dd v-if="customer.cpf && !customer.documentos?.some(document => document.tipo === 'CPF')">CPF: {{ customer.cpf }}</dd><dd v-if="customer.endereco">{{ customer.endereco }}</dd><dd v-if="!customer.telefone && !customer.email && !customer.cpf && !customer.documentos?.length && !customer.endereco">—</dd></dl>
         <div class="cliente-actions">
           <RouterLink :to="{ path: '/enderecos', query: { customer_id: customer.id } }" class="erp-button erp-button--secondary erp-button--sm">{{ t('addresses') }}</RouterLink>
           <button type="button" class="erp-button erp-button--secondary erp-button--sm" :title="t('edit')" @click="$emit('edit')">{{ uiText('Editar') }}</button>
@@ -59,10 +62,12 @@ import { RouterLink } from 'vue-router'
 import type { CustomerWithActivity } from '@/services/customerLogistics'
 import { uiText } from '@/i18n/uiText'
 import { customerMessages } from './customerMessages'
+import { customerMergeMessages } from './customerMergeMessages'
 import '@/assets/trackingCards.css'
-const props = defineProps<{ customer: CustomerWithActivity; expanded: boolean }>()
-defineEmits<{ toggle: []; edit: []; deactivate: [] }>()
-const { t, locale } = useI18n({ useScope: 'local', messages: customerMessages })
+const props = defineProps<{ customer: CustomerWithActivity; expanded: boolean; selectable?: boolean; selected?: boolean; selectionDisabled?: boolean }>()
+defineEmits<{ toggle: []; edit: []; deactivate: []; select: [] }>()
+const { t, locale } = useI18n({ useScope: 'local', messages: { pt: { ...customerMessages.pt, ...customerMergeMessages.pt }, es: { ...customerMessages.es, ...customerMergeMessages.es }, en: { ...customerMessages.en, ...customerMergeMessages.en } } })
+const mergeText = t
 const panelId = computed(() => `customer-history-${props.customer.id}`)
 const initials = computed(() => props.customer.nome.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toLocaleUpperCase())
 const number = (value: number) => value.toLocaleString(locale.value)
@@ -72,6 +77,10 @@ const date = (value: string) => new Date(value).toLocaleString(locale.value, { t
 <style scoped>
 .cliente-wrap { border-radius: 14px; overflow: hidden; --tracking-tint: #f2f7ff; --tracking-edge: #a5bad6; --tracking-accent: #2563eb; }
 .cliente-card { padding: 1rem 1.1rem; }
+.customer-top-row { display: flex; align-items: center; gap: .75rem; }
+.customer-select { display: grid; place-items: center; flex: 0 0 32px; min-height: 40px; cursor: pointer; }
+.customer-select input { width: 19px; height: 19px; accent-color: #2563eb; cursor: pointer; }
+.is-selected { --tracking-edge: #6295e2; box-shadow: 0 0 0 1px #6295e2; }
 .customer-expand { width: 100%; display: flex; align-items: center; gap: .8rem; border: 0; background: transparent; text-align: left; padding: 0; color: #0f172a; font: inherit; cursor: pointer; }
 .customer-expand:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 5px; border-radius: 6px; }
 .cliente-avatar { flex: 0 0 42px; height: 42px; display: grid; place-items: center; border: 1px solid #bfdbfe; border-radius: 12px; color: #1d4ed8; background: #eaf2ff; font-weight: 700; font-size: .85rem; }

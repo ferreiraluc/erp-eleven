@@ -7,6 +7,11 @@ backend e PostgreSQL como estado persistente. Os endpoints usam serviços e/ou s
 SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou Celery.
 
 - `frontend/src/main.ts` inicia Vue, Pinia, router e i18n; `App.vue` contém as telas e notificações.
+- O frontend usa Node 22 e Vue I18n 11 em Composition API (`legacy: false`).
+  A atualização pontual da tradução corrige os avisos
+  [GHSA-83rm-6c8r-g728](https://github.com/advisories/GHSA-83rm-6c8r-g728) e
+  [GHSA-8rc2-428q-7ww3](https://github.com/advisories/GHSA-8rc2-428q-7ww3),
+  sem desativar a auditoria de dependências nem migrar os demais componentes Vue.
 - `frontend/src/components/ModuleHeader.vue` padroniza os cabeçalhos dos módulos:
   voltar, título e ações compactas que se reorganizam no celular. As ações e suas
   permissões continuam nas telas. Dashboard e login mantêm composição própria;
@@ -171,13 +176,17 @@ armazenadas como hash no servidor. Segredo de webhook SuperFrete persistido usa 
 
 ### Identidade entre módulos
 
-`customer_identity` resolve o cliente de um endereço salvo, sem fundir pessoas nem
-reescrever snapshots. `customer_reconciliation` associa registros históricos sob locks;
+`customer_identity` compartilha a resolução de clientes, endereços e contas PDV,
+com documentos tipados de `customer_documents`, nomes e contatos/endereço corroborados.
+Identidades ambíguas ficam para revisão, sem criar outra pessoa definitiva; nomes e
+documentos dos aliases confirmados reconhecem o principal. Não reescreve snapshots. `customer_reconciliation` associa registros históricos sob locks;
 rastreios desconhecidos não geram clientes. `address_usage.history_for_ids` serve a
 agenda e a ficha do cliente com as mesmas operações originais. `vendor_activity` reúne
 BI e calendário por identidade persistida, aplicando a autorização financeira antes de
 agregar. A CLI `app.customer_reconciliation` é uma entrada operacional ativa.
-`customer_maintenance` permite consolidar um par de clientes explicitamente revisado,
-preservando a origem como alias e transferindo apenas vínculos. A CLI
+`customer_maintenance` permite consolidar uma seleção de 2 a 20 clientes, com principal,
+prévia única e confirmação adicional de divergências. Preserva as origens como aliases e
+transfere apenas vínculos; contas PDV e saldos continuam separados. A busca SQL de
+`customer_search` inclui documentos e aliases sem trazer o diretório inteiro à memória. A CLI
 `app.customer_maintenance` exige simulação e token do plano antes de aplicar; não
 participa do deploy nem realiza fusão automática por nomes semelhantes.

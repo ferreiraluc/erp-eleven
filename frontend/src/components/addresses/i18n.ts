@@ -2,6 +2,11 @@ import { useI18n } from 'vue-i18n'
 
 // UI copy only. Customer names, addresses and operational values are never translated.
 const messages: Record<string, [string, string]> = {
+  "Tipo de documento": ["Tipo de documento", "Document type"],
+  "(opcional na impressão)": ["(opcional para impresión)", "(optional for printing)"],
+  "Tipo não informado": ["Tipo no informado", "Type not provided"],
+  "Emissor / UF do RG (opcional)": ["Emisor / UF del RG (opcional)", "RG issuer / state (optional)"],
+  "Conferir endereços": ["Revisar direcciones", "Review addresses"],
   "A prévia mantém o modelo e o remetente escolhido até a impressão.": ["La vista previa conserva el modelo y el remitente seleccionado hasta la impresión.", "The preview keeps the selected layout and sender until printing."],
   "Alternar os cinco modelos a cada nova prévia": ["Alternar los cinco modelos en cada nueva vista previa", "Rotate the five layouts for each new preview"],
   "Blocos": ["Bloques", "Blocks"],

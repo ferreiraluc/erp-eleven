@@ -8,7 +8,9 @@ from sqlalchemy import and_, or_, func
 from ..models.cliente import Cliente
 from ..models.pdv import PdvCliente
 from ..models.address_book import SavedAddress
-from .customer_identity import name_key, phone_key
+from .customer_identity import name_key, phone_key, pdv_identity_data, compatible_name
+from .customer_documents import customer_documents, input_documents, documents_overlap, documents_conflict
+from .customer_search import directory_match
 from .user_audit import record
 
 
@@ -35,6 +37,8 @@ def search(db, query, limit=20):
     if len(term) < 2:
         return {'items': [], 'has_more': False}
     normalize = normalizer(db)
+    literal_only = any(character in query for character in '%_\\')
+    literal_pattern = '%' + query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
     tokens = name_key(query).split() if not any(c.isdigit() for c in term) else [term]
     phone_terms = {term}
     canonical_phone = phone_key(query)
@@ -44,10 +48,13 @@ def search(db, query, limit=20):
             phone_terms.add(canonical_phone[3:])
         elif canonical_phone.startswith('55') and len(canonical_phone) in (12, 13):
             phone_terms.add(canonical_phone[2:])
-    legacy_cep = normalize(Cliente.endereco).contains(term, autoescape=True) if term.isdigit() and len(term) == 8 else False
+    legacy_cep = normalize(Cliente.endereco).contains(term, autoescape=True) if not literal_only and term.isdigit() and len(term) == 8 else False
+    directory_identity = directory_match(str(query).strip())
 
     def matches(name, phone, doc):
         # Never interpolate input into SQL or interpret %/_ as wildcards.
+        if literal_only:
+            return or_(*(column.ilike(literal_pattern, escape='\\') for column in (name, phone, doc)))
         return or_(and_(*(normalize(name).contains(key(t), autoescape=True) for t in tokens)),
                    *(normalize(phone).contains(t, autoescape=True) for t in sorted(phone_terms)),
                    normalize(doc).contains(term, autoescape=True))
@@ -60,7 +67,9 @@ def search(db, query, limit=20):
             SavedAddress.customer_link_review.is_(False), or_(*links))
 
     def address_match(q):
-        return q.filter(or_(normalize(SavedAddress.data['cep'].as_string()).contains(term, autoescape=True),
+        postcode = SavedAddress.data['cep'].as_string()
+        postcode_match = postcode.ilike(literal_pattern, escape='\\') if literal_only else normalize(postcode).contains(term, autoescape=True)
+        return q.filter(or_(postcode_match,
             matches(SavedAddress.data['nome'].as_string(), SavedAddress.data['telefone'].as_string(),
                     SavedAddress.data['cpf'].as_string()))).exists()
 
@@ -69,12 +78,13 @@ def search(db, query, limit=20):
             and_(Cliente.ativo.is_(True), Cliente.merged_into_id.is_(None))),
         or_(matches(PdvCliente.nome, PdvCliente.telefone, PdvCliente.doc),
             matches(Cliente.nome, Cliente.telefone, Cliente.cpf),
+            directory_identity,
             legacy_cep,
             address_match(addresses(PdvCliente.cadastro_cliente_id, PdvCliente.id))))
     # A directory record already linked to PDV appears only as its PDV identity.
     main_query = db.query(Cliente).filter(Cliente.ativo.is_(True), Cliente.merged_into_id.is_(None),
         ~db.query(PdvCliente.id).filter(PdvCliente.cadastro_cliente_id == Cliente.id).exists(),
-        or_(matches(Cliente.nome, Cliente.telefone, Cliente.cpf), legacy_cep, address_match(addresses(Cliente.id))))
+        or_(matches(Cliente.nome, Cliente.telefone, Cliente.cpf), directory_identity, legacy_cep, address_match(addresses(Cliente.id))))
     rows = [('pdv', c) for c in pdv_query.order_by(PdvCliente.nome, PdvCliente.id).limit(limit + 1)]
     rows += [('cadastro', c) for c in main_query.order_by(Cliente.nome, Cliente.id).limit(limit + 1)]
     rows.sort(key=lambda pair: (key(pair[1].nome) != term, name_key(pair[1].nome), pair[0], str(pair[1].id)))
@@ -126,21 +136,29 @@ def select(db, selection, user):
         return existing[0]
     normalize = normalizer(db)
     identifiers = []
-    if main.cpf and len(key(main.cpf)) >= 6: identifiers.append(normalize(PdvCliente.doc) == key(main.cpf))
+    documents = customer_documents(main)
+    numbers = [key(document['numero']) for document in documents]
+    if numbers:
+        identifiers.append(normalize(PdvCliente.doc).in_(numbers))
     # Full telephone only, and always corroborated by the full name below.
     if main.telefone and len(key(main.telefone)) >= 8:
         identifiers.append(normalize(PdvCliente.telefone).in_([key(main.telefone), phone_key(main.telefone)]))
     candidates = db.query(PdvCliente).filter(or_(*identifiers)).order_by(PdvCliente.id).with_for_update().all() if identifiers else []
     if candidates:
         compatible = [c for c in candidates if c.ativo and not c.cadastro_cliente_id and
-            name_key(c.nome) == name_key(main.nome) and
-            not (c.doc and main.cpf and key(c.doc) != key(main.cpf))]
+            compatible_name(c.nome, main.nome) and
+            not documents_conflict(documents, input_documents(pdv_identity_data(c))) and
+            (documents_overlap(documents, input_documents(pdv_identity_data(c))) or
+             bool(phone_key(c.telefone) and phone_key(c.telefone) == phone_key(main.telefone)))]
         if len(candidates) != 1 or len(compatible) != 1:
             raise HTTPException(409, 'Já existe cadastro PDV com esses contatos. Confira e selecione-o na busca antes de vender.')
         customer = compatible[0]
         customer.cadastro_cliente_id = main.id
     else:
-        customer = PdvCliente(nome=main.nome, doc=main.cpf, telefone=main.telefone, email=main.email,
+        document = next(iter(documents), None)
+        customer = PdvCliente(nome=main.nome, doc=document['numero'] if document else None,
+                              doc_tipo=document['tipo'] if document else None,
+                              doc_pais=document['pais'] if document else None, telefone=main.telefone, email=main.email,
                               cadastro_cliente_id=main.id, created_by=user.id)
         db.add(customer)
     db.flush()

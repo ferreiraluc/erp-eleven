@@ -9,6 +9,8 @@ class AddressData(BaseModel):
     nome: str = Field(default='', max_length=120)
     telefone: str = Field(default='', max_length=40)
     cpf: str = Field(default='', max_length=20)
+    documento_tipo: Literal['CPF','CNPJ','RG','CI','RUC'] | None = None
+    documento_emissor: str | None = Field(default=None, max_length=20)
     endereco: str = Field(default='', max_length=250)
     numero: str = Field(default='', max_length=10)
     bairro: str = Field(default='', max_length=60)
@@ -17,6 +19,18 @@ class AddressData(BaseModel):
     estado: str = Field(default='', max_length=60)
     cep: str = Field(default='', max_length=15)
     email: str = Field(default='', max_length=100)
+
+    @model_validator(mode='after')
+    def document_namespace(self):
+        if self.documento_tipo:
+            from ..services.customer_documents import DOCUMENT_COUNTRIES, normalize_document
+            if DOCUMENT_COUNTRIES[self.documento_tipo] != self.pais:
+                raise ValueError('O país não corresponde ao tipo de documento.')
+            document = normalize_document({'tipo': self.documento_tipo, 'pais': self.pais,
+                'numero': self.cpf, 'emissor': self.documento_emissor}) if self.cpf else None
+            if self.cpf and not document:
+                raise ValueError('Confira o tipo, país e número do documento do destinatário.')
+        return self
 
 
 class AddressInput(BaseModel):

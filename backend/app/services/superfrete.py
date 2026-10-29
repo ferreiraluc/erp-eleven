@@ -13,6 +13,7 @@ from ..models.printing import PrintSender
 from ..schemas.address_book import AddressData
 from ..models.assistant import utcnow
 from .superfrete_errors import ProviderError, response_error, valid_document, UNAVAILABLE, UNCERTAIN
+from .document_snapshot import comparable_document_snapshot
 
 
 class Package(BaseModel):
@@ -74,6 +75,8 @@ def call(method,path,body=None):
 
 def party(data,recipient=False):
     if data.get('pais')!='BR':raise HTTPException(400,'SuperFrete exige endereço no Brasil.')
+    if data.get('cpf') and data.get('documento_tipo') not in (None, 'CPF', 'CNPJ'):
+        raise HTTPException(400, 'A emissão SuperFrete exige CPF/CNPJ; RG, CI e RUC não substituem esse documento.')
     names={'nome':'name','endereco':'address','numero':'number','bairro':'district','complemento':'complement','cidade':'city','estado':'state_abbr','cep':'postal_code','cpf':'document'}
     p={dst:str(data.get(src) or '').strip() for src,dst in names.items()}
     p['postal_code']=re.sub(r'\D','',p['postal_code']);p['document']=re.sub(r'\D','',p['document']);p['state_abbr']=p['state_abbr'].upper()
@@ -95,7 +98,7 @@ def party(data,recipient=False):
 def quote_order(db,body,user_id):
     previous=db.query(FreightOrder).filter_by(request_key=body.request_key).first()
     if previous:
-        if previous.user_id!=user_id or previous.payload.get('_request')!=body.model_dump(mode='json',exclude={'request_key'}):raise HTTPException(409,'Identificador já utilizado com outros dados.')
+        if previous.user_id!=user_id or comparable_document_snapshot(previous.payload.get('_request'))!=comparable_document_snapshot(body.model_dump(mode='json',exclude={'request_key'})):raise HTTPException(409,'Identificador já utilizado com outros dados.')
         return previous
     from .address_book import resolve_address
     address=resolve_address(db,body.address_id)

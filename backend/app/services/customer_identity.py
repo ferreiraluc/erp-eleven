@@ -7,6 +7,8 @@ import re
 import unicodedata
 from ..models.cliente import Cliente
 from .user_audit import record
+from .customer_documents import (customer_documents, input_documents, documents_overlap,
+                                 documents_conflict, unique_documents, legacy_document)
 
 
 def name_key(value):
@@ -36,10 +38,12 @@ def document_key(value, country='BR'):
     return digits if len(digits) in (11, 14) and len(set(digits)) > 1 else ''
 
 
+def document_conflicts(customer, data):
+    return documents_conflict(customer_documents(customer), input_documents(data))
+
+
 def compatible_person(customer, data):
-    doc, old_doc = document_key(data.get('cpf'), data.get('pais', 'BR')), document_key(customer.cpf)
-    # Phones can legitimately change. Different known documents establish conflict.
-    return not (doc and old_doc and doc != old_doc)
+    return not document_conflicts(customer, data)
 
 
 def email_key(value):
@@ -49,6 +53,7 @@ def email_key(value):
 
 def address_key(value):
     """Full location evidence, never a city/CEP/name alone."""
+    value = re.sub(r'(?<!\d)(\d{5})[-\s]+(\d{3})(?!\d)', r'\1\2', str(value or ''))
     key = name_key(value)
     key = re.sub(r'^av\s+', 'avenida ', key)
     key = re.sub(r'^r\s+', 'rua ', key)
@@ -68,18 +73,18 @@ def address_key(value):
     return key if separate_number or embedded_number else ''
 
 
-def corroboration(customer, data):
-    """Return strong identity evidence without replacing contacts/snapshots."""
-    if not compatible_person(customer, data):
+def corroboration(customer, data, *, documents=None):
+    """Return corroborated evidence; surname, street or postal code alone is insufficient."""
+    before = customer_documents(customer) if documents is None else documents
+    after = input_documents(data)
+    if documents_conflict(before, after):
         return None
+    if documents_overlap(before, after):
+        return 'document'
     phone, old_phone = phone_key(data.get('telefone'), data.get('pais')), phone_key(customer.telefone)
     email, old_email = email_key(data.get('email')), email_key(customer.email)
-    # An otherwise matching address cannot choose between conflicting identities.
     if (phone and old_phone and phone != old_phone) or (email and old_email and email != old_email):
         return None
-    doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
-    if doc and doc == document_key(customer.cpf):
-        return 'document'
     if phone and phone == old_phone:
         return 'name_phone'
     if email and email == old_email:
@@ -91,45 +96,65 @@ def corroboration(customer, data):
     return None
 
 
-def find_customer(db, data, *, customers=None):
-    name = name_key(data.get('nome'))
-    phone = phone_key(data.get('telefone'), data.get('pais'))
-    doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
-    customers = db.query(Cliente).populate_existing().all() if customers is None else customers
-    by_id = {c.id: c for c in customers}
-    names = {c.id: {name_key(c.nome)} for c in customers if not c.merged_into_id}
-    # Only explicitly consolidated aliases can supply another known name. Old
-    # contacts/documents do not override the identity chosen for the principal.
+def compatible_name(incoming, known):
+    left, right = name_key(incoming).split(), name_key(known).split()
+    if not full_name(incoming) or not full_name(known):
+        return False
+    # Extra middle names may be absent. A shared surname alone cannot choose a person.
+    return left == right or (left[0] == right[0] and left[-1] == right[-1] and
+                             (set(left).issubset(right) or set(right).issubset(left)))
+
+
+def customer_identity_groups(customers):
+    by_id = {customer.id: customer for customer in customers}
+    roots = {customer.id: customer for customer in customers if not customer.merged_into_id}
+    groups = {key: [customer] for key, customer in roots.items()}
     for alias in customers:
         row, seen = alias, set()
         while row and row.merged_into_id and row.id not in seen:
             seen.add(row.id)
             row = by_id.get(row.merged_into_id)
-        if row and row.id in names:
-            names[row.id].add(name_key(alias.nome))
-    customers = [c for c in customers if not c.merged_into_id]
-    named = [c for c in customers if name and name in names[c.id]]
-    same_person = lambda c: bool(name and any(set(name.split()).issubset(n.split()) for n in names[c.id]))
-    documented = [c for c in customers if doc and document_key(c.cpf) == doc]
-    if documented and not any(same_person(c) for c in documented):
+        if alias.merged_into_id and row and row.id in groups:
+            groups[row.id].append(alias)
+    return roots, groups
+
+
+def find_customer(db, data, *, customers=None, exclude_id=None):
+    name = name_key(data.get('nome'))
+    after = input_documents(data)
+    customers = db.query(Cliente).populate_existing().all() if customers is None else customers
+    roots, groups = customer_identity_groups(customers)
+    if exclude_id is not None:
+        roots.pop(exclude_id, None)
+    names = {key: {name_key(row.nome) for row in groups[key]} for key in roots}
+    documents = {key: unique_documents(doc for row in groups[key] for doc in customer_documents(row)) for key in roots}
+    compatible_names = {key for key in roots if any(compatible_name(name, known) for known in names[key])}
+    named = [customer for key, customer in roots.items() if name and name in names[key]]
+    documented = [customer for key, customer in roots.items() if documents_overlap(documents[key], after)]
+    # Typed documents are preserved on historical aliases and are not a unique
+    # database column. A number shared by two unconfirmed principals (or a payload
+    # combining one person's CI with another's RUC) cannot silently choose one by
+    # name. Confirmed aliases have already collapsed into a single root above.
+    if len(documented) > 1:
+        return None, 'ambiguous', documented
+    if documented and documented[0].id not in compatible_names:
         return None, 'document_name_conflict', documented
-    corroborated = [(c, corroboration(c, data)) for c in named if full_name(name)]
-    corroborated = [(c, reason) for c, reason in corroborated if reason]
+    corroborated = []
+    for key in compatible_names:
+        customer = roots[key]
+        # Contacts and addresses on confirmed aliases remain valid identity evidence,
+        # without replacing the principal's current details or historic snapshots.
+        reasons = [corroboration(row, data, documents=documents[key]) for row in groups[key]]
+        reason = next((value for value in reasons if value), None)
+        if reason:
+            corroborated.append((customer, reason))
     if len(corroborated) == 1:
         return corroborated[0][0], corroborated[0][1], []
     if len(corroborated) > 1:
-        return None, 'ambiguous', [c for c, _ in corroborated]
-    strong = [c for c in customers if compatible_person(c, data) and (
-        (doc and document_key(c.cpf) == doc and same_person(c)) or
-        (phone and phone_key(c.telefone) == phone and same_person(c)))]
-    if len(strong) == 1:
-        return strong[0], 'document' if doc and document_key(strong[0].cpf) == doc else 'name_phone', []
-    if len(strong) > 1: return None, 'ambiguous', strong
-    if (len(named) == 1 and full_name(name) and compatible_person(named[0], data)
-            and not (phone and phone_key(named[0].telefone) and phone != phone_key(named[0].telefone))):
-        return named[0], 'unique_full_name', []
-    if named: return None, 'conflicting_or_short_name', named
-    return None, 'new_customer' if name else 'missing_name', []
+        return None, 'ambiguous', [customer for customer, _ in corroborated]
+    if named or compatible_names:
+        return None, 'conflicting_or_unconfirmed_name', named or [roots[key] for key in compatible_names]
+    return None, 'new_customer' if full_name(name) else 'missing_or_short_name', []
 
 
 def address_text(data):
@@ -137,36 +162,104 @@ def address_text(data):
                      ('endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'pais') if data.get(k))
 
 
+def enrich_customer_documents(customer, data):
+    before, after = customer_documents(customer), input_documents(data)
+    if documents_conflict(before, after):
+        return False
+    merged = unique_documents([*(getattr(customer, 'documentos', None) or []), *after])
+    if merged != (customer.documentos or []):
+        customer.documentos = merged
+        return True
+    return False
+
+
 def ensure_customer(db, row):
-    """Every new address belongs to a customer; ambiguous identities stay separate."""
-    if row.cliente_id or row.pdv_cliente_id:
+    """Resolve confirmed address input without creating a permanent ambiguous person."""
+    if row.cliente_id:
+        customer = db.get(Cliente, row.cliente_id)
+        if customer:
+            if document_conflicts(customer, row.data):
+                changed = not row.customer_link_review or row.customer_link_reason != 'document_conflict'
+                row.customer_link_review = True
+                row.customer_link_reason = 'document_conflict'
+                return changed
+            enrich_customer_documents(customer, row.data)
+        return False
+    if row.pdv_cliente_id:
+        from ..models.pdv import PdvCliente
+        account = db.get(PdvCliente, row.pdv_cliente_id)
+        if account:
+            ensure_pdv_customer(db, account)
         return False
     data = row.data
     customer, reason, candidates = find_customer(db, data)
-    created = customer is None
+    created = False
+    if customer is None and (candidates or not full_name(data.get('nome'))):
+        changed = not row.customer_link_review or row.customer_link_reason != reason
+        row.customer_link_review = True
+        row.customer_link_reason = reason
+        db.flush()
+        return changed
     if customer is None:
-        doc = document_key(data.get('cpf'), data.get('pais', 'BR'))
-        # A conflicting existing document stays only in the address for review.
-        if doc and any(document_key(c.cpf) == doc for c in db.query(Cliente)):
-            doc = None
-        customer = Cliente(nome=data.get('nome') or 'Cliente a identificar',
-                           telefone=phone_key(data.get('telefone'), data.get('pais')) or None,
-                           email=data.get('email') or None, cpf=doc or None,
-                           endereco=address_text(data) or None, ativo=True)
-        db.add(customer); db.flush()
+        legacy = legacy_document(data.get('cpf'), data.get('pais', 'BR')) if not data.get('documento_tipo') or data.get('documento_tipo') in {'CPF', 'CNPJ'} else None
+        customer = Cliente(nome=data['nome'], telefone=phone_key(data.get('telefone'), data.get('pais')) or None,
+            email=data.get('email') or None, cpf=legacy['numero'] if legacy else None,
+            documentos=input_documents(data), endereco=address_text(data) or None, ativo=True)
+        db.add(customer)
+        db.flush()
+        created = True
     else:
-        # Do not rewrite existing contact details or reactivate archived customers.
-        if not customer.telefone: customer.telefone = phone_key(data.get('telefone'), data.get('pais')) or None
-        if not customer.email: customer.email = data.get('email') or None
-        if not customer.endereco: customer.endereco = address_text(data) or None
+        if not customer.telefone:
+            customer.telefone = phone_key(data.get('telefone'), data.get('pais')) or None
+        if not customer.email:
+            customer.email = data.get('email') or None
+        if not customer.endereco:
+            customer.endereco = address_text(data) or None
+        enrich_customer_documents(customer, data)
     row.cliente_id = customer.id
-    row.customer_link_review = bool(candidates) or (created and not full_name(data.get('nome'))) or not customer.ativo
+    row.customer_link_review = not customer.ativo
     row.customer_link_reason = reason
     db.flush()
     if db.info.get('audit_actor'):
         record(db, 'customer_auto_created' if created else 'customer_auto_linked', 'clientes',
-               entity='saved_addresses', entity_id=str(row.id),
-               changes={'cliente_id': str(customer.id), 'reason': reason, 'review': row.customer_link_review})
+            entity='saved_addresses', entity_id=str(row.id), changes={'cliente_id': str(customer.id),
+                'reason': reason, 'review': row.customer_link_review})
+    return True
+
+
+def pdv_identity_data(row):
+    return {'nome': row.nome, 'telefone': row.telefone, 'email': row.email,
+            'doc': row.doc, 'doc_tipo': row.doc_tipo, 'doc_pais': row.doc_pais}
+
+
+def ensure_pdv_customer(db, row):
+    """Add the canonical directory link; never merge PDV accounts, sales or credit."""
+    if row.cadastro_cliente_id:
+        customer = db.get(Cliente, row.cadastro_cliente_id)
+        return bool(customer and enrich_customer_documents(customer, pdv_identity_data(row)))
+    if not row.ativo or not full_name(row.nome):
+        return False
+    from .address_book import lock_addresses
+    lock_addresses(db)
+    data = pdv_identity_data(row)
+    customer, reason, candidates = find_customer(db, data)
+    if customer is None and candidates:
+        return False
+    created = customer is None
+    if customer is None:
+        documents = input_documents(data)
+        legacy = next((doc['numero'] for doc in documents if doc['tipo'] in {'CPF', 'CNPJ'}), None)
+        customer = Cliente(nome=row.nome, telefone=row.telefone, email=row.email,
+            cpf=legacy, documentos=documents, ativo=True)
+        db.add(customer)
+        db.flush()
+    if not customer.ativo:
+        return False
+    enrich_customer_documents(customer, data)
+    row.cadastro_cliente_id = customer.id
+    if db.info.get('audit_actor'):
+        record(db, 'customer_auto_created' if created else 'pdv_customer_auto_linked', 'clientes',
+            entity='pdv_clientes', entity_id=str(row.id), changes={'cadastro_cliente_id': str(customer.id), 'reason': reason})
     return True
 
 

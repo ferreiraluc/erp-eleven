@@ -23,7 +23,12 @@ def resolve_address(db, key):
 
 
 def compatible(row, data, cliente_id=None, pdv_cliente_id=None):
-    if str(data.get('pais','')).upper() == 'PY':
+    from .customer_documents import input_documents, documents_conflict
+    before_documents, after_documents = input_documents(row.data), input_documents(data)
+    if before_documents and after_documents:
+        if documents_conflict(before_documents, after_documents):
+            raise HTTPException(409, 'O documento desse tipo e país diverge do endereço salvo. Confira o destinatário antes de continuar.')
+    elif str(data.get('pais','')).upper() == 'PY':
         # RUC/C.I may contain letters. Equal numeric parts do not establish
         # the same document, and repeated digits are not Brazilian placeholders.
         document = lambda value: ''.join(c for c in str(value or '').casefold() if c.isalnum())
@@ -62,7 +67,29 @@ def save_or_reuse(db, data, user_id, *, label=None, cliente_id=None, pdv_cliente
         compatible(row,data,cliente_id,pdv_cliente_id)
         changed = False
         enriched = {**row.data}
+        # The saved primary document and its type travel together. A subsequent
+        # print can use another document, but must not relabel the original value.
+        from .customer_documents import input_documents, normalized_number, document_identity
+        before_docs, after_docs = input_documents(row.data), input_documents(data)
+        same_value = normalized_number(row.data.get('cpf')) == normalized_number(data.get('cpf'))
+        same_namespace = not before_docs or not after_docs or any(
+            document_identity(before)[:3] == document_identity(after)[:3]
+            for before in before_docs for after in after_docs)
+        enrich_primary = not row.data.get('cpf') or (same_value and same_namespace)
+        if not row.data.get('cpf') and data.get('cpf'):
+            # A selected type without a number is not an existing document.
+            # Fill its value and metadata atomically, never retain an empty
+            # CI/RG selection as the label of a newly supplied RUC/CPF.
+            enriched['cpf'] = data['cpf']
+            for field in ('documento_tipo', 'documento_emissor'):
+                if data.get(field):
+                    enriched[field] = data[field]
+                else:
+                    enriched.pop(field, None)
+            changed = True
         for field,value in data.items():
+            if field in {'cpf', 'documento_tipo', 'documento_emissor'} and not enrich_primary:
+                continue
             if value and not enriched.get(field):enriched[field]=value;changed=True
         if not row.cliente_id and not row.pdv_cliente_id and (cliente_id or pdv_cliente_id):
             row.cliente_id,row.pdv_cliente_id=cliente_id,pdv_cliente_id;changed=True
@@ -72,6 +99,12 @@ def save_or_reuse(db, data, user_id, *, label=None, cliente_id=None, pdv_cliente
         from .customer_identity import ensure_customer
         if ensure_customer(db, row) and not changed:
             row.version += 1; row.updated_at=utcnow()
+        if row.cliente_id:
+            from ..models.cliente import Cliente
+            from .customer_identity import enrich_customer_documents
+            customer = db.get(Cliente, row.cliente_id)
+            if customer:
+                enrich_customer_documents(customer, data)
         db.flush()
         return row, True
     row=SavedAddress(label=label or data.get('nome') or 'Endereço',data=data,created_by=user_id,

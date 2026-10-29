@@ -1,7 +1,7 @@
 <template>
   <div class="clientes-view">
     <ModuleHeader :title="uiText('Clientes')">
-      <button v-if="auth.isOwner" class="erp-button erp-button--secondary" @click="showDuplicates=true">{{ uiText('Conferir duplicidades') }}</button>
+      <button v-if="auth.isOwner" type="button" class="erp-button erp-button--secondary" :aria-pressed="selectionMode" @click="toggleSelectionMode">{{ mergeText(selectionMode ? 'finish' : 'select') }}</button>
       <button @click="openCreate" class="btn btn-primary erp-button erp-button--primary">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -24,6 +24,11 @@
         </button>
         <div class="customer-sort"><ErpSelect v-model="sort" :label="customerText('sort')"><option value="nome">{{ customerText('name') }}</option><option value="ultima_compra">{{ customerText('latestPurchase') }}</option><option value="ultima_impressao">{{ customerText('latestPrint') }}</option></ErpSelect></div>
         <span v-if="!loading && !loadError" class="total-count">{{ total === 1 ? uiText('{0} cliente',{0:total}) : uiText('{0} clientes',{0:total}) }}</span>
+      </div>
+      <div v-if="selectionMode && auth.isOwner" class="customer-selection" role="region" :aria-label="mergeText('selected', { count: selectedCustomers.length })">
+        <div><strong>{{ mergeText('selected', { count: selectedCustomers.length }) }}</strong><p>{{ mergeText('selectionHelp') }}</p></div>
+        <div class="customer-selection-actions"><button type="button" class="erp-button erp-button--ghost erp-button--sm" :disabled="!selectedCustomers.length" @click="selectedById = {}">{{ mergeText('clear') }}</button><button type="button" class="erp-button erp-button--primary erp-button--sm" :disabled="selectedCustomers.length < 2" @click="showMerge = true">{{ mergeText('merge') }}</button></div>
+        <p v-if="selectedCustomers.length >= selectionLimit" class="customer-selection-limit" role="status">{{ mergeText('limit') }}</p>
       </div>
     </div>
 
@@ -51,7 +56,9 @@
     <div v-else class="clientes-list">
       <CustomerActivityCard
         v-for="c in clientes" :key="c.id" :customer="c" :expanded="expandedId === c.id"
+        :selectable="selectionMode && auth.isOwner" :selected="selectionMode && !!selectedById[c.id]" :selection-disabled="selectedCustomers.length >= selectionLimit"
         @toggle="toggleHistory(c.id)" @edit="openEdit(c)" @deactivate="confirmDelete(c)"
+        @select="toggleSelected(c)"
       >
         <CustomerLogisticsPanel v-if="expandedId === c.id" :customer="c" @changed="refreshActivity" />
       </CustomerActivityCard>
@@ -63,7 +70,7 @@
       <button @click="changePage(page + 1)" class="erp-button erp-button--secondary" :disabled="loading || page >= totalPages">{{ uiText('Próxima') }}</button>
     </nav>
 
-    <DirectoryDuplicatesModal v-if="showDuplicates && auth.isOwner" @close="showDuplicates=false" @changed="reload" />
+    <CustomerMergeSelectionModal v-if="showMerge && auth.isOwner" :customers="selectedCustomers" @close="showMerge = false" @changed="onMerged" />
 
     <!-- Form Modal -->
     <ClienteFormModal
@@ -82,7 +89,7 @@
 
 <script setup lang="ts">
 import ModuleHeader from '@/components/ModuleHeader.vue'
-import DirectoryDuplicatesModal from '@/components/clientes/DirectoryDuplicatesModal.vue'
+import CustomerMergeSelectionModal from '@/components/clientes/CustomerMergeSelectionModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { uiText } from '@/i18n/uiText'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -93,9 +100,15 @@ import CustomerActivityCard from '@/components/clientes/CustomerActivityCard.vue
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { useI18n } from 'vue-i18n'
 import { customerMessages } from '@/components/clientes/customerMessages'
+import { customerMergeMessages } from '@/components/clientes/customerMergeMessages'
 import type { CustomerSort, CustomerWithActivity } from '@/services/customerLogistics'
-const { t: customerText } = useI18n({ useScope: 'local', messages: customerMessages })
-const auth = useAuthStore(), showDuplicates = ref(false)
+const { t: customerText } = useI18n({ useScope: 'local', messages: { pt: { ...customerMessages.pt, ...customerMergeMessages.pt }, es: { ...customerMessages.es, ...customerMergeMessages.es }, en: { ...customerMessages.en, ...customerMergeMessages.en } } })
+const mergeText = customerText
+const auth = useAuthStore()
+const selectionMode = ref(false), showMerge = ref(false)
+const selectedById = ref<Record<string, Cliente>>({})
+const selectedCustomers = computed(() => Object.values(selectedById.value))
+const selectionLimit = 20
 
 type CustomerStatusFilter = 'active' | 'inactive' | 'all'
 const clientes = ref<CustomerWithActivity[]>([])
@@ -131,11 +144,34 @@ watch(() => auth.token, () => {
   requestVersion++
   if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
   clientes.value = []; total.value = 0; expandedId.value = null
-  showForm.value = false; editingCliente.value = null; showDuplicates.value = false
+  showForm.value = false; editingCliente.value = null; showMerge.value = false
+  selectedById.value = {}; selectionMode.value = false
   loadError.value = false
   if (auth.token) void loadPage(1)
   else loading.value = false
 }, { flush: 'sync' })
+watch(() => auth.isOwner, owner => {
+  if (!owner) { selectedById.value = {}; selectionMode.value = false; showMerge.value = false }
+}, { flush: 'sync' })
+
+function toggleSelectionMode() { selectionMode.value = !selectionMode.value }
+function toggleSelected(customer: Cliente) {
+  if (!auth.isOwner || !selectionMode.value) return
+  const selected = { ...selectedById.value }
+  if (selected[customer.id]) delete selected[customer.id]
+  else if (selectedCustomers.value.length < selectionLimit) selected[customer.id] = customer
+  selectedById.value = selected
+}
+async function onMerged(targetId: string, sourceIds: string[]) {
+  const token = auth.token
+  showMerge.value = false
+  const selected = { ...selectedById.value }
+  sourceIds.forEach(id => { delete selected[id] })
+  selectedById.value = selected
+  expandedId.value = targetId
+  await loadPage(page.value)
+  if (token === auth.token) showToast(mergeText('success'), 'success')
+}
 
 function reload() {
   expandedId.value = null
@@ -161,6 +197,9 @@ async function loadPage(targetPage: number, background = false) {
       return
     }
     clientes.value = result.items
+    for (const customer of result.items) {
+      if (selectedById.value[customer.id]) selectedById.value[customer.id] = customer
+    }
     if (expandedId.value && !clientes.value.some(customer => customer.id === expandedId.value)) expandedId.value = null
   } catch {
     if (version !== requestVersion || token !== auth.token) return
@@ -244,6 +283,11 @@ onUnmounted(() => { requestVersion++; if (searchTimer) clearTimeout(searchTimer)
 
 .clientes-list { padding: .3rem 1rem 2rem; max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: .85rem; }
 .customer-sort { width: 210px; margin-left: auto; max-width: 100%; }
+.customer-selection { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .7rem; margin-top: .9rem; padding: .8rem; background: #eff6ff; border: 1px solid #c7dbf8; border-radius: 12px; }
+.customer-selection strong { color: #1d4ed8; font-size: .8rem; }
+.customer-selection p { margin: .25rem 0 0; color: #64748b; font-size: .73rem; line-height: 1.5; }
+.customer-selection-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+.customer-selection .customer-selection-limit { width: 100%; color: #92400e; }
 /* ─── Misc ─────────────────────────────────────────── */
 .customer-pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 0 1rem 2rem; color: #6b7280; font-size: .8rem; }
 

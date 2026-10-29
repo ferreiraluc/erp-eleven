@@ -80,7 +80,9 @@ com itens, devoluções, atalho aos detalhes da venda e valores separados do BI.
 Os cards expansíveis exibem contadores de compras, rastreios e solicitações de
 impressão, com organização pelas últimas compras ou impressões. Lucas pode conferir
 e associar históricos ainda sem vínculo por identidade corroborada, preservando
-os registros originais; novos fluxos aproveitam nomes, endereços e contatos compatíveis.
+os registros originais. A seleção permite unificar de 2 a 20 clientes em um principal;
+novos lançamentos reaproveitam identidades corroboradas, com documentos tipados
+CPF/CNPJ/RG (BR) e CI/RUC (PY), e ambiguidades pedem revisão sem criar duplicatas definitivas.
 O acesso pessoal dos vendedores é aplicado antes dos resumos e da paginação.
 Clientes e Pedidos usam busca e paginação no servidor, incluindo registros antigos
 além da primeira página. Criação de grades e duplicação preservam os locks e leem

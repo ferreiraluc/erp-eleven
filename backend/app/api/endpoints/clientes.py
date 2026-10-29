@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from sqlalchemy.exc import IntegrityError
+from pydantic import ValidationError
 from typing import List, Optional, Literal
 from ...database import get_db
 from ...models.cliente import Cliente
@@ -16,9 +17,10 @@ from ...schemas.customer_links import (
 from ...schemas.rastreamento import RastreamentoComPedido
 from ...services.customer_links import customer_shipments, inherit_order_customer, validate_tracking_links, lock_tracking_row
 from ...services.customer_maintenance import resolve_customer
-from ...services.customer_identity import find_customer
+from ...services.customer_identity import find_customer, full_name, enrich_customer_documents
 from ...services.customer_purchases import customer_purchases
 from ...services.customer_activity import customer_activity, order_customer_directory
+from ...services.customer_search import directory_match
 from ...services.address_book import lock_addresses
 from ...dependencies import get_current_active_user, require_role, require_owner
 from ..validators import validate_uuid
@@ -52,16 +54,7 @@ def listar_clientes(
     if not include_inactive and ativo is not None:
         query = query.filter(Cliente.ativo == ativo)
     if search:
-        term = f"%{search}%"
-        query = query.filter(
-            or_(
-                Cliente.nome.ilike(term),
-                Cliente.email.ilike(term),
-                Cliente.telefone.ilike(term),
-                Cliente.cpf.ilike(term),
-                Cliente.endereco.ilike(term),
-            )
-        )
+        query = query.filter(directory_match(search.strip()))
     return query.order_by(Cliente.nome).offset(skip).limit(limit).all()
 
 
@@ -82,10 +75,7 @@ def listar_pagina_clientes(
         query = query.filter(Cliente.ativo == ativo)
     term = search.strip()
     if term:
-        pattern = '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
-        query = query.filter(or_(*(column.ilike(pattern, escape='\\') for column in (
-            Cliente.nome, Cliente.email, Cliente.telefone, Cliente.cpf, Cliente.endereco,
-        ))))
+        query = query.filter(directory_match(term))
     total = query.count()
     rows = order_customer_directory(query, db, current_user, sort).offset((page - 1) * page_size).limit(page_size).all()
     activity = customer_activity(db, [row.id for row in rows], current_user)
@@ -96,15 +86,27 @@ def listar_pagina_clientes(
 @router.post("/", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)
 def criar_cliente(
     cliente: ClienteCreate,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Cria um cliente, evitando repetir uma identidade já reconhecida."""
+    """Reuse a corroborated identity; ambiguous people require an explicit choice."""
     lock_addresses(db)
-    existing, _, _ = find_customer(db, cliente.model_dump())
+    data = cliente.model_dump()
+    existing, _, candidates = find_customer(db, data)
     if existing:
-        raise HTTPException(409, 'Cliente já cadastrado. Localize-o na lista de clientes antes de criar outro cadastro.')
-    db_cliente = Cliente(**cliente.model_dump())
+        if not existing.ativo:
+            raise HTTPException(409, 'Este cliente já existe e está inativo. Confira o cadastro existente antes de continuar.')
+        enrich_customer_documents(existing, data)
+        db.commit()
+        db.refresh(existing)
+        response.status_code = status.HTTP_200_OK
+        return existing
+    if candidates:
+        raise HTTPException(409, 'Há cadastros com identidade semelhante ou documentos conflitantes. Selecione o cliente existente ou confira os dados antes de criar outro.')
+    if not full_name(cliente.nome):
+        raise HTTPException(422, 'Informe o nome completo do cliente para conferir sua identidade.')
+    db_cliente = Cliente(**data)
     db.add(db_cliente)
     try:
         db.commit()
@@ -167,8 +169,21 @@ def atualizar_cliente(
     uuid_ = validate_uuid(cliente_id)
     lock_addresses(db)
     db_cliente = _customer(db, uuid_, write=True)
-
-    for field, value in update.model_dump(exclude_unset=True).items():
+    changes = update.model_dump(exclude_unset=True)
+    if changes.get('documentos', ...) is None:
+        changes['documentos'] = []
+    final = {field: getattr(db_cliente, field) for field in ClienteCreate.model_fields}
+    final.update(changes)
+    try:
+        # Cross-field validation uses the retained CPF too, not only this patch.
+        checked = ClienteCreate.model_validate(final)
+    except ValidationError:
+        raise HTTPException(422, 'Confira o nome, CPF e documentos do cadastro; os dados informados precisam corresponder.')
+    if {'nome', 'telefone', 'email', 'cpf', 'documentos', 'endereco'} & changes.keys():
+        existing, _, candidates = find_customer(db, checked.model_dump(), exclude_id=db_cliente.id)
+        if existing or candidates:
+            raise HTTPException(409, 'Esta alteração corresponde a outro cadastro ou apresenta conflito de identidade. Selecione os clientes e use Unificar clientes para conferir.')
+    for field, value in changes.items():
         setattr(db_cliente, field, value)
 
     try:

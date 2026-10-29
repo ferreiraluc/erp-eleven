@@ -1,8 +1,10 @@
 <template>
   <div class="fields">
-    <label>{{ tr('País') }}<ErpSelect :label="(tr('País'))" :value="modelValue.pais" @change="update('pais',$event)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></ErpSelect></label>
+    <label>{{ tr('País') }}<ErpSelect :label="(tr('País'))" :value="modelValue.pais" @change="updateCountry($event)"><option value="PY">{{ tr('Paraguai') }}</option><option value="BR">{{ tr('Brasil') }}</option></ErpSelect></label>
     <label>{{tr(nameLabel || 'Nome do destinatário')}}<input :value="modelValue.nome" @input="update('nome',($event.target as HTMLInputElement).value)" maxlength="120"/></label>
-    <label v-for="f in primaryFields" :key="f.key" :class="{wide:f.key==='endereco'}">{{tr(f.key==='cpf' && modelValue.pais==='PY' ? 'RUC/C.I (opcional na impressão)' : f.label)}}
+    <label>{{ tr('Tipo de documento') }}<ErpSelect :label="tr('Tipo de documento')" :model-value="modelValue.documento_tipo || ''" @update:model-value="updateDocumentType($event)"><option value="">{{ tr('Tipo não informado') }}</option><option v-for="type in documentTypes" :key="type" :value="type">{{ type }}</option></ErpSelect></label>
+    <label v-if="modelValue.documento_tipo === 'RG'">{{ tr('Emissor / UF do RG (opcional)') }}<input :value="modelValue.documento_emissor || ''" @input="update('documento_emissor',($event.target as HTMLInputElement).value)" maxlength="20"/></label>
+    <label v-for="f in primaryFields" :key="f.key" :class="{wide:f.key==='endereco'}">{{fieldLabel(f)}}
       <input :value="modelValue[f.key]" @input="update(f.key,($event.target as HTMLInputElement).value)" @blur="onBlur(f.key)" :maxlength="f.max"/>
     </label>
     <details v-if="extraFields.length" class="wide extra-fields erp-dialog__section" :open="hasExtraData">
@@ -30,7 +32,7 @@ import ErpSelect from '@/components/ui/ErpSelect.vue'
 import {computed,ref,watch,nextTick} from 'vue'
 import api from '@/services/api'
 import { useAddressI18n } from './i18n'
-import type {AddressData} from './types'
+import type {AddressData,AddressDocumentType} from './types'
 const {tr}=useAddressI18n()
 const props=defineProps<{modelValue:AddressData;nameLabel?:string}>(),emit=defineEmits<{(e:'update:modelValue',v:AddressData):void}>()
 const busy=ref(false),message=ref(''),conflicts=ref<{field:string;provided:string;suggested:string}[]>([])
@@ -38,6 +40,25 @@ const validCep=computed(()=>/^[0-9]{8}$/.test(props.modelValue.cep.replace(/[\s-
 const labels:Record<string,string>={endereco:'Rua',bairro:'Bairro',cidade:'Cidade',estado:'UF'}
 let sequence=0
 function update(key:string,value:string){emit('update:modelValue',{...props.modelValue,[key]:value})}
+const documentTypes=computed<AddressDocumentType[]>(()=>props.modelValue.pais==='PY' ? ['CI','RUC'] : ['CPF','CNPJ','RG'])
+function fieldLabel(field:{key:keyof AddressData;label:string}){
+  if(field.key!=='cpf')return tr(field.label)
+  if(props.modelValue.documento_tipo)return props.modelValue.documento_tipo+' '+tr('(opcional na impressão)')
+  return tr(props.modelValue.pais==='PY' ? 'RUC/C.I (opcional na impressão)' : field.label)
+}
+function updateCountry(value:AddressData['pais']){
+  const next={...props.modelValue,pais:value}
+  const allowed=value==='PY' ? ['CI','RUC'] : ['CPF','CNPJ','RG']
+  if(next.documento_tipo && !allowed.includes(next.documento_tipo)){delete next.documento_tipo;delete next.documento_emissor}
+  emit('update:modelValue',next)
+}
+function updateDocumentType(value:AddressDocumentType|''){
+  const next={...props.modelValue}
+  if(value)next.documento_tipo=value
+  else delete next.documento_tipo
+  if(value!=='RG')delete next.documento_emissor
+  emit('update:modelValue',next)
+}
 watch(()=>JSON.stringify(props.modelValue),()=>{sequence++;busy.value=false;message.value='';conflicts.value=[]})
 function onBlur(key:string){if(key==='cep' && props.modelValue.pais==='BR' && validCep.value)lookup()}
 async function lookup(){

@@ -4,10 +4,10 @@
       <section
         v-erp-dialog
         class="erp-dialog erp-dialog--lg duplicate-dialog"
-        :aria-label="uiText('Conferir duplicidades')"
+        :aria-label="uiText(addressesOnly ? 'Conferir endereços' : 'Conferir duplicidades')"
       >
         <header class="erp-dialog__header">
-          <h2>{{ uiText('Conferir duplicidades') }}</h2>
+          <h2>{{ uiText(addressesOnly ? 'Conferir endereços' : 'Conferir duplicidades') }}</h2>
           <button
             data-dialog-close
             class="erp-button erp-button--ghost erp-button--icon"
@@ -28,6 +28,7 @@
           </p>
           <div v-if="!selected" class="review-filters">
             <ErpDropdown
+              v-if="!addressesOnly"
               v-model="kind"
               :disabled="busy"
               :label="uiText('Tipo de cadastro')"
@@ -180,9 +181,9 @@ interface Plan {
   conflicting_fields?: string[]
   links_to_move?: Record<string, number>
 }
-const props = withDefaults(defineProps<{ initialKind?: Kind }>(), { initialKind: 'customers' })
+const props = withDefaults(defineProps<{ initialKind?: Kind; addressesOnly?: boolean }>(), { initialKind: 'customers', addressesOnly: false })
 const emit = defineEmits<{ close: []; changed: [] }>()
-const kind = ref<Kind>(props.initialKind),
+const kind = ref<Kind>(props.addressesOnly ? 'addresses' : props.initialKind),
   search = ref(''),
   rows = ref<Pair[]>([]),
   selected = ref<Pair | null>(null),

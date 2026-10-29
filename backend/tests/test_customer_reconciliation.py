@@ -35,12 +35,13 @@ def test_ambiguous_name_keeps_customers_separate_and_review_survives_edit(env):
     with factory() as db:
         db.add_all([Cliente(nome='Joao Silva'),Cliente(nome='João Silva')]);db.flush()
         a,_=save_or_reuse(db,{'pais':'PY','nome':'Joao Silva','cidade':'Asunción'},uid)
-        assert db.query(Cliente).count()==3 and a.customer_link_review
+        assert db.query(Cliente).count()==2 and a.cliente_id is None and a.customer_link_review
         assert match_recipient(db,'Joao Silva') is None
         body=AddressInput(label='Casa',data=a.data,cliente_id=a.cliente_id,version=a.version)
         a,_=edit_address(db,a.id,body)
         assert a.customer_link_review
-        a,_=edit_address(db,a.id,body.model_copy(update={'version':a.version,'customer_link_confirmed':True}))
+        selected=db.query(Cliente).order_by(Cliente.id).first()
+        a,_=edit_address(db,a.id,body.model_copy(update={'version':a.version,'customer_link_confirmed':True,'cliente_id':selected.id}))
         assert not a.customer_link_review and a.customer_link_reason=='manual'
 
 
@@ -50,7 +51,7 @@ def test_document_name_conflict_does_not_reassign_identity_or_unique_document(en
         owner=Cliente(nome='Pessoa Original',cpf='12345678909');db.add(owner);db.flush()
         a,_=save_or_reuse(db,{'pais':'BR','nome':'Outro Cliente','cpf':'12345678909','cidade':'São Paulo'},uid)
         assert a.cliente_id != owner.id and a.customer_link_review
-        assert db.get(Cliente,a.cliente_id).cpf is None
+        assert a.cliente_id is None and db.query(Cliente).count()==1
         assert owner.nome=='Pessoa Original'
 
 
@@ -65,12 +66,12 @@ def test_paraguay_document_never_becomes_cpf_and_new_address_creates_customer(en
 def test_reconciliation_only_links_existing_customers_and_is_idempotent(env):
     factory,_,uid,_=env
     with factory() as db:
-        a=SavedAddress(label='Casa',data={'pais':'PY','nome':'Ana Correia','cidade':'Asunción'},created_by=uid)
-        known=Cliente(nome='Bruno Silva');db.add_all([a,known]);db.flush()
-        order=Pedido(numero_pedido='LOCAL-1',descricao='Fixture',valor_total=42,cliente_nome='Ana Correia')
+        a=SavedAddress(label='Casa',data={'pais':'PY','nome':'Ana Correia','cidade':'Asunción','telefone':'+595972394123'},created_by=uid)
+        known=Cliente(nome='Bruno Silva',endereco='Rua Teste, 12, Foz, PR, 85865310, BR');db.add_all([a,known]);db.flush()
+        order=Pedido(numero_pedido='LOCAL-1',descricao='Fixture',valor_total=42,cliente_nome='Ana Correia',cliente_telefone='+595972394123')
         db.add(order);db.flush()
         inherited=Rastreamento(codigo_rastreio='LOCAL1',pedido_id=order.id,destinatario='Texto preservado')
-        named=Rastreamento(codigo_rastreio='LOCAL2',destinatario='BRUNO SILVA')
+        named=Rastreamento(codigo_rastreio='LOCAL2',destinatario='BRUNO SILVA',destino=known.endereco)
         unknown=Rastreamento(codigo_rastreio='LOCAL3',destinatario='Pessoa Sem Cadastro')
         db.add_all([inherited,named,unknown]);db.flush()
         result=reconcile(db)

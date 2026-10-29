@@ -54,7 +54,9 @@ def test_repeated_requests_share_address_customer_and_enrich_missing_fields(env,
         db.add(customer); db.flush()
         first = EMBEDDED if embedded_first else ADDRESS
         saved, reused = save_or_reuse(db, first | {'cpf': '', 'bairro': ''}, uid)
-        assert not reused and saved.cliente_id == customer.id
+        # A name without the known CPF/contact remains pending until the next
+        # request supplies corroboration; do not create another customer.
+        assert not reused and saved.cliente_id is None and saved.customer_link_review
         for index in range(10):
             data = ADDRESS if index % 2 else EMBEDDED
             row, reused = save_or_reuse(db, data, uid)

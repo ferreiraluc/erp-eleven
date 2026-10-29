@@ -29,12 +29,27 @@
               <label>{{ uiText(`E-mail`) }}</label>
               <input v-model="form.email" type="email" placeholder="cliente@email.com" class="form-input" />
             </div>
-            <div class="form-group">
-              <label for="customer-form-document">{{ uiText('CPF / RUC / C.I.') }}</label>
-              <input id="customer-form-document" v-model="form.cpf" type="text" class="form-input" maxlength="14" />
-            </div>
           </fieldset>
         </div>
+
+        <section class="form-section document-section">
+          <h3 class="section-title">{{ documentText('title') }}</h3>
+          <fieldset :disabled="submitting" class="document-list">
+            <div v-if="legacyDocument" class="legacy-document">
+              <span>{{ documentText('previous') }}: {{ legacyDocument }}</span>
+              <ErpSelect v-model="legacyType" :label="documentText('type')" :disabled="submitting"><option value="">{{ documentText('unspecified') }}</option><option v-for="type in documentTypes" :key="type" :value="type">{{ type }} · {{ countryFor(type) }}</option></ErpSelect>
+              <p class="field-hint">{{ documentText('legacyHelp') }}</p>
+              <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="legacyDocument = ''; legacyType = ''">{{ documentText('remove') }}</button>
+            </div>
+            <div v-for="(document, index) in documents" :key="index" class="document-row">
+              <ErpSelect v-model="document.tipo" :label="documentText('type')" :disabled="submitting" @change="updateDocumentType(document)"><option v-for="type in documentTypes" :key="type" :value="type">{{ type }} · {{ countryFor(type) }}</option></ErpSelect>
+              <label><span class="sr-only">{{ documentText('number') }}</span><input v-model="document.numero" class="form-input" type="text" maxlength="40" :placeholder="documentText('number')" :aria-label="documentText('number')" /></label>
+              <label v-if="document.tipo === 'RG'" class="document-issuer"><span class="sr-only">{{ documentText('issuer') }}</span><input v-model="document.emissor" class="form-input" type="text" maxlength="40" :placeholder="documentText('issuer')" :aria-label="documentText('issuer')" /></label>
+              <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="documentText('remove')" @click="documents.splice(index, 1)">×</button>
+            </div>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="documents.length + (legacyDocument ? 1 : 0) >= 10" @click="documents.push({ tipo: 'CPF', pais: 'BR', numero: '' })">+ {{ documentText('add') }}</button>
+          </fieldset>
+        </section>
 
         <!-- Endereço livre -->
         <details class="form-section" :open="!quick">
@@ -68,8 +83,12 @@
 <script setup lang="ts">
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText } from '@/i18n/uiText'
-import { ref, watch, computed } from 'vue'
-import { clientesAPI, type Cliente, type ClienteCreate } from '@/services/api'
+import { ref, watch, computed, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
+import ErpSelect from '@/components/ui/ErpSelect.vue'
+import { customerDocumentMessages } from './customerDocumentMessages'
+import { clientesAPI, type Cliente, type ClienteCreate, type ClienteDocumento } from '@/services/api'
 
 interface Props {
   isVisible: boolean
@@ -79,6 +98,18 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), { cliente: null, quick: false, initialName: '' })
 const emit = defineEmits<{ close: []; saved: [c: Cliente] }>()
+const { t: documentText } = useI18n({ useScope: 'local', messages: customerDocumentMessages })
+const auth = useAuthStore()
+const documentTypes = ['CPF', 'CNPJ', 'RG', 'CI', 'RUC'] as const
+const documents = ref<ClienteDocumento[]>([])
+const originalLegacyRow = ref<ClienteDocumento | null>(null)
+const legacyDocument = ref(''), legacyType = ref<ClienteDocumento['tipo'] | ''>('')
+const countryFor = (type: ClienteDocumento['tipo']): 'BR' | 'PY' => type === 'CI' || type === 'RUC' ? 'PY' : 'BR'
+function updateDocumentType(document: ClienteDocumento) {
+  document.pais = countryFor(document.tipo)
+  if (document.tipo !== 'RG') delete document.emissor
+}
+let generation = 0
 
 const isEditing = computed(() => !!props.cliente)
 const submitting = ref(false)
@@ -92,6 +123,7 @@ const form = ref<ClienteCreate>(emptyForm())
 
 watch(() => props.isVisible, (v) => {
   if (v) {
+    generation++
     errorMsg.value = ''
     form.value = props.cliente ? {
       nome: props.cliente.nome,
@@ -101,21 +133,45 @@ watch(() => props.isVisible, (v) => {
       endereco: props.cliente.endereco || '',
       ativo: props.cliente.ativo,
     } : { ...emptyForm(), nome: props.initialName }
+    documents.value = (props.cliente?.documentos || []).map(document => ({ ...document }))
+    originalLegacyRow.value = null
+    legacyDocument.value = ''; legacyType.value = ''
+    const legacy = props.cliente?.cpf?.trim() || ''
+    const normalized = legacy.replace(/\D/g, '')
+    if (legacy && !documents.value.some(document => document.numero.replace(/\D/g, '') === normalized && (document.tipo === 'CPF' || document.tipo === 'CNPJ'))) {
+      if (normalized.length === 11 || normalized.length === 14) documents.value.push({ tipo: normalized.length === 11 ? 'CPF' : 'CNPJ', pais: 'BR', numero: legacy })
+      else legacyDocument.value = legacy
+    }
+    if (legacy) originalLegacyRow.value = documents.value.find(document => document.numero.replace(/\D/g, '') === normalized && (document.tipo === 'CPF' || document.tipo === 'CNPJ')) || null
   }
 }, { immediate: true })
+watch(() => auth.token, () => { generation++; submitting.value = false; errorMsg.value = ''; emit('close') }, { flush: 'sync' })
+onBeforeUnmount(() => { generation++ })
 
 function close() { if (!submitting.value) emit('close') }
 
 async function handleSubmit() {
   if (submitting.value) return
+  if (documents.value.some(document => !document.numero.trim())) { errorMsg.value = documentText('invalid'); return }
+  const current = ++generation, token = auth.token
   submitting.value = true
   errorMsg.value = ''
   try {
-    const payload: ClienteCreate = { ...form.value }
+    const allDocuments: ClienteDocumento[] = documents.value.map(document => ({ tipo: document.tipo, pais: countryFor(document.tipo), numero: document.numero.trim(), ...(document.tipo === 'RG' && document.emissor?.trim() ? { emissor: document.emissor.trim() } : {}) }))
+    if (legacyDocument.value && legacyType.value) allDocuments.push({ tipo: legacyType.value, pais: countryFor(legacyType.value), numero: legacyDocument.value })
+    // An alias may retain the unique legacy CPF. Documents added to the primary
+    // record must not silently move that CPF into its legacy column on contact edits.
+    const original = originalLegacyRow.value
+    const legacy = isEditing.value
+      ? original
+        ? documents.value.includes(original) && (original.tipo === 'CPF' || original.tipo === 'CNPJ') ? original.numero.trim() : null
+        : legacyDocument.value || null
+      : allDocuments.find(document => document.tipo === 'CPF' || document.tipo === 'CNPJ')?.numero || (!legacyType.value && legacyDocument.value) || null
+    const payload: ClienteCreate = { ...form.value, documentos: allDocuments, cpf: legacy }
     // Remove strings vazias → undefined
     Object.keys(payload).forEach(k => {
       const key = k as keyof ClienteCreate
-      if (payload[key] === '') (payload as any)[key] = undefined
+      if (payload[key] === '') delete payload[key]
     })
     let result: Cliente
     if (isEditing.value && props.cliente) {
@@ -123,16 +179,15 @@ async function handleSubmit() {
     } else {
       result = await clientesAPI.create(payload)
     }
-    emit('saved', result)
-    emit('close')
+    if (current === generation && token === auth.token) { emit('saved', result); emit('close') }
   } catch (e: any) {
-    console.error('[ClienteFormModal] save error:', e)
+    if (current !== generation || token !== auth.token) return
     const detail = e.response?.data?.detail
     errorMsg.value = Array.isArray(detail)
       ? detail.map((d: any) => d.msg || String(d)).join('; ')
       : (typeof detail === 'string' ? detail : e.message || uiText(`Erro ao salvar cliente.`))
   } finally {
-    submitting.value = false
+    if (current === generation) submitting.value = false
   }
 }
 </script>
@@ -151,6 +206,15 @@ async function handleSubmit() {
 .form-grid { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
 .form-group { display: flex; flex-direction: column; gap: .28rem; }
 .form-group.span-2 { grid-column: 1 / -1; }
+.document-list { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: .6rem; }
+.document-row { display: grid; grid-template-columns: 135px minmax(0, 1fr) 32px; gap: .4rem; align-items: center; }
+.document-row > label { min-width: 0; }
+.document-row input { width: 100%; box-sizing: border-box; }
+.document-row .document-issuer { grid-column: 1 / 3; grid-row: 2; }
+.document-row > button { grid-column: 3; grid-row: 1; }
+.legacy-document { border: 1px solid #e2e8f0; border-radius: 8px; padding: .7rem; display: grid; gap: .5rem; color: #64748b; font-size: .78rem; overflow-wrap: anywhere; }
+.document-list > button { justify-self: start; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 label { font-size: .78rem; font-weight: 600; color: #374151; }
 .form-input { padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: 7px; font-size: .875rem; outline: none; transition: border-color .15s; }
