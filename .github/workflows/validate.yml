@@ -59,6 +59,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Audit development Node dependencies
         run: npm audit --include=dev --audit-level=high
+      - run: npm run audit:ui
       - run: npm test
       - run: npm run type-check
       - run: npm run build

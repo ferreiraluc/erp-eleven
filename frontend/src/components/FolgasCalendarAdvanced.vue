@@ -4,7 +4,7 @@
     <div class="calendar-header">
       <div class="header-controls">
         <div class="month-navigation">
-          <button @click="previousMonth" class="nav-button erp-button erp-button--ghost erp-button--icon">
+          <button @click="previousMonth" class="nav-button erp-button erp-button--ghost erp-button--icon" :aria-label="$tr('Mês anterior')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -12,7 +12,7 @@
           <h3 class="month-title">
             {{ monthNames[currentMonth] }} {{ currentYear }}
           </h3>
-          <button @click="nextMonth" class="nav-button erp-button erp-button--ghost erp-button--icon">
+          <button @click="nextMonth" class="nav-button erp-button erp-button--ghost erp-button--icon" :aria-label="$tr('Próximo mês')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
@@ -155,12 +155,12 @@
                 </svg>
               </div>
               <div class="action-buttons">
-                <button @click.stop="editFolga(folga)" class="action-btn edit erp-button erp-button--ghost erp-button--icon">
+                <button @click.stop="editFolga(folga)" class="action-btn edit erp-button erp-button--ghost erp-button--icon" :aria-label="$tr('Editar folga')">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="m18 2 4 4-14 14H4v-4L18 2zM14.5 5.5 18.5 9.5"/>
                   </svg>
                 </button>
-                <button @click.stop="deleteFolga(folga)" class="action-btn delete erp-button erp-button--danger erp-button--icon">
+                <button @click.stop="deleteFolga(folga)" class="action-btn delete erp-button erp-button--danger erp-button--icon" :aria-label="$tr('Excluir folga')">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -208,10 +208,10 @@
                   <span :class="['status-badge', getStatusClass(folga)]">
                     {{ getStatusText(folga) }}
                   </span>
-                  <button @click="editFolga(folga)" class="btn btn-sm btn-secondary erp-button erp-button--secondary erp-button--sm">
+                  <button @click="editFolga(folga)" class="btn btn-sm btn-secondary erp-button erp-button--secondary erp-button--sm" :aria-label="$tr('Editar folga')">
                     {{ $tr("Editar") }}
                   </button>
-                  <button @click="deleteFolga(folga)" class="btn btn-sm btn-danger erp-button erp-button--danger erp-button--sm">
+                  <button @click="deleteFolga(folga)" class="btn btn-sm btn-danger erp-button erp-button--danger erp-button--sm" :aria-label="$tr('Excluir folga')">
                     {{ $tr("Excluir") }}
                   </button>
                 </div>

@@ -45,7 +45,7 @@
           :key="a.id"
           :class="['thumb-btn', { active: i === current }]"
           @click.prevent="current = i"
-        >
+         :aria-label="uiText('Ver anexo') + ': ' + a.nome_arquivo">
           <img :src="dataUrl(a)" :alt="a.nome_arquivo" class="thumb-img" />
         </button>
       </div>
@@ -131,10 +131,10 @@
     <!-- Lightbox -->
     <teleport to="body">
       <div v-if="lightboxIndex !== null" class="lightbox" @click="lightboxIndex = null">
-        <button class="lb-close erp-button erp-button--ghost erp-button--icon" @click.stop="lightboxIndex = null">
+        <button class="lb-close erp-button erp-button--ghost erp-button--icon" @click.stop="lightboxIndex = null" :aria-label="uiText('Fechar')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        <button v-if="anexos.length > 1" class="lb-nav lb-prev erp-button erp-button--secondary" @click.stop="lightboxPrev">
+        <button v-if="anexos.length > 1" class="lb-nav lb-prev erp-button erp-button--secondary" @click.stop="lightboxPrev" :aria-label="uiText('Anterior')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <img
@@ -143,7 +143,7 @@
           class="lb-img"
           @click.stop
         />
-        <button v-if="anexos.length > 1" class="lb-nav lb-next erp-button erp-button--secondary" @click.stop="lightboxNext">
+        <button v-if="anexos.length > 1" class="lb-nav lb-next erp-button erp-button--secondary" @click.stop="lightboxNext" :aria-label="uiText('Próximo')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
         <p class="lb-caption">{{ anexos[lightboxIndex].nome_arquivo }}</p>

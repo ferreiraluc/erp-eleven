@@ -30,6 +30,7 @@
         class="notification-dropdown"
         :style="position"
         role="dialog"
+        aria-modal="false"
         :aria-labelledby="`${panelId}-title`"
       >
         <header class="notification-dropdown__header">

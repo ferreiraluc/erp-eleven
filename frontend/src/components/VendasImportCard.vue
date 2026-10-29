@@ -147,7 +147,7 @@
                     <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
                   </div>
                 </div>
-                <button @click="clearFile" class="remove-file-btn erp-button erp-button--danger erp-button--icon">
+                <button @click="clearFile" class="remove-file-btn erp-button erp-button--danger erp-button--icon" :aria-label="uiText('Remover arquivo')">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>

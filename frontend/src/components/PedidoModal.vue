@@ -82,7 +82,7 @@
                     @focus="onRastreioFocus"
                     @blur="hideTrackingSuggestions"
                   />
-                  <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn erp-button erp-button--ghost erp-button--icon">✕</button>
+                  <button v-if="selectedRastreio" type="button" @click="clearRastreio" class="rastreio-clear-btn erp-button erp-button--ghost erp-button--icon" :aria-label="uiText('Remover rastreio')">✕</button>
                   <!-- Dropdown de sugestões -->
                   <div v-if="showRastreioSuggestions" class="rastreio-list">
                     <button

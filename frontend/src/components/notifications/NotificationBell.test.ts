@@ -115,7 +115,7 @@ describe('Dashboard notification dropdown', () => {
     expect(Number.parseFloat(menu().style.width)).toBeCloseTo(288.4)
     expect(Number.parseFloat(menu().style.left)).toBeCloseTo(113.6)
     expect(menu().style.top).toBe('46px')
-    expect(menu().getAttribute('aria-modal')).toBeNull()
+    expect(menu().getAttribute('aria-modal')).toBe('false')
     expect(document.body.style.overflow).toBe(previousOverflow)
     expect(document.activeElement?.tagName).not.toBe('TEXTAREA')
     expect(mocks.load).toHaveBeenCalledWith()

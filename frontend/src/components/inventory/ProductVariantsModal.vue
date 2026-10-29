@@ -22,7 +22,7 @@
           type="button"
           class="erp-button erp-button--secondary erp-button--icon"
           @click="emit('close')"
-        >
+         :aria-label="tr('Fechar')">
           ×
         </button>
       </header>

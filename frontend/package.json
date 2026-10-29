@@ -16,7 +16,8 @@
     "format": "prettier --write src/",
     "start": "vite preview --port $PORT",
     "lint:fix": "eslint src --fix",
-    "test": "vitest run"
+    "test": "vitest run",
+    "audit:ui": "node scripts/audit-ui.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.11",

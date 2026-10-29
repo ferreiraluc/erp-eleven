@@ -10,7 +10,7 @@
         <label>{{ $t('access.currentPassword') }}<input v-model="current" type="password" autocomplete="current-password" required /></label>
         <label>{{ $t('access.newPassword') }}<input v-model="password" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
         <label>{{ $t('access.confirmPassword') }}<input v-model="confirm" type="password" autocomplete="new-password" minlength="6" maxlength="72" required /></label>
-      </div><div class="actions"><button class="primary erp-button erp-button--primary" :disabled="saving">{{ saving ? $t('common.loading') : $t('access.savePassword') }}</button></div></form>
+      </div><div class="actions"><button class="primary erp-button erp-button--primary" :disabled="saving" type="submit">{{ saving ? $t('common.loading') : $t('access.savePassword') }}</button></div></form>
     </section>
     <p class="muted">{{ $t('access.activityNotice') }}</p>
   </main>

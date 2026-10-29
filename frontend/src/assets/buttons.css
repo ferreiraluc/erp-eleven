@@ -1,7 +1,7 @@
 /* Explicit action variants override legacy scoped decoration, including teleported
    dialogs under body. Layout/visibility stay with the owning component. */
 :root {
-  --button-radius: 8px;
+  --button-radius: var(--radius-control, 10px);
   --button-primary: #2563eb;
   --button-primary-hover: #1d4ed8;
   --button-danger: #b91c1c;
@@ -32,7 +32,8 @@
   white-space: normal;
   box-shadow: none;
   cursor: pointer;
-  transition: background-color .15s, border-color .15s, color .15s;
+  touch-action: manipulation;
+  transition: background-color .15s, border-color .15s, color .15s, transform .12s var(--ease-interface, ease);
 }
 
 /* Kept at low specificity so mobile-only/desktop-only display rules still win. */
@@ -90,6 +91,21 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+@media screen {
+  :is(#app, body) .erp-button:not(:disabled):not([aria-disabled="true"]):active { transform: translateY(1px); }
+  :is(#app, body) .erp-button[aria-busy="true"] { cursor: progress; }
+  :is(#app, body) .erp-button[aria-busy="true"]::after {
+    content: ""; width: 12px; height: 12px; flex: 0 0 12px;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: erp-busy-turn .8s linear infinite;
+  }
+}
+@keyframes erp-busy-turn { to { transform: rotate(360deg); } }
+@media (forced-colors: active) {
+  :is(#app, body) .erp-button { border: 1px solid ButtonText; }
+  :is(#app, body) .erp-button:focus-visible { outline-color: Highlight; }
+}
 @media (prefers-reduced-motion: reduce) {
-  :is(#app, body) .erp-button { transition: none; }
+  :is(#app, body) .erp-button { transition: none; transform: none !important; }
+  :is(#app, body) .erp-button[aria-busy="true"]::after { animation: none; }
 }

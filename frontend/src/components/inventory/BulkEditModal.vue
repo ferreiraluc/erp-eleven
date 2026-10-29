@@ -53,6 +53,7 @@
           type="button"
           @click="save"
           class="erp-button erp-button--primary"
+          :aria-busy="saving"
           :disabled="saving || photoBusy || !hasChanges"
         >
           <span v-if="saving">{{ tr('Salvando...') }}</span

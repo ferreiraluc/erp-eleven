@@ -5,7 +5,7 @@
       <header class="erp-dialog__header"><h2>{{ tr('Histórico de excluídos') }}</h2><button data-dialog-close class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Fechar')" @click="emit('close')">✕</button></header>
       <main class="erp-dialog__body">
         <p>{{ tr('Produtos retirados do catálogo com registros preservados. Abra um produto para consultar seu histórico.') }}</p>
-        <form @submit.prevent="page = 1; load()"><input v-model="search" :placeholder="tr('Buscar por nome ou SKU')" :aria-label="tr('Buscar por nome ou SKU')" maxlength="150" /><button class="erp-button erp-button--secondary erp-button--sm">{{ tr('Buscar') }}</button></form>
+        <form @submit.prevent="page = 1; load()"><input v-model="search" :placeholder="tr('Buscar por nome ou SKU')" :aria-label="tr('Buscar por nome ou SKU')" maxlength="150" /><button class="erp-button erp-button--secondary erp-button--sm" type="submit">{{ tr('Buscar') }}</button></form>
         <p v-if="loading" role="status">{{ tr('Carregando histórico...') }}</p>
         <div v-else-if="error" role="alert"><p>{{ tr('Não foi possível carregar o histórico do produto.') }}</p><button class="erp-button erp-button--secondary erp-button--sm" @click="load">{{ tr('Tentar novamente') }}</button></div>
         <template v-else-if="data"><p v-if="!data.items.length">{{ tr('Nenhum registro nesta seção.') }}</p>

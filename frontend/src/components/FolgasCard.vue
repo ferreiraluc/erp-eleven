@@ -6,7 +6,7 @@
         <p class="card-subtitle">{{ getCurrentMonth() }}</p>
       </div>
       <div class="header-right">
-        <button @click="openFullCalendar" class="expand-button erp-button erp-button--ghost erp-button--icon">
+        <button @click="openFullCalendar" class="expand-button erp-button erp-button--ghost erp-button--icon" :aria-label="$tr('Calendário completo')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
@@ -18,13 +18,13 @@
       <!-- Mini calendário com indicadores -->
       <div class="mini-calendar">
         <div class="mini-calendar-header">
-          <button @click="previousMonth" class="mini-nav-btn erp-button erp-button--ghost erp-button--icon">
+          <button @click="previousMonth" class="mini-nav-btn erp-button erp-button--ghost erp-button--icon" :aria-label="$tr('Mês anterior')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
           </button>
           <span class="mini-month">{{ getShortMonth() }}</span>
-          <button @click="nextMonth" class="mini-nav-btn erp-button erp-button--ghost erp-button--icon">
+          <button @click="nextMonth" class="mini-nav-btn erp-button erp-button--ghost erp-button--icon" :aria-label="$tr('Próximo mês')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>

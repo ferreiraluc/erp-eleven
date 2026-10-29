@@ -17,7 +17,7 @@
           <p>{{ text('usage', { count: 24 / Number(form.interval_hours) }) }}</p>
           <label v-if="form.enabled" class="monitoring-check"><input v-model="consent" type="checkbox" required />{{ text('consent') }}</label>
           <small>{{ text('cleanup') }}</small><p v-if="!form.enabled">{{ text('paused') }}</p>
-          <div class="monitoring-actions"><button class="erp-button erp-button--primary" :disabled="busy || (form.enabled && !consent)">{{ text('save') }}</button><button type="button" class="erp-button erp-button--secondary" :disabled="busy" @click="load">{{ text('refresh') }}</button></div>
+          <div class="monitoring-actions"><button class="erp-button erp-button--primary" :disabled="busy || (form.enabled && !consent)" type="submit">{{ text('save') }}</button><button type="button" class="erp-button erp-button--secondary" :disabled="busy" @click="load">{{ text('refresh') }}</button></div>
         </fieldset>
       </form>
       <label>{{ text('address') }}<input readonly :value="webhookUrl" /></label>

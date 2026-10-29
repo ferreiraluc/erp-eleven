@@ -59,7 +59,7 @@
             <input ref="searchInput" v-model="searchQuery" type="text"
               :placeholder='$tr("Buscar produto, SKU ou código de barras… (F2)")'
               class="pdv-search-input" @keydown.enter="onSearchEnter" @input="onSearchInput" />
-            <button v-if="searchQuery" class="pdv-search-clear erp-button erp-button--ghost erp-button--icon" @click="clearSearch">×</button>
+            <button v-if="searchQuery" class="pdv-search-clear erp-button erp-button--ghost erp-button--icon" @click="clearSearch" :aria-label="uiText('Limpar busca')">×</button>
           </div>
           <button class="pdv-scan-btn erp-button erp-button--primary erp-button--icon" @click="showScanner = true" :title='$tr("Escanear código")' :aria-label='$tr("Escanear código com a câmera")'>
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h4l2-3h6l2 3h4v13H3V7zm13 6a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -68,7 +68,8 @@
 
         <p v-if="!scannedProduct && !searchQuery.trim() && !loadingSearch && !searchError" class="pdv-results-label">{{ uiText('Produtos recentes') }}</p>
         <p v-if="scannedProduct" class="pdv-results-label">{{ cartText('scanContext') }}</p>
-        <p v-if="loadingSearch" class="pdv-search-loading" role="status">{{ uiText('Carregando produtos…') }}</p>
+        <ErpLoadingState v-if="loadingSearch && !visibleProducts.length" class="pdv-search-loading" :label="uiText('Carregando produtos…')" :rows="2" />
+        <p v-if="loadingSearch && visibleProducts.length" class="pdv-search-loading" role="status">{{ uiText('Carregando produtos…') }}</p>
         <div v-if="visibleProducts.length" class="pdv-results" :aria-busy="loadingSearch">
           <div v-for="item in visibleProducts" :key="item.id" class="pdv-result-row" :class="{ 'is-unavailable': !canAddProduct(item) }" @click="addToCart(item)">
             <div class="pdv-result-thumb">
@@ -223,7 +224,7 @@
                   <span v-if="p.card_fee_gs" class="pay-orig-amount">{{ uiText('Acréscimo cartão') }}: {{ fmtGs(p.card_fee_gs) }} · {{ uiText('Aplicado à venda') }}: {{ fmtGs(p.amount_gs) }}</span>
                   <span v-if="p.currency !== 'GS'" class="pay-orig-amount">≈ {{ fmtGs(p.amount_gs) }}</span>
                 </div>
-                <button class="pay-entry-remove erp-button erp-button--danger erp-button--icon" @click="removePayment(p.id)">×</button>
+                <button class="pay-entry-remove erp-button erp-button--danger erp-button--icon" @click="removePayment(p.id)" :aria-label="uiText('Remover pagamento')">×</button>
               </div>
               <div v-if="!localPayments.length" class="pay-empty">{{ $tr("Nenhum pagamento adicionado") }}</div>
             </div>
@@ -296,6 +297,7 @@
         <!-- Sticky confirm button -->
         <div class="pdv-pay-area">
           <button class="pay-confirm-btn erp-button erp-button--primary"
+            :aria-busy="pdv.loading"
             :disabled="!canConfirmPayment || pdv.loading || pdv.checkoutUncertain || invalidQuantityDraft || invalidPriceDraft || !ratesReady || !pdv.cart.length"
             @click="confirmPayment">
             <span v-if="pdv.loading">{{ $tr("Processando…") }}</span>
@@ -324,6 +326,7 @@
 </template>
 
 <script setup lang="ts">
+import ErpLoadingState from '@/components/ui/ErpLoadingState.vue'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
 import DecimalInput from '@/components/forms/DecimalInput.vue'

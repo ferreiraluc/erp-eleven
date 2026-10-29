@@ -4377,5 +4377,21 @@
   "Não foi possível confirmar o saldo. Tente novamente online.": {"pt": "Não foi possível confirmar o saldo. Tente novamente online.", "es": "No se pudo confirmar el saldo. Inténtelo nuevamente en línea.", "en": "Could not confirm the balance. Try again online."},
   "Produto indisponível no catálogo.": {"pt": "Produto indisponível no catálogo.", "es": "Producto no disponible en el catálogo.", "en": "Product unavailable in the catalog."},
   "{count} itens exibidos · QR e relacionados": {"pt": "{count} itens exibidos · QR e relacionados", "es": "{count} artículos mostrados · QR y relacionados", "en": "{count} items shown · QR and related"},
-  "Consulta local · {count} produtos. Saldos a confirmar.": {"pt": "Consulta local · {count} produtos. Saldos a confirmar.", "es": "Consulta local · {count} productos. Saldos por confirmar.", "en": "Local results · {count} products. Balances unconfirmed."}
+  "Consulta local · {count} produtos. Saldos a confirmar.": {"pt": "Consulta local · {count} produtos. Saldos a confirmar.", "es": "Consulta local · {count} productos. Saldos por confirmar.", "en": "Local results · {count} products. Balances unconfirmed."},
+  "Remover rastreio": {"pt": "Remover rastreio", "es": "Quitar rastreo", "en": "Remove tracking"},
+  "Remover tamanho": {"pt": "Remover tamanho", "es": "Quitar talla", "en": "Remove size"},
+  "Remover cor": {"pt": "Remover cor", "es": "Quitar color", "en": "Remove color"},
+  "Remover produto": {"pt": "Remover produto", "es": "Quitar producto", "en": "Remove product"},
+  "Limpar busca": {"pt": "Limpar busca", "es": "Limpiar búsqueda", "en": "Clear search"},
+  "Remover pagamento": {"pt": "Remover pagamento", "es": "Quitar pago", "en": "Remove payment"},
+  "Ver anexo": {"pt": "Ver anexo", "es": "Ver adjunto", "en": "View attachment"},
+  "Calendário completo": {"pt": "Calendário completo", "es": "Calendario completo", "en": "Full calendar"},
+  "Mês anterior": {"pt": "Mês anterior", "es": "Mes anterior", "en": "Previous month"},
+  "Próximo mês": {"pt": "Próximo mês", "es": "Próximo mes", "en": "Next month"},
+  "Editar vendedor": {"pt": "Editar vendedor", "es": "Editar vendedor", "en": "Edit salesperson"},
+  "Editar folga": {"pt": "Editar folga", "es": "Editar descanso", "en": "Edit time off"},
+  "Excluir folga": {"pt": "Excluir folga", "es": "Eliminar descanso", "en": "Delete time off"},
+  "Remover arquivo": {"pt": "Remover arquivo", "es": "Quitar archivo", "en": "Remove file"},
+  "Excluir venda": {"pt": "Excluir venda", "es": "Eliminar venta", "en": "Delete sale"},
+  "Editar venda": {"pt": "Editar venda", "es": "Editar venta", "en": "Edit sale"}
 }
