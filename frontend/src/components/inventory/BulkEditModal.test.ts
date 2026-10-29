@@ -6,8 +6,10 @@ import { chooseDropdown } from '@/test/dropdown'
 
 const api = vi.hoisted(() => ({ batchEdit: vi.fn(), getSuppliers: vi.fn() }))
 const photos = vi.hoisted(() => ({ prepareGalleryFile: vi.fn(), galleryPreview: vi.fn() }))
+const photoEditor = vi.hoisted(() => ({ photoStatus: vi.fn(), cutoutPhoto: vi.fn(), catalogForStorage: vi.fn(), analyzePhoto: vi.fn(), generateCatalog: vi.fn() }))
 vi.mock('@/services/api', () => ({ inventoryAPI: api }))
 vi.mock('@/services/productGallery', () => photos)
+vi.mock('@/services/productPhoto', () => photoEditor)
 let app: App, root: HTMLDivElement
 const items = [
   { id: 's-white', name: 'Camiseta S Branca', size: 'S', color: 'Branca' },
@@ -67,6 +69,9 @@ beforeEach(() => {
   api.getSuppliers.mockResolvedValue([])
   photos.prepareGalleryFile.mockImplementation(async (file: File) => `prepared:${file.name}`)
   photos.galleryPreview.mockImplementation(async (source: string) => `thumb:${source}`)
+  photoEditor.photoStatus.mockResolvedValue({ editing_available: false, model: '' })
+  photoEditor.cutoutPhoto.mockResolvedValue('background-removed')
+  photoEditor.catalogForStorage.mockResolvedValue('edited-photo')
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 afterEach(() => {
@@ -265,6 +270,33 @@ async function uploadPhoto(name: string) {
 async function photoScope(value: string) {
   await chooseDropdown(root.querySelector('button[aria-label="Aplicar dados a"]'), value)
 }
+
+it('edits one uploaded photo and saves the background-removed result for every selected item only on Save', async () => {
+  await mount()
+  await field('photo')
+  await uploadPhoto('all.jpg')
+  button('Editar foto').click()
+  await vi.dynamicImportSettled()
+  await tick()
+  expect(button('Salvar 3 itens').disabled).toBe(true)
+  button('Remover fundo · grátis').click()
+  await tick()
+  expect(photoEditor.cutoutPhoto).toHaveBeenCalledWith('prepared:all.jpg', expect.any(AbortSignal))
+  button('Usar foto').click()
+  await tick(); await tick()
+  expect(photoEditor.catalogForStorage).toHaveBeenCalledWith('background-removed')
+  expect(document.querySelector('.photo-dialog')).toBeNull()
+  expect(api.batchEdit).not.toHaveBeenCalled()
+  expect(button('Salvar 3 itens').disabled).toBe(false)
+  button('Salvar 3 itens').click()
+  await tick()
+  expect(api.batchEdit).toHaveBeenCalledTimes(1)
+  expect(api.batchEdit.mock.calls[0][0].image_groups).toEqual([
+    { item_ids: items.map(item => item.id), image_data: 'edited-photo' },
+  ])
+  expect(photoEditor.analyzePhoto).not.toHaveBeenCalled()
+  expect(photoEditor.generateCatalog).not.toHaveBeenCalled()
+})
 
 it('stages one cover per color, includes every size and only saves the selected IDs once', async () => {
   await mount()

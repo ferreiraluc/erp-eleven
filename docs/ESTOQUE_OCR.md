@@ -694,6 +694,20 @@ passa a ser a principal. Cada envio prepara uma foto por item; outro envio para
 os mesmos IDs substitui a preparação anterior. Para adicionar várias fotos ao
 mesmo produto, salve uma por vez ou use a galeria do editor individual.
 
+**Editar foto** abre o mesmo editor de imagem do cadastro, sem campos de nome ou
+descrição. Em **Foto de referência**, escolha um dos produtos do grupo; apenas a
+foto original desse produto é carregada ao abrir o editor. Também é possível
+editar uma foto recém-enviada pelo botão junto à prévia preparada. Sem referência,
+o editor permite escolher ou fotografar uma imagem. **Remover fundo · grátis**
+recorta uma única imagem no dispositivo, para reaproveitar em todos os destinatários
+do grupo (todos, cor ou tamanho). Compare a prévia e clique em **Usar foto**; a
+gravação só acontece no **Salvar** do editar massivo. O atalho junto à foto
+preparada mantém os mesmos destinatários e a operação de substituir/adicionar.
+Cancelar ou falhar conserva as fotos já preparadas. IDs e operação são congelados
+ao abrir, e Salvar fica bloqueado enquanto o editor estiver aberto ou processando.
+A edição opcional no cabide mantém a confirmação explícita de créditos existente;
+abrir o editor e remover fundo não disparam geração paga.
+
 É possível preparar fotos para várias cores antes de **Salvar**. A lista única
 mostra a imagem preparada e se será uma substituição ou adição. Desfazer uma foto
 preparada conserva o cadastro salvo. As fotos ficam vinculadas aos IDs no momento

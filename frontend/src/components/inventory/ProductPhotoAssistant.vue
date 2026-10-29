@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div v-show="open" class="photo-overlay erp-dialog-backdrop">
       <section v-erp-dialog="open" class="photo-dialog erp-dialog erp-dialog--media" role="dialog" aria-modal="true" aria-labelledby="product-photo-title" tabindex="-1">
-        <header class="erp-dialog__header"><div><h2 id="product-photo-title">{{ t('title') }}</h2><p>{{ t('intro') }}</p></div>
+        <header class="erp-dialog__header"><div><h2 id="product-photo-title">{{ t(photoOnly ? 'photoTitle' : 'title') }}</h2><p>{{ t(photoOnly ? 'photoIntro' : 'intro') }}</p></div>
           <button data-dialog-close type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" :disabled="busy === 'generating'" @click="close">✕</button>
         </header>
         <div ref="photoBody" class="photo-body erp-dialog__body">
@@ -28,7 +28,7 @@
             </div>
             <p v-if="original && !editingAvailable" class="photo-hint">{{ t('edit_unavailable') }}</p>
           </section>
-          <div v-if="original" class="photo-workspace">
+          <div v-if="original" class="photo-workspace" :class="{ 'photo-workspace--only': photoOnly }">
             <div class="photo-preview">
               <div class="photo-comparison">
                 <figure><img :src="original" :alt="t('original')" /><figcaption>{{ t('original') }}</figcaption></figure>
@@ -41,7 +41,7 @@
               <p v-if="cost !== null" class="photo-hint">{{ t('cost', { amount: cost.toFixed(5) }) }}</p>
               <a :href="selectedImage" download="eleven-produto.jpg" class="photo-download">{{ t('download') }}</a>
             </div>
-            <div class="photo-fields">
+            <div v-if="!photoOnly" class="photo-fields">
               <button type="button" class="erp-button erp-button--primary erp-button--sm" :disabled="!!busy || analyzed" @click="analyze">{{ t('analyze') }}</button>
               <p class="photo-hint">{{ t('reviewHint') }}</p>
               <p v-if="noProduct" class="photo-hint" role="status">{{ t('noProduct') }}</p>
@@ -53,8 +53,8 @@
             </div>
           </div>
         </div>
-        <footer class="erp-dialog__footer" v-if="original"><label v-if="!draft" class="photo-reviewed"><input v-model="reviewed" type="checkbox" :disabled="!!busy" />{{ t('reviewed') }}</label>
-          <p>{{ t(draft ? 'draftNext' : 'next') }}</p><button type="button" class="erp-button erp-button--primary" :disabled="(!draft && (!reviewed || !fields.name.trim())) || !!busy" @click="apply">{{ t(draft ? 'draftUse' : 'use') }}</button></footer>
+        <footer class="erp-dialog__footer" v-if="original"><label v-if="!draft && !photoOnly" class="photo-reviewed"><input v-model="reviewed" type="checkbox" :disabled="!!busy" />{{ t('reviewed') }}</label>
+          <p>{{ applyHint || t(photoOnly ? 'photoNext' : draft ? 'draftNext' : 'next') }}</p><button type="button" class="erp-button erp-button--primary" :disabled="(!draft && !photoOnly && (!reviewed || !fields.name.trim())) || !!busy" @click="apply">{{ t(photoOnly ? 'photoUse' : draft ? 'draftUse' : 'use') }}</button></footer>
       </section>
     </div>
   </Teleport>
@@ -68,7 +68,7 @@ import { productPhotoMessages } from './productPhotoMessages'
 import { analyzePhoto, catalogForStorage, cutoutPhoto, generateCatalog, photoError, photoStatus, preparePhoto,
   type ProductPhotoFields, type ProductPhotoResult } from '@/services/productPhoto'
 const { t } = useI18n({ useScope: 'local', messages: productPhotoMessages })
-const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean; startWithHanger?: boolean; initialImage?: string }>(), { draft: false, open: true, startWithHanger: false })
+const props = withDefaults(defineProps<{ draft?: boolean; photoOnly?: boolean; applyHint?: string; open?: boolean; startWithHanger?: boolean; initialImage?: string }>(), { draft: false, photoOnly: false, open: true, startWithHanger: false })
 const emit = defineEmits<{ (event: 'close'): void; (event: 'result', value: ProductPhotoResult): void }>()
 const fieldNames: (keyof ProductPhotoFields)[] = ['name', 'brand', 'category', 'color', 'size', 'description']
 const blank = (): ProductPhotoFields => ({ name: '', brand: '', category: '', color: '', size: '', description: '' })
@@ -149,7 +149,7 @@ async function generate() {
   } catch (e) { if (alive) error.value = photoError(e) } finally { if (alive) busy.value = '' }
 }
 async function apply() {
-  if (busy.value || (!props.draft && (!reviewed.value || !fields.name.trim()))) return
+  if (busy.value || (!props.draft && !props.photoOnly && (!reviewed.value || !fields.name.trim()))) return
   busy.value = 'preparing'; error.value = ''
   try {
     const image_data = await catalogForStorage(selectedImage.value)
@@ -160,6 +160,7 @@ async function apply() {
 
 <style scoped>
 .photo-overlay{position:fixed;inset:0;background:#0f172a99;z-index:12000;display:flex;align-items:center;justify-content:center;padding:20px}
+.photo-workspace.photo-workspace--only{grid-template-columns:minmax(0,1fr)}
 .photo-dialog{width:min(960px,100%);max-height:92dvh;background:#fff;border-radius:18px;display:flex;flex-direction:column;overflow:hidden;color:#1e293b;box-shadow:0 20px 70px #0f172a40}
 .photo-tools{margin-top:16px}.photo-dialog>header,.photo-dialog>footer{flex-shrink:0}.photo-body{overscroll-behavior:contain}.photo-tools .erp-button{max-width:100%;white-space:normal;height:auto}
 header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 24px;border-bottom:1px solid #e2e8f0}h2{font-size:21px;margin:0 0 6px}p{margin:0;font-size:13px;line-height:1.5;color:#64748b}.photo-body{overflow:auto;padding:20px 24px;min-height:0}.photo-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}small{font-size:11px;color:#64748b}.photo-workspace{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;margin-top:20px}.photo-comparison{display:grid;grid-template-columns:1fr 1fr;gap:10px}figure{margin:0;min-width:0}figure img{width:100%;aspect-ratio:1;object-fit:contain;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}figcaption{text-align:center;font-size:12px;margin-top:6px;color:#64748b}.photo-options{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}.photo-options button{font-size:12px;padding:7px 10px;border:1px solid #dbe3ef;border-radius:8px;background:white;color:#475569}.photo-options button[aria-pressed=true]{background:#eff6ff;border-color:#3b82f6;color:#1d4ed8}.photo-fields{display:flex;flex-direction:column;gap:12px}.photo-fields>button{align-self:flex-start}.photo-fields label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600}.photo-fields input{border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;min-width:0;font-size:14px;color:#1e293b;background:white}.photo-fields input:focus{outline:2px solid #93c5fd;outline-offset:1px}.photo-hint{font-size:12px;margin:10px 0}.photo-paid,.photo-status{background:#eff6ff;padding:12px;border-radius:10px;margin-top:12px}.photo-paid p{margin-bottom:10px;color:#334155}.photo-error{margin-top:12px;background:#fff1f2;color:#9f1239;padding:10px;border-radius:8px}.photo-download{font-size:12px;color:#2563eb;display:inline-block;margin-top:12px}footer{padding:16px 24px;border-top:1px solid #e2e8f0;background:#f8fafc}footer p{font-size:11px;margin:8px 0 12px}.photo-reviewed{display:flex;align-items:flex-start;gap:8px;font-size:13px}.photo-reviewed input{accent-color:#2563eb;margin-top:3px}

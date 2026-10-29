@@ -2824,6 +2824,11 @@
     "Fotos por color",
     "Photos by color"
   ],
+  "Foto de referência": ["Foto de referencia", "Reference photo"],
+  "Foto de referência: {name}. A imagem editada será aplicada ao grupo escolhido.": ["Foto de referencia: {name}. La imagen editada se aplicará al grupo elegido.", "Reference photo: {name}. The edited image will be applied to the chosen group."],
+  "Editar foto de {color}": ["Editar foto de {color}", "Edit photo for {color}"],
+  "A foto será preparada para {count} itens. Clique em Salvar no editar massivo para concluir.": ["La foto se preparará para {count} artículos. Pulse Guardar en la edición masiva para finalizar.", "The photo will be prepared for {count} items. Click Save in bulk edit to finish."],
+  "Não foi possível carregar a foto original. Tente novamente ou envie outra foto.": ["No se pudo cargar la foto original. Inténtelo de nuevo o suba otra foto.", "Could not load the original photo. Try again or upload another photo."],
   "Troque a foto principal dos itens escolhidos. As fotos adicionais da galeria são preservadas.": [
     "Cambie la foto principal de los productos elegidos. Se conservan las fotos adicionales de la galería.",
     "Replace the selected products’ main photo. Additional gallery photos are preserved."
