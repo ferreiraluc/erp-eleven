@@ -7,6 +7,11 @@ backend e PostgreSQL como estado persistente. Os endpoints usam serviços e/ou s
 SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou Celery.
 
 - `frontend/src/main.ts` inicia Vue, Pinia, router e i18n; `App.vue` contém as telas e notificações.
+- O frontend usa Node 22 e Vue I18n 11 em Composition API (`legacy: false`).
+  A atualização pontual da tradução corrige os avisos
+  [GHSA-83rm-6c8r-g728](https://github.com/advisories/GHSA-83rm-6c8r-g728) e
+  [GHSA-8rc2-428q-7ww3](https://github.com/advisories/GHSA-8rc2-428q-7ww3),
+  sem desativar a auditoria de dependências nem migrar os demais componentes Vue.
 - `frontend/src/components/ModuleHeader.vue` padroniza os cabeçalhos dos módulos:
   voltar, título e ações compactas que se reorganizam no celular. As ações e suas
   permissões continuam nas telas. Dashboard e login mantêm composição própria;
