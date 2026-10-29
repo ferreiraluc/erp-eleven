@@ -4,7 +4,7 @@ Network calls precede write locks. Every caller locks parent orders before parce
 in a stable order, and commits parcel/order changes in one transaction.
 """
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from ..config import settings
@@ -49,6 +49,7 @@ def apply_provider_results(db, results):
             continue
         row.historico_eventos, row.rastreio_info, row.status = events, meta, inferred
         row.ultima_atualizacao = settings.now()
+        row.provedor_verificado_em = datetime.now(timezone.utc)
         changed.append(row)
     db.flush()
     synced_orders = set()
@@ -59,10 +60,17 @@ def apply_provider_results(db, results):
     return changed, skipped
 
 
-def refresh_active(db):
+def refresh_active(db, *, skip_managed=False):
     from .wonca_service import parse_tracking
     rows = db.query(Rastreamento).filter(Rastreamento.ativo.is_(True),
                                          Rastreamento.status != RastreamentoStatus.ENTREGUE).all()
+    if skip_managed:
+        from ..models.wonca import WoncaSubscription
+        from .tracking_codes import normalize_tracking_code
+        monitored = {code for code, in db.query(WoncaSubscription.code).filter(
+            WoncaSubscription.remote_id.is_not(None),
+            WoncaSubscription.state.in_(('active', 'paused', 'removing', 'expired')))}
+        rows = [row for row in rows if normalize_tracking_code(row.codigo_rastreio) not in monitored]
     # Snapshot all versions before external calls; later responses never overwrite
     # an intervening edit, archive, relink or newer provider update.
     versions = [TrackingVersion.capture(row) for row in rows]

@@ -169,12 +169,13 @@ def test_scheduler_preserves_newer_manual_results_and_updates_order_atomically(p
     from app.models.pedido import PedidoStatus
     from app.models.rastreamento import RastreamentoStatus as Status
     from app.models.operations import ScheduledRun
+    from app.models.wonca import WoncaSubscription
     from app.services import wonca_service
 
     monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
     engine,schema=pg
     isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
-    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento,ScheduledRun)])
+    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento,ScheduledRun,WoncaSubscription)])
     factory=sessionmaker(bind=isolated,autoflush=False)
     monkeypatch.setattr(database,'SessionLocal',factory)
     order_id=uuid.uuid4()

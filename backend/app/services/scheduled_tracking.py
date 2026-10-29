@@ -7,7 +7,7 @@ from ..models.operations import ScheduledRun
 from .tracking_refresh import refresh_active
 
 
-def run_daily(session_factory=None, refresh=refresh_active):
+def run_daily(session_factory=None, refresh=None):
     session_factory = session_factory or database.SessionLocal
     key = 'tracking:' + settings.now().date().isoformat()
     with session_factory() as guard:
@@ -17,7 +17,7 @@ def run_daily(session_factory=None, refresh=refresh_active):
             if not guard.execute(text('SELECT pg_try_advisory_xact_lock(711003)')).scalar():return None
         if guard.get(ScheduledRun,key):return None
         with session_factory() as db:
-            result = refresh(db)
+            result = refresh(db) if refresh else refresh_active(db, skip_managed=True)
             db.commit()
         guard.add(ScheduledRun(key=key,completed_at=now()))
         guard.commit()

@@ -11,6 +11,7 @@
           {{ uiText('Configurar impressora de tickets') }}
         </button>
       </section>
+      <WoncaMonitoringPanel />
     </main>
     <PDVPrinterModal v-if="showPrinterModal" @close="showPrinterModal = false" />
   </div>
@@ -21,13 +22,14 @@ import { ref } from 'vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import PDVPrinterModal from '@/components/pdv/PDVPrinterModal.vue'
 import { uiText } from '@/i18n/uiText'
+import WoncaMonitoringPanel from '@/components/tracking/WoncaMonitoringPanel.vue'
 
 const showPrinterModal = ref(false)
 </script>
 
 <style scoped>
 .system-settings { min-height: 100vh; background: #f8fafc; color: #172033; }
-.settings-content { width: min(100%, 920px); margin: 0 auto; padding: 8px 24px 48px; box-sizing: border-box; }
+.settings-content { width: min(100%, 920px); margin: 0 auto; padding: 8px 24px 48px; box-sizing: border-box; display: grid; gap: 20px; }
 .settings-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
 .settings-card h2 { margin: 0 0 8px; font-size: 18px; }
 .settings-card p { margin: 0; color: #64748b; line-height: 1.5; }
