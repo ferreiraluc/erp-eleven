@@ -28,3 +28,5 @@ from .notification import (Notification, NotificationPreference, NotificationRec
                            NotificationRevision, NotificationRule, NotificationTemplate)
 from .notification_push import NotificationPushSetting, NotificationPushSubscription, NotificationPushDelivery
 from .system_quality import QualityConfig, QualityRun
+
+from .exchange_sync import ExchangeSync

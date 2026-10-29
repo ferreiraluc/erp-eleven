@@ -196,14 +196,14 @@
 
           <!-- Totals -->
           <div class="pdv-totals" v-if="pdv.cart.length">
-            <div class="pdv-total-row"><span>{{ $tr("Subtotal") }}</span><span>{{ fmtGs(pdv.subtotal) }}</span></div>
+            <div class="pdv-total-row"><span>{{ $tr("Subtotal") }}</span><span>{{ saleUsd(pdv.subtotal, rateUsd) }}</span></div>
             <div v-if="pdv.discountGs > 0" class="pdv-total-row pdv-discount-row">
-              <span>{{ $tr("Desconto") }}</span><span>-{{ fmtGs(pdv.discountGs) }}</span>
+              <span>{{ $tr("Desconto") }}</span><span>-{{ saleUsd(pdv.discountGs, rateUsd) }}</span>
             </div>
             <div class="pdv-total-row pdv-grand-total">
-              <span>{{ $tr("TOTAL") }}</span><span>{{ fmtGs(pdv.total) }}</span>
+              <span>{{ $tr("TOTAL") }}</span><span>{{ saleUsd(pdv.total, rateUsd) }}</span>
             </div>
-            <div class="pdv-total-usd">≈ U$ {{ fmtNum(pdv.total / rateUsd) }} · R$ {{ fmtNum(pdv.total / rateBrl) }}</div>
+            <div class="pdv-total-usd">≈ {{ fmtGs(pdv.total) }} · R$ {{ fmtNum(pdv.total / rateBrl) }}</div>
           </div>
 
           <!-- ── Payment section ── -->
@@ -323,6 +323,7 @@ import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { usePdvStore } from '@/stores/pdv'
 import { useCurrencyStore } from '@/stores/currency'
+import { saleUsd } from '@/services/saleUsd'
 import { inventoryAPI, type InventoryItem, type ProductRelation, type RelatedProductCursor } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
 import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, validPaymentAmount } from '@/services/pdvPayments'
@@ -756,7 +757,7 @@ async function confirmPayment() {
   checkoutError.value = null
   pdv.payments.splice(0, pdv.payments.length, ...localPayments.value)
   try {
-    const sale = await pdv.completeSale()
+    const sale = await pdv.completeSale(undefined, rateUsd.value)
     if (disposed || pdv.lastSale?.id !== sale.id) return
     refreshProductsAfterCheckout()
     resetPayment()
@@ -764,6 +765,7 @@ async function confirmPayment() {
     showToast(uiText(`Venda concluída!`), 'success')
   } catch (e: any) {
     checkoutError.value = e
+    if (e?.response?.status === 409 && String(e?.response?.data?.detail || '').includes('câmbio mudou')) void currencyStore.loadCurrentRates()
   }
 }
 

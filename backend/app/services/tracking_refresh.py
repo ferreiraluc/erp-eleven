@@ -68,8 +68,7 @@ def refresh_active(db, *, skip_managed=False):
         from ..models.wonca import WoncaSubscription
         from .tracking_codes import normalize_tracking_code
         monitored = {code for code, in db.query(WoncaSubscription.code).filter(
-            WoncaSubscription.remote_id.is_not(None),
-            WoncaSubscription.state.in_(('active', 'paused', 'removing', 'expired')))}
+            WoncaSubscription.state.in_(('active', 'pending', 'paused', 'removing', 'expired')))}
         rows = [row for row in rows if normalize_tracking_code(row.codigo_rastreio) not in monitored]
     # Snapshot all versions before external calls; later responses never overwrite
     # an intervening edit, archive, relink or newer provider update.

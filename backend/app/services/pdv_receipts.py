@@ -88,6 +88,7 @@ def enqueue(db, sale, user_id, *, copy_key=None):
 
 def build_snapshot(sale, device=None, *, copy=False):
     return dict(sale_id=str(sale.id), version=sale.version, date=sale.created_at.isoformat(),
+                usd_rate_gs=str(sale.usd_rate_gs) if sale.usd_rate_gs else None,
                 customer=sale.cliente_nome, seller=sale.vendedor.nome if sale.vendedor else None,
                 width=device.paper_width_mm if device else 80, height=device.paper_height_mm if device else 0,
                 status=sale.status, refunded=str(sale.refunded_gs or 0),
@@ -105,7 +106,7 @@ def snapshot_for_view(db, sale):
     device = destination(db) or db.query(PrintDevice).filter_by(purpose='tickets', active=True).order_by(PrintDevice.created_at).first()
     if original and original.snapshot:
         # Reflow the immutable financial data for today's media, without rewriting jobs.
-        return dict(original.snapshot, width=device.paper_width_mm if device else 80,
+        return dict(original.snapshot, usd_rate_gs=original.snapshot.get('usd_rate_gs') or (str(sale.usd_rate_gs) if sale.usd_rate_gs else None), width=device.paper_width_mm if device else 80,
                     height=device.paper_height_mm if device else 0)
     return build_snapshot(sale, device)
 

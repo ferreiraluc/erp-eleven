@@ -9,10 +9,11 @@
       <p v-if="auth.ownSales" class="scope-note">{{ tr('Você está consultando apenas suas vendas.') }}</p>
       <div v-if="data && !loading && !error" class="sale-summary">
         <article><span>{{ tr('Vendas no período') }}</span><strong>{{ data.total }}</strong></article>
-        <article><span>{{ tr('Valor líquido no ERP') }}</span><strong>{{ gs(data.summary.net_gs) }}</strong></article>
-        <article><span>{{ tr('Devoluções registradas') }}</span><strong>{{ gs(data.summary.refunded_gs) }}</strong></article>
+        <article><span>{{ tr('Valor líquido no ERP') }}</span><strong>{{ usd(data.summary.usd_unavailable ? null : data.summary.net_usd) }}</strong></article>
+        <article><span>{{ tr('Devoluções registradas') }}</span><strong>{{ usd(data.summary.usd_unavailable ? null : data.summary.refunded_usd) }}</strong></article>
         <article><span>{{ tr('Canceladas') }}</span><strong>{{ data.summary.cancelled }}</strong></article>
       </div>
+      <p v-if="data?.summary.usd_unavailable" class="scope-note">{{ tr('Cotação histórica indisponível') }} · {{ data.summary.usd_unavailable }}</p>
       <form class="sales-filters" @submit.prevent="page = 1; load()">
         <label class="search-field">{{ tr('Buscar') }}<input v-model="filters.q" :placeholder="tr('Cliente, produto, SKU ou código da venda')" maxlength="150" /><button type="button" class="erp-button erp-button--secondary erp-button--sm scan-ticket" @click="showScanner=true">{{ tr('Ler ticket') }}</button></label>
         <label>{{ tr('De') }}<input v-model="filters.date_from" type="date" /></label>
@@ -35,7 +36,7 @@
             <td :data-label="tr('Cliente e vendedor')"><strong>{{ sale.cliente_nome || tr('Cliente não informado') }}</strong><small>{{ sale.seller || '—' }}</small></td>
             <td :data-label="tr('Pagamento')">{{ sale.payment_methods.map(paymentText).join(' · ') || '—' }}</td>
             <td :data-label="tr('Situação')"><span class="status" :class="sale.status">{{ statusText(sale.status) }}</span></td>
-            <td :data-label="tr('Valor líquido')"><strong>{{ gs(sale.status === 'cancelled' ? 0 : Number(sale.total_gs) - Number(sale.refunded_gs)) }}</strong><small v-if="Number(sale.refunded_gs)">{{ tr('Estorno') }}: {{ gs(sale.refunded_gs) }}</small></td>
+            <td :data-label="tr('Valor líquido')"><strong>{{ usd(sale.net_usd) }}</strong><small v-if="Number(sale.refunded_gs)">{{ tr('Estorno') }}: {{ usd(sale.refunded_usd) }}</small></td>
             <td><div class="sale-actions"><button class="erp-button erp-button--secondary erp-button--sm" @click="openSale(sale.id)">{{ tr('Ver venda') }}</button><button v-if="auth.isOwner && !sale.deleted_at" class="erp-button erp-button--ghost erp-button--sm" @click="notificationSaleId = sale.id">{{ tr('Notificar vendedor') }}</button></div></td>
           </tr></tbody></table></div>
         <footer v-if="data.total > data.page_size" class="pagination"><button class="erp-button erp-button--secondary" :disabled="page === 1" @click="page--; load()">{{ tr('Anterior') }}</button><span>{{ page }} / {{ Math.ceil(data.total / data.page_size) }}</span><button class="erp-button erp-button--secondary" :disabled="page * data.page_size >= data.total" @click="page++; load()">{{ tr('Próxima') }}</button></footer>
@@ -58,7 +59,8 @@ import SaleNotificationModal from '@/components/notifications/SaleNotificationMo
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
 import { pdvManagementAPI, saleError, type SaleListing } from '@/services/pdvManagement'
 import { allPaymentFilters } from '@/services/pdvPayments'
-import { tr, gs, saleDate, statusText, paymentText } from '@/components/pdv/management/i18n'
+import { usd } from '@/services/saleUsd'
+import { tr, saleDate, statusText, paymentText } from '@/components/pdv/management/i18n'
 const auth = useAuthStore(), router = useRouter(), route = useRoute()
 const blank = () => ({ q: '', date_from: '', date_to: '', status: '', seller_id: '', payment: '', deleted: false })
 const filters = ref(blank()), page = ref(1), loading = ref(false), error = ref(''), selected = ref('')
@@ -86,7 +88,7 @@ function clear() { filters.value = blank(); page.value = 1; load() }
 function exportPage() {
   if (!data.value) return
   const safe = (value: unknown) => '"' + String(value ?? '').replace(/^\s*[=+@-]/, "'$&").replaceAll('"', '""') + '"'
-  const lines = [[tr('Venda'),tr('Data'),tr('Cliente'),tr('Vendedor'),tr('Situação'),'Total G$','Estorno G$'], ...data.value.items.map(s => [s.id,saleDate(s.created_at),s.cliente_nome,s.seller,statusText(s.status),s.total_gs,s.refunded_gs])]
+  const lines = [[tr('Venda'),tr('Data'),tr('Cliente'),tr('Vendedor'),tr('Situação'),'Total USD','Estorno USD'], ...data.value.items.map(s => [s.id,saleDate(s.created_at),s.cliente_nome,s.seller,statusText(s.status),s.total_usd,s.refunded_usd])]
   const url = URL.createObjectURL(new Blob(['\ufeff' + lines.map(row => row.map(safe).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }))
   const a = document.createElement('a'); a.href = url; a.download = `vendas-pagina-${page.value}.csv`; a.click(); URL.revokeObjectURL(url)
 }

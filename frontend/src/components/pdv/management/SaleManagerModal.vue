@@ -10,7 +10,7 @@
           <p v-if="sale.deleted_at" class="notice">{{ tr('Venda excluída da listagem. O histórico está preservado.') }}</p>
           <template v-if="preview">
             <h3>{{ tr('Confira antes de confirmar') }}</h3>
-            <div class="review-totals"><div><span>{{ tr('Total anterior') }}</span><strong>{{ gs(preview.before_total_gs) }}</strong></div><div><span>{{ tr('Valor após a operação') }}</span><strong>{{ gs(preview.after_total_gs) }}</strong></div><div v-if="operation !== 'edit'"><span>{{ tr('Estorno nesta operação') }}</span><strong>{{ gs(preview.refund_gs) }}</strong></div></div>
+            <div class="review-totals"><div><span>{{ tr('Total anterior') }}</span><strong>{{ saleUsd(preview.before_total_gs, sale?.usd_rate_gs) }}</strong></div><div><span>{{ tr('Valor após a operação') }}</span><strong>{{ saleUsd(preview.after_total_gs, sale?.usd_rate_gs) }}</strong></div><div v-if="operation !== 'edit'"><span>{{ tr('Estorno nesta operação') }}</span><strong>{{ saleUsd(preview.refund_gs, sale?.usd_rate_gs) }}</strong></div></div>
             <p v-if="operation !== 'edit'" class="notice">{{ tr('Abatimento do fiado') }}: <strong>{{ gs(preview.fiado_credit_gs) }}</strong><br />{{ tr('Valor a devolver fora do ERP') }}: <strong>{{ gs(preview.cash_refund_gs) }}</strong></p>
             <p v-if="operation !== 'edit'" class="hint">{{ tr(preview.payment_notice) }}</p>
             <template v-if="preview.correction">
@@ -37,7 +37,7 @@
             <label class="reason">{{ tr('Motivo da alteração') }}<textarea v-model="reason" rows="3" maxlength="1000" :placeholder="tr('Descreva o que precisa ser corrigido ou devolvido')" /></label>
           </template>
           <template v-else>
-            <div class="review-totals"><div><span>{{ tr('Total da venda') }}</span><strong>{{ gs(sale.total_gs) }}</strong></div><div><span>{{ tr('Estornado') }}</span><strong>{{ gs(sale.refunded_gs) }}</strong></div><div><span>{{ tr('Valor líquido') }}</span><strong>{{ gs(sale.status === 'cancelled' ? 0 : Number(sale.total_gs)-Number(sale.refunded_gs)) }}</strong></div></div>
+            <div class="review-totals"><div><span>{{ tr('Total da venda') }}</span><strong>{{ saleUsd(sale.total_gs, sale.usd_rate_gs) }}</strong></div><div><span>{{ tr('Estornado') }}</span><strong>{{ saleUsd(sale.refunded_gs, sale.usd_rate_gs) }}</strong></div><div><span>{{ tr('Valor líquido') }}</span><strong>{{ saleUsd(sale.status === 'cancelled' ? 0 : Number(sale.total_gs)-Number(sale.refunded_gs), sale.usd_rate_gs) }}</strong></div></div>
             <p v-if="Number(sale.payment_difference_gs)" class="notice">{{ tr('Diferença entre pagamentos e total (pode incluir troco)') }}: {{ gs(sale.payment_difference_gs) }}</p>
             <nav class="detail-tabs"><button class="erp-control" :aria-pressed="tab==='items'" @click="tab='items'">{{ tr('Itens e pagamentos') }}</button><button v-if="sale.can_manage && auth.isOwner" class="erp-control" :aria-pressed="tab==='history'" @click="tab='history'">{{ tr('Histórico de alterações') }} ({{ sale.events.length }})</button></nav>
             <template v-if="tab==='items'">
@@ -73,6 +73,7 @@ import SaleEditForm from './SaleEditForm.vue'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
 import SaleNotificationModal from '@/components/notifications/SaleNotificationModal.vue'
 import PDVReceiptModal from '../PDVReceiptModal.vue'
+import { saleUsd } from '@/services/saleUsd'
 import { tr, gs, qty, amount, saleDate, statusText, operationText, paymentText } from './i18n'
 const props=defineProps<{saleId:string;sellers:Array<{id:string;name:string}>}>()
 const emit=defineEmits<{(e:'close'):void;(e:'changed'):void}>(),auth=useAuthStore()

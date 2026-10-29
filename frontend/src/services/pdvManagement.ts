@@ -4,7 +4,7 @@ export type SaleOperation = 'edit' | 'return' | 'cancel' | 'delete'
 export interface ManagedLine extends PdvSaleItemResponse { returned_quantity: number | string; product_deleted?: boolean; catalog_preview?: SaleProductPreview | null }
 export interface ManagedSale {
   id: string; ticket_code?: string; vendedor_id: string | null; cliente_id: string | null; cliente_nome: string | null
-  subtotal_gs: string; desconto_gs: string; total_gs: string; refunded_gs: string; fiado_reversed_gs: string
+  usd_rate_gs?: string | null; subtotal_gs: string; desconto_gs: string; total_gs: string; refunded_gs: string; fiado_reversed_gs: string
   status: string; stock_applied: boolean; notas: string | null; version: number; created_at: string
   deleted_at: string | null; seller: string | null; actor: string | null; can_manage: boolean
   items: ManagedLine[]; payments: PdvPaymentResponse[]; events: SaleEvent[]; payment_difference_gs: string
@@ -21,9 +21,9 @@ export interface SalePreview { operation: SaleOperation; reason: string; plan_to
   warnings: string[]; payment_notice: string; correction?: PdvSaleCreate | null }
 export interface SaleCommit { command: SaleCommand; plan_token: string; request_id: string; confirm: true }
 export interface SaleListing { page: number; page_size: number; total: number; own_sales_only: boolean; can_manage: boolean
-  summary: { gross_gs: string; refunded_gs: string; net_gs: string; cancelled: number }
+  summary: { gross_usd?: string; refunded_usd?: string; net_usd?: string; usd_unavailable?: number; gross_gs: string; refunded_gs: string; net_gs: string; cancelled: number }
   items: Array<{ id: string; ticket_code?: string; created_at: string; cliente_nome: string | null; seller: string | null; total_gs: string
-    refunded_gs: string; status: string; items_count: number; payment_methods: string[]; deleted_at: string | null; version: number
+    net_usd?: string | null; total_usd?: string | null; refunded_usd?: string | null; usd_rate_gs?: string | null; refunded_gs: string; status: string; items_count: number; payment_methods: string[]; deleted_at: string | null; version: number
     products?: Array<{ name: string; preview: SaleProductPreview | null }> }> }
 export const pdvManagementAPI = {
   list: (params: Record<string, unknown>): Promise<SaleListing> => api.get('/api/pdv/management', { params }).then(r => r.data),

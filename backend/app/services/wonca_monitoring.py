@@ -49,6 +49,11 @@ def lock(db, key):
         text('SELECT pg_try_advisory_xact_lock(:key)'), {'key': key}).scalar())
 
 
+def owns(subscription, config):
+    return bool(subscription and config and subscription.endpoint_id == config.endpoint_id and
+                (subscription.remote_id or subscription.state == 'pending' and subscription.attempts > 0))
+
+
 def call(method, payload):
     if method not in {'UpsertTrackingSubscriptions', 'DeleteTrackingSubscriptions'}:
         raise ValueError('Unsupported Wonca operation')
@@ -109,7 +114,7 @@ def receive(db, body, headers, moment=None):
             raise HTTPException(409, 'Evento já recebido com outro conteúdo.')
         return {'accepted': True, 'duplicate': True}
     subscription = db.get(WoncaSubscription, code)
-    owned = subscription and subscription.endpoint_id == config.endpoint_id and subscription.remote_id
+    owned = owns(subscription, config)
     status = 'pending' if owned and config.enabled else 'ignored'
     row = WoncaEvent(event_id=event_id, code=code, checked_at=checked,
         body_hash=digest, payload=event['payload'] if status == 'pending' else None,
@@ -141,8 +146,7 @@ def process_one(db):
         db.query(Pedido.id).filter_by(id=row.pedido_id).with_for_update().first()
     if row:
         row = db.query(Rastreamento).filter_by(id=row.id).populate_existing().with_for_update().first()
-    applicable = (config and config.enabled and subscription and subscription.remote_id and
-        subscription.endpoint_id == config.endpoint_id and row and row.ativo and
+    applicable = (config and config.enabled and owns(subscription, config) and row and row.ativo and
         utc(event.checked_at) <= utc(subscription.expires_at) and
         normalize_tracking_code(row.codigo_rastreio) == event.code)
     events = normalize_events(event.payload or {}) if applicable else []
@@ -190,9 +194,9 @@ def process_safely(db):
     return True
 
 
-def sync_subscriptions(db, provider=call, moment=None):
+def sync_subscriptions(db, provider=call, moment=None, *, guarded=False, plan_only=False, enroll_new=True):
     """One serialized bounded batch; calls only for new/changed owned subscriptions."""
-    if not lock(db, 711014):
+    if not guarded and not lock(db, 711014):
         return {'added': 0, 'removed': 0}
     config = db.get(WoncaConfig, 'main')
     if not config or not secret(config) or not settings.WONCA_API_KEY:
@@ -205,18 +209,28 @@ def sync_subscriptions(db, provider=call, moment=None):
     subscriptions = db.query(WoncaSubscription).order_by(WoncaSubscription.code).all()
     by_code = {row.code: row for row in subscriptions}
     # Existing registrations keep their first window; never renew expired objects silently.
-    for code in sorted(desired - by_code.keys())[:100]:
+    for code in (sorted(desired - by_code.keys())[:100] if enroll_new else []):
         row = WoncaSubscription(code=code, endpoint_id=config.endpoint_id, profile_id=config.profile_id,
-            created_at=moment, expires_at=moment + timedelta(days=config.monitor_days), retry_at=moment)
+            created_at=moment, expires_at=moment + timedelta(days=config.monitor_days), retry_at=moment, attempts=1)
         db.add(row); subscriptions.append(row)
     db.flush()
     for row in subscriptions:
-        if not row.remote_id and utc(row.expires_at) <= moment:
+        if not row.remote_id and not row.attempts and utc(row.expires_at) <= moment:
             row.state = 'expired'
+        if (plan_only and row.code in desired and row.state in ('stopped', 'paused') and
+                utc(row.expires_at) > moment and utc(row.retry_at) <= moment):
+            # Its previous remote registration was already cancelled. Persist an
+            # uncertain intent before a new ID can be created by the provider.
+            row.remote_id = None
+            row.state = 'pending'
+            row.attempts = max(1, row.attempts)
+    if plan_only:
+        db.flush()
+        return {'added': 0, 'removed': 0}
     due = [row for row in subscriptions if utc(row.retry_at) <= moment]
     removing = [row for row in due if row.remote_id and row.state in ('active', 'pending', 'removing') and
         (row.code not in desired or utc(row.expires_at) <= moment or row.state == 'removing')][:100]
-    adding = [row for row in due if (row.code in desired or row.attempts > 0 and not row.remote_id) and utc(row.expires_at) > moment and
+    adding = [row for row in due if ((row.code in desired and utc(row.expires_at) > moment) or row.attempts > 0 and not row.remote_id) and
         row.state in ('pending', 'stopped', 'paused') and row.endpoint_id == config.endpoint_id and row.profile_id == config.profile_id][:100]
     added = removed = 0
     for rows, method in ((removing, 'DeleteTrackingSubscriptions'), (adding, 'UpsertTrackingSubscriptions')):
@@ -244,7 +258,7 @@ def sync_subscriptions(db, provider=call, moment=None):
                     row.remote_id = str(UUID(item['id'])); row.state = 'active'
                     row.last_error = None; row.attempts = 0
                 added = len(rows)
-                abandoned = [row for row in rows if row.code not in desired]
+                abandoned = [row for row in rows if row.code not in desired or utc(row.expires_at) <= moment]
                 if abandoned:
                     # A timeout may have accepted an upsert before the operator
                     # paused/archived it. Recover its ID and cancel immediately.
@@ -252,7 +266,8 @@ def sync_subscriptions(db, provider=call, moment=None):
                         row.state = 'removing'
                     provider('DeleteTrackingSubscriptions', {'ids': [row.remote_id for row in abandoned]})
                     for row in abandoned:
-                        row.state = 'paused' if config.enabled and not awake and row.code in current else 'stopped'
+                        row.state = ('expired' if utc(row.expires_at) <= moment else
+                                     'paused' if config.enabled and not awake and row.code in current else 'stopped')
                     removed += len(abandoned)
         except (RuntimeError, ValueError, KeyError, TypeError):
             for row in rows:
@@ -263,6 +278,22 @@ def sync_subscriptions(db, provider=call, moment=None):
                     row.state = 'removing'
     db.flush()
     return {'added': added, 'removed': removed}
+
+
+def reconcile(session_factory, provider=call, moment=None):
+    # Separate guard owns the lock across the durable intent and remote phases.
+    # A deployment may stop after the provider accepted an upsert; the next
+    # worker can then recover its ID even if the parcel was archived meanwhile.
+    with session_factory() as guard:
+        if not lock(guard, 711014):
+            return {'added': 0, 'removed': 0}
+        with session_factory() as db:
+            sync_subscriptions(db, provider, moment, guarded=True, plan_only=True)
+            db.commit()
+        with session_factory() as db:
+            result = sync_subscriptions(db, provider, moment, guarded=True, enroll_new=False)
+            db.commit()
+            return result
 
 
 def main(stop):
@@ -279,9 +310,8 @@ def main(stop):
                     db.commit()
                 beat('wonca')
             if time.monotonic() >= sync_at:
+                reconcile(SessionLocal)
                 with SessionLocal() as db:
-                    sync_subscriptions(db)
-                    db.commit()
                     # Keep idempotency receipts, purge only completed raw-free inbox rows after 90d.
                     db.query(WoncaEvent).filter(WoncaEvent.processed_at < now() - timedelta(days=90)).delete(synchronize_session=False)
                     db.commit()

@@ -12,6 +12,7 @@
         </button>
       </section>
       <WoncaMonitoringPanel />
+      <BonanzaSyncPanel />
     </main>
     <PDVPrinterModal v-if="showPrinterModal" @close="showPrinterModal = false" />
   </div>
@@ -23,6 +24,7 @@ import ModuleHeader from '@/components/ModuleHeader.vue'
 import PDVPrinterModal from '@/components/pdv/PDVPrinterModal.vue'
 import { uiText } from '@/i18n/uiText'
 import WoncaMonitoringPanel from '@/components/tracking/WoncaMonitoringPanel.vue'
+import BonanzaSyncPanel from '@/components/currency/BonanzaSyncPanel.vue'
 
 const showPrinterModal = ref(false)
 </script>

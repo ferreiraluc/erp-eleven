@@ -167,6 +167,8 @@ def create_sale(
     if any(p['method'] == 'fiado' and p['amount_gs'] > 0 for p in payments) and not body.cliente_id:
         raise HTTPException(422, 'Selecione o cliente para lançar fiado.')
 
+    from ...services.pdv_usd import current_rate
+    usd_rate = current_rate(db, body.usd_rate_gs)
     stock_items = _lock_sale_stock(db, body.items)
     customer = pdv_customers.select(db, PdvCustomerSelection(source='pdv', id=body.cliente_id), current_user) if body.cliente_id else None
 
@@ -193,6 +195,7 @@ def create_sale(
         subtotal_gs=Decimal(str(round(subtotal, 2))),
         desconto_gs=Decimal(str(round(desconto, 2))),
         total_gs=total_gs,
+        usd_rate_gs=usd_rate,
         notas=body.notas,
         status="completed",
         created_by=current_user.id,
@@ -519,6 +522,7 @@ def _sale_to_response(sale: PdvSale) -> PdvSaleResponse:
         subtotal_gs=float(sale.subtotal_gs),
         desconto_gs=float(sale.desconto_gs),
         total_gs=float(sale.total_gs),
+        usd_rate_gs=sale.usd_rate_gs,
         status=sale.status,
         stock_applied=sale.stock_applied,
         notas=sale.notas,

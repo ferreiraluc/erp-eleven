@@ -26,6 +26,7 @@ from app.models.folga import Folga
 from app.models.inventory import Item
 from app.models.pdv import PdvCliente, PdvSale
 from app.models.venda import Venda
+from app.models.exchange_rate import ExchangeRate
 from app.services import assistant_channels as channels, assistant_agent as agent, assistant_tools as tools
 from app.services import assistant_events  # register event listener
 from app.api.endpoints.assistant import router
@@ -42,7 +43,7 @@ def setup(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     tables = [m.__table__ for m in (Usuario, Cliente, Pedido, Rastreamento, AssistantIdentity,
                                    AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge,
-                                   Vendedor, Folga, Item, PdvCliente, PdvSale, Venda)]
+                                   Vendedor, Folga, Item, PdvCliente, PdvSale, Venda, ExchangeRate)]
     Base.metadata.create_all(engine, tables=tables)
     factory = sessionmaker(bind=engine, autoflush=False)
     monkeypatch.setattr(worker, "SessionLocal", factory)

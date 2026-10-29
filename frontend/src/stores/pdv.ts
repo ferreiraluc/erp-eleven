@@ -253,7 +253,7 @@ export const usePdvStore = defineStore('pdv', () => {
   watch([() => auth.user?.id, () => auth.token, () => auth.user?.sales_scope,
          () => auth.user?.vendedor_id, () => auth.user?.sales_seller], resetSessionState, { flush: 'sync' })
 
-  async function completeSale(vendedorId?: string): Promise<PdvSaleResponse> {
+  async function completeSale(vendedorId?: string, usdRateGs?: number): Promise<PdvSaleResponse> {
     ensureEditable()
     if (checkoutUncertain.value) throw new PdvCartError('uncertain')
     if (!cart.value.length) throw new PdvCartError('emptyCart')
@@ -263,6 +263,7 @@ export const usePdvStore = defineStore('pdv', () => {
     try {
       const body: PdvSaleCreate = {
         print_receipt: true,
+        usd_rate_gs: usdRateGs,
         vendedor_id: vendedorId || undefined,
         cliente_id: clienteId.value || undefined,
         cliente_nome: clienteNome.value || undefined,

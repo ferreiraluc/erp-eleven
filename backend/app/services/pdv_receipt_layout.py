@@ -39,6 +39,10 @@ def barcode(sale_id):
 
 
 def view(snapshot):
+    from .pdv_usd import convert
+    def money(value):
+        usd = convert(value, snapshot.get('usd_rate_gs'))
+        return 'US$ ' + (number(usd, 2) if usd is not None else '—')
     date = datetime.fromisoformat(snapshot['date'])
     if date.tzinfo:
         date = date.astimezone(ZoneInfo('America/Asuncion'))
@@ -57,7 +61,7 @@ def view(snapshot):
         subtotal=money(snapshot['subtotal']), discount=money(snapshot['discount']) if Decimal(snapshot['discount']) > 0 else None,
         total=money(total), refunded=money(snapshot.get('refunded', 0)) if Decimal(snapshot.get('refunded') or '0') > 0 else None,
         payments=[dict(label=PAYMENTS.get(p['method'], 'Otro'), amount=f"{p['currency']} {number(p['amount'], 0 if p['currency'] in ('GS', 'PYG') else 2)}",
-                       equivalent=money(p['total']) if p['currency'] not in ('GS', 'PYG') else None) for p in snapshot['payments']],
+                       equivalent=money(p['total']) if p['currency'] not in ('USD', 'USDT') else None) for p in snapshot['payments']],
         change=money(paid-total) if paid > total and state == 'completed' else None,
         seller=snapshot.get('seller') or 'No informado', customer=snapshot.get('customer') or 'Consumidor final',
         footer=['¡Gracias por su compra!', 'Conserve este comprobante para consultas.', '¡Esperamos su próxima visita!'],

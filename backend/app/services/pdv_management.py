@@ -6,7 +6,7 @@ import hashlib
 import json
 import uuid
 from fastapi import HTTPException
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, case as sa_case
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.exc import IntegrityError
 from ..config import settings
@@ -44,7 +44,7 @@ def serial(value):
 def digest(value): return hashlib.sha256(json.dumps(serial(value),sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 def snapshot(sale):
-    fields = ('id','vendedor_id','cliente_id','cliente_nome','subtotal_gs','desconto_gs','total_gs','status','stock_applied','notas','created_at','version','refunded_gs','fiado_reversed_gs','deleted_at')
+    fields = ('id','vendedor_id','cliente_id','cliente_nome','subtotal_gs','desconto_gs','total_gs','usd_rate_gs','status','stock_applied','notas','created_at','version','refunded_gs','fiado_reversed_gs','deleted_at')
     return serial({**{f:getattr(sale,f) for f in fields},
         'items':[{c.name:getattr(r,c.name) for c in r.__table__.columns} for r in sorted(sale.items,key=lambda r:str(r.id))],
         'payments':[{c.name:getattr(r,c.name) for c in r.__table__.columns} for r in sorted(sale.payments,key=lambda r:str(r.id))]})
@@ -112,6 +112,12 @@ def listing(db,user,*,page=1,page_size=25,q='',status=None,date_from=None,date_t
         if bounds:parts.append(PdvSale.id.between(*bounds))
         query=query.filter(or_(*parts))
     count=query.count()
+    from .pdv_usd import convert
+    usd_summary=query.with_entities(
+        func.sum(func.round(sa_case((PdvSale.status != 'cancelled', PdvSale.total_gs / func.nullif(PdvSale.usd_rate_gs,0)),else_=0),2)),
+        func.sum(func.round(PdvSale.refunded_gs / func.nullif(PdvSale.usd_rate_gs,0),2)),
+        func.sum(func.round(sa_case((PdvSale.status != 'cancelled', (PdvSale.total_gs-PdvSale.refunded_gs) / func.nullif(PdvSale.usd_rate_gs,0)),else_=0),2)),
+        func.count(sa_case((PdvSale.usd_rate_gs.is_(None), 1)))).one()
     grouped=query.with_entities(PdvSale.status,func.count(PdvSale.id),func.sum(PdvSale.total_gs),func.sum(PdvSale.refunded_gs)).group_by(PdvSale.status).all()
     # Cancelled records remain auditable but never inflate effective sales.
     gross=sum((r[2] or 0) for r in grouped if r[0]!='cancelled')
@@ -121,9 +127,12 @@ def listing(db,user,*,page=1,page_size=25,q='',status=None,date_from=None,date_t
     visible_lines={s.id: sorted(s.items, key=lambda line: str(line.id))[:3] for s in rows}
     previews=catalog_previews(db, {line.item_id for lines in visible_lines.values() for line in lines if line.item_id})
     return serial({'page':page,'page_size':page_size,'total':count,'own_sales_only':own_sales(user),'can_manage':is_owner(user),
-        'summary':{'gross_gs':gross,'refunded_gs':refunds,'net_gs':gross-effective_refunds,'cancelled':sum(r[1] for r in grouped if r[0]=='cancelled')},
+        'summary':{'gross_usd':money(usd_summary[0] or 0),'refunded_usd':money(usd_summary[1] or 0),
+                   'net_usd':money(usd_summary[2] or 0),'usd_unavailable':usd_summary[3], 'gross_gs':gross,'refunded_gs':refunds,'net_gs':gross-effective_refunds,'cancelled':sum(r[1] for r in grouped if r[0]=='cancelled')},
         'items':[{'id':s.id,'ticket_code':ticket_code(s.id),'created_at':s.created_at,'cliente_nome':s.cliente_nome,'seller':s.vendedor.nome if s.vendedor else None,
-                  'total_gs':s.total_gs,'refunded_gs':s.refunded_gs,'status':s.status,'items_count':len(s.items),
+                  'total_gs':s.total_gs,'refunded_gs':s.refunded_gs,'usd_rate_gs':s.usd_rate_gs,
+                  'total_usd':convert(s.total_gs,s.usd_rate_gs),'refunded_usd':convert(s.refunded_gs,s.usd_rate_gs),
+                  'net_usd':convert(0 if s.status=='cancelled' else s.total_gs-s.refunded_gs,s.usd_rate_gs),'status':s.status,'items_count':len(s.items),
                   'products':[{'name':line.item_name,'preview':previews.get(str(line.item_id))} for line in visible_lines[s.id]],
                   'payment_methods':sorted({p.method for p in s.payments}),'deleted_at':s.deleted_at,'version':s.version} for s in rows]})
 
