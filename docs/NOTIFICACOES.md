@@ -130,17 +130,29 @@ estáveis reduzem avisos duplicados, sem garantir entrega exatamente uma vez.
 
 ## Regras iniciais
 
-| Evento | Destinatários permitidos | Comportamento inicial |
+| Evento | Destinatários padrão, sem seleção | Comportamento inicial |
 | --- | --- | --- |
 | Nova venda do PDV concluída | Lucas | Aviso informativo |
 | Nova venda com avulsos e sem observação | Lucas e vendedor daquela venda | Pede motivo e confirmação, sem impedir uma venda legítima |
 | Ticket em falha ou envio incerto | Lucas e vendedor daquela venda | Solicita conferir a fila; não reimprime |
 | Rastreio existente muda de situação | Lucas e criador do rastreio | Atalho para a consulta |
-| Bom dia / boa tarde | Usuários ativos ou seleção de Lucas | 09h / 14h de Brasília, uma vez ao dia |
-| Lembrete diário | Usuários configurados | Desligado até configuração |
+| Bom dia / boa tarde | Todos os usuários ativos | 09h / 14h de Brasília, uma vez ao dia |
+| Lembrete diário | Todos os usuários ativos | Desligado até configuração |
 
-As regras operacionais podem restringir esses destinatários, nunca ampliar uma
-venda para um colega sem relação com ela. O motivo de um avulso fica no recibo da
+Ao marcar usuários e salvar uma regra, a seleção **substitui** os destinatários
+padrão nos próximos eventos. Lucas precisa estar marcado para continuar recebendo
+essa regra quando há uma seleção. Rastreios podem ser enviados aos usuários ativos
+selecionados, mesmo quando outra pessoa cadastrou o pacote.
+
+Avisos de venda respeitam o acesso atual de cada selecionado: contas limitadas às
+próprias vendas recebem somente eventos das suas vendas; contas com acesso geral
+podem receber eventos de todos os vendedores. Selecionar alguém na regra não
+amplia permissões de consulta nem expõe valores de uma venda fora do seu escopo.
+As mesmas restrições continuam na caixa, na abertura do destino e no envio push.
+Usuários inativos não recebem novos avisos. As seleções já salvas são aproveitadas
+pelos próximos eventos, sem reenviar notificações antigas.
+
+O motivo de um avulso fica no recibo da
 notificação; não reescreve dados financeiros da venda. Avulso não é tratado como
 fraude nem como prova de baixa indevida. Saudações têm janela de 60 minutos após
 o horário configurado, evitando mensagens de manhã durante um deploy à noite.

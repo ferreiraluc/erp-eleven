@@ -14,6 +14,7 @@ from ..models.notification import (
 from ..models.usuario import Usuario
 from ..schemas.notification import CATEGORIES, NotificationFields, validate_action_path
 from .access_policy import is_owner, own_sales
+from .notification_context import notification_allowed
 from .user_sessions import aware
 
 BRT = ZoneInfo('America/Sao_Paulo')
@@ -253,13 +254,13 @@ def emit_event(db, event_key, *, context, user_ids, dedupe_key, action_path=None
               'date': moment.strftime('%d/%m/%Y'), 'time': moment.strftime('%H:%M')}
     # No nested lookups, formatting operations or arbitrary object attributes.
     values.update({key: str(value)[:500] for key, value in context.items() if key in values and value is not None})
-    if event_key in DAILY_EVENTS:
-        recipients = rule.user_ids or user_ids
-    else:
-        allowed = {str(uid) for uid in user_ids}
-        recipients = [uid for uid in rule.user_ids if str(uid) in allowed] if rule.user_ids else user_ids
-    users = active_users(db, recipients)
+    # Event defaults are a fallback, not an allowlist. Explicit recipients must
+    # still have access to the underlying sale before any inbox/push is created.
+    users = active_users(db, rule.user_ids or user_ids)
     path = action_path or template.action_path
+    reference = Notification(action_path=path, entity_type=entity_type,
+                             entity_id=str(entity_id) if entity_id is not None else None)
+    users = [user for user in users if notification_allowed(db, user, reference)]
     # Retain the inbox message when access changed, while dropping a now-forbidden shortcut.
     if any(not action_allowed(db, user, path) for user in users):
         path = None

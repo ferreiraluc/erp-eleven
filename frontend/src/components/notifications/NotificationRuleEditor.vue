@@ -29,6 +29,8 @@
     <details>
       <summary>{{ n('recipients') }} · {{ userIds.length || n('defaultRecipients') }}</summary>
       <p>{{ n('automaticRecipients') }}</p>
+      <p>{{ n(defaultRecipientsHelp) }}</p>
+      <p v-if="salesEvent">{{ n('salesRecipientsScope') }}</p>
       <div class="notification-rule__users">
         <label v-for="user in users" :key="user.id" class="check"
           ><input v-model="userIds" type="checkbox" :value="user.id" :disabled="busy" />{{
@@ -91,6 +93,15 @@ watch(
 const timed = computed(() =>
   ['daily_greeting', 'morning_greeting', 'afternoon_greeting'].includes(props.rule.event_key),
 )
+const salesEvent = computed(() =>
+  ['sale_completed', 'sale_avulso_without_reason', 'sale_receipt_problem'].includes(props.rule.event_key),
+)
+const defaultRecipientsHelp = computed<NotificationCopyKey>(() => {
+  if (props.rule.event_key === 'sale_completed') return 'defaultSaleRecipients'
+  if (salesEvent.value) return 'defaultSaleProblemRecipients'
+  if (props.rule.event_key === 'tracking_status_changed') return 'defaultTrackingRecipients'
+  return 'defaultGreetingRecipients'
+})
 const ruleLabel = computed(() => n(props.rule.event_key as NotificationCopyKey))
 const templateOptions = computed(() =>
   props.templates.map((template) => ({ value: template.id, label: template.name })),
