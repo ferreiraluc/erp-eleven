@@ -48,3 +48,28 @@ def test_overlapping_workers_fetch_one_board(pg,monkeypatch):
         assert sum(bool(r['updated']) for r in results)==1 and len(calls)==1
         with factory() as db: assert db.query(ExchangeRate).filter_by(is_active=True).count()==2
     finally: isolated.dispose()
+
+
+def test_summary_rounds_each_sale_half_up_in_postgresql(pg,monkeypatch):
+    from sqlalchemy.orm import sessionmaker
+    from app.database import Base
+    from app.models import Usuario
+    from app.models.usuario import UsuarioRole
+    from app.models.pdv import PdvSale
+    from app.config import settings
+    from app.services.pdv_management import listing
+    from decimal import Decimal
+    monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
+    engine,schema=pg
+    isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
+    Base.metadata.create_all(isolated)
+    factory=sessionmaker(bind=isolated,autoflush=False)
+    try:
+        with factory() as db:
+            user=Usuario(nome='Synthetic Lucas',email='lucas@eleven.com',role=UsuarioRole.ADMIN,senha_hash='unused');db.add(user)
+            db.add_all([PdvSale(total_gs=90,subtotal_gs=90,usd_rate_gs=6000),PdvSale(total_gs=90,subtotal_gs=90,usd_rate_gs=6000)])
+            db.commit()
+            data=listing(db,user)
+            assert Decimal(data['summary']['net_usd'])==Decimal('.04')
+            assert all(Decimal(row['net_usd'])==Decimal('.02') for row in data['items'])
+    finally: isolated.dispose()

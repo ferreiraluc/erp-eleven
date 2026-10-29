@@ -132,7 +132,7 @@ def test_sync_configuration_requires_owner_and_only_fetches_on_enable(setup,monk
 def test_sales_summary_sums_each_rounded_dollar_total_and_exposes_missing_rates(pdv_app):
     factory,client,_=pdv_app
     with factory() as db:
-        db.add_all([PdvSale(total_gs=90,subtotal_gs=90,usd_rate_gs=6000),PdvSale(total_gs=90,subtotal_gs=90,usd_rate_gs=6000)])
+        db.add_all([PdvSale(total_gs=120,subtotal_gs=120,usd_rate_gs=6000),PdvSale(total_gs=120,subtotal_gs=120,usd_rate_gs=6000)])
         db.commit()
     data=client.get('/api/pdv/management').json()
     assert Decimal(data['summary']['net_usd'])==Decimal('.04')
