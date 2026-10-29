@@ -122,12 +122,14 @@ def test_new_addresses_reuse_principal_and_known_alias_without_hiding_conflicts(
     factory, _, uid, _ = env
     with factory() as db:
         target, source, *_ = pair(db, uid)
-        target.nome = 'Ana Correia Silva'; db.flush()
+        target.nome = 'Ana Correia Silva'
+        source.telefone = '+595981123456'
+        db.flush()
         apply(db, target, source)
-        new, _ = save_or_reuse(db, {'pais':'PY','nome':'ANA CORREIA','cidade':'Encarnación'}, uid)
+        new, _ = save_or_reuse(db, {'pais':'PY','nome':'ANA CORREIA','cidade':'Encarnación','telefone':'+595981123456'}, uid)
         assert new.cliente_id == target.id and not new.customer_link_review
         assert db.query(Cliente).count() == 2
-        assert find_customer(db, {'nome':'Ana Correia'}, customers=db.query(Cliente).all())[0].id == target.id
+        assert find_customer(db, {'nome':'Ana Correia','telefone':'+595981123456'}, customers=db.query(Cliente).all())[0].id == target.id
         target.cpf = '12345678909'; db.flush()
         assert find_customer(db, {'nome':'Ana Correia','cpf':'98765432100'})[0] is None
         db.add(Cliente(nome='Ana Correia')); db.flush()
@@ -159,3 +161,22 @@ def test_customer_api_hides_aliases_redirects_history_and_rejects_stale_edits(en
     assert client.post('/clientes/', json={'nome':'ANA CORREIA'}).status_code == 409
     # A documented/contact conflict remains a separate identity, never auto-merged.
     assert client.post('/clientes/', json={'nome':'Outra Pessoa'}).status_code == 201
+
+
+def test_legacy_pair_api_requires_review_for_conflicting_typed_documents(env):
+    factory, _, uid, _ = env
+    with factory() as db:
+        target, source, *_ = pair(db, uid)
+        target.documentos = [{'tipo': 'CI', 'pais': 'PY', 'numero': '1234567'}]
+        source.documentos = [{'tipo': 'CI', 'pais': 'PY', 'numero': '7654321'}]
+        db.flush()
+        plan = merge_customers(db, target.id, source.id)
+        assert plan['state'] == 'review_conflicts'
+        assert plan['conflicting_fields'] == ['documentos']
+        with pytest.raises(HTTPException, match='divergem'):
+            merge_customers(db, target.id, source.id, apply=True, expected_plan=plan['plan_token'])
+        result = merge_customers(db, target.id, source.id, apply=True,
+                                 expected_plan=plan['plan_token'], reviewed_conflicts=True)
+        assert result['state'] == 'merged'
+        assert target.documentos[0]['numero'] == '1234567'
+        assert source.documentos[0]['numero'] == '7654321'

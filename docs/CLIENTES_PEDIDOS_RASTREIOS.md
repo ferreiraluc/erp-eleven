@@ -107,22 +107,42 @@ O histórico expandido acompanha o conteúdo, sem limite de altura que corte eve
 - Ao selecionar um cliente em um pedido, o frontend preenche seus dados para revisão.
   A operação de vincular, sozinha, não troca nomes ou endereços históricos.
 
-Novos endereços salvos no gestor, cotados no bot ou usados em uma impressão confirmada
-recebem um cliente. A resolução normaliza acentos, espaços e telefones completos; usa
-documento compatível com o nome, nome/telefone ou nome completo único sem conflito de
-documento/telefone. CPF ausente não vira zeros; RUC/C.I. permanece no endereço PY.
-Sem correspondência, cria um cliente com os dados recebidos. Nome incompleto,
-homônimos, documento divergente ou cadastro inativo ficam sinalizados para revisão.
-Isso não impede a impressão PY dos dados disponíveis. A prévia de impressão sozinha
-não cria cliente nem trabalho na fila.
+Novos cadastros em Clientes, contas PDV/fiado e endereços confirmados compartilham a
+comparação de identidade: nome completo, sobrenomes compatíveis, documento com tipo e
+país, telefone/e-mail ou endereço completo com rua e número. Acentos, pontuação dos
+documentos, máscaras de CEP e abreviações reconhecidas de rua são normalizados.
+Nome, sobrenome, rua ou CEP isolados não comprovam que duas pessoas são a mesma.
+Nomes com alguns nomes intermediários omitidos podem corresponder quando há outra
+informação que confirme a identidade.
 
-Clientes existentes não são fundidos automaticamente. Vínculos explícitos têm prioridade; documentos,
-contatos e nomes existentes não são substituídos. Ao editar um endereço, selecionar
+Uma identidade reconhecida é reaproveitada. Criar novamente o mesmo cliente retorna
+o cadastro existente (`200`, em vez de `201`), sem substituir seus contatos atuais.
+Se já houver uma pessoa com nome compatível sem confirmação suficiente, ou documento
+conflitante, o cadastro manual pede revisão (`409`); não cria outro cliente definitivo.
+Nome incompleto também não cria uma pessoa permanente. Um endereço ambíguo continua
+salvo e sinalizado para revisão, sem vincular uma pessoa por suposição; isso preserva
+a impressão dos dados disponíveis no Paraguai. A prévia sozinha não cria cliente
+nem trabalho de impressão. Pedidos e rastreios novos usam a mesma identidade quando
+há evidência compatível ou vínculo explícito; um rastreio desconhecido não cria cliente.
+
+O cadastro permite **CPF, CNPJ e RG (Brasil)** e **CI e RUC (Paraguai)**, com vários
+documentos por cliente. RG sem emissor pode ser registrado, mas seu número sozinho
+não confirma uma associação automática. Números de tipos/países diferentes não são
+intercambiáveis. O CPF antigo é preservado; campos genéricos antigos de documento PDV
+ou PY não são classificados por adivinhação. CPF ausente não vira zeros. No endereço,
+o campo histórico `cpf` conserva o número acompanhado de `documento_tipo` e, para RG,
+`documento_emissor`; acrescentar outro documento não troca o tipo do número já salvo.
+A emissão SuperFrete continua exigindo CPF/CNPJ, sem substituir por RG/CI/RUC.
+
+Clientes existentes não são fundidos sem confirmação. Nomes e documentos dos aliases
+confirmados passam a reconhecer o principal em lançamentos futuros e nas buscas,
+sem sobrescrever as identidades originais. Vínculos explícitos têm prioridade; um
+conflito de documento no endereço permanece sinalizado. Ao editar, selecionar
 expressamente o cliente confirma a revisão (`customer_link_confirmed`); salvar apenas
-uma alteração de rua não apaga o aviso. Cadastros PDV conservam sua identidade
-financeira, mas podem ser associados ao diretório por `cadastro_cliente_id` ao
-selecionar um cliente na nova venda (ver [Vendas PDV](VENDAS_PDV.md)). A consolidação
-move esse vínculo sem unir saldos ou alterar snapshots de vendas anteriores.
+uma alteração de rua não apaga o aviso. Contas PDV mantêm sua identidade financeira e
+`cadastro_cliente_id`; consolidar o diretório move apenas esse vínculo, sem unir
+saldos, contas ou snapshots. Havendo mais de uma conta PDV para a pessoa, o operador
+escolhe a conta existente. Lançamentos simultâneos de identidade são serializados.
 O servidor valida a consistência cliente/pedido/pacote, inclusive fora da interface.
 
 ## Compras do PDV no histórico do cliente
@@ -201,83 +221,92 @@ Serviços compartilhados: `services/customer_links.py`, `customer_identity.py` e
 `customer_reconciliation.py`. A validação não faz commits,
 não chama provedores e não dispensa a confirmação dos fluxos do assistente.
 
-## Consolidação de clientes duplicados
+## Unificar clientes por seleção
 
-O proprietário pode usar **Clientes → Conferir duplicidades** ou o mesmo botão em
-**Endereços e envios**. A ferramenta apresenta pares candidatos, permite escolher
-o principal, exige uma prévia e uma confirmação da identidade antes de unir.
-Nomes normalizados iguais são apenas candidatos; CPF/contatos ou vínculos
-divergentes bloqueiam a união. O usuário deve conferir os dados, inclusive em
-homônimos. Clientes PDV/fiado permanecem contas distintas, com os vínculos
-explícitos já implementados, sem soma automática de saldos.
+O proprietário usa **Clientes → Selecionar**, marca de **2 a 20 clientes** e abre
+**Unificar clientes**. A seleção permanece ao pesquisar ou mudar de página. O modal
+permite escolher o cadastro principal e conferir documentos, contatos e quantos
+pedidos, rastreios, endereços e vínculos PDV serão reunidos. O antigo botão
+**Conferir duplicidades** foi removido de Clientes. Em Endereços e envios,
+**Conferir endereços** continua tratando apenas duplicidades de endereços.
 
-Para endereços, a comparação conservadora já usada no cadastro deve reconhecer o
-mesmo destinatário/local. O duplicado vira uma referência inativa ao principal;
-jobs, fretes, PDFs e snapshots permanecem nos IDs originais e o histórico segue
-as referências. Dados divergentes de documentos/clientes não são mesclados.
-Uma alteração após a prévia invalida o token; a confirmação pode ser repetida
-após falha de rede sem repetir a consolidação. Nenhuma união roda no deploy.
+A confirmação exige declarar que os cadastros são da mesma pessoa. Nomes, contatos
+ou documentos preenchidos divergentes aparecem na prévia e exigem uma confirmação
+adicional. Isso permite corrigir grafias e cadastros feitos de maneiras diferentes,
+sem decidir automaticamente qual pessoa tem razão. Campos já preenchidos no principal
+são preservados; documentos das origens continuam registrados nos aliases, inclusive
+CPF com unicidade própria. Não se copiam números para sobrescrever documentos atuais.
 
-A revisão é solicitada manualmente e limitada a 10 mil cadastros e 25 pares por
-consulta (até 20 registros por nome); o aviso de revisão parcial pede refinar a
-busca. Nomes incompletos, grafias diferentes não reconhecidas ou nomes únicos não
-são detectados como duplicados por esta tela. Ausência de candidatos não comprova
-unicidade. A API aplica a autorização do proprietário em consulta, prévia e
-confirmação; nenhuma lista de contatos é enviada a IA.
+A união inteira é atômica, com uma única prévia para o grupo: falha em qualquer
+vínculo impede alteração parcial. Mudanças nos cadastros ou nos próprios vínculos
+invalidam o token; é preciso conferir novamente. Repetir uma confirmação já concluída
+não repete seus efeitos. A autorização do proprietário é aplicada no backend, e a
+auditoria registra responsável, origens, campos acrescentados e vínculos movidos.
 
-A revisão `e1f2a3b4c5d6` permite conservar um cliente antigo como referência ao
-principal (`clientes.merged_into_id`). Não consolida pessoas durante o deploy.
-Uma manutenção explícita pode reunir pedidos, rastreios e endereços de um par
-revisado. Não altera nomes de destinatários, endereços das compras, valores, códigos,
-PDFs, snapshots de impressão, etiquetas nem os cadastros PDV. Cada operação registra
-o responsável e os vínculos movidos na auditoria.
+- `POST /api/clientes/maintenance/customers/preview`: `target_id` e `source_ids`
+  (1 a 19 origens diferentes do principal).
+- `POST /api/clientes/maintenance/customers/confirm`: os mesmos IDs, `plan_token`,
+  `confirm: true` e `reviewed_conflicts: true` quando a prévia exigir.
 
-O cadastro de origem fica inativo, preservado para rastreabilidade, e não aparece
-nem na lista Todos. Consultar seu ID nas rotas de cliente e histórico resolve o
-principal; editar, reativar ou vincular por uma seleção antiga retorna `409` para
-atualizar a lista. O bot reconhece os nomes dos aliases explicitamente unidos,
-sem usar documentos antigos para sobrescrever os dados do principal. Divergências
-de identidade continuam exigindo revisão; nomes parecidos não provocam fusão.
-A criação manual também retorna `409` se a identidade já for reconhecida pela
-mesma regra usada nos endereços, indicando reutilizar o cadastro existente.
+Pedidos, rastreios e endereços passam a apontar para o principal. Contas PDV/fiado
+permanecem distintas, com seus saldos e vendas; apenas o vínculo ao diretório muda.
+Nomes de destinatários, valores, códigos, PDFs, snapshots de venda/impressão e
+etiquetas já emitidas não são reescritos. O histórico do card reúne esses vínculos
+sem somar receitas do BI ou das vendas operacionais.
 
-No diretório `backend`, com o ambiente correto, simular um par autorizado:
+As origens ficam inativas, preservadas para rastreabilidade e fora de todas as listas.
+Consultar um ID antigo resolve o principal; editar, reativar ou vincular por uma
+seleção antiga retorna `409` para atualizar a lista. A busca por documento tipado ou
+identidade de um alias retorna o principal. Registros antigos ainda sem vínculo
+podem ser conferidos em **Associar histórico existente**; abrir a lista ou unificar
+clientes não executa uma associação global por nome.
+
+Para endereços, a comparação conservadora continua exigindo o mesmo destinatário/local.
+O duplicado vira uma referência inativa; trabalhos, fretes e snapshots mantêm seus
+IDs originais, e o histórico segue as referências. A revisão manual de endereços
+permanece limitada a 10 mil cadastros e 25 pares por consulta (até 20 por nome).
+Nenhuma lista de contatos é enviada a IA para decidir identidade.
+
+A migração `s1b2c3d4e5f6` acrescenta documentos tipados e os campos de tipo/país nas
+contas PDV, sem inferir tipos nos dados antigos nem consolidar pessoas no deploy.
+A migração anterior `e1f2a3b4c5d6` conserva as origens por `clientes.merged_into_id`.
+As rotas antigas de manutenção em pares e a CLI permanecem disponíveis para as
+operações existentes; a interface de Clientes usa a seleção de grupo.
+
+### Manutenção operacional em pares
+
+A CLI anterior continua exigindo uma simulação e o token do par, no diretório
+`backend` com o ambiente do destino configurado:
 
 ```sh
 venv/bin/python -m app.customer_maintenance merge --target UUID_PRINCIPAL --source UUID_DUPLICADO
 venv/bin/python -m app.customer_maintenance merge --target UUID_PRINCIPAL --source UUID_DUPLICADO --apply --expected-plan TOKEN_DA_SIMULACAO
 ```
 
-O token vincula a confirmação ao conteúdo e aos vínculos revisados. Mudanças entre
-simulação e aplicação exigem nova simulação; reaplicar o mesmo par já consolidado
-não duplica efeitos. CPF, telefone ou e-mail divergentes impedem a aplicação até
-o proprietário confirmar a identidade e o cadastro correto. Somente então se usa
-`--reviewed-conflicts`, conservando os dados preenchidos do destino e os originais
-na origem. Se apenas um cadastro possui CPF, ele deve ser o principal para respeitar
-a unicidade do documento. Nunca aplicar o sinalizador apenas por semelhança de nome.
-
-Usar em uma janela sem edição dos cadastros envolvidos. A transação possui locks
-PostgreSQL e limite de espera; em falha, revisar o estado antes de repetir. A
-confirmação exige o administrador Lucas ativo para auditoria. O downgrade recusa
-remover aliases existentes. `test_customer_maintenance.py` e
-`test_customer_maintenance_postgres.py` cobrem histórico, conflitos, rollback,
-migração e concorrência entre aplicações da mesma consolidação.
+Divergências de documentos tipados, CPF, telefone ou e-mail exigem a revisão explícita
+`--reviewed-conflicts`, preservando os valores de cada origem. Na CLI de pares, se
+apenas um cadastro possui CPF legado, ele deve ser o principal por sua unicidade.
+A seleção de grupo da interface preserva o CPF no alias e não exige essa escolha.
+Não usar a confirmação de diferenças apenas por semelhança de nome. A aplicação
+exige Lucas ativo para auditoria; locks PostgreSQL e token protegem a transação.
+Downgrades não removem documentos ou aliases existentes.
 
 ## Validação e limites
 
-`tests/test_customer_links.py` cobre homônimos, herança explícita, snapshots,
-idempotência, conflitos, múltiplos pacotes e estados de entrega/cancelamento.
-SQLite valida essas regras; a migração e a concorrência dependem de PostgreSQL.
+Os testes de seleção, identidade tipada, busca e contas PDV cobrem autorização,
+homônimos, documentos conflitantes, aliases, rollback, repetição de confirmações,
+históricos e concorrência. As migrações e os locks são validados em PostgreSQL
+isolado; SQLite não comprova concorrência PostgreSQL.
 
-Não há vinculação automática com linhas do Excel, reconciliação financeira ou
-fusão de clientes de pedidos com `PdvCliente`. Pacotes arquivados permanecem no
-histórico; inativar um cliente também não apaga seus pedidos ou rastreios.
+Não há associação automática com linhas do Excel ou reconciliação financeira.
+Diretório e contas `PdvCliente` continuam entidades distintas. Pacotes arquivados
+permanecem no histórico; inativar um cliente não apaga seus pedidos ou rastreios.
 
 ## Conciliação dos cadastros existentes
 
-A revisão `d0e1f2a3b4c5` adiciona o estado de revisão dos endereços e a identidade BI
-do vendedor, sem executar conciliação de pessoas no deploy. O comando abaixo gera
-uma prévia transacional com rollback; `--apply` confirma a conciliação autorizada.
+A revisão `d0e1f2a3b4c5` adicionou o estado de revisão dos endereços e a identidade
+BI do vendedor, sem executar conciliação de pessoas no deploy. A CLI abaixo gera
+uma prévia com rollback; `--apply` confirma uma conciliação previamente autorizada.
 Executar no diretório `backend`, com o ambiente do destino configurado:
 
 ```sh
@@ -285,14 +314,8 @@ venv/bin/python -m app.customer_reconciliation --report /caminho/privado/previa.
 venv/bin/python -m app.customer_reconciliation --apply --report /caminho/privado/aplicado.json
 ```
 
-A ordem é endereço → cliente → pedido → rastreio. Rastreios antigos **não criam
-clientes**: somente os clientes existentes, incluindo os criados a partir dos
-endereços, podem receber esses vínculos. Nome incompleto, homônimo ou desconhecido
-permanece sem vínculo, com motivo no relatório privado. O comando pode ser repetido
-sem recriar clientes, pacotes ou utilizações. A conciliação usa locks PostgreSQL,
-registra o ator Lucas na auditoria e preserva snapshots, valores e códigos.
-
-Os testes `test_customer_reconciliation.py` e `test_reconciliation_postgres.py`
-cobrem identidade, privacidade, histórico, migração e concorrência entre endereços.
-Não se deve tratar nome único como identificação infalível: os vínculos continuam
-revisáveis no ERP e nenhuma fusão automática de clientes é realizada.
+A ordem é endereço → cliente → pedido → rastreio. Rastreios antigos não criam
+clientes; desconhecidos e ambiguidades permanecem sem vínculo. O comando conserva
+snapshots, valores, códigos e auditoria, e pode ser repetido sem recriar operações.
+A regra atual exige evidência além do nome para vincular uma identidade existente;
+nome único não é identificação infalível. Essa CLI não faz parte do deploy.

@@ -20,10 +20,16 @@ const inactive = { id: 'inactive', nome: 'Cliente inativo QA', ativo: false, act
 const pageResult = (items = [active], page = 1, total = items.length) => ({ items, page, page_size: 20, total })
 let app: App | undefined, container: HTMLDivElement
 const settle = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); await nextTick() }
-async function mount() {
+async function mount(owner = false) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { render: () => null } }] })
   await router.push('/'); await router.isReady()
-  app = createApp(ClientesView).use(createPinia()).use(router).use(i18n)
+  const pinia = createPinia()
+  app = createApp(ClientesView).use(pinia).use(router).use(i18n)
+  if (owner) {
+    const auth = useAuthStore(pinia)
+    auth.token = 'owner-session'
+    auth.user = { id: 'owner', nome: 'Lucas QA', email: 'lucas@eleven.com', role: 'ADMIN', ativo: true, must_change_password: false, sales_scope: 'all', sales_seller: null, vendedor_id: null, created_at: '', updated_at: '' }
+  }
   app.mount(container); await settle()
 }
 function button(text: string) {
@@ -221,6 +227,56 @@ describe('Customer status filters', () => {
     expect(container.textContent).not.toContain('Cliente da conta anterior')
     auth.token = null; await settle()
     expect(container.querySelectorAll('.cliente-wrap')).toHaveLength(0)
+  })
+
+  it('replaces duplicate discovery with owner selection that remains across pages and searches', async () => {
+    api.getPage.mockImplementation(async ({ page, search }) => pageResult([{ ...active, id: search ? 'searched' : `page-${page}`, nome: search || `Cliente página ${page}` }], page, 45))
+    await mount(true)
+    expect(button('Conferir duplicidades')).toBeUndefined()
+    button('Selecionar').click(); await settle()
+    container.querySelector<HTMLInputElement>('.customer-select input')!.click(); await settle()
+    expect(container.querySelector('.customer-selection')?.textContent).toContain('1 selecionados')
+    expect(button('Unificar clientes').disabled).toBe(true)
+    expect(container.querySelector('.customer-expand')?.getAttribute('aria-expanded')).toBe('false')
+    button('Próxima').click(); await settle()
+    container.querySelector<HTMLInputElement>('.customer-select input')!.click(); await settle()
+    expect(container.querySelector('.customer-selection')?.textContent).toContain('2 selecionados')
+    expect(button('Unificar clientes').disabled).toBe(false)
+    const search = container.querySelector<HTMLInputElement>('.search-input')!
+    search.value = 'Outro nome QA'; search.dispatchEvent(new Event('input')); await vi.advanceTimersByTimeAsync(300); await settle()
+    expect(container.querySelector('.customer-selection')?.textContent).toContain('2 selecionados')
+    button('Unificar clientes').click(); await settle()
+    expect(document.querySelector('.customer-merge-dialog')?.textContent).toContain('Cliente página 1')
+    expect(document.querySelector('.customer-merge-dialog')?.textContent).toContain('Cliente página 2')
+    Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(row => row.textContent?.trim() === 'Cancelar')!.click(); await settle()
+    expect(container.querySelector('.customer-selection')?.textContent).toContain('2 selecionados')
+  })
+
+  it('limits a merge to 20 customers without preventing deselection or opening customer history', async () => {
+    api.getPage.mockImplementation(async ({ page }) => pageResult(Array.from({ length: 20 }, (_, index) => ({ ...active, id: `${page}-${index}`, nome: `Cliente ${page} ${index}` })), page, 40))
+    await mount(true); button('Selecionar').click(); await settle()
+    for (const input of Array.from(container.querySelectorAll<HTMLInputElement>('.customer-select input'))) { input.click(); await settle() }
+    expect(container.querySelector('.customer-selection-limit')?.textContent).toContain('até 20 clientes')
+    expect(container.querySelector<HTMLInputElement>('.customer-select input')!.disabled).toBe(false)
+    button('Próxima').click(); await settle()
+    expect(container.querySelector<HTMLInputElement>('.customer-select input')!.disabled).toBe(true)
+    container.querySelector<HTMLButtonElement>('.customer-expand')!.click(); await settle()
+    expect(container.querySelector('.customer-expand')?.getAttribute('aria-expanded')).toBe('true')
+    button('Limpar').click(); await settle()
+    expect(container.querySelector<HTMLInputElement>('.customer-select input')!.disabled).toBe(false)
+    expect(container.querySelector('.customer-selection')?.textContent).toContain('0 selecionados')
+  })
+
+  it('clears selected identities and closes the merge when ownership changes', async () => {
+    api.getPage.mockResolvedValue(pageResult([active, { ...active, id: 'second' }]))
+    await mount(true); button('Selecionar').click(); await settle()
+    for (const input of Array.from(container.querySelectorAll<HTMLInputElement>('.customer-select input'))) { input.click(); await settle() }
+    button('Unificar clientes').click(); await settle()
+    expect(document.querySelector('.customer-merge-dialog')).not.toBeNull()
+    useAuthStore().token = 'other-account'; useAuthStore().user = null; await settle()
+    expect(document.querySelector('.customer-merge-dialog')).toBeNull()
+    expect(container.querySelector('.customer-selection')).toBeNull()
+    expect(button('Selecionar')).toBeUndefined()
   })
 
 })

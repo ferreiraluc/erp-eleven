@@ -45,7 +45,7 @@ def test_concurrent_addresses_share_one_new_customer(pg,monkeypatch):
     def create(city):
         with factory() as db:
             barrier.wait(timeout=10)
-            row,_=save_or_reuse(db,{'pais':'PY','nome':'Mesmo Cliente','cidade':city},uid)
+            row,_=save_or_reuse(db,{'pais':'PY','nome':'Mesmo Cliente','cidade':city,'telefone':'+595972394123'},uid)
             cid=row.cliente_id;db.commit();return cid
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:

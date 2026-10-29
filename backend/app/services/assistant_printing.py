@@ -32,7 +32,11 @@ def printable_cpf(value):
 
 def document_line(address, *, preview=False):
     """The persisted key stays cpf; Paraguay documents keep the supplied text."""
-    if address['pais'] == 'BR':
+    kind = address.get('documento_tipo')
+    if kind and kind != 'CPF':
+        value = (address.get('cpf') or '').strip()
+        label = kind + (' do destinatário' if preview else '')
+    elif address['pais'] == 'BR':
         value = printable_cpf(address.get('cpf'))
         label = 'CPF do destinatário' if preview else 'CPF'
     else:
@@ -53,6 +57,8 @@ class AddressArgs(BaseModel):
     estado: str = Field(default='', max_length=60, description='UF obrigatória no Brasil; departamento opcional no Paraguai.')
     cep: str = Field(default='', max_length=15)
     cpf: str = Field(default='', max_length=20, description='Documento opcional do destinatário: CPF no BR; RUC/C.I no PY, preservando texto, letras, pontos e hífen sem validar como CPF brasileiro. Extraia somente do endereço informado. Ausente ou pedido sem documento: string vazia. Nunca preencha zeros nem use documento do remetente.')
+    documento_tipo: Literal['CPF', 'CNPJ', 'RG', 'CI', 'RUC'] | None = None
+    documento_emissor: str | None = Field(default=None, max_length=20)
     telefone: str = Field(default='', max_length=40)
     remetente: str | None = Field(default=None, max_length=30, description='ID do remetente ativo cadastrado no gestor; debora e mona são os iniciais.')
 
@@ -63,6 +69,13 @@ class AddressArgs(BaseModel):
 
     @model_validator(mode='after')
     def address_rules(self):
+        if self.documento_tipo:
+            from .customer_documents import DOCUMENT_COUNTRIES, normalize_document
+            if DOCUMENT_COUNTRIES[self.documento_tipo] != self.pais:
+                raise ValueError('O país não corresponde ao tipo de documento.')
+            if self.cpf and not normalize_document({'tipo': self.documento_tipo, 'pais': self.pais,
+                    'numero': self.cpf, 'emissor': self.documento_emissor}):
+                raise ValueError('Confira o tipo e o número do documento do destinatário.')
         for value in self.model_dump().values():
             if isinstance(value, str) and any(ord(c) < 32 and c not in '\n\r' for c in value):
                 raise ValueError('Caracteres de controle não permitidos.')
@@ -76,7 +89,8 @@ class AddressArgs(BaseModel):
             if len(digits) != 8 or not re.fullmatch(r'[0-9 -]+', self.cep):
                 raise ValueError('Informe o CEP com 8 dígitos.')
             self.cep = digits[:5] + '-' + digits[5:]
-            self.cpf = printable_cpf(self.cpf)
+            if not self.documento_tipo or self.documento_tipo == 'CPF':
+                self.cpf = printable_cpf(self.cpf)
             if not self.remetente:
                 raise ValueError('Escolha um remetente ativo cadastrado no gestor.')
         else:

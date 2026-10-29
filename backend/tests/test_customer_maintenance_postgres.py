@@ -83,7 +83,7 @@ def test_customer_merge_is_atomic_serialized_and_future_addresses_reuse_principa
         uid, target_id, source_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         with factory() as db:
             db.add(Usuario(id=uid,nome='Fixture',email='fixture@example.test',senha_hash='unused'))
-            db.add_all([Cliente(id=target_id,nome='Mesmo Cliente'), Cliente(id=source_id,nome='MESMO CLIENTE')]); db.flush()
+            db.add_all([Cliente(id=target_id,nome='Mesmo Cliente',telefone='+595981123456'), Cliente(id=source_id,nome='MESMO CLIENTE')]); db.flush()
             db.add(SavedAddress(label='Casa',data={'pais':'PY','nome':'Mesmo Cliente','cidade':'Asunción'},cliente_id=source_id,created_by=uid))
             db.commit()
             plan = merge_customers(db, target_id, source_id)['plan_token']; db.rollback()
@@ -103,7 +103,7 @@ def test_customer_merge_is_atomic_serialized_and_future_addresses_reuse_principa
         with factory() as db:
             assert db.query(AuditEvent).filter_by(action='customer_merged').count() == 1
             assert db.query(SavedAddress).one().cliente_id == target_id
-            address, _ = save_or_reuse(db, {'pais':'PY','nome':'Mesmo Cliente','cidade':'Encarnación'}, uid)
+            address, _ = save_or_reuse(db, {'pais':'PY','nome':'Mesmo Cliente','cidade':'Encarnación','telefone':'+595981123456'}, uid)
             assert address.cliente_id == target_id and db.query(Cliente).count() == 2
     finally:
         isolated.dispose()

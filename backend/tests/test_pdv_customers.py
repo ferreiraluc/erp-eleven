@@ -87,7 +87,7 @@ def test_existing_document_and_full_name_reuse_pdv_without_resetting_financials(
     factory, client, _ = pdv_app
     main, _, _ = seed(factory)
     with factory() as db:
-        customer = PdvCliente(nome='JOAO AVILA', doc='12345678909', saldo_fiado_gs=777, limite_fiado_gs=999)
+        customer = PdvCliente(nome='JOAO AVILA', doc='12345678909', doc_tipo='CPF', doc_pais='BR', saldo_fiado_gs=777, limite_fiado_gs=999)
         db.add(customer); db.flush(); cid = customer.id; db.commit()
     response = client.post('/api/pdv/clients/select', json={'source':'cadastro','id':str(main)})
     assert response.status_code == 200, response.text

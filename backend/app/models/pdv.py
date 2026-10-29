@@ -14,6 +14,8 @@ class PdvCliente(Base):
     nome = Column(String(200), nullable=False)
     cadastro_cliente_id = Column(UUID(as_uuid=True), ForeignKey('clientes.id'), nullable=True, index=True)
     doc = Column(String(30), nullable=True)          # CPF, RUC, CI
+    doc_tipo = Column(String(5), nullable=True)
+    doc_pais = Column(String(2), nullable=True)
     telefone = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
     tipo = Column(String(20), default="varejo")      # varejo, atacadista

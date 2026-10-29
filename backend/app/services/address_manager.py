@@ -6,6 +6,7 @@ from ..models.printing import PrintJob, PrintDevice, PrintSender
 from ..models.address_book import PrintLayout, SavedAddress
 from ..models.assistant import utcnow
 from ..schemas.address_book import LayoutConfig
+from .document_snapshot import comparable_document_snapshot
 
 
 def get_layout(db, country, request_key=None):
@@ -39,7 +40,7 @@ def enqueue_address(db, body, user_id):
     if not device: raise HTTPException(404,'Impressora não encontrada.')
     previous=db.query(PrintJob).filter_by(request_key=body.request_key).first()
     if previous:
-        if previous.user_id!=user_id or previous.device_id!=body.device_id or (str(body.address_id) if body.address_id else None)!=(previous.snapshot or {}).get('requested_address_id',str(previous.address_id) if previous.address_id else None) or previous.parent_id!=body.parent_id or (previous.snapshot or {}).get('editor')!=body.data.model_dump() or (previous.snapshot or {}).get('sender_id')!=body.sender_id:
+        if previous.user_id!=user_id or previous.device_id!=body.device_id or (str(body.address_id) if body.address_id else None)!=(previous.snapshot or {}).get('requested_address_id',str(previous.address_id) if previous.address_id else None) or previous.parent_id!=body.parent_id or comparable_document_snapshot((previous.snapshot or {}).get('editor'))!=comparable_document_snapshot(body.data.model_dump()) or (previous.snapshot or {}).get('sender_id')!=body.sender_id:
             raise HTTPException(409,'Identificador já utilizado para outra impressão. Atualize antes de enviar.')
         return previous
     if body.address_id:

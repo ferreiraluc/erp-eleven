@@ -7,19 +7,39 @@ import uuid
 
 # ── PDV Cliente ───────────────────────────────────────────────────────────────
 
+def validate_customer_document(customer):
+    if customer.doc_tipo:
+        from ..services.customer_documents import DOCUMENT_COUNTRIES, normalize_document
+        country = customer.doc_pais or DOCUMENT_COUNTRIES[customer.doc_tipo]
+        if customer.doc_pais and country != DOCUMENT_COUNTRIES[customer.doc_tipo]:
+            raise ValueError('O país não corresponde ao tipo de documento.')
+        if customer.doc and not normalize_document({'tipo': customer.doc_tipo, 'pais': country, 'numero': customer.doc}):
+            raise ValueError('Confira o documento do cliente.')
+        customer.doc_pais = country
+    return customer
+
+
 class PdvClienteCreate(BaseModel):
     nome: str
     doc: Optional[str] = None
+    doc_tipo: Optional[Literal['CPF','CNPJ','RG','CI','RUC']] = None
+    doc_pais: Optional[Literal['BR','PY']] = None
     telefone: Optional[str] = None
     email: Optional[str] = None
     tipo: str = "varejo"          # varejo, atacadista
     limite_fiado_gs: float = 0
     notas: Optional[str] = None
 
+    @model_validator(mode='after')
+    def document_namespace(self):
+        return validate_customer_document(self)
+
 
 class PdvClienteUpdate(BaseModel):
     nome: Optional[str] = None
     doc: Optional[str] = None
+    doc_tipo: Optional[Literal['CPF','CNPJ','RG','CI','RUC']] = None
+    doc_pais: Optional[Literal['BR','PY']] = None
     telefone: Optional[str] = None
     email: Optional[str] = None
     tipo: Optional[str] = None
@@ -27,12 +47,18 @@ class PdvClienteUpdate(BaseModel):
     notas: Optional[str] = None
     ativo: Optional[bool] = None
 
+    @model_validator(mode='after')
+    def document_namespace(self):
+        return validate_customer_document(self)
+
 
 class PdvClienteResponse(BaseModel):
     id: uuid.UUID
     cadastro_cliente_id: Optional[uuid.UUID] = None
     nome: str
     doc: Optional[str]
+    doc_tipo: Optional[str] = None
+    doc_pais: Optional[str] = None
     telefone: Optional[str]
     email: Optional[str]
     tipo: str

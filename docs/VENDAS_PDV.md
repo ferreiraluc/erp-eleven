@@ -99,7 +99,7 @@ como **COPIA**. Nenhuma consulta dispara impressão ou refaz lançamentos financ
 
 ## Cliente e moeda na nova venda
 
-Em `/pdv`, busque o cliente por **nome, telefone, documento (CPF/RUC/C.I.) ou CEP**.
+Em `/pdv`, busque o cliente por **nome, telefone, documento (CPF/CNPJ/RG/CI/RUC) ou CEP**.
 A busca desconsidera acentos, espaços e pontuação. Retorna até 20 opções e pede
 refinamento quando há mais; CEP compartilhado não escolhe uma pessoa sozinho.
 São consultados cadastros ativos do PDV, do diretório Clientes (incluindo CEP de
@@ -113,7 +113,10 @@ Se já existir cadastro PDV único com documento/telefone e nome completo compat
 ele é reaproveitado; conflitos pedem seleção do cadastro PDV existente. Seleções
 simultâneas do mesmo cliente são serializadas. Nenhum saldo ou venda anterior é
 fundido. A consolidação de clientes move apenas esse vínculo, preservando contas
-PDV distintas; nesse caso o operador escolhe qual conta utilizar.
+PDV distintas; nesse caso o operador escolhe qual conta utilizar. Criar/editar contas
+em Fiado também confere a identidade antes de salvar: um cadastro reconhecido é
+reaproveitado sem redefinir limite, saldo ou contatos; conflitos exigem revisão.
+Os campos novos de tipo/país não classificam documentos genéricos antigos por suposição.
 
 O cliente pode ser removido/trocado antes de concluir. **Usar somente o nome, sem
 cadastro** é uma opção explícita para visitantes; digitar uma busca não grava esse
@@ -131,8 +134,10 @@ nem movimenta estoque.
 ## Uso rápido no celular
 
 O botão **+** junto à busca abre o cadastro compacto de cliente: nome, telefone e
-CPF/RUC/C.I.; endereço fica em uma seção opcional. Usa o diretório Clientes e a
-mesma validação de duplicidade. Após salvar, o vínculo PDV existente é selecionado
+documentos com tipo e país (CPF/CNPJ/RG no Brasil, CI/RUC no Paraguai); endereço
+fica em uma seção opcional. Usa o diretório Clientes e a mesma comparação de identidade.
+Uma identidade corroborada reaproveita o cadastro; nome compatível sem evidência
+suficiente pede revisão. RG sem emissor não confirma identidade pelo número sozinho. Após salvar, o vínculo PDV existente é selecionado
 ou criado pelo fluxo de associação. Se a seleção falhar depois do cadastro, o botão
 **Associar cliente cadastrado** repete só o vínculo, sem cadastrar outra pessoa.
 

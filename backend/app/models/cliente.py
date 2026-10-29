@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Text, Index, ForeignKey, CheckConstraint
+from sqlalchemy import Column, String, Boolean, DateTime, Text, Index, ForeignKey, CheckConstraint, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,6 +15,7 @@ class Cliente(Base):
     telefone = Column(String(20))
     email = Column(String(100))
     cpf = Column(String(14), unique=True, nullable=True)
+    documentos = Column(JSON, nullable=False, default=list, server_default='[]')
     endereco = Column(Text)  # campo livre — colar endereço completo
 
     merged_into_id = Column(UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=True, index=True)

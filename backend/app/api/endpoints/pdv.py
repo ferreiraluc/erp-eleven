@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List, Optional
@@ -400,17 +400,16 @@ def list_clients(
 @router.post("/clients", response_model=PdvClienteResponse, status_code=201)
 def create_client(
     body: PdvClienteCreate,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    cliente = PdvCliente(
-        id=uuid.uuid4(),
-        created_by=current_user.id,
-        **body.model_dump(),
-    )
-    db.add(cliente)
+    from ...services.customer_accounts import save_account
+    cliente, reused = save_account(db, body.model_dump(), current_user)
     db.commit()
     db.refresh(cliente)
+    if reused:
+        response.status_code = 200
     return _client_response(cliente, current_user)
 
 
@@ -436,8 +435,10 @@ def update_client(
     cliente = db.query(PdvCliente).filter(PdvCliente.id == cliente_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    for k, v in body.model_dump(exclude_none=True).items():
-        setattr(cliente, k, v)
+    from ...services.customer_accounts import save_account
+    # The service locks and refreshes before combining a partial patch, preserving
+    # concurrent contact/limit changes and validating the retained document.
+    cliente, _ = save_account(db, body.model_dump(exclude_unset=True), current_user, cliente)
     db.commit()
     db.refresh(cliente)
     return _client_response(cliente, current_user)

@@ -10,7 +10,8 @@ from ..models.pedido import Pedido
 from ..models.rastreamento import Rastreamento
 from ..models.address_book import SavedAddress
 from .address_book import lock_addresses
-from .customer_identity import ensure_customer, match_recipient, find_customer, name_key, corroboration, full_name
+from .customer_identity import (ensure_customer, match_recipient, find_customer, name_key,
+                                corroboration, full_name, ensure_pdv_customer, pdv_identity_data)
 from .customer_links import validate_order_customer, inherit_order_customer, validate_tracking_links
 from .user_audit import record
 
@@ -75,17 +76,7 @@ CUSTOMER_REVIEW_LIMIT = 10_000
 
 def auto_link_pdv_customer(db, row):
     """A selected PDV account may acquire a directory link, never a balance merge."""
-    if row.cadastro_cliente_id or not row.ativo or not full_name(row.nome):
-        return False
-    data = {'nome': row.nome, 'cpf': row.doc, 'telefone': row.telefone, 'email': row.email}
-    customer, _, _ = find_customer(db, data)
-    if not customer or not customer.ativo or not corroboration(customer, data):
-        return False
-    row.cadastro_cliente_id = customer.id
-    if db.info.get('audit_actor'):
-        record(db, 'pdv_customer_auto_linked', 'clientes', entity='pdv_clientes', entity_id=str(row.id),
-            changes={'cadastro_cliente_id': str(customer.id)})
-    return True
+    return ensure_pdv_customer(db, row)
 
 
 def _identity_snapshot(row):
@@ -185,7 +176,7 @@ def _customer_link_plan(db, customer, limit=200):
         accounts = inspect_rows('pdv_account', db.query(PdvCliente).filter(
             PdvCliente.cadastro_cliente_id.is_(None), normalize(PdvCliente.nome).in_(sql_names)))
         for row in accounts:
-            reason = eligible({'nome': row.nome, 'cpf': row.doc, 'telefone': row.telefone, 'email': row.email})
+            reason = eligible(pdv_identity_data(row))
             if reason:
                 add('pdv_account', row, row.nome, reason)
 

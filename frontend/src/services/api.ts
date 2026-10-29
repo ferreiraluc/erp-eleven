@@ -350,12 +350,20 @@ export const tagsAPI = {
 // Pedido Types (Simplified)
 // ─── Cliente Types ─────────────────────────────────────────────────────────────
 
+export interface ClienteDocumento {
+  tipo: 'CPF' | 'CNPJ' | 'RG' | 'CI' | 'RUC'
+  pais: 'BR' | 'PY'
+  numero: string
+  emissor?: string
+}
+
 export interface Cliente {
   id: string
   nome: string
   telefone?: string
   email?: string
-  cpf?: string
+  cpf?: string | null
+  documentos?: ClienteDocumento[]
   endereco?: string
   ativo: boolean
   created_at: string
@@ -366,7 +374,8 @@ export interface ClienteCreate {
   nome: string
   telefone?: string
   email?: string
-  cpf?: string
+  cpf?: string | null
+  documentos?: ClienteDocumento[]
   endereco?: string
   ativo?: boolean
 }
@@ -994,6 +1003,8 @@ export interface PdvClienteResponse {
   cadastro_cliente_id?: string | null
   nome: string
   doc: string | null
+  doc_tipo?: ClienteDocumento['tipo'] | null
+  doc_pais?: ClienteDocumento['pais'] | null
   telefone: string | null
   email: string | null
   tipo: string

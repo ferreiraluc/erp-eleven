@@ -151,8 +151,12 @@
           </div>
           <div class="fiado-row">
             <div class="fiado-field">
-              <label>{{ $tr("Documento (CPF/RUC/CI)") }}</label>
-              <input v-model="newClient.doc" type="text" class="fiado-input" :placeholder='$tr("Opcional")' />
+              <label for="fiado-document-type">{{ documentText('type') }}</label>
+              <ErpSelect id="fiado-document-type" v-model="newClient.doc_tipo" :label="documentText('type')" :disabled="savingClient"><option value="">{{ documentText('unspecified') }}</option><option v-for="type in documentTypes" :key="type" :value="type">{{ type }} · {{ documentCountry(type) }}</option></ErpSelect>
+            </div>
+            <div class="fiado-field">
+              <label for="fiado-document-number">{{ documentText('number') }}</label>
+              <input id="fiado-document-number" v-model="newClient.doc" type="text" class="fiado-input" :placeholder='$tr("Opcional")' :disabled="savingClient" maxlength="40" />
             </div>
             <div class="fiado-field">
               <label>{{ $tr("Telefone") }}</label>
@@ -200,7 +204,12 @@ import { tr as salesText } from '@/components/pdv/management/i18n'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted } from 'vue'
-import { pdvAPI, type PdvClienteResponse, type PdvFiadoMovementResponse } from '@/services/api'
+import { useI18n } from 'vue-i18n'
+import { customerDocumentMessages } from '@/components/clientes/customerDocumentMessages'
+import { pdvAPI, type ClienteDocumento, type PdvClienteResponse, type PdvFiadoMovementResponse } from '@/services/api'
+const { t: documentText } = useI18n({ useScope: 'local', messages: customerDocumentMessages })
+const documentTypes = ['CPF', 'CNPJ', 'RG', 'CI', 'RUC'] as const
+const documentCountry = (type: ClienteDocumento['tipo']) => type === 'CI' || type === 'RUC' ? 'PY' : 'BR'
 
 const clients = ref<PdvClienteResponse[]>([])
 const loading = ref(false)
@@ -215,7 +224,7 @@ const showNewClient = ref(false)
 const savingClient = ref(false)
 const newClientError = ref('')
 
-const newClient = ref({ nome: '', doc: '', telefone: '', tipo: 'atacadista', limite_fiado_gs: 0, notas: '' })
+const newClient = ref({ nome: '', doc: '', doc_tipo: '' as ClienteDocumento['tipo'] | '', telefone: '', tipo: 'atacadista', limite_fiado_gs: 0, notas: '' })
 
 interface Toast { msg: string; type: 'success' | 'error' }
 const toast = ref<Toast | null>(null)
@@ -291,17 +300,18 @@ async function recordPayment() {
 }
 
 function openNewClient() {
-  newClient.value = { nome: '', doc: '', telefone: '', tipo: 'atacadista', limite_fiado_gs: 0, notas: '' }
+  newClient.value = { nome: '', doc: '', doc_tipo: '', telefone: '', tipo: 'atacadista', limite_fiado_gs: 0, notas: '' }
   newClientError.value = ''
   showNewClient.value = true
 }
 
 async function saveNewClient() {
-  if (!newClient.value.nome.trim()) return
+  if (!newClient.value.nome.trim() || savingClient.value) return
   savingClient.value = true
   newClientError.value = ''
   try {
-    await pdvAPI.createClient(newClient.value as any)
+    const { doc_tipo, ...values } = newClient.value
+    await pdvAPI.createClient({ ...values, ...(doc_tipo ? { doc_tipo, doc_pais: documentCountry(doc_tipo) } : {}) })
     await loadClients()
     showNewClient.value = false
     showToast(uiText(`Cliente cadastrado!`))

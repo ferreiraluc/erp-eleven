@@ -71,7 +71,12 @@ def test_status_filters_count_the_complete_set_and_hide_aliases(logistics, param
     result = page(client, page=(total + 19) // 20, **params)
     assert result['total'] == total and len(result['items']) == last_count
     assert not any('Alias' in row['nome'] for row in result['items'])
-    assert page(client, search='Alias', **params)['total'] == 0
+    # Confirmed alias names are searchable, but only the active principal card
+    # is returned. An inactive-only filter never reveals the merged aliases.
+    aliases = page(client, search='Alias', **params)
+    expected = 0 if params.get('ativo') is False and not params.get('include_inactive') else 1
+    assert aliases['total'] == expected
+    assert [row['nome'] for row in aliases['items']] == (['Cliente QA 000'] if expected else [])
 
 
 @pytest.mark.parametrize(('search', 'name'), [
@@ -88,15 +93,19 @@ def test_search_covers_all_fields_before_counting_and_paging(logistics, search, 
     factory, client, _ = logistics
     seed(factory)
     result = page(client, search=search, page_size=1)
-    assert result['total'] == 1 and result['items'][0]['nome'] == name
-    assert page(client, search=search, page=2, page_size=1)['items'] == []
+    expected_names = ['Cliente QA 000', name] if search == 'final@example.test' else [name]
+    assert result['total'] == len(expected_names) and result['items'][0]['nome'] == expected_names[0]
+    if len(expected_names) == 2:
+        assert page(client, search=search, page=2, page_size=1)['items'][0]['nome'] == expected_names[1]
+    assert page(client, search=search, page=len(expected_names) + 1, page_size=1)['items'] == []
 
 
 def test_combined_search_and_status_legacy_contract_and_literal_queries(logistics):
     factory, client, _ = logistics
     seed(factory)
     all_matches = page(client, search='final@example.test', include_inactive=True, page_size=1)
-    assert all_matches['total'] == 2
+    assert all_matches['total'] == 3
+    assert all_matches['items'][0]['nome'] == 'Cliente QA 000'
     inactive = page(client, search='final@example.test', ativo=False)
     assert inactive['total'] == 1 and inactive['items'][0]['nome'] == 'Inativo QA 024'
     assert page(client, search="' OR 1=1 --")['total'] == 0

@@ -1,4 +1,5 @@
-export interface AddressData { pais:'BR'|'PY';nome:string;telefone:string;cpf:string;endereco:string;numero:string;bairro:string;complemento:string;cidade:string;estado:string;cep:string;email:string }
+export type AddressDocumentType = 'CPF'|'CNPJ'|'RG'|'CI'|'RUC'
+export interface AddressData { pais:'BR'|'PY';nome:string;telefone:string;cpf:string;documento_tipo?:AddressDocumentType|null;documento_emissor?:string|null;endereco:string;numero:string;bairro:string;complemento:string;cidade:string;estado:string;cep:string;email:string }
 export const blankAddress=(pais:'BR'|'PY'='PY'):AddressData=>({pais,nome:'',telefone:'',cpf:'',endereco:'',numero:'',bairro:'',complemento:'',cidade:'',estado:'',cep:'',email:''})
 export interface SavedAddress {customer_link_confirmed?:boolean;customer_link_review?:boolean;customer_link_reason?:string|null;cliente_nome?:string|null;id:string;label:string;data:AddressData;cliente_id:string|null;pdv_cliente_id:string|null;active:boolean;version:number}
 export interface Sender {id:string;name:string;lines:string[];data:AddressData|null;active:boolean;version:number;synthetic?:boolean;source?:string|null}
