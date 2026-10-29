@@ -550,5 +550,9 @@
   "Ver produto": [
     "Ver producto",
     "View product"
+  ],
+  "Cotação histórica indisponível": [
+    "Cotización histórica no disponible",
+    "Historical exchange rate unavailable"
   ]
 }

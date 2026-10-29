@@ -932,6 +932,7 @@ export interface PdvPaymentCreate {
 }
 
 export interface PdvSaleCreate {
+  usd_rate_gs?: number
   print_receipt?: boolean
   vendedor_id?: string
   cliente_id?: string
@@ -972,6 +973,7 @@ export interface PdvPaymentResponse {
 }
 
 export interface PdvSaleResponse {
+  usd_rate_gs?: number | string | null
   id: string
   vendedor_id: string | null
   cliente_id: string | null

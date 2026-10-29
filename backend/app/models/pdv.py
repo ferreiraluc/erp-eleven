@@ -51,6 +51,7 @@ class PdvSale(Base):
     subtotal_gs = Column(Numeric(15, 2), default=0)
     desconto_gs = Column(Numeric(15, 2), default=0)
     total_gs = Column(Numeric(15, 2), default=0)
+    usd_rate_gs = Column(Numeric(12, 4), nullable=True)  # Frozen G$ per US$ at checkout.
 
     status = Column(String(20), default="completed")    # completed, cancelled
     stock_applied = Column(Boolean, default=False)

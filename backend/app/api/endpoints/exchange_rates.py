@@ -60,6 +60,8 @@ def quick_update_rates(
     current_user = Depends(require_role(["ADMIN", "GERENTE"]))
 ):
     """Quick update multiple exchange rates - perfect for dashboard/header editing"""
+    from ...services.bonanza_rates import lock_rates
+    lock_rates(db)
     updated_rates = []
     
     # Helper function to update or create rate

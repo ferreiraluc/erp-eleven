@@ -19,10 +19,11 @@ from app.models.access import AuditEvent
 from app.models.inventory import Item, Supplier, StockMovement
 from app.models.pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement, PdvSaleEvent
 from app.schemas.pdv import PdvSaleItemCreate
+from app.models.exchange_rate import ExchangeRate, CurrencyPair
 
 
 BALANCES = ("current_stock", "stock_loja", "stock_deposito")
-TABLES = (Usuario, Vendedor, Cambista, Cliente, SavedAddress, Supplier, Item, StockMovement,
+TABLES = (ExchangeRate, Usuario, Vendedor, Cambista, Cliente, SavedAddress, Supplier, Item, StockMovement,
           PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement, PdvSaleEvent, AuditEvent)
 
 
@@ -32,6 +33,7 @@ def pdv_app():
     Base.metadata.create_all(engine, tables=[model.__table__ for model in TABLES])
     factory = sessionmaker(bind=engine, autoflush=False)
     with factory() as db:
+        db.add(ExchangeRate(currency_pair=CurrencyPair.USD_TO_PYG,rate=6000,source='Synthetic'))
         user = Usuario(nome="Lucas sintético", email="lucas@eleven.com", role=UsuarioRole.ADMIN, senha_hash="unused")
         customer = PdvCliente(nome="Cliente sintético", saldo_fiado_gs=20)
         db.add_all([user, customer])

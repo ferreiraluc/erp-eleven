@@ -394,3 +394,46 @@ incompleta (`policySupported=false`, política desconhecida). `NotAllowedError`
 também pode ser uma recusa nativa do aparelho; cabeçalho correto não garante suporte
 em todas as versões do navegador. Validar o compartilhamento final no Samsung/iOS.
 Referência: [Web Share API — Permissions Policy](https://www.w3.org/TR/web-share/#permissions-policy).
+
+## Totais em dólares e referência Bonanza
+
+O PDV destaca subtotal, desconto e total em **US$**, com o equivalente em G$/R$
+abaixo. A listagem Vendas do PDV, seus totais, exportação e detalhes também usam
+US$ como apresentação principal. Pagamentos continuam na moeda efetivamente
+recebida; os registros financeiros e de estoque em G$ preservam seu contrato.
+O ticket espanhol (prévia, PDF e fila do caixa) converte valores pela cotação
+congelada em `pdv_sales.usd_rate_gs`, inclusive em reimpressões/devoluções.
+Uma alteração de cotação durante o checkout pede atualização e nova conferência;
+não conclui a venda com uma cotação diferente da que foi apresentada.
+
+A migração preenche a cotação das vendas anteriores com o último registro de
+câmbio existente **até a data da venda**; na ausência dele, usa a cotação de seus
+pagamentos USD/USDT somente se forem consistentes. Não aplica a cotação atual a
+uma venda antiga. Sem evidência histórica, mostra **US$ —**; resumos com registros
+sem cotação ficam sinalizados em vez de somar um total parcial como completo.
+Revisões, pagamentos, saldos, valores em G$ e snapshots de impressão já enviados
+não são reescritos. A cotação congelada não muda ao corrigir/reimprimir uma venda.
+Os snapshots antigos de fila continuam imutáveis; a prévia/download incorpora a
+cotação histórica recuperada sem alterar o job original. Cópias novas usam o formato
+em dólares. Nenhuma dessas consultas imprime ou simula pagamento.
+
+Em **Configurações → Câmbio automático · Bonanza**, Lucas ativa a referência fixa
+**Jebai (unidade 2), coluna Venta** para dólar/guarani e dólar/real. O conector lê
+o mesmo JSON público usado pelo site (`https://www.bonanzacambios.com.py/api/board`),
+sem navegador automatizado nem IA. O par USD/BRL vem do arbitragem direto do dólar
+com real; não é calculado dividindo as duas cotações em guaranis. Os demais pares
+não são derivados por suposição.
+
+Ao ativar faz uma consulta; o agendador confere a configuração a cada 5 minutos e
+solicita outra cotação somente após 6 horas da última tentativa. Consultar dashboard
+ou abrir PDV não dispara consulta à Bonanza. Resposta incompleta, unidade inesperada,
+valores inválidos, publicação com mais de 7 dias ou anterior à última aceita não
+substituem as taxas. Limite de 256 KiB, timeout e HTTPS fixo mantêm a leitura limitada.
+A tela mostra última consulta concluída, publicação do provedor e falhas; o horário
+de consulta não é apresentado como se fosse atualização da própria casa de câmbio.
+
+Mudanças preservam o histórico de cotações; valores idênticos não criam novos
+registros. O operador pode pausar a automação e usar o editor manual existente.
+Se editar manualmente com a automação ativa, a próxima sincronização válida aplica
+novamente Jebai/Venta. Ativação e pausa são auditadas. Migração e deploy não ativam
+consumo ou mudança de câmbio automaticamente.

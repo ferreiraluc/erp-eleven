@@ -21,7 +21,7 @@ from .services import user_audit
 from .services import notification_events  # register transactional operational notifications
 from .api.endpoints import notifications, notification_push
 from .api.endpoints import system_quality
-from .api.endpoints import wonca
+from .api.endpoints import wonca, exchange_sync
 
 # Main
 # Setup logging
@@ -88,6 +88,9 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
         max_instances=1, coalesce=True, misfire_grace_time=3600,
     )
+    from .services.bonanza_rates import run_due as sync_bonanza
+    scheduler.add_job(sync_bonanza, 'interval', minutes=5, id='bonanza_rates',
+        replace_existing=True, max_instances=1, coalesce=True, misfire_grace_time=300)
     scheduler.start()
     logger.info("[SCHEDULER] Job de atualização diária de rastreamentos agendado (19:00 BRT)")
 
@@ -181,6 +184,7 @@ app.include_router(user_admin.router, prefix="/api/access", tags=["access"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(notification_push.router)
 app.include_router(system_quality.router, prefix="/api/quality", tags=["quality"])
+app.include_router(exchange_sync.router, prefix='/api/exchange-rates/bonanza', tags=['exchange-rates'])
 app.include_router(wonca.router, prefix='/api/tracking-monitor', tags=['tracking-monitor'])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(vendas.router, prefix="/api/vendas", tags=["vendas"])

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Literal
 from datetime import datetime
 from decimal import Decimal
@@ -186,6 +186,7 @@ class PdvPaymentResponse(BaseModel):
 # ── PDV Sale ──────────────────────────────────────────────────────────────────
 
 class PdvSaleCreate(BaseModel):
+    usd_rate_gs: Optional[Decimal] = Field(default=None, gt=0, le=1000000)
     print_receipt: bool = False
     vendedor_id: Optional[uuid.UUID] = None
     cliente_id: Optional[uuid.UUID] = None
@@ -197,6 +198,7 @@ class PdvSaleCreate(BaseModel):
 
 
 class PdvSaleResponse(BaseModel):
+    usd_rate_gs: Optional[Decimal] = None
     id: uuid.UUID
     vendedor_id: Optional[uuid.UUID]
     cliente_id: Optional[uuid.UUID]
