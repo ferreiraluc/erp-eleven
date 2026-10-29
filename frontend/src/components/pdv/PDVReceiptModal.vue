@@ -26,6 +26,7 @@
             <hr />
             <div class="receipt-pair"><span>Subtotal</span><span>{{ data.subtotal }}</span></div>
             <div v-if="data.discount" class="receipt-pair"><span>Descuento</span><span>{{ data.discount }}</span></div>
+            <div v-if="data.card_fee" class="receipt-pair"><span>Recargo tarjeta (6%)</span><span>{{ data.card_fee }}</span></div>
             <div class="receipt-pair receipt-total"><strong>TOTAL</strong><strong>{{ data.total }}</strong></div>
             <div v-if="data.refunded" class="receipt-pair"><span>Importe devuelto</span><span>{{ data.refunded }}</span></div>
             <hr />

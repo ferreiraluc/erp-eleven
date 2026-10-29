@@ -48,6 +48,7 @@ def view(snapshot):
         date = date.astimezone(ZoneInfo('America/Asuncion'))
     paid = sum(Decimal(p['total']) for p in snapshot['payments'])
     total = Decimal(snapshot['total'])
+    card_fee = sum(Decimal(p.get('card_fee') or '0') for p in snapshot['payments'])
     state = snapshot.get('status', 'completed')
     return dict(
         title='ELEVEN', location='Shopping Paris - PY', email='contato@elevenparispy.com',
@@ -59,9 +60,10 @@ def view(snapshot):
                     returned=number(i.get('returned', 0), 3).rstrip('0').rstrip(',') if Decimal(i.get('returned') or '0') > 0 else None)
                for i in snapshot['items']],
         subtotal=money(snapshot['subtotal']), discount=money(snapshot['discount']) if Decimal(snapshot['discount']) > 0 else None,
-        total=money(total), refunded=money(snapshot.get('refunded', 0)) if Decimal(snapshot.get('refunded') or '0') > 0 else None,
+        card_fee=money(card_fee) if card_fee else None, merchandise_total=money(total),
+        total=money(total + card_fee), refunded=money(snapshot.get('refunded', 0)) if Decimal(snapshot.get('refunded') or '0') > 0 else None,
         payments=[dict(label=PAYMENTS.get(p['method'], 'Otro'), amount=f"{p['currency']} {number(p['amount'], 0 if p['currency'] in ('GS', 'PYG') else 2)}",
-                       equivalent=money(p['total']) if p['currency'] not in ('USD', 'USDT') else None) for p in snapshot['payments']],
+                       equivalent=money(Decimal(p['total']) + Decimal(p.get('card_fee') or '0')) if p['currency'] not in ('USD', 'USDT') else None) for p in snapshot['payments']],
         change=money(paid-total) if paid > total and state == 'completed' else None,
         seller=snapshot.get('seller') or 'No informado', customer=snapshot.get('customer') or 'Consumidor final',
         footer=['¡Gracias por su compra!', 'Conserve este comprobante para consultas.', '¡Esperamos su próxima visita!'],
@@ -113,6 +115,7 @@ def render(snapshot):
     totals_start = len(story)
     pair('Subtotal', data['subtotal'])
     if data['discount']: pair('Descuento', data['discount'])
+    if data['card_fee']: pair('Recargo tarjeta (6%)', data['card_fee'])
     pair('TOTAL', data['total'], total_style)
     if data['refunded']: pair('Importe devuelto', data['refunded'])
     story[totals_start:] = [KeepTogether(story[totals_start:])]

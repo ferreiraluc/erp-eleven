@@ -197,9 +197,9 @@ const copy = {
   ],
   saved: ['Alteração salva.', 'Cambio guardado.', 'Change saved.'],
   templateHelp: [
-    'Variáveis permitidas: {user_name}, {sale_code}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use somente as disponíveis para o evento.',
-    'Variables permitidas: {user_name}, {sale_code}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use solo las disponibles para el evento.',
-    'Allowed variables: {user_name}, {sale_code}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use only those available for the event.',
+    'Variáveis permitidas: {user_name}, {sale_code}, {sale_total}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use somente as disponíveis para o evento.',
+    'Variables permitidas: {user_name}, {sale_code}, {sale_total}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use solo las disponibles para el evento.',
+    'Allowed variables: {user_name}, {sale_code}, {sale_total}, {tracking_code}, {cliente_username}, {status}, {date}, {time}. Use only those available for the event.',
   ],
   chooseTemplate: ['Escolha um modelo', 'Elija una plantilla', 'Choose a template'],
   none: ['Nenhum', 'Ninguno', 'None'],

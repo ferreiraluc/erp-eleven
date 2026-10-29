@@ -220,6 +220,7 @@
                 </div>
                 <div class="pay-entry-amounts">
                   <span class="pay-gs-amount">{{ paymentSymbol(p.currency) }} {{ fmtNum(p.amount_original) }}</span>
+                  <span v-if="p.card_fee_gs" class="pay-orig-amount">{{ uiText('Acréscimo cartão') }}: {{ fmtGs(p.card_fee_gs) }} · {{ uiText('Aplicado à venda') }}: {{ fmtGs(p.amount_gs) }}</span>
                   <span v-if="p.currency !== 'GS'" class="pay-orig-amount">≈ {{ fmtGs(p.amount_gs) }}</span>
                 </div>
                 <button class="pay-entry-remove erp-button erp-button--danger erp-button--icon" @click="removePayment(p.id)">×</button>
@@ -237,13 +238,18 @@
               <div class="pay-add-row">
                 <div class="pay-input-wrap">
                   <span class="pay-currency-prefix">{{ currencySymbol }}</span>
-                  <DecimalInput v-model="newAmount" ref="amountInput" :aria-label="uiText('Valor em {0}', {0: currencySymbol})"
+                  <DecimalInput v-model="newAmount" ref="amountInput" :aria-label="cardSelected ? uiText('Valor na máquina (G$)') : uiText('Valor em {0}', {0: currencySymbol})"
                     @update:model-value="totalIntent = null"
                     class="pay-amount-input" @keydown.enter="addPayment" />
                 </div>
                 <button class="pay-btn-total erp-button erp-button--secondary erp-button--sm" style="--button-bg: #f5f3ff; --button-fg: #6d28d9; --button-border: #ddd6fe; --button-hover: #ede9fe" :disabled="!validRate" @click="fillTotal" :title='$tr("Preencher valor restante")'>{{ $tr("Total") }}</button>
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
                 <button class="pay-btn-add erp-button erp-button--primary erp-button--sm" @click="addPayment" :disabled="!canAddPayment">{{ $tr("+ Add") }}</button>
+              </div>
+              <div v-if="cardSelected" class="pay-card-preview" role="status">
+                <strong>{{ uiText('Valor na máquina') }}: {{ fmtGs(cardTerminalTotal) }}</strong>
+                <span>{{ uiText('Câmbio cartão') }}: {{ fmtNum(rateUsd / 0.94) }} G$ / U$</span>
+                <small>{{ uiText('Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.') }}</small>
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
                 <span>{{ $tr("Taxa:") }}</span>
@@ -256,6 +262,10 @@
             <p v-if="newMethod === 'fiado' && !pdv.clienteId" class="pay-validation" role="status">{{ uiText('Selecione o cliente para lançar fiado.') }}</p>
             <p v-if="invalidNoncashChange" class="pay-validation" role="alert">{{ uiText('O valor acima do total precisa estar em dinheiro para gerar troco. Confira os pagamentos.') }}</p>
 
+            <div v-if="cardFees" class="pay-card-summary" role="status">
+              <span>{{ uiText('Acréscimo cartão') }}: {{ saleUsd(cardFees, rateUsd) }}</span>
+              <strong>{{ uiText('Total a cobrar') }}: {{ saleUsd(pdv.total + cardFees, rateUsd) }}</strong>
+            </div>
             <!-- Discount -->
             <div class="pay-discount-row">
               <label class="pay-discount-label" for="pdv-discount">{{ $tr("Desconto (G$)") }}</label>
@@ -326,7 +336,7 @@ import { useCurrencyStore } from '@/stores/currency'
 import { saleUsd } from '@/services/saleUsd'
 import { inventoryAPI, type InventoryItem, type ProductRelation, type RelatedProductCursor } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
-import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, validPaymentAmount } from '@/services/pdvPayments'
+import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, isCardPayment, cardCharge, cardPaymentAmounts, validPaymentAmount } from '@/services/pdvPayments'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr: inventoryText } = useInventoryI18n()
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
@@ -468,10 +478,13 @@ watch(() => pdv.loading, loading => {
 watch(() => pdv.cart.length, (len) => { if (len === 0) { roundingSnapshots.clear(); ratesChangedDuringCheckout = false; totalIntent.value = null; resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
 
 const currencySymbol = computed(() => paymentSymbol(newCurrency.value))
+const cardSelected = computed(() => isCardPayment(newMethod.value))
+const cardFees = computed(() => localPayments.value.reduce((sum, p) => sum + (p.card_fee_gs || 0), 0))
+const cardTerminalTotal = computed(() => cardCharge(payRemaining.value))
 const showReference = computed(() => !newMethod.value.startsWith('cash_') && newMethod.value !== 'fiado')
 const referencePlaceholder = computed(() => newMethod.value.startsWith('card_') ? uiText('Últimos 4 dígitos') : uiText('Referência'))
 const validRate = computed(() => Number.isFinite(newRate.value) && Number(newRate.value) > 0 && Number(newRate.value) <= 999999999)
-const canAddPayment = computed(() => validPaymentAmount(Number(newAmount.value), Number(newRate.value)) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
+const canAddPayment = computed(() => validPaymentAmount(Number(newAmount.value), Number(newRate.value)) && (!cardSelected.value || Number.isInteger(newAmount.value)) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
 
 const payTotalPaid = computed(() => localPayments.value.reduce((s, p) => s + p.amount_gs, 0))
 const payRemaining = computed(() => Math.max(0, pdv.total - payTotalPaid.value))
@@ -486,7 +499,7 @@ const canConfirmPayment = computed(() => !customerBusy.value && !barcodePending.
 
 function fillTotal() {
   if (!validRate.value) return
-  const rounded = remainingInCurrency.value > 0 ? Math.max(0.01, Math.round(remainingInCurrency.value * 100) / 100) : 0
+  const rounded = cardSelected.value ? cardTerminalTotal.value : remainingInCurrency.value > 0 ? Math.max(0.01, Math.round(remainingInCurrency.value * 100) / 100) : 0
   newAmount.value = rounded
   totalIntent.value = { method: newMethod.value, amount: rounded, rate: Number(newRate.value), total: pdv.total, paid: payTotalPaid.value }
 }
@@ -506,10 +519,11 @@ function addPayment() {
     reference: newReference.value || null,
     label: methodLabel(newMethod.value),
   }
+  if (cardSelected.value) Object.assign(payment, cardPaymentAmounts(payment.amount_original, payRemaining.value))
   const intent = totalIntent.value
   const matchedTotal = intent && intent.method === payment.method && intent.amount === payment.amount_original &&
     intent.rate === payment.exchange_rate && intent.total === pdv.total && intent.paid === payTotalPaid.value
-  if (matchedTotal || !payment.method.startsWith('cash_')) {
+  if (!cardSelected.value && (matchedTotal || !payment.method.startsWith('cash_'))) {
     const snapshot = pdv.roundCartTotalToPayment(payment, payTotalPaid.value)
     if (snapshot) {
       payment.rounding_snapshot = snapshot
@@ -791,6 +805,7 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 </script>
 
 <style scoped>
+.pay-card-preview,.pay-card-summary{display:grid;gap:5px;padding:10px 12px;background:#f5f3ff;color:#5b21b6;border-radius:10px;font-size:13px;overflow-wrap:anywhere}.pay-card-preview small{font-size:11px}.pay-card-summary{margin:8px 12px}
 .pdv-checkout-lock { display: contents; }
 .pdv-stock-location { min-width: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .65rem; color: #6b7280; }
 .pdv-stock-location .erp-dropdown { max-width: 140px; }

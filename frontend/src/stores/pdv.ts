@@ -33,6 +33,8 @@ export interface CartPayment {
   amount_original: number
   exchange_rate: number
   amount_gs: number
+  card_fee_gs?: number
+  card_fee_percent?: number
   cambista_id: string | null
   reference: string | null
   label: string                 // display label
@@ -288,6 +290,7 @@ export const usePdvStore = defineStore('pdv', () => {
           amount_original: p.amount_original,
           exchange_rate: p.exchange_rate,
           amount_gs: p.amount_gs,
+          card_fee_gs: p.card_fee_gs || 0, card_fee_percent: p.card_fee_percent || 0,
           cambista_id: p.cambista_id || undefined,
           reference: p.reference || undefined,
         })),

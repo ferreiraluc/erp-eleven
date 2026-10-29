@@ -19,6 +19,7 @@ from ..models.cliente import Cliente
 from ..schemas.notification import MANUAL_TOKEN, NotificationContext, NotificationFields, TEMPLATE_VARIABLES
 from .access_policy import is_owner, own_sales
 from .pdv_ticket_identity import ticket_code
+from .pdv_usd import notification_amount
 from .user_sessions import aware
 from .tracking_codes import normalize_tracking_code
 
@@ -158,7 +159,7 @@ def notification_allowed(db, user, notice):
 
 
 def sale_metadata(db, sale_id, *, required=True):
-    row = db.query(PdvSale.id, PdvSale.vendedor_id, PdvSale.created_at, PdvSale.status,
+    row = db.query(PdvSale.id, PdvSale.vendedor_id, PdvSale.created_at, PdvSale.status, PdvSale.total_gs, PdvSale.usd_rate_gs,
                    Usuario.nome.label('seller_name')).outerjoin(Usuario, Usuario.id == PdvSale.vendedor_id)\
         .filter(PdvSale.id == sale_id, PdvSale.deleted_at.is_(None)).first()
     if required and row is None:
@@ -186,8 +187,8 @@ def prepare_manual(db, body, users, moment, *, context=None):
     fields = {match[1] for value in (body.title, body.body) for match in MANUAL_TOKEN.finditer(value) if match[1] in TEMPLATE_VARIABLES}
     tracking_code = tracking_code_from_path(body.action_path) if not linked else None
     tracking = find_tracking_metadata(db, tracking_code)
-    if 'sale_code' in fields and sale is None:
-        raise HTTPException(400, 'Selecione uma venda real para preencher {sale_code}.')
+    if fields.intersection({'sale_code', 'sale_total'}) and sale is None:
+        raise HTTPException(400, 'Selecione uma venda real para preencher {sale_code}/{sale_total}.')
     if fields.intersection({'tracking_code', 'cliente_username'}) and tracking is None:
         raise HTTPException(400, 'Escolha o atalho Rastreio e informe um código de rastreio cadastrado para preencher {tracking_code}/{cliente_username}.')
     if 'status' in fields and sale is None and tracking is None:
@@ -195,6 +196,7 @@ def prepare_manual(db, body, users, moment, *, context=None):
     local = moment.astimezone(BRT)
     values = {'user_name': sale.seller_name if sale and sale.seller_name else users[0].nome if len(users) == 1 else 'equipe',
               'cliente_username': tracking_recipient_name(db, tracking) if tracking else 'destinatário não informado',
+              'sale_total': notification_amount(sale.total_gs, sale.usd_rate_gs) if sale else '—',
               'sale_code': ticket_code(sale.id) if sale else '', 'tracking_code': tracking.codigo_rastreio if tracking else '',
               'status': {'completed': 'concluída', 'cancelled': 'cancelada', 'partially_refunded': 'devolução parcial',
                          'refunded': 'estornada'}.get(sale.status, sale.status) if sale else TRACKING_LABELS.get(getattr(tracking.status, 'value', tracking.status), '') if tracking else '',
@@ -241,7 +243,7 @@ def presented_fields(db, notices, names=None):
             names.setdefault(notice_id, []).append(name)
     source = {notice.id: notice_context(notice) for notice in legacy}
     sale_ids = {_uuid(value['sale_id']) for value in source.values() if value and value.get('sale_id')}
-    sales = {row.id: row for row in db.query(PdvSale.id, PdvSale.vendedor_id, PdvSale.status, Usuario.nome.label('seller_name'))
+    sales = {row.id: row for row in db.query(PdvSale.id, PdvSale.vendedor_id, PdvSale.status, PdvSale.total_gs, PdvSale.usd_rate_gs, Usuario.nome.label('seller_name'))
              .outerjoin(Usuario, Usuario.id == PdvSale.vendedor_id).filter(PdvSale.id.in_(sale_ids), PdvSale.deleted_at.is_(None)).all()} if sale_ids else {}
     tracking_ids = {_uuid(notice.entity_id) for notice in legacy if notice.entity_type == 'tracking' and _uuid(notice.entity_id)}
     tracking_codes = {code for notice in legacy if (code := tracking_code_from_path(notice.action_path))}
@@ -255,6 +257,7 @@ def presented_fields(db, notices, names=None):
         recipients = names.get(notice.id, [])
         local = aware(notice.created_at).astimezone(BRT)
         values = {'user_name': sale.seller_name if sale and sale.seller_name else recipients[0] if len(recipients) == 1 else 'equipe',
+                  'sale_total': notification_amount(sale.total_gs, sale.usd_rate_gs) if sale else '—',
                   'sale_code': ticket_code(sale.id) if sale else 'venda não vinculada',
                   'cliente_username': tracking_recipient_name(db, tracking) if tracking else 'destinatário não informado',
                   'tracking_code': tracking.codigo_rastreio if tracking else 'rastreio não vinculado',

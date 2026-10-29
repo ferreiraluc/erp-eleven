@@ -203,7 +203,7 @@ def test_owner_template_unavailable_variable_does_not_block_sale_commit(factory)
         db.commit()
         assert db.get(PdvSale, sale.id)
         notice = db.query(Notification).one()
-        assert notice.title.startswith('Venda #') and notice.title.endswith(' concluída')
+        assert notice.title.startswith('Venda U$ ') and notice.title.endswith(' concluída')
         assert notice.body == 'Lucas fixture concluiu uma venda. Abra o sistema para conferir.'
 
 

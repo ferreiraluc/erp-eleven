@@ -19,7 +19,7 @@ from .user_sessions import aware
 BRT = ZoneInfo('America/Sao_Paulo')
 DAILY_EVENTS = {'daily_greeting', 'morning_greeting', 'afternoon_greeting'}
 DEFAULTS = {
-    'sale_completed': ('Venda concluída', 'Venda #{sale_code} concluída',
+    'sale_completed': ('Venda concluída', 'Venda U$ {sale_total} concluída',
                        '{user_name} concluiu uma venda. Abra o sistema para conferir.', 'sales', 'success', False, False, '09:00'),
     'sale_avulso_without_reason': ('Conferir itens avulsos', 'Venda #{sale_code}: informe o motivo',
                                  '{user_name}, esta venda contém itens avulsos sem vínculo com o estoque. Informe o motivo para conferência.', 'sales', 'warning', True, True, '09:00'),
@@ -64,6 +64,17 @@ def ensure_defaults(db):
             NotificationTemplate.requires_ack.is_(False), NotificationTemplate.requires_response.is_(False),
             NotificationTemplate.action_path.is_(None))
         query.update({'body': tracking[2], 'version': 2, 'updated_at': utcnow()}, synchronize_session='fetch')
+    sale_id = uuid.uuid5(uuid.NAMESPACE_URL, 'erp-eleven/notification-template/sale_completed')
+    if 'sale_completed' in existing and not any(isinstance(row, NotificationTemplate) and row.id == sale_id for row in db.dirty):
+        values = DEFAULTS['sale_completed']
+        db.query(NotificationTemplate).filter(
+            NotificationTemplate.id == sale_id, NotificationTemplate.version == 1,
+            NotificationTemplate.created_by.is_(None), NotificationTemplate.name == values[0],
+            NotificationTemplate.title == 'Venda #{sale_code} concluída', NotificationTemplate.body == values[2],
+            NotificationTemplate.category == values[3], NotificationTemplate.severity == values[4],
+            NotificationTemplate.requires_ack.is_(False), NotificationTemplate.requires_response.is_(False),
+            NotificationTemplate.action_path.is_(None)).update(
+                {'title': values[1], 'version': 2, 'updated_at': utcnow()}, synchronize_session='fetch')
     for key, values in DEFAULTS.items():
         if key in existing:
             continue
@@ -238,7 +249,7 @@ def emit_event(db, event_key, *, context, user_ids, dedupe_key, action_path=None
         return None
     template = db.get(NotificationTemplate, rule.template_id)
     moment = utcnow().astimezone(BRT)
-    values = {'user_name': 'equipe', 'cliente_username': 'destinatário não informado', 'sale_code': '', 'tracking_code': '', 'status': '',
+    values = {'user_name': 'equipe', 'cliente_username': 'destinatário não informado', 'sale_code': '', 'sale_total': '—', 'tracking_code': '', 'status': '',
               'date': moment.strftime('%d/%m/%Y'), 'time': moment.strftime('%H:%M')}
     # No nested lookups, formatting operations or arbitrary object attributes.
     values.update({key: str(value)[:500] for key, value in context.items() if key in values and value is not None})

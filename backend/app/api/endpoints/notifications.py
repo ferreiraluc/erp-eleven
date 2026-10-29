@@ -335,15 +335,16 @@ def edit_rule(event_key: str, body: RuleUpdate, owner=Depends(require_owner), db
 
 def _sale_context_row(row):
     from ...services.pdv_ticket_identity import ticket_code
+    from ...services.pdv_usd import notification_amount
     return {'id': row.id, 'code': ticket_code(row.id), 'created_at': row.created_at,
-            'seller_id': row.vendedor_id, 'seller_name': row.seller_name, 'status': row.status}
+            'sale_total': notification_amount(row.total_gs, row.usd_rate_gs), 'seller_id': row.vendedor_id, 'seller_name': row.seller_name, 'status': row.status}
 
 
 @router.get('/context/sales')
 def sale_contexts(search: str = Query('', max_length=80), limit: int = Query(20, ge=1, le=30),
                   owner=Depends(require_owner), db: Session = Depends(get_db)):
     from ...models.pdv import PdvSale
-    query = db.query(PdvSale.id, PdvSale.vendedor_id, PdvSale.created_at, PdvSale.status,
+    query = db.query(PdvSale.id, PdvSale.vendedor_id, PdvSale.created_at, PdvSale.status, PdvSale.total_gs, PdvSale.usd_rate_gs,
                      Usuario.nome.label('seller_name')).outerjoin(Usuario, Usuario.id == PdvSale.vendedor_id)\
         .filter(PdvSale.deleted_at.is_(None))
     term = search.strip().removeprefix('#')

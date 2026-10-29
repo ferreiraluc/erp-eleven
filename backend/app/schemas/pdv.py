@@ -164,6 +164,8 @@ class PdvPaymentCreate(BaseModel):
     amount_original: float
     exchange_rate: float = 1.0
     amount_gs: float
+    card_fee_gs: float = 0
+    card_fee_percent: float = 0
     cambista_id: Optional[uuid.UUID] = None
     reference: Optional[str] = None
 
@@ -175,6 +177,8 @@ class PdvPaymentResponse(BaseModel):
     amount_original: float
     exchange_rate: float
     amount_gs: float
+    card_fee_gs: float = 0
+    card_fee_percent: float = 0
     cambista_id: Optional[uuid.UUID]
     reference: Optional[str]
     created_at: datetime

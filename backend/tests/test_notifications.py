@@ -296,7 +296,7 @@ def test_reusable_template_with_unavailable_values_keeps_event_message_valid(set
         notification = service.emit_event(db, 'sale_completed', context={'user_name': 'Sol', 'sale_code': 'ABC'},
             user_ids=[ids['Lucas']], dedupe_key='sale:template-empty:completed')
         db.commit()
-        assert notification.title == 'Venda #ABC concluída'
+        assert notification.title == 'Venda U$ — concluída'
         assert notification.body == 'Sol concluiu uma venda. Abra o sistema para conferir.'
         # A valid customized field is preserved while the other field falls back.
         saved = db.get(NotificationTemplate, uuid.UUID(template['id']))
@@ -571,3 +571,42 @@ def test_ambiguous_legacy_sale_query_fails_closed_for_inbox_read_ack_and_push(se
     assert response['items'] == [] and response['total'] == response['unread_count'] == 0
     assert client.post(f'/api/notifications/{notice_id}/read', headers={'X-User': 'Junior'}).status_code == 404
     assert client.post(f'/api/notifications/{notice_id}/acknowledge', headers={'X-User': 'Junior'}, json={}).status_code == 404
+
+
+def test_sale_amount_template_upgrade_preserves_owner_edits_and_old_messages(setup):
+    client, factory, ids = setup
+    with factory() as db:
+        service.ensure_defaults(db)
+        template_id = uuid.uuid5(uuid.NAMESPACE_URL, 'erp-eleven/notification-template/sale_completed')
+        template = db.get(NotificationTemplate, template_id)
+        template.title = 'Venda #{sale_code} concluída'; template.version = 1
+        db.commit()
+        service.ensure_defaults(db)
+        db.commit(); db.refresh(template)
+        assert template.title == 'Venda U$ {sale_total} concluída' and template.version == 2
+        notice = service.emit_event(db, 'sale_completed', context={'sale_total':'800', 'user_name':'Sol'},
+            user_ids=[ids['Lucas']], dedupe_key='sale-value-test')
+        db.commit()
+        assert notice.title == 'Venda U$ 800 concluída' and 'Sol' in notice.body
+        # Owner customization and already delivered snapshots are not overwritten.
+        template.title = 'Minha venda {sale_code}'; template.version = 3
+        db.commit(); service.ensure_defaults(db); db.commit()
+        assert template.title == 'Minha venda {sale_code}'
+        assert notice.title == 'Venda U$ 800 concluída'
+
+
+def test_sale_value_is_rendered_from_the_linked_frozen_rate(setup):
+    from app.models.pdv import PdvSale
+    client, factory, ids = setup
+    sale_id, _, _ = context_fixtures(factory, ids)
+    with factory() as db:
+        sale = db.get(PdvSale, sale_id); sale.total_gs = 4680000; sale.usd_rate_gs = 5850; db.commit()
+    body = payload(ids, title='Venda U$ {sale_total} concluída', body='{user_name} concluiu a venda.',
+        context={'sale_id': str(sale_id), 'target':'sale'}, user_ids=[str(ids['Sol'])])
+    result = client.post('/api/notifications/admin', headers=owner(), json=body)
+    assert result.status_code == 201, result.text
+    assert result.json()['title'] == 'Venda U$ 800 concluída'
+    assert result.json()['body'] == 'Sol concluiu a venda.'
+    assert client.get(f'/api/notifications/context/sales/{sale_id}', headers=owner()).json()['sale_total'] == '800'
+    body.pop('context'); body['request_id'] = str(uuid.uuid4())
+    assert client.post('/api/notifications/admin', headers=owner(), json=body).status_code == 400

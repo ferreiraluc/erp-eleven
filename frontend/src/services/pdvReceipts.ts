@@ -6,6 +6,7 @@ export interface ReceiptState { printer: ReceiptPrinter | null; job: ReceiptJob 
 export interface ReceiptPreview {
   title: string; location: string; email: string; code: string; sale_id: string; date: string
   status: string; status_changed: boolean; copy: boolean; subtotal: string; discount: string | null; total: string
+  card_fee?: string | null; merchandise_total?: string
   refunded: string | null; change: string | null; seller: string; customer: string; footer: string[]; barcode: string
   items: Array<{ name: string; meta: string; calculation: string; total: string; discount: string | null; returned: string | null }>
   payments: Array<{ label: string; amount: string; equivalent: string | null }>

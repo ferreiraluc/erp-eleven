@@ -189,3 +189,14 @@ agendamento, rollback, edição, autenticação, fila, isolamento de aparelhos e
 eventos de negócio. Conferência visual usa a interface com dados locais.
 Validação física de som/push depende de aceitar a permissão no aparelho real;
 nunca enviar uma venda, impressão ou alerta real somente para testar a interface.
+
+### Valor no aviso de venda concluída
+
+O modelo padrão passa a **Venda U$ {sale_total} concluída**, com o nome do vendedor
+no texto (`{user_name}`) e o mesmo atalho para a venda. `{sale_total}` é o total
+**das mercadorias em dólares**, calculado com a cotação congelada da venda,
+formatado sem centavos quando inteiro (ex.: `800`, ou `800,50`). Não usa a cotação
+atual nem acrescenta ressarcimento de cartão. Sem evidência de cotação, exibe `—`.
+A variável também funciona em modelos manuais com uma venda real vinculada e na
+prévia. Somente o modelo original intocado é atualizado automaticamente; edições
+de Lucas e notificações já enviadas permanecem preservadas.

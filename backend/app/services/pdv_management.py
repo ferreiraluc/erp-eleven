@@ -265,6 +265,8 @@ def plan(db,sid,user,command):
     if any(e['after']<0 for e in debt_effects):warnings.append('O abatimento gera saldo a favor do cliente no fiado; confira valores já recebidos antes de devolver dinheiro.')
     if new and new['cliente_id']:new['cliente_nome']=next(c.nome for c in customers if c.id==new['cliente_id'])
     fiado_credit=sum(-e['delta'] for e in debt_effects if e['delta']<0) if not new else Decimal(0)
+    if command.operation in ('return', 'cancel') and any(p.card_fee_gs for p in sale.payments):
+        warnings.append('O estorno acima corresponde às mercadorias. O acréscimo do cartão não está incluído; confira a devolução da taxa diretamente na operadora antes de devolver valores ao cliente.')
     public=serial({'operation':command.operation,'reason':command.reason,'before_total_gs':sale.total_gs,'after_total_gs':new['total_gs'] if new else money(sale.total_gs-sale.refunded_gs-refund) if sale.status!='cancelled' else 0,
         'refund_gs':refund,'fiado_credit_gs':fiado_credit,'cash_refund_gs':refund-fiado_credit,'stock':effects,'fiado':debt_effects,'returns':returns,'warnings':warnings,
         'correction':new,

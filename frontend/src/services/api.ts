@@ -927,6 +927,8 @@ export interface PdvPaymentCreate {
   amount_original: number
   exchange_rate: number
   amount_gs: number
+  card_fee_gs?: number
+  card_fee_percent?: number
   cambista_id?: string
   reference?: string
 }
@@ -967,6 +969,8 @@ export interface PdvPaymentResponse {
   amount_original: number
   exchange_rate: number
   amount_gs: number
+  card_fee_gs?: number
+  card_fee_percent?: number
   cambista_id: string | null
   reference: string | null
   created_at: string

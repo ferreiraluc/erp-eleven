@@ -282,3 +282,29 @@ def test_ticket_lookup_includes_collisions_for_review_and_accepts_full_id(ticket
         result=client.get('/api/pdv/management',params={'q':query}).json()
         assert {row['id'] for row in result['items']}=={sold['id'],collision_id}
     assert client.get('/api/pdv/management',params={'q':sold['id']}).json()['total']==1
+
+
+def test_card_receipt_shows_gross_total_and_fee_in_usd_without_changing_frozen_goods(tickets):
+    from app.models.exchange_rate import ExchangeRate
+    from test_pdv_card_fee import card
+    factory, client, customer = tickets
+    with factory() as db:
+        db.query(ExchangeRate).one().rate = 5850; db.commit()
+    body = sale_payload([None], customer, avulso=True)
+    body['items'][0].update(unit_price_gs=468000)
+    body['payments'] = [card()]
+    result = client.post('/api/pdv/sales', json=body)
+    assert result.status_code == 201, result.text
+    sid = result.json()['id']
+    preview = client.get(f'/api/pdv/sales/{sid}/receipt/preview').json()
+    assert preview['subtotal'] == preview['merchandise_total'] == 'US$ 80,00'
+    assert preview['card_fee'] == 'US$ 5,11'
+    assert preview['total'] == 'US$ 85,11'
+    assert preview['payments'][0]['amount'] == 'GS 497.873'
+    assert preview['payments'][0]['equivalent'] == 'US$ 85,11'
+    assert preview['change'] is None
+    pdf = client.get(f'/api/pdv/sales/{sid}/receipt/pdf')
+    text = '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(pdf.content)).pages)
+    assert 'Recargo tarjeta (6%)' in text and '85,11' in text
+    with factory() as db:
+        assert db.query(PrintJob).count() == 0  # Preview and download never print.
