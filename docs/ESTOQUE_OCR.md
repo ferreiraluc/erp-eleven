@@ -1,5 +1,45 @@
 # Estoque e leitura de etiquetas
 
+## Reposição da loja
+
+**Estoque → Mais ações → Reposição** abre `/inventory/replenishment` para
+ADMIN/GERENTE. A lista consulta os produtos ativos, não excluídos, com **zero na
+loja e pelo menos uma unidade no depósito**. Cada cor/tamanho continua sendo seu
+próprio cadastro. Não agrupa saldos de peças semelhantes nem presume que um saldo
+desconhecido seja zero.
+
+Confira a peça pela miniatura, nome, código interno, cor e tamanho. A quantidade
+inicial é **1**, editável até o saldo do depósito e o limite de 100 unidades por
+produto. Use **Reposto** em uma linha ou selecione vários produtos da página. A
+confirmação reúne a transferência **Depósito → Loja**, a quantidade de peças e a
+mesma quantidade de etiquetas Zebra. Confira o modelo, a prévia e os dados antes
+de confirmar. Limites por confirmação: 100 produtos e 2.000 etiquetas.
+
+Transferências e trabalhos de impressão são registrados **na mesma transação**.
+O estoque total é preservado e o histórico identifica a reposição, seu responsável
+e o lote de etiquetas. O produto deixa a lista assim que a loja passa a ter saldo.
+Se outro operador ou uma venda alterar os saldos após a conferência, a confirmação
+antiga é recusada e nenhum item daquele lote é transferido ou enfileirado.
+Cadastros com saldo total desconhecido/divergente aparecem bloqueados para
+conferência; a reposição não corrige esses valores silenciosamente.
+
+A Zebra deve estar configurada para etiquetas de produtos. Não é necessário novo
+agente nem alterar tickets/A4. Se o Windows ou o agente estiver desligado, os
+trabalhos permanecem na fila existente para reconexão. **Reposição registrada**
+confirma os saldos; **enviado à impressora** indica aceitação pelo spooler e não
+comprova a saída física do papel. Confira falhas/estado incerto na fila de etiquetas;
+uma nova cópia deve usar o componente de etiquetas, sem refazer a transferência.
+
+Se a internet cair durante a confirmação, use **Recuperar confirmação**. O
+navegador conserva a mesma solicitação por usuário durante a sessão, inclusive
+ao recarregar a página. O servidor devolve o resultado original sem movimentar ou
+imprimir novamente, mesmo que o cadastro/modelo/impressora tenha mudado depois.
+Não crie outra solicitação para resolver uma resposta perdida.
+
+A lista usa paginação no servidor e miniaturas carregadas sob demanda, sem baixar
+fotos originais nem todo o catálogo. Não utiliza o índice offline para autorizar
+movimentações: saldos e identidade são conferidos online no momento de confirmar.
+
 ## Movimentações nos cards
 
 Os cards, a lista e as peças de uma grade não oferecem mais a saída rápida

@@ -47,6 +47,7 @@ SQLAlchemy diretamente; não há uma camada universal de repositórios, Redis ou
 | Dashboard | `DashboardView`, `components/dashboard/*` | Resumos dos módulos | API de cada card; BI usa snapshots |
 | Estoque | `views/inventory/`, `components/inventory/`, `stores/inventory` | `inventory`, `ocr`, `product-photo` | `product_photo`, `inventory_service`, `inventory_history`, `inventory_deletion`, `inventory_diagnostics`, `ocr_service`, `models/inventory`, `label_template` |
 | Etiquetas internas | `ProductLabelsView`, `services/productLabels` | `inventory-labels`, agente `printing` | `product_labels`, `PrintDevice`/`PrintJob`, `AgenteEtiquetas.ps1` RAW/ZPL |
+| Reposição da loja | `InventoryReplenishmentView`, `services/inventoryReplenishment` | `inventory-replenishment` | `inventory_replenishment`, `inventory_service`, `product_labels`, movimentos e fila existentes |
 | Pedidos/clientes | `PedidosView`, `ClientesView`, componentes de pedidos/clientes | `pedidos`, `clientes`, `tags` | `models/pedido`, `cliente`, `pedido_tag`, `pedido_anexo` |
 | Rastreio | `RastreamentoView`, `RastreamentoCard`, `stores/rastreamento` | `rastreamento` | `wonca_service`, `rastreamento_sync`, `models/rastreamento` |
 | Equipe/folgas | `VendorManagement`, `FolgasCard`, `FolgasCalendarAdvanced` | `vendedores` | `models/vendedor`, `funcionario`, `folga`, `assistant_schedule` |

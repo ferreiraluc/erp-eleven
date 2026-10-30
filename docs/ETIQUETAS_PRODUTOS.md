@@ -7,6 +7,12 @@ Também é possível selecionar produtos no estoque e usar **Imprimir etiquetas*
 O módulo é independente dos exemplos de etiquetas usados no OCR e das etiquetas
 de transporte SuperFrete. Não usa IA, não movimenta estoque e não cria vendas.
 
+Para repor peças do depósito na loja, use **Estoque → Mais ações → Reposição**.
+Esse fluxo confirma a transferência e cria uma etiqueta por unidade na mesma
+transação, reutilizando o destino, modelos e fila deste módulo. A impressão
+direta de etiquetas continua sem movimentar estoque. Consulte
+[Reposição da loja](ESTOQUE_OCR.md#reposição-da-loja).
+
 1. Em **Selecionar**, procure produtos, grades ou lotes de recebimento. Uma grade
    ou lote adiciona todos os produtos ativos vinculados, inclusive além da página
    visível. Selecionar a mesma peça por dois caminhos não aumenta suas cópias.
