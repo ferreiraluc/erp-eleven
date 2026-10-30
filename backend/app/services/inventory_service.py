@@ -145,6 +145,8 @@ def create_movement(
         quantity=abs(quantity) if mv_type != MovementType.adjustment else quantity,
         quantity_before=quantity_before,
         quantity_after=item.current_stock,
+        stock_loja_before=loja,
+        stock_loja_after=item.stock_loja,
         reason=reason,
         reference_type=reference_type,
         reference_id=reference_id,

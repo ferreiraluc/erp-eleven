@@ -16,6 +16,8 @@ export interface ReplenishmentProduct extends LabelProduct {
   has_image: boolean | null
   updated_at: string
   blocked_reason: string | null
+  last_store_exit_at: string | null
+  has_store_history: boolean
 }
 export interface ReplenishmentLine extends LabelLine {
   sale_price: string
@@ -141,6 +143,8 @@ export function restoreReplenishmentRequest(value: string): ReplenishmentRequest
       has_image: false,
       updated_at: '',
       blocked_reason: null,
+      last_store_exit_at: null,
+      has_store_history: false,
       copies: line.copies,
     }
   })

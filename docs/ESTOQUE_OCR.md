@@ -8,6 +8,27 @@ loja e pelo menos uma unidade no depósito**. Cada cor/tamanho continua sendo se
 próprio cadastro. Não agrupa saldos de peças semelhantes nem presume que um saldo
 desconhecido seja zero.
 
+A prioridade vem das movimentações da **loja**, antes de paginar: as últimas
+saídas aparecem primeiro, seguidas dos itens com passagem pela loja sem data de
+baixa identificável e, por último, dos itens sem histórico na loja. A linha mostra
+**Última baixa na loja**, **Já esteve na loja** ou **Sem histórico na loja**.
+Entradas no depósito, alterações no cadastro e conferências repetidas de saldo
+zero não promovem um produto na fila. Assim, novidades reservadas no depósito
+continuam disponíveis ao final, sem passar à frente das peças que acabaram.
+Ao buscar um código/nome, a correspondência exata continua tendo prioridade sobre
+resultados semelhantes; a recência desempata os resultados da mesma relevância.
+
+A data considera saídas, transferências da loja e ajustes que efetivamente zeraram
+seu saldo. Os saldos antes/depois do movimento representam o total, por isso não
+são interpretados como saldo da loja. Novos movimentos também registram os saldos
+da loja antes/depois, para distinguir um ajuste que realmente zerou a loja de uma
+correção do total quando ela já estava zerada. Ajustes antigos para zero sem essa
+evidência não recebem uma data de baixa presumida. Registros antigos sem local identificado
+permanecem **sem histórico na loja**, exceto entradas das importações CSV/NF-e que
+comprovadamente inicializavam estoque na loja. Ausência de histórico não comprova
+que a peça nunca esteve fisicamente na loja. Não há reconstrução nem alteração
+retroativa do estoque ou de movimentos.
+
 Confira a peça pela miniatura, nome, código interno, cor e tamanho. A quantidade
 inicial é **1**, editável até o saldo do depósito e o limite de 100 unidades por
 produto. Use **Reposto** em uma linha ou selecione vários produtos da página. A
