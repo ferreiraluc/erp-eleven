@@ -14,6 +14,7 @@ referência do comportamento implementado; materiais em `docs/archive/` são his
 | Dashboard | Estoque e rastreios; cards lado a lado de endereços e vendas, resumos e atalhos | `/dashboard` |
 | Estoque | Produtos, grades por cor/tamanho, lotes de recebimento por data ou seleção, loja/depósito, movimentações, histórico por produto, contagem, etiquetas, OCR e cadastro por foto com IA | `/inventory` |
 | Etiquetas de produtos | Seleção por produto, grade ou lote; editor visual e modelos salvos; QR interno; fila Zebra USB/Windows 60 × 30 mm | `/inventory/labels` |
+| Reposição da loja | Itens zerados na loja com saldo no depósito; transferência confirmada e uma etiqueta Zebra por unidade na mesma operação | `/inventory/replenishment` |
 | Clientes e pedidos | Cadastros, endereços, impressões, pedidos e vínculos logísticos | `/clientes`, `/pedidos` |
 | Rastreamento | Consulta e atualização via Wonca; sincronização com pedidos | `/rastreamento` |
 | Equipe e folgas | Vendedores com resultados do BI, calendário e histórico de folgas | `/vendors`, card de folgas |

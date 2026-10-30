@@ -2,6 +2,7 @@
     <details class="more-actions" @keydown.esc="($event.currentTarget as HTMLDetailsElement).open = false">
       <summary class="erp-button erp-button--secondary erp-button--sm" :class="{ 'actions-icon': compact }" :aria-label="tr('Mais ações')"><span v-if="!compact">{{ tr('Mais ações') }} <span aria-hidden="true">▾</span></span><span v-else aria-hidden="true">•••</span></summary>
       <div class="more-actions-menu" @click="($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')">
+    <button v-if="['ADMIN', 'GERENTE'].includes(auth.userRole)" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="$router.push('/inventory/replenishment')"><PackageCheck aria-hidden="true" />{{ tr('Reposição') }}</button>
     <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="$router.push('/inventory/labels')">{{ tr('Etiquetas de produtos') }}</button>
     <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-receiving')">{{ tr('Lotes de recebimento') }}</button>
     <button v-if="isOwner" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-deleted')">
@@ -21,7 +22,8 @@
 </template>
 
 <script setup lang="ts">
-import { ClipboardCheck, Lightbulb, Upload } from 'lucide-vue-next'
+import { ClipboardCheck, Lightbulb, Upload, PackageCheck } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 import { useI18n } from 'vue-i18n'
 import { diagnosticsMessages } from '@/components/inventory/diagnosticsMessages'
@@ -35,6 +37,7 @@ const emit = defineEmits<{
   'open-receiving': []
 }>()
 const { tr } = useInventoryI18n()
+const auth = useAuthStore()
 const { t: diagnosticsText } = useI18n({ useScope: 'local', messages: diagnosticsMessages })
 </script>
 <style scoped>

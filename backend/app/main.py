@@ -14,7 +14,7 @@ from .api.endpoints import vendas, vendedores, cambistas, auth, pedidos, dashboa
 from .logging_config import setup_logging, get_logger
 from .database import engine, Base, SessionLocal
 from .config import settings
-from .api.endpoints import assistant, printing, inventory_labels, address_manager, freight, sales_bi, sales_bi_entries
+from .api.endpoints import assistant, printing, inventory_labels, inventory_replenishment, address_manager, freight, sales_bi, sales_bi_entries
 from .services import assistant_events  # register atomic tracking outbox listener
 from .api.endpoints import user_admin, product_photo
 from .services import user_audit
@@ -207,6 +207,7 @@ app.include_router(freight.router, prefix='/api/freight', tags=['freight'])
 app.include_router(address_manager.router, prefix='/api/address-manager', tags=['address-manager'])
 app.include_router(printing.router, prefix="/api/printing", tags=["printing"])
 app.include_router(inventory_labels.router, prefix="/api/inventory-labels", tags=["inventory-labels"])
+app.include_router(inventory_replenishment.router, prefix="/api/inventory-replenishment", tags=["inventory-replenishment"])
 app.include_router(sales_bi.router, prefix="/api/sales-bi", tags=["sales-bi"])
 app.include_router(sales_bi_entries.router, prefix='/api/sales-bi', tags=['sales-bi'])
 

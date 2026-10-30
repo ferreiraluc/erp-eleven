@@ -244,7 +244,12 @@ def batch_view(db, root):
                 jobs=[job_view(job) for job in jobs])
 
 
-def enqueue(db, user, body):
+def prepare_batch(db, user, body, *, operation=None):
+    """Prepare locked jobs without committing; callers own the whole transaction.
+
+    Operational callers namespace their confirmation so a lost response can be
+    recovered without accidentally replaying a plain label batch as a stock move.
+    """
     if not body.confirm:
         raise HTTPException(422, 'Confira os produtos e confirme a impressão das etiquetas.')
     if len({row.item_id for row in body.items}) != len(body.items):
@@ -256,16 +261,29 @@ def enqueue(db, user, body):
     if layout_id:
         fingerprint_data = dict(items=fingerprint_data, layout_id=layout_id,
                                 layout_revision=body.layout_revision)
+    if operation:
+        fingerprint_data = dict(operation=operation, request=fingerprint_data)
     fingerprint = hashlib.sha256(json.dumps(fingerprint_data, sort_keys=True).encode()).hexdigest()
+
+    def previous_confirmation():
+        previous = db.query(PrintJob).filter_by(request_key=body.request_key).first()
+        if previous and (previous.source != PURPOSE or previous.user_id != user.id or
+                (previous.snapshot or {}).get('operation') != operation or
+                (previous.snapshot or {}).get('fingerprint') != fingerprint):
+            raise HTTPException(409, 'Esta confirmação já foi usada com outros produtos ou quantidades.')
+        return previous
+
+    # Recovery must not depend on a printer, layout or product still being active.
+    previous = previous_confirmation()
+    if previous:
+        return previous, {}, False
     device = destination(db, lock=True)
     if not device:
         raise HTTPException(409, 'Configure primeiro a Zebra em Etiquetas de produtos.')
-    previous = db.query(PrintJob).filter_by(request_key=body.request_key).first()
+    # A concurrent confirmation may have committed while the device lock waited.
+    previous = previous_confirmation()
     if previous:
-        if (previous.source != PURPOSE or previous.user_id != user.id or
-                (previous.snapshot or {}).get('fingerprint') != fingerprint):
-            raise HTTPException(409, 'Esta confirmação já foi usada com outros produtos ou quantidades.')
-        return batch_view(db, previous)
+        return previous, {}, False
     design = None
     if layout_id:
         from . import product_label_layouts
@@ -280,7 +298,8 @@ def enqueue(db, user, body):
             raise
     ids = [row.item_id for row in body.items]
     # Consistent lock order protects the snapshot against edits/deletion during confirmation.
-    products = {item.id: item for item in items_query(db).filter(Item.id.in_(ids)).order_by(Item.id).with_for_update().all()}
+    products = {item.id: item for item in items_query(db).filter(Item.id.in_(ids)).order_by(
+        Item.id).with_for_update().populate_existing().all()}
     if len(products) != len(ids):
         raise HTTPException(409, 'Um produto foi excluído ou desativado. Atualize a seleção.')
     batch_id = uuid.uuid4()
@@ -293,6 +312,8 @@ def enqueue(db, user, body):
                 (row.sale_currency is not None and row.sale_currency.upper() != snap['sale_currency'])):
             raise HTTPException(409, 'Um produto mudou durante a conferência. Atualize a seleção antes de imprimir.')
         snap.update(position=position, fingerprint=fingerprint if position == 0 else None)
+        if operation:
+            snap['operation'] = operation
         payload = render_zpl(snap)
         job = PrintJob(id=batch_id if position == 0 else uuid.uuid4(),
             device_id=device.id, user_id=user.id, source=PURPOSE,
@@ -304,5 +325,16 @@ def enqueue(db, user, body):
         if position == 0:
             root = job
             db.flush()  # parent FK, also ensures transaction rolls back as one batch
-    db.commit()
-    return batch_view(db, root)
+    db.flush()
+    return root, products, True
+
+
+def enqueue(db, user, body):
+    try:
+        root, _, created = prepare_batch(db, user, body)
+        if created:
+            db.commit()
+        return batch_view(db, root)
+    except Exception:
+        db.rollback()
+        raise
