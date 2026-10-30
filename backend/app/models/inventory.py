@@ -92,6 +92,9 @@ class StockMovement(Base):
     quantity = Column(Integer, nullable=False)
     quantity_before = Column(Integer, nullable=False)
     quantity_after = Column(Integer, nullable=False)
+    # Legacy movements only recorded combined stock; never infer local balances.
+    stock_loja_before = Column(Integer, nullable=True)
+    stock_loja_after = Column(Integer, nullable=True)
     reason = Column(String(500))
     reference_type = Column(String(50))
     reference_id = Column(String(100))

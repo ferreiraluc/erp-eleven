@@ -168,6 +168,7 @@
                 <span>{{ t('store') }}: {{ item.stock_loja ?? '—' }}</span
                 ><strong>{{ t('warehouse') }}: {{ item.stock_deposito ?? '—' }}</strong>
               </div>
+              <small class="store-history">{{ storeHistoryLabel(item) }}</small>
               <template v-if="!canReplenish(item)"
                 ><p class="blocked-reason">{{ item.blocked_reason || t('blocked') }}</p>
                 <button
@@ -363,7 +364,7 @@ import {
   type ReplenishmentRequest,
 } from '@/services/inventoryReplenishment'
 
-const { t } = useI18n({ useScope: 'local', messages: replenishmentMessages })
+const { t, locale } = useI18n({ useScope: 'local', messages: replenishmentMessages })
 const auth = useAuthStore()
 const items = ref<ReplenishmentProduct[]>([]),
   query = ref(''),
@@ -439,6 +440,21 @@ let disposed = false,
 let listController: AbortController | undefined, stopUserWatch: WatchStopHandle | undefined
 function current(ownerEpoch: number) {
   return !disposed && ownerEpoch === epoch
+}
+
+const storeExitFormatter = computed(
+  () =>
+    new Intl.DateTimeFormat(
+      locale.value === 'es' ? 'es-PY' : locale.value === 'en' ? 'en-US' : 'pt-BR',
+      { dateStyle: 'short', timeStyle: 'short' },
+    ),
+)
+function storeHistoryLabel(item: ReplenishmentProduct) {
+  const date = item.last_store_exit_at ? new Date(item.last_store_exit_at) : null
+  if (date && Number.isFinite(date.getTime())) {
+    return t('lastStoreExit', { date: storeExitFormatter.value.format(date) })
+  }
+  return t(item.has_store_history ? 'hadStoreStock' : 'noStoreHistory')
 }
 
 function validQuantity(item: ReplenishmentProduct) {
@@ -778,6 +794,8 @@ async function initialize(userId: string | undefined) {
         has_image: false,
         updated_at: '',
         blocked_reason: null,
+        last_store_exit_at: null,
+        has_store_history: false,
       }))
       reviewOpen.value = true
     }

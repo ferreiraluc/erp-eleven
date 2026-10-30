@@ -56,6 +56,8 @@ const product: ReplenishmentProduct = {
   has_image: true,
   updated_at: '2026-10-30T10:00:00Z',
   blocked_reason: null,
+  last_store_exit_at: '2026-10-30T10:25:00-03:00',
+  has_store_history: true,
 }
 const other: ReplenishmentProduct = {
   ...product,
@@ -246,6 +248,48 @@ it('shows known quantities, lazy thumbnails and blocks incoherent stock without 
   expect(navigate).toHaveBeenCalledWith({ path: '/inventory', query: { item_id: 'p3' } })
   expect(mocks.confirm).not.toHaveBeenCalled()
 })
+
+it('shows the three store-history states while keeping the order supplied by the server', async () => {
+  const withoutHistory = { ...blocked, last_store_exit_at: null, has_store_history: false }
+  const undatedHistory = { ...other, last_store_exit_at: null, has_store_history: true }
+  // Keep deliberately mixed order: ordering and pagination belong to the API.
+  mocks.list.mockResolvedValue({
+    items: [withoutHistory, product, undatedHistory],
+    total: 3,
+    page: 1,
+    page_size: 40,
+  })
+  await mount()
+  const rows = Array.from(root.querySelectorAll('.product-row'))
+  expect(rows.map((row) => row.querySelector('.product-identity>strong')?.textContent)).toEqual([
+    withoutHistory.name,
+    product.name,
+    undatedHistory.name,
+  ])
+  expect(rows[0].querySelector('.store-history')?.textContent).toBe('Sem histórico na loja')
+  expect(rows[1].querySelector('.store-history')?.textContent).toContain('Última baixa na loja:')
+  expect(rows[2].querySelector('.store-history')?.textContent).toBe('Já esteve na loja')
+  expect(root.querySelector('.intro')?.textContent).toContain(
+    'As últimas baixas na loja aparecem primeiro',
+  )
+  expect(mocks.confirm).not.toHaveBeenCalled()
+})
+
+it.each([
+  ['pt', 'pt-BR', 'Última baixa na loja:'],
+  ['es', 'es-PY', 'Última salida de la tienda:'],
+  ['en', 'en-US', 'Last store stock exit:'],
+])(
+  'formats the last store exit in %s using its timezone-aware timestamp',
+  async (locale, dateLocale, label) => {
+    await mount(locale)
+    const date = new Intl.DateTimeFormat(dateLocale, {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date(product.last_store_exit_at!))
+    expect(root.querySelector('.store-history')?.textContent).toBe(`${label} ${date}`)
+  },
+)
 
 it('requires real preview and explicit confirmation before one atomic transfer plus labels', async () => {
   await mount()
