@@ -4499,6 +4499,26 @@
     "es": "No se encontraron grupos. Ningún grupo está autorizado por defecto.",
     "en": "No groups found. No groups are authorized by default."
   },
+  "Adicione o bot ao grupo. A lista se atualiza automaticamente; marque o grupo e salve para liberar. Todos os membros poderão ler as respostas publicadas nele.": {
+    "pt": "Adicione o bot ao grupo. A lista se atualiza automaticamente; marque o grupo e salve para liberar. Todos os membros poderão ler as respostas publicadas nele.",
+    "es": "Añada el bot al grupo. La lista se actualiza automáticamente; seleccione el grupo y guarde para autorizarlo. Todos los miembros podrán leer las respuestas publicadas allí.",
+    "en": "Add the bot to the group. The list updates automatically; select the group and save to authorize it. All members can read replies posted there."
+  },
+  "O WhatsApp não retornou a lista de grupos. O agente tentará novamente automaticamente; os grupos já conhecidos continuam disponíveis.": {
+    "pt": "O WhatsApp não retornou a lista de grupos. O agente tentará novamente automaticamente; os grupos já conhecidos continuam disponíveis.",
+    "es": "WhatsApp no devolvió la lista de grupos. El agente lo intentará de nuevo automáticamente; los grupos conocidos siguen disponibles.",
+    "en": "WhatsApp did not return the group list. The agent will retry automatically; known groups remain available."
+  },
+  "Para testar, envie /eleven ajuda de outro número autorizado. Mensagens do próprio número do bot são ignoradas.": {
+    "pt": "Para testar, envie /eleven ajuda de outro número autorizado. Mensagens do próprio número do bot são ignoradas.",
+    "es": "Para probar, envíe /eleven ayuda desde otro número autorizado. Los mensajes del propio número del bot se ignoran.",
+    "en": "To test, send /eleven help from another authorized number. Messages sent by the bot's own number are ignored."
+  },
+  "Não foi possível atualizar os grupos agora. A lista anterior foi mantida; tentaremos novamente.": {
+    "pt": "Não foi possível atualizar os grupos agora. A lista anterior foi mantida; tentaremos novamente.",
+    "es": "No se pudieron actualizar los grupos ahora. Se conservó la lista anterior; volveremos a intentarlo.",
+    "en": "Groups could not be updated right now. The previous list was kept; we will retry."
+  },
   "Nos grupos, responder a": {
     "pt": "Nos grupos, responder a",
     "es": "En los grupos, responder a",

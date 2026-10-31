@@ -64,8 +64,22 @@ medição do consumo real do agente).
    O QR fica disponível somente ao administrador, expira e não aparece nos logs.
 6. Cadastre os números da equipe, vinculando cada um ao respectivo usuário.
    Permissão de registro continua sendo uma concessão separada.
-7. Adicione o número ao grupo desejado, atualize o painel e marque os grupos que
-   poderão usar o assistente. Salve a configuração.
+7. Adicione o número ao grupo desejado. O agente incorpora os eventos de entrada
+   em grupos e o painel visível atualiza a lista a cada 10 segundos, preservando
+   alterações ainda não salvas. Marque os grupos que poderão usar o assistente e
+   salve a configuração. A descoberta não autoriza o grupo automaticamente.
+
+Se o WhatsApp falhar ao consultar os grupos, o agente mantém os grupos conhecidos
+e tenta novamente com intervalo limitado. Essa consulta não bloqueia a fila de
+mensagens. Eventos de atualização da própria consulta não disparam consultas
+completas em sequência. O painel informa quando a descoberta precisa tentar
+novamente. A verificação completa periódica continua a cada cinco minutos.
+Se um grupo adicionado antes de uma atualização ainda não aparecer, envie uma
+nova mensagem nele. O agente consulta os metadados desse grupo, com limite de
+duas consultas simultâneas e nova tentativa por grupo após 30 segundos. Essa
+descoberta não executa a mensagem nem concede acesso aos dados do ERP.
+Para testar em grupo, envie `/eleven ajuda` a partir de **outro número autorizado**;
+mensagens do próprio número vinculado são ignoradas para evitar ciclos de respostas.
 
 O agente só inicia conexões de saída HTTPS/WebSocket. Não precisa de porta
 pública, túnel, navegador Chromium ou acesso direto ao banco do ERP. Seu token

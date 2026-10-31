@@ -10,6 +10,7 @@ export interface WhatsAppBridgeConfig {
   allowed_groups: string[]
   discovered_groups: WhatsAppGroup[]
   state: string
+  error_code?: string | null
   account_phone: string | null
   last_seen_at: string | null
   credential_configured: boolean

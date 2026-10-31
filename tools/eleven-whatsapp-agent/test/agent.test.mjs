@@ -286,3 +286,283 @@ test('message retry cache failure preserves accepted provider result', async t =
   assert.equal(f.sends(), 1);
   assert.equal(f.calls.find(call => call.path.endsWith('/ack')).payload.status, 'accepted');
 });
+
+test('new group upsert is published immediately without granting ERP access', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  f.agent.nextHeartbeat = Date.now() + 10000;
+  sockets[0].ev.emit('groups.upsert', [{ id: '120363123456789@g.us', subject: 'Pedidos e Endereços' }]);
+  assert.deepEqual(f.agent.groups, [{ id: '120363123456789@g.us', name: 'Pedidos e Endereços' }]);
+  assert.equal(f.agent.nextHeartbeat, 0);
+  assert.deepEqual(f.agent.config.allowed_groups, []);
+  await f.agent.heartbeat();
+  assert.deepEqual(f.calls[0].payload.groups, f.agent.groups);
+});
+
+test('provider groups.update inside full discovery does not create a refresh loop', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const socket = sockets[0];
+  socket.ev.emit('connection.update', { connection: 'open' });
+  let now = Date.now(), queries = 0;
+  f.agent.now = () => now;
+  const group = { id: '120363123456789@g.us', subject: 'Equipe' };
+  socket.groupFetchAllParticipating = async () => {
+    queries++;
+    socket.ev.emit('groups.update', [group]); // Real Baileys behaviour.
+    return { [group.id]: group };
+  };
+  await f.agent.refreshGroups();
+  assert.equal(f.agent.nextGroups, now + 300000);
+  await f.agent.refreshGroups();
+  assert.equal(queries, 1);
+  socket.ev.emit('groups.update', [{ id: group.id, subject: 'Equipe Eleven' }]);
+  assert.equal(f.agent.groups[0].name, 'Equipe Eleven');
+  now += 300000;
+  await f.agent.refreshGroups();
+  assert.equal(queries, 2);
+});
+
+test('group discovery has one outstanding query and does not block ERP heartbeat or messages', async t => {
+  const f = fixture(t, async path => path === '/heartbeat' ? f.agent.config : { status: 'queued' });
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  sockets[0].ev.emit('connection.update', { connection: 'open' });
+  let resolveGroups, queries = 0;
+  sockets[0].groupFetchAllParticipating = () => { queries++; return new Promise(resolve => { resolveGroups = resolve; }); };
+  const discovery = f.agent.refreshGroups();
+  await f.agent.refreshGroups();
+  await f.agent.heartbeat();
+  await f.agent.receive({ key: { id: 'while-discovering', remoteJid: `${phone}@s.whatsapp.net` }, messageTimestamp: Math.floor(Date.now() / 1000), message: { conversation: 'Consulta' } });
+  await f.agent.flushInbox();
+  assert.equal(queries, 1);
+  assert.deepEqual(f.calls.map(call => call.path), ['/heartbeat', '/incoming']);
+  resolveGroups({});
+  await discovery;
+});
+
+test('failed group discovery retains known groups, reports safely and retries after thirty seconds', async t => {
+  const f = fixture(t);
+  let now = Date.now(), queries = 0;
+  f.agent.now = () => now;
+  const group = { id: '120363123456789@g.us', name: 'Equipe' };
+  f.agent.groups = [group];
+  f.agent.socket.groupFetchAllParticipating = async () => { queries++; throw new Error('provider secret and phone must not be reported'); };
+  const reports = [];
+  f.agent.report = value => reports.push(value);
+  await f.agent.refreshGroups();
+  assert.deepEqual(f.agent.groups, [group]);
+  assert.equal(f.agent.nextGroups, now + 30000);
+  assert.deepEqual(reports, ['GROUPS_RETRY']);
+  await f.agent.heartbeat();
+  assert.equal(f.calls[0].payload.error_code, 'group_sync_retry');
+  now += 29999;
+  await f.agent.refreshGroups();
+  assert.equal(queries, 1);
+  now++;
+  f.agent.socket.groupFetchAllParticipating = async () => { queries++; return {}; };
+  await f.agent.refreshGroups();
+  assert.equal(queries, 2);
+  assert.equal(f.agent.groupError, null);
+  assert.deepEqual(f.agent.groups, []);
+});
+
+test('stale group events and delayed queries cannot overwrite a replacement session', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const old = sockets[0];
+  old.ev.emit('connection.update', { connection: 'open' });
+  let resolveGroups;
+  old.groupFetchAllParticipating = () => new Promise(resolve => { resolveGroups = resolve; });
+  const discovery = f.agent.refreshGroups();
+  f.agent.pendingReset = 1;
+  f.agent.applySessionReset();
+  f.agent.nextGroups = 123456;
+  for (const event of ['groups.upsert', 'groups.update']) old.ev.emit(event, [{ id: '120363123456789@g.us', subject: 'Old session' }]);
+  old.ev.emit('group-participants.update', { id: '120363123456789@g.us', participants: [] });
+  resolveGroups({ '120363123456789@g.us': { id: '120363123456789@g.us', subject: 'Old session' } });
+  await discovery;
+  assert.deepEqual(f.agent.groups, []);
+  assert.equal(f.agent.nextGroups, 123456);
+  assert.equal(f.agent.groupError, null);
+  assert.equal(f.agent.groupRefresh, null);
+});
+
+test('newly joined and allowed groups remain visible beyond the discovery limit', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const socket = sockets[0];
+  socket.ev.emit('connection.update', { connection: 'open' });
+  const groups = Array.from({ length: 110 }, (_, index) => ({ id: `${120363123450000 + index}@g.us`, subject: `Group ${index}` }));
+  f.agent.config.allowed_groups = [groups[109].id];
+  socket.groupFetchAllParticipating = async () => Object.fromEntries(groups.map(group => [group.id, group]));
+  await f.agent.refreshGroups();
+  assert.equal(f.agent.groups.length, 100);
+  assert.ok(f.agent.groups.some(group => group.id === groups[109].id));
+  socket.ev.emit('groups.upsert', [{ id: '120363123459999@g.us', subject: 'New group' }]);
+  assert.equal(f.agent.groups.length, 100);
+  assert.equal(f.agent.groups[0].name, 'New group');
+  assert.ok(f.agent.groups.some(group => group.id === groups[109].id));
+});
+
+test('group joined during a pending discovery survives its older snapshot', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const socket = sockets[0];
+  socket.ev.emit('connection.update', { connection: 'open' });
+  let resolveGroups;
+  socket.groupFetchAllParticipating = () => new Promise(resolve => { resolveGroups = resolve; });
+  const discovery = f.agent.refreshGroups();
+  socket.ev.emit('groups.upsert', [{ id: '120363123456789@g.us', subject: 'Just joined' }]);
+  resolveGroups({});
+  await discovery;
+  assert.equal(f.agent.groups[0].name, 'Just joined');
+});
+
+test('restart heartbeat preserves ERP group discoveries until a provider snapshot succeeds', async t => {
+  const f = fixture(t);
+  await f.agent.heartbeat();
+  assert.equal('groups' in f.calls[0].payload, false);
+  f.agent.socket.groupFetchAllParticipating = async () => { throw new Error('offline'); };
+  await f.agent.refreshGroups();
+  await f.agent.heartbeat();
+  assert.equal('groups' in f.calls[1].payload, false);
+  f.agent.nextGroups = 0;
+  f.agent.socket.groupFetchAllParticipating = async () => ({});
+  await f.agent.refreshGroups();
+  await f.agent.heartbeat();
+  assert.deepEqual(f.calls[2].payload.groups, []);
+});
+
+test('group failure diagnostics contain only a validated HTTP status', async t => {
+  const f = fixture(t);
+  const reports = [];
+  f.agent.report = value => reports.push(value);
+  f.agent.socket.groupFetchAllParticipating = async () => {
+    const error = new Error('private group name and session payload');
+    error.output = { statusCode: 429, payload: { private: true } };
+    throw error;
+  };
+  await f.agent.refreshGroups();
+  assert.deepEqual(reports, ['GROUPS_RETRY_429']);
+  assert.equal(f.agent.groupError, 'group_sync_retry');
+});
+
+test('message metadata recovers an undiscovered group while its command remains unauthorized', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const socket = sockets[0];
+  socket.ev.emit('connection.update', { connection: 'open' });
+  const id = '120363123456789@g.us';
+  let lookups = 0;
+  socket.groupMetadata = async target => { lookups++; assert.equal(target, id); return { id, subject: 'Pedidos e Endereços' }; };
+  socket.groupFetchAllParticipating = async () => { throw new Error('full discovery unavailable'); };
+  await f.agent.refreshGroups();
+  socket.ev.emit('messages.upsert', { type: 'notify', messages: [{ key: { id: 'group-query', remoteJid: id, participant: `${phone}@s.whatsapp.net` }, messageTimestamp: Math.floor(Date.now() / 1000), message: { conversation: '/eleven consulte' } }] });
+  await new Promise(resolve => setImmediate(resolve));
+  await f.agent.receiveChain;
+  assert.equal(lookups, 1);
+  assert.equal(f.agent.groups[0].name, 'Pedidos e Endereços');
+  assert.deepEqual(f.agent.config.allowed_groups, []);
+  assert.equal(f.store.pendingInbound().length, 0);
+  await f.agent.heartbeat();
+  assert.deepEqual(f.calls[0].payload.groups, [{ id, name: 'Pedidos e Endereços' }]);
+});
+
+test('metadata discovery rejects stale history and special chats but allows own group observation without commands', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const socket = sockets[0];
+  socket.ev.emit('connection.update', { connection: 'open' });
+  let lookups = 0;
+  socket.groupMetadata = async id => { lookups++; return { id, subject: 'Observed group' }; };
+  const raw = { key: { id: 'own-group', fromMe: true, remoteJid: '120363123456789@g.us' }, messageTimestamp: Math.floor(Date.now() / 1000), message: { conversation: '/eleven consulte' } };
+  for (const remoteJid of ['status@broadcast', '12@g.us', 'person@newsletter', `${phone}@s.whatsapp.net`]) await f.agent.discoverMessageGroup({ ...raw, key: { ...raw.key, remoteJid } }, socket);
+  await f.agent.discoverMessageGroup({ ...raw, messageTimestamp: raw.messageTimestamp - 90000 }, socket);
+  await f.agent.discoverMessageGroup({ ...raw, messageTimestamp: raw.messageTimestamp + 1000 }, socket);
+  socket.ev.emit('messages.upsert', { type: 'history', messages: [raw] });
+  assert.equal(lookups, 0);
+  socket.ev.emit('messages.upsert', { type: 'notify', messages: [raw] });
+  await new Promise(resolve => setImmediate(resolve));
+  await f.agent.receiveChain;
+  assert.equal(lookups, 1);
+  assert.equal(f.agent.groups[0].name, 'Observed group');
+  assert.equal(f.store.pendingInbound().length, 0);
+});
+
+test('individual metadata lookups are bounded and retry the same group after thirty seconds', async t => {
+  const f = fixture(t);
+  let now = Date.now();
+  f.agent.now = () => now;
+  const pending = [];
+  f.agent.socket.groupMetadata = id => new Promise((resolve, reject) => pending.push({ id, resolve, reject }));
+  const message = index => ({ key: { remoteJid: `${120363123456700 + index}@g.us` }, messageTimestamp: Math.floor(now / 1000) });
+  const first = f.agent.discoverMessageGroup(message(1), f.agent.socket);
+  const second = f.agent.discoverMessageGroup(message(2), f.agent.socket);
+  await f.agent.discoverMessageGroup(message(1), f.agent.socket);
+  await f.agent.discoverMessageGroup(message(3), f.agent.socket);
+  assert.equal(pending.length, 2);
+  pending[0].reject(new Error('temporary failure'));
+  pending[1].resolve({ id: pending[1].id, subject: 'Second group' });
+  await Promise.all([first, second]);
+  await f.agent.discoverMessageGroup(message(1), f.agent.socket);
+  assert.equal(pending.length, 2);
+  now += 30000;
+  const retry = f.agent.discoverMessageGroup(message(1), f.agent.socket);
+  assert.equal(pending.length, 3);
+  pending[2].resolve({ id: pending[2].id, subject: 'Recovered group' });
+  await retry;
+  f.agent.groupLookups = new Map(Array.from({ length: 100 }, (_, index) => [`${120363123450000 + index}@g.us`, { pending: false, nextAt: now + 30000 }]));
+  await f.agent.discoverMessageGroup(message(4), f.agent.socket);
+  assert.equal(pending.length, 3);
+  assert.equal(f.agent.groupLookups.size, 100);
+});
+
+test('metadata completion from an old socket cannot publish in the new session', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const old = sockets[0];
+  old.ev.emit('connection.update', { connection: 'open' });
+  let resolve;
+  old.groupMetadata = () => new Promise(done => { resolve = done; });
+  const id = '120363123456789@g.us';
+  const lookup = f.agent.discoverMessageGroup({ key: { remoteJid: id }, messageTimestamp: Math.floor(Date.now() / 1000) }, old);
+  f.agent.pendingReset = 1;
+  f.agent.applySessionReset();
+  resolve({ id, subject: 'Old account group' });
+  await lookup;
+  assert.deepEqual(f.agent.groups, []);
+  assert.equal(f.agent.groupLookups.size, 0);
+});
+
+test('partial unknown group metadata can obtain its name and keeps full metadata cache bounded', async t => {
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const socket = sockets[0];
+  socket.ev.emit('connection.update', { connection: 'open' });
+  const groups = Array.from({ length: 100 }, (_, index) => ({ id: `${120363123450000 + index}@g.us`, name: `Group ${index}` }));
+  f.agent.groups = groups;
+  for (const group of groups) f.agent.groupCache.set(group.id, { value: group, expires: Date.now() + 300000 });
+  const id = '120363123459999@g.us';
+  socket.ev.emit('groups.update', [{ id }]);
+  // The bounded display can omit this unknown ID until a current message names it.
+  f.agent.groups[99] = { id, name: 'Grupo WhatsApp' };
+  socket.groupMetadata = async () => ({ id, subject: 'Pedidos e Endereços' });
+  await f.agent.discoverMessageGroup({ key: { remoteJid: id }, messageTimestamp: Math.floor(Date.now() / 1000) }, socket);
+  assert.equal(f.agent.groups[0].name, 'Pedidos e Endereços');
+  assert.equal(f.agent.groupCache.size, 100);
+  assert.ok(f.agent.groupCache.has(id));
+  const cached = f.agent.groupCache.get(id);
+  cached.expires = Date.now() - 1;
+  assert.equal(await socket.options.cachedGroupMetadata(id), undefined);
+  assert.equal(f.agent.groupCache.has(id), false);
+});

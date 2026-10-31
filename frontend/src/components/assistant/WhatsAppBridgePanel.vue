@@ -5,6 +5,7 @@
       <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="loading || saving" @click="load">{{ uiText('Atualizar') }}</button>
     </div>
     <p v-if="error" class="wa-error" role="alert">{{ error }}</p>
+    <p v-if="refreshError" class="wa-error" role="status">{{ refreshError }}</p>
     <p v-if="notice" class="wa-notice" role="status">{{ notice }}</p>
     <p v-if="loading && !config" role="status">{{ uiText('Carregando conexão…') }}</p>
     <template v-if="config">
@@ -19,9 +20,11 @@
           </ErpSelect>
         </label>
         <fieldset :disabled="saving"><legend>{{ uiText('Grupos autorizados') }}</legend>
-          <p class="wa-hint">{{ uiText('Vincule o número e adicione-o ao grupo. Depois, atualize esta lista para liberar o grupo. Todos os membros poderão ler as respostas publicadas nele.') }}</p>
+          <p class="wa-hint">{{ uiText('Adicione o bot ao grupo. A lista se atualiza automaticamente; marque o grupo e salve para liberar. Todos os membros poderão ler as respostas publicadas nele.') }}</p>
+          <p v-if="config.error_code === 'group_sync_retry'" class="wa-hint" role="status">{{ uiText('O WhatsApp não retornou a lista de grupos. O agente tentará novamente automaticamente; os grupos já conhecidos continuam disponíveis.') }}</p>
           <label v-for="group in groups" :key="group.id" class="wa-check"><input v-model="draft.allowed_groups" :value="group.id" type="checkbox" />{{ group.name }}</label>
           <p v-if="!groups.length" class="wa-hint">{{ uiText('Nenhum grupo encontrado. Nenhum grupo está autorizado por padrão.') }}</p>
+          <p class="wa-hint">{{ uiText('Para testar, envie /eleven ajuda de outro número autorizado. Mensagens do próprio número do bot são ignoradas.') }}</p>
         </fieldset>
         <label class="wa-check"><input v-model="draft.notify_tracking" type="checkbox" :disabled="saving" />{{ uiText('Avisar sobre novos rastreios nos grupos autorizados') }}</label>
         <button type="submit" class="erp-button erp-button--primary" :disabled="saving || loading">{{ saving ? uiText('Salvando…') : uiText('Salvar configuração') }}</button>
@@ -63,10 +66,12 @@ import { createWhatsAppBridgeCredential, getWhatsAppBridge, getWhatsAppBridgePai
 
 const config = ref<WhatsAppBridgeConfig | null>(null)
 const draft = ref({ name: 'WhatsApp Eleven', enabled: false, allow_private: true, notify_tracking: false, group_mode: 'mention' as 'mention' | 'all_authorized', allowed_groups: [] as string[] })
-const error = ref(''), notice = ref(''), token = ref('')
+const error = ref(''), refreshError = ref(''), notice = ref(''), token = ref('')
+const statusTime = ref(Date.now())
 const loading = ref(false), saving = ref(false), rotateConfirmed = ref(false), pairingOpen = ref(false), qrImage = ref('')
 const resetConfirmed = ref(false)
 let poll: ReturnType<typeof setTimeout> | undefined, expiry: ReturnType<typeof setTimeout> | undefined
+let statusPoll: ReturnType<typeof setTimeout> | undefined, statusRefreshing = false, configRequest = 0
 let generation = 0, disposed = false
 const groups = computed(() => {
   const known = config.value?.discovered_groups || []
@@ -75,31 +80,37 @@ const groups = computed(() => {
 const date = (value: string) => new Date(value).toLocaleString(uiLocale())
 const connectionLabel = computed(() => {
   if (!config.value?.enabled) return uiText('Pausado')
-  if (!config.value.last_seen_at || Date.now() - Date.parse(config.value.last_seen_at) > 120_000) return uiText('Agente sem contato recente')
+  if (!config.value.last_seen_at || statusTime.value - Date.parse(config.value.last_seen_at) > 120_000) return uiText('Agente sem contato recente')
   return ({ connected: uiText('Conectado'), open: uiText('Conectado'), connecting: uiText('Conectando…'), qr: uiText('Aguardando vínculo'), pairing: uiText('Aguardando vínculo'), logged_out: uiText('Vincule o número novamente'), disconnected: uiText('Reconectando…') }[config.value.state] || uiText('Aguardando conexão'))
 })
 function explain(e: unknown) {
   const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
   return typeof detail === 'string' ? detail : uiText('Não foi possível atualizar a conexão do WhatsApp.')
 }
-function setConfig(value: WhatsAppBridgeConfig) {
+function configDraft(value: WhatsAppBridgeConfig) {
+  return { name: value.name, enabled: value.enabled, allow_private: value.allow_private, notify_tracking: value.notify_tracking, group_mode: value.group_mode, allowed_groups: [...value.allowed_groups] }
+}
+function setConfig(value: WhatsAppBridgeConfig, preserveDraft = false) {
+  const dirty = config.value && JSON.stringify(draft.value) !== JSON.stringify(configDraft(config.value))
   config.value = value
-  draft.value = { name: value.name, enabled: value.enabled, allow_private: value.allow_private, notify_tracking: value.notify_tracking, group_mode: value.group_mode, allowed_groups: [...value.allowed_groups] }
+  statusTime.value = Date.now()
+  if (!preserveDraft || !dirty) draft.value = configDraft(value)
 }
 async function load() {
-  loading.value = true; error.value = ''
-  try { const value = await getWhatsAppBridge(); if (!disposed) setConfig(value) }
-  catch (e) { if (!disposed) error.value = explain(e) }
+  const request = ++configRequest
+  loading.value = true; error.value = ''; refreshError.value = ''
+  try { const value = await getWhatsAppBridge(); if (!disposed && request === configRequest) setConfig(value, true) }
+  catch (e) { if (!disposed && request === configRequest) refreshError.value = explain(e) }
   finally { loading.value = false }
 }
 async function save() {
-  saving.value = true; error.value = ''; notice.value = ''
+  configRequest++; saving.value = true; error.value = ''; notice.value = ''
   try { const value = await saveWhatsAppBridge(draft.value); if (!disposed) { setConfig(value); notice.value = uiText('Configuração salva.') } }
   catch (e) { if (!disposed) error.value = explain(e) }
   finally { saving.value = false }
 }
 async function credential() {
-  saving.value = true; error.value = ''; token.value = ''
+  configRequest++; saving.value = true; error.value = ''; token.value = ''
   try { const value = await createWhatsAppBridgeCredential(); if (!disposed) { token.value = value.token; rotateConfirmed.value = false; if (config.value) config.value.credential_configured = true } }
   catch (e) { if (!disposed) error.value = explain(e) }
   finally { saving.value = false }
@@ -109,7 +120,7 @@ function clearClosedSecret(event: Event) {
 }
 async function resetSession() {
   if (!resetConfirmed.value) return
-  saving.value = true; error.value = ''; notice.value = ''; closePairing()
+  configRequest++; saving.value = true; error.value = ''; notice.value = ''; closePairing()
   try {
     await resetWhatsAppBridgeSession()
     if (!disposed) { resetConfirmed.value = false; notice.value = uiText('Novo vínculo solicitado. Aguarde o agente preparar o QR Code.'); openPairing() }
@@ -121,14 +132,16 @@ function closePairing() {
   clearTimeout(poll); clearTimeout(expiry)
 }
 function openPairing() {
-  closePairing(); pairingOpen.value = true; error.value = ''
+  configRequest++; closePairing(); pairingOpen.value = true; error.value = ''
   const current = generation, started = Date.now()
   async function refresh() {
     if (disposed || current !== generation || !pairingOpen.value) return
     if (Date.now() - started >= 180_000) { closePairing(); return }
+    const request = configRequest
     try {
       const [value, currentConfig] = await Promise.all([getWhatsAppBridgePairing(), getWhatsAppBridge()])
       if (disposed || current !== generation) return
+      if (request !== configRequest) { poll = setTimeout(refresh, 5000); return }
       config.value = currentConfig
       if (currentConfig.state === 'connected' && currentConfig.last_seen_at && Date.now() - Date.parse(currentConfig.last_seen_at) < 120_000) {
         closePairing(); notice.value = uiText('WhatsApp conectado. Confira os funcionários e os grupos autorizados.'); return
@@ -137,14 +150,34 @@ function openPairing() {
       const remaining = value.expires_at ? Date.parse(value.expires_at) - Date.now() : 0
       qrImage.value = remaining > 0 && value.qr_image?.startsWith('data:image/png;base64,') ? value.qr_image : ''
       if (remaining > 0) expiry = setTimeout(() => { qrImage.value = '' }, Math.min(remaining, 60_000))
-    } catch (e) { if (!disposed && current === generation) { qrImage.value = ''; error.value = explain(e) } }
+    } catch (e) { if (!disposed && current === generation && request === configRequest) { qrImage.value = ''; error.value = explain(e) } }
     if (!disposed && current === generation) poll = setTimeout(refresh, 5000)
   }
   void refresh()
 }
-function hidden() { if (document.hidden) { closePairing(); token.value = '' } }
-onMounted(() => { void load(); document.addEventListener('visibilitychange', hidden) })
-onBeforeUnmount(() => { disposed = true; closePairing(); token.value = ''; document.removeEventListener('visibilitychange', hidden) })
+async function refreshStatus() {
+  clearTimeout(statusPoll)
+  if (disposed) return
+  statusTime.value = Date.now()
+  if (!document.hidden && !loading.value && !saving.value && !pairingOpen.value && !statusRefreshing) {
+    statusRefreshing = true
+    const request = configRequest
+    try {
+      const value = await getWhatsAppBridge()
+      if (!disposed && request === configRequest) { setConfig(value, true); refreshError.value = '' }
+    } catch {
+      if (!disposed && request === configRequest) refreshError.value = uiText('Não foi possível atualizar os grupos agora. A lista anterior foi mantida; tentaremos novamente.')
+    } finally { statusRefreshing = false }
+  }
+  clearTimeout(statusPoll)
+  if (!disposed && !document.hidden) statusPoll = setTimeout(refreshStatus, 10000)
+}
+function hidden() {
+  if (document.hidden) { closePairing(); token.value = ''; clearTimeout(statusPoll) }
+  else void refreshStatus()
+}
+onMounted(() => { void load(); statusPoll = setTimeout(refreshStatus, 10000); document.addEventListener('visibilitychange', hidden) })
+onBeforeUnmount(() => { disposed = true; clearTimeout(statusPoll); closePairing(); token.value = ''; document.removeEventListener('visibilitychange', hidden) })
 </script>
 
 <style scoped>

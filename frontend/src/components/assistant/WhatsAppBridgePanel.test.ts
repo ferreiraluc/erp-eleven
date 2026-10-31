@@ -12,10 +12,85 @@ let app: App, root: HTMLElement
 const settle = async () => { await Promise.resolve(); await nextTick(); await Promise.resolve(); await nextTick() }
 const button = (text: string) => Array.from(root.querySelectorAll('button')).find(b => b.textContent?.includes(text))!
 async function mount() { root = document.createElement('div'); document.body.append(root); app = createApp(WhatsAppBridgePanel); app.mount(root); await settle() }
-beforeEach(() => { vi.useFakeTimers(); vi.resetAllMocks(); mocks.get.mockResolvedValue(structuredClone(base)); mocks.save.mockImplementation(async (body) => ({ ...base, ...body })); mocks.pairing.mockResolvedValue({ qr_image: null, expires_at: null }) })
-afterEach(() => { app?.unmount(); root?.remove(); vi.useRealTimers() })
+beforeEach(() => { vi.useFakeTimers(); vi.resetAllMocks(); vi.spyOn(document, 'hidden', 'get').mockReturnValue(false); mocks.get.mockResolvedValue(structuredClone(base)); mocks.save.mockImplementation(async (body) => ({ ...base, ...body })); mocks.pairing.mockResolvedValue({ qr_image: null, expires_at: null }) })
+afterEach(() => { app?.unmount(); root?.remove(); vi.restoreAllMocks(); vi.useRealTimers() })
 
 describe('WhatsApp team connection', () => {
+  it('discovers new groups while preserving unsaved group and response settings', async () => {
+    await mount()
+    root.querySelector<HTMLInputElement>('fieldset input')!.click()
+    const mode = root.querySelector<HTMLSelectElement>('select')!
+    mode.value = 'all_authorized'; mode.dispatchEvent(new Event('change')); await nextTick()
+    mocks.get.mockResolvedValue({ ...base, discovered_groups: [...base.discovered_groups, { id: '9876543210@g.us', name: 'Pedidos e Endereços' }] })
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(root.textContent).toContain('Pedidos e Endereços')
+    const groups = root.querySelectorAll<HTMLInputElement>('fieldset input')
+    expect(groups[0].checked).toBe(true)
+    expect(groups[1].checked).toBe(false)
+    expect(mode.value).toBe('all_authorized')
+    expect(mocks.save).not.toHaveBeenCalled()
+    button('Atualizar').click(); await settle()
+    expect(groups[0].checked).toBe(true)
+    root.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ group_mode: 'all_authorized', allowed_groups: ['1234567890@g.us'] }))
+  })
+  it('pauses polling when hidden and stops after unmount', async () => {
+    await mount()
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(mocks.get).toHaveBeenCalledTimes(1)
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+    document.dispatchEvent(new Event('visibilitychange')); await settle()
+    expect(mocks.get).toHaveBeenCalledTimes(2)
+    app.unmount()
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(mocks.get).toHaveBeenCalledTimes(2)
+  })
+  it('retains known groups on failure and explains automatic retry without showing provider details', async () => {
+    await mount()
+    mocks.get.mockRejectedValue(new Error('private provider detail'))
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(root.textContent).toContain('Equipe Eleven')
+    expect(root.textContent).toContain('A lista anterior foi mantida')
+    expect(root.textContent).not.toContain('private provider detail')
+    mocks.get.mockResolvedValue({ ...base, error_code: 'group_sync_retry' })
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(root.textContent).not.toContain('A lista anterior foi mantida')
+    expect(root.textContent).toContain('O agente tentará novamente automaticamente')
+  })
+  it('clears an initial connection error after polling recovers', async () => {
+    mocks.get.mockRejectedValueOnce(new Error('network'))
+    await mount()
+    expect(root.textContent).toContain('Não foi possível atualizar a conexão')
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(root.textContent).toContain('Equipe Eleven')
+    expect(root.textContent).not.toContain('Não foi possível atualizar a conexão')
+  })
+  it('ignores a background response started before a configuration save', async () => {
+    await mount()
+    let resolve!: (value: WhatsAppBridgeConfig) => void
+    mocks.get.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    await vi.advanceTimersByTimeAsync(10000)
+    root.querySelector<HTMLInputElement>('fieldset input')!.click(); await nextTick()
+    root.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
+    resolve({ ...base, discovered_groups: [] }); await settle()
+    expect(root.textContent).toContain('Equipe Eleven')
+    expect(root.querySelector<HTMLInputElement>('fieldset input')!.checked).toBe(true)
+  })
+  it('cannot revert credential confirmation after a stale background response', async () => {
+    await mount()
+    let resolve!: (value: WhatsAppBridgeConfig) => void
+    mocks.get.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    await vi.advanceTimersByTimeAsync(10000)
+    mocks.credential.mockResolvedValue({ token: 'isolated-test-token' })
+    root.querySelector('details')!.open = true
+    button('Gerar credencial').click(); await settle()
+    expect(button('Substituir credencial').disabled).toBe(true)
+    resolve({ ...base, credential_configured: false }); await settle()
+    expect(button('Substituir credencial').disabled).toBe(true)
+    expect(mocks.credential).toHaveBeenCalledTimes(1)
+  })
   it('keeps groups disabled until selected and saves only configuration fields', async () => {
     await mount()
     expect(root.textContent).toContain('Equipe Eleven')
