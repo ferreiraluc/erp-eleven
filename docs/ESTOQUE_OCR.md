@@ -29,7 +29,14 @@ comprovadamente inicializavam estoque na loja. Ausência de histórico não comp
 que a peça nunca esteve fisicamente na loja. Não há reconstrução nem alteração
 retroativa do estoque ou de movimentos.
 
-Confira a peça pela miniatura, nome, código interno, cor e tamanho. A quantidade
+Confira a peça pela miniatura, nome, código interno, cor e tamanho. Toque ou clique
+na miniatura para abrir a galeria ampliada, com a foto principal e as adicionais.
+O botão também funciona pelo teclado; fechar pelo ×, pelo fundo ou por Esc retorna
+à lista com seleção, quantidades e rolagem preservadas. Produtos sem foto mantêm
+o espaço da miniatura sem ação de abertura. Abrir a foto não transfere estoque,
+não inicia a conferência de reposição e não solicita impressão. As fotos originais
+são buscadas apenas ao abrir; falhas permitem tentar novamente pela miniatura.
+A quantidade
 inicial é **1**, editável até o saldo do depósito e o limite de 100 unidades por
 produto. Use **Reposto** em uma linha ou selecione vários produtos da página. A
 confirmação reúne a transferência **Depósito → Loja**, a quantidade de peças e a
