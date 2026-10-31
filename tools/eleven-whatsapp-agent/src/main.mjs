@@ -10,9 +10,9 @@ let agent;
 let store;
 let release;
 let stopping = false;
-const allowedCodes = new Set(['CONNECTED', 'PAIRING_REQUIRED', 'GROUPS_RETRY', 'INCOMING_REJECTED', 'CYCLE_RETRY', 'AUTH_STORAGE_FAILED', 'CLAIM_REVIEW_REQUIRED', 'MESSAGE_CACHE_FAILED', 'MEDIA_RETRY']);
+const allowedCodes = new Set(['CONNECTED', 'PAIRING_REQUIRED', 'GROUPS_RETRY', 'GROUP_METADATA_RETRY', 'INCOMING_REJECTED', 'CYCLE_RETRY', 'AUTH_STORAGE_FAILED', 'CLAIM_REVIEW_REQUIRED', 'MESSAGE_CACHE_FAILED', 'MEDIA_RETRY']);
 function report(code) {
-  if (!allowedCodes.has(code) && !/^ERP_HTTP_\d{3}$/.test(code)) code = 'AGENT_ERROR';
+  if (!allowedCodes.has(code) && !/^ERP_HTTP_\d{3}$/.test(code) && !/^(?:GROUPS|GROUP_METADATA)_RETRY_[45]\d{2}$/.test(code)) code = 'AGENT_ERROR';
   process.stdout.write(`${new Date().toISOString()} ${code}\n`);
 }
 function stop() {

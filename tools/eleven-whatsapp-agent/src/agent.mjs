@@ -3,6 +3,8 @@ import { ApiError, GROUP_JID, MAX_MEDIA_BYTES, authorized, boundedMedia, incomin
 
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const terminalStates = new Set(['accepted', 'uncertain', 'failed']);
+const GROUP_REFRESH_MS = 300000;
+const GROUP_RETRY_MS = 30000;
 
 export class Agent {
   constructor({ store, api, baileys, logger, report = () => {}, now = Date.now }) {
@@ -14,6 +16,7 @@ export class Agent {
     this.qrAt = 0;
     this.accountPhone = null;
     this.groups = [];
+    this.groupsKnown = false;
     this.groupCache = new Map();
     this.socket = null;
     this.connected = false;
@@ -22,7 +25,12 @@ export class Agent {
     this.reconnectTimer = null;
     this.nextHeartbeat = 0;
     this.lastCleanup = 0;
-    this.lastGroups = 0;
+    this.nextGroups = 0;
+    this.groupRefresh = null;
+    this.groupError = null;
+    this.groupRevision = 0;
+    this.recentGroupIds = [];
+    this.groupLookups = new Map();
     this.pendingReset = null;
     this.connectionEpoch = 0;
     this.receiveChain = Promise.resolve();
@@ -37,7 +45,10 @@ export class Agent {
 
   async heartbeat() {
     const qr = this.qr && this.now() - this.qrAt < 55000 ? this.qr : null;
-    const body = { state: this.state, agent_version: '1.0.0', qr, groups: this.groups };
+    const body = { state: this.state, agent_version: '1.0.1', qr, error_code: this.groupError };
+    // A restart has not discovered an empty account. Preserve the ERP's last
+    // known groups until the provider returns metadata or a successful snapshot.
+    if (this.groupsKnown) body.groups = this.groups;
     if (this.accountPhone) body.account_phone = this.accountPhone;
     const response = await this.api.post('/heartbeat', body);
     this.config = response;
@@ -54,7 +65,9 @@ export class Agent {
         if (this.now() - this.lastCleanup > 60000) { this.store.cleanup(this.now()); this.lastCleanup = this.now(); }
         if (this.now() >= this.nextHeartbeat) await this.heartbeat();
         this.applySessionReset();
-        if (this.connected && this.now() - this.lastGroups > 300000) await this.refreshGroups();
+        // Group discovery can take the provider's full query timeout. It must
+        // not stop heartbeats, messages or replies while that query is pending.
+        if (this.connected && this.now() >= this.nextGroups) void this.refreshGroups();
         await this.flushInbox();
         await this.flushOutbox();
       } catch (error) {
@@ -70,6 +83,9 @@ export class Agent {
   connect() {
     if (this.stopped) return;
     this.state = 'starting';
+    this.connected = false;
+    this.groupRefresh = null;
+    this.groupLookups.clear();
     const auth = this.auth;
     const epoch = ++this.connectionEpoch;
     const guardedKeys = {
@@ -97,6 +113,7 @@ export class Agent {
       getMessage: async key => this.store.message(key.remoteJid, key.id, this.now()),
       cachedGroupMetadata: async jid => {
         const entry = this.groupCache.get(jid);
+        if (entry && entry.expires <= this.now()) this.groupCache.delete(jid);
         return entry && entry.expires > this.now() ? entry.value : undefined;
       },
     });
@@ -112,11 +129,33 @@ export class Agent {
       if (!['notify', 'append'].includes(type) || socket !== this.socket) return;
       // Preserve delivery order across asynchronous LID lookups and batches.
       for (const message of messages) {
+        // A newly joined group may be absent from a failed full discovery. Only
+        // its metadata is queried here; incomingEnvelope still denies its use
+        // until the administrator explicitly authorizes it.
+        void this.discoverMessageGroup(message, socket);
         this.receiveChain = this.receiveChain.then(() => this.receive(message, socket)).catch(() => this.report('INCOMING_REJECTED'));
       }
     });
-    socket.ev.on('groups.update', updates => { for (const group of updates) this.groupCache.delete(group.id); this.lastGroups = 0; });
-    socket.ev.on('group-participants.update', update => { this.groupCache.delete(update.id); this.lastGroups = 0; });
+    socket.ev.on('groups.upsert', groups => {
+      if (socket !== this.socket || this.stopped) return;
+      const ids = groups.filter(group => GROUP_JID.test(group.id)).map(group => group.id);
+      this.recentGroupIds = [...new Set([...ids, ...this.recentGroupIds])].slice(0, 20);
+      this.groupRevision++;
+      this.publishGroups(groups);
+      this.nextGroups = Math.min(this.nextGroups, this.now() + 1000);
+    });
+    socket.ev.on('groups.update', updates => {
+      if (socket !== this.socket || this.stopped) return;
+      for (const group of updates) this.groupCache.delete(group.id);
+      // Baileys emits this event inside groupFetchAllParticipating too. Starting
+      // another discovery here would turn the five-minute refresh into a loop.
+      this.publishGroups(updates);
+    });
+    socket.ev.on('group-participants.update', update => {
+      if (socket !== this.socket || this.stopped || !GROUP_JID.test(update.id)) return;
+      this.groupCache.delete(update.id);
+      this.nextGroups = Math.min(this.nextGroups, this.now() + 1000);
+    });
   }
 
   applySessionReset() {
@@ -134,9 +173,15 @@ export class Agent {
     this.qr = null;
     this.accountPhone = null;
     this.groups = [];
+    this.groupsKnown = false;
     this.groupCache.clear();
+    this.groupRefresh = null;
+    this.groupError = null;
+    this.groupRevision = 0;
+    this.recentGroupIds = [];
+    this.groupLookups.clear();
     this.reconnectAttempt = 0;
-    this.lastGroups = 0;
+    this.nextGroups = 0;
     this.nextHeartbeat = 0;
     this.connect();
     return true;
@@ -158,7 +203,7 @@ export class Agent {
       this.accountPhone = phoneFromJid(socket.user?.id);
       this.reconnectAttempt = 0;
       this.nextHeartbeat = 0;
-      this.lastGroups = 0;
+      this.nextGroups = 0;
       this.report('CONNECTED');
     }
     if (update.connection === 'close') {
@@ -178,18 +223,90 @@ export class Agent {
     }
   }
 
+  publishGroups(updates, { replace = false } = {}) {
+    const previous = new Map(this.groups.map(group => [group.id, group]));
+    const discovered = replace ? new Map() : new Map(previous);
+    for (const group of updates) {
+      if (!GROUP_JID.test(group.id)) continue;
+      this.groupsKnown = true;
+      const name = String(group.subject ?? previous.get(group.id)?.name ?? 'Grupo WhatsApp').trim().slice(0, 100) || 'Grupo WhatsApp';
+      discovered.set(group.id, { id: group.id, name });
+    }
+    // Keep newly joined and explicitly allowed groups visible even if a personal
+    // account belongs to more groups than the ERP's bounded discovery list.
+    const order = [...new Set([...this.recentGroupIds, ...(this.config?.allowed_groups || []), ...previous.keys(), ...discovered.keys()])];
+    const groups = order.filter(id => discovered.has(id)).slice(0, 100).map(id => discovered.get(id));
+    if (JSON.stringify(groups) !== JSON.stringify(this.groups)) { this.groups = groups; this.nextHeartbeat = 0; }
+  }
+
+  async discoverMessageGroup(message, socket) {
+    if (socket !== this.socket || this.stopped || !this.connected) return;
+    const id = message?.key?.remoteJid;
+    const timestamp = Number(message?.messageTimestamp) * 1000;
+    if (!GROUP_JID.test(id) || !Number.isFinite(timestamp) || timestamp < this.now() - 86400000 || timestamp > this.now() + 300000) return;
+    if (this.groups.some(group => group.id === id && group.name !== 'Grupo WhatsApp')) return;
+    const previous = this.groupLookups.get(id);
+    if (previous?.pending || previous?.nextAt > this.now()) return;
+    if ([...this.groupLookups.values()].filter(value => value.pending).length >= 2) return;
+    if (!previous && this.groupLookups.size >= 100) {
+      const expired = [...this.groupLookups].find(([, value]) => !value.pending && value.nextAt <= this.now());
+      if (!expired) return;
+      this.groupLookups.delete(expired[0]);
+    }
+    const request = { pending: true, nextAt: this.now() + GROUP_RETRY_MS };
+    this.groupLookups.set(id, request);
+    try {
+      const group = await socket.groupMetadata(id);
+      if (socket !== this.socket || this.stopped || !this.connected || this.groupLookups.get(id) !== request) return;
+      if (group?.id !== id) throw new Error('GROUP_METADATA_INVALID');
+      this.recentGroupIds = [...new Set([id, ...this.recentGroupIds])].slice(0, 20);
+      this.groupRevision++;
+      this.publishGroups([group]);
+      const visible = new Set(this.groups.map(item => item.id));
+      for (const [cachedId, entry] of this.groupCache) {
+        if (!visible.has(cachedId) || entry.expires <= this.now()) this.groupCache.delete(cachedId);
+      }
+      this.groupCache.set(id, { value: group, expires: this.now() + GROUP_REFRESH_MS });
+    } catch (error) {
+      if (socket !== this.socket || this.stopped || this.groupLookups.get(id) !== request) return;
+      const status = Number(error?.output?.statusCode ?? error?.status ?? error?.response?.status);
+      this.report(Number.isInteger(status) && status >= 400 && status <= 599 ? `GROUP_METADATA_RETRY_${status}` : 'GROUP_METADATA_RETRY');
+    } finally {
+      request.pending = false;
+      request.nextAt = this.now() + GROUP_RETRY_MS;
+    }
+  }
+
   async refreshGroups() {
-    this.lastGroups = this.now();
+    if (this.stopped || !this.connected || this.groupRefresh || this.now() < this.nextGroups) return;
     const socket = this.socket;
+    const request = { socket, revision: this.groupRevision };
+    this.groupRefresh = request;
+    this.nextGroups = this.now() + GROUP_RETRY_MS;
     try {
       const groups = await socket.groupFetchAllParticipating();
-      if (socket !== this.socket || this.stopped) return;
-      this.groups = Object.values(groups).filter(group => GROUP_JID.test(group.id)).slice(0, 100).map(group => {
-        this.groupCache.set(group.id, { value: group, expires: this.now() + 300000 });
-        return { id: group.id, name: String(group.subject || 'Grupo WhatsApp').trim().slice(0, 100) || 'Grupo WhatsApp' };
-      });
+      if (socket !== this.socket || this.stopped || !this.connected || this.groupRefresh !== request) return;
+      // A join received while querying may be newer than the returned snapshot.
+      this.publishGroups(Object.values(groups), { replace: request.revision === this.groupRevision });
+      this.groupsKnown = true;
+      this.groupCache.clear();
+      for (const group of this.groups) {
+        if (groups[group.id]) this.groupCache.set(group.id, { value: groups[group.id], expires: this.now() + GROUP_REFRESH_MS });
+      }
+      this.groupError = null;
+      this.nextGroups = this.now() + GROUP_REFRESH_MS;
       this.nextHeartbeat = 0;
-    } catch { this.report('GROUPS_RETRY'); }
+    } catch (error) {
+      if (socket !== this.socket || this.stopped || this.groupRefresh !== request) return;
+      this.groupError = 'group_sync_retry';
+      this.nextGroups = this.now() + GROUP_RETRY_MS;
+      this.nextHeartbeat = 0;
+      const status = Number(error?.output?.statusCode ?? error?.status ?? error?.response?.status);
+      // Provider messages and payloads can include private group/session data.
+      this.report(Number.isInteger(status) && status >= 400 && status <= 599 ? `GROUPS_RETRY_${status}` : 'GROUPS_RETRY');
+    } finally {
+      if (this.groupRefresh === request) this.groupRefresh = null;
+    }
   }
 
   async receive(message, sourceSocket = this.socket) {
