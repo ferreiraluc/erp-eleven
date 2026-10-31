@@ -19,6 +19,9 @@ export const customerAssociationMessages = {
     name_address: 'Nome e endereço compatíveis', name_phone: 'Nome e telefone compatíveis',
     name_email: 'Nome e e-mail compatíveis', document: 'Identidade documental compatível',
     explicit_order: 'Cliente já vinculado ao pedido',
+    explicit_freight_customer: 'Cliente confirmado no envio e no endereço',
+    freight_name_address: 'Nome e endereço conferidos na etiqueta emitida',
+    freight_document: 'Documento conferido na etiqueta emitida',
   },
   es: {
     title: 'Asociar historial existente',
@@ -36,6 +39,9 @@ export const customerAssociationMessages = {
     name_address: 'Nombre y dirección compatibles', name_phone: 'Nombre y teléfono compatibles',
     name_email: 'Nombre y correo compatibles', document: 'Identidad documental compatible',
     explicit_order: 'Cliente ya vinculado al pedido',
+    explicit_freight_customer: 'Cliente confirmado en el envío y la dirección',
+    freight_name_address: 'Nombre y dirección verificados en la etiqueta emitida',
+    freight_document: 'Documento verificado en la etiqueta emitida',
   },
   en: {
     title: 'Link existing history',
@@ -53,5 +59,8 @@ export const customerAssociationMessages = {
     name_address: 'Matching name and address', name_phone: 'Matching name and phone',
     name_email: 'Matching name and email', document: 'Matching document identity',
     explicit_order: 'Customer already linked to the order',
+    explicit_freight_customer: 'Customer confirmed for the shipment and address',
+    freight_name_address: 'Name and address verified against the issued label',
+    freight_document: 'Document verified against the issued label',
   },
 }

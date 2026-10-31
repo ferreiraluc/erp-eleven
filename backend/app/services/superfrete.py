@@ -96,12 +96,38 @@ def party(data,recipient=False):
 
 
 def quote_order(db,body,user_id):
-    previous=db.query(FreightOrder).filter_by(request_key=body.request_key).first()
-    if previous:
-        if previous.user_id!=user_id or comparable_document_snapshot(previous.payload.get('_request'))!=comparable_document_snapshot(body.model_dump(mode='json',exclude={'request_key'})):raise HTTPException(409,'Identificador já utilizado com outros dados.')
+    from copy import deepcopy
+    def previous_order():
+        previous=db.query(FreightOrder).filter_by(request_key=body.request_key).populate_existing().first()
+        if previous and (previous.user_id!=user_id or comparable_document_snapshot(previous.payload.get('_request'))!=comparable_document_snapshot(body.model_dump(mode='json',exclude={'request_key'}))):
+            raise HTTPException(409,'Identificador já utilizado com outros dados.')
         return previous
-    from .address_book import resolve_address
-    address=resolve_address(db,body.address_id)
+
+    previous=previous_order()
+    if previous:
+        return previous
+    from .address_book import lock_addresses, resolve_address
+    from .customer_identity import ensure_customer
+    from .customer_shipping_identity import address_customer
+
+    def current_address():
+        # Refresh every alias, including a root already cached by the caller.
+        # The snapshot detects edits and reassignments while HTTP calls run.
+        key, seen, snapshot = body.address_id, set(), []
+        while key:
+            if key in seen:
+                raise HTTPException(409,'Vínculo de endereço inválido. Confira o cadastro.')
+            seen.add(key)
+            row=db.query(SavedAddress).filter_by(id=key).populate_existing().first()
+            if not row:
+                return None, snapshot
+            snapshot.append((row.id,row.merged_into_id,row.active,row.version,
+                             row.cliente_id,row.pdv_cliente_id,deepcopy(row.data)))
+            key=row.merged_into_id
+        return resolve_address(db,body.address_id), snapshot
+
+    db.flush()
+    address,address_snapshot=current_address()
     if not address or not address.active:raise HTTPException(400,'Escolha um endereço ativo.')
     if body.sender_id:
         sender=db.get(PrintSender,body.sender_id)
@@ -121,9 +147,23 @@ def quote_order(db,body,user_id):
              '_request':body.model_dump(mode='json',exclude={'request_key'})}
     payload['_postal_warnings'] = ['Remetente: '+w for w in sender_check['warnings']] + ['Destinatário: '+w for w in recipient_check['warnings']]
     if not body.non_commercial:payload['options']['invoice']={'number':body.invoice}
-    row=FreightOrder(request_key=body.request_key,user_id=user_id,address_id=address.id,environment=environment(),payload=payload,rates=[],state='quoting')
+    # Calculator/CEP have no purchase effect. Keep the global identity lock out
+    # of their network waits and persist only after validating the saved address.
+    row=FreightOrder(request_key=body.request_key,user_id=user_id,address_id=address.id,
+        environment=environment(),payload=payload,rates=[],state='quoting',recovery_attempts=0)
+    calculate(db,row)
+    lock_addresses(db)
+    previous=previous_order()
+    if previous:
+        return previous
+    address,current_snapshot=current_address()
+    if not address or not address.active or current_snapshot!=address_snapshot:
+        raise HTTPException(409,'O endereço mudou durante a cotação. Confira os dados e solicite uma nova cotação.')
+    ensure_customer(db,address)
+    customer=address_customer(db,address)
+    row.payload={**row.payload,'_customer_id':str(customer.id) if customer else None}
     db.add(row);db.flush()
-    return calculate(db,row)
+    return row
 
 
 def calculate(db,row):
@@ -294,15 +334,63 @@ def refresh(db,key):
 
 def sync_tracking(db,row):
     if row.environment!='production' or not row.tracking:return
+    if db.bind.dialect.name == 'postgresql':
+        from sqlalchemy import text
+        # Serialize only against customer consolidation, before taking any
+        # parent/code/parcel locks. Ordinary customer writes remain compatible.
+        db.execute(text('LOCK TABLE clientes IN ROW EXCLUSIVE MODE'))
     from ..models.rastreamento import Rastreamento
-    from ..models.address_book import SavedAddress
+    from ..models.pedido import Pedido
+    from .customer_identity import compatible_name
+    from .customer_maintenance import resolve_customer
+    from .customer_shipping_identity import freight_customer
     from .tracking_codes import normalize_tracking_code, tracking_code_expression, lock_tracking_codes
     code = normalize_tracking_code(row.tracking)
+    # Match manual/receipt writes: parent order, code, then parcel. Read only IDs
+    # before waiting, so a stale ORM instance cannot supply the expected parent.
+    observed = db.query(Rastreamento.id, Rastreamento.pedido_id).filter(
+        tracking_code_expression(Rastreamento.codigo_rastreio) == code,
+    ).first()
+    order = None
+    if observed and observed.pedido_id:
+        order = db.query(Pedido).filter(Pedido.id == observed.pedido_id).populate_existing().with_for_update().first()
+        if not order:
+            return
     lock_tracking_codes(db, [code])
-    if db.query(Rastreamento).filter(tracking_code_expression(Rastreamento.codigo_rastreio) == code).first():return
-    address = db.get(SavedAddress, row.address_id) if row.address_id else None
+    if observed:
+        existing = db.query(Rastreamento).filter(Rastreamento.id == observed.id).populate_existing().with_for_update().first()
+        if (not existing or existing.pedido_id != observed.pedido_id
+                or normalize_tracking_code(existing.codigo_rastreio) != code):
+            # A manual correction won the race. Do not acquire another parent
+            # after the code/row locks or assign this freight to the edited code.
+            return
+    else:
+        existing = db.query(Rastreamento).filter(
+            tracking_code_expression(Rastreamento.codigo_rastreio) == code,
+        ).populate_existing().with_for_update().first()
+        if existing and existing.pedido_id:
+            # A concurrent registration introduced a parent we have not locked.
+            # A later refresh can resolve it in the canonical order.
+            return
+    customer = freight_customer(db, row)
+    if existing:
+        if existing.cliente_id or not customer:
+            return
+        names = (row.payload.get('to', {}).get('name'), customer.nome)
+        if existing.destinatario and not any(compatible_name(existing.destinatario, name) for name in names):
+            return
+        if order:
+            if order.cliente_id:
+                owner = resolve_customer(db, order.cliente_id)
+                if not owner or owner.id != customer.id:
+                    return
+            elif order.cliente_nome and not any(compatible_name(order.cliente_nome, name) for name in names):
+                return
+        existing.cliente_id = customer.id
+        db.flush()
+        return
     db.add(Rastreamento(codigo_rastreio=code,destinatario=row.payload['to']['name'],
-           cliente_id=address.cliente_id if address else None,
+           cliente_id=customer.id if customer else None,
            origem=row.payload['from']['city'],destino=row.payload['to']['city'],servico_provedor='SuperFrete',
            custo_emissao=row.price,created_by=row.user_id,descricao='Etiqueta emitida pelo gestor de endereços'))
     db.flush()

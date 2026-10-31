@@ -34,7 +34,7 @@
           type="button"
           class="erp-button erp-button--primary erp-button--sm"
           :disabled="busy"
-          @click="reviewOpen = true"
+          @click="recoverReview"
         >
           {{ t('recover') }}
         </button>
@@ -152,9 +152,21 @@
               :disabled="controlsDisabled || !canReplenish(item)"
               @change="selectItem(item, ($event.target as HTMLInputElement).checked)"
             />
-            <ProductThumbnail :item="item" :alt="item.name" class="product-photo" />
+            <button
+              type="button"
+              class="product-photo erp-control"
+              :aria-label="t(item.has_image ? 'viewPhotos' : 'noPhoto', { name: item.name })"
+              :title="t(item.has_image ? 'viewPhotos' : 'noPhoto', { name: item.name })"
+              :aria-busy="photoLoadingId === item.id"
+              :disabled="!item.has_image || loading || busy || reviewOpen"
+              @click.stop="openPhoto(item)"
+            >
+              <ProductThumbnail :item="item" alt="" class="product-photo-image" />
+            </button>
             <div class="product-identity">
               <strong>{{ item.name }}</strong>
+              <small v-if="photoLoadingId === item.id" role="status">{{ t('photoLoading') }}</small>
+              <small v-if="photoError?.id === item.id" class="photo-error" role="alert">{{ t(photoError.message) }}</small>
               <div class="product-tags">
                 <span v-if="item.size">{{ item.size }}</span
                 ><span v-if="item.color">{{ item.color }}</span
@@ -235,6 +247,7 @@
         </button>
       </div>
     </main>
+    <ProductGalleryModal v-if="photoItem" :key="photoItem.id" :item="photoItem" @close="closePhoto" />
     <Teleport to="body">
       <div
         v-if="reviewOpen"
@@ -349,10 +362,12 @@ import { ArrowUpRight, PackageCheck, Printer, RefreshCw, Search } from 'lucide-v
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
+import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
 import StockQuantityInput from '@/components/inventory/StockQuantityInput.vue'
 import { replenishmentMessages } from '@/components/inventory/replenishmentMessages'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useAuthStore } from '@/stores/auth'
+import { inventoryAPI, type InventoryItem } from '@/services/api'
 import { productLabels, type LabelBatch, type LabelDevice } from '@/services/productLabels'
 import { labelLayoutReference, type ProductLabelLayout } from '@/services/productLabelDesign'
 import {
@@ -374,6 +389,9 @@ const items = ref<ReplenishmentProduct[]>([]),
   pageSize = ref(40)
 const quantities = ref<Record<string, number>>({}),
   selectedIds = ref<string[]>([])
+const photoItem = ref<InventoryItem | null>(null),
+  photoLoadingId = ref(''),
+  photoError = ref<{ id: string; message: 'photoError' | 'photoUnavailable' } | null>(null)
 const device = ref<LabelDevice | null>(null),
   deviceError = ref(false),
   loading = ref(false),
@@ -435,11 +453,40 @@ let disposed = false,
   epoch = 0,
   listGeneration = 0,
   previewGeneration = 0,
+  photoGeneration = 0,
   queueGeneration = 0,
   lastLoadedAt = 0
 let listController: AbortController | undefined, stopUserWatch: WatchStopHandle | undefined
+let photoController: AbortController | undefined
 function current(ownerEpoch: number) {
   return !disposed && ownerEpoch === epoch
+}
+
+function closePhoto() {
+  photoGeneration++
+  photoController?.abort()
+  photoController = undefined
+  photoLoadingId.value = ''
+  photoItem.value = null
+}
+async function openPhoto(item: ReplenishmentProduct) {
+  if (!item.has_image || loading.value || busy.value || reviewOpen.value || photoLoadingId.value === item.id) return
+  closePhoto()
+  photoError.value = null
+  const ownerEpoch = epoch, request = photoGeneration
+  photoLoadingId.value = item.id
+  photoController = new AbortController()
+  try {
+    const full = await inventoryAPI.getItem(item.id, photoController.signal)
+    if (!current(ownerEpoch) || request !== photoGeneration) return
+    if (full.image_data) photoItem.value = full
+    else photoError.value = { id: item.id, message: 'photoUnavailable' }
+  } catch {
+    if (current(ownerEpoch) && request === photoGeneration)
+      photoError.value = { id: item.id, message: 'photoError' }
+  } finally {
+    if (current(ownerEpoch) && request === photoGeneration) photoLoadingId.value = ''
+  }
 }
 
 const storeExitFormatter = computed(
@@ -476,6 +523,8 @@ function selectPage() {
 }
 
 async function loadCatalog() {
+  closePhoto()
+  photoError.value = null
   const ownerEpoch = epoch,
     request = ++listGeneration
   listController?.abort()
@@ -546,7 +595,7 @@ function changePage(delta: number) {
   }
 }
 function refresh() {
-  if (loading.value || locked.value || busy.value || reviewOpen.value) return
+  if (loading.value || locked.value || busy.value || reviewOpen.value || photoLoadingId.value || photoItem.value) return
   void Promise.allSettled([loadCatalog(), loadDevice(), loadLayouts()])
 }
 function onFocus() {
@@ -561,6 +610,7 @@ function onFocus() {
 
 function openReview(rows: ReplenishmentProduct[]) {
   if (controlsDisabled.value || !device.value || deviceError.value) return
+  closePhoto()
   error.value = ''
   confirmed.value = false
   try {
@@ -572,6 +622,11 @@ function openReview(rows: ReplenishmentProduct[]) {
   } catch {
     error.value = t('limits')
   }
+}
+function recoverReview() {
+  if (busy.value || !attempt.value) return
+  closePhoto()
+  reviewOpen.value = true
 }
 function clearPreview() {
   previewGeneration++
@@ -742,6 +797,7 @@ async function refreshQueue() {
 }
 async function initialize(userId: string | undefined) {
   epoch++
+  closePhoto()
   listGeneration++
   queueGeneration++
   listController?.abort()
@@ -838,6 +894,7 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true
   epoch++
+  closePhoto()
   listController?.abort()
   stopUserWatch?.()
   clearPreview()
@@ -957,13 +1014,19 @@ onUnmounted(() => {
   accent-color: #2563eb;
 }
 .product-photo {
+  display: block;
   width: 76px;
   height: 80px;
-  object-fit: contain;
+  padding: 0;
+  overflow: hidden;
+  cursor: zoom-in;
   border: 1px solid #f1f5f9;
   border-radius: 10px;
   background: white;
 }
+.product-photo:disabled { cursor: default; }
+.product-photo-image { display: block; width: 100%; height: 100%; object-fit: contain; }
+.product-identity > .photo-error { color: #b91c1c; }
 .product-identity {
   min-width: 0;
 }

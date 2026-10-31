@@ -2,7 +2,7 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import ValidationError
-from sqlalchemy import or_, cast, String, func
+from sqlalchemy import or_, cast, String, func, select
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
 from ...database import get_db
@@ -62,7 +62,17 @@ def addresses(q:str=Query('',max_length=100),country:str='',customer_id:uuid.UUI
     query=db.query(SavedAddress).options(selectinload(SavedAddress.cliente)).filter(SavedAddress.active==active,SavedAddress.merged_into_id.is_(None))
     if q:query=query.filter(or_(SavedAddress.label.ilike(pattern(q),escape='\\'),cast(SavedAddress.data,String).ilike(pattern(q),escape='\\')))
     if country:query=query.filter(SavedAddress.data['pais'].as_string()==country)
-    if customer_id:query=query.filter(or_(SavedAddress.cliente_id==customer_id,SavedAddress.pdv_cliente_id==customer_id))
+    if customer_id:
+        from ...services.customer_maintenance import resolve_customer
+        from ...services.customer_shipping_links import address_owners
+        customer=resolve_customer(db,customer_id)
+        if customer:
+            owners=address_owners([customer.id])
+            query=query.filter(SavedAddress.id.in_(select(owners.c.address_id)))
+        else:
+            # Older callers select a financial account, which remains distinct
+            # from other accounts linked to the same directory customer.
+            query=query.filter(SavedAddress.pdv_cliente_id==customer_id)
     return {'total':query.count(),'items':[item(r) for r in query.order_by(SavedAddress.updated_at.desc(),SavedAddress.id).offset(offset).limit(limit)]}
 
 
