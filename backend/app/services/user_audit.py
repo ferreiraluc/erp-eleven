@@ -9,7 +9,7 @@ from ..models.access import AuditEvent, now
 
 INTERNAL = {'audit_events', 'activity_spans', 'auth_sessions', 'assistant_messages',
             'assistant_deliveries', 'assistant_knowledge', 'sales_bi_workbooks',
-            'login_throttles', 'scheduled_runs'}
+            'login_throttles', 'scheduled_runs', 'assistant_whatsapp_bridges', 'assistant_whatsapp_media'}
 SAFE_VALUES = {'status', 'state', 'ativo', 'active', 'is_active', 'role', 'sales_scope',
                'current_stock', 'stock_loja', 'stock_deposito', 'quantity', 'quantity_before',
                'quantity_after', 'total_gs', 'valor_bruto', 'valor_liquido', 'moeda',

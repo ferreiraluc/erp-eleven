@@ -89,6 +89,22 @@ jobs:
           ./tools/eleven-print-agent/tests/Inicializacao.Tests.ps1
           ./tools/eleven-print-agent/tests/TicketContinuo.Tests.ps1
           ./tools/eleven-print-agent/tests/Etiquetas.Tests.ps1
+  whatsapp-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tools/eleven-whatsapp-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tools/eleven-whatsapp-agent/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm test
   macos-agent:
     # Validated before merge; macOS capacity must not hold up a checked main release.
     if: github.event_name != 'push'

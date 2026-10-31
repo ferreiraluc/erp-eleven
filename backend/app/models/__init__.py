@@ -14,7 +14,8 @@ from .rastreamento import Rastreamento
 from .inventory import Supplier, Item, StockMovement, InventorySession, InventorySessionItem, MovementType, SessionStatus
 from .pedido_anexo import PedidoAnexo
 from .pdv import PdvCliente, PdvSale, PdvSaleItem, PdvPayment, PdvFiadoMovement, PdvSaleEvent
-from .assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction
+from .assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantWhatsAppBridge
+from .assistant_whatsapp_media import WhatsAppMedia
 
 from .sales_bi import SalesBIConfig, SalesBIWorkbook
 from .access import AuthSession, AuditEvent, ActivitySpan

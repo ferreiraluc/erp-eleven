@@ -16,12 +16,14 @@
       </section>
       <p class="hint">{{ uiText(`Configuração não comprova conexão. Verifique a fila após enviar uma mensagem de teste. Limite:`) }} {{ status.daily_messages_per_user }} {{ uiText(`mensagens por usuário em 24 horas.`) }}</p>
 
+      <WhatsAppBridgePanel />
+
       <section class="card">
         <h2>{{ uiText(`Funcionários autorizados`) }}</h2>
         <p>{{ uiText(`Vincule o WhatsApp e o ID do Telegram ao mesmo usuário do ERP. Confirme a identidade do funcionário antes de liberar acesso.`) }}</p>
         <form @submit.prevent="saveIdentity">
-          <label>{{ uiText(`Canal`) }}<ErpSelect v-model="form.channel" :aria-label="uiText(`Canal`)"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></ErpSelect></label>
-          <label>{{ uiText(`Identificador`) }}<input v-model.trim="form.external_id" required :placeholder="form.channel === 'whatsapp' ? 'whatsapp:+5511999999999' : uiText(`ID numérico do usuário`)" /></label>
+          <label>{{ uiText(`Canal`) }}<ErpSelect v-model="form.channel" :aria-label="uiText(`Canal`)"><option value="whatsapp_web">{{ uiText('WhatsApp da equipe') }}</option><option value="whatsapp">WhatsApp · Twilio</option><option value="telegram">Telegram</option></ErpSelect></label>
+          <label>{{ uiText(`Identificador`) }}<input v-model.trim="form.external_id" required :placeholder="form.channel !== 'telegram' ? 'whatsapp:+5511999999999' : uiText(`ID numérico do usuário`)" /></label>
           <label>{{ uiText(`Usuário ERP`) }}<ErpSelect v-model="form.user_id" required :aria-label="uiText(`Usuário ERP`)"><option disabled value="">{{ uiText(`Selecione`) }}</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.nome }} · {{ roleLabel(u.role) }}</option></ErpSelect></label>
           <label class="check"><input v-model="form.active" type="checkbox" /> {{ uiText(`Acesso ativo`) }}</label>
           <label class="check"><input v-model="form.can_register" type="checkbox" /> {{ uiText(`Pode registrar ocorrências e preparar folgas (gestores)`) }}</label>
@@ -64,11 +66,12 @@
 <script setup lang="ts">
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
+import WhatsAppBridgePanel from '@/components/assistant/WhatsAppBridgePanel.vue'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { onMounted, ref } from 'vue'
 import api from '@/services/api'
 
-interface Identity { id: string; channel: 'whatsapp' | 'telegram'; external_id: string; user_id: string; active: boolean; can_register: boolean }
+interface Identity { id: string; channel: 'whatsapp' | 'whatsapp_web' | 'telegram'; external_id: string; user_id: string; active: boolean; can_register: boolean }
 interface User { id: string; nome: string; role: string }
 interface Note { id: string; kind: string; content: string; status: string; user_id: string; created_at: string }
 interface Action { id: string; status: string; user_id: string; vendedor?: string; data?: string; tipo?: string; periodo?: string }
@@ -81,7 +84,7 @@ const notes = ref<Note[]>([])
 const actions = ref<Action[]>([])
 const queue = ref<QueueItem[]>([])
 const loading = ref(false), saving = ref(false), error = ref(''), notice = ref('')
-const form = ref<Omit<Identity, 'id'>>({ channel: 'whatsapp', external_id: '', user_id: '', active: true, can_register: false })
+const form = ref<Omit<Identity, 'id'>>({ channel: 'whatsapp_web', external_id: '', user_id: '', active: true, can_register: false })
 const userName = (id: string) => users.value.find(u => u.id === id)?.nome || id
 const date = (value: string) => new Date(value).toLocaleString(uiLocale())
 const dateOnly = (value?: string) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(uiLocale()) : '—'

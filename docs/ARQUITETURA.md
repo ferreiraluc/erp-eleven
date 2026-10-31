@@ -70,6 +70,7 @@ não houver uma migração explícita de seus consumidores.
 | --- | --- | --- |
 | API | `uvicorn app.main:app` | Requisições HTTP e ciclo `lifespan` |
 | Assistente | `assistant_worker.main` | Thread quando `ASSISTANT_EMBEDDED_WORKER=true`, ou CLI separada |
+| WhatsApp da equipe | `tools/eleven-whatsapp-agent/src/main.mjs` | Worker Node separado; sessão em disco, pull HTTPS autenticado, sem porta de entrada |
 | Recuperação de etiquetas | `services.freight_labels.main` | Thread da API, independente do assistente |
 | BI | `services.sales_bi_sync.main` | Thread da API; leitura às 18h Brasília ou pedido manual no banco |
 | Atualização de rastreios | `_job_atualizar_rastreamentos` | APScheduler, às 19h Brasília |
@@ -95,6 +96,13 @@ entrega. `assistant_channels` isola os provedores; `assistant_tools` declara e d
 ferramentas; `assistant_controls` vincula botões e confirmações às ações corretas.
 `assistant_events` é importado por efeito de registro do evento transacional; não removê-lo
 porque a variável importada não é referenciada diretamente.
+
+**WhatsApp Web:** Baileys → ponte HTTPS autenticada → `AssistantMessage` no canal
+`whatsapp_web` → mesmo núcleo do assistente. Respostas saem de `AssistantDelivery`
+por retirada e autorização antes do envio. Autores, conversas, grupos e permissões
+são revalidados; Twilio e Telegram conservam suas filas e contextos. QR temporário
+é exclusivo do administrador. Sessão/diário SQLite ficam no disco do worker;
+nenhum endpoint público controla o WhatsApp. Ver [guia](WHATSAPP_EQUIPE.md).
 
 **Endereço:** `address_identity` normaliza a identidade; `address_book` reutiliza ou
 cria cadastro; `address_usage` reúne utilizações. `merged_into_id` preserva IDs antigos.

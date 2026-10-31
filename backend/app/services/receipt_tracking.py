@@ -36,7 +36,7 @@ def receipt_intent(content):
 
 
 def _source(db, message, source_id):
-    if message.channel != "telegram":
+    if message.channel not in ("telegram", "whatsapp_web"):
         return None
     query = db.query(AssistantMessage).filter(
         AssistantMessage.user_id == message.user_id,
@@ -119,9 +119,11 @@ def prepare_receipt(db, message, identity, args):
                 else {"erro": "Esta solicitação já possui uma prévia ou foi concluída. Consulte as prévias existentes."})
     source = _source(db, message, args.mensagem_id)
     if not source:
-        return {"erro": "Envie a foto do comprovante (JPG ou PNG) nesta conversa do Telegram e peça para cadastrar os rastreios. Use uma foto sua enviada nas últimas 24h."}
+        return {"erro": "Envie a foto do comprovante (JPG ou PNG) nesta conversa e peça para cadastrar os rastreios. Use uma foto sua enviada nas últimas 24h."}
     try:
-        objects = extract_receipt(download_image(source.attachment))
+        data = (download_image(source.attachment, db=db, user_id=message.user_id, conversation_id=message.conversation_id)
+                if message.channel == "whatsapp_web" else download_image(source.attachment))
+        objects = extract_receipt(data)
     except ReceiptError as exc:
         return {"erro": str(exc)}
     rows, duplicates = [], []
@@ -147,7 +149,10 @@ def prepare_receipt(db, message, identity, args):
                      "pedido_cliente_nome": customer.nome if customer else None,
                      "vinculo_aviso": reason})
     # The minimal extracted data is sufficient for the preview and registration.
-    # Erase Telegram's download reference immediately; no raw OCR/image snapshot.
+    # Erase temporary bytes/reference immediately; no raw OCR/image snapshot.
+    if message.channel == "whatsapp_web":
+        from .assistant_whatsapp_media import discard_media
+        discard_media(db, source.attachment, user_id=message.user_id, conversation_id=message.conversation_id)
     source.attachment = None
     if not rows:
         return {"erro": "Todos os códigos lidos já estão no ERP. Nenhum rastreio foi duplicado: " + ", ".join(duplicates)}

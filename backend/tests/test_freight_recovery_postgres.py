@@ -13,7 +13,7 @@ from app.database import Base
 from app.models import Usuario, Vendedor, Cliente
 from app.models.usuario import UsuarioRole
 from app.models.address_book import SavedAddress, FreightOrder
-from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantDelivery
+from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantDelivery, AssistantWhatsAppBridge
 from app.models.pdv import PdvCliente
 from app.models.printing import PrintDevice, PrintJob
 from app.services import freight_recovery as recovery, superfrete as sf
@@ -39,7 +39,7 @@ def test_second_worker_skips_active_recovery_and_notifies_only_once(pg, monkeypa
     engine, schema = pg
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
     models = (Usuario, Vendedor, Cliente, PdvCliente, SavedAddress, PrintDevice, PrintJob,
-              FreightOrder, AssistantIdentity, AssistantMessage, AssistantDelivery)
+              FreightOrder, AssistantIdentity, AssistantMessage, AssistantDelivery, AssistantWhatsAppBridge)
     Base.metadata.create_all(isolated, tables=[model.__table__ for model in models])
     factory = sessionmaker(bind=isolated, autoflush=False)
     user_id = uuid.uuid4()

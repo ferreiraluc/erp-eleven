@@ -1,4 +1,4 @@
-"""Ephemeral Telegram-to-printer bridge: never persist PDF bytes or document contents."""
+"""Confirmed PDF printing with expiring channel references and integrity checks."""
 import hashlib
 import io
 import re
@@ -7,6 +7,7 @@ from datetime import timedelta
 import requests
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import String,cast
+from sqlalchemy.orm import object_session
 from ..config import settings
 from ..models.assistant import AssistantMessage,AssistantAction,utcnow
 from ..models.printing import PrintDevice,PrintJob
@@ -22,10 +23,13 @@ class FilePrintArgs(BaseModel):
     mensagem_id: uuid.UUID | None = None
 
 
-def download_pdf(attachment):
+def download_pdf(attachment, *, db=None, user_id=None, conversation_id=None):
     if attachment.get('size',0) and attachment['size']>MAX_BYTES:raise ValueError('Envie um PDF de até 5 MB.')
     if attachment.get('mime_type')!='application/pdf' and not attachment.get('name','').lower().endswith('.pdf'):
         raise ValueError('Para imprimir esse arquivo, envie-o em PDF. Endereços em texto continuam disponíveis.')
+    if attachment.get('provider') == 'whatsapp_web':
+        from .assistant_whatsapp_media import read_media
+        return read_media(db, attachment, user_id=user_id, conversation_id=conversation_id)
     try:
         response=requests.post(f'https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getFile',
             json={'file_id':attachment['file_id']},timeout=(5,20),allow_redirects=False)
@@ -70,28 +74,33 @@ def validate_pdf(data):
 
 def file_preview(action):
     p=action.payload
-    return preview_reply(action,f"Imprimir PDF: {p['pages']} página(s), uma cópia na impressora da loja.\nImpressora: {p.get('device_name', 'da loja')}.\nO documento não será arquivado no ERP nem usado para cadastrar dados.\nConfirme para enviar à fila ou cancele.")
+    retention = ('O PDF fica temporariamente protegido no ERP por até 24 horas e não é usado para cadastrar dados.'
+                 if p.get('media_provider') == 'whatsapp_web' else 'O documento não será arquivado no ERP nem usado para cadastrar dados.')
+    return preview_reply(action,f"Imprimir PDF: {p['pages']} página(s), uma cópia na impressora da loja.\nImpressora: {p.get('device_name', 'da loja')}.\n{retention}\nConfirme para enviar à fila ou cancele.")
 
 
 def prepare_file(db,message,identity,args):
     if not message.should_reply or not may_schedule(db,message,identity):return {'erro':'Impressão de arquivos exige gestor habilitado e pedido direto.'}
     previous=db.query(AssistantAction).filter_by(source_message_id=message.id).first()
     if previous:return {'confirmacao':file_preview(previous)} if previous.kind=='arquivo_imprimir' else {'erro':'Esta mensagem já possui outra prévia. Conclua-a antes de pedir uma nova.'}
-    query=db.query(AssistantMessage).filter(AssistantMessage.user_id==message.user_id,AssistantMessage.channel=='telegram',
+    if message.channel not in ('telegram', 'whatsapp_web'):return {'erro':'Envie o PDF pelo Telegram ou WhatsApp conectado por QR.'}
+    query=db.query(AssistantMessage).filter(AssistantMessage.user_id==message.user_id,
         AssistantMessage.channel==message.channel,AssistantMessage.conversation_id==message.conversation_id,
         AssistantMessage.created_at<=message.created_at,AssistantMessage.created_at>=utcnow()-timedelta(hours=24),AssistantMessage.attachment.isnot(None))
     source=query.filter(AssistantMessage.id==args.mensagem_id).first() if args.mensagem_id else (
         message if message.attachment else query.order_by(AssistantMessage.created_at.desc()).first())
-    if not source or not source.attachment:return {'erro':'Envie o arquivo PDF nesta conversa do Telegram e peça para imprimir. Um nome de arquivo em texto não contém o PDF.'}
+    if not source or not source.attachment:return {'erro':'Envie o arquivo PDF nesta conversa e peça para imprimir. Um nome de arquivo em texto não contém o PDF.'}
     devices=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True).limit(2).all()
     if len(devices)!=1:return {'erro':'Configure uma única impressora ativa no ERP.'}
     try:
-        pdf=download_pdf(source.attachment)
+        pdf=(download_pdf(source.attachment, db=db, user_id=message.user_id, conversation_id=message.conversation_id)
+             if message.channel == 'whatsapp_web' else download_pdf(source.attachment))
         pages=validate_pdf(pdf)
     except ValueError as exc:return {'erro':str(exc)}
     action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind='arquivo_imprimir',payload={
         'attachment_message_id':str(source.id),'pages':pages,
-        'sha256':hashlib.sha256(pdf).hexdigest(),'device_id':str(devices[0].id),'device_name':devices[0].name})
+        'sha256':hashlib.sha256(pdf).hexdigest(),'device_id':str(devices[0].id),'device_name':devices[0].name,
+        'media_provider':message.channel})
     db.add(action);db.flush()
     return {'confirmacao':file_preview(action)}
 
@@ -102,31 +111,56 @@ def confirm_file(db,message,action):
     if not source or source.user_id!=message.user_id or source.channel!=message.channel or source.conversation_id!=message.conversation_id:
         return 'Arquivo não disponível para este usuário e conversa.'
     if not source.attachment:return 'A referência temporária do PDF expirou. Envie o arquivo novamente.'
+    expires_at=utcnow()+timedelta(hours=24)
+    if message.channel == 'whatsapp_web':
+        from .assistant_whatsapp_media import media_expires_at
+        try:
+            expires_at=media_expires_at(db,source.attachment,user_id=message.user_id,conversation_id=message.conversation_id)
+        except ValueError as exc:
+            return str(exc)
     device=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(id=uuid.UUID(p['device_id']),active=True).with_for_update().first()
     if not device:return 'A impressora foi desativada. Nenhum arquivo enviado.'
     job=db.query(PrintJob).filter_by(request_key=action.id).first()
     if not job:
         # The existing Windows agent downloads this through its scoped endpoint.
-        # Only a temporary Telegram reference is queued, never the PDF itself.
+        # Only an expiring reference is queued; document bytes never enter the
+        # action payload, conversation history or AI context.
+        snapshot=({'whatsapp_file':source.attachment,'source_message_id':str(source.id),
+                   'conversation_id':message.conversation_id} if message.channel == 'whatsapp_web'
+                  else {'telegram_file':source.attachment})
         job=PrintJob(device_id=device.id,user_id=message.user_id,request_key=action.id,pdf=b'',sha256=p['sha256'],
-            snapshot={'telegram_file':source.attachment},source='bot_pdf_ephemeral',expires_at=utcnow()+timedelta(hours=24))
+            snapshot=snapshot,source='bot_pdf_ephemeral',expires_at=expires_at)
         db.add(job);db.flush()
     source.attachment=None
     action.status='executed';action.result_id=job.id;action.executed_at=utcnow()
-    return f"PDF encaminhado à impressora: {p['pages']} página(s), uma cópia. Destino: {device.name}. O ERP não arquiva esse documento. O envio à fila ainda não confirma a saída do papel."
+    retention=('O arquivo temporário expira em até 24 horas.' if message.channel=='whatsapp_web' else 'O ERP não arquiva esse documento.')
+    return f"PDF encaminhado à impressora: {p['pages']} página(s), uma cópia. Destino: {device.name}. {retention} O envio à fila ainda não confirma a saída do papel."
 
 
 def ephemeral_pdf(job):
     expires=job.expires_at.replace(tzinfo=utcnow().tzinfo) if job.expires_at.tzinfo is None else job.expires_at
     if expires < utcnow():raise ValueError('Solicitação de impressão expirada.')
-    attachment=(job.snapshot or {}).get('telegram_file')
+    snapshot=job.snapshot or {}
+    attachment=snapshot.get('whatsapp_file') or snapshot.get('telegram_file')
     if not attachment:raise ValueError('Referência temporária do arquivo indisponível.')
-    data=download_pdf(attachment)
+    if snapshot.get('whatsapp_file'):
+        db=object_session(job)
+        try:source_id=uuid.UUID(snapshot['source_message_id'])
+        except (KeyError,TypeError,ValueError):raise ValueError('Origem do PDF indisponível.') from None
+        source=db.get(AssistantMessage,source_id) if db else None
+        if (not source or source.channel!='whatsapp_web' or source.user_id!=job.user_id
+                or source.conversation_id!=snapshot.get('conversation_id')):
+            raise ValueError('Origem do PDF indisponível para este usuário e conversa.')
+        data=download_pdf(attachment,db=db,user_id=job.user_id,conversation_id=source.conversation_id)
+    else:
+        data=download_pdf(attachment)
     if hashlib.sha256(data).hexdigest()!=job.sha256:raise ValueError('Arquivo diferente do PDF aprovado. Reenvie e confirme uma nova prévia.')
     return data
 
 
 def cleanup_documents(db):
+    from .assistant_whatsapp_media import cleanup_media
+    cleanup_media(db)
     db.query(AssistantMessage).filter(AssistantMessage.attachment.isnot(None),
         AssistantMessage.created_at<utcnow()-timedelta(hours=24)).update({'attachment':None},synchronize_session=False)
     db.query(PrintJob).filter(PrintJob.source=='bot_pdf_ephemeral',PrintJob.expires_at<=utcnow(),

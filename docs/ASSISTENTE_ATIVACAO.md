@@ -2,7 +2,9 @@
 
 ## Capacidades e ativação atuais
 
-- WhatsApp **1:1** via Twilio e **grupo Telegram**, com DeepSeek no mesmo backend.
+- WhatsApp da equipe **individual e grupos autorizados** pela ponte WhatsApp Web,
+  WhatsApp **1:1** via Twilio e **grupo Telegram**, com DeepSeek no mesmo backend.
+  A ponte é opcional e nasce desabilitada; veja [instalação e limites](WHATSAPP_EQUIPE.md).
 - Consultas de pedidos/rastreios, inclusive envios sem pedido vinculado.
 - Memória compartilhada de relatos operacionais confirmados. Histórico de conversa é separado por canal/conversa/tópico; WhatsApp privado não é enviado ao contexto do grupo.
 - Rascunhos de atendimento, devolução, pedido, venda e endereço. Isso **não** lança uma venda, altera endereço do pedido, movimenta estoque ou emite reembolso.
@@ -14,7 +16,7 @@ Além das consultas e ocorrências, o bot oferece folgas, apelidos, cadastro/ent
 impressão A4/PDF e emissão SuperFrete com prévias e confirmações. Telegram tem botões e seleção
 por nome. A implantação contínua e a impressão Windows já foram validadas na operação.
 
-Imagens e áudio pelo bot, Meta Cloud API direta e lançamento de vendas/saídas/reembolsos pelo
+Áudio e imagens genéricas pelo bot, Meta Cloud API direta e lançamento de vendas/saídas/reembolsos pelo
 assistente não estão implementados. O OCR de estoque é separado. Para comportamento atual,
 consulte [o escopo](ESCOPO.md), [os fluxos](ASSISTENTE_FLUXOS_OPERACIONAIS.md) e
 [o gestor de endereços](GESTOR_ENDERECOS_SUPERFRETE.md).
@@ -45,6 +47,10 @@ Start: cd backend && python -m app.assistant_worker
 O worker separado necessita serviço que permaneça em execução. Configure as variáveis do exemplo também no serviço web. Não execute o worker pelo APScheduler da API. Em desenvolvimento, inicie o mesmo comando em outro terminal. Durante reinícios ou deploys sobrepostos, locks PostgreSQL impedem processamento simultâneo da mesma fila; resultados de envio incerto continuam sem repetição automática.
 
 ## 2. Número WhatsApp na Twilio
+
+Esta seção é do conector Twilio existente. Para usar o número como aparelho
+conectado, sem Twilio/API oficial da Meta, siga [WhatsApp da equipe](WHATSAPP_EQUIPE.md).
+Os acessos e as filas dos dois conectores são separados.
 
 Cadastre um remetente WhatsApp na conta Twilio e conclua o processo de habilitação. Para piloto, o Sandbox do console legado permite respostas livres na janela de atendimento com funcionários que tenham aderido a ele, quando disponível na conta.
 

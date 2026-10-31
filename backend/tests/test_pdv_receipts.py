@@ -14,6 +14,7 @@ from app.api.endpoints import printing
 from app.dependencies import get_current_active_user
 from app.models.printing import PrintDevice, PrintJob
 from app.models.assistant import AssistantMessage
+from app.models.assistant_whatsapp_media import WhatsAppMedia
 from app.models.pdv import PdvSale
 from app.models.usuario import Usuario, UsuarioRole
 from app.services import pdv_receipts as receipts
@@ -29,7 +30,7 @@ def sqlite_jsonb(element, compiler, **kwargs):
 def tickets(pdv_app):
     factory, client, customer = pdv_app
     with factory() as db:
-        Base.metadata.create_all(db.get_bind(), tables=[PrintDevice.__table__, PrintJob.__table__, AssistantMessage.__table__])
+        Base.metadata.create_all(db.get_bind(), tables=[PrintDevice.__table__, PrintJob.__table__, AssistantMessage.__table__, WhatsAppMedia.__table__])
     client.app.include_router(printing.router, prefix='/api/printing')
     return factory, client, customer
 

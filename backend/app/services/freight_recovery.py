@@ -59,14 +59,15 @@ def notify(db, row, state):
     from .assistant_channels import authorized_identity
     from .assistant_controls import InteractiveReply, button
     from .assistant_freight import quote_preview
-    from ..config import settings
+    from .freight_labels import MEDIA_CHANNELS, _destination_allowed
     message = source_message(db, row)
     if not message:
-        message = db.query(AssistantMessage).filter_by(user_id=row.user_id, channel='telegram', should_reply=True).order_by(AssistantMessage.created_at.desc()).first()
-    if not message or message.channel != 'telegram' or message.conversation_id.split(':')[0] != settings.TELEGRAM_GROUP_ID: return
-    identity = authorized_identity(db, 'telegram', message.sender_id)
+        message = db.query(AssistantMessage).filter(AssistantMessage.user_id==row.user_id,
+            AssistantMessage.channel.in_(MEDIA_CHANNELS),AssistantMessage.should_reply.is_(True)).order_by(AssistantMessage.created_at.desc()).first()
+    if not message or not _destination_allowed(db,message.channel,message.conversation_id,message.sender_id): return
+    identity = authorized_identity(db, message.channel, message.sender_id)
     if not identity or identity.user_id != row.user_id or not identity.can_register: return
-    row.notify_channel='telegram';row.notify_destination=message.conversation_id
+    row.notify_channel=message.channel;row.notify_destination=message.conversation_id
     if state in ('released','posted','delivered'):
         # The existing PDF worker delivers the document with its supported
         # freight-pdf event; recovery only supplies its authorized destination.
@@ -86,7 +87,7 @@ def notify(db, row, state):
     else:
         prefix = 'Não foi possível concluir automaticamente a solicitação SuperFrete.\n'
         reply = row.error or 'Confira o frete no gestor; não repita um pagamento incerto.'
-    db.add(AssistantDelivery(event_key=event, channel='telegram', destination=message.conversation_id,
+    db.add(AssistantDelivery(event_key=event, channel=message.channel, destination=message.conversation_id,
         user_id=row.user_id, text=prefix+str(reply), reply_markup=getattr(reply,'reply_markup',None),
         expires_at=utcnow()+timedelta(hours=24)))
 

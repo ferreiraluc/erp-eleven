@@ -33,8 +33,12 @@ def delivery_rejection(db, delivery):
     generation/delivery timestamp. Operational notifications have their own
     provenance and must not be classified by searching their text.
     """
-    if delivery.channel not in ("telegram", "whatsapp"):
+    if delivery.channel not in ("telegram", "whatsapp", "whatsapp_web"):
         return "delivery_channel_invalid"
+    if delivery.channel == "whatsapp_web":
+        from .assistant_whatsapp_bridge import conversation_allowed
+        if not conversation_allowed(db, delivery.destination):
+            return "delivery_group_changed"
     if delivery.channel == "telegram" and (
         not settings.TELEGRAM_GROUP_ID
         or delivery.destination.split(":")[0] != settings.TELEGRAM_GROUP_ID
@@ -46,6 +50,13 @@ def delivery_rejection(db, delivery):
         if (delivery.channel == "telegram" and delivery.destination == settings.TELEGRAM_GROUP_ID
                 and not delivery.event_key.startswith(("reply:", "freight-"))):
             return None
+        if delivery.channel == "whatsapp_web":
+            from .assistant_whatsapp_bridge import bridge_config, GROUP
+            config = bridge_config(db)
+            if (config and config.notify_tracking and GROUP.fullmatch(delivery.destination)
+                    and delivery.destination in config.allowed_groups
+                    and delivery.event_key.startswith("tracking:whatsapp_web:" + delivery.destination + ":")):
+                return None
         return "delivery_author_missing"
     user = db.get(Usuario, delivery.user_id)
     if not user or not user.ativo or getattr(user.role, "value", user.role) not in ("ADMIN", "GERENTE", "VENDEDOR"):
@@ -59,6 +70,8 @@ def delivery_rejection(db, delivery):
             return "delivery_source_changed"
         if delivery.channel == "whatsapp" and source.sender_id != delivery.destination:
             return "delivery_source_changed"
+        if delivery.channel == "whatsapp_web" and not conversation_allowed(db, delivery.destination, source.sender_id):
+            return "delivery_source_changed"
         if not _same_identity(db, source, delivery.user_id):
             return "delivery_identity_changed"
         cutoff = sales_context_since(db, user)
@@ -69,7 +82,7 @@ def delivery_rejection(db, delivery):
     freight, recovery = _FREIGHT.fullmatch(delivery.event_key), _RECOVERY.fullmatch(delivery.event_key)
     if not freight and not recovery:
         return "delivery_source_missing"
-    if delivery.channel != "telegram" or getattr(user.role, "value", user.role) not in ("ADMIN", "GERENTE"):
+    if delivery.channel not in ("telegram", "whatsapp_web") or getattr(user.role, "value", user.role) not in ("ADMIN", "GERENTE"):
         return "delivery_user_ineligible"
     from ..models.address_book import FreightOrder
     order = db.get(FreightOrder, uuid.UUID(freight[2] if freight else recovery[1]))
@@ -94,16 +107,25 @@ def delivery_rejection(db, delivery):
                 or source.conversation_id != delivery.destination
                 or not _same_identity(db, source, delivery.user_id, can_register=bool(recovery))):
             return "delivery_identity_changed"
+        if delivery.channel == "whatsapp_web" and not conversation_allowed(db, delivery.destination, source.sender_id):
+            return "delivery_identity_changed"
     else:
         # Purchases started in the frontend may not have an originating bot
         # message. Keep the existing linked-employee notification contract.
         identities = db.query(AssistantIdentity.id).filter_by(
-            user_id=delivery.user_id, channel="telegram", active=True,
+            user_id=delivery.user_id, channel=delivery.channel, active=True,
         )
         if recovery:
             identities = identities.filter(AssistantIdentity.can_register.is_(True))
         if not identities.first():
             return "delivery_identity_changed"
+        if delivery.channel == "whatsapp_web":
+            current = db.query(AssistantIdentity).filter_by(user_id=delivery.user_id, channel=delivery.channel, active=True).all()
+            if not any(authorized_identity(db, delivery.channel, identity.external_id)
+                       and (not recovery or identity.can_register)
+                       and conversation_allowed(db, delivery.destination, identity.external_id)
+                       for identity in current):
+                return "delivery_identity_changed"
     return None
 
 

@@ -4393,5 +4393,220 @@
   "Excluir folga": {"pt": "Excluir folga", "es": "Eliminar descanso", "en": "Delete time off"},
   "Remover arquivo": {"pt": "Remover arquivo", "es": "Quitar archivo", "en": "Remove file"},
   "Excluir venda": {"pt": "Excluir venda", "es": "Eliminar venta", "en": "Delete sale"},
-  "Editar venda": {"pt": "Editar venda", "es": "Editar venta", "en": "Edit sale"}
+  "Editar venda": {"pt": "Editar venda", "es": "Editar venta", "en": "Edit sale"},
+  "A credencial conecta o agente ao ERP. Salve-a no ambiente protegido do serviço; ela não substitui o vínculo do WhatsApp por QR Code.": {
+    "pt": "A credencial conecta o agente ao ERP. Salve-a no ambiente protegido do serviço; ela não substitui o vínculo do WhatsApp por QR Code.",
+    "es": "La credencial conecta el agente al ERP. Guárdela en el entorno protegido del servicio; no sustituye la vinculación de WhatsApp por QR.",
+    "en": "The credential connects the agent to the ERP. Store it in the service’s protected environment; it does not replace WhatsApp QR pairing."
+  },
+  "Agente sem contato recente": {
+    "pt": "Agente sem contato recente",
+    "es": "Agente sin contacto reciente",
+    "en": "Agent has not connected recently"
+  },
+  "Aguardando QR Code do agente. Se o número já estiver conectado, não é necessário vinculá-lo novamente.": {
+    "pt": "Aguardando QR Code do agente. Se o número já estiver conectado, não é necessário vinculá-lo novamente.",
+    "es": "Esperando el QR del agente. Si el número ya está conectado, no necesita vincularlo nuevamente.",
+    "en": "Waiting for the agent’s QR code. If the number is already connected, you do not need to pair it again."
+  },
+  "Aguardando conexão": {
+    "pt": "Aguardando conexão",
+    "es": "Esperando conexión",
+    "en": "Waiting for connection"
+  },
+  "Aguardando vínculo": {
+    "pt": "Aguardando vínculo",
+    "es": "Esperando vinculación",
+    "en": "Waiting for pairing"
+  },
+  "Avisar sobre novos rastreios nos grupos autorizados": {
+    "pt": "Avisar sobre novos rastreios nos grupos autorizados",
+    "es": "Avisar de nuevos seguimientos en los grupos autorizados",
+    "en": "Notify authorized groups about new shipments"
+  },
+  "Carregando conexão…": {
+    "pt": "Carregando conexão…",
+    "es": "Cargando conexión…",
+    "en": "Loading connection…"
+  },
+  "Com o agente da nuvem configurado, abra WhatsApp → Aparelhos conectados → Conectar um aparelho e leia o QR Code abaixo.": {
+    "pt": "Com o agente da nuvem configurado, abra WhatsApp → Aparelhos conectados → Conectar um aparelho e leia o QR Code abaixo.",
+    "es": "Con el agente en la nube configurado, abra WhatsApp → Dispositivos vinculados → Vincular un dispositivo y escanee el QR de abajo.",
+    "en": "Once the cloud agent is configured, open WhatsApp → Linked devices → Link a device and scan the QR code below."
+  },
+  "Conectado": {
+    "pt": "Conectado",
+    "es": "Conectado",
+    "en": "Connected"
+  },
+  "Conectando…": {
+    "pt": "Conectando…",
+    "es": "Conectando…",
+    "en": "Connecting…"
+  },
+  "Conexão independente pela sessão do WhatsApp Web. Pode exigir novo vínculo ou ser interrompida pelo WhatsApp. Use preferencialmente um número dedicado à equipe. Só os funcionários vinculados abaixo recebem acesso ao ERP.": {
+    "pt": "Conexão independente pela sessão do WhatsApp Web. Pode exigir novo vínculo ou ser interrompida pelo WhatsApp. Use preferencialmente um número dedicado à equipe. Só os funcionários vinculados abaixo recebem acesso ao ERP.",
+    "es": "Conexión independiente mediante WhatsApp Web. Puede requerir una nueva vinculación o ser interrumpida por WhatsApp. Se recomienda un número dedicado al equipo. Solo los empleados vinculados abajo reciben acceso al ERP.",
+    "en": "Independent connection through WhatsApp Web. WhatsApp may interrupt it or require pairing again. A dedicated team number is recommended. Only employees linked below receive ERP access."
+  },
+  "Configuração do agente na nuvem": {
+    "pt": "Configuração do agente na nuvem",
+    "es": "Configuración del agente en la nube",
+    "en": "Cloud agent setup"
+  },
+  "Credencial do agente": {
+    "pt": "Credencial do agente",
+    "es": "Credencial del agente",
+    "en": "Agent credential"
+  },
+  "Credencial exibida somente agora": {
+    "pt": "Credencial exibida somente agora",
+    "es": "Credencial visible solo ahora",
+    "en": "Credential shown only now"
+  },
+  "Este código é temporário e aparece somente para o administrador. Não compartilhe a imagem.": {
+    "pt": "Este código é temporário e aparece somente para o administrador. Não compartilhe a imagem.",
+    "es": "Este código es temporal y solo aparece para el administrador. No comparta la imagen.",
+    "en": "This code is temporary and visible only to the administrator. Do not share the image."
+  },
+  "Gerar credencial": {
+    "pt": "Gerar credencial",
+    "es": "Generar credencial",
+    "en": "Generate credential"
+  },
+  "Grupos autorizados": {
+    "pt": "Grupos autorizados",
+    "es": "Grupos autorizados",
+    "en": "Authorized groups"
+  },
+  "Habilitar WhatsApp da equipe": {
+    "pt": "Habilitar WhatsApp da equipe",
+    "es": "Habilitar WhatsApp del equipo",
+    "en": "Enable team WhatsApp"
+  },
+  "Menções, respostas ao bot ou /eleven": {
+    "pt": "Menções, respostas ao bot ou /eleven",
+    "es": "Menciones, respuestas al bot o /eleven",
+    "en": "Mentions, replies to the bot or /eleven"
+  },
+  "Mostrar QR Code": {
+    "pt": "Mostrar QR Code",
+    "es": "Mostrar código QR",
+    "en": "Show QR code"
+  },
+  "Nenhum grupo encontrado. Nenhum grupo está autorizado por padrão.": {
+    "pt": "Nenhum grupo encontrado. Nenhum grupo está autorizado por padrão.",
+    "es": "No se encontraron grupos. Ningún grupo está autorizado por defecto.",
+    "en": "No groups found. No groups are authorized by default."
+  },
+  "Nos grupos, responder a": {
+    "pt": "Nos grupos, responder a",
+    "es": "En los grupos, responder a",
+    "en": "In groups, respond to"
+  },
+  "Novo vínculo solicitado. Aguarde o agente preparar o QR Code.": {
+    "pt": "Novo vínculo solicitado. Aguarde o agente preparar o QR Code.",
+    "es": "Nueva vinculación solicitada. Espere a que el agente prepare el QR.",
+    "en": "New pairing requested. Wait for the agent to prepare the QR code."
+  },
+  "Não foi possível atualizar a conexão do WhatsApp.": {
+    "pt": "Não foi possível atualizar a conexão do WhatsApp.",
+    "es": "No se pudo actualizar la conexión de WhatsApp.",
+    "en": "Could not update the WhatsApp connection."
+  },
+  "O mesmo assistente do ERP, com acesso individual e grupos autorizados.": {
+    "pt": "O mesmo assistente do ERP, com acesso individual e grupos autorizados.",
+    "es": "El mismo asistente del ERP, con acceso individual y grupos autorizados.",
+    "en": "The same ERP assistant, with individual access and authorized groups."
+  },
+  "Ocultar QR Code": {
+    "pt": "Ocultar QR Code",
+    "es": "Ocultar código QR",
+    "en": "Hide QR code"
+  },
+  "Permitir conversas individuais com funcionários autorizados": {
+    "pt": "Permitir conversas individuais com funcionários autorizados",
+    "es": "Permitir conversaciones individuales con empleados autorizados",
+    "en": "Allow direct conversations with authorized employees"
+  },
+  "Preparar novo vínculo": {
+    "pt": "Preparar novo vínculo",
+    "es": "Preparar nueva vinculación",
+    "en": "Prepare new pairing"
+  },
+  "QR Code para vincular o WhatsApp da equipe": {
+    "pt": "QR Code para vincular o WhatsApp da equipe",
+    "es": "Código QR para vincular el WhatsApp del equipo",
+    "en": "QR code to pair team WhatsApp"
+  },
+  "Quando responder nos grupos": {
+    "pt": "Quando responder nos grupos",
+    "es": "Cuándo responder en grupos",
+    "en": "When to respond in groups"
+  },
+  "Quero substituir a credencial atual; o agente precisará receber a nova.": {
+    "pt": "Quero substituir a credencial atual; o agente precisará receber a nova.",
+    "es": "Quiero sustituir la credencial actual; el agente necesitará la nueva.",
+    "en": "I want to replace the current credential; the agent will need the new one."
+  },
+  "Quero vincular o número novamente por QR Code": {
+    "pt": "Quero vincular o número novamente por QR Code",
+    "es": "Quiero vincular el número nuevamente mediante QR",
+    "en": "I want to pair the number again using a QR code"
+  },
+  "Reconectando…": {
+    "pt": "Reconectando…",
+    "es": "Reconectando…",
+    "en": "Reconnecting…"
+  },
+  "Refazer vínculo do WhatsApp": {
+    "pt": "Refazer vínculo do WhatsApp",
+    "es": "Volver a vincular WhatsApp",
+    "en": "Pair WhatsApp again"
+  },
+  "Salvar configuração": {
+    "pt": "Salvar configuração",
+    "es": "Guardar configuración",
+    "en": "Save configuration"
+  },
+  "Substituir credencial": {
+    "pt": "Substituir credencial",
+    "es": "Sustituir credencial",
+    "en": "Replace credential"
+  },
+  "Todas as mensagens de funcionários autorizados": {
+    "pt": "Todas as mensagens de funcionários autorizados",
+    "es": "Todos los mensajes de empleados autorizados",
+    "en": "All messages from authorized employees"
+  },
+  "Use se o WhatsApp desconectou o aparelho ou se deseja trocar o número do bot. A sessão atual do agente será substituída, preservando as filas e o histórico do ERP.": {
+    "pt": "Use se o WhatsApp desconectou o aparelho ou se deseja trocar o número do bot. A sessão atual do agente será substituída, preservando as filas e o histórico do ERP.",
+    "es": "Use esta opción si WhatsApp desconectó el dispositivo o desea cambiar el número del bot. Se sustituirá la sesión actual del agente, conservando las colas y el historial del ERP.",
+    "en": "Use this if WhatsApp disconnected the device or you want to change the bot’s number. The agent’s current session will be replaced, preserving queues and ERP history."
+  },
+  "Vincular o número": {
+    "pt": "Vincular o número",
+    "es": "Vincular el número",
+    "en": "Pair the number"
+  },
+  "Vincule o número e adicione-o ao grupo. Depois, atualize esta lista para liberar o grupo. Todos os membros poderão ler as respostas publicadas nele.": {
+    "pt": "Vincule o número e adicione-o ao grupo. Depois, atualize esta lista para liberar o grupo. Todos os membros poderão ler as respostas publicadas nele.",
+    "es": "Vincule el número y agréguelo al grupo. Luego actualice esta lista para autorizar el grupo. Todos los miembros podrán leer las respuestas publicadas allí.",
+    "en": "Pair the number and add it to the group. Then refresh this list to authorize the group. All members will be able to read replies posted there."
+  },
+  "Vincule o número novamente": {
+    "pt": "Vincule o número novamente",
+    "es": "Vuelva a vincular el número",
+    "en": "Pair the number again"
+  },
+  "WhatsApp conectado. Confira os funcionários e os grupos autorizados.": {
+    "pt": "WhatsApp conectado. Confira os funcionários e os grupos autorizados.",
+    "es": "WhatsApp conectado. Revise los empleados y grupos autorizados.",
+    "en": "WhatsApp connected. Review authorized employees and groups."
+  },
+  "WhatsApp da equipe": {
+    "pt": "WhatsApp da equipe",
+    "es": "WhatsApp del equipo",
+    "en": "Team WhatsApp"
+  }
 }

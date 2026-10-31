@@ -83,7 +83,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
 
 
 class IdentityInput(BaseModel):
-    channel: Literal["whatsapp", "telegram"]
+    channel: Literal["whatsapp", "whatsapp_web", "telegram"]
     external_id: str = Field(min_length=1, max_length=100)
     user_id: UUID
     active: bool = True
@@ -92,7 +92,7 @@ class IdentityInput(BaseModel):
     @model_validator(mode="after")
     def validate_external_id(self):
         import re
-        pattern = r"whatsapp:\+[1-9][0-9]{6,14}" if self.channel == "whatsapp" else r"[1-9][0-9]{0,19}"
+        pattern = r"whatsapp:\+[1-9][0-9]{6,14}" if self.channel in ("whatsapp", "whatsapp_web") else r"[1-9][0-9]{0,19}"
         if not re.fullmatch(pattern, self.external_id):
             raise ValueError("Use whatsapp:+DDINUMERO ou o ID numérico do usuário Telegram")
         return self

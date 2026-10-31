@@ -67,7 +67,11 @@ solicitação está em andamento. O estado exibido muda após a resposta do serv
 
 Telegram em grupo é o canal operacional atual. WhatsApp 1:1 via Twilio tem adaptador
 e flags próprias; conta/remetente ainda dependem da habilitação externa. Meta direta
-foi investigada, mas não foi implementada. Não há bot em grupo WhatsApp neste código.
+foi investigada, mas não foi implementada. A ponte opcional `whatsapp_web` permite
+conversas individuais e grupos internos explicitamente autorizados, com identidade
+por telefone vinculada ao ERP. Ela nasce desabilitada e exige worker com disco
+persistente e vínculo por QR Code. Não é API oficial nem atendimento público;
+veja [capacidades, instalação e limitações](WHATSAPP_EQUIPE.md).
 
 O bot prioriza envios em trânsito ao pedir rastreio de um cliente; entregues exigem
 pedido de histórico. Cada código de um destinatário identificado é enviado sozinho,
