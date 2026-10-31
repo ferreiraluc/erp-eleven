@@ -1,0 +1,9 @@
+{
+  "name": "eleven-whatsapp-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": { "start": "node src/main.mjs", "test": "node --test test/*.test.mjs", "check": "node --check src/main.mjs && node --check src/agent.mjs && node --check src/store.mjs && node --check src/protocol.mjs" },
+  "dependencies": { "@whiskeysockets/baileys": "7.0.0-rc14", "pino": "9.14.0" }
+}

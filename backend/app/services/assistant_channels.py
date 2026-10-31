@@ -25,11 +25,16 @@ class Incoming:
     attachment: dict | None = None
 
 
-def enabled_channels():
-    return [channel for channel, enabled in (
+def enabled_channels(db=None):
+    channels = [channel for channel, enabled in (
         ("telegram", settings.ASSISTANT_TELEGRAM_ENABLED),
         ("whatsapp", settings.ASSISTANT_WHATSAPP_ENABLED),
     ) if enabled]
+    if db is not None:
+        from .assistant_whatsapp_bridge import bridge_enabled
+        if bridge_enabled(db):
+            channels.append("whatsapp_web")
+    return channels
 
 
 def telegram_message(update):
@@ -147,7 +152,7 @@ def authorized_identity(db, channel, external_id):
 def enqueue_incoming(db, incoming):
     if incoming is None:
         return "ignored"
-    if incoming.channel not in enabled_channels():
+    if incoming.channel not in enabled_channels(db):
         return "paused"
     identity = authorized_identity(db, incoming.channel, incoming.sender_id)
     if not identity:

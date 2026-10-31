@@ -7,8 +7,14 @@ O frontend usa Vue 3, TypeScript, Vite, Pinia, Axios e CSS por componente/Tailwi
 O backend usa FastAPI, SQLAlchemy 2, Alembic e Pydantic 2. As versões concretas ficam
 em `requirements*.txt` e `frontend/package-lock.json`.
 
-Não há instalação npm na raiz: todos os comandos Node pertencem a `frontend/`.
+Não há instalação npm na raiz. O frontend usa `frontend/`; a ponte opcional
+WhatsApp usa `tools/eleven-whatsapp-agent/`, com Node 24 e lockfile próprios.
 Use `npm ci --include=dev` para reproduzir o lockfile e incluir verificadores.
+
+Para a ponte WhatsApp: `npm --prefix tools/eleven-whatsapp-agent ci --ignore-scripts`,
+`npm --prefix tools/eleven-whatsapp-agent test` e
+`npm --prefix tools/eleven-whatsapp-agent audit --omit=dev --audit-level=high`.
+Os testes não vinculam números nem enviam mensagens reais.
 
 ## Banco e primeira execução
 

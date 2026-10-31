@@ -1,12 +1,23 @@
 # Fluxos operacionais do assistente
 
-Atualização de 05/10/2026, conforme os fluxos implementados e testes isolados.
+Atualização de 30/10/2026, conforme os fluxos implementados e testes isolados.
+
+Telegram e WhatsApp Web para a equipe reutilizam as mesmas ferramentas, vínculos
+de usuário e confirmações. A conexão WhatsApp por QR, grupos autorizados e limites
+estão descritos em [WhatsApp da equipe](WHATSAPP_EQUIPE.md). O canal Twilio anterior
+permanece separado. A nova conexão não ativa nem migra números automaticamente.
 
 ## Rastreios de clientes
 
 “Manda o rastreio do Taigoro” consulta os envios em trânsito. Se não houver, procura pendentes ou falhas de consulta, identificando o estado real. Entregues não entram nessa resposta; precisam de solicitação explícita de histórico, período ou código específico. Nomes diferentes em entregas antigas não criam ambiguidade sobre um único envio atual.
 
 Um destinatário identificado recebe cada código em uma mensagem isolada, seguido pelos detalhes do ERP em outra mensagem. Vários pacotes atuais do mesmo cliente recebem pares separados; homônimos atuais continuam exigindo identificação. Listagens gerais mantêm datas, paginação e totais. As consultas não atualizam o rastreio nos Correios: exibem os dados atuais salvos no ERP.
+
+Avisos automáticos de novos rastreios no WhatsApp exigem ativação explícita no
+painel e só alcançam os grupos autorizados. O código é enviado primeiro, isolado;
+os detalhes dependem da aceitação desse envio. Alterar apenas o status de um
+rastreio não gera outro aviso de cadastro. Os avisos existentes do Telegram são
+preservados.
 
 ## Contexto e etiquetas
 
@@ -29,7 +40,14 @@ prévia de pagamento, esse pedido não autoriza pagar ou emitir outra etiqueta.
 
 ## Comprovantes dos Correios em foto
 
-Envie uma foto/JPG/PNG com “Cadastre os rastreios deste comprovante”. O bot lê os códigos e destinatários legíveis, valida o dígito verificador e mostra prévia com botão de confirmação. Não cadastra só por receber a imagem, não inventa caracteres e não duplica códigos existentes. Vínculos de pedido são sugestões explícitas na prévia, revalidadas ao confirmar. A foto não é arquivada no ERP; esta leitura usa o provedor de visão configurado (DeepSeek ou Anthropic). Veja os limites, privacidade e operação em [Rastreios por comprovante](RASTREIOS_COMPROVANTES.md).
+Envie uma foto/JPG/PNG com “Cadastre os rastreios deste comprovante” no Telegram ou
+WhatsApp Web conectado. O bot lê os códigos e destinatários legíveis, valida o
+dígito verificador e mostra prévia para confirmação. Não cadastra só por receber a
+imagem, não inventa caracteres e não duplica códigos existentes. Vínculos de pedido
+são sugestões explícitas na prévia, revalidadas ao confirmar. No WhatsApp, a imagem
+fica temporariamente protegida por até 24 horas e é apagada ao preparar a prévia;
+esta leitura usa o provedor de visão configurado (DeepSeek ou Anthropic). Veja os
+limites, privacidade e operação em [Rastreios por comprovante](RASTREIOS_COMPROVANTES.md).
 
 ## Produtos e entradas de estoque
 
@@ -44,13 +62,30 @@ O filtro `nao_informado` consulta o local escolhido (total, loja ou depósito).
 A confirmação de entrada é recusada se algum saldo do produto estiver ausente;
 consulte **Estoque → Conferir estoque** para identificar os campos a revisar.
 
-## Ponte de PDF sem arquivo no ERP
+## Ponte de PDF com referência temporária
 
-Envie um PDF ao Telegram com “imprima este PDF”, ou envie o arquivo e depois peça a impressão. O bot mostra quantidade de páginas e botão de confirmação. Não exige endereço, cliente nem emissão SuperFrete. Limites: 5 MB, 1 a 30 páginas, sem senha. Outros formatos devem ser exportados para PDF.
+Envie um PDF ao Telegram ou WhatsApp Web conectado com “imprima este PDF”, ou envie
+o arquivo e depois peça a impressão. O bot mostra quantidade de páginas e exige
+confirmação. Não exige endereço, cliente nem emissão SuperFrete. Limites: 5 MB,
+1 a 30 páginas, sem senha. Outros formatos devem ser exportados para PDF.
 
-O servidor baixa o PDF apenas em memória para validar e calcular a assinatura. Não extrai texto, não envia conteúdo à IA, não grava bytes do documento no banco/disco e não cria cadastro ou arquivo no histórico de endereços. O nome original também não é preservado.
+O PDF não é enviado à IA, não tem seu texto extraído e não cria cadastro nem arquivo
+no histórico de endereços. O nome original não é preservado. No Telegram o servidor
+baixa o arquivo apenas em memória; conserva somente a referência de download.
+No WhatsApp a ponte transfere os bytes autenticados para armazenamento temporário
+no banco: até 24 horas desde o recebimento, 25 MB por usuário e 100 MB no total.
+São aceitos somente PDF validado e JPG/PNG; não são aceitas URLs ou caminhos locais.
 
-Até a confirmação existe apenas uma referência técnica temporária ao anexo Telegram. Na confirmação, a referência vai para a fila por até 24 horas. O agente Windows pede o documento usando sua credencial atual; o servidor busca os mesmos bytes em memória, confere a assinatura e os encaminha. O computador usa um PDF temporário para o Sumatra, removido após o processamento e confirmação ao ERP. A referência no servidor é removida ao receber resultado, cancelar ou expirar; ficam somente estados/IDs técnicos para evitar impressão duplicada. O documento original continua no Telegram conforme as regras desse canal.
+Na confirmação, a referência técnica vai para a fila por até 24 horas. O WhatsApp
+preserva o vencimento original do anexo: confirmar depois não renova a retenção.
+O agente Windows pede o documento usando sua credencial atual; o servidor confere
+autor, conversa e assinatura dos mesmos bytes aprovados antes de encaminhá-los.
+O computador usa um PDF temporário para o Sumatra, removido após o processamento e
+confirmação ao ERP. A referência da fila é removida ao receber resultado, cancelar
+ou expirar. Bytes temporários do WhatsApp são limpos ao vencer; nunca entram no
+histórico de conversa enviado à IA. Estados/IDs técnicos ficam para evitar impressão
+duplicada. O documento original permanece no aplicativo de mensagens conforme as
+regras do canal.
 
 O bot não confirma a saída física do papel. O Windows precisa estar ligado, conectado e com Eleven Impressão aberto. Não é necessário reinstalar o agente para este fluxo. Quando a conexão cai durante o processamento, a limpeza local ocorre na retomada do agente.
 

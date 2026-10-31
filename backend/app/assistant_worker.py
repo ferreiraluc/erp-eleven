@@ -43,15 +43,18 @@ def process_inbox():
                 and_(previous.created_at == AssistantMessage.created_at, previous.id < AssistantMessage.id)),
         ).exists()
         message = db.query(AssistantMessage).filter(
-            AssistantMessage.channel.in_(enabled_channels()),
+            AssistantMessage.channel.in_(enabled_channels(db)),
             AssistantMessage.status == "pending", AssistantMessage.available_at <= utcnow(),
             ~earlier_pending,
         ).order_by(AssistantMessage.created_at, AssistantMessage.id).with_for_update(skip_locked=True).first()
         if not message:
             return False
+        from .services.assistant_whatsapp_bridge import conversation_allowed
         identity = authorized_identity(db, message.channel, message.sender_id)
         if not identity or identity.user_id != message.user_id or (
             message.channel == "telegram" and message.conversation_id.split(":")[0] != settings.TELEGRAM_GROUP_ID
+        ) or (
+            message.channel == "whatsapp_web" and not conversation_allowed(db, message.conversation_id, message.sender_id)
         ):
             message.status = "rejected"
             db.commit()
@@ -68,6 +71,10 @@ def process_inbox():
                     predecessor = None
                     from .services.assistant_replies import text_reply
                     reply_parts=getattr(answer,'parts',None) or text_reply(str(answer),message.channel).parts
+                    if message.channel == 'whatsapp_web' and getattr(answer, 'document_url', None):
+                        # WhatsApp document captions are bounded. Preserve the complete
+                        # explanation/confirmation in ordered messages after the PDF.
+                        reply_parts = ['Documento do ERP.', *reply_parts]
                     for index, part in enumerate(reply_parts):
                         delivery_id = uuid.uuid4()
                         db.add(AssistantDelivery(
@@ -75,7 +82,7 @@ def process_inbox():
                             event_key=f"reply:{message.id}" + (f":{index}" if index else ""), channel=message.channel,
                             destination=message.conversation_id, text=part, user_id=message.user_id,
                             document_url=getattr(answer,"document_url",None) if index==0 else None,
-                            reply_markup=getattr(answer,"reply_markup",None) if index==len(reply_parts)-1 and message.channel=='telegram' else None,
+                            reply_markup=getattr(answer,"reply_markup",None) if index==len(reply_parts)-1 and message.channel in ('telegram', 'whatsapp_web') else None,
                             expires_at=message.created_at + timedelta(hours=23) if message.channel == "whatsapp" else None,
                         ))
                         db.flush()  # persist predecessor before its FK-dependent message
@@ -100,6 +107,7 @@ def process_outbox():
             return False
         # A crashed worker may have sent a message but not saved its external ID.
         db.query(AssistantDelivery).filter(
+            AssistantDelivery.channel != "whatsapp_web",
             AssistantDelivery.status == "sending",
             AssistantDelivery.available_at < utcnow() - timedelta(minutes=5),
         ).update({"status": "uncertain", "error_code": "interrupted_send"}, synchronize_session=False)

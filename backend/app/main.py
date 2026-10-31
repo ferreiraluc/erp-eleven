@@ -15,6 +15,7 @@ from .logging_config import setup_logging, get_logger
 from .database import engine, Base, SessionLocal
 from .config import settings
 from .api.endpoints import assistant, printing, inventory_labels, inventory_replenishment, address_manager, freight, sales_bi, sales_bi_entries
+from .api.endpoints import assistant_whatsapp_bridge
 from .services import assistant_events  # register atomic tracking outbox listener
 from .api.endpoints import user_admin, product_photo
 from .services import user_audit
@@ -203,6 +204,7 @@ app.include_router(ocr.router, prefix="/api/ocr", tags=["ocr"])
 app.include_router(product_photo.router, prefix="/api/product-photo", tags=["Product photo"])
 app.include_router(pdv.router, prefix="/api/pdv", tags=["pdv"])
 app.include_router(assistant.router, prefix="/api/assistant", tags=["assistant"])
+app.include_router(assistant_whatsapp_bridge.router, prefix="/api/assistant/whatsapp-bridge", tags=["assistant"])
 app.include_router(freight.router, prefix='/api/freight', tags=['freight'])
 app.include_router(address_manager.router, prefix='/api/address-manager', tags=['address-manager'])
 app.include_router(printing.router, prefix="/api/printing", tags=["printing"])

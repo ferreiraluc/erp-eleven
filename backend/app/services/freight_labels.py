@@ -13,6 +13,17 @@ from . import superfrete as sf
 
 logger = logging.getLogger('freight_labels')
 PAID = ('released','posted','delivered')
+MEDIA_CHANNELS = ('telegram', 'whatsapp_web')
+
+
+def _destination_allowed(db, channel, destination, sender_id=None):
+    if channel == 'telegram':
+        from ..config import settings
+        return bool(destination and settings.TELEGRAM_GROUP_ID and destination.split(':')[0] == settings.TELEGRAM_GROUP_ID)
+    if channel == 'whatsapp_web':
+        from .assistant_whatsapp_bridge import conversation_allowed
+        return conversation_allowed(db, destination, sender_id=sender_id)
+    return False
 
 
 def watch_label(db, row, *, auto_print=False, device_id=None, message=None):
@@ -28,8 +39,10 @@ def watch_label(db, row, *, auto_print=False, device_id=None, message=None):
             if len(devices) == 1:row.print_device_id = devices[0].id
     # Frontend purchases by a connected employee use their existing company conversation.
     if message is None and not row.notify_destination:
-        message = db.query(AssistantMessage).filter_by(user_id=row.user_id, channel='telegram', should_reply=True).order_by(AssistantMessage.created_at.desc()).first()
-    if message and message.user_id == row.user_id and message.channel == 'telegram':
+        message = db.query(AssistantMessage).filter(AssistantMessage.user_id==row.user_id,
+            AssistantMessage.channel.in_(MEDIA_CHANNELS),AssistantMessage.should_reply.is_(True)).order_by(AssistantMessage.created_at.desc()).first()
+    if (message and message.user_id == row.user_id
+            and _destination_allowed(db,message.channel,message.conversation_id,message.sender_id)):
         row.notify_channel, row.notify_destination = message.channel, message.conversation_id
     if row.label_status != 'ready' or row.auto_print and not row.print_job_id:
         row.label_check_at = utcnow() + timedelta(seconds=15)
@@ -37,13 +50,12 @@ def watch_label(db, row, *, auto_print=False, device_id=None, message=None):
 
 
 def notify_pdf(db, row, printed):
-    from ..config import settings
     from .assistant_channels import authorized_identity
     from ..models.assistant import AssistantIdentity
-    if not row.notify_destination or row.notify_channel != 'telegram':return
-    if row.notify_destination.split(':')[0] != settings.TELEGRAM_GROUP_ID:return
-    identities = db.query(AssistantIdentity).filter_by(user_id=row.user_id, channel='telegram', active=True).all()
-    if not any(authorized_identity(db,'telegram',i.external_id) for i in identities):return
+    if not _destination_allowed(db,row.notify_channel,row.notify_destination):return
+    identities = db.query(AssistantIdentity).filter_by(user_id=row.user_id, channel=row.notify_channel, active=True).all()
+    if not any(authorized_identity(db,row.notify_channel,i.external_id)
+               and _destination_allowed(db,row.notify_channel,row.notify_destination,i.external_id) for i in identities):return
     event_key = 'freight-pdf:' + str(row.id)
     old = db.query(AssistantDelivery).filter_by(event_key=event_key).first()
     name = row.payload.get('to', {}).get('name', 'destinatário')
@@ -52,13 +64,13 @@ def notify_pdf(db, row, printed):
         if printed and 'fila de impressão' not in old.text:
             key = 'freight-printed:' + str(row.id)
             if not db.query(AssistantDelivery.id).filter_by(event_key=key).first():
-                db.add(AssistantDelivery(event_key=key, channel='telegram', destination=row.notify_destination,
+                db.add(AssistantDelivery(event_key=key, channel=row.notify_channel, destination=row.notify_destination,
                     text=f'Etiqueta de {name} enviada à fila de impressão da loja: uma cópia A4.', user_id=row.user_id))
         return
     text = f'Etiqueta de {name} disponível. O PDF também está no gestor de endereços do ERP.'
     if printed:text += '\nEnviada à fila de impressão da loja: uma cópia A4. Mantenha o Eleven Impressao aberto no Windows.'
     elif row.auto_print:text += '\nA impressão aguarda a impressora configurada no ERP. O gestor mostra o motivo.'
-    db.add(AssistantDelivery(event_key=event_key, channel='telegram', destination=row.notify_destination,
+    db.add(AssistantDelivery(event_key=event_key, channel=row.notify_channel, destination=row.notify_destination,
         text=text, user_id=row.user_id, document_pdf=row.label_pdf))
 
 
@@ -120,10 +132,10 @@ def process_label():
                 row.label_error = str(exc.detail)[:200] if isinstance(exc, HTTPException) else 'Falha temporária ao buscar o PDF; nova tentativa automática.'
                 if row.label_attempts >= 400:
                     row.label_status='failed';row.label_check_at=None
-                    if row.notify_destination and row.notify_channel=='telegram':
+                    if _destination_allowed(db,row.notify_channel,row.notify_destination):
                         event='freight-pdf-timeout:'+str(row.id)
                         if not db.query(AssistantDelivery.id).filter_by(event_key=event).first():
-                            db.add(AssistantDelivery(event_key=event,channel='telegram',destination=row.notify_destination,
+                            db.add(AssistantDelivery(event_key=event,channel=row.notify_channel,destination=row.notify_destination,
                                 user_id=row.user_id,text='A SuperFrete ainda não liberou uma etiqueta pendente. Confira o gestor de endereços; não pague novamente.'))
                 else:
                     row.label_check_at=utcnow()+timedelta(seconds=min(300,15*2**min(row.label_attempts,5)))

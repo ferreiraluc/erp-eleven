@@ -20,7 +20,8 @@ from app.database import Base, get_db
 from app.config import settings
 from app.models import Usuario, Cliente, Pedido, Rastreamento
 from app.models.usuario import UsuarioRole
-from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge, utcnow
+from app.models.assistant import AssistantIdentity, AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge, AssistantWhatsAppBridge, utcnow
+from app.models.assistant_whatsapp_media import WhatsAppMedia
 from app.models.vendedor import Vendedor
 from app.models.folga import Folga
 from app.models.inventory import Item
@@ -42,7 +43,7 @@ def sqlite_jsonb(element, compiler, **kwargs):
 def setup(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     tables = [m.__table__ for m in (Usuario, Cliente, Pedido, Rastreamento, AssistantIdentity,
-                                   AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge,
+                                   AssistantMessage, AssistantNote, AssistantDelivery, AssistantAction, AssistantKnowledge, AssistantWhatsAppBridge, WhatsAppMedia,
                                    Vendedor, Folga, Item, PdvCliente, PdvSale, Venda, ExchangeRate)]
     Base.metadata.create_all(engine, tables=tables)
     factory = sessionmaker(bind=engine, autoflush=False)

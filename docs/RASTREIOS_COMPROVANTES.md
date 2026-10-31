@@ -1,18 +1,20 @@
 # Cadastro de rastreios por foto do comprovante
 
-O Telegram aceita uma foto, JPG ou PNG de comprovante postal acompanhada de
+O Telegram e o WhatsApp Web conectado para a equipe aceitam uma foto, JPG ou PNG de comprovante postal acompanhada de
 “Cadastre os rastreios deste comprovante”. Também é possível enviar a foto e pedir
-o cadastro na mensagem seguinte, ou responder à própria foto. A foto isolada apenas
+o cadastro na mensagem seguinte. No Telegram, também é possível responder à própria foto. A foto isolada apenas
 recebe uma orientação; nada é cadastrado automaticamente.
 
-Se a mensagem trouxer uma foto ou documento novo, esse anexo tem prioridade sobre
+No Telegram, se a mensagem trouxer uma foto ou documento novo, esse anexo tem prioridade sobre
 o da mensagem respondida. O bot só reutiliza o anexo da resposta quando não há
 anexo atual, mantendo as restrições de autor, conversa e tópico. Isso evita gerar
 a prévia de um comprovante antigo ao enviar uma foto nova como resposta.
 
 ## Conferência e gravação
 
-1. O servidor baixa a foto em memória, valida o formato e remove metadados.
+1. O servidor valida o formato e remove metadados. No Telegram o download ocorre
+   em memória; no WhatsApp a ponte autenticada entrega a imagem para armazenamento
+   temporário protegido, vinculado ao autor e à conversa.
 2. O serviço de visão extrai até 20 códigos postais e, quando legíveis e associados
    ao objeto, destinatário, cidade e UF. Não extrai CPF, cartão, preço nem texto bruto.
 3. O backend verifica o formato de 13 caracteres e o dígito verificador S10. Não
@@ -44,14 +46,18 @@ conferido; o campo de código principal não é sobrescrito por cada novo pacote
 
 ## Operação e privacidade
 
-- Exige identidade Telegram vinculada, ativa, permissão `can_register` e perfil
+- Exige identidade do canal vinculada, ativa, permissão `can_register` e perfil
   ADMIN/GERENTE, igual às demais ações operacionais confirmadas do assistente.
 - Foto do próprio autor, na mesma conversa/tópico, recebida nas últimas 24 horas.
 - Até 5 MB, JPG/PNG estático, 32–8000 pixels por lado e até 20 megapixels.
-- A referência de download é removida após extrair uma prévia válida, ou pela limpeza
-  normal de anexos após 24 horas. Bytes da foto não são gravados no ERP/disco.
+- No Telegram, a referência de download é removida após extrair uma prévia válida
+  ou pela limpeza normal de anexos após 24 horas. Bytes da foto não são gravados.
+- No WhatsApp, os bytes normalizados ficam temporariamente no banco por até 24 horas
+  desde o recebimento; são apagados imediatamente após preparar a prévia. Há limites
+  de 25 MB por usuário e 100 MB globais, compartilhados com os PDFs temporários.
+  Anexos vencidos não podem ser lidos mesmo antes da próxima limpeza periódica.
 - A ação conserva apenas os dados mínimos propostos, IDs e resultado da confirmação.
-  O original continua no Telegram conforme as regras do canal.
+  O original continua no aplicativo de mensagens conforme as regras do canal.
 - A imagem é transmitida ao provedor configurado em `VISION_PROVIDER`. O padrão
   `auto` usa a chave DeepSeek existente e `DEEPSEEK_VISION_MODEL=deepseek-flash`;
   se não houver chave DeepSeek, usa Anthropic com `ANTHROPIC_API_KEY` e
@@ -66,12 +72,14 @@ conferido; o campo de código principal não é sobrescrito por cada novo pacote
 OCR pode falhar; checksum não prova que um pacote existe e não impede toda troca
 de caracteres. A conferência humana continua obrigatória. Foto borrada, códigos
 conflitantes ou lote parcialmente ilegível são recusados em conjunto; envie recortes
-mais nítidos. Não há interpretação de PDF, áudio, vídeo ou comprovante no WhatsApp
-neste fluxo; PDFs continuam pertencendo à ponte de impressão avulsa.
+mais nítidos. Não há interpretação de PDF, áudio ou vídeo neste fluxo; PDFs
+continuam pertencendo à ponte de impressão avulsa. O WhatsApp via Twilio antigo
+não recebe este suporte a anexos.
 
 Código: `services/receipt_vision.py` valida mídia/extração e `receipt_tracking.py`
-prepara/confirma o cadastro. Os adaptadores e botões usam as tabelas existentes de
-mensagens e ações; não há armazenamento novo de imagens. O vínculo de cliente usa
+prepara/confirma o cadastro. Os adaptadores e controles usam as tabelas existentes
+de mensagens e ações. `assistant_whatsapp_media` mantém apenas os anexos temporários
+autorizados da ponte WhatsApp. O vínculo de cliente usa
 o serviço comum `customer_links.validate_tracking_links`.
 
 ```sh

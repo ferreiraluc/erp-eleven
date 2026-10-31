@@ -72,9 +72,15 @@ class ReceiptExtraction(BaseModel):
     objetos: list[ReceiptObject] = Field(min_length=1, max_length=MAX_OBJECTS)
 
 
-def download_image(attachment):
+def download_image(attachment, *, db=None, user_id=None, conversation_id=None):
     if not is_image(attachment):
-        raise ReceiptError("Envie o comprovante como foto, JPG ou PNG no Telegram.")
+        raise ReceiptError("Envie o comprovante como foto JPG ou PNG nesta conversa.")
+    if attachment.get("provider") == "whatsapp_web":
+        from .assistant_whatsapp_media import read_media
+        try:
+            return read_media(db, attachment, user_id=user_id, conversation_id=conversation_id)
+        except ValueError as exc:
+            raise ReceiptError(str(exc)) from None
     size = attachment.get("size")
     if isinstance(size, int) and size > MAX_BYTES:
         raise ReceiptError("Envie uma foto do comprovante de até 5 MB.")

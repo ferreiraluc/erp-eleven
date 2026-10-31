@@ -44,6 +44,10 @@ acessíveis. São fluxos próprios, separados do BI; não foram removidos só po
 serem o caminho principal atual. O canal WhatsApp via Twilio está implementado,
 mas sua ativação depende da conta/remetente e das flags do ambiente. **Não existe
 conector Meta Cloud API direto neste repositório.**
+Há também uma ponte opcional de **WhatsApp da equipe**, sem Twilio, por sessão
+WhatsApp Web: usuários vinculados, grupos autorizados, fotos/PDFs e as mesmas
+confirmações do assistente. Ela exige um worker separado e vínculo por QR Code;
+nasce desabilitada. Veja [instalação e limitações](docs/WHATSAPP_EQUIPE.md).
 
 ## Fluxo principal
 

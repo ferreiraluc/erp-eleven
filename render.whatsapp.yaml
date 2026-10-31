@@ -1,0 +1,29 @@
+# Separate Blueprint: creates only the optional WhatsApp worker, never replaces ERP services.
+services:
+  - type: worker
+    runtime: node
+    name: eleven-whatsapp
+    repo: https://github.com/ferreiraluc/erp-eleven
+    branch: main
+    rootDir: tools/eleven-whatsapp-agent
+    region: oregon
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    buildCommand: npm ci --ignore-scripts && npm audit --omit=dev --audit-level=high && npm test
+    startCommand: node src/main.mjs
+    disk:
+      name: whatsapp-session
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: ELEVEN_ERP_URL
+        value: https://erp-eleven-backend.onrender.com
+      - key: ELEVEN_WHATSAPP_STATE_DIR
+        value: /var/data/eleven-whatsapp
+      - key: ELEVEN_WHATSAPP_TOKEN
+        sync: false

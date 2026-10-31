@@ -13,7 +13,7 @@ from app.database import Base
 from app.models import Usuario, Vendedor, Venda
 from app.models.access import AuditEvent, AuthSession
 from app.models.address_book import FreightOrder
-from app.models.assistant import AssistantDelivery, AssistantIdentity, AssistantMessage, utcnow
+from app.models.assistant import AssistantDelivery, AssistantIdentity, AssistantMessage, AssistantWhatsAppBridge, utcnow
 from app.models.usuario import UsuarioRole
 from app.models.venda import MoedaTipo, PagamentoMetodo
 from app.services.assistant_queries import SalesArgs, query_sales
@@ -420,7 +420,7 @@ def test_postgres_policy_and_recursive_pending_cancellation(pg, monkeypatch):
     engine, schema = pg
     isolated = sa.create_engine(engine.url, connect_args={"options": f"-csearch_path={schema}"})
     Base.metadata.create_all(isolated, tables=[m.__table__ for m in
-        (Usuario, Vendedor, AssistantIdentity, AssistantMessage, AssistantDelivery, AuditEvent)])
+        (Usuario, Vendedor, AssistantIdentity, AssistantMessage, AssistantDelivery, AuditEvent, AssistantWhatsAppBridge)])
     factory = sessionmaker(bind=isolated, autoflush=False)
     monkeypatch.setattr(settings, "TELEGRAM_GROUP_ID", "-100123")
     try:
