@@ -5,17 +5,16 @@ PDV sales only; order values, BI rows and fiado balances never become revenue he
 """
 from datetime import timezone
 
-from sqlalchemy import case, func, select
-from sqlalchemy.orm import aliased
+from sqlalchemy import case, func
 
 from ..config import settings
-from ..models.address_book import SavedAddress
 from ..models.cliente import Cliente
 from ..models.pdv import PdvCliente, PdvSale
 from ..models.pedido import Pedido
 from ..models.printing import PrintJob
 from ..models.rastreamento import Rastreamento
 from .access_policy import own_sales, sales_query
+from .customer_shipping_links import address_owners
 
 
 def _purchases(db, user, customer_ids=None):
@@ -34,24 +33,8 @@ def _purchases(db, user, customer_ids=None):
     ).group_by(PdvCliente.cadastro_cliente_id).subquery()
 
 
-def _address_owners(customer_ids=None):
-    # Print jobs keep their original address ID after consolidation. Starting at
-    # linked roots, follow all historical aliases, including multi-step merges.
-    roots = select(
-        SavedAddress.id.label('address_id'),
-        SavedAddress.cliente_id.label('customer_id'),
-    ).where(SavedAddress.merged_into_id.is_(None), SavedAddress.cliente_id.is_not(None))
-    if customer_ids is not None:
-        roots = roots.where(SavedAddress.cliente_id.in_(customer_ids))
-    owners = roots.cte('customer_address_owners', recursive=True)
-    child = aliased(SavedAddress)
-    return owners.union(select(child.id, owners.c.customer_id).join(
-        owners, child.merged_into_id == owners.c.address_id,
-    ))
-
-
 def _prints(db, customer_ids=None):
-    owners = _address_owners(customer_ids)
+    owners = address_owners(customer_ids)
     return db.query(
         owners.c.customer_id,
         func.count(PrintJob.id).label('print_count'),

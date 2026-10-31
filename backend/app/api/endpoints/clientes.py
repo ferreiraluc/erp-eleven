@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import ValidationError
 from typing import List, Optional, Literal
@@ -335,14 +335,15 @@ def historico_enderecos_cliente(
     db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_active_user),
 ):
     from ...models.address_book import SavedAddress
-    from ...services.address_book import address_family
+    from ...services.customer_shipping_links import address_owners
     from ...services.address_usage import history_for_ids
     customer_id = validate_uuid(cliente_id)
     customer_id = _customer(db, customer_id).id
-    addresses = db.query(SavedAddress).filter_by(cliente_id=customer_id, merged_into_id=None).order_by(SavedAddress.updated_at.desc()).all()
-    ids = set()
-    for address in addresses:
-        ids.update(address_family(db, address))
+    owners = address_owners([customer_id])
+    addresses = db.query(SavedAddress.id, SavedAddress.label, SavedAddress.active,
+        SavedAddress.customer_link_review).join(owners, owners.c.address_id == SavedAddress.id).filter(
+        SavedAddress.merged_into_id.is_(None)).order_by(SavedAddress.updated_at.desc(), SavedAddress.id).all()
+    ids = select(owners.c.address_id)
     return {**history_for_ids(db, ids, offset, limit, kind),
             'addresses': [{'id': str(row.id), 'label': row.label, 'active': row.active,
                            'review': row.customer_link_review} for row in addresses]}

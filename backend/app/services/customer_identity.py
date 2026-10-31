@@ -93,6 +93,9 @@ def corroboration(customer, data, *, documents=None):
         data.get('endereco_livre') or data.get('endereco')) else ''
     if location and location == address_key(customer.endereco):
         return 'name_address'
+    from .customer_address_match import same_structured_address
+    if same_structured_address(customer.endereco, data, customer.nome):
+        return 'name_address'
     return None
 
 

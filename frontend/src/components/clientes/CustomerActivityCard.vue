@@ -3,14 +3,23 @@
     <div class="cliente-card" :class="{ inactive: !customer.ativo }">
       <div class="customer-top-row">
       <label v-if="selectable" class="customer-select"><input type="checkbox" :checked="selected" :disabled="selectionDisabled && !selected" :aria-label="mergeText('selectCustomer', { name: customer.nome })" @change="$emit('select')" /></label>
+      <div class="customer-summary">
       <button type="button" class="customer-expand" :aria-expanded="expanded" :aria-controls="panelId" :aria-label="t(expanded ? 'collapse' : 'expand', { name: customer.nome })" @click="$emit('toggle')">
         <span class="cliente-avatar" aria-hidden="true">{{ initials }}</span>
         <span class="customer-heading">
           <span class="cliente-name-row"><span class="cliente-name">{{ customer.nome }}</span><span v-if="!customer.ativo" class="badge-inactive">{{ t('inactive') }}</span></span>
-          <span class="customer-contact">{{ customer.telefone || customer.email || t('noContact') }}</span>
         </span>
         <svg class="expand-chevron" :class="{ rotated: expanded }" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" /></svg>
       </button>
+      <div class="customer-contact-row">
+        <span class="customer-contact">{{ customer.telefone || customer.email || t('noContact') }}</span>
+        <template v-if="customer.telefone">
+          <a v-if="whatsappUrl" :href="whatsappUrl" class="customer-whatsapp erp-button erp-button--secondary erp-button--sm" target="_blank" rel="noopener noreferrer" :aria-label="t('whatsappOpen', { name: customer.nome })" :title="t('whatsappOpen', { name: customer.nome })" @click.stop>WhatsApp</a>
+          <button v-else type="button" class="customer-whatsapp erp-button erp-button--secondary erp-button--sm" disabled :aria-describedby="phoneHelpId" :title="t('whatsappPhoneHelp')" @click.stop>WhatsApp</button>
+        </template>
+      </div>
+      <p v-if="customer.telefone && !whatsappUrl" :id="phoneHelpId" class="customer-phone-help">{{ t('whatsappPhoneHelp') }}</p>
+      </div>
       </div>
 
       <div class="customer-overview">
@@ -61,6 +70,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import type { CustomerWithActivity } from '@/services/customerLogistics'
 import { uiText } from '@/i18n/uiText'
+import { whatsappConversationUrl } from '@/utils/whatsapp'
 import { customerMessages } from './customerMessages'
 import { customerMergeMessages } from './customerMergeMessages'
 import '@/assets/trackingCards.css'
@@ -69,6 +79,8 @@ defineEmits<{ toggle: []; edit: []; deactivate: []; select: [] }>()
 const { t, locale } = useI18n({ useScope: 'local', messages: { pt: { ...customerMessages.pt, ...customerMergeMessages.pt }, es: { ...customerMessages.es, ...customerMergeMessages.es }, en: { ...customerMessages.en, ...customerMergeMessages.en } } })
 const mergeText = t
 const panelId = computed(() => `customer-history-${props.customer.id}`)
+const phoneHelpId = computed(() => `customer-phone-help-${props.customer.id}`)
+const whatsappUrl = computed(() => whatsappConversationUrl(props.customer.telefone))
 const initials = computed(() => props.customer.nome.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toLocaleUpperCase())
 const number = (value: number) => value.toLocaleString(locale.value)
 const date = (value: string) => new Date(value).toLocaleString(locale.value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
@@ -78,6 +90,7 @@ const date = (value: string) => new Date(value).toLocaleString(locale.value, { t
 .cliente-wrap { border-radius: 14px; overflow: hidden; --tracking-tint: #f2f7ff; --tracking-edge: #a5bad6; --tracking-accent: #2563eb; }
 .cliente-card { padding: 1rem 1.1rem; }
 .customer-top-row { display: flex; align-items: center; gap: .75rem; }
+.customer-summary { flex: 1; min-width: 0; }
 .customer-select { display: grid; place-items: center; flex: 0 0 32px; min-height: 40px; cursor: pointer; }
 .customer-select input { width: 19px; height: 19px; accent-color: #2563eb; cursor: pointer; }
 .is-selected { --tracking-edge: #6295e2; box-shadow: 0 0 0 1px #6295e2; }
@@ -88,7 +101,10 @@ const date = (value: string) => new Date(value).toLocaleString(locale.value, { t
 .cliente-name-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .cliente-name { color: #172033; font-size: .95rem; font-weight: 700; overflow-wrap: anywhere; }
 .badge-inactive { background: #e2e8f0; color: #475569; font-size: .7rem; border-radius: 5px; padding: .1rem .35rem; }
-.customer-contact { display: block; font-size: .77rem; color: #64748b; margin-top: .25rem; overflow-wrap: anywhere; }
+.customer-contact-row { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .5rem; margin-left: 3.45rem; }
+.customer-contact { font-size: .77rem; color: #64748b; overflow-wrap: anywhere; }
+.customer-whatsapp { flex-shrink: 0; }
+.customer-phone-help { margin: .25rem 0 0 3.45rem; font-size: .7rem; line-height: 1.5; color: #64748b; }
 .expand-chevron { flex-shrink: 0; color: #64748b; transition: transform .15s; }
 .expand-chevron.rotated { transform: rotate(180deg); }
 .customer-overview { margin-top: .85rem; padding-left: 3.45rem; }

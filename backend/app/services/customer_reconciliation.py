@@ -2,13 +2,14 @@
 import hashlib
 import hmac
 import json
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import or_
 from ..models.cliente import Cliente
 from ..models.pedido import Pedido
 from ..models.rastreamento import Rastreamento
-from ..models.address_book import SavedAddress
+from ..models.address_book import FreightOrder, SavedAddress
 from .address_book import lock_addresses
 from .customer_identity import (ensure_customer, match_recipient, find_customer, name_key,
                                 corroboration, full_name, ensure_pdv_customer, pdv_identity_data)
@@ -84,6 +85,145 @@ def _identity_snapshot(row):
     return {column.name: str(getattr(row, column.name)) for column in row.__table__.columns}
 
 
+def _freight_recipient(payload):
+    recipient = payload.get('to') if isinstance(payload, dict) else None
+    if not isinstance(recipient, dict):
+        return None
+    fields = {'name': 'nome', 'document': 'cpf', 'address': 'endereco', 'number': 'numero',
+              'district': 'bairro', 'complement': 'complemento', 'city': 'cidade',
+              'state_abbr': 'estado', 'postal_code': 'cep'}
+    return {'pais': 'BR', **{field: recipient.get(key) or '' for key, field in fields.items()}}
+
+
+def _freight_tracking_evidence(db, parcels, customer, customers, eligible, limit, public, inspected):
+    """Bounded historical proof, including every dependency in the reviewed token."""
+    from ..models.pdv import PdvCliente
+    from .address_identity import equivalent, normalized
+    from .customer_documents import customer_documents, documents_conflict, input_documents, unique_documents
+    from .customer_identity import compatible_name, customer_identity_groups
+    from .tracking_codes import normalize_tracking_code, tracking_code_expression
+
+    dependencies = {FreightOrder: set(), SavedAddress: set(), PdvCliente: set()}
+    if not parcels:
+        return {}, dependencies
+    codes = {normalize_tracking_code(row.codigo_rastreio) for row in parcels}
+    rows = db.query(FreightOrder).filter(FreightOrder.environment == 'production',
+        FreightOrder.state.in_(('released', 'posted', 'delivered')),
+        tracking_code_expression(FreightOrder.tracking).in_(codes),
+    ).order_by(FreightOrder.id).limit(limit + 1).populate_existing().all()
+    complete = len(rows) <= limit
+    rows = rows[:limit]
+    public['scanned'] += len(rows)
+    dependencies[FreightOrder].update(row.id for row in rows)
+    # Do not read PDFs while producing a digest of identity evidence.
+    inspected.extend({'freight_id': str(row.id), 'address_id': str(row.address_id),
+        'environment': row.environment, 'state': row.state, 'tracking': row.tracking,
+        'payload': row.payload} for row in rows)
+
+    addresses = {}
+    pending = {row.address_id for row in rows if row.address_id}
+    while pending and len(addresses) < limit:
+        found = db.query(SavedAddress).filter(SavedAddress.id.in_(pending)).order_by(SavedAddress.id).limit(
+            limit - len(addresses) + 1).populate_existing().all()
+        if len(found) > limit - len(addresses):
+            complete = False
+        found = found[:limit - len(addresses)]
+        addresses.update((row.id, row) for row in found)
+        public['scanned'] += len(found)
+        inspected.extend(_identity_snapshot(row) for row in found)
+        pending = {row.merged_into_id for row in found if row.merged_into_id and row.merged_into_id not in addresses}
+    if pending:
+        complete = False
+    dependencies[SavedAddress].update(addresses)
+    account_ids = {row.pdv_cliente_id for row in addresses.values() if row.pdv_cliente_id}
+    accounts = db.query(PdvCliente).filter(PdvCliente.id.in_(account_ids)).order_by(PdvCliente.id).limit(limit + 1).populate_existing().all() if account_ids else []
+    if len(accounts) > limit:
+        complete = False
+    accounts = {row.id: row for row in accounts[:limit]}
+    public['scanned'] += len(accounts)
+    inspected.extend(_identity_snapshot(row) for row in accounts.values())
+    dependencies[PdvCliente].update(accounts)
+    if not complete:
+        public['limited'] = True
+        return {code: None for code in codes}, dependencies
+
+    _, groups = customer_identity_groups(customers)
+    owners = {row.id: owner for owner, members in groups.items() for row in members}
+    identities = groups[customer.id]
+    documents = unique_documents(doc for row in identities for doc in customer_documents(row))
+
+    def valid_identity(data):
+        return bool(data and any(compatible_name(data.get('nome'), row.nome) for row in identities)
+                    and not documents_conflict(documents, input_documents(data)))
+
+    def one_freight(row):
+        data = _freight_recipient(row.payload)
+        if not valid_identity(data):
+            return None
+        explicit = False
+        location_proof = False
+        captured = row.payload.get('_customer_id')
+        if captured is not None:
+            try:
+                owner = owners.get(UUID(str(captured)))
+            except (ValueError, TypeError):
+                return None
+            if owner != customer.id:
+                return None
+            explicit = True
+        address = addresses.get(row.address_id) if row.address_id else None
+        if row.address_id and not address:
+            return None
+        seen = set()
+        while address and address.merged_into_id:
+            if address.id in seen:
+                return None
+            seen.add(address.id)
+            address = addresses.get(address.merged_into_id)
+            if not address:
+                return None
+        if address:
+            if not valid_identity(address.data) or documents_conflict(input_documents(address.data), input_documents(data)):
+                return None
+            direct = owners.get(address.cliente_id) if address.cliente_id else None
+            account = accounts.get(address.pdv_cliente_id) if address.pdv_cliente_id else None
+            linked = owners.get(account.cadastro_cliente_id) if account and account.cadastro_cliente_id else None
+            if (address.cliente_id and direct != customer.id) or (address.pdv_cliente_id and not account):
+                return None
+            if account and ((account.cadastro_cliente_id and linked != customer.id) or
+                            documents_conflict(documents, input_documents(pdv_identity_data(account)))):
+                return None
+            explicit = explicit or direct == customer.id or linked == customer.id
+            # Complete snapshots must agree with the saved delivery location.
+            # For older partial snapshots, every supplied shared field must agree.
+            if data.get('endereco') and data.get('numero'):
+                if not equivalent({**data, 'nome': address.data.get('nome')}, address.data):
+                    return None
+                location_proof = True
+            elif any(data.get(field) and address.data.get(field) and
+                     normalized(data[field]) != normalized(address.data[field])
+                     for field in ('endereco', 'numero', 'complemento', 'cidade', 'estado', 'cep')):
+                return None
+        reason = eligible(data)
+        if '_customer_id' in row.payload and captured is None and not reason and not (explicit and location_proof):
+            return None
+        if explicit:
+            return 'explicit_freight_customer'
+        return 'freight_' + reason if reason else None
+
+    evidence = {}
+    for row in rows:
+        code = normalize_tracking_code(row.tracking)
+        reason = one_freight(row)
+        # Two providers' records for one code must not let one positive match
+        # hide contradictory evidence. A missing/invalid proof blocks that code.
+        if code not in evidence:
+            evidence[code] = reason
+        elif not reason:
+            evidence[code] = None
+    return evidence, dependencies
+
+
 def _customer_link_plan(db, customer, limit=200):
     from sqlalchemy.orm import selectinload
     from ..models.pdv import PdvCliente
@@ -98,6 +238,7 @@ def _customer_link_plan(db, customer, limit=200):
               'scanned': 0, 'limit': limit}
     planned = []
     inspected = []
+    dependencies = {}
     # A truncated identity directory cannot prove that a name has no homonym.
     # Refuse automatic candidates rather than linking through incomplete evidence.
     if len(customers) <= CUSTOMER_REVIEW_LIMIT:
@@ -160,6 +301,10 @@ def _customer_link_plan(db, customer, limit=200):
         parcels = inspect_rows('tracking', db.query(Rastreamento).options(selectinload(Rastreamento.pedido)).outerjoin(Pedido, Pedido.id == Rastreamento.pedido_id).filter(
             Rastreamento.cliente_id.is_(None), or_(normalize(Rastreamento.destinatario).in_(sql_names),
                 Pedido.cliente_id == customer.id, Rastreamento.pedido_id.in_(planned_orders))))
+        from .tracking_codes import normalize_tracking_code
+        freight_evidence, dependencies = _freight_tracking_evidence(db,
+            [row for row in parcels if name_key(row.destinatario) in names],
+            customer, customers, eligible, limit, public, inspected)
         for row in parcels:
             parent = db.get(Pedido, row.pedido_id) if row.pedido_id else None
             if parent and parent.cliente_id and parent.cliente_id != customer.id:
@@ -170,6 +315,9 @@ def _customer_link_plan(db, customer, limit=200):
                 if parent and full_name(parent.cliente_nome) and name_key(parent.cliente_nome) not in names:
                     continue
                 reason = eligible({'nome': row.destinatario, 'endereco_livre': row.destino})
+            code = normalize_tracking_code(row.codigo_rastreio)
+            if code in freight_evidence:
+                reason = freight_evidence[code]
             if reason:
                 add('tracking', row, row.codigo_rastreio, reason)
 
@@ -183,7 +331,7 @@ def _customer_link_plan(db, customer, limit=200):
     digest = {'customer_id': str(customer.id), 'identities': [_identity_snapshot(row) for row in customers],
               'inspected': inspected, 'items': public['items'], 'limit': limit, 'limited': public['limited']}
     public['token'] = hashlib.sha256(json.dumps(digest, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-    return public, planned
+    return public, planned, dependencies
 
 
 def preview_customer_links(db, customer, limit=200):
@@ -207,19 +355,24 @@ def apply_customer_links(db, customer, expected_token, actor, limit=200):
     if previous:
         return {'linked': previous.changes['linked'], 'already_applied': True,
                 'limited': bool(previous.changes.get('limited'))}
-    preview, planned = _customer_link_plan(db, customer, limit)
+    preview, planned, dependencies = _customer_link_plan(db, customer, limit)
     if not hmac.compare_digest(preview['token'], expected_token):
         raise HTTPException(409, 'Os cadastros ou vínculos mudaram. Gere uma nova prévia.')
+    # Provider refreshes lock a freight before its parent/parcel. Preserve that
+    # order while protecting the snapshots used as proof by this confirmation.
+    freight_ids = dependencies.get(FreightOrder, set())
+    if freight_ids:
+        db.query(FreightOrder).filter(FreightOrder.id.in_(freight_ids)).order_by(FreightOrder.id).populate_existing().with_for_update().all()
     # Follow the existing lock order: addresses, parent orders, then parcels.
     parents = {row.pedido_id for kind, row, _ in planned if kind == 'tracking' and row.pedido_id}
     parents.update(row.id for kind, row, _ in planned if kind == 'order')
     if parents:
         db.query(Pedido).filter(Pedido.id.in_(parents)).order_by(Pedido.id).populate_existing().with_for_update().all()
     for kind, model in [('address', SavedAddress), ('pdv_account', PdvCliente), ('tracking', Rastreamento)]:
-        ids = [row.id for row_kind, row, _ in planned if row_kind == kind]
+        ids = {row.id for row_kind, row, _ in planned if row_kind == kind} | dependencies.get(model, set())
         if ids:
             db.query(model).filter(model.id.in_(ids)).order_by(model.id).populate_existing().with_for_update().all()
-    preview, planned = _customer_link_plan(db, customer, limit)
+    preview, planned, _ = _customer_link_plan(db, customer, limit)
     if not hmac.compare_digest(preview['token'], expected_token):
         raise HTTPException(409, 'Os cadastros ou vínculos mudaram. Gere uma nova prévia.')
     for kind, row, reason in planned:

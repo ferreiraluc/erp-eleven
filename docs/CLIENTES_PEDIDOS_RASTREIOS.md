@@ -147,6 +147,11 @@ O servidor valida a consistência cliente/pedido/pacote, inclusive fora da inter
 
 ## Compras do PDV no histórico do cliente
 
+O card mostra **WhatsApp** ao lado do telefone. O atalho abre a conversa pelo
+número internacional, sem enviar mensagem automaticamente. Números incompletos
+ou sem país inequívoco pedem correção do cadastro; não se adivinha o DDI pelo nome,
+endereço ou idioma. A validação de formato não confirma que exista uma conta WhatsApp.
+
 O histórico em **Clientes** inclui **Compras no PDV**, com paginação própria,
 situação, vendedor, data em Brasília, itens e quantidades devolvidas. Cada venda
 mostra a conta PDV de origem e o nome registrado na venda. A associação considera
@@ -199,8 +204,21 @@ As consultas do bot encontram tanto o cliente explicitamente vinculado quanto o
 nome do destinatário histórico. Isso não muda a regra de priorizar envios atuais e
 responder com cada código isolado, seguido de seus detalhes.
 
-Novos rastreios gerados por etiquetas SuperFrete recebem o cliente explicitamente
-vinculado ao endereço usado na emissão. A migração `a7b8c9d0e1f2` cria
+Ao cotar uma etiqueta SuperFrete, o endereço é reavaliado pelas regras de identidade
+e o cliente é capturado no dado interno `_customer_id` do frete, inclusive quando
+não foi possível determinar um cliente. Esse campo não é enviado à transportadora.
+O vínculo pode vir do diretório ou da conta PDV ligada ao diretório, preservando
+a exclusividade desses campos no endereço. Alterações posteriores do endereço
+não trocam o destinatário capturado. Rastreios existentes recebem somente um
+vínculo ausente e compatível; outros clientes e pedidos não são sobrescritos.
+
+Os contadores e o histórico de impressões incluem endereços vinculados via PDV,
+clientes consolidados e IDs antigos de endereços, sem consultas individuais por
+endereço. Cada pacote continua com seu próprio rastreio: três envios do mesmo
+cliente aparecem na ficha, mesmo originados no bot. Uma venda sem envio não gera
+pacote; não se atribui um frete a uma venda PDV específica apenas por nome ou data.
+
+A migração `a7b8c9d0e1f2` cria
 `rastreamentos.cliente_id` e preenche apenas vínculos comprovados por
 `pedidos.cliente_id`; não compara nomes nem reescreve destinatários.
 
@@ -260,6 +278,18 @@ seleção antiga retorna `409` para atualizar a lista. A busca por documento tip
 identidade de um alias retorna o principal. Registros antigos ainda sem vínculo
 podem ser conferidos em **Associar histórico existente**; abrir a lista ou unificar
 clientes não executa uma associação global por nome.
+
+A comparação de endereço brasileiro aceita texto livre com campos identificados
+(como `N°`, `CEP`, `Cidade` e `Estado Roraima`) e endereço estruturado com UF (`RR`).
+Exige rua, número e CEP iguais, nome compatível e complementos consistentes;
+fragmentos desconhecidos, documentos conflitantes ou homônimos ambíguos impedem
+a associação. Não reescreve o endereço original.
+
+A prévia de **Associar histórico existente** também examina o destinatário
+registrado no frete de produção cujo código corresponde exatamente ao rastreio.
+Isso permite recuperar vínculos antigos quando o rastreio guarda apenas a cidade.
+Mudanças nos dados de prova invalidam a prévia; a confirmação é limitada, auditada
+e idempotente. PDFs, valores, nomes históricos e snapshots permanecem preservados.
 
 Para endereços, a comparação conservadora continua exigindo o mesmo destinatário/local.
 O duplicado vira uma referência inativa; trabalhos, fretes e snapshots mantêm seus

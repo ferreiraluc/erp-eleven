@@ -9,6 +9,8 @@ export const customerMessages = {
     expand: 'Ver histórico de {name}', collapse: 'Recolher histórico de {name}',
     history: 'Histórico do cliente', edit: 'Editar cliente', inactive: 'Inativo', deactivate: 'Inativar', addresses: 'Endereços',
     contact: 'Contato e endereço', noContact: 'Sem contato informado',
+    whatsappOpen: 'Abrir conversa com {name} no WhatsApp (nova aba)',
+    whatsappPhoneHelp: 'Inclua o código do país e confira o telefone para abrir o WhatsApp.',
   },
   es: {
     sort: 'Organizar clientes', name: 'Nombre', latestPurchase: 'Últimas compras', latestPrint: 'Últimas impresiones',
@@ -20,6 +22,8 @@ export const customerMessages = {
     expand: 'Ver historial de {name}', collapse: 'Contraer historial de {name}',
     history: 'Historial del cliente', edit: 'Editar cliente', inactive: 'Inactivo', deactivate: 'Desactivar', addresses: 'Direcciones',
     contact: 'Contacto y dirección', noContact: 'Sin contacto registrado',
+    whatsappOpen: 'Abrir conversación con {name} en WhatsApp (nueva pestaña)',
+    whatsappPhoneHelp: 'Incluya el código de país y revise el teléfono para abrir WhatsApp.',
   },
   en: {
     sort: 'Organize customers', name: 'Name', latestPurchase: 'Latest purchases', latestPrint: 'Latest print requests',
@@ -31,5 +35,7 @@ export const customerMessages = {
     expand: 'View history for {name}', collapse: 'Collapse history for {name}',
     history: 'Customer history', edit: 'Edit customer', inactive: 'Inactive', deactivate: 'Deactivate', addresses: 'Addresses',
     contact: 'Contact and address', noContact: 'No contact details',
+    whatsappOpen: 'Open a WhatsApp conversation with {name} (new tab)',
+    whatsappPhoneHelp: 'Include the country code and check the phone number to open WhatsApp.',
   },
 }
