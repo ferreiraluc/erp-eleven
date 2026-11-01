@@ -94,6 +94,33 @@ duas instâncias com a mesma sessão nem clone esse disco para outro agente ativ
 Deploys desse worker podem interromper brevemente a conexão; isso não interrompe
 a API, o Telegram, o PDV ou os agentes de impressão.
 
+O encerramento diário das sessões do painel às 21h não encerra o bot: a ponte
+usa uma credencial própria, independente do login do navegador. O painel distingue
+início, reconexão, recuperação automática e situações que precisam de revisão.
+Desconexões temporárias tentam reconectar preservando a sessão e a fila.
+
+O código de desconexão `500` pode ser recuperável. O agente tenta reutilizar a
+sessão até cinco vezes, com espera entre tentativas; atingir esse limite pausa
+a recuperação e pede revisão, sem apagar a sessão nem solicitar automaticamente
+outro QR Code. O contador só é reiniciado após cinco minutos conectado, evitando
+um ciclo infinito de conexões que caem logo em seguida. Confira o serviço e a
+persistência antes de decidir reiniciar o agente ou refazer o vínculo.
+
+Outros encerramentos exigem ações diferentes:
+
+- `401`: o WhatsApp encerrou o vínculo; use **Refazer vínculo do WhatsApp** para
+  preparar outro QR Code.
+- `440`: outra conexão substituiu a atual. Confira se há mais de um agente com
+  a mesma sessão, mantenha apenas um ativo e preserve o vínculo antes de reiniciar.
+- `403`: o WhatsApp recusou o acesso; confira a situação da conta no telefone.
+- `411`: incompatibilidade de sessão; revise versão e configuração do agente.
+
+Nesses casos, o agente pausa a reconexão automática. Os registros técnicos mostram
+somente o código da desconexão, sem mensagens brutas do provedor, chaves ou dados
+da sessão. Estados antigos sem código não comprovam que seja necessário refazer
+o vínculo. Uma resposta real confirmada pela equipe valida a recuperação; o estado
+**Conectado** sozinho não comprova entrega de uma mensagem.
+
 Cada mensagem recebida é identificada pelo ID do WhatsApp **e pela conversa**.
 Reentregas não repetem ações. Histórico sincronizado, mensagens enviadas pelo
 próprio número, status e newsletters não entram como comandos novos. Identificadores

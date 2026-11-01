@@ -5,6 +5,8 @@ const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, millise
 const terminalStates = new Set(['accepted', 'uncertain', 'failed']);
 const GROUP_REFRESH_MS = 300000;
 const GROUP_RETRY_MS = 30000;
+const STABLE_CONNECTION_MS = 300000;
+const SESSION_RECOVERY_ATTEMPTS = 5;
 
 export class Agent {
   constructor({ store, api, baileys, logger, report = () => {}, now = Date.now }) {
@@ -22,6 +24,9 @@ export class Agent {
     this.connected = false;
     this.stopped = false;
     this.reconnectAttempt = 0;
+    this.sessionRecoveryAttempts = 0;
+    this.connectedAt = null;
+    this.connectionError = null;
     this.reconnectTimer = null;
     this.nextHeartbeat = 0;
     this.lastCleanup = 0;
@@ -43,9 +48,17 @@ export class Agent {
 
   activeConfig() { return this.now() - this.configAt <= 45000 ? this.config : null; }
 
+  resetRecoveryAfterStableConnection() {
+    if (this.connected && this.connectedAt !== null && this.now() - this.connectedAt >= STABLE_CONNECTION_MS) {
+      this.sessionRecoveryAttempts = 0;
+      this.reconnectAttempt = 0;
+    }
+  }
+
   async heartbeat() {
+    this.resetRecoveryAfterStableConnection();
     const qr = this.qr && this.now() - this.qrAt < 55000 ? this.qr : null;
-    const body = { state: this.state, agent_version: '1.0.1', qr, error_code: this.groupError };
+    const body = { state: this.state, agent_version: '1.0.2', qr, error_code: this.connected ? this.groupError : this.connectionError ?? this.groupError };
     // A restart has not discovered an empty account. Preserve the ERP's last
     // known groups until the provider returns metadata or a successful snapshot.
     if (this.groupsKnown) body.groups = this.groups;
@@ -82,8 +95,11 @@ export class Agent {
 
   connect() {
     if (this.stopped) return;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.state = 'starting';
     this.connected = false;
+    this.connectedAt = null;
     this.groupRefresh = null;
     this.groupLookups.clear();
     const auth = this.auth;
@@ -181,6 +197,9 @@ export class Agent {
     this.recentGroupIds = [];
     this.groupLookups.clear();
     this.reconnectAttempt = 0;
+    this.sessionRecoveryAttempts = 0;
+    this.connectedAt = null;
+    this.connectionError = null;
     this.nextGroups = 0;
     this.nextHeartbeat = 0;
     this.connect();
@@ -195,31 +214,70 @@ export class Agent {
 
   connectionUpdate(socket, update) {
     if (socket !== this.socket || this.stopped) return;
-    if (update.qr) { this.qr = update.qr; this.qrAt = this.now(); this.state = 'qr'; this.nextHeartbeat = 0; }
+    if (update.qr) { this.qr = update.qr; this.qrAt = this.now(); this.state = 'qr'; this.connectionError = null; this.nextHeartbeat = 0; }
     if (update.connection === 'open') {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+      if (!this.connected) this.connectedAt = this.now();
       this.connected = true;
       this.qr = null;
       this.state = 'connected';
       this.accountPhone = phoneFromJid(socket.user?.id);
-      this.reconnectAttempt = 0;
+      this.connectionError = null;
       this.nextHeartbeat = 0;
       this.nextGroups = 0;
       this.report('CONNECTED');
     }
     if (update.connection === 'close') {
+      this.resetRecoveryAfterStableConnection();
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
       this.connected = false;
+      this.connectedAt = null;
       this.qr = null;
       this.nextHeartbeat = 0;
       const status = update.lastDisconnect?.error?.output?.statusCode;
       const reason = this.baileys.DisconnectReason;
-      if ([reason.loggedOut, reason.connectionReplaced, reason.badSession, reason.multideviceMismatch, reason.forbidden].filter(Number.isFinite).includes(status)) {
+      // Log only the numeric provider code: messages/data may contain session keys.
+      this.report(Number.isInteger(status) && status >= 100 && status <= 599 ? `CONNECTION_CLOSED_${status}` : 'CONNECTION_CLOSED');
+      if (Number.isFinite(reason.connectionReplaced) && status === reason.connectionReplaced) {
+        this.state = 'error';
+        this.connectionError = 'connection_replaced';
+        return; // Do not fight another connection using the same linked session.
+      }
+      const terminal = new Map([
+        [reason.loggedOut, 'session_logged_out'], [reason.forbidden, 'session_forbidden'],
+        [reason.multideviceMismatch, 'session_device_mismatch'],
+      ].filter(([code]) => Number.isFinite(code)));
+      if (terminal.has(status)) {
         this.state = 'logged_out';
+        this.connectionError = terminal.get(status);
         this.report('PAIRING_REQUIRED');
         return;
       }
+      let delay;
+      if (Number.isFinite(reason.badSession) && status === reason.badSession) {
+        // Baileys also maps unknown stream failures to 500. Retry the persisted
+        // session before asking for a new QR, but bound repeated/flapping failures.
+        if (this.sessionRecoveryAttempts >= SESSION_RECOVERY_ATTEMPTS) {
+          this.state = 'error';
+          this.connectionError = 'session_recovery_exhausted';
+          this.report('RECOVERY_PAUSED');
+          return;
+        }
+        this.connectionError = 'session_recovery';
+        delay = Math.max(5000, reconnectDelay(this.sessionRecoveryAttempts++ + 2));
+      } else {
+        this.connectionError = 'connection_retry';
+        delay = reconnectDelay(this.reconnectAttempt++);
+      }
       this.state = 'reconnecting';
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = setTimeout(() => this.connect(), reconnectDelay(this.reconnectAttempt++));
+      const epoch = this.connectionEpoch;
+      this.reconnectTimer = setTimeout(() => {
+        if (this.stopped || this.connected || this.state !== 'reconnecting' || this.socket !== socket || this.connectionEpoch !== epoch) return;
+        this.reconnectTimer = null;
+        this.connect();
+      }, delay);
     }
   }
 
@@ -467,6 +525,7 @@ export class Agent {
     this.stopped = true;
     this.connected = false;
     clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     try { this.socket?.end(undefined); } catch { /* closing */ }
   }
 }

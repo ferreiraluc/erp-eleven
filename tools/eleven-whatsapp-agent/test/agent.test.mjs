@@ -32,7 +32,7 @@ function mockSocketFactory(agent) {
   Object.assign(agent.baileys, {
     makeCacheableSignalKeyStore: keys => keys,
     Browsers: { ubuntu: () => ['Ubuntu', 'Eleven', 'test'] },
-    DisconnectReason: { loggedOut: 401, connectionReplaced: 440 },
+    DisconnectReason: { loggedOut: 401, connectionReplaced: 440, badSession: 500, multideviceMismatch: 411, forbidden: 403 },
     makeWASocket: options => {
       const socket = { options, ev: new EventEmitter(), end() { this.ended = true; }, user: { id: '5511000000000@s.whatsapp.net' } };
       sockets.push(socket);
@@ -41,6 +41,196 @@ function mockSocketFactory(agent) {
   });
   return sockets;
 }
+
+function closeConnection(socket, statusCode) {
+  socket.ev.emit('connection.update', { connection: 'close', lastDisconnect: {
+    error: { output: { statusCode }, message: 'private provider message', data: { sessionKey: 'secret key', qr: 'secret QR' } },
+  } });
+}
+
+test('generic provider 500 reconnects with the same session and preserves queued work', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  const reports = [];
+  f.agent.report = code => reports.push(code);
+  f.agent.connect();
+  const originalAuth = f.agent.auth;
+  await originalAuth.saveCreds({ deviceIdentity: 'unchanged' });
+  f.store.enqueueInbound('incoming-recovery', { payload: { text: 'queued' } }, Date.now() + 100000);
+  addDelivery(f.store);
+  sockets[0].ev.emit('connection.update', { connection: 'open' });
+  f.agent.groupError = 'group_sync_retry';
+  closeConnection(sockets[0], 500);
+  assert.equal(f.agent.state, 'reconnecting');
+  assert.equal(f.agent.connectionError, 'session_recovery');
+  assert.equal(f.agent.sessionRecoveryAttempts, 1);
+  await f.agent.heartbeat();
+  assert.equal(f.calls.at(-1).payload.error_code, 'session_recovery');
+  t.mock.timers.tick(80000);
+  assert.equal(sockets.length, 2);
+  assert.equal(f.agent.auth, originalAuth);
+  assert.equal(f.store.get('auth-creds').deviceIdentity, 'unchanged');
+  assert.equal(f.store.pendingInbound().length, 1);
+  assert.equal(f.store.pendingOutbound()[0].state, 'claimed');
+  sockets[1].ev.emit('connection.update', { connection: 'open' });
+  assert.equal(f.agent.connectionError, null);
+  assert.equal(f.agent.sessionRecoveryAttempts, 1); // An immediate open is not yet stable.
+  await f.agent.heartbeat();
+  assert.equal(f.calls.at(-1).payload.error_code, 'group_sync_retry');
+  assert.deepEqual(reports, ['CONNECTED', 'CONNECTION_CLOSED_500', 'CONNECTED']);
+  assert.doesNotMatch(JSON.stringify(f.calls) + JSON.stringify(reports), /private provider|secret key|secret QR/);
+});
+
+test('repeated 500 failures pause after five retries even when each socket briefly opens', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  t.mock.method(Math, 'random', () => 0.5);
+  const f = fixture(t);
+  let now = Date.now();
+  f.agent.now = () => now;
+  const sockets = mockSocketFactory(f.agent);
+  const reports = [];
+  f.agent.report = code => reports.push(code);
+  f.agent.connect();
+  for (let index = 0; index < 6; index++) {
+    const socket = sockets.at(-1);
+    socket.ev.emit('connection.update', { connection: 'open' });
+    now += 1000;
+    closeConnection(socket, 500);
+    if (index < 5) {
+      assert.equal(f.agent.state, 'reconnecting');
+      t.mock.timers.tick([5000, 8000, 16000, 32000, 60000][index] - 1);
+      assert.equal(sockets.length, index + 1);
+      t.mock.timers.tick(1);
+      assert.equal(sockets.length, index + 2);
+    } else t.mock.timers.tick(80000);
+  }
+  assert.equal(sockets.length, 6);
+  assert.equal(f.agent.sessionRecoveryAttempts, 5);
+  assert.equal(f.agent.state, 'error');
+  assert.equal(f.agent.connectionError, 'session_recovery_exhausted');
+  assert.equal(f.agent.reconnectTimer, null);
+  assert.equal(f.agent.qr, null);
+  assert.equal(reports.at(-1), 'RECOVERY_PAUSED');
+  assert.equal(reports.includes('PAIRING_REQUIRED'), false);
+  await f.agent.heartbeat();
+  assert.equal(f.calls.at(-1).payload.error_code, 'session_recovery_exhausted');
+});
+
+test('a five-minute stable connection replenishes the recovery budget', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(t);
+  let now = Date.now();
+  f.agent.now = () => now;
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  sockets[0].ev.emit('connection.update', { connection: 'open' });
+  f.agent.sessionRecoveryAttempts = 5;
+  f.agent.reconnectAttempt = 8;
+  now += 299999;
+  await f.agent.heartbeat();
+  assert.equal(f.agent.sessionRecoveryAttempts, 5);
+  now += 1;
+  await f.agent.heartbeat();
+  assert.equal(f.agent.sessionRecoveryAttempts, 0);
+  assert.equal(f.agent.reconnectAttempt, 0);
+  closeConnection(sockets[0], 500);
+  assert.equal(f.agent.sessionRecoveryAttempts, 1);
+  assert.equal(f.agent.state, 'reconnecting');
+});
+
+test('a pairing QR after recovery clears the stale retry reason without resetting its budget', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  closeConnection(sockets[0], 500);
+  t.mock.timers.tick(80000);
+  sockets[1].ev.emit('connection.update', { qr: 'isolated pairing code' });
+  assert.equal(f.agent.state, 'qr');
+  assert.equal(f.agent.connectionError, null);
+  assert.equal(f.agent.sessionRecoveryAttempts, 1);
+  await f.agent.heartbeat();
+  assert.equal(f.calls.at(-1).payload.error_code, null);
+  assert.equal(f.calls.at(-1).payload.state, 'qr');
+});
+
+for (const [status, code, state] of [
+  [401, 'session_logged_out', 'logged_out'], [403, 'session_forbidden', 'logged_out'],
+  [411, 'session_device_mismatch', 'logged_out'], [440, 'connection_replaced', 'error'],
+]) {
+  test(`terminal provider ${status} cancels an earlier retry and reports its distinct safe reason`, async t => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const f = fixture(t);
+    const sockets = mockSocketFactory(f.agent);
+    const reports = [];
+    f.agent.report = value => reports.push(value);
+    f.agent.connect();
+    closeConnection(sockets[0], 500);
+    closeConnection(sockets[0], status);
+    t.mock.timers.tick(80000);
+    assert.equal(sockets.length, 1);
+    assert.equal(f.agent.state, state);
+    assert.equal(f.agent.connectionError, code);
+    assert.equal(f.agent.reconnectTimer, null);
+    await f.agent.heartbeat();
+    assert.equal(f.calls.at(-1).payload.error_code, code);
+    assert.equal(reports.includes(`CONNECTION_CLOSED_${status}`), true);
+    assert.equal(reports.includes('PAIRING_REQUIRED'), status !== 440);
+    assert.doesNotMatch(JSON.stringify(f.calls) + JSON.stringify(reports), /private provider|secret key|secret QR/);
+  });
+}
+
+test('open and shutdown both cancel pending reconnect timers', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  closeConnection(sockets[0], 500);
+  sockets[0].ev.emit('connection.update', { connection: 'open' });
+  t.mock.timers.tick(80000);
+  assert.equal(sockets.length, 1);
+  assert.equal(f.agent.reconnectTimer, null);
+  closeConnection(sockets[0], 500);
+  f.agent.stop();
+  t.mock.timers.tick(80000);
+  assert.equal(sockets.length, 1);
+  assert.equal(f.agent.reconnectTimer, null);
+});
+
+test('old socket events and pending callbacks cannot replace a newer connection', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  f.agent.connect();
+  const previous = sockets[0];
+  closeConnection(previous, 500);
+  f.agent.connect();
+  const current = sockets[1];
+  current.ev.emit('connection.update', { connection: 'open' });
+  closeConnection(previous, 401);
+  closeConnection(previous, 500);
+  previous.ev.emit('connection.update', { connection: 'open' });
+  t.mock.timers.tick(80000);
+  assert.equal(sockets.length, 2);
+  assert.equal(f.agent.socket, current);
+  assert.equal(f.agent.state, 'connected');
+  assert.equal(f.agent.connectionError, null);
+});
+
+test('unrecognized disconnect data never reaches diagnostics and retains ordinary reconnect', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const f = fixture(t);
+  const sockets = mockSocketFactory(f.agent);
+  const reports = [];
+  f.agent.report = code => reports.push(code);
+  f.agent.connect();
+  closeConnection(sockets[0], 'private status payload');
+  assert.deepEqual(reports, ['CONNECTION_CLOSED']);
+  assert.equal(f.agent.connectionError, 'connection_retry');
+  t.mock.timers.tick(80000);
+  assert.equal(sockets.length, 2);
+});
 
 test('successful send persists result before ERP ack and does not resend if ack fails', async t => {
   let ackAttempts = 0;
