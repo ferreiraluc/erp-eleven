@@ -1,6 +1,6 @@
 # Fluxos operacionais do assistente
 
-Atualização de 30/10/2026, conforme os fluxos implementados e testes isolados.
+Atualização de 31/10/2026, conforme os fluxos implementados e testes isolados.
 
 Telegram e WhatsApp Web para a equipe reutilizam as mesmas ferramentas, vínculos
 de usuário e confirmações. A conexão WhatsApp por QR, grupos autorizados e limites
@@ -12,6 +12,16 @@ permanece separado. A nova conexão não ativa nem migra números automaticament
 “Manda o rastreio do Taigoro” consulta os envios em trânsito. Se não houver, procura pendentes ou falhas de consulta, identificando o estado real. Entregues não entram nessa resposta; precisam de solicitação explícita de histórico, período ou código específico. Nomes diferentes em entregas antigas não criam ambiguidade sobre um único envio atual.
 
 Um destinatário identificado recebe cada código em uma mensagem isolada, seguido pelos detalhes do ERP em outra mensagem. Vários pacotes atuais do mesmo cliente recebem pares separados; homônimos atuais continuam exigindo identificação. Listagens gerais mantêm datas, paginação e totais. As consultas não atualizam o rastreio nos Correios: exibem os dados atuais salvos no ERP.
+
+A busca aceita nomes com sobrenomes intermediários omitidos, ordem diferente e
+acentos: “Davi Muniz” encontra “Davi Almeida Muniz”. Todos os termos informados
+precisam aparecer no mesmo nome do cliente vinculado ou do destinatário; encontrar
+apenas “Davi” em outra pessoa não basta para essa consulta. Isso amplia a busca,
+sem unificar cadastros nem alterar vínculos. Códigos, pedidos e telefones conservam
+a busca literal, e destinatários diferentes continuam exigindo esclarecimento.
+Pedidos claros de consulta de rastreio precisam consultar uma ferramenta nesta
+solicitação antes de responder, inclusive para dizer que não há resultados. Uma
+falha de consulta ou de permissão é informada como falha, não como ausência de envio.
 
 Avisos automáticos de novos rastreios no WhatsApp exigem ativação explícita no
 painel e só alcançam os grupos autorizados. O código é enviado primeiro, isolado;
