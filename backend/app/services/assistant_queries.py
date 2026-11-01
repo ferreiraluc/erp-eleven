@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import String, case, cast, exists, func, literal, or_, select, union_all
+from sqlalchemy import String, and_, case, cast, exists, func, literal, or_, select, union_all
 
 from ..config import settings
 from ..models.cliente import Cliente
@@ -25,6 +25,27 @@ def literal_pattern(value):
 
 def contains(columns, value):
     return or_(*(c.ilike(literal_pattern(value), escape="\\") for c in columns))
+
+
+def shipment_match(db, columns, value):
+    """Match a shortened name without weakening literal shipment identifiers."""
+    literal_match = contains([
+        columns.cliente, columns.codigo, columns.pedido,
+        columns.telefone_busca, columns.destinatario_busca,
+    ], value)
+    # Wildcards remain literal and codes/phones never become loose name queries.
+    # The shared PDV normalizer supports PostgreSQL without an unaccent extension.
+    from .customer_identity import name_key
+    from .pdv_customers import normalizer
+    tokens = list(dict.fromkeys(name_key(value).split()))
+    if any(char in value for char in "%_\\") or not tokens or not all(token.isalpha() for token in tokens):
+        return literal_match
+    normalize = normalizer(db)
+    # Every name component must occur in the same name. Never combine a buyer's
+    # first name with a different historical recipient's surname.
+    name_matches = [and_(*(normalize(column).contains(token, autoescape=True) for token in tokens))
+                    for column in (columns.cliente, columns.destinatario_busca)]
+    return or_(literal_match, *name_matches)
 
 
 def scalar(value):
@@ -201,7 +222,7 @@ def query_shipments(db, args):
     c = source.c
     q = db.query(source)
     if args.termo:
-        q = q.filter(contains([c.cliente, c.codigo, c.pedido, c.telefone_busca, c.destinatario_busca], args.termo))
+        q = q.filter(shipment_match(db, c, args.termo))
     if args.situacao == "em_aberto":
         q = q.filter(c.status.in_(OPEN_SHIPMENTS))
     elif args.situacao != "todos":

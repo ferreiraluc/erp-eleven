@@ -37,6 +37,7 @@ Não reaproveite destinatário, peso, declaração ou serviço de outro pedido. 
   Status PENDENTE estrito só quando usuário pedir especificamente aguardando/inicial. Erros não comprovam atraso.
   Datas de envio são cadastro no ERP, não comprovam data de postagem física. Não use ultima_atualizacao para ordenar envios.
   Para 'rastreio de NOME', use consultar_rastreio_cliente com termo só com NOME. Não inclua entregues nem pergunte 'é esse?' quando há um único cliente em andamento.
+  Consulte antes de dizer que não encontrou ou exigir nome completo: nomes parciais e sobrenomes podem identificar um destinatário; a ferramenta informa quando há ambiguidade.
   Se esse cliente tem vários pacotes em trânsito, entregue todos os códigos atuais, cada código sozinho seguido dos detalhes. Não escolha arbitrariamente um pacote.
   Para 'último/mais recente' use recentes, mesmo entregue. Não peça identificação só por haver histórico.
   Use recomendado da ferramenta. Clientes distintos ou vários abertos sem escolha clara: apresente opções curtas com datas/status.
@@ -154,6 +155,23 @@ def draft_response(note):
             "Não altera vendas, estoque ou pagamentos. Expira em 24 horas."))
 
 
+def _tracking_lookup_required(content, previous=None):
+    """Require live evidence for tracking, without hijacking product code requests."""
+    if not tracking_intent(content, previous):
+        return False
+    # Explaining the feature or declining a lookup does not request live records.
+    if re.search(r"\bcomo\s+(?:funciona\w*|rastrear|consultar|acompanhar)\b", content, re.I):
+        return False
+    if re.search(r"\bn[aã]o\s+(?:(?:preciso|quero|necessito)\s+(?:de\s+)?)?(?:consultar|buscar|rastrear|verificar)\b", content, re.I):
+        return False
+    if re.search(r"\brastrei\w*\b|\brastreamento\b|\b[A-Z]{2}\d{9}[A-Z]{2}\b", content, re.I):
+        return True
+    if current_customer_request(content):
+        return not re.search(r"\b(?:sku|produtos?|it(?:em|ens)|barras|internos?|estoque|vendas?|tickets?)\b", content, re.I)
+    continuation = re.match(r"^(?:e |sim\b|esse\b|este\b|dele\b|dela\b|s[oó] |apenas |mais\b)", content.strip(), re.I)
+    return bool(previous and continuation and _tracking_lookup_required(previous))
+
+
 def respond(db, message, identity):
     content = message.text.strip()
     parts = content.split(maxsplit=1)
@@ -224,6 +242,8 @@ def respond(db, message, identity):
         result=prepare_file(db,message,identity,FilePrintArgs())
         return result.get('confirmacao') or result['erro']
     is_tracking=tracking_intent(content,previous_text)
+    tracking_lookup_required = _tracking_lookup_required(content, previous_text)
+    tracking_queried = False
     customer_mode=current_customer_request(content)
     mode = "Responda à solicitação." if message.should_reply else "Modo observação: não responda, exceto para preparar rascunho de ocorrência clara."
     now = settings.now()
@@ -293,6 +313,17 @@ def respond(db, message, identity):
                 tool_choice={"type":"function","function":{"name":"consultar_vendas_planilhas"}}
                 continue
             answer = str(result.get("content") or "Não consegui concluir essa consulta. Tente reformular a pergunta.")
+            if tracking_lookup_required and not tracking_queried and message.should_reply:
+                if refresh_attempts >= 2:
+                    return "Não consegui verificar esse rastreio no ERP agora. Tente consultar novamente."
+                refresh_attempts += 1
+                messages.append({"role": "system", "content":
+                    "Consulte buscar_rastreios com os filtros desta solicitação antes de responder, "
+                    "inclusive antes de dizer que não encontrou um envio. O histórico não comprova "
+                    "a existência nem a ausência de rastreios atuais. Use o contexto apenas para "
+                    "identificar o cliente; não invente resultados nem reutilize uma negativa antiga."})
+                tool_choice = {"type": "function", "function": {"name": "buscar_rastreios"}}
+                continue
             if re.search(r'cota[çc][ãa]o (?:para|feita|refeita)|(?:PAC|SEDEX)[^\n]{0,30}R\$',answer,re.I) and not db.query(FreightOrder.id).filter_by(request_key=message.id).first():
                 if quote_attempts>=1:
                     return 'Não consegui gerar uma cotação válida para este pedido. '+(str(last_tool_error) if last_tool_error else 'Envie os dados que faltam para cotar; nenhuma etiqueta foi comprada.')
@@ -359,6 +390,10 @@ def respond(db, message, identity):
                         arguments={'termo':arguments['termo'],'pagina':arguments.get('pagina',1)}
                     output = execute_tool(db, message, identity, name, arguments)
                     if isinstance(output,dict) and output.get('erro'):last_tool_error=output['erro']
+                    if name in ('buscar_rastreios', 'consultar_rastreio_cliente'):
+                        if output.get('erro') and is_tracking and message.should_reply:
+                            return text_reply(output['erro'], message.channel)
+                        tracking_queried = not output.get('erro')
                     if name=='consultar_rastreio_cliente' and is_tracking and message.should_reply:
                         return customer_tracking_reply(output)
                     if name == "consultar_sistema":consulted_system=True

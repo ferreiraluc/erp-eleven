@@ -235,6 +235,8 @@ def test_unverified_tracking_code_cannot_be_sent_as_verified_result(setup, monke
     replies = iter([
         {"tool_calls": [{"id": "fake", "type": "function", "function": {"name": "responder_rastreio", "arguments": '{"codigo":"FAKE123"}'}}]},
         {"content": "Não encontrei um rastreio identificado."},
+        tool_call("buscar_rastreios", {"termo": "NaoEncontrado"}),
+        {"content": "Não encontrei um rastreio identificado."},
     ])
     monkeypatch.setattr(agent, "complete", lambda _, **kwargs: next(replies))
     with factory() as db:
