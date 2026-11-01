@@ -372,7 +372,8 @@ export interface Cliente {
 
 export interface ClienteCreate {
   nome: string
-  telefone?: string
+  telefone?: string | null
+  telefone_pais?: 'BR' | 'PY'
   email?: string
   cpf?: string | null
   documentos?: ClienteDocumento[]

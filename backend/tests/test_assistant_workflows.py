@@ -92,13 +92,15 @@ def test_group_context_does_not_mix_employees(env,monkeypatch):
 
 def test_fabricated_quote_cannot_reuse_previous_customer(env,monkeypatch):
     factory,_,uid,_=env
-    answers=iter([{'content':'Cotação para Taigoro: PAC R$ 25,65; SEDEX R$ 46,49.'},
+    answers=iter([tool_call('consultar_enderecos',{'termo':'remetentes'}),
+        {'content':'Cotação para Taigoro: PAC R$ 25,65; SEDEX R$ 46,49.'},
         {'content':'Informe o peso e as medidas do pacote.'}])
     monkeypatch.setattr(agent,'complete',lambda *a,**k:next(answers))
     with factory() as db:
         msg=incoming(db,uid,'Emita uma etiqueta para Taigoro',channel='telegram')
         answer=agent.respond(db,msg,identity(db,msg))
         assert 'Informe o peso' in answer and db.query(FreightOrder).count()==0
+        assert '25,65' not in answer and '46,49' not in answer
 
 
 def test_service_number_does_not_select_older_quote_after_another_request(env):

@@ -1,6 +1,7 @@
 """Explicit setup commands. Credentials are read from the environment, never printed."""
 import argparse
 import json
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import requests
@@ -26,9 +27,46 @@ def telegram(method, payload=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["check", "telegram-info", "telegram-discover", "telegram-webhook"])
+    parser.add_argument("command", choices=["check", "telegram-info", "telegram-discover", "telegram-webhook",
+                                            "shipping-defaults-show", "shipping-defaults-set"])
     parser.add_argument("--url", help="URL HTTPS pública do webhook Telegram")
+    parser.add_argument("--defaults-file", help="JSON do padrão de frete explicitamente autorizado por Lucas")
+    parser.add_argument("--expected-revision", type=int, help="Revisão atual; zero apenas para o primeiro cadastro")
     args = parser.parse_args()
+    if args.command.startswith('shipping-defaults-'):
+        from fastapi import HTTPException
+        from pydantic import ValidationError
+        from sqlalchemy.exc import SQLAlchemyError
+        from .database import SessionLocal
+        from .models.usuario import Usuario
+        from .services.access_policy import OWNER_EMAIL
+        from .services.assistant_routines import RoutineArgs, get_routine, save_routine
+        from .services.user_audit import bind_actor
+        if args.command == 'shipping-defaults-set' and (
+                not args.defaults_file or args.expected_revision is None or args.expected_revision < 0):
+            parser.error('Informe --defaults-file e --expected-revision; a atualização não é automática.')
+        try:
+            with SessionLocal() as db:
+                if args.command == 'shipping-defaults-show':
+                    print(json.dumps({'padrao': get_routine(db)}, ensure_ascii=False, indent=2))
+                    return
+                path=Path(args.defaults_file)
+                if path.stat().st_size > 65536:
+                    raise ValueError('Arquivo de padrão muito grande.')
+                payload=RoutineArgs.model_validate(json.loads(path.read_text(encoding='utf-8')))
+                owner=db.query(Usuario).filter(Usuario.email==OWNER_EMAIL, Usuario.ativo.is_(True)).one_or_none()
+                if not owner:raise SystemExit('Proprietário ativo não encontrado. Nenhuma alteração realizada.')
+                bind_actor(db,owner,source='cli')
+                saved=save_routine(db,payload,user_id=owner.id,expected_revision=args.expected_revision)
+                db.commit()
+                print(json.dumps({'salvo':True,'revisao':saved['revision'],'ativo':saved['active']}))
+        except HTTPException as error:
+            raise SystemExit(str(error.detail)) from None
+        except (OSError,ValueError,ValidationError):
+            raise SystemExit('Confira o JSON do padrão. Nenhuma alteração realizada.') from None
+        except SQLAlchemyError:
+            raise SystemExit('Não foi possível acessar o banco; confira a configuração sem expor credenciais.') from None
+        return
     if args.command == "check":
         keys = ["DEEPSEEK_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM",
                 "TWILIO_WEBHOOK_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET",

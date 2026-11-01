@@ -15,7 +15,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.platypus.doctemplate import LayoutError
 
 from ..models.assistant import AssistantAction, utcnow
-from ..models.printing import PrintDevice, PrintJob, PrintSender
+from ..models.printing import PrintDevice, PrintJob
 from .assistant_schedule import may_schedule
 
 
@@ -60,7 +60,7 @@ class AddressArgs(BaseModel):
     documento_tipo: Literal['CPF', 'CNPJ', 'RG', 'CI', 'RUC'] | None = None
     documento_emissor: str | None = Field(default=None, max_length=20)
     telefone: str = Field(default='', max_length=40)
-    remetente: str | None = Field(default=None, max_length=30, description='ID do remetente ativo cadastrado no gestor; debora e mona são os iniciais.')
+    remetente: str | None = Field(default=None, max_length=100, description='ID, apelido cadastrado no ID ou nome do remetente ativo consultado no gestor. Uma referência ambígua exige escolha.')
 
     @field_validator('nome', 'endereco', 'cidade', 'estado', 'cep', 'cpf', 'telefone', mode='before')
     @classmethod
@@ -170,9 +170,11 @@ def prepare_print(db, message, identity, args, postal_check=None):
         return {'erro': 'É necessário configurar uma única impressora ativa da loja.'}
     sender = None
     if args.pais == 'BR':
-        profile = db.get(PrintSender, args.remetente)
-        if not profile or not profile.active:
-            return {'erro': 'Remetente ainda não configurado no ERP. Nenhuma impressão enviada.'}
+        from .assistant_senders import resolve_sender
+        profile, sender_error = resolve_sender(db, args.remetente)
+        if sender_error:
+            return sender_error
+        args = args.model_copy(update={'remetente': profile.id})
         sender = {'nome': profile.name, 'linhas': sender_lines(profile)}
     from .address_manager import get_layout
     action_id = uuid.uuid4()

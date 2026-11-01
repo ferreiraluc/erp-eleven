@@ -52,12 +52,14 @@ class ClienteBase(BaseModel):
 
 
 class ClienteCreate(ClienteBase):
-    pass
+    # Input-only: the country is persisted as the DDI in telefone, not nationality.
+    telefone_pais: Optional[Literal['BR', 'PY']] = None
 
 
 class ClienteUpdate(BaseModel):
     nome: Optional[str] = None
     telefone: Optional[str] = None
+    telefone_pais: Optional[Literal['BR', 'PY']] = None
     email: Optional[str] = None
     cpf: Optional[str] = None
     documentos: Optional[list[CustomerDocument]] = Field(default=None, max_length=10)

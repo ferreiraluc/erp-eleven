@@ -60,6 +60,9 @@ def may_schedule(db, message, identity):
 
 
 def action_preview(action):
+    if action.kind == 'padrao_frete':
+        from .assistant_routines import routine_preview
+        return routine_preview(action)
     if action.kind == 'rastreio_comprovante':
         from .receipt_tracking import receipt_preview
         return receipt_preview(action)
@@ -133,6 +136,9 @@ def confirm_action(db, message, identity, action, cancel=False):
     if action.kind == "apelido":
         from .assistant_knowledge import confirm_alias
         return confirm_alias(db, message, action)
+    if action.kind == 'padrao_frete':
+        from .assistant_routines import confirm_routine
+        return confirm_routine(db, message, action)
     if action.kind == 'rastreio_comprovante':
         from .receipt_tracking import confirm_receipt
         return confirm_receipt(db, message, action)

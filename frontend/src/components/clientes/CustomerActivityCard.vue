@@ -15,7 +15,7 @@
         <span class="customer-contact">{{ customer.telefone || customer.email || t('noContact') }}</span>
         <template v-if="customer.telefone">
           <a v-if="whatsappUrl" :href="whatsappUrl" class="customer-whatsapp erp-button erp-button--secondary erp-button--sm" target="_blank" rel="noopener noreferrer" :aria-label="t('whatsappOpen', { name: customer.nome })" :title="t('whatsappOpen', { name: customer.nome })" @click.stop>WhatsApp</a>
-          <button v-else type="button" class="customer-whatsapp erp-button erp-button--secondary erp-button--sm" disabled :aria-describedby="phoneHelpId" :title="t('whatsappPhoneHelp')" @click.stop>WhatsApp</button>
+          <button v-else type="button" class="customer-whatsapp erp-button erp-button--secondary erp-button--sm" :aria-describedby="phoneHelpId" :title="t('whatsappPhoneHelp')" @click.stop="$emit('edit')">{{ t('whatsappConfigure') }}</button>
         </template>
       </div>
       <p v-if="customer.telefone && !whatsappUrl" :id="phoneHelpId" class="customer-phone-help">{{ t('whatsappPhoneHelp') }}</p>

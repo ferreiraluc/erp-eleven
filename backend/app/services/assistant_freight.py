@@ -1,11 +1,12 @@
 """Bot freight workflow: quote, price approval, paid PDF review, print approval."""
 import uuid
+from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 from fastapi import HTTPException
 from ..database import SessionLocal
 from ..models.assistant import AssistantAction, utcnow
 from ..models.address_book import SavedAddress,FreightOrder
-from ..models.printing import PrintSender,PrintDevice
+from ..models.printing import PrintDevice
 from ..schemas.address_book import AddressData
 from .assistant_schedule import may_schedule
 from . import superfrete as sf
@@ -15,10 +16,12 @@ class BotQuote(BaseModel):
     model_config=ConfigDict(extra='forbid')
     address_id:uuid.UUID|None=None
     endereco:AddressData|None=None
-    sender_id:str|None=Field(default=None,max_length=30)
+    sender_id:str|None=Field(default=None,max_length=100)
     remetente:AddressData|None=None
-    package:sf.Package
-    products:list[sf.Product]=Field(min_length=1,max_length=50)
+    package:sf.Package|None=None
+    products:list[sf.Product]|None=Field(default=None,min_length=1,max_length=50)
+    quantidade:int|None=Field(default=None,ge=1,le=10000,strict=True,
+        description='Quantidade informada para este envio; permite aplicar o modelo de conteúdo salvo quando products não foi informado.')
     non_commercial:bool=False
     invoice:str=Field(default='',max_length=44)
     @model_validator(mode='after')
@@ -39,11 +42,31 @@ class FreightId(BaseModel):
     freight_id:uuid.UUID
 
 
+def shipment_details(payload):
+    """Show the actual quote snapshot, never the current mutable preset."""
+    package=payload.get('volumes') or {}
+    lines=[]
+    def number(value):
+        return format(Decimal(str(value)).normalize(),'f').replace('.',',')
+    if all(key in package for key in ('weight','height','width','length')):
+        lines.append(f"Pacote: {number(package['weight'])} kg; "
+                     f"{number(package['height'])} × {number(package['width'])} × {number(package['length'])} cm (A × L × C).")
+    for product in payload.get('products') or []:
+        price=f"{Decimal(str(product['unitary_value'])):.2f}".replace('.',',')
+        lines.append(f"Conteúdo: {product['quantity']} × {product['name']} — R$ {price} por unidade.")
+    defaults=payload.get('_assistant_defaults') or {}
+    if defaults.get('applied_fields'):
+        fields=', '.join('pacote' if field=='package' else 'descrição/valor unitário' for field in defaults['applied_fields'])
+        lines.append(f"Padrão da equipe aplicado: {fields} (revisão {defaults['revision']}). Confira antes de emitir.")
+    return '\n'.join(lines)
+
+
 def preview(action):
     from .assistant_controls import preview_reply
     p=action.payload
     if action.kind=='frete_emitir':
-        return preview_reply(action, ('\n'.join(p.get('postal_warnings',[])) + '\n' + f"Emitir etiqueta para {p['recipient']}, serviço {p['service_name']}, valor R$ {p['price']}. "
+        return preview_reply(action, ('\n'.join(p.get('postal_warnings',[])) + '\n' +
+                (p['shipment_details']+'\n' if p.get('shipment_details') else '') + f"Emitir etiqueta para {p['recipient']}, serviço {p['service_name']}, valor R$ {p['price']}. "
                 f"Ambiente: {p['environment']}. O valor será debitado do saldo SuperFrete.\n"
                 f"Ao confirmar, o PDF será enviado ao Telegram e impresso automaticamente quando liberado.\nDiga ‘confirmo’ para pagar e emitir ou ‘cancela’. Nenhuma compra realizada ainda.\nIdentificador da prévia: {action.id}"))
     from .assistant_replies import DocumentReply
@@ -56,9 +79,23 @@ def execute(db,message,identity,name,args):
     if not message.should_reply or not may_schedule(db,message,identity):return {'erro':'Fretes exigem pedido direto de ADMIN/GERENTE habilitado.'}
     try:
         if name=='cotar_superfrete':
-            a=BotQuote.model_validate(args)
             previous=db.query(FreightOrder).filter_by(request_key=message.id).first()
-            if previous:return sf.summary(previous)
+            if previous:
+                if previous.user_id!=message.user_id:return {'erro':'Cotação não disponível para este usuário.'}
+                return sf.summary(previous)
+            from .assistant_routines import merge_quote_defaults
+            from .assistant_senders import resolve_sender
+            supplied=BotQuote.model_validate(args).model_dump(mode='json',exclude_none=True)
+            merged,defaults=merge_quote_defaults(db,supplied)
+            if defaults['missing_fields']:
+                return {'erro':'Informe somente os dados que faltam para este envio.',
+                        'campos':defaults['missing_fields'],
+                        'orientacao':'A quantidade precisa ser informada para este pedido; nunca reutilize a de outro envio.'}
+            a=BotQuote.model_validate(merged)
+            if a.sender_id:
+                sender,error=resolve_sender(db,a.sender_id)
+                if error:return error
+                a.sender_id=sender.id
             address_id=a.address_id
             if not address_id:
                 from .address_book import save_or_reuse
@@ -67,6 +104,9 @@ def execute(db,message,identity,name,args):
                 address_id=saved.id
             q=sf.QuoteInput(request_key=message.id,address_id=address_id,sender_id=a.sender_id,remetente=a.remetente,package=a.package,products=a.products,non_commercial=a.non_commercial,invoice=a.invoice)
             row=sf.quote_order(db,q,message.user_id)
+            if defaults['applied_fields']:
+                row.payload={**row.payload,'_assistant_defaults':defaults}
+                db.flush()
             return {**sf.summary(row),'instrucao':'Mostre serviços e valores e peça que o usuário escolha. Não emita nesta mensagem.'}
         if name=='preparar_etiqueta':
             a=SelectFreight.model_validate(args)
@@ -84,7 +124,8 @@ def execute(db,message,identity,name,args):
                 if row.state!='pending':return sf.summary(row)
                 selected=next((r for r in row.rates if r['id']==row.service),{})
                 payload={'freight_id':str(row.id),'recipient':row.payload['to']['name'],'price':str(row.price),
-                         'service_name':selected.get('name',str(row.service)),'environment':row.environment,'postal_warnings':row.payload.get('_postal_warnings',[])}
+                         'service_name':selected.get('name',str(row.service)),'environment':row.environment,'postal_warnings':row.payload.get('_postal_warnings',[]),
+                         'shipment_details':shipment_details(row.payload)}
             action=AssistantAction(source_message_id=message.id,user_id=message.user_id,kind='frete_emitir',payload=payload)
             db.add(action);db.flush();return {'confirmacao':preview(action)}
         a=FreightId.model_validate(args)
@@ -133,6 +174,8 @@ def quote_preview(order):
     """Stable option order and quote identity, persisted with the bot response."""
     if order.state!='quoted':return order.error or 'A cotação está sendo consultada. Avisaremos quando puder continuar.'
     lines=[f"Cotação para {order.payload['to']['name']}, remetente {order.payload['from']['name']}:"]
+    details=shipment_details(order.payload)
+    if details:lines.append(details)
     lines += order.payload.get('_postal_warnings', [])
     for index,rate in enumerate(order.rates,1):
         price=f"{float(rate['price']):.2f}".replace('.',',')
