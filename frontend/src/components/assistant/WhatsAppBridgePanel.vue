@@ -9,7 +9,7 @@
     <p v-if="notice" class="wa-notice" role="status">{{ notice }}</p>
     <p v-if="loading && !config" role="status">{{ uiText('Carregando conexão…') }}</p>
     <template v-if="config">
-      <div class="wa-status" role="status"><strong>{{ connectionLabel }}</strong><span v-if="config.account_phone">{{ config.account_phone }}</span><small v-if="config.last_seen_at">{{ uiText('Último contato:') }} {{ date(config.last_seen_at) }}</small></div>
+      <div class="wa-status" role="status"><strong>{{ connectionLabel }}</strong><span v-if="config.account_phone">{{ config.account_phone }}</span><small v-if="config.last_seen_at">{{ uiText('Último contato:') }} {{ date(config.last_seen_at) }}</small><small v-if="connectionDetail">{{ connectionDetail }}</small></div>
       <form @submit.prevent="save">
         <label class="wa-check"><input v-model="draft.enabled" type="checkbox" :disabled="saving" />{{ uiText('Habilitar WhatsApp da equipe') }}</label>
         <label class="wa-check"><input v-model="draft.allow_private" type="checkbox" :disabled="saving" />{{ uiText('Permitir conversas individuais com funcionários autorizados') }}</label>
@@ -31,7 +31,8 @@
       </form>
       <div class="wa-link">
         <h3>{{ uiText('Vincular o número') }}</h3>
-        <p>{{ uiText('Com o agente da nuvem configurado, abra WhatsApp → Aparelhos conectados → Conectar um aparelho e leia o QR Code abaixo.') }}</p>
+        <p>{{ uiText('Use o QR Code no primeiro acesso ou quando o WhatsApp confirmar que o vínculo terminou. Para falhas temporárias, aguarde a recuperação do agente.') }}</p>
+        <p>{{ uiText('Para vincular, abra WhatsApp → Aparelhos conectados → Conectar um aparelho no telefone do bot.') }}</p>
         <button v-if="!pairingOpen" type="button" class="erp-button erp-button--secondary" @click="openPairing">{{ uiText('Mostrar QR Code') }}</button>
         <template v-else>
           <img v-if="qrImage" class="wa-qr" :src="qrImage" :alt="uiText('QR Code para vincular o WhatsApp da equipe')" />
@@ -49,7 +50,7 @@
       </details>
       <details class="wa-setup">
         <summary>{{ uiText('Refazer vínculo do WhatsApp') }}</summary>
-        <p>{{ uiText('Use se o WhatsApp desconectou o aparelho ou se deseja trocar o número do bot. A sessão atual do agente será substituída, preservando as filas e o histórico do ERP.') }}</p>
+        <p>{{ uiText('Use para trocar o número ou quando o WhatsApp confirmar o encerramento do vínculo. Antes de refazer por falha de conexão, confira o diagnóstico acima. A sessão será substituída, preservando as filas e o histórico do ERP.') }}</p>
         <label class="wa-check"><input v-model="resetConfirmed" type="checkbox" />{{ uiText('Quero vincular o número novamente por QR Code') }}</label>
         <button type="button" class="erp-button erp-button--secondary" :disabled="saving || !resetConfirmed" @click="resetSession">{{ uiText('Preparar novo vínculo') }}</button>
       </details>
@@ -78,10 +79,29 @@ const groups = computed(() => {
   return [...known, ...draft.value.allowed_groups.filter(id => !known.some(g => g.id === id)).map(id => ({ id, name: id }))]
 })
 const date = (value: string) => new Date(value).toLocaleString(uiLocale())
+const recentContact = computed(() => !!config.value?.last_seen_at && statusTime.value - Date.parse(config.value.last_seen_at) <= 120_000)
+const connected = computed(() => config.value?.state === 'connected' || config.value?.state === 'open')
 const connectionLabel = computed(() => {
   if (!config.value?.enabled) return uiText('Pausado')
-  if (!config.value.last_seen_at || statusTime.value - Date.parse(config.value.last_seen_at) > 120_000) return uiText('Agente sem contato recente')
-  return ({ connected: uiText('Conectado'), open: uiText('Conectado'), connecting: uiText('Conectando…'), qr: uiText('Aguardando vínculo'), pairing: uiText('Aguardando vínculo'), logged_out: uiText('Vincule o número novamente'), disconnected: uiText('Reconectando…') }[config.value.state] || uiText('Aguardando conexão'))
+  if (!recentContact.value) return uiText('Agente sem contato recente')
+  if (connected.value) return uiText('Conectado')
+  const failure = ({ session_recovery: uiText('Recuperando conexão…'), session_recovery_exhausted: uiText('Recuperação pausada'), connection_replaced: uiText('Conflito de conexão'), session_logged_out: uiText('Vincule o número novamente'), session_forbidden: uiText('Acesso recusado pelo WhatsApp'), session_device_mismatch: uiText('Sessão incompatível') } as Record<string, string>)[config.value.error_code || '']
+  return failure || ({ starting: uiText('Iniciando conexão…'), connecting: uiText('Conectando…'), reconnecting: uiText('Reconectando…'), qr: uiText('Aguardando vínculo'), pairing: uiText('Aguardando vínculo'), logged_out: uiText('Conexão interrompida'), error: uiText('Conexão precisa de revisão'), disconnected: uiText('Reconectando…') }[config.value.state] || uiText('Aguardando conexão'))
+})
+const connectionDetail = computed(() => {
+  if (!config.value?.enabled || !recentContact.value || connected.value) return ''
+  const detail = ({
+    session_recovery: uiText('A conexão foi interrompida. O agente está tentando recuperar a sessão existente automaticamente, sem precisar de outro QR Code.'),
+    session_recovery_exhausted: uiText('A recuperação automática atingiu o limite de tentativas. Peça a revisão do agente antes de refazer o vínculo; a sessão e a fila foram preservadas.'),
+    connection_replaced: uiText('O WhatsApp substituiu esta conexão. Confira se há outro agente usando a mesma sessão e mantenha apenas um ativo antes de reiniciar. Preserve o vínculo atual.'),
+    session_logged_out: uiText('O WhatsApp encerrou o vínculo deste aparelho. Use Refazer vínculo do WhatsApp e conecte o número novamente por QR Code.'),
+    session_forbidden: uiText('O WhatsApp recusou o acesso desta conta. Confira a situação do número no aplicativo do telefone antes de tentar reconectar.'),
+    session_device_mismatch: uiText('O WhatsApp informou uma incompatibilidade de sessão. Revise a versão e a configuração do agente antes de refazer o vínculo.'),
+    connection_retry: uiText('A conexão caiu. O agente tentará novamente automaticamente, preservando a sessão e a fila.'),
+  } as Record<string, string>)[config.value.error_code || '']
+  if (detail) return detail
+  if (config.value.state === 'logged_out' || config.value.state === 'error') return uiText('Confira o diagnóstico do agente antes de refazer o vínculo. Este estado, sem um motivo confirmado, não indica que seja necessário outro QR Code.')
+  return ''
 })
 function explain(e: unknown) {
   const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail

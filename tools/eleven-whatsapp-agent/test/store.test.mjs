@@ -46,7 +46,9 @@ test('a stale PID file does not block replacement containers using the SQLite OS
 test('OS ownership lock is released when its process is killed', async t => {
   const { directory } = fixture(t);
   const moduleUrl = new URL('../src/store.mjs', import.meta.url).href;
-  const script = `import { acquireLock } from ${JSON.stringify(moduleUrl)}; acquireLock(process.argv[1]); process.stdout.write('ready'); setInterval(() => {}, 1000);`;
+  // Retain the release closure, like main.mjs does, so GC cannot close the
+  // SQLite owner before the parent verifies the lock or kills this process.
+  const script = `import { acquireLock } from ${JSON.stringify(moduleUrl)}; const release = acquireLock(process.argv[1]); process.once('exit', release); process.stdout.write('ready'); setInterval(() => {}, 1000);`;
   const child = spawn(process.execPath, ['--input-type=module', '-e', script, directory], { stdio: ['ignore', 'pipe', 'pipe'] });
   t.after(() => child.kill('SIGKILL'));
   await once(child.stdout, 'data');

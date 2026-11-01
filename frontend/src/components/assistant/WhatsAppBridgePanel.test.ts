@@ -16,6 +16,47 @@ beforeEach(() => { vi.useFakeTimers(); vi.resetAllMocks(); vi.spyOn(document, 'h
 afterEach(() => { app?.unmount(); root?.remove(); vi.restoreAllMocks(); vi.useRealTimers() })
 
 describe('WhatsApp team connection', () => {
+  it.each([
+    ['starting', null, 'Iniciando conexão…', ''],
+    ['reconnecting', 'connection_retry', 'Reconectando…', 'preservando a sessão e a fila'],
+    ['reconnecting', 'session_recovery', 'Recuperando conexão…', 'sem precisar de outro QR Code'],
+    ['error', 'session_recovery_exhausted', 'Recuperação pausada', 'a sessão e a fila foram preservadas'],
+    ['error', 'connection_replaced', 'Conflito de conexão', 'Preserve o vínculo atual'],
+    ['logged_out', 'session_logged_out', 'Vincule o número novamente', 'O WhatsApp encerrou o vínculo'],
+    ['logged_out', 'session_forbidden', 'Acesso recusado pelo WhatsApp', 'Confira a situação do número no aplicativo do telefone'],
+    ['logged_out', 'session_device_mismatch', 'Sessão incompatível', 'Revise a versão e a configuração do agente'],
+    ['logged_out', null, 'Conexão interrompida', 'sem um motivo confirmado'],
+    ['error', 'unknown_private_provider_detail', 'Conexão precisa de revisão', 'sem um motivo confirmado'],
+  ])('explains %s / %s without resetting the session', async (state, error_code, label, detail) => {
+    mocks.get.mockResolvedValue({ ...base, enabled: true, state, error_code, last_seen_at: new Date().toISOString() })
+    await mount()
+    const status = root.querySelector('.wa-status')!
+    expect(status.querySelector('strong')!.textContent).toBe(label)
+    expect(status.textContent).toContain(detail)
+    expect(status.textContent).not.toContain('unknown_private_provider_detail')
+    if (error_code !== 'session_logged_out') expect(status.textContent).not.toContain('Vincule o número novamente')
+    expect(mocks.reset).not.toHaveBeenCalled()
+    expect(mocks.pairing).not.toHaveBeenCalled()
+  })
+  it('clears recovery guidance once the connection is restored', async () => {
+    mocks.get.mockResolvedValue({ ...base, enabled: true, state: 'reconnecting', error_code: 'session_recovery', last_seen_at: new Date().toISOString() })
+    await mount()
+    expect(root.querySelector('.wa-status')!.textContent).toContain('Recuperando conexão…')
+    mocks.get.mockResolvedValue({ ...base, enabled: true, state: 'connected', error_code: 'session_recovery', last_seen_at: new Date().toISOString() })
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(root.querySelector('.wa-status strong')!.textContent).toBe('Conectado')
+    expect(root.querySelector('.wa-status')!.textContent).not.toContain('recuperar a sessão')
+  })
+  it('does not present stale or paused connection diagnoses as current recovery', async () => {
+    mocks.get.mockResolvedValue({ ...base, enabled: true, state: 'error', error_code: 'session_recovery_exhausted', last_seen_at: new Date(Date.now() - 121000).toISOString() })
+    await mount()
+    expect(root.querySelector('.wa-status strong')!.textContent).toBe('Agente sem contato recente')
+    expect(root.querySelector('.wa-status')!.textContent).not.toContain('atingiu o limite')
+    mocks.get.mockResolvedValue({ ...base, enabled: false, state: 'error', error_code: 'session_recovery_exhausted', last_seen_at: new Date().toISOString() })
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(root.querySelector('.wa-status strong')!.textContent).toBe('Pausado')
+    expect(root.querySelector('.wa-status')!.textContent).not.toContain('atingiu o limite')
+  })
   it('discovers new groups while preserving unsaved group and response settings', async () => {
     await mount()
     root.querySelector<HTMLInputElement>('fieldset input')!.click()

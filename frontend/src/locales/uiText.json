@@ -4628,5 +4628,100 @@
     "pt": "WhatsApp da equipe",
     "es": "WhatsApp del equipo",
     "en": "Team WhatsApp"
+  },
+  "Recuperando conexão…": {
+    "pt": "Recuperando conexão…",
+    "es": "Recuperando conexión…",
+    "en": "Recovering connection…"
+  },
+  "Recuperação pausada": {
+    "pt": "Recuperação pausada",
+    "es": "Recuperación pausada",
+    "en": "Recovery paused"
+  },
+  "Conflito de conexão": {
+    "pt": "Conflito de conexão",
+    "es": "Conflicto de conexión",
+    "en": "Connection conflict"
+  },
+  "Acesso recusado pelo WhatsApp": {
+    "pt": "Acesso recusado pelo WhatsApp",
+    "es": "Acceso rechazado por WhatsApp",
+    "en": "Access denied by WhatsApp"
+  },
+  "Sessão incompatível": {
+    "pt": "Sessão incompatível",
+    "es": "Sesión incompatible",
+    "en": "Incompatible session"
+  },
+  "Iniciando conexão…": {
+    "pt": "Iniciando conexão…",
+    "es": "Iniciando conexión…",
+    "en": "Starting connection…"
+  },
+  "Conexão interrompida": {
+    "pt": "Conexão interrompida",
+    "es": "Conexión interrumpida",
+    "en": "Connection interrupted"
+  },
+  "Conexão precisa de revisão": {
+    "pt": "Conexão precisa de revisão",
+    "es": "La conexión requiere revisión",
+    "en": "Connection needs review"
+  },
+  "A conexão foi interrompida. O agente está tentando recuperar a sessão existente automaticamente, sem precisar de outro QR Code.": {
+    "pt": "A conexão foi interrompida. O agente está tentando recuperar a sessão existente automaticamente, sem precisar de outro QR Code.",
+    "es": "La conexión se interrumpió. El agente está intentando recuperar la sesión existente automáticamente, sin necesitar otro código QR.",
+    "en": "The connection was interrupted. The agent is trying to recover the existing session automatically, without another QR code."
+  },
+  "A recuperação automática atingiu o limite de tentativas. Peça a revisão do agente antes de refazer o vínculo; a sessão e a fila foram preservadas.": {
+    "pt": "A recuperação automática atingiu o limite de tentativas. Peça a revisão do agente antes de refazer o vínculo; a sessão e a fila foram preservadas.",
+    "es": "La recuperación automática alcanzó el límite de intentos. Solicite una revisión del agente antes de volver a vincular; se conservaron la sesión y la cola.",
+    "en": "Automatic recovery reached its retry limit. Have the agent reviewed before pairing again; the session and queue were preserved."
+  },
+  "O WhatsApp substituiu esta conexão. Confira se há outro agente usando a mesma sessão e mantenha apenas um ativo antes de reiniciar. Preserve o vínculo atual.": {
+    "pt": "O WhatsApp substituiu esta conexão. Confira se há outro agente usando a mesma sessão e mantenha apenas um ativo antes de reiniciar. Preserve o vínculo atual.",
+    "es": "WhatsApp sustituyó esta conexión. Compruebe si otro agente usa la misma sesión y mantenga solo uno activo antes de reiniciar. Conserve la vinculación actual.",
+    "en": "WhatsApp replaced this connection. Check whether another agent is using the same session and keep only one active before restarting. Preserve the current pairing."
+  },
+  "O WhatsApp encerrou o vínculo deste aparelho. Use Refazer vínculo do WhatsApp e conecte o número novamente por QR Code.": {
+    "pt": "O WhatsApp encerrou o vínculo deste aparelho. Use Refazer vínculo do WhatsApp e conecte o número novamente por QR Code.",
+    "es": "WhatsApp cerró la vinculación de este dispositivo. Use Volver a vincular WhatsApp y conecte el número de nuevo mediante código QR.",
+    "en": "WhatsApp ended this device’s pairing. Use Pair WhatsApp again and reconnect the number by QR code."
+  },
+  "O WhatsApp recusou o acesso desta conta. Confira a situação do número no aplicativo do telefone antes de tentar reconectar.": {
+    "pt": "O WhatsApp recusou o acesso desta conta. Confira a situação do número no aplicativo do telefone antes de tentar reconectar.",
+    "es": "WhatsApp rechazó el acceso de esta cuenta. Revise el estado del número en la aplicación del teléfono antes de intentar reconectar.",
+    "en": "WhatsApp denied access to this account. Check the number’s status in the phone app before trying to reconnect."
+  },
+  "O WhatsApp informou uma incompatibilidade de sessão. Revise a versão e a configuração do agente antes de refazer o vínculo.": {
+    "pt": "O WhatsApp informou uma incompatibilidade de sessão. Revise a versão e a configuração do agente antes de refazer o vínculo.",
+    "es": "WhatsApp informó de una incompatibilidad de sesión. Revise la versión y la configuración del agente antes de volver a vincular.",
+    "en": "WhatsApp reported an incompatible session. Review the agent’s version and configuration before pairing again."
+  },
+  "A conexão caiu. O agente tentará novamente automaticamente, preservando a sessão e a fila.": {
+    "pt": "A conexão caiu. O agente tentará novamente automaticamente, preservando a sessão e a fila.",
+    "es": "La conexión se perdió. El agente volverá a intentarlo automáticamente, conservando la sesión y la cola.",
+    "en": "The connection dropped. The agent will retry automatically, preserving the session and queue."
+  },
+  "Confira o diagnóstico do agente antes de refazer o vínculo. Este estado, sem um motivo confirmado, não indica que seja necessário outro QR Code.": {
+    "pt": "Confira o diagnóstico do agente antes de refazer o vínculo. Este estado, sem um motivo confirmado, não indica que seja necessário outro QR Code.",
+    "es": "Revise el diagnóstico del agente antes de volver a vincular. Este estado, sin una causa confirmada, no indica que se necesite otro código QR.",
+    "en": "Review the agent’s diagnosis before pairing again. This state without a confirmed reason does not mean another QR code is required."
+  },
+  "Use o QR Code no primeiro acesso ou quando o WhatsApp confirmar que o vínculo terminou. Para falhas temporárias, aguarde a recuperação do agente.": {
+    "pt": "Use o QR Code no primeiro acesso ou quando o WhatsApp confirmar que o vínculo terminou. Para falhas temporárias, aguarde a recuperação do agente.",
+    "es": "Use el código QR en el primer acceso o cuando WhatsApp confirme que la vinculación terminó. Para fallos temporales, espere la recuperación del agente.",
+    "en": "Use the QR code for initial setup or when WhatsApp confirms that pairing has ended. For temporary failures, wait for the agent to recover."
+  },
+  "Para vincular, abra WhatsApp → Aparelhos conectados → Conectar um aparelho no telefone do bot.": {
+    "pt": "Para vincular, abra WhatsApp → Aparelhos conectados → Conectar um aparelho no telefone do bot.",
+    "es": "Para vincular, abra WhatsApp → Dispositivos vinculados → Vincular un dispositivo en el teléfono del bot.",
+    "en": "To pair, open WhatsApp → Linked devices → Link a device on the bot’s phone."
+  },
+  "Use para trocar o número ou quando o WhatsApp confirmar o encerramento do vínculo. Antes de refazer por falha de conexão, confira o diagnóstico acima. A sessão será substituída, preservando as filas e o histórico do ERP.": {
+    "pt": "Use para trocar o número ou quando o WhatsApp confirmar o encerramento do vínculo. Antes de refazer por falha de conexão, confira o diagnóstico acima. A sessão será substituída, preservando as filas e o histórico do ERP.",
+    "es": "Use esta opción para cambiar el número o cuando WhatsApp confirme que terminó la vinculación. Antes de volver a vincular por un fallo de conexión, revise el diagnóstico anterior. Se sustituirá la sesión, conservando las colas y el historial del ERP.",
+    "en": "Use this to change the number or when WhatsApp confirms that pairing has ended. Before pairing again due to a connection failure, review the diagnosis above. The session will be replaced, preserving queues and ERP history."
   }
 }
