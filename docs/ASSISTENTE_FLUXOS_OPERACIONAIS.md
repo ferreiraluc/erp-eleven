@@ -33,6 +33,27 @@ preservados.
 
 Continuações usam somente o histórico do próprio autor no canal/conversa. Cadastros e memória confirmada continuam compartilhados conforme as permissões. Não se reaproveitam dados de outro funcionário. Dados históricos de pacote/declaração são referência, não padrão automático para novos envios.
 
+O bot possui um padrão operacional explícito em `assistant_knowledge` (`shipping:defaults`),
+com pacote e modelo de conteúdo, separado do histórico livre. Lucas pode pedir para
+salvar, alterar ou desativar esse padrão; a prévia exige confirmação e a gravação
+registra autor, revisão e auditoria. Gestores habilitados podem consultar e usar o
+padrão nos canais autorizados. Não há aprendizado automático de instruções de terceiros.
+
+Na cotação, o servidor preenche apenas pacote ou modelo de conteúdo omitidos. Dados
+explícitos do pedido prevalecem sem mudar o padrão. Quantidade, remetente, destinatário,
+serviço e informações fiscais nunca são guardados como padrão. A quantidade deve vir
+do pedido atual; sem ela, o bot pergunta antes de cotar. Cotação e confirmação mostram
+peso, dimensões, descrição, quantidade, valor unitário e quais dados vieram do padrão.
+Uma revisão posterior não altera o snapshot das cotações existentes nem autoriza
+pagamento ou impressão. Alterações concorrentes exigem uma nova prévia.
+
+Remetentes são consultados no catálogo ativo atual. Impressão e frete aceitam ID ou
+nome, ignorando acentos, caixa e sobrenomes intermediários omitidos. Um único resultado
+é convertido para seu ID cadastrado; homônimos exigem escolha e IDs inativos não são
+reaproveitados. Destinatários vazios não significam ausência de remetentes. Negativas
+antigas deixam de orientar a IA; erros de consulta são informados como falha, sem
+inventar cadastro ou declarar que um remetente existente não foi encontrado.
+
 Cotações só são apresentadas após uma operação real persistida. Escolhas curtas como “2” se vinculam à última cotação mostrada ao autor; botões identificam a cotação exata. Consultas de PDF/etiquetas não são substituídas por uma resposta de rastreio apenas porque apareceu um código.
 
 ## Prévias de impressão e confirmação

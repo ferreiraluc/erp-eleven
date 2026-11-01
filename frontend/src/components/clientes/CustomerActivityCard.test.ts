@@ -15,13 +15,14 @@ async function mount(phone: string | undefined = customer.telefone, locale = 'pt
   const props = reactive({ customer: { ...customer, telefone: phone }, expanded: false })
   const toggle = vi.fn(() => { props.expanded = !props.expanded })
   const bubble = vi.fn()
+  const edit = vi.fn()
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { render: () => null } }] })
   await router.push('/'); await router.isReady()
   root = document.createElement('div'); document.body.append(root)
-  app = createApp({ render: () => h('div', { onClick: bubble }, [h(CustomerActivityCard, { ...props, onToggle: toggle })]) })
+  app = createApp({ render: () => h('div', { onClick: bubble }, [h(CustomerActivityCard, { ...props, onToggle: toggle, onEdit: edit })]) })
   app.use(createI18n({ legacy: false, locale, messages: {} })).use(router).mount(root)
   await nextTick()
-  return { props, toggle, bubble }
+  return { props, toggle, bubble, edit }
 }
 
 afterEach(() => { app?.unmount(); app = undefined; root?.remove() })
@@ -52,14 +53,19 @@ describe('Customer card WhatsApp action', () => {
     expect(root.querySelector('.historico-section')).not.toBeNull()
   })
 
-  it('keeps an ambiguous local number visible with a disabled action and accessible correction hint', async () => {
-    const { props } = await mount('(11) 91234-5678')
+  it('opens the correction form for an ambiguous local number instead of a dead button', async () => {
+    const { props, edit, toggle, bubble } = await mount('(11) 91234-5678')
     expect(root.querySelector('a.customer-whatsapp')).toBeNull()
     expect(root.querySelector('.customer-contact')?.textContent).toBe('(11) 91234-5678')
     const action = root.querySelector<HTMLButtonElement>('button.customer-whatsapp')!
-    expect(action.disabled).toBe(true)
+    expect(action.disabled).toBe(false)
+    expect(action.textContent).toBe('Configurar WhatsApp')
+    action.click()
+    expect(edit).toHaveBeenCalledOnce()
+    expect(toggle).not.toHaveBeenCalled()
+    expect(bubble).not.toHaveBeenCalled()
     const hint = document.getElementById(action.getAttribute('aria-describedby')!)!
-    expect(hint.textContent).toBe('Inclua o código do país e confira o telefone para abrir o WhatsApp.')
+    expect(hint.textContent).toBe('Escolha Brasil (+55) ou Paraguai (+595) no cadastro e confira o telefone para abrir o WhatsApp.')
     props.customer.telefone = '+55 (11) 91234-5678'; await nextTick()
     expect(root.querySelector<HTMLAnchorElement>('a.customer-whatsapp')?.href).toBe('https://wa.me/5511912345678')
     expect(root.querySelector('.customer-phone-help')).toBeNull()
@@ -73,8 +79,8 @@ describe('Customer card WhatsApp action', () => {
   })
 
   it.each([
-    ['es', 'Abrir conversación con Cliente sintético QA en WhatsApp (nueva pestaña)', 'Incluya el código de país y revise el teléfono para abrir WhatsApp.'],
-    ['en', 'Open a WhatsApp conversation with Cliente sintético QA (new tab)', 'Include the country code and check the phone number to open WhatsApp.'],
+    ['es', 'Abrir conversación con Cliente sintético QA en WhatsApp (nueva pestaña)', 'Elija Brasil (+55) o Paraguay (+595) en el registro y revise el teléfono para abrir WhatsApp.'],
+    ['en', 'Open a WhatsApp conversation with Cliente sintético QA (new tab)', 'Choose Brazil (+55) or Paraguay (+595) in the customer form and check the phone number to open WhatsApp.'],
   ])('translates the action and phone guidance to %s', async (locale, label, hint) => {
     const { props } = await mount(customer.telefone, locale)
     expect(root.querySelector('a.customer-whatsapp')?.getAttribute('aria-label')).toBe(label)

@@ -148,9 +148,22 @@ O servidor valida a consistência cliente/pedido/pacote, inclusive fora da inter
 ## Compras do PDV no histórico do cliente
 
 O card mostra **WhatsApp** ao lado do telefone. O atalho abre a conversa pelo
-número internacional, sem enviar mensagem automaticamente. Números incompletos
-ou sem país inequívoco pedem correção do cadastro; não se adivinha o DDI pelo nome,
-endereço ou idioma. A validação de formato não confirma que exista uma conta WhatsApp.
+número internacional, sem enviar mensagem automaticamente. O cadastro oferece
+**País do telefone: Brasil (+55) ou Paraguai (+595)** e uma prévia do número final.
+O Brasil exige DDD; no Paraguai, `0981 234567` pode ser informado com o zero nacional.
+Ao salvar, o backend valida a escolha e grava o telefone internacional no campo
+existente, por exemplo `+595981234567`; não cria outro cliente nem muda sua identidade.
+O país do telefone fica no DDI, não representa nacionalidade ou país do endereço.
+
+Números já internacionais são preservados, inclusive ao selecionar outro país por
+engano. O zero nacional indevido após `+595` ou `+55` é removido, quando o restante
+forma um número válido do país, também ao construir o link
+de contatos antigos. Números locais sem DDI mostram **Configurar WhatsApp**, que
+abre o cadastro para escolher o país; o botão não fica mais desabilitado. Não se
+adivinha o DDI pelo nome, documento, endereço ou idioma e não há alteração em massa
+dos telefones históricos. Uma edição de outro campo pode preservar um telefone
+antigo ainda sem país. Números incompletos pedem correção; a validação de formato
+não confirma que exista uma conta WhatsApp.
 
 O histórico em **Clientes** inclui **Compras no PDV**, com paginação própria,
 situação, vendedor, data em Brasília, itens e quantidades devolvidas. Cada venda

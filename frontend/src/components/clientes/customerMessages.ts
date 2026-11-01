@@ -10,7 +10,8 @@ export const customerMessages = {
     history: 'Histórico do cliente', edit: 'Editar cliente', inactive: 'Inativo', deactivate: 'Inativar', addresses: 'Endereços',
     contact: 'Contato e endereço', noContact: 'Sem contato informado',
     whatsappOpen: 'Abrir conversa com {name} no WhatsApp (nova aba)',
-    whatsappPhoneHelp: 'Inclua o código do país e confira o telefone para abrir o WhatsApp.',
+    whatsappConfigure: 'Configurar WhatsApp',
+    whatsappPhoneHelp: 'Escolha Brasil (+55) ou Paraguai (+595) no cadastro e confira o telefone para abrir o WhatsApp.',
   },
   es: {
     sort: 'Organizar clientes', name: 'Nombre', latestPurchase: 'Últimas compras', latestPrint: 'Últimas impresiones',
@@ -23,7 +24,8 @@ export const customerMessages = {
     history: 'Historial del cliente', edit: 'Editar cliente', inactive: 'Inactivo', deactivate: 'Desactivar', addresses: 'Direcciones',
     contact: 'Contacto y dirección', noContact: 'Sin contacto registrado',
     whatsappOpen: 'Abrir conversación con {name} en WhatsApp (nueva pestaña)',
-    whatsappPhoneHelp: 'Incluya el código de país y revise el teléfono para abrir WhatsApp.',
+    whatsappConfigure: 'Configurar WhatsApp',
+    whatsappPhoneHelp: 'Elija Brasil (+55) o Paraguay (+595) en el registro y revise el teléfono para abrir WhatsApp.',
   },
   en: {
     sort: 'Organize customers', name: 'Name', latestPurchase: 'Latest purchases', latestPrint: 'Latest print requests',
@@ -36,6 +38,7 @@ export const customerMessages = {
     history: 'Customer history', edit: 'Edit customer', inactive: 'Inactive', deactivate: 'Deactivate', addresses: 'Addresses',
     contact: 'Contact and address', noContact: 'No contact details',
     whatsappOpen: 'Open a WhatsApp conversation with {name} (new tab)',
-    whatsappPhoneHelp: 'Include the country code and check the phone number to open WhatsApp.',
+    whatsappConfigure: 'Set up WhatsApp',
+    whatsappPhoneHelp: 'Choose Brazil (+55) or Paraguay (+595) in the customer form and check the phone number to open WhatsApp.',
   },
 }

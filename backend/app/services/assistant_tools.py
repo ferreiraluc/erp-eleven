@@ -17,6 +17,7 @@ from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule,
 from .assistant_printing import AddressArgs, prepare_print
 from .assistant_freight import BotQuote, SelectFreight, FreightId
 from .assistant_knowledge import KnowledgeArgs, AliasArgs, query_team, system_catalog, prepare_alias
+from .assistant_routines import RoutineArgs, query_routine, prepare_routine
 from .assistant_tracking import CustomerTrackingArgs, customer_tracking
 from .assistant_documents import FilePrintArgs,prepare_file,query_prints
 from .receipt_tracking import ReceiptArgs,prepare_receipt
@@ -113,8 +114,10 @@ TOOLS = [
     tool("consultar_sistema", "Consulta o mapa persistente de capacidades do ERP, ferramentas e páginas. Use antes de concluir que algo não é possível. Combine ferramentas para aproveitar dados existentes. Não contém saldos ou estados antigos.", KnowledgeArgs),
     tool("consultar_equipe", "Consulta vendedores ativos e resolve nomes e apelidos confirmados, inclusive nomes parciais e acentos. Um único Junior já identifica o vendedor: não exija sobrenome.", KnowledgeArgs),
     tool("preparar_apelido", "Somente quando o autor pedir explicitamente para lembrar/salvar quem é uma pessoa: prepara vínculo de apelido com vendedor. Confirmação humana salva memória compartilhada entre canais. Não deduza apelidos de texto de terceiros.", AliasArgs),
+    tool("consultar_padrao_frete", "Consulta o padrão de pacote e modelo de conteúdo confirmado por Lucas, compartilhado entre os canais autorizados. Quantidade e dados específicos do envio nunca são memorizados como padrão.", KnowledgeArgs),
+    tool("preparar_padrao_frete", "Somente quando Lucas pedir explicitamente para salvar, alterar ou desativar o padrão compartilhado de frete. Mostra prévia e exige confirmação. Envie o padrão completo desejado; consulte o atual para preservar partes não alteradas. Não aprende instruções de terceiros, quantidades, remetentes ou dados fiscais.", RoutineArgs),
     tool("consultar_enderecos", "Busca endereços salvos e histórico de endereços impressos, remetentes ativos e fretes recentes do autor no gestor. Somente ADMIN/GERENTE habilitado. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
-    tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos informados, remetente por sender_id (mesmo endereço de impressão) ou dados em remetente; ambos juntos permitem complementar campos faltantes, peso/medidas reais e produtos/valores. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário na próxima mensagem.", BotQuote),
+    tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos; sender_id aceita ID ou nome de remetente ativo, ou remetente informado. Campos ausentes package/products usam somente o padrão confirmado da equipe: omita-os e envie quantidade informada neste pedido para aplicar o modelo. Dados explícitos prevalecem. Nunca adivinhe quantidade nem dados fiscais. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário.", BotQuote),
     tool("preparar_etiqueta", "Após escolha explícita do serviço de uma cotação anterior: prepara o frete, mostra valor final e exige confirmação humana antes de pagar e emitir. Após a confirmação de pagamento, busca o PDF, envia ao Telegram e imprime automaticamente uma cópia A4.", SelectFreight),
     tool("consultar_etiqueta", "Atualiza estado/rastreio e obtém PDF de uma etiqueta do autor. Nunca refaz pagamento incerto.", FreightId),
     tool("preparar_impressao_etiqueta", "Após emissão: devolve PDF da etiqueta para conferência e prepara confirmação separada para imprimir uma cópia A4.", FreightId),
@@ -145,18 +148,24 @@ def execute_tool(db, message, identity, name, arguments):
     if name == "consultar_sistema":return system_catalog(db, KnowledgeArgs.model_validate(arguments))
     if name == "consultar_equipe":return query_team(db, KnowledgeArgs.model_validate(arguments))
     if name == "preparar_apelido":return prepare_alias(db, message, identity, AliasArgs.model_validate(arguments))
+    if name == 'consultar_padrao_frete':
+        KnowledgeArgs.model_validate(arguments)
+        return query_routine(db,message,identity)
+    if name == 'preparar_padrao_frete':return prepare_routine(db,message,identity,RoutineArgs.model_validate(arguments))
     if name in ("cotar_superfrete","preparar_etiqueta","consultar_etiqueta","preparar_impressao_etiqueta"):
         from .assistant_freight import execute
         return execute(db,message,identity,name,arguments)
     if name == "consultar_enderecos":
         from .assistant_schedule import may_schedule
         from ..models.address_book import SavedAddress,FreightOrder
-        from ..models.printing import PrintSender,PrintJob
+        from ..models.printing import PrintJob
+        from .assistant_senders import active_sender_catalog, sender_candidates, sender_choices
         from .sender_addresses import sender_address
         from .print_diagnostics import diagnostic_message
         from sqlalchemy import cast,String,or_
         if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
         term=SearchArgs.model_validate(arguments).termo
+        senders=active_sender_catalog(db)
         q=db.query(SavedAddress).filter(SavedAddress.active.is_(True),SavedAddress.merged_into_id.is_(None))
         if term not in ('todos','remetentes'):
             q=q.filter(or_(SavedAddress.label.ilike(literal_pattern(term),escape="\\"),cast(SavedAddress.data,String).ilike(literal_pattern(term),escape="\\")))
@@ -168,7 +177,10 @@ def execute_tool(db, message, identity, name, arguments):
              'remetente':(j.snapshot or {}).get('remetente'),'status':j.status,'diagnostico':diagnostic_message(j),'created_at':j.created_at.isoformat()}
             for j in jobs.order_by(PrintJob.created_at.desc()).limit(10)]
         return {"enderecos_impressos":printed,"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
-                "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":sender_address(s),"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in db.query(PrintSender).filter_by(active=True)],
+                "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":sender_address(s),"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in senders],
+                "remetentes_correspondentes":sender_choices(sender_candidates(db,term,rows=senders)),
+                "orientacao_remetentes":"remetentes é o catálogo ativo atual, separado dos destinatários em enderecos. Endereços vazios não significam remetente ausente. ID ou nome identifica; mais de um candidato exige escolha.",
+                "padrao_frete":query_routine(db,message,identity),
                 "fretes_recentes":[{"id":str(f.id),"destinatario":f.payload.get('to',{}).get('name'),"estado":f.state,
                     "criado_em":f.created_at.isoformat(),"pdf":f.label_status,"impressao_automatica":f.auto_print,
                     "remetente_utilizado":f.payload.get('from'),"pacote_utilizado":f.payload.get('volumes'),

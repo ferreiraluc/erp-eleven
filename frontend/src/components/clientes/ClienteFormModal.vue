@@ -22,8 +22,20 @@
               <input id="customer-form-name" v-model="form.nome" type="text" :placeholder="uiText(`Nome completo`)" class="form-input" required />
             </div>
             <div class="form-group">
+              <label>{{ documentText('phoneCountry') }}</label>
+              <ErpSelect v-model="phoneCountry" :label="documentText('phoneCountry')" :disabled="submitting">
+                <option value="">{{ documentText('phoneCountryChoose') }}</option>
+                <option value="BR">{{ documentText('phoneBrazil') }}</option>
+                <option value="PY">{{ documentText('phoneParaguay') }}</option>
+              </ErpSelect>
+            </div>
+            <div class="form-group">
               <label for="customer-form-phone">{{ uiText(`Telefone`) }}</label>
-              <input id="customer-form-phone" v-model="form.telefone" type="tel" placeholder="(11) 99999-9999" class="form-input" />
+              <input id="customer-form-phone" v-model="form.telefone" type="tel" :placeholder="phoneCountry === 'PY' ? '0981 234567' : phoneCountry === 'BR' ? '(11) 91234-5678' : '+55 / +595'" class="form-input" aria-describedby="customer-phone-hint customer-phone-preview" />
+            </div>
+            <div class="form-group span-2">
+              <span id="customer-phone-hint" class="field-hint">{{ documentText('phoneHelp') }}</span>
+              <span v-if="normalizedPhone" id="customer-phone-preview" class="phone-preview">{{ documentText('phonePreview', { phone: normalizedPhone }) }}</span>
             </div>
             <div v-if="!quick" class="form-group">
               <label>{{ uiText(`E-mail`) }}</label>
@@ -88,6 +100,8 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { customerDocumentMessages } from './customerDocumentMessages'
+import { customerPhoneMessages } from './customerPhoneMessages'
+import { normalizeWhatsappPhone, whatsappPhoneCountry, type PhoneCountry } from '@/utils/whatsapp'
 import { clientesAPI, type Cliente, type ClienteCreate, type ClienteDocumento } from '@/services/api'
 
 interface Props {
@@ -98,7 +112,11 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), { cliente: null, quick: false, initialName: '' })
 const emit = defineEmits<{ close: []; saved: [c: Cliente] }>()
-const { t: documentText } = useI18n({ useScope: 'local', messages: customerDocumentMessages })
+const { t: documentText } = useI18n({ useScope: 'local', messages: {
+  pt: { ...customerDocumentMessages.pt, ...customerPhoneMessages.pt },
+  es: { ...customerDocumentMessages.es, ...customerPhoneMessages.es },
+  en: { ...customerDocumentMessages.en, ...customerPhoneMessages.en },
+} })
 const auth = useAuthStore()
 const documentTypes = ['CPF', 'CNPJ', 'RG', 'CI', 'RUC'] as const
 const documents = ref<ClienteDocumento[]>([])
@@ -120,6 +138,12 @@ const emptyForm = (): ClienteCreate => ({
 })
 
 const form = ref<ClienteCreate>(emptyForm())
+const phoneCountry = ref<PhoneCountry | ''>('')
+const normalizedPhone = computed(() => normalizeWhatsappPhone(form.value.telefone, phoneCountry.value))
+watch(() => form.value.telefone, phone => {
+  const explicit = whatsappPhoneCountry(phone)
+  if (explicit) phoneCountry.value = explicit
+})
 
 watch(() => props.isVisible, (v) => {
   if (v) {
@@ -133,6 +157,7 @@ watch(() => props.isVisible, (v) => {
       endereco: props.cliente.endereco || '',
       ativo: props.cliente.ativo,
     } : { ...emptyForm(), nome: props.initialName }
+    phoneCountry.value = whatsappPhoneCountry(props.cliente?.telefone)
     documents.value = (props.cliente?.documentos || []).map(document => ({ ...document }))
     originalLegacyRow.value = null
     legacyDocument.value = ''; legacyType.value = ''
@@ -153,6 +178,10 @@ function close() { if (!submitting.value) emit('close') }
 async function handleSubmit() {
   if (submitting.value) return
   if (documents.value.some(document => !document.numero.trim())) { errorMsg.value = documentText('invalid'); return }
+  const phoneChanged = (form.value.telefone || '').trim() !== (props.cliente?.telefone || '').trim()
+  if (form.value.telefone?.trim() && (phoneChanged || phoneCountry.value) && !normalizedPhone.value) {
+    errorMsg.value = documentText('phoneInvalid'); return
+  }
   const current = ++generation, token = auth.token
   submitting.value = true
   errorMsg.value = ''
@@ -168,6 +197,9 @@ async function handleSubmit() {
         : legacyDocument.value || null
       : allDocuments.find(document => document.tipo === 'CPF' || document.tipo === 'CNPJ')?.numero || (!legacyType.value && legacyDocument.value) || null
     const payload: ClienteCreate = { ...form.value, documentos: allDocuments, cpf: legacy }
+    if (phoneCountry.value) payload.telefone_pais = phoneCountry.value
+    if (normalizedPhone.value) payload.telefone = normalizedPhone.value
+    else if (phoneChanged && !form.value.telefone?.trim()) payload.telefone = null
     // Remove strings vazias → undefined
     Object.keys(payload).forEach(k => {
       const key = k as keyof ClienteCreate
@@ -236,6 +268,7 @@ label { font-size: .78rem; font-weight: 600; color: #374151; }
 }
 .form-textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
 .field-hint { font-size: .72rem; color: #9ca3af; }
+.phone-preview { font-size: .76rem; color: #15803d; overflow-wrap: anywhere; }
 
 .modal-footer { display: flex; justify-content: flex-end; gap: .75rem; padding-top: 1rem; border-top: 1px solid #f3f4f6; margin-top: .25rem; flex-shrink: 0; }
 .btn { display: flex; align-items: center; gap: .4rem; padding: .5rem 1.1rem; border-radius: 8px; font-size: .875rem; cursor: pointer; border: none; font-weight: 600; }

@@ -9,7 +9,7 @@ from ...models.cliente import Cliente
 from ...models.pedido import Pedido
 from ...models.rastreamento import Rastreamento, RastreamentoStatus
 from ...models.usuario import Usuario
-from ...schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate, ClientePage
+from ...schemas.cliente import ClienteBase, ClienteCreate, ClienteResponse, ClienteUpdate, ClientePage
 from ...schemas.pedido import PedidoResponse
 from ...schemas.customer_links import (
     CustomerLinkRequest, CustomerLogisticsResponse, CustomerPurchasesResponse, CustomerHistoryConfirmation,
@@ -21,6 +21,7 @@ from ...services.customer_identity import find_customer, full_name, enrich_custo
 from ...services.customer_purchases import customer_purchases
 from ...services.customer_activity import customer_activity, order_customer_directory
 from ...services.customer_search import directory_match
+from ...services.customer_phone import normalize_customer_phone
 from ...services.address_book import lock_addresses
 from ...dependencies import get_current_active_user, require_role, require_owner
 from ..validators import validate_uuid
@@ -28,6 +29,16 @@ from .directory_duplicates import router as duplicates_router
 
 router = APIRouter()
 router.include_router(duplicates_router)
+
+
+def _normalize_contact(data, current_phone=None):
+    country = data.pop('telefone_pais', None)
+    if country:
+        try:
+            data['telefone'] = normalize_customer_phone(data.get('telefone', current_phone), country)
+        except ValueError as error:
+            raise HTTPException(422, str(error))
+    return data
 
 
 def _customer(db, customer_id, *, write=False):
@@ -92,7 +103,7 @@ def criar_cliente(
 ):
     """Reuse a corroborated identity; ambiguous people require an explicit choice."""
     lock_addresses(db)
-    data = cliente.model_dump()
+    data = _normalize_contact(cliente.model_dump())
     existing, _, candidates = find_customer(db, data)
     if existing:
         if not existing.ativo:
@@ -169,10 +180,10 @@ def atualizar_cliente(
     uuid_ = validate_uuid(cliente_id)
     lock_addresses(db)
     db_cliente = _customer(db, uuid_, write=True)
-    changes = update.model_dump(exclude_unset=True)
+    changes = _normalize_contact(update.model_dump(exclude_unset=True), db_cliente.telefone)
     if changes.get('documentos', ...) is None:
         changes['documentos'] = []
-    final = {field: getattr(db_cliente, field) for field in ClienteCreate.model_fields}
+    final = {field: getattr(db_cliente, field) for field in ClienteBase.model_fields}
     final.update(changes)
     try:
         # Cross-field validation uses the retained CPF too, not only this patch.

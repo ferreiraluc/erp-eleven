@@ -46,8 +46,8 @@ describe('Customer document fields', () => {
     const primary: Cliente = { ...customer, cpf: null, documentos: [{ tipo: 'CPF', pais: 'BR', numero: '12345678909' }] }
     await mount(primary)
     const phone = root.querySelector<HTMLInputElement>('#customer-form-phone')!
-    phone.value = '5511000000000'; phone.dispatchEvent(new Event('input')); await settle(); await submit()
-    expect(calls.update).toHaveBeenCalledWith(primary.id, expect.objectContaining({ telefone: '5511000000000', cpf: null, documentos: primary.documentos }))
+    phone.value = '5511912345678'; phone.dispatchEvent(new Event('input')); await settle(); await submit()
+    expect(calls.update).toHaveBeenCalledWith(primary.id, expect.objectContaining({ telefone: '+5511912345678', cpf: null, documentos: primary.documentos }))
   })
 
   it('updates only the explicitly edited original legacy CPF rather than picking another CPF from the document list', async () => {
@@ -88,5 +88,46 @@ describe('Customer document fields', () => {
     await mount(customer); await submit()
     auth.token = 'another-account'; await settle(); finish(customer); await settle()
     expect(closed).toHaveBeenCalledTimes(1); expect(saved).not.toHaveBeenCalled()
+  })
+})
+
+describe('Customer phone country', () => {
+  const chooseCountry = async (label: string) => {
+    root.querySelector<HTMLButtonElement>('[aria-label="País do telefone"]')!.click(); await settle()
+    Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]')).find(row => row.textContent?.trim() === label)!.click(); await settle()
+  }
+
+  it.each([
+    ['0981 234567', 'Paraguai · +595', 'PY', '+595981234567'],
+    ['(55) 91234-5678', 'Brasil · +55', 'BR', '+5555912345678'],
+  ])('corrects an existing local %s and persists the country in its international number', async (phone, label, country, expected) => {
+    await mount({ ...customer, telefone: phone }); await chooseCountry(label)
+    expect(root.querySelector('#customer-phone-preview')?.textContent).toContain(expected)
+    await submit()
+    expect(calls.update).toHaveBeenCalledWith(customer.id, expect.objectContaining({ telefone: expected, telefone_pais: country }))
+  })
+
+  it('requires a country for a new local number and does not infer nationality from its documents', async () => {
+    await mount(customer)
+    const phone = root.querySelector<HTMLInputElement>('#customer-form-phone')!
+    phone.value = '0981234567'; phone.dispatchEvent(new Event('input')); await settle(); await submit()
+    expect(calls.update).not.toHaveBeenCalled()
+    expect(root.querySelector('.error-msg')?.textContent).toContain('Escolha o país')
+    await chooseCountry('Paraguai · +595'); await submit()
+    expect(calls.update).toHaveBeenCalledWith(customer.id, expect.objectContaining({ telefone: '+595981234567', telefone_pais: 'PY' }))
+  })
+
+  it('preserves an explicit country despite a different selected country and shows the resulting number', async () => {
+    await mount({ ...customer, telefone: '+55 (11) 91234-5678' })
+    await chooseCountry('Paraguai · +595')
+    expect(root.querySelector('#customer-phone-preview')?.textContent).toContain('+5511912345678')
+    await submit()
+    expect(calls.update).toHaveBeenCalledWith(customer.id, expect.objectContaining({ telefone: '+5511912345678' }))
+  })
+
+  it('does not block unrelated edits to an unchanged legacy local phone', async () => {
+    await mount({ ...customer, telefone: '0981234567' }); await submit()
+    expect(calls.update).toHaveBeenCalledWith(customer.id, expect.objectContaining({ telefone: '0981234567' }))
+    expect(calls.update.mock.calls[0][1]).not.toHaveProperty('telefone_pais')
   })
 })

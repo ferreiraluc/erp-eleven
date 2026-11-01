@@ -42,6 +42,24 @@ O bot aceita destinatário e remetente informados na conversa, sem exigir cadast
 
 Confirmações pertencem ao usuário autorizado e à conversa de origem. Cotar não paga. Cancelar a impressão de uma etiqueta paga não cancela nem reembolsa a compra.
 
+O bot aceita ID ou nome de remetente do cadastro ativo (acentos e nomes abreviados
+não impedem uma correspondência única). Homônimos precisam de escolha explícita.
+O padrão operacional da equipe pode preencher pacote e descrição/valor unitário
+ausentes, sempre com conferência nas prévias. Quantidade vem do pedido atual;
+dados explícitos prevalecem. Somente Lucas altera esse padrão mediante confirmação.
+Ele não altera os formulários de frete do frontend nem os pedidos já cotados.
+Veja [Memória operacional do bot](ASSISTENTE_FLUXOS_OPERACIONAIS.md#contexto-e-etiquetas).
+
+Provisionamento inicial, somente com valores explicitamente autorizados pelo
+proprietário: `python -m app.assistant_setup shipping-defaults-show` consulta o padrão.
+`python -m app.assistant_setup shipping-defaults-set --defaults-file /caminho/padrao.json --expected-revision 0`
+cria a primeira revisão. Para uma alteração, informe a revisão atual; divergências
+não sobrescrevem dados. O JSON aceita `active`, `package` (weight/height/width/length)
+e `product` (name/unitary_value), sem quantidade, dados fiscais ou identidades.
+O comando valida Lucas ativo/ADMIN e grava auditoria na mesma transação. Não inclua
+credenciais no arquivo nem versione arquivos operacionais. A migração não cria
+padrões presumidos, e a aplicação não aprende padrões a partir de respostas da IA.
+
 ## Configuração
 
 ```dotenv

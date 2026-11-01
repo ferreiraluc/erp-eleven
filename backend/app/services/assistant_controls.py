@@ -44,6 +44,7 @@ def subject(action):
     if isinstance(action, AssistantNote):
         return f'{action.kind}: {action.content[:60]}'
     p = action.payload
+    if action.kind=='padrao_frete':return 'Padrão de frete da equipe'
     if action.kind=='arquivo_imprimir':return f"PDF · {p['pages']} página(s)"
     return p.get('filename') or p.get('item_name') or p.get('recipient') or p.get('endereco', {}).get('nome') or p.get('vendedor_nome') or p.get('apelido') or 'Endereço sem nome'
 
@@ -52,6 +53,8 @@ def action_label(action):
     kind = getattr(action, 'kind', '')
     if kind == 'frete_emitir':
         return 'Pagar R$ ' + action.payload['price'].replace('.', ',')
+    if kind == 'padrao_frete':
+        return 'Salvar padrão de frete'
     return {'rastreio_comprovante':'Cadastrar rastreios','arquivo_imprimir':'Imprimir PDF','item_cadastrar':'Cadastrar item','estoque_entrada':'Registrar entrada','impressao': 'Imprimir', 'frete_imprimir': 'Imprimir', 'folga': 'Cadastrar folga', 'apelido': 'Salvar apelido'}.get(kind, 'Confirmar registro')
 
 
