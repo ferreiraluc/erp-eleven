@@ -178,6 +178,8 @@ def create_sale(
         for i in body.items
     )
     desconto = float(body.desconto_gs)
+    if desconto > subtotal:
+        raise HTTPException(422, 'O desconto não pode ultrapassar o subtotal da venda.')
     total = max(0.0, subtotal - desconto)
     total_gs = Decimal(str(round(total, 2)))
     paid_gs = sum((payment['amount_gs'] for payment in payments), Decimal(0))
@@ -299,10 +301,15 @@ def list_sales(
         q = q.filter(PdvSale.status == status)
     if cliente_id:
         q = q.filter(PdvSale.cliente_id == cliente_id)
-    if date_from:
-        q = q.filter(PdvSale.created_at >= date_from)
-    if date_to:
-        q = q.filter(PdvSale.created_at <= date_to)
+    from ...services.business_time import stored_day_start
+    from datetime import timedelta
+    try:
+        if date_from:
+            q = q.filter(PdvSale.created_at >= stored_day_start(date.fromisoformat(date_from), db))
+        if date_to:
+            q = q.filter(PdvSale.created_at < stored_day_start(date.fromisoformat(date_to) + timedelta(days=1), db))
+    except ValueError:
+        raise HTTPException(422, 'Use datas no formato AAAA-MM-DD.') from None
 
     sales = q.order_by(desc(PdvSale.created_at)).offset((page - 1) * page_size).limit(page_size).all()
 

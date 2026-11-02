@@ -260,6 +260,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted } from 'vue'
@@ -369,7 +370,7 @@ const confirmImport = async () => {
 }
 
 const formatDate = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleString(uiLocale(), {
+  return businessDateTime(dateStr, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

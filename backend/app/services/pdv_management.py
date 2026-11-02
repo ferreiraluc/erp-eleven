@@ -1,6 +1,7 @@
 """Atomic, owner-reviewed revisions of PDV records; never calls a payment provider."""
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
+from .business_time import stored_day_start
 from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import json
@@ -96,8 +97,8 @@ def listing(db,user,*,page=1,page_size=25,q='',status=None,date_from=None,date_t
     if deleted:
         owner(user);query=query.filter(PdvSale.deleted_at.isnot(None))
     else:query=query.filter(PdvSale.deleted_at.is_(None))
-    if date_from:query=query.filter(PdvSale.created_at >= datetime.combine(date_from,time.min))
-    if date_to:query=query.filter(PdvSale.created_at < datetime.combine(date_to+timedelta(days=1),time.min))
+    if date_from:query=query.filter(PdvSale.created_at >= stored_day_start(date_from, db))
+    if date_to:query=query.filter(PdvSale.created_at < stored_day_start(date_to+timedelta(days=1), db))
     if date_from and date_to and date_from>date_to:raise HTTPException(422,'O início do período deve anteceder o fim.')
     if seller_id:query=query.filter(PdvSale.vendedor_id==seller_id)
     if status:query=query.filter(PdvSale.status==status)

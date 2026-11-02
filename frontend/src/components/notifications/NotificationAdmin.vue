@@ -204,6 +204,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { businessDateTimeInput, parseDateTime, formatDateTime as businessDateTime } from '@/utils/datetime'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -215,7 +216,7 @@ import {
   type NotificationTemplate,
 } from '@/services/notifications'
 import { notificationText as n, type NotificationCopyKey } from '@/services/notificationText'
-import { uiLocale } from '@/i18n/uiText'
+
 import NotificationComposer, { type NotificationForm } from './NotificationComposer.vue'
 import NotificationRuleEditor from './NotificationRuleEditor.vue'
 defineProps<{embedded?:boolean}>()
@@ -256,7 +257,7 @@ let generation = 0,
   read = 0,
   saveEpoch = 0
 const date = (value: string) =>
-  new Date(value).toLocaleString(uiLocale(), { dateStyle: 'short', timeStyle: 'short' })
+  businessDateTime(value, { dateStyle: 'short', timeStyle: 'short' })
 watch(
   form,
   () => {
@@ -314,8 +315,7 @@ function newForm() {
 }
 function localDate(value: string | null) {
   if (!value) return ''
-  const date = new Date(value)
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  return businessDateTimeInput(value)
 }
 function editMessage(item: AdminNotification) {
   if (busy.value) return
@@ -360,7 +360,7 @@ async function save() {
     formError.value = n('invalidPath')
     return
   }
-  const schedule = value.scheduled_at ? new Date(value.scheduled_at) : null
+  const schedule = value.scheduled_at ? parseDateTime(value.scheduled_at, 'business') : null
   if (
     schedule &&
     (!Number.isFinite(schedule.getTime()) || (!editId.value && schedule.getTime() <= Date.now()))

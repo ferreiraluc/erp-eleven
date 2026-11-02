@@ -60,9 +60,10 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
-import { uiLocale, uiText } from '@/i18n/uiText'
+import { uiText } from '@/i18n/uiText'
 import { createWhatsAppBridgeCredential, getWhatsAppBridge, getWhatsAppBridgePairing, resetWhatsAppBridgeSession, saveWhatsAppBridge, type WhatsAppBridgeConfig } from '@/services/whatsappBridge'
 
 const config = ref<WhatsAppBridgeConfig | null>(null)
@@ -78,7 +79,7 @@ const groups = computed(() => {
   const known = config.value?.discovered_groups || []
   return [...known, ...draft.value.allowed_groups.filter(id => !known.some(g => g.id === id)).map(id => ({ id, name: id }))]
 })
-const date = (value: string) => new Date(value).toLocaleString(uiLocale())
+const date = (value: string) => businessDateTime(value)
 const recentContact = computed(() => !!config.value?.last_seen_at && statusTime.value - Date.parse(config.value.last_seen_at) <= 120_000)
 const connected = computed(() => config.value?.state === 'connected' || config.value?.state === 'open')
 const connectionLabel = computed(() => {

@@ -64,10 +64,11 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate, formatDateTime as businessDateTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import WhatsAppBridgePanel from '@/components/assistant/WhatsAppBridgePanel.vue'
-import { uiText, uiLocale } from '@/i18n/uiText'
+import { uiText } from '@/i18n/uiText'
 import { onMounted, ref } from 'vue'
 import api from '@/services/api'
 
@@ -86,8 +87,8 @@ const queue = ref<QueueItem[]>([])
 const loading = ref(false), saving = ref(false), error = ref(''), notice = ref('')
 const form = ref<Omit<Identity, 'id'>>({ channel: 'whatsapp_web', external_id: '', user_id: '', active: true, can_register: false })
 const userName = (id: string) => users.value.find(u => u.id === id)?.nome || id
-const date = (value: string) => new Date(value).toLocaleString(uiLocale())
-const dateOnly = (value?: string) => value ? new Date(`${value}T12:00:00`).toLocaleDateString(uiLocale()) : '—'
+const date = (value: string) => businessDateTime(value)
+const dateOnly = (value?: string) => value ? businessDate(value) : '—'
 const noteKind = (kind: string) => ({ atendimento: uiText('Atendimento'), devolucao: uiText('Devolução'), pedido: uiText('Pedido'), venda: uiText('Venda'), endereco: uiText('Endereço'), geral: uiText('Geral') }[kind] || kind)
 const roleLabel = (role: string) => ({ admin: uiText('Administrador'), gerente: uiText('Gerente'), operador: uiText('Operador') }[role.toLowerCase()] || role)
 const absenceLabel = (value?: string) => ({ FOLGA: uiText('Folga'), FERIAS: uiText('Férias'), FALTA: uiText('Falta'), LICENCA: uiText('Licença'), MEIO_PERIODO: uiText('Meio Período'), COMPLETO: uiText('Dia Completo'), MANHA: uiText('Manhã'), TARDE: uiText('Tarde') }[value || ''] || value || '—')

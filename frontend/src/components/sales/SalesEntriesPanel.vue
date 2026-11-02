@@ -55,6 +55,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -83,7 +84,7 @@ const hours = computed(() => Array.from({ length: 24 }, (_, hour) => ({ hour, co
 const maxHour = computed(() => Math.max(1,...hours.value.map(h => h.count)))
 const differences = computed(() => result.value?.reconciliation.filter(r => r.difference === null || Math.abs(r.difference) > .05) || [])
 function money(value: number | null, code: string) { return value === null ? '—' : value.toLocaleString(locale.value,{style:'currency',currency:code,maximumFractionDigits:code==='PYG'?0:2}) }
-function formatDate(value: string) { return new Date(`${value}T12:00:00`).toLocaleDateString(locale.value) }
+function formatDate(value: string) { return businessDate(value) }
 function entryDate(entry: SalesEntry) {
   if (entry.date) return formatDate(entry.date)
   if (entry.period_start && entry.period_end) return `${formatDate(entry.period_start)} – ${formatDate(entry.period_end)}`

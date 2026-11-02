@@ -128,6 +128,7 @@
   </details>
 </template>
 <script setup lang="ts">
+import { formatDate as businessDate, formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -137,7 +138,7 @@ import {
   type QualityRunDetail,
 } from '@/services/systemQuality'
 import { qualityText as q } from '@/services/systemQualityText'
-import { uiLocale } from '@/i18n/uiText'
+
 import QualityReport from './QualityReport.vue'
 const props = defineProps<{ runId?: string | null }>(),
   auth = useAuthStore()
@@ -174,9 +175,9 @@ const active = computed(() =>
       Date.now() - new Date(run.created_at).getTime() < 86400000,
   ),
 )
-const day = (value: string) => new Date(value + 'T12:00:00').toLocaleDateString(uiLocale())
+const day = (value: string) => businessDate(value)
 const date = (value: string) =>
-  new Date(value).toLocaleString(uiLocale(), {
+  businessDateTime(value, {
     dateStyle: 'short',
     timeStyle: 'short',
   })

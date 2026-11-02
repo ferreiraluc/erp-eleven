@@ -123,6 +123,8 @@ cadastro** é uma opção explícita para visitantes; digitar uma busca não gra
 texto como nome. Ao concluir, o backend valida novamente o cliente e salva seu
 nome cadastrado como snapshot da venda. Checkout fica bloqueado durante a seleção.
 
+O botão **+** ao lado da busca e da câmera abre diretamente o modal de produto
+avulso, sem precisar pesquisar um item inexistente primeiro.
 No modal de **produto avulso**, escolha **G$, R$, U$ ou EUR** e informe o preço
 nessa moeda. A prévia mostra o câmbio do PDV e o equivalente unitário em G$;
 cotação inválida bloqueia a inclusão. O carrinho conserva moeda/preço digitados e
@@ -438,9 +440,13 @@ Se editar manualmente com a automação ativa, a próxima sincronização válid
 novamente Jebai/Venta. Ativação e pausa são auditadas. Migração e deploy não ativam
 consumo ou mudança de câmbio automaticamente.
 
-### Cartão PY: recuperação integral dos 6%
+### Cartão PY: recuperação opcional dos 6%
 
-Crédito e débito PY cobram a parte paga no cartão dividida por **0,94**,
+Crédito e débito PY oferecem **Repassar taxa de 6% do cartão**, inicialmente marcado.
+Ao desmarcar, a cobrança é isenta do acréscimo; o total na máquina coincide com a
+parcela aplicada à venda. A escolha vale para o pagamento que será adicionado e
+não modifica parcelas já lançadas. A prévia mostra valor aplicado, acréscimo e total.
+Com a opção marcada, cobram a parte paga no cartão dividida por **0,94**,
 arredondando para cima ao guarani inteiro. Não se aplica a dinheiro, QR, PIX,
 transferência ou fiado. Exemplo: US$80 × G$5.850 = G$468.000 de mercadorias;
 **G$497.873 na máquina**, acréscimo de G$29.873. A cotação geral e os preços do
@@ -452,10 +458,10 @@ o bruto na máquina e aplica 94% às mercadorias. Cartão não gera troco.
 `amount_original` registra o bruto; `amount_gs` continua sendo o valor aplicado às
 mercadorias. `card_fee_gs` e `card_fee_percent` registram o acréscimo e seus 6%.
 G$ mantém `exchange_rate=1`. O backend exige a relação bruto=ceil(líquido/0,94),
-acréscimo=bruto−líquido e percentual 6; rejeita valores fracionários na máquina,
-métodos indevidos ou omissão da taxa em novos cartões. O arredondamento pode
-reter menos de G$1 adicional. A migração preserva pagamentos antigos com taxa
-zero; correções podem mantê-los intactos, mas não criar novas cópias sem taxa.
+acréscimo=bruto−líquido e percentual 6 quando há repasse; rejeita valores fracionários
+na máquina para esse cálculo e métodos indevidos. Na isenção exige percentual zero,
+acréscimo zero e bruto igual ao líquido, com até duas casas decimais. O arredondamento
+do repasse pode reter menos de G$1 adicional. Pagamentos antigos são preservados.
 
 O ticket em espanhol discrimina **Recargo tarjeta (6%)**, total bruto em dólares
 e a cobrança original em guaranis. Vendas/relatórios continuam contabilizando
@@ -463,3 +469,15 @@ mercadorias, sem tratar o ressarcimento da operadora como receita de produtos.
 Estornos existentes continuam sobre mercadorias; a prévia alerta que uma eventual
 devolução da taxa precisa ser conferida com a operadora. O ERP não executa
 estorno bancário nem decide automaticamente a devolução dessa taxa.
+
+### Desconto rápido para saldo negociado
+
+Depois de adicionar pelo menos um pagamento positivo, clicar em **Desconto (G$)**
+preenche o desconto geral para quitar o valor que ainda falta. O campo continua
+editável e a venda só é lançada pela confirmação existente. Exemplo: mercadorias
+de US$576, dólar a G$6.000 e real a R$5,10/U$: R$2.800 correspondem a G$3.294.117,65;
+o desconto acumulado fica em G$161.882,35, deixando o total igual ao valor pago.
+Descontos anteriores são considerados, sem somar novamente o mesmo saldo. O botão
+fica indisponível sem pagamento, com saldo já quitado ou troco. A taxa de cartão
+não entra como desconto; a base são os valores líquidos aplicados às mercadorias.
+O backend rejeita desconto negativo, não finito ou maior que o subtotal.

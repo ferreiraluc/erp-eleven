@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, selectinload
 
-from ..config import settings
+from .business_time import stored_instant
 from ..models.pdv import PdvCliente, PdvSale
 from .access_policy import own_sales, sales_query
 
@@ -52,7 +52,7 @@ def customer_purchases(db, customer_id, user, *, page=1, page_size=20):
         },
         'items': [{
             'id': sale.id,
-            'created_at': sale.created_at if sale.created_at.tzinfo else sale.created_at.replace(tzinfo=settings.tz),
+            'created_at': stored_instant(sale.created_at, db),
             'account_id': sale.cliente_id, 'account_name': sale.cliente.nome,
             'customer_name': sale.cliente_nome,
             'seller': sale.vendedor.nome if sale.vendedor else None,

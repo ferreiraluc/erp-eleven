@@ -120,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import type { Pedido } from '@/services/api'
 
@@ -136,7 +137,7 @@ defineEmits<{
 }>()
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString(uiLocale(), {
+  return businessDate(dateString, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'

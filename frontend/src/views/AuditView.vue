@@ -17,18 +17,19 @@
     <div v-if="loading&&!data" class="empty">{{ $t('common.loading') }}</div>
     <template v-if="data">
       <section class="metrics audit-metrics">
-        <article class="access-card metric"><small>{{ $t('access.events') }}</small><strong>{{ data.total.toLocaleString(locale) }}</strong></article>
+        <article class="access-card metric"><small>{{ at('operations') }}</small><strong>{{ data.total.toLocaleString(locale) }}</strong></article>
         <article class="access-card metric"><small>{{ $t('access.activeUsers') }}</small><strong>{{ data.users.length }}</strong></article>
       </section>
       <section class="access-card"><h2>{{ $t('access.activityByUser') }}</h2>
         <div v-if="!data.users.length" class="empty">{{ $t('access.noActivity') }}</div>
-        <div class="table-wrap"><table><thead><tr><th>{{ $t('access.user') }}</th><th>{{ actionName('login') }}</th><th>{{ $t('access.mutations') }}</th><th>{{ $t('access.lastSeen') }}</th></tr></thead>
-          <tbody><tr v-for="u in data.users" :key="u.id"><td><strong>{{ u.name }}</strong></td><td>{{ u.actions.login || 0 }}</td><td>{{ mutationCount(u.actions) }}</td><td>{{ date(u.last_seen_at) }}</td></tr></tbody>
+        <div class="table-wrap"><table><thead><tr><th>{{ $t('access.user') }}</th><th>{{ actionName('login') }}</th><th>{{ at('operations') }}</th><th>{{ $t('access.lastSeen') }}</th></tr></thead>
+          <tbody><tr v-for="u in data.users" :key="u.id"><td><strong>{{ u.name }}</strong></td><td>{{ u.actions.login || 0 }}</td><td>{{ u.operations ?? mutationCount(u.actions) }}</td><td>{{ date(u.last_seen_at) }}</td></tr></tbody>
         </table></div>
       </section>
-      <section class="access-card"><div class="access-head"><div><h2>{{ $t('access.history') }}</h2><small>{{ $t('access.historyHelp') }}</small></div><button class="erp-button erp-button--secondary" :disabled="!data.events.length" @click="exportPage">{{ $t('access.exportPage') }}</button></div>
-        <div class="table-wrap"><table><thead><tr><th>{{ $t('access.when') }}</th><th>{{ $t('access.user') }}</th><th>{{ $t('access.action') }}</th><th>{{ $t('access.module') }}</th><th>{{ $t('access.result') }}</th><th>{{ $t('access.details') }}</th></tr></thead><tbody><tr v-for="e in data.events" :key="e.id"><td>{{ date(e.occurred_at) }}</td><td><strong>{{ e.actor_name }}</strong><small class="block">{{ e.source }}</small></td><td><span class="badge">{{ actionName(e.action) }}</span></td><td>{{ moduleName(e.module) }}</td><td>{{ e.status_code || $t('access.committed') }}</td><td><details><summary>{{ $t('access.details') }}</summary><p><code>{{ e.method }} {{ e.route || e.entity }}<br/>{{ e.entity_id }}</code></p><ul><li v-for="(value,key) in e.changes" :key="key"><strong>{{ key }}</strong>: {{ change(value) }}</li></ul><small>{{ $t('access.reference') }}: {{ e.request_id || e.id }}</small></details></td></tr></tbody></table><div v-if="!data.events.length" class="empty">{{ $t('access.noActivity') }}</div></div>
-        <div class="actions"><span class="muted">{{ data.total ? offset+1 : 0 }}–{{ Math.min(offset+data.events.length,data.total) }} / {{ data.total }}</span><button class="erp-button erp-button--secondary" :disabled="loading||offset===0" @click="offset=Math.max(0,offset-50);load()">{{ $t('access.previous') }}</button><button class="erp-button erp-button--secondary" :disabled="loading||offset+50>=data.total" @click="offset+=50;load()">{{ $t('access.next') }}</button></div>
+      <section class="access-card"><div class="access-head"><div><h2>{{ $t('access.history') }}</h2><small>{{ at('groupedHelp') }}</small></div><button class="erp-button erp-button--secondary" :disabled="!groups.length" @click="exportPage">{{ $t('access.exportPage') }}</button></div>
+        <AuditOperationCard v-for="group in groups" :key="`${revision}:${group.key}`" :group="group" :filters="appliedFilters" />
+        <div v-if="!groups.length" class="empty">{{ $t('access.noActivity') }}</div>
+        <div class="actions"><span class="muted">{{ data.total ? data.offset+1 : 0 }}–{{ Math.min(data.offset+groups.length,data.total) }} / {{ data.total }}</span><button class="erp-button erp-button--secondary" :disabled="loading||offset===0" @click="offset=Math.max(0,offset-50);load()">{{ $t('access.previous') }}</button><button class="erp-button erp-button--secondary" :disabled="loading||offset+50>=data.total" @click="offset+=50;load()">{{ $t('access.next') }}</button></div>
       </section>
     </template>
   </main>
@@ -36,10 +37,13 @@
 <script setup lang="ts">
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { accessAPI, type AuditResult } from '@/services/access'
+import { accessAPI, type AuditResult, type AuditGroup, type AuditFilters } from '@/services/access'
+import AuditOperationCard from '@/components/access/AuditOperationCard.vue'
+import { auditText, groupTitle, type AuditTextKey } from '@/services/auditPresentation'
+import { formatDateTime } from '@/utils/datetime'
 import type { User } from '@/services/api'
 import NotificationAdmin from '@/components/notifications/NotificationAdmin.vue'
 import QualityPanel from '@/components/notifications/QualityPanel.vue'
@@ -49,16 +53,18 @@ const route=useRoute()
 const {t,te,locale}=useI18n()
 const days=ref(7),userId=ref(''),module=ref(''),action=ref(''),offset=ref(0),loading=ref(false),error=ref(''),data=ref<AuditResult|null>(null),users=ref<User[]>([])
 let requestId=0
+const revision=ref(0),appliedFilters=ref<AuditFilters>({days:7})
+const at=(key:AuditTextKey)=>auditText(key,locale.value)
+const groups=computed<AuditGroup[]>(()=>data.value?.groups??data.value?.events.map(event=>({key:'event:'+event.id,kind:'operation',sale_id:null,sale_code:null,event_count:1,first_at:event.occurred_at,last_at:event.occurred_at,module:event.module,actor_name:event.actor_name,actor_count:1,samples:[event]}))??[])
 const actions=['login','logout','login_failed','create','update','delete','bulk_update','bulk_delete','password_changed','password_reset','access_created','access_changed','item_permanently_deleted','item_catalog_deleted','pdv_edit','pdv_return','pdv_cancel','pdv_delete']
 const modules=['dashboard','bi-vendas','enderecos','pedidos','inventory','rastreamento','vendas','pdv','fiado','vendors','exchange-rates','conta','usuarios','auditoria','assistente','clientes']
 const moduleName=(m:string)=>te('access.modules.'+m)?t('access.modules.'+m):m
 const actionName=(a:string)=>te('access.actionNames.'+a)?t('access.actionNames.'+a):a
-const date=(s:string|null)=>s?new Date(s).toLocaleString(locale.value):'—'
+const date=(s:string|null)=>s?formatDateTime(s):'—'
 const mutationCount=(actions:Record<string,number>)=>Object.entries(actions).reduce((sum,[action,count])=>sum+(['login','login_failed','logout'].includes(action)?0:count),0)
-function change(value:unknown){if(value&&typeof value==='object'&&'changed' in value)return t('access.fieldChanged');if(value&&typeof value==='object'&&'before' in value&&'after' in value)return `${value.before??'—'} → ${value.after??'—'}`;return String(value)}
-async function load(){const id=++requestId;loading.value=true;error.value='';try{const result=await accessAPI.audit({days:days.value,user_id:userId.value||undefined,module:module.value||undefined,action:action.value||undefined,offset:offset.value});if(id===requestId)data.value=result}catch{if(id===requestId)error.value=t('access.connectionError')}finally{if(id===requestId)loading.value=false}}
+async function load(){const id=++requestId;loading.value=true;error.value='';try{const filters={days:days.value,user_id:userId.value||undefined,module:module.value||undefined,action:action.value||undefined};const result=await accessAPI.audit({...filters,offset:offset.value,grouped:true});if(id===requestId){data.value=result;appliedFilters.value=filters;revision.value++}}catch{if(id===requestId){error.value=t('access.connectionError');offset.value=data.value?.offset??0}}finally{if(id===requestId)loading.value=false}}
 function filter(){offset.value=0;load()}
-function exportPage(){if(!data.value)return;const cell=(v:unknown)=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';const rows=[['when','user','channel','action','module','result','object','identifier'].map(k=>t('access.'+k)),...data.value.events.map(e=>[e.occurred_at,e.actor_name,e.source,actionName(e.action),moduleName(e.module),e.status_code,e.entity,e.entity_id])];const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='eleven-auditoria.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function exportPage(){if(!data.value)return;const cell=(v:unknown)=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replaceAll('"','""')+'"';const rows=[['when','user','action','module','identifier'].map(k=>t('access.'+k)),...groups.value.map(group=>[date(group.last_at),group.actor_name,groupTitle(group,locale.value,actionName),moduleName(group.module),group.sale_id||group.key])];const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='eleven-auditoria.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 onMounted(async()=>{await load();try{users.value=await accessAPI.users()}catch{error.value=t('access.connectionError')}})
 </script>
 <style scoped src="@/components/access/access.css"></style>

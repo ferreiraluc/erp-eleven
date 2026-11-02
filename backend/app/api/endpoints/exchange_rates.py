@@ -44,7 +44,7 @@ def get_current_rates(
             continue  # Skip deprecated pairs
         
         # Track most recent update (ensure timezone aware)
-        rate_updated_at = ensure_timezone_aware(rate.updated_at)
+        rate_updated_at = ensure_timezone_aware(rate.updated_at, db)
         if not latest_update or rate_updated_at > latest_update:
             latest_update = rate_updated_at
             source = rate.source
@@ -225,7 +225,7 @@ def get_exchange_rates_history(
                 "rate": float(rate.rate),
                 "source": rate.source,
                 "is_active": rate.is_active,
-                "created_at": ensure_timezone_aware(rate.created_at).isoformat() if rate.created_at else None,
+                "created_at": ensure_timezone_aware(rate.created_at, db).isoformat() if rate.created_at else None,
                 "updated_by": rate.updated_by
             }
             for rate in all_rates
@@ -423,12 +423,12 @@ def get_sales_average_rate(
     
     for i, rate in enumerate(rates):
         # Ensure rate.created_at has timezone info
-        rate_created_at = ensure_timezone_aware(rate.created_at)
+        rate_created_at = ensure_timezone_aware(rate.created_at, db)
         
         # Calculate how long this rate was active
         if i < len(rates) - 1:
             # Not the last rate - active until next rate
-            next_rate_time = ensure_timezone_aware(rates[i + 1].created_at)
+            next_rate_time = ensure_timezone_aware(rates[i + 1].created_at, db)
             active_duration = (next_rate_time - rate_created_at).total_seconds()
         else:
             # Last rate - active until now
@@ -464,7 +464,7 @@ def get_sales_average_rate(
         "rate_changes": [
             {
                 "rate": float(rate.rate),
-                "changed_at": ensure_timezone_aware(rate.created_at).isoformat(),
+                "changed_at": ensure_timezone_aware(rate.created_at, db).isoformat(),
                 "changed_by": rate.updated_by,
                 "source": rate.source
             }
@@ -493,6 +493,6 @@ def get_rate_by_pair(
     return {
         "currency_pair": currency_pair.value,
         "rate": rate.rate,
-        "last_updated": ensure_timezone_aware(rate.updated_at),
+        "last_updated": ensure_timezone_aware(rate.updated_at, db),
         "source": rate.source
     }

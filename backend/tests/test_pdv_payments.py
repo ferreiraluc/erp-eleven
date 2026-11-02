@@ -124,6 +124,34 @@ def test_cash_change_stays_explicit_and_a_rounded_product_closes_without_change(
     assert Decimal(client.get('/api/pdv/management/' + aligned.json()['id']).json()['payment_difference_gs']) == 0
 
 
+def test_negotiated_foreign_payment_settles_remaining_balance_as_discount(pdv_app):
+    _, client, cid = pdv_app
+    body = sale_payload([None], cid, avulso=True)
+    body['items'][0]['unit_price_gs'] = 3456000
+    body['desconto_gs'] = 161882.35
+    body['payments'] = [{'method': 'cash_brl', 'currency': 'BRL', 'exchange_rate': 1176.470588,
+                         'amount_original': 2800, 'amount_gs': 3294117.65}]
+    result = client.post('/api/pdv/sales', json=body)
+    assert result.status_code == 201, result.text
+    assert result.json()['total_gs'] == result.json()['payments'][0]['amount_gs'] == 3294117.65
+    assert result.json()['items'][0]['unit_price_gs'] == 3456000
+
+
+@pytest.mark.parametrize('discount', [-1, 100.01, 'NaN', 'Infinity'])
+def test_invalid_discount_never_changes_stock_or_finance(pdv_app, discount):
+    factory, client, cid = pdv_app
+    with factory() as db:
+        rid = make_item(db).id; db.commit()
+    body = sale_payload([rid], cid)
+    body['desconto_gs'] = discount
+    result = client.post('/api/pdv/sales', json=body)
+    assert result.status_code == 422, result.text
+    with factory() as db:
+        assert balances(db, rid) == (10, 6, 4)
+        assert db.query(PdvSale).count() == db.query(PdvPayment).count() == 0
+        assert db.query(StockMovement).count() == db.query(PdvFiadoMovement).count() == 0
+
+
 def test_mixed_payment_change_cannot_exceed_the_cash_part(pdv_app):
     factory, client, cid = pdv_app
     body = sale_payload([None], cid, avulso=True)

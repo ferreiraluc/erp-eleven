@@ -3,12 +3,13 @@
     <h2>{{ text('title') }}</h2>
     <p>{{ text('intro') }} <a href="https://www.bonanzacambios.com.py/?suc=2" target="_blank" rel="noopener">Bonanza · Jebai · Venta ↗</a></p>
     <p v-if="error || state?.last_error" role="alert">{{ error || text('failure') }}</p>
-    <p v-if="state?.last_success">{{ text('last') }}: {{ new Date(state.last_success).toLocaleString() }}</p>
-    <p v-if="state?.source_at">{{ text('published') }}: {{ new Date(state.source_at).toLocaleString() }}</p>
+    <p v-if="state?.last_success">{{ text('last') }}: {{ businessDateTime(state.last_success) }}</p>
+    <p v-if="state?.source_at">{{ text('published') }}: {{ businessDateTime(state.source_at) }}</p>
     <button class="erp-button" :class="state?.enabled ? 'erp-button--secondary' : 'erp-button--primary'" :disabled="busy || !state" @click="toggle">{{ text(busy ? 'loading' : state?.enabled ? 'pause' : 'enable') }}</button>
   </section>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/services/api'

@@ -611,11 +611,12 @@
 </template>
 
 <script setup lang="ts">
+import { parseDateTime, formatDateTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import '@/assets/trackingCards.css'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
-import { uiText, uiLocale } from '@/i18n/uiText'
+import { uiText } from '@/i18n/uiText'
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useRastreamentoStore } from '@/stores/rastreamento'
@@ -707,9 +708,9 @@ function triggerFlash(id: string) {
 function formatUltimaAtt(r: any): string {
   if (!r.ultima_atualizacao) return ''
   try {
-    const d = new Date(r.ultima_atualizacao)
+    const d = parseDateTime(r.ultima_atualizacao)
     if (isNaN(d.getTime())) return ''
-    return d.toLocaleDateString(uiLocale(), {
+    return formatDateTime(d, {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     })
@@ -993,9 +994,9 @@ function formatEventDate(dateStr: string): string {
   if (!dateStr) return ''
   try {
     // Handle "2026-04-30 16:51:46.000000" format from Correios via Wonca
-    const d = new Date(dateStr.replace(' ', 'T').split('.')[0])
+    const d = parseDateTime(dateStr, 'business')
     if (isNaN(d.getTime())) return dateStr
-    return d.toLocaleDateString(uiLocale(), {
+    return formatDateTime(d, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

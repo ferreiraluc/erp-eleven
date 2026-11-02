@@ -140,6 +140,7 @@
 </template>
 
 <script setup lang="ts">
+import { businessDateKey } from '@/utils/datetime'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { ref, computed, onMounted, watch } from 'vue'
@@ -147,8 +148,8 @@ import { vendorsAPI } from '@/services/api'
 import FolgasCalendarAdvanced from './FolgasCalendarAdvanced.vue'
 
 // Estado reativo
-const currentYear = ref(new Date().getFullYear())
-const currentMonth = ref(new Date().getMonth())
+const currentYear = ref(Number(businessDateKey().slice(0, 4)))
+const currentMonth = ref(Number(businessDateKey().slice(5, 7)) - 1)
 const showFullCalendar = ref(false)
 
 // Dados
@@ -159,7 +160,7 @@ const estatisticas = ref<any[]>([])
 const miniCalendarDays = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1)
   const startDate = new Date(firstDay)
-  const today = new Date()
+  const today = new Date(businessDateKey() + 'T12:00:00')
   
   // Ajustar para começar no domingo
   startDate.setDate(startDate.getDate() - startDate.getDay())
@@ -169,7 +170,7 @@ const miniCalendarDays = computed(() => {
   
   // Gerar 35 dias (5 semanas)
   for (let i = 0; i < 35; i++) {
-    const dateStr = currentDate.toISOString().split('T')[0]
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
     const dayFolgas = folgas.value.filter(f => f.data === dateStr)
     
     days.push({
@@ -187,7 +188,7 @@ const miniCalendarDays = computed(() => {
 })
 
 const totalFolgasHoje = computed(() => {
-  const hoje = new Date().toISOString().split('T')[0]
+  const hoje = businessDateKey()
   return folgas.value.filter(f => f.data === hoje).length
 })
 

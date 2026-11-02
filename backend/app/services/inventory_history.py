@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import load_only
 from sqlalchemy import cast, String, func, or_, and_
 
-from ..config import settings
+from .business_time import stored_instant
 from ..models.inventory import Item, StockMovement, InventorySessionItem, InventorySession
 from ..models.pdv import PdvSale, PdvSaleItem, PdvSaleEvent
 from ..models.usuario import Usuario
@@ -25,11 +25,11 @@ CHANGE_FIELDS = {'name', 'description', 'category', 'brand', 'size', 'color', 'u
                  'max_stock', 'current_stock', 'stock_loja', 'stock_deposito', 'group_key', 'is_active'}
 
 
-def timestamp(value, *, utc=False):
+def timestamp(value, *, utc=False, db=None):
     if value is None:
         return None
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc if utc else settings.tz)
+        value = value.replace(tzinfo=timezone.utc) if utc else stored_instant(value, db)
     return value.isoformat()
 
 
@@ -65,7 +65,7 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
     people = names(db, [item.created_by, item.deleted_by])
     creator = people.get(item.created_by)
     product = {key: getattr(item, key) for key in PRODUCT_FIELDS if key not in ('created_by', 'deleted_by')}
-    product.update(created_by=creator, created_at=timestamp(item.created_at), updated_at=timestamp(item.updated_at))
+    product.update(created_by=creator, created_at=timestamp(item.created_at, db=db), updated_at=timestamp(item.updated_at, db=db))
     product.update(name=item.history_name, deleted_at=timestamp(item.deleted_at, utc=True), deleted_by=people.get(item.deleted_by))
     offset = (page - 1) * page_size
     rows = []
@@ -95,8 +95,8 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
                         'sku':line.get('item_sku'),'size':line.get('item_size'),'color':line.get('item_color'),
                         'quantity':line['quantity'],'unit_price_gs':line['unit_price_gs'],'discount_gs':line['discount_gs'],
                         'total_gs':line['total_gs'],'location':line['location'],'is_avulso':line['is_avulso']})
-        rows = [{'id': str(sale.id), 'at': timestamp(sale.created_at), 'status': sale.status,
-                 'updated_at': timestamp(sale.updated_at), 'seller': actors.get(sale.vendedor_id),
+        rows = [{'id': str(sale.id), 'at': timestamp(sale.created_at, db=db), 'status': sale.status,
+                 'updated_at': timestamp(sale.updated_at, db=db), 'seller': actors.get(sale.vendedor_id),
                  'actor': actors.get(sale.created_by), 'customer': sale.cliente_nome,
                  'stock_applied': sale.stock_applied, 'sale_total_gs': amount(sale.total_gs),
                  'lines': lines[sale.id]} for sale in batch]
@@ -106,7 +106,7 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
         restricted_ids = restricted_movement_ids(db, batch, user)
         for m in batch:
             restricted = m.id in restricted_ids
-            rows.append({'id': str(m.id), 'at': timestamp(m.created_at), 'type': m.movement_type.value,
+            rows.append({'id': str(m.id), 'at': timestamp(m.created_at, db=db), 'type': m.movement_type.value,
                 'quantity': m.quantity, 'before': m.quantity_before, 'after': m.quantity_after,
                 'location_from': m.location_from, 'location_to': m.location_to,
                 'actor': None if restricted else actors.get(m.created_by),
@@ -117,11 +117,11 @@ def product_history(db, item_id, user, *, section='movements', page=1, page_size
         batch = counts.join(InventorySession).add_entity(InventorySession).order_by(
             InventorySession.started_at.desc(), InventorySessionItem.id.desc()).offset(offset).limit(page_size).all()
         actors = names(db, [r.counted_by for r, _ in batch])
-        rows = [{'id': str(r.id), 'at': timestamp(r.scanned_at or session.started_at),
+        rows = [{'id': str(r.id), 'at': timestamp(r.scanned_at or session.started_at, db=db),
                  'session_id': str(session.id), 'name': session.name, 'status': session.status.value,
                  'location': session.count_location, 'system_quantity': r.system_quantity,
                  'counted_quantity': r.counted_quantity, 'actor': actors.get(r.counted_by),
-                 'applied_at': timestamp(session.applied_at)} for r, session in batch]
+                 'applied_at': timestamp(session.applied_at, db=db)} for r, session in batch]
     elif section == 'changes':
         batch = changes.order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc()).offset(offset).limit(page_size).all()
         rows = [{'id': str(event.id), 'at': timestamp(event.occurred_at, utc=True), 'actor': event.actor_name,

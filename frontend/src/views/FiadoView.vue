@@ -198,6 +198,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { tr as salesText } from '@/components/pdv/management/i18n'
@@ -326,7 +327,7 @@ function fmtGs(v: number) {
   return 'G$ ' + Math.round(v).toLocaleString(uiLocale())
 }
 function formatDate(s: string) {
-  return new Date(s).toLocaleDateString(uiLocale(), { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return businessDate(s, { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 onMounted(loadClients)

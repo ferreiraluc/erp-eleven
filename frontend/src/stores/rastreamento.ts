@@ -1,5 +1,6 @@
+import { formatDate as businessDate } from '@/utils/datetime'
 import { defineStore } from 'pinia'
-import { uiText, uiLocale } from '@/i18n/uiText'
+import { uiText } from '@/i18n/uiText'
 import { ref, computed } from 'vue'
 import api from '../services/api'
 
@@ -369,7 +370,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
     if (!data) return ''
     
     try {
-      return new Date(data).toLocaleDateString(uiLocale(), {
+      return businessDate(data, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

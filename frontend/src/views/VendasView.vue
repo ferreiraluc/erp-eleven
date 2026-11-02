@@ -253,6 +253,7 @@
 </template>
 
 <script setup lang="ts">
+import { businessDateKey, formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
@@ -321,11 +322,11 @@ const filteredVendas = computed(() => {
 
   // Filtro por período
   if (filters.value.periodo) {
-    const now = new Date()
+    const now = new Date(businessDateKey() + 'T12:00:00')
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
     result = result.filter(venda => {
-      const vendaDate = new Date(venda.data_venda)
+      const vendaDate = new Date(businessDateKey(venda.data_venda) + 'T12:00:00')
 
       switch (filters.value.periodo) {
         case 'hoje':
@@ -391,13 +392,13 @@ const loadVendedores = async () => {
 }
 
 const updateStats = () => {
-  const today = new Date()
+  const today = new Date(businessDateKey() + 'T12:00:00')
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
 
   stats.value = {
     total_vendas: vendas.value.length,
     valor_total: vendas.value.reduce((sum, venda) => sum + Number(venda.valor_bruto || 0), 0),
-    vendas_hoje: vendas.value.filter(venda => new Date(venda.data_venda) >= todayStart).length,
+    vendas_hoje: vendas.value.filter(venda => new Date(businessDateKey(venda.data_venda) + 'T12:00:00') >= todayStart).length,
     vendedores_ativos: new Set(vendas.value.map(venda => venda.vendedor_id)).size
   }
 }
@@ -449,7 +450,7 @@ const exportVendas = () => {
 
 // Formatação
 const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString(uiLocale())
+  return businessDate(dateStr)
 }
 
 const formatCurrency = (value: number) => {

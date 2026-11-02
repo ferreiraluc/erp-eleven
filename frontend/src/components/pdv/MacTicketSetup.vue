@@ -8,7 +8,7 @@
       <button v-if="!mac" type="button" class="erp-button erp-button--secondary" :disabled="busy || !!error" @click="prepare">{{ uiText('Preparar 3nStar no Mac') }}</button>
       <template v-else>
         <strong>{{ uiText(mac.auto_receipts ? '3nStar ativa para as próximas vendas' : '3nStar em preparação') }}</strong>
-        <p>{{ uiText('Último contato:') }} {{ mac.last_seen_at ? new Date(mac.last_seen_at).toLocaleString() : uiText('Ainda não conectado') }}</p>
+        <p>{{ uiText('Último contato:') }} {{ mac.last_seen_at ? businessDateTime(mac.last_seen_at) : uiText('Ainda não conectado') }}</p>
         <div v-if="token" class="mac-secret">
           <strong>{{ uiText('Credencial exclusiva do Mac') }}</strong>
           <p>{{ uiText('Cole no Instalar.command do iMac. Não use a credencial da Zebra ou da Samsung.') }}</p>
@@ -47,6 +47,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed, onMounted, ref } from 'vue'
 import { pdvReceipts, type ReceiptPrinter } from '@/services/pdvReceipts'
 import { saleError } from '@/services/pdvManagement'

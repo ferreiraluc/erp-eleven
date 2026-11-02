@@ -281,10 +281,11 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate, formatTime as businessTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import ModuleHeader from '@/components/ModuleHeader.vue'
-import { uiText, uiLocale, uiNumber } from '@/i18n/uiText'
+import { uiText, uiNumber } from '@/i18n/uiText'
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -542,12 +543,12 @@ const resetQuickUpdateForm = () => {
 // Helper functions
 const formatDateLocal = (dateString: string | null) => {
   if (!dateString) return t('exchangeManagement.na')
-  return new Date(dateString).toLocaleDateString(uiLocale(),{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'America/Sao_Paulo'})
+  return businessDate(dateString, {year:'numeric',month:'2-digit',day:'2-digit',timeZone:'America/Sao_Paulo'})
 }
 
 const formatTime = (dateString: string | null) => {
   if (!dateString) return ''
-  return new Date(dateString).toLocaleTimeString(uiLocale(), {
+  return businessTime(dateString, {
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit',
     minute: '2-digit'

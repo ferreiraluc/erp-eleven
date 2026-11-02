@@ -1,4 +1,9 @@
 {
+  "Acender luz": ["Encender luz", "Turn light on"],
+  "Apagar luz": ["Apagar luz", "Turn light off"],
+  "Câmera": ["Cámara", "Camera"],
+  "Preparando câmera...": ["Preparando cámara...", "Preparing camera..."],
+  "Se estiver desfocado, afaste um pouco a etiqueta e use o zoom.": ["Si está desenfocado, aleja un poco la etiqueta y usa el zoom.", "If blurry, move the label slightly farther away and use zoom."],
   "Reposição": ["Reposición", "Replenishment"],
   "Cópia do padrão — salve para usar este desenho.": ["Copia del diseño original — guarda para usar este diseño.", "Copy of the standard — save to use this design."],
   "Editor de etiquetas": [

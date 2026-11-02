@@ -126,13 +126,47 @@ as contas. Leituras e tentativas de push ficam fora do log genérico; alteraçõ
 administrativas geram eventos explícitos, sem copiar o corpo da mensagem.
 Detalhes: [Notificações](NOTIFICACOES.md).
 
-Somente Lucas acessa `/auditoria` e `/api/access/audit`. O painel combina:
+Somente Lucas acessa `/auditoria`, `/api/access/audit` e seus detalhes de operação. O painel combina:
 
 - Login, falhas, logout, mudanças de senha e permissões.
 - Operações confirmadas de criação/alteração/exclusão, vinculadas ao usuário e ao canal.
-- Filtros por período, usuário, módulo e ação, resumo de eventos por usuário e exportação da página.
+- Filtros por período, usuário, módulo e ação, resumo de operações por usuário e exportação da página.
 - Exclusão definitiva de produtos sem vínculo, exclusiva do Lucas, com identificação
   da peça e quantidade de movimentações removidas.
+
+O histórico abre como **cards de operações**. Cada venda do PDV reúne seus registros
+de criação, edição, itens, pagamentos, devoluções e estoque associado. O botão
+**Abrir venda** leva à venda correspondente; os registros ficam expansíveis no
+próprio card. Vendas operacionais e BI não são tratados como vendas do PDV.
+Outras alterações são agrupadas pelo identificador exato da requisição confirmada,
+por exemplo uma transferência em lote. Eventos sem esse identificador ficam
+individuais. Horário próximo, nome do usuário ou semelhança entre valores nunca
+são usados para adivinhar uma associação.
+
+As movimentações identificam o produto, quem confirmou, entrada, saída ou
+transferência, quantidade e locais conhecidos. Mostram os saldos anteriores e
+posteriores da loja e do depósito quando esses fatos foram registrados. Históricos
+antigos sem saldo por local mostram somente o saldo total conhecido. Exclusão de
+um registro histórico é identificada como exclusão, não como uma nova saída física.
+Datas e horas usam o horário de Brasília (`America/Sao_Paulo`).
+
+O servidor aplica os filtros **antes de agrupar e paginar**; os detalhes usam os
+mesmos filtros. Por isso um filtro por usuário ou estoque mostra somente os
+registros correspondentes dentro da venda, e o total do card reflete esse recorte.
+A lista carrega até três exemplos por operação. Os demais registros são buscados
+apenas ao abrir o card, com paginação independente; uma venda grande não desaparece
+nem se divide artificialmente entre páginas de operações. O resumo de cada usuário
+conta operações distintas, com logins em coluna separada. A exportação contém os
+grupos da página atual.
+
+`/api/access/audit?grouped=true` habilita a leitura agrupada e
+`/api/access/audit/group` pagina os registros de um grupo. Sem `grouped`, a API
+mantém o contrato anterior de eventos individuais. Não há migração nem alteração
+dos registros antigos. Novos eventos guardam referências estruturais seguras da
+venda e do produto; eventos antigos só são associados quando há uma venda única
+explicitamente identificada na mesma requisição. Essas referências sobrevivem à
+exclusão das linhas operacionais e não copiam documentos, endereços, fotos ou textos
+privados. Um histórico legado sem vínculo suficiente continua separado.
 
 Mutações ORM são registradas na mesma transação; rollback não vira alteração
 concluída. Atualizações em lote registram quantidade afetada. Valores sensíveis,
@@ -169,6 +203,11 @@ migrações e concorrência entre abas. Testes frontend verificam sessão expira
 respostas atrasadas de outra conta e troca de senha durante validação em segundo plano.
 `authConcurrency.test.ts` e `authRequests.test.ts` exercitam respostas fora de ordem
 e a associação da requisição ao token original, sem consultar contas reais.
+`test_audit_groups.py`, `test_audit_groups_postgres.py`, `AuditOperationCard.test.ts`
+e `auditPresentation.test.ts` verificam agrupamento e paginação, filtros, isolamento
+de permissão, referências históricas, rollback, saldos, detalhes sob demanda e
+recuperação após falha de rede. A consulta de agrupamento é validada também em
+PostgreSQL isolado, incluindo extração JSON e identificadores UUID.
 `test_daily_sessions.py`, `test_daily_sessions_postgres.py`,
 `authDailyExpiry.test.ts` e `sessionStorage.test.ts` cobrem a virada das 21h,
 logins após o fechamento, atualização de sessões legadas em PostgreSQL isolado,

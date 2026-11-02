@@ -65,7 +65,7 @@ def test_backend_rejects_tampered_card_charge_without_recording_sale(pdv_app, ch
         assert db.query(PdvSale).count() == db.query(PdvPayment).count() == 0
 
 
-def test_historical_card_payment_is_preserved_but_cannot_be_newly_assigned(pdv_app):
+def test_historical_card_payment_is_preserved_and_new_payments_may_waive_fee(pdv_app):
     factory, client, cid = pdv_app
     old = dict(method='card_credit_py', currency='GS', exchange_rate=1, amount_original=100, amount_gs=100)
     body = sale_payload([None], cid, avulso=True)
@@ -81,9 +81,48 @@ def test_historical_card_payment_is_preserved_but_cannot_be_newly_assigned(pdv_a
     assert preview.status_code == 200, preview.text
     edit['payments'].append(dict(edit['payments'][0]))
     edit['items'][0]['unit_price_gs'] = 200
-    assert client.post(f'/api/pdv/management/{sid}/preview', json=command('edit', edit=edit)).status_code == 422
+    assert client.post(f'/api/pdv/management/{sid}/preview', json=command('edit', edit=edit)).status_code == 200
     body['payments'] = [old]
+    assert client.post('/api/pdv/sales', json=body).status_code == 201
+
+
+@pytest.mark.parametrize('method', ['card_credit_py', 'card_debit_py'])
+@pytest.mark.parametrize('split', [False, True])
+def test_waived_fee_persists_without_changing_goods_or_refund(pdv_app, method, split):
+    _, client, cid = pdv_app
+    body = sale_payload([None], cid, avulso=True)
+    body['items'][0]['unit_price_gs'] = 468000.25
+    amount = 234000.25 if split else 468000.25
+    body['payments'] = [dict(method=method, currency='GS', exchange_rate=1,
+                             amount_original=amount, amount_gs=amount,
+                             card_fee_gs=0, card_fee_percent=0)]
+    if split:
+        body['payments'].append(dict(method='cash_usd', currency='USD', exchange_rate=5850,
+                                    amount_original=40, amount_gs=234000))
+    result = client.post('/api/pdv/sales', json=body)
+    assert result.status_code == 201, result.text
+    sale = result.json()
+    assert sale['total_gs'] == 468000.25
+    assert sale['payments'][0]['amount_original'] == sale['payments'][0]['amount_gs'] == amount
+    assert sale['payments'][0]['card_fee_percent'] == sale['payments'][0]['card_fee_gs'] == 0
+    preview = client.post(f"/api/pdv/management/{sale['id']}/preview", json=command('cancel'))
+    assert preview.status_code == 200, preview.text
+    assert Decimal(preview.json()['refund_gs']) == Decimal('468000.25')
+    assert not any('acréscimo do cartão' in warning for warning in preview.json()['warnings'])
+
+
+@pytest.mark.parametrize('change', [
+    {'card_fee_gs': 1}, {'card_fee_percent': -1}, {'amount_gs': 99.99},
+    {'currency': 'USD'}, {'exchange_rate': 2},
+])
+def test_waiver_cannot_hide_a_fee_or_inconsistent_currency(pdv_app, change):
+    factory, client, cid = pdv_app
+    body = sale_payload([None], cid, avulso=True)
+    body['payments'] = [{**dict(method='card_credit_py', currency='GS', exchange_rate=1,
+        amount_original=100, amount_gs=100, card_fee_gs=0, card_fee_percent=0), **change}]
     assert client.post('/api/pdv/sales', json=body).status_code == 422
+    with factory() as db:
+        assert db.query(PdvSale).count() == db.query(PdvPayment).count() == 0
 
 
 def test_manual_card_amount_is_net_of_six_percent():

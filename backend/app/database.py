@@ -10,7 +10,7 @@ def engine_options(url):
                        pool_timeout=settings.DB_POOL_TIMEOUT, pool_recycle=900,
                        connect_args={'connect_timeout': settings.DB_CONNECT_TIMEOUT,
                            'application_name': 'erp-eleven',
-                           'options': f'-c statement_timeout={settings.DB_STATEMENT_TIMEOUT_MS} '
+                           'options': f'-c timezone=UTC -c statement_timeout={settings.DB_STATEMENT_TIMEOUT_MS} '
                                       f'-c lock_timeout={settings.DB_LOCK_TIMEOUT_MS} '
                                       f'-c idle_in_transaction_session_timeout={settings.DB_IDLE_TRANSACTION_TIMEOUT_MS}'})
         if settings.PRODUCTION:

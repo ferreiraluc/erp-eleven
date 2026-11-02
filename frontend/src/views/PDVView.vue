@@ -61,6 +61,7 @@
               class="pdv-search-input" @keydown.enter="onSearchEnter" @input="onSearchInput" />
             <button v-if="searchQuery" class="pdv-search-clear erp-button erp-button--ghost erp-button--icon" @click="clearSearch" :aria-label="uiText('Limpar busca')">×</button>
           </div>
+          <button type="button" class="pdv-quick-avulso erp-button erp-button--secondary erp-button--icon" @click="openAvulso()" :title="uiText('Adicionar item avulso')" :aria-label="uiText('Adicionar item avulso')">+</button>
           <button class="pdv-scan-btn erp-button erp-button--primary erp-button--icon" @click="showScanner = true" :title='$tr("Escanear código")' :aria-label='$tr("Escanear código com a câmera")'>
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h4l2-3h6l2 3h4v13H3V7zm13 6a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           </button>
@@ -222,6 +223,7 @@
                 <div class="pay-entry-amounts">
                   <span class="pay-gs-amount">{{ paymentSymbol(p.currency) }} {{ fmtNum(p.amount_original) }}</span>
                   <span v-if="p.card_fee_gs" class="pay-orig-amount">{{ uiText('Acréscimo cartão') }}: {{ fmtGs(p.card_fee_gs) }} · {{ uiText('Aplicado à venda') }}: {{ fmtGs(p.amount_gs) }}</span>
+                  <span v-else-if="isCardPayment(p.method)" class="pay-orig-amount">{{ uiText('Sem acréscimo de cartão') }}</span>
                   <span v-if="p.currency !== 'GS'" class="pay-orig-amount">≈ {{ fmtGs(p.amount_gs) }}</span>
                 </div>
                 <button class="pay-entry-remove erp-button erp-button--danger erp-button--icon" @click="removePayment(p.id)" :aria-label="uiText('Remover pagamento')">×</button>
@@ -247,10 +249,15 @@
                 <input v-if="showReference" v-model="newReference" type="text" class="pay-ref-input" :placeholder="referencePlaceholder" />
                 <button class="pay-btn-add erp-button erp-button--primary erp-button--sm" @click="addPayment" :disabled="!canAddPayment">{{ $tr("+ Add") }}</button>
               </div>
+              <label v-if="cardSelected" class="pay-card-fee-choice">
+                <input v-model="cardFeeEnabled" type="checkbox" />
+                <span>{{ uiText('Repassar taxa de 6% do cartão') }}</span>
+              </label>
               <div v-if="cardSelected" class="pay-card-preview" role="status">
-                <strong>{{ uiText('Valor na máquina') }}: {{ fmtGs(cardTerminalTotal) }}</strong>
-                <span>{{ uiText('Câmbio cartão') }}: {{ fmtNum(rateUsd / 0.94) }} G$ / U$</span>
-                <small>{{ uiText('Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.') }}</small>
+                <strong>{{ uiText('Valor na máquina') }}: G$ {{ fmtNum(cardPreview.gross) }}</strong>
+                <span>{{ uiText('Aplicado à venda') }}: G$ {{ fmtNum(cardPreview.net) }} · {{ uiText('Acréscimo cartão') }}: G$ {{ fmtNum(cardPreview.fee) }}</span>
+                <span>{{ uiText('Câmbio cartão') }}: {{ fmtNum(cardFeeEnabled ? rateUsd / 0.94 : rateUsd) }} G$ / U$</span>
+                <small>{{ uiText(cardFeeEnabled ? 'Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.' : 'Sem acréscimo de cartão') }}</small>
               </div>
               <div v-if="newCurrency !== 'GS'" class="pay-rate-row">
                 <span>{{ $tr("Taxa:") }}</span>
@@ -269,7 +276,7 @@
             </div>
             <!-- Discount -->
             <div class="pay-discount-row">
-              <label class="pay-discount-label" for="pdv-discount">{{ $tr("Desconto (G$)") }}</label>
+              <button type="button" class="pay-discount-label erp-button erp-button--secondary erp-button--sm" :disabled="!canCoverShortfall" :title="uiText('Usar o valor faltante como desconto')" @click="coverShortfallWithDiscount">{{ $tr("Desconto (G$)") }}</button>
               <div class="pay-discount-input-wrap">
                 <span class="pay-currency-prefix">G$</span>
                 <DecimalInput id="pdv-discount" :model-value="pdv.discountGs" @update:model-value="changeGlobalDiscount" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
@@ -341,7 +348,7 @@ import { prepareCatalogIndex, searchDeviceCatalog } from '@/services/catalogInde
 import { saleUsd } from '@/services/saleUsd'
 import { inventoryAPI, type InventoryItem, type ProductRelation, type RelatedProductCursor } from '@/services/api'
 import { displayStock } from '@/services/inventoryStock'
-import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, isCardPayment, cardCharge, cardPaymentAmounts, validPaymentAmount } from '@/services/pdvPayments'
+import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, isCardPayment, cardCharge, cardPaymentAmounts, validPaymentAmount, discountToCoverShortfall } from '@/services/pdvPayments'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr: inventoryText } = useInventoryI18n()
 import BarcodeScanner from '@/components/inventory/BarcodeScanner.vue'
@@ -417,6 +424,7 @@ const newCurrency = computed(() => paymentCurrency(newMethod.value) || 'USD')
 const newAmount = ref<number | null>(null)
 const newRate = ref<number | null>(0)
 const newReference = ref('')
+const cardFeeEnabled = ref(true)
 const amountInput = ref<InstanceType<typeof DecimalInput>>()
 const totalIntent = ref<{ method: string; amount: number; rate: number; total: number; paid: number } | null>(null)
 const roundingSnapshots = new Map<string, CartRoundingSnapshot>(localPayments.value
@@ -456,7 +464,9 @@ watch(newMethod, () => {
   newRate.value = defaultRate(newCurrency.value)
   newAmount.value = null
   newReference.value = ''
+  cardFeeEnabled.value = true
 })
+watch(cardFeeEnabled, () => { newAmount.value = null; totalIntent.value = null })
 watch([rateUsd, rateBrl, rateEur], () => {
   if (pdv.loading || pdv.checkoutUncertain) {
     ratesChangedDuringCheckout = true
@@ -486,14 +496,28 @@ watch(() => pdv.cart.length, (len) => { if (len === 0) { roundingSnapshots.clear
 const currencySymbol = computed(() => paymentSymbol(newCurrency.value))
 const cardSelected = computed(() => isCardPayment(newMethod.value))
 const cardFees = computed(() => localPayments.value.reduce((sum, p) => sum + (p.card_fee_gs || 0), 0))
-const cardTerminalTotal = computed(() => cardCharge(payRemaining.value))
+const cardTerminalTotal = computed(() => cardCharge(payRemaining.value, cardFeeEnabled.value))
+const cardPreview = computed(() => {
+  const amount = Number(newAmount.value)
+  const gross = Number.isFinite(amount) && amount > 0 ? amount : cardTerminalTotal.value
+  const values = cardPaymentAmounts(gross, payRemaining.value, cardFeeEnabled.value)
+  return { gross, net: values.amount_gs, fee: values.card_fee_gs }
+})
 const showReference = computed(() => !newMethod.value.startsWith('cash_') && newMethod.value !== 'fiado')
 const referencePlaceholder = computed(() => newMethod.value.startsWith('card_') ? uiText('Últimos 4 dígitos') : uiText('Referência'))
 const validRate = computed(() => Number.isFinite(newRate.value) && Number(newRate.value) > 0 && Number(newRate.value) <= 999999999)
-const canAddPayment = computed(() => validPaymentAmount(Number(newAmount.value), Number(newRate.value)) && (!cardSelected.value || Number.isInteger(newAmount.value)) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
+const canAddPayment = computed(() => validPaymentAmount(Number(newAmount.value), Number(newRate.value)) && (!cardSelected.value || !cardFeeEnabled.value || Number.isInteger(newAmount.value)) && (newMethod.value !== 'fiado' || !!pdv.clienteId))
 
 const payTotalPaid = computed(() => localPayments.value.reduce((s, p) => s + p.amount_gs, 0))
 const payRemaining = computed(() => Math.max(0, pdv.total - payTotalPaid.value))
+const canCoverShortfall = computed(() => !pdv.loading && !pdv.checkoutUncertain && !customerBusy.value && !barcodePending.value &&
+  !invalidQuantityDraft.value && !invalidPriceDraft.value && discountToCoverShortfall(pdv.subtotal, pdv.discountGs, payTotalPaid.value) !== null)
+function coverShortfallWithDiscount() {
+  if (!canCoverShortfall.value) return
+  undoPaymentRounding()
+  const discount = discountToCoverShortfall(pdv.subtotal, pdv.discountGs, payTotalPaid.value)
+  if (discount !== null) pdv.discountGs = discount
+}
 const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
 const cashPaid = computed(() => localPayments.value.reduce((sum, payment) =>
   sum + (payment.method.startsWith('cash_') ? payment.amount_gs : 0), 0))
@@ -525,11 +549,11 @@ function addPayment() {
     reference: newReference.value || null,
     label: methodLabel(newMethod.value),
   }
-  if (cardSelected.value) Object.assign(payment, cardPaymentAmounts(payment.amount_original, payRemaining.value))
+  if (cardSelected.value) Object.assign(payment, cardPaymentAmounts(payment.amount_original, payRemaining.value, cardFeeEnabled.value))
   const intent = totalIntent.value
   const matchedTotal = intent && intent.method === payment.method && intent.amount === payment.amount_original &&
     intent.rate === payment.exchange_rate && intent.total === pdv.total && intent.paid === payTotalPaid.value
-  if (!cardSelected.value && (matchedTotal || !payment.method.startsWith('cash_'))) {
+  if ((!cardSelected.value || !cardFeeEnabled.value) && (matchedTotal || !payment.method.startsWith('cash_'))) {
     const snapshot = pdv.roundCartTotalToPayment(payment, payTotalPaid.value)
     if (snapshot) {
       payment.rounding_snapshot = snapshot
@@ -790,6 +814,7 @@ function resetPayment() {
   localPayments.value = []
   newAmount.value = null
   newReference.value = ''
+  cardFeeEnabled.value = true
 }
 
 async function confirmPayment() {
@@ -833,6 +858,11 @@ onUnmounted(() => { disposed = true; searchGeneration++; searchController?.abort
 
 <style scoped>
 .pay-card-preview,.pay-card-summary{display:grid;gap:5px;padding:10px 12px;background:#f5f3ff;color:#5b21b6;border-radius:10px;font-size:13px;overflow-wrap:anywhere}.pay-card-preview small{font-size:11px}.pay-card-summary{margin:8px 12px}
+.pay-card-fee-choice { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 13px; color: #475569; }
+.pay-card-fee-choice input { width: 18px; height: 18px; accent-color: #6d28d9; flex-shrink: 0; }
+.pdv-quick-avulso { flex: 0 0 44px; }
+:is(#app, body) .pdv-search-bar :is(.pdv-quick-avulso, .pdv-scan-btn) { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+:is(#app, body) .pdv-search-bar .pdv-quick-avulso { font-size: 22px; }
 .pdv-checkout-lock { display: contents; }
 .pdv-stock-location { min-width: 0; display: flex; flex-direction: column; gap: .15rem; font-size: .65rem; color: #6b7280; }
 .pdv-stock-location .erp-dropdown { max-width: 140px; }

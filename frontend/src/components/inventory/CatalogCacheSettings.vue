@@ -15,7 +15,7 @@
       <p role="status">
         {{ state.count.toLocaleString() }} {{ uiText('produtos disponíveis na consulta local') }} ·
         {{ (state.bytes / 1048576).toFixed(1) }} MB
-        <span v-if="state.syncedAt"> · {{ new Date(state.syncedAt).toLocaleString() }}</span>
+        <span v-if="state.syncedAt"> · {{ businessDateTime(state.syncedAt) }}</span>
       </p>
       <p v-if="state.loading" role="status">
         {{ uiText('Preparando o índice em segundo plano… Você pode continuar usando o sistema.') }}
@@ -43,6 +43,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { onMounted } from 'vue'
 import {
   catalogCacheState as state,

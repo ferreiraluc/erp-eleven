@@ -1,74 +1,76 @@
 import { uiLocale, uiText } from '@/i18n/uiText'
 
-/**
- * Utilities for handling datetime with correct timezone (GMT-3 / America/Sao_Paulo)
- */
+/** Business display is independent of the browser/device timezone. */
+export const TIMEZONE = 'America/Sao_Paulo'
+type DateValue = string | Date | number
+const calendarDate = /^\d{4}-\d{2}-\d{2}$/
 
-// Timezone configuration
-export const TIMEZONE = 'America/Sao_Paulo' // GMT-3
-
-/**
- * Format a date string to local timezone with the selected display locale
+/** ERP timestamps without an offset are legacy UTC instants, not device-local time.
+ * Provider wall-clock events (Correios) must explicitly use `business` instead.
+ * Calendar-only dates are kept on their original day and never shifted by UTC.
  */
-export function formatDate(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: TIMEZONE,
-    ...options
-  }
-  
-  return date.toLocaleDateString(uiLocale(), defaultOptions)
+export function parseDateTime(value: DateValue, naive: 'utc' | 'business' = 'utc'): Date {
+  if (value instanceof Date) return new Date(value.getTime())
+  if (typeof value === 'number') return new Date(value)
+  const text = value.trim()
+  if (calendarDate.test(text)) return new Date(`${text}T12:00:00-03:00`)
+  const normalized = text.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1')
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(normalized)) return new Date(NaN)
+  const explicit = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized)
+  return new Date(explicit ? normalized : normalized + (naive === 'business' ? '-03:00' : 'Z'))
 }
 
-/**
- * Format a datetime string to local timezone with the selected display locale
- */
-export function formatDateTime(dateString: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: TIMEZONE,
-    ...options
-  }
-  
-  return date.toLocaleString(uiLocale(), defaultOptions)
+function display(value: DateValue, options: Intl.DateTimeFormatOptions, naive: 'utc' | 'business' = 'utc'): string {
+  const date = parseDateTime(value, naive)
+  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat(uiLocale(), { ...options, timeZone: TIMEZONE }).format(date)
 }
 
-/**
- * Format time only
- */
-export function formatTime(dateString: string | Date): string {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  
-  return date.toLocaleTimeString(uiLocale(), {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: TIMEZONE
+export function formatDate(value: DateValue, options: Intl.DateTimeFormatOptions = {}): string {
+  return display(value, options.dateStyle ? options : { year: 'numeric', month: '2-digit', day: '2-digit', ...options })
+}
+
+export function formatDateTime(value: DateValue, options: Intl.DateTimeFormatOptions = {}): string {
+  return display(value, options.dateStyle || options.timeStyle ? options : {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', ...options,
   })
 }
 
-/**
- * Get current date in Brazil timezone
- */
-export function nowInBrazil(): Date {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: TIMEZONE }))
+/** A provider's timezone-less event is a Brasília wall clock, unlike ERP timestamps. */
+export function formatBusinessDateTime(value: DateValue, options: Intl.DateTimeFormatOptions = {}): string {
+  return display(value, options.dateStyle || options.timeStyle ? options : {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', ...options,
+  }, 'business')
 }
 
-/**
- * Format relative time (e.g., "há 2 horas")
- */
-export function formatRelativeTime(dateString: string | Date): string {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+export function formatTime(value: DateValue, options: Intl.DateTimeFormatOptions = {}): string {
+  return display(value, { hour: '2-digit', minute: '2-digit', ...options })
+}
+
+/** A Date always represents an instant. Format it with the business helpers. */
+export function nowInBrazil(): Date { return new Date() }
+
+/** Stable YYYY-MM-DD for filters and date inputs; not the UTC/device calendar day. */
+export function businessDateKey(value: DateValue = new Date()): string {
+  if (typeof value === 'string' && calendarDate.test(value)) return value
+  const date = parseDateTime(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  const part = (name: string) => parts.find(entry => entry.type === name)?.value || ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+/** Value for datetime-local controls, always interpreted as Brasília by the submitter. */
+export function businessDateTimeInput(value: DateValue): string {
+  const date = parseDateTime(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date)
+  const part = (name: string) => parts.find(entry => entry.type === name)?.value || ''
+  return `${businessDateKey(date)}T${part('hour')}:${part('minute')}`
+}
+
+export function formatRelativeTime(value: DateValue): string {
+  const date = parseDateTime(value)
+  if (Number.isNaN(date.getTime())) return '—'
   const seconds = Math.trunc((date.getTime() - Date.now()) / 1000)
   const relative = new Intl.RelativeTimeFormat(uiLocale(), { numeric: 'auto' })
   if (Math.abs(seconds) < 60) return uiText('agora mesmo')
@@ -81,11 +83,7 @@ export function formatRelativeTime(dateString: string | Date): string {
   return formatDate(date)
 }
 
-/**
- * Check if a date is today in Brazil timezone
- */
-export function isToday(dateString: string | Date): boolean {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  const calendarDate = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE })
-  return calendarDate.format(date) === calendarDate.format(new Date())
+export function isToday(value: DateValue): boolean {
+  const key = businessDateKey(value)
+  return !!key && key === businessDateKey()
 }

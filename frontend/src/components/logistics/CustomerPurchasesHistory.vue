@@ -47,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
@@ -62,7 +63,7 @@ let sequence = 0
 const money = (value: string) => `G$ ${Number(value).toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const paymentMoney = (value: string, currency: string) => `${paymentSymbol(currency)} ${Number(value).toLocaleString(locale.value, { minimumFractionDigits: currency === 'GS' || currency === 'PYG' ? 0 : 2, maximumFractionDigits: 2 })}`
 const quantity = (value: string) => Number(value).toLocaleString(locale.value, { maximumFractionDigits: 3 })
-const date = (value: string) => new Date(value).toLocaleString(locale.value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
+const date = (value: string) => businessDateTime(value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
 const status = (value: string) => te(`states.${value}`) ? t(`states.${value}`) : value
 
 async function load(page = 1) {

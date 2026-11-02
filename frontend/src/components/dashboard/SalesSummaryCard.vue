@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -186,7 +187,7 @@ const amount = (value: number | null | undefined) =>
     ? '—'
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const date = (value: string) =>
-  new Date(value).toLocaleString(locale.value, {
+  businessDateTime(value, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

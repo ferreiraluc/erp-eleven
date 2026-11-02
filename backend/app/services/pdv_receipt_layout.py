@@ -2,10 +2,8 @@
 import base64
 import io
 import math
-from datetime import datetime
 from decimal import Decimal
 from html import escape
-from zoneinfo import ZoneInfo
 
 from reportlab.graphics.barcode import createBarcodeDrawing
 from reportlab.lib.styles import ParagraphStyle
@@ -43,9 +41,8 @@ def view(snapshot):
     def money(value):
         usd = convert(value, snapshot.get('usd_rate_gs'))
         return 'US$ ' + (number(usd, 2) if usd is not None else '—')
-    date = datetime.fromisoformat(snapshot['date'])
-    if date.tzinfo:
-        date = date.astimezone(ZoneInfo('America/Asuncion'))
+    from .business_time import business_datetime
+    date = business_datetime(snapshot['date'])
     paid = sum(Decimal(p['total']) for p in snapshot['payments'])
     total = Decimal(snapshot['total'])
     card_fee = sum(Decimal(p.get('card_fee') or '0') for p in snapshot['payments'])

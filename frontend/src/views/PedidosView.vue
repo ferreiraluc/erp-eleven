@@ -235,9 +235,10 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
-import { uiText, uiLocale } from '@/i18n/uiText'
+import { uiText } from '@/i18n/uiText'
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PedidoCard from '@/components/PedidoCard.vue'
@@ -314,7 +315,7 @@ const loadTags = async () => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString(uiLocale())
+  return businessDate(dateString)
 }
 
 const getStatusLabel = (status: string) => {

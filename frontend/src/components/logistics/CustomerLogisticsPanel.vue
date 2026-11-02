@@ -55,6 +55,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { ref, watch, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -107,7 +108,7 @@ const kind = ref<'pedido' | 'rastreamento'>('rastreamento'), identifier = ref(''
 const candidate = ref<{ id: string; kind: 'pedido' | 'rastreamento'; title: string; description: string } | null>(null)
 const feedback = ref(''), feedbackError = ref(false)
 let generation = 0, contextVersion = 0
-const date = (value: string) => new Date(value).toLocaleString(locale.value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
+const date = (value: string) => businessDateTime(value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
 async function load(more?: 'orders' | 'parcels') {
   const request = ++generation
   const customerId = props.customer.id, token = auth.token

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setLocale } from '@/i18n'
-import { formatDate, formatDateTime, formatRelativeTime, formatTime, isToday } from './datetime'
+import { formatDate, formatDateTime, formatRelativeTime, formatTime, isToday, businessDateKey, formatBusinessDateTime, parseDateTime, businessDateTimeInput } from './datetime'
 
 afterEach(()=>{vi.useRealTimers();setLocale('pt')})
 describe('localized dates retain the business timezone',()=>{
@@ -25,4 +25,33 @@ describe('localized dates retain the business timezone',()=>{
     expect(isToday('2026-09-30T20:00:00Z')).toBe(true)
     expect(isToday('2026-10-01T04:00:00Z')).toBe(false)
   })
+})
+
+it('treats legacy naive ERP timestamps as UTC, independently of the device timezone', () => {
+  expect(formatDateTime('2026-11-02T18:15:00.123456')).toBe(formatDateTime('2026-11-02T18:15:00.123Z'))
+  expect(formatTime('2026-11-02T18:15:00')).toBe('15:15')
+  expect(formatTime('2026-11-02T15:15:00-03:00')).toBe('15:15')
+  expect(formatTime(Date.parse('2026-11-02T18:15:00Z'))).toBe('15:15')
+})
+
+it('preserves calendar-only dates and keeps provider wall clocks explicit', () => {
+  expect(formatDate('2026-11-02')).toBe('02/11/2026')
+  expect(businessDateKey('2026-11-02')).toBe('2026-11-02')
+  expect(businessDateKey('2026-11-02T02:59:59Z')).toBe('2026-11-01')
+  expect(formatBusinessDateTime('2026-11-02 15:15:00.000000')).toContain('15:15')
+  expect(parseDateTime('2026-11-02 15:15:00', 'business').toISOString()).toBe('2026-11-02T18:15:00.000Z')
+  expect(formatDateTime('2026-11-02T18:15:00Z', { dateStyle: 'short', timeStyle: 'short' })).toContain('15:15')
+})
+
+it('handles invalid values without breaking cards and computes naive elapsed time from UTC', () => {
+  expect(formatDateTime('not a date')).toBe('—')
+  expect(formatDateTime(new Date(NaN))).toBe('—')
+  expect(businessDateKey('not a date')).toBe('')
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-02T18:00:00Z'))
+  expect(formatRelativeTime('2026-11-02T16:00:00')).toBe('há 2 horas')
+})
+
+it('keeps notification schedule controls in Brasília across device timezones', () => {
+  expect(businessDateTimeInput('2026-11-02T03:15:00Z')).toBe('2026-11-02T00:15')
+  expect(parseDateTime('2026-11-02T00:15', 'business').toISOString()).toBe('2026-11-02T03:15:00.000Z')
 })

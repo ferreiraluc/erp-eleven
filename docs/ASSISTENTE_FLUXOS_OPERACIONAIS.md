@@ -1,6 +1,6 @@
 # Fluxos operacionais do assistente
 
-Atualização de 31/10/2026, conforme os fluxos implementados e testes isolados.
+Atualização de 02/11/2026, conforme os fluxos implementados e testes isolados.
 
 Telegram e WhatsApp Web para a equipe reutilizam as mesmas ferramentas, vínculos
 de usuário e confirmações. A conexão WhatsApp por QR, grupos autorizados e limites
@@ -19,6 +19,14 @@ precisam aparecer no mesmo nome do cliente vinculado ou do destinatário; encont
 apenas “Davi” em outra pessoa não basta para essa consulta. Isso amplia a busca,
 sem unificar cadastros nem alterar vínculos. Códigos, pedidos e telefones conservam
 a busca literal, e destinatários diferentes continuam exigindo esclarecimento.
+Quando não há correspondência, a consulta tenta uma letra inserida, removida,
+substituída ou duas letras vizinhas trocadas em um componente do nome: “Murilo”
+encontra “Murillo”. A resposta identifica a grafia realmente cadastrada. Os demais
+componentes devem coincidir, e nomes curtos, códigos, números e documentos não
+recebem essa aproximação. Um nome exato existente prevalece mesmo se seus envios
+estiverem fora do período/status pedido, evitando substituir uma pessoa por outra.
+A ambiguidade é verificada em todos os resultados, não só na página exibida.
+
 Pedidos claros de consulta de rastreio precisam consultar uma ferramenta nesta
 solicitação antes de responder, inclusive para dizer que não há resultados. Uma
 falha de consulta ou de permissão é informada como falha, não como ausência de envio.
@@ -53,6 +61,13 @@ nome, ignorando acentos, caixa e sobrenomes intermediários omitidos. Um único 
 reaproveitados. Destinatários vazios não significam ausência de remetentes. Negativas
 antigas deixam de orientar a IA; erros de consulta são informados como falha, sem
 inventar cadastro ou declarar que um remetente existente não foi encontrado.
+
+A consulta de endereços salvos e impressos também aceita nomes abreviados e,
+na ausência de correspondência, uma grafia próxima do nome do destinatário. A
+busca aproximada não corrige rua, CEP, documento nem o bloco do remetente; devolve
+os candidatos reais para conferência. Pessoas diferentes exigem escolha antes da
+prévia. Cadastros inativos/unificados e documentos que não são endereços ficam
+fora dessa sugestão. Nada é impresso pela simples busca.
 
 Cotações só são apresentadas após uma operação real persistida. Escolhas curtas como “2” se vinculam à última cotação mostrada ao autor; botões identificam a cotação exata. Consultas de PDF/etiquetas não são substituídas por uma resposta de rastreio apenas porque apareceu um código.
 

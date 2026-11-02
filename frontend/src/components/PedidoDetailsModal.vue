@@ -123,6 +123,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
 import { useRouter } from 'vue-router'
@@ -165,7 +166,7 @@ onMounted(loadAnexos)
 watch(() => props.pedido.id, loadAnexos)
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString(uiLocale(), {
+  return businessDate(dateString, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

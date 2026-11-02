@@ -19,6 +19,7 @@ describe('Focused audit view',()=>{
     root=document.createElement('div');document.body.append(root)
     app=createApp(AuditView).use(createI18n({legacy:false,locale:'pt',messages:{pt}}));app.mount(root)
     await vi.waitFor(()=>expect(api.users).toHaveBeenCalled())
+    expect(api.audit).toHaveBeenCalledWith(expect.objectContaining({grouped:true,days:7,offset:0}))
     expect(root.querySelector('[data-quality-run]')?.getAttribute('data-quality-run')).toBe(route.query.quality_run)
     expect(root.textContent).toContain('Consultas e tempo de navegação não são registrados.')
     expect(root.textContent).not.toContain('Tempo ativo')

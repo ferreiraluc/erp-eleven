@@ -2,9 +2,9 @@
   <div class="avulso-overlay erp-dialog-backdrop" @click.self="$emit('close')" v-pdv-action-keyboard>
     <div v-erp-dialog class="avulso-modal erp-dialog erp-dialog--sm" role="dialog" aria-modal="true" aria-labelledby="avulso-title">
       <div class="avulso-header erp-dialog__header">
-        <div class="avulso-icon">⚠</div>
+        <div class="avulso-icon">{{ scannedCode ? '⚠' : '+' }}</div>
         <div>
-          <h3 id="avulso-title">{{ uiText(`Produto não encontrado`) }}</h3>
+          <h3 id="avulso-title">{{ uiText(scannedCode ? 'Produto não encontrado' : 'Adicionar item avulso') }}</h3>
           <p>{{ uiText(`Adicione manualmente ao carrinho`) }}</p>
         </div>
         <button data-dialog-close :aria-label="uiText('Fechar')" class="avulso-close erp-button erp-button--secondary erp-button--icon" @click="$emit('close')">×</button>

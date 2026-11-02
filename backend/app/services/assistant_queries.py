@@ -217,17 +217,25 @@ def shipments_source(db):
     return union_all(tracks, orders).subquery()
 
 
-def query_shipments(db, args):
+def query_shipments(db, args, *, allow_fuzzy=True):
     source = shipments_source(db)
     c = source.c
     q = db.query(source)
-    if args.termo:
-        q = q.filter(shipment_match(db, c, args.termo))
     if args.situacao == "em_aberto":
         q = q.filter(c.status.in_(OPEN_SHIPMENTS))
     elif args.situacao != "todos":
         q = q.filter(c.status == args.situacao)
     q = date_filter(q, c.data_envio, args)
+    approximate = False
+    if args.termo:
+        exact = q.filter(shipment_match(db, c, args.termo))
+        if (not allow_fuzzy or exact.limit(1).first() is not None
+                or db.query(source).filter(shipment_match(db, c, args.termo)).limit(1).first() is not None):
+            q = exact
+        else:
+            from .assistant_name_search import name_condition
+            q = q.filter(name_condition(db, (c.cliente, c.destinatario_busca), args.termo, approximate=True))
+            approximate = True
     counts = {status: count for status, count in q.with_entities(c.status, func.count()).group_by(c.status).all()}
     order = [c.data_envio.desc(), c.cadastrado_em.desc(), c.id.desc()]
     if args.ordem == "antigos":
@@ -242,11 +250,19 @@ def query_shipments(db, args):
             data[field] = local_timestamp(row._mapping[field])
         data.pop("telefone_busca")
         data.pop("cliente_id")
-        data.pop("destinatario_busca")
+        recipient = data.pop("destinatario_busca")
+        if approximate:
+            data["nome_aproximado"] = True
+            data["termo_consultado"] = args.termo
+            if recipient and recipient != data["cliente"]:
+                data["destinatario"] = recipient
         results.append(data)
     # Identity check over the entire filtered set, not just the displayed page.
     # Same full name with different registered customer IDs remains ambiguous.
-    identities = q.with_entities(func.lower(func.trim(c.cliente)), c.cliente_id).distinct().limit(2).all()
+    identity_columns = [func.lower(func.trim(c.cliente)), c.cliente_id]
+    if approximate:
+        identity_columns.append(func.lower(func.trim(c.destinatario_busca)))
+    identities = q.with_entities(*identity_columns).distinct().limit(2).all()
     unique_customer = len(identities) == 1 and bool(identities[0][0])
     open_count = sum(counts.get(status, 0) for status in OPEN_SHIPMENTS)
     recommendation = None
@@ -261,13 +277,16 @@ def query_shipments(db, args):
                 else "envio mais recente deste cliente" if info["total"] > 1 else "único envio encontrado")}
     return {**info, "periodo": period_info(args, "data de cadastro do envio no ERP"),
             "por_status": counts, "em_aberto": open_count, "resultados": results,
+            "busca_aproximada": approximate and bool(info["total"]), "termo_consultado": args.termo,
             "recomendado": recommendation, "clientes_distintos": not unique_customer and info["total"] > 1,
             "fonte": "Dados salvos no ERP, sem consulta online aos Correios. Data do envio é data_criacao; "
                      "códigos existentes apenas no pedido usam a data do pedido (origem identificada). "
                      "ERRO/NAO_ENCONTRADO indicam falha de rastreio, não comprovam atraso ou cancelamento.",
             "instrucao": "Listagens: responda diretamente com os resultados. Rastreio individual: use recomendado; "
                          "se houver vários envios em aberto, mostre os mais recentes com data/status e peça "
-                         "esclarecimento somente se precisar escolher um. Nunca trate entregues antigos como pendentes."}
+                         "esclarecimento somente se precisar escolher um. Nunca trate entregues antigos como pendentes. "
+                         "Em busca_aproximada, informe o nome realmente cadastrado e que a grafia é próxima; "
+                         "não afirme identidade exata nem invente dados."}
 
 
 def query_orders(db, args):

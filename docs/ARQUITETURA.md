@@ -165,6 +165,16 @@ compartilham locks por código normalizado; uma corrida não gera outro rastreio
 mutações na mesma transação, além dos eventos de autenticação. Consultas/requisições
 genéricas não geram eventos e o acompanhamento de navegação está desativado.
 `AuthSession` controla revogação; `ActivitySpan` conserva somente os dados históricos.
+`audit_groups` agrega por venda ou ID exato da operação, com paginação dos detalhes
+sem apagar eventos. Novas mutações conservam somente contexto estrutural da venda
+ou produto/saldos para descrever as movimentações. `business_time` e o formatador
+frontend `utils/datetime` convertem instantes UTC para Brasília; dias de calendário
+e horários locais dos provedores têm contratos distintos, sem reescrever históricos.
+
+O assistente usa `assistant_name_search` como alternativa limitada a um erro de
+letra em nomes, apenas depois da busca exata. Rastreios e endereços consultam dados
+atuais, preservam filtros/permissões e indicam candidatos em vez de inferir identidade.
+
 
 ## Entidades que não são intercambiáveis
 

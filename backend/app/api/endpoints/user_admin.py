@@ -14,6 +14,7 @@ from ...schemas.usuario import UsuarioResponse
 from ...services.access_policy import is_owner
 from ...services.user_sessions import revoke_all, get_password_hash
 from ...services.user_audit import record
+from ...services import audit_groups
 
 router = APIRouter()
 
@@ -115,7 +116,7 @@ def activity(body: Activity, request: Request, user=Depends(get_current_active_u
 def audit(days: int = Query(7, ge=1, le=90), user_id: uuid.UUID | None = None,
           module: str | None = Query(None, max_length=80), action: str | None = Query(None, max_length=40),
           offset: int = Query(0, ge=0, le=1000000), limit: int = Query(50, ge=1, le=100),
-          owner=Depends(require_owner), db: Session = Depends(get_db)):
+          grouped: bool = False, owner=Depends(require_owner), db: Session = Depends(get_db)):
     since = now() - timedelta(days=days)
     # Preserve historical reads in the database without flooding the audit screen.
     events = db.query(AuditEvent).filter(AuditEvent.occurred_at >= since, AuditEvent.action.notin_(['read', 'request']))
@@ -123,16 +124,34 @@ def audit(days: int = Query(7, ge=1, le=90), user_id: uuid.UUID | None = None,
     if module: events = events.filter(AuditEvent.module == module)
     if action: events = events.filter(AuditEvent.action == action)
     count = events.count()
-    rows = events.order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc()).offset(offset).limit(limit).all()
+    rows = [] if grouped else events.order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc()).offset(offset).limit(limit).all()
     actions = events.with_entities(AuditEvent.user_id, AuditEvent.action, func.count()).group_by(AuditEvent.user_id, AuditEvent.action).all()
     last_events = dict(events.with_entities(AuditEvent.user_id, func.max(AuditEvent.occurred_at)).group_by(AuditEvent.user_id).all())
     names = {u.id: u.nome for u in db.query(Usuario).all()}
     ids = {r[0] for r in actions if r[0]}
-    return {'total': count, 'offset': offset, 'limit': limit, 'since': since,
+    groups, operation_counts = None, {}
+    if grouped:
+        scoped = audit_groups.scope(db, since, user_id, module, action)
+        group_count, groups = audit_groups.grouped(db, scoped, offset, limit)
+        operation_counts = audit_groups.operations_by_user(db, scoped)
+    return {'total': group_count if grouped else count, 'event_total': count, 'grouped': grouped,
+            'groups': groups, 'offset': offset, 'limit': limit, 'since': since,
             'active_seconds': 0, 'tracking_enabled': False,
             'users': [{'id': str(uid), 'name': names.get(uid, 'Usuário'),
-                       'active_seconds': 0, 'last_seen_at': last_events.get(uid),
+                       'active_seconds': 0, 'last_seen_at': last_events.get(uid), 'operations': operation_counts.get(uid, 0),
                        'actions': {a: n for u, a, n in actions if u == uid}} for uid in sorted(ids, key=lambda x:names.get(x,''))],
             'modules': [],
             'events': [{key: getattr(r, key) for key in ('id','occurred_at','user_id','actor_name','source','action',
-                       'module','entity','entity_id','request_id','route','method','status_code','changes')} for r in rows]}
+                       'module','entity','entity_id','request_id','route','method','status_code','changes')} for r in rows] if not grouped else []}
+
+
+@router.get('/audit/group')
+def audit_group(key: str = Query(..., min_length=1, max_length=160),
+                days: int = Query(7, ge=1, le=90), user_id: uuid.UUID | None = None,
+                module: str | None = Query(None, max_length=80), action: str | None = Query(None, max_length=40),
+                offset: int = Query(0, ge=0, le=1000000), limit: int = Query(50, ge=1, le=100),
+                owner=Depends(require_owner), db: Session = Depends(get_db)):
+    scoped = audit_groups.scope(db, now() - timedelta(days=days), user_id, module, action)
+    result = audit_groups.details(db, scoped, key, offset, limit)
+    if not result['total']: raise HTTPException(404, 'Operação não encontrada nos filtros atuais.')
+    return result

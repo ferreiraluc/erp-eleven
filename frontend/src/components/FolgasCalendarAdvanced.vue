@@ -360,6 +360,7 @@
 </template>
 
 <script setup lang="ts">
+import { businessDateKey, formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
 import { uiText, uiLocale } from '@/i18n/uiText'
@@ -370,8 +371,8 @@ import { vendorsAPI } from '@/services/api'
 const authStore = useAuthStore()
 
 // Estado reativo
-const currentYear = ref(new Date().getFullYear())
-const currentMonth = ref(new Date().getMonth())
+const currentYear = ref(Number(businessDateKey().slice(0, 4)))
+const currentMonth = ref(Number(businessDateKey().slice(5, 7)) - 1)
 const selectedDay = ref<any>(null)
 const showFolgaModal = ref(false)
 const showDeleteModal = ref(false)
@@ -409,7 +410,7 @@ const weekDays = computed(() => Array.from({length:7},(_,day)=>new Date(2026,0,4
 const calendarDays = computed(() => {
   const firstDay = new Date(currentYear.value, currentMonth.value, 1)
   const startDate = new Date(firstDay)
-  const today = new Date()
+  const today = new Date(businessDateKey() + 'T12:00:00')
 
   startDate.setDate(startDate.getDate() - startDate.getDay())
 
@@ -417,7 +418,7 @@ const calendarDays = computed(() => {
   const currentDate = new Date(startDate)
 
   for (let i = 0; i < 42; i++) {
-    const dateStr = currentDate.toISOString().split('T')[0]
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
     const dayFolgas = filteredFolgas.value.filter(f => f.data === dateStr)
 
     days.push({
@@ -644,8 +645,7 @@ const absenceLabel = (value: string) => {
 }
 // Métodos utilitários
 const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString(uiLocale(), {
+  return businessDate(dateStr, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

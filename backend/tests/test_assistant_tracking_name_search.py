@@ -138,3 +138,60 @@ def test_codes_orders_phones_and_special_characters_keep_literal_matching(tracki
     assert query_shipments(db, ShipmentArgs(termo='QA 102'))['total'] == 0
     shipment(db, 'QA-LITERAL', name='Cliente 50%_\\ Original')
     assert [row['codigo'] for row in query_shipments(db, ShipmentArgs(termo='50%_\\'))['resultados']] == ['QA-LITERAL']
+
+
+@pytest.mark.parametrize('term,name', [
+    ('Murilo', 'Murillo Almeida'), ('Murillo', 'Murilo Almeida'),
+    ('Murilo Muniz', 'Murillo de Almeida Muniz'),
+    ('Debroa', 'Débora Silva'), ('Munilo', 'Murilo Silva'),
+])
+def test_typo_fallback_returns_real_registered_recipient(tracking_db, term, name):
+    shipment(tracking_db, 'QA-TYPO', name=name)
+    result = customer_tracking(tracking_db, CustomerTrackingArgs(termo=term))
+    assert result['total'] == 1 and result['busca_aproximada']
+    reply = customer_tracking_reply(result)
+    assert reply.parts[0] == 'QA-TYPO'
+    assert name in reply.parts[1] and 'Nome próximo à busca' in reply.parts[1]
+
+
+def test_exact_pending_recipient_wins_over_similar_transit(tracking_db):
+    shipment(tracking_db, 'QA-EXACT', name='Murilo Almeida', status='PENDENTE')
+    shipment(tracking_db, 'QA-TYPO', name='Murillo Souza', status='EM_TRANSITO')
+    result = customer_tracking(tracking_db, CustomerTrackingArgs(termo='Murilo'))
+    assert [row['codigo'] for row in result['resultados']] == ['QA-EXACT']
+    assert not result['busca_aproximada']
+
+
+def test_exact_delivered_customer_does_not_fall_back_to_different_current_person(tracking_db):
+    shipment(tracking_db, 'QA-EXACT', name='Murilo Almeida', status='ENTREGUE')
+    shipment(tracking_db, 'QA-TYPO', name='Murillo Souza', status='EM_TRANSITO')
+    result = customer_tracking(tracking_db, CustomerTrackingArgs(termo='Murilo'))
+    assert result['total'] == 0
+
+
+def test_typo_ambiguity_is_not_hidden_by_pagination(tracking_db):
+    shipment(tracking_db, 'QA-A', name='Murillo Almeida')
+    shipment(tracking_db, 'QA-B', name='Murilo Souza')
+    result = query_shipments(tracking_db, ShipmentArgs(termo='Murilllo', limite=1))
+    # Only one edit, so Murilo is too distant from Murilllo.
+    assert result['total'] == 1
+    result = query_shipments(tracking_db, ShipmentArgs(termo='Murilio', limite=1))
+    assert result['total'] >= 2 and result['clientes_distintos']
+    assert result['recomendado'] is None
+
+
+@pytest.mark.parametrize('term', ['Mui', 'Murilo 102', 'Murilo%', 'Murilo Munis'])
+def test_fuzzy_names_do_not_match_codes_short_fragments_or_two_typos(tracking_db, term):
+    shipment(tracking_db, 'QA102BR', name='Murillo Muniz')
+    assert query_shipments(tracking_db, ShipmentArgs(termo=term))['total'] == 0
+
+
+def test_similar_recipients_for_one_buyer_remain_distinguishable(tracking_db):
+    buyer = Cliente(nome='Cliente vinculado')
+    tracking_db.add(buyer); tracking_db.flush()
+    shipment(tracking_db, 'QA-A', name='Murillo Almeida', cliente_id=buyer.id)
+    shipment(tracking_db, 'QA-B', name='Murilo Souza', cliente_id=buyer.id)
+    result = customer_tracking(tracking_db, CustomerTrackingArgs(termo='Murilio'))
+    assert result['clientes_distintos']
+    reply = customer_tracking_reply(result)
+    assert 'Murillo Almeida' in reply and 'Murilo Souza' in reply and 'Qual deles?' in reply

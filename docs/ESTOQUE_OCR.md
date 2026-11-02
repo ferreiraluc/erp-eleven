@@ -1428,3 +1428,21 @@ ou iPad; memória inclui a representação dos objetos do worker e os custos do
 navegador. Fotos não participam desse índice. A persistência e a execução em worker
 seguem as APIs [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 e [Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
+
+
+## Leitor de câmera compartilhado com o PDV
+
+O leitor pede resolução ideal 1280×720, aumenta a área de leitura e verifica até
+15 quadros por segundo, mantendo QR e códigos de barras. Câmeras traseiras físicas
+identificadas pelo navegador têm preferência; o seletor permite escolher outra
+lente e guarda a escolha apenas neste aparelho. Foco contínuo, zoom (até 4×) e luz
+só são oferecidos quando a câmera informa suporte. A recusa desses controles não
+interrompe a leitura; restrições de câmera incompatíveis recebem uma tentativa
+compatível, sem repetir pedidos de permissão negados. Fechar o modal encerra a
+câmera, inclusive quando a permissão termina de abrir depois do fechamento.
+
+O aviso após 30 segundos não abre o teclado sozinho. A digitação continua
+alternativa disponível. A precisão/foco em iPhones reais depende da câmera e do
+Safari e deve ser conferida no aparelho; os testes automatizados verificam
+seleção, fallback, controles opcionais e leitura única, sem comprovar tempo de
+foco físico. API de referência: [Html5Qrcode](https://scanapp.org/html5-qrcode-docs/docs/apis/classes/Html5Qrcode).

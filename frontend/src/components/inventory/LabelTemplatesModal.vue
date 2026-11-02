@@ -169,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
@@ -176,7 +177,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ocrAPI } from '@/services/api'
 import { useI18n } from 'vue-i18n'
 import { ocrMessages } from './ocrMessages'
-const { t: ocrText, locale } = useI18n({ useScope: 'local', messages: ocrMessages })
+const { t: ocrText } = useI18n({ useScope: 'local', messages: ocrMessages })
 
 interface LabelTemplate {
   id: string
@@ -218,8 +219,7 @@ function ensureDataUrl(img: string): string {
 
 function formatDate(iso: string): string {
   if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString(locale.value, { day: '2-digit', month: '2-digit', year: '2-digit' })
+  return businessDate(iso, { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 function openPreview(tpl: LabelTemplate) {
