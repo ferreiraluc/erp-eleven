@@ -280,12 +280,13 @@ it.each([
   ['es', 'es-PY', 'Última salida de la tienda:'],
   ['en', 'en-US', 'Last store stock exit:'],
 ])(
-  'formats the last store exit in %s using its timezone-aware timestamp',
+  'formats the last store exit in %s using Brasília independently of the device timezone',
   async (locale, dateLocale, label) => {
     await mount(locale)
     const date = new Intl.DateTimeFormat(dateLocale, {
       dateStyle: 'short',
       timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
     }).format(new Date(product.last_store_exit_at!))
     expect(root.querySelector('.store-history')?.textContent).toBe(`${label} ${date}`)
   },
