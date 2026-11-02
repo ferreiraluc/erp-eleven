@@ -114,6 +114,13 @@ baixa o PDF por autorização própria, chama Sumatra e comunica resultado. Esta
 não provoca reimpressão automática. Documentos avulsos têm um caminho temporário distinto
 em `assistant_documents`, sem guardar conteúdo no banco.
 
+**Conferência impressa de estoque:** `inventory_count_list` consulta somente os
+metadados dos IDs selecionados e assina uma prévia dos saldos por local. A
+confirmação cria `print_jobs.source=inventory_list` para dispositivos A4
+`documents/windows`, com chave idempotente e snapshot imutável. O PDF pode ser
+regerado após a limpeza dos bytes pelo agente; não entra no histórico de
+Endereços e não modifica o estoque. Ver [fluxo e limites](ESTOQUE_OCR.md#lista-impressa-para-conferência-física).
+
 **Tickets PDV:** `services.pdv_receipts` persiste snapshot/solicitação na transação
 da venda e gera PDF ao recolher. `print_devices.purpose` separa `documents` de
 `tickets`; índice parcial admite um destino automático. A revisão da venda define

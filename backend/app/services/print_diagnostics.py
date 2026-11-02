@@ -35,6 +35,8 @@ MESSAGES = {
 
 def diagnostic_message(job):
     diagnostic = job.diagnostic or {}
+    if getattr(job, 'source', None) == 'inventory_list' and diagnostic.get('code') == 'document_generation_failed':
+        return 'Não foi possível montar a lista de conferência. Nada foi enviado à impressora. Gere uma nova lista.'
     if getattr(job, 'source', None) == 'product_labels' and diagnostic.get('code') == 'renderer_start_failed':
         return 'O processo de impressão não iniciou. Nenhuma etiqueta foi enviada.'
     return MESSAGES.get(diagnostic.get('code')) or (

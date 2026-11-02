@@ -112,6 +112,10 @@ def snapshot_for_view(db, sale):
 
 
 def prepare_document(job):
+    if job.source == 'inventory_list' and not job.pdf:
+        from .inventory_count_list import render as render_count_list
+        job.pdf = render_count_list(job.snapshot)
+        job.sha256 = hashlib.sha256(job.pdf).hexdigest()
     if job.source == 'printer_test' and not job.pdf:
         from .receipt_printer_setup import test_document
         job.pdf = test_document(job.id)
