@@ -2924,6 +2924,7 @@
   "O código de barras deve ter até 200 caracteres.": ["El código de barras debe tener hasta 200 caracteres.", "The barcode must be at most 200 characters."],
   "Etiquetas de produtos": ["Etiquetas de productos", "Product labels"],
   "Imprimir etiquetas": ["Imprimir etiquetas", "Print labels"],
+  "Imprimir lista": ["Imprimir lista", "Print list"],
   "Aponte a câmera para o QR Code ou código de barras": ["Apunte la cámara al código QR o de barras", "Point the camera at the QR code or barcode"],
   "Confira os produtos, escolha as quantidades e imprima as etiquetas para colar nas peças.": ["Revise los productos, elija las cantidades e imprima las etiquetas para pegar en las prendas.", "Review products, choose quantities and print labels to attach to the items."],
   "Impressora": ["Impresora", "Printer"],

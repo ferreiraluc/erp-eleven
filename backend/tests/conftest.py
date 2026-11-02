@@ -1,4 +1,16 @@
 import pytest
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.compiler import compiles
+
+
+@compiles(UUID, 'sqlite')
+def sqlite_uuid_as_text(element, compiler, **kwargs):
+    """SQLite's UUID name has NUMERIC affinity and corrupts numeric/scientific hex.
+
+    Only test schemas use this adapter; production PostgreSQL keeps native UUIDs.
+    SQLAlchemy's existing UUID bind/result processors still validate each value.
+    """
+    return 'CHAR(32)'
 
 
 @pytest.fixture(autouse=True)

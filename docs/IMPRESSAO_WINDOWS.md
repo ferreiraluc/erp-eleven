@@ -1,5 +1,21 @@
 # Impressão da Eleven no Windows
 
+## Lista A4 para conferência de estoque
+
+Em **Estoque → Selecionar → Imprimir lista**, ADMIN/GERENTE pode baixar o PDF ou
+confirmar uma cópia na HP/A4 cadastrada. O relatório separa os saldos de Loja e
+Depósito e deixa campos em branco para a contagem física. Não modifica estoque.
+Utiliza o agente A4 existente, sem nova instalação; exige destino ativo do perfil
+`documents`, driver `windows`. Tickets e etiquetas conservam seus destinos.
+
+O agente recebe um PDF A4 de até 5 MiB e aplica o fluxo existente de uma cópia,
+frente única. Mantenha Windows, agente, internet e impressora ligados. Prévias e
+downloads não enviam trabalhos. Depois de confirmar, **Recuperar confirmação**
+reutiliza a mesma chave se a resposta da rede se perder. Confira o estado da fila
+e a saída física antes de solicitar outra cópia. Os trabalhos pendentes expiram
+em 24 horas, como os demais documentos A4.
+Veja [seleção, prévia e limites](ESTOQUE_OCR.md#lista-impressa-para-conferência-física).
+
 ## Tickets do PDV — Zebra ZD220 (14/10/2026)
 
 O agente **2026.10.14.3** possui dois perfis independentes. **Eleven Impressao**

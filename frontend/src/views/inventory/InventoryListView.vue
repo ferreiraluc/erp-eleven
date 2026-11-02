@@ -476,6 +476,7 @@
       @saved="onBulkTransferSaved"
       @close="showBulkTransfer = false"
     />
+    <InventoryCountListModal v-if="showCountList" :item-ids="countListSelection" @close="showCountList = false" />
 
     <GroupingSuggestionModal
       v-if="showSuggestionModal && canManageGrades"
@@ -503,6 +504,7 @@
         </div>
         <div class="sel-actions">
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
+          <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="countListSelection = [...selectedIds]; showCountList = true">{{ tr('Imprimir lista') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
           <button v-if="canManageGrades" type="button" @click="openSelectionGradeAction" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Grades') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
@@ -613,6 +615,7 @@ import { useInventoryGradeLinks } from '@/composables/useInventoryGradeLinks'
 import { inventoryGroupName } from '@/services/inventoryGroupNames'
 import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
+import InventoryCountListModal from '@/components/inventory/InventoryCountListModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
 import GradeMembershipModal from '@/components/inventory/GradeMembershipModal.vue'
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
@@ -772,6 +775,8 @@ const editingGroupName = ref('')
 const grouping = ref(false)
 const showBulkEdit = ref(false)
 const showBulkTransfer = ref(false)
+const showCountList = ref(false)
+const countListSelection = ref<string[]>([])
 const filterLocation = ref(inventoryStore.filters.location_stock || '')
 const isDragSelecting = ref(false)
 const showSuggestionModal = ref(false)
@@ -779,7 +784,7 @@ const suggestionModalItems = ref<InventoryItem[]>([])
 const selectionDialogOpen = computed(() =>
   showReceiving.value || showDiagnostics.value || showScanner.value || showDeletedHistory.value ||
   showItemForm.value || showMovementModal.value || showImport.value || showBulkEdit.value ||
-  showBulkTransfer.value || showBulkDelete.value || showSuggestionModal.value ||
+  showBulkTransfer.value || showCountList.value || showBulkDelete.value || showSuggestionModal.value ||
   showLabelTemplates.value || showGroupModal.value || !!gradeManagerItem.value ||
   !!gradeManagerKey.value || !!imageModalItem.value || Object.hasOwn(route.query, 'item_id')
 )

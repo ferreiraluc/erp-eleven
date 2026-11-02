@@ -68,6 +68,41 @@ A lista usa paginação no servidor e miniaturas carregadas sob demanda, sem bai
 fotos originais nem todo o catálogo. Não utiliza o índice offline para autorizar
 movimentações: saldos e identidade são conferidos online no momento de confirmar.
 
+## Lista impressa para conferência física
+
+Selecione os produtos e use **Imprimir lista** na barra flutuante do estoque.
+O modal consulta os IDs selecionados no servidor, inclusive os que ficaram fora
+da visualização atual, e mostra uma prévia com o saldo de **Loja** e **Depósito**
+separados. A seleção permanece marcada ao fechar. **Sel. todos** conserva o
+escopo da seleção existente: os produtos carregados na listagem atual.
+
+A lista A4 contém código interno, nome, cor/tamanho, localização, saldos por local
+e campos em branco para anotar a contagem física de cada local. Inclui data/hora,
+totais e cabeçalho repetido nas páginas. Saldo não informado é identificado;
+não vira zero nem é incluído como quantidade conhecida nos totais. A lista não
+contém fotos, preços ou custos. Limite: 5.000 produtos por documento, sem omissão
+silenciosa dos itens selecionados. Produtos excluídos ou inexistentes exigem
+atualizar a seleção antes de gerar a prévia.
+
+**Baixar PDF** funciona sem impressora configurada. Para imprimir, escolha uma
+impressora A4 cadastrada e confirme uma cópia. A HP é sugerida quando há uma única
+HP ativa; senão, uma única impressora A4 pode ser sugerida. Com vários destinos
+compatíveis, a escolha é explícita. Tickets da 3nStar e etiquetas da Zebra mantêm
+suas próprias filas. Não é necessária uma atualização do agente A4 existente.
+
+O documento usa um snapshot assinado dos saldos consultados, identificado pela
+data/hora da prévia; não afirma representar movimentações posteriores. A prévia
+vale por 60 minutos para gerar o PDF ou iniciar uma impressão. A confirmação preserva esse snapshot
+na fila e vincula a solicitação ao usuário e dispositivo. Falha de conexão deve
+ser recuperada com a mesma solicitação, sem criar outra cópia. O estado da fila
+não comprova a saída física do papel. Downloads e impressões não zeram nem
+movimentam estoque: depois da contagem, use os ajustes existentes para corrigir
+os itens conferidos, mantendo o histórico operacional.
+
+O acesso é de ADMIN/GERENTE no frontend e no backend. Prévias e downloads não
+enfileiram trabalhos; a confirmação explícita envia somente a impressora A4
+escolhida. O PDF pode ser reconstituído a partir do snapshot do trabalho original.
+
 ## Movimentações nos cards
 
 Os cards, a lista e as peças de uma grade não oferecem mais a saída rápida
