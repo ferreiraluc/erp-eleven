@@ -37,7 +37,7 @@ def validate_payment(payment, *, preserve_legacy=False):
             raise ValueError()
         if currency in ('GS', 'PYG') and rate != 1:
             raise ValueError()
-        if data['method'] in CARD_METHODS and not (preserve_legacy and percent == fee == 0):
+        if data['method'] in CARD_METHODS and percent != 0:
             # amount_original is the terminal charge; amount_gs settles goods only.
             # Ceiling a whole guarani recovers the full 6%, with < G$1 rounding.
             if percent != 6 or currency not in ('GS', 'PYG') or amount != amount.to_integral_value():
@@ -45,6 +45,11 @@ def validate_payment(payment, *, preserve_legacy=False):
             if amount != (converted / CARD_NET_FACTOR).to_integral_value(rounding=ROUND_CEILING):
                 raise ValueError()
             if fee != amount - converted or fee < 0:
+                raise ValueError()
+        elif data['method'] in CARD_METHODS and not preserve_legacy:
+            # The operator may waive the surcharge. Zero percent must also mean
+            # zero fee, with the whole terminal amount applied to the merchandise.
+            if fee != 0 or amount != converted:
                 raise ValueError()
         elif fee != 0 or percent != 0 or abs((amount * rate).quantize(Decimal('.01'), rounding=ROUND_HALF_UP) - converted) > 1:
             raise ValueError()

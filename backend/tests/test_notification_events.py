@@ -158,7 +158,7 @@ def test_tracking_audience_uses_selected_users_instead_of_creator_and_preserves_
         assert_recipient_devices(db, notice, expected, devices)
 
 
-def test_new_sale_reaches_owner_and_unexplained_avulso_only_its_seller(factory):
+def test_new_sale_with_unexplained_avulso_only_sends_normal_sale_notice(factory):
     with factory() as db:
         ids = users(db)
         row = sale(db)
@@ -169,20 +169,16 @@ def test_new_sale_reaches_owner_and_unexplained_avulso_only_its_seller(factory):
         assert db.query(Notification).count() == 0
         db.commit()
         notices = {notice.dedupe_key: notice for notice in db.query(Notification).all()}
-        assert set(notices) == {f'sale-completed:{row.id}', f'sale-avulso:{row.id}'}
+        assert set(notices) == {f'sale-completed:{row.id}'}
         completed = notices[f'sale-completed:{row.id}']
-        review = notices[f'sale-avulso:{row.id}']
         assert completed.title == 'Venda U$ 800 concluída'
         assert completed.body == 'Sol concluiu uma venda. Abra o sistema para conferir.'
         assert completed.action_path == f'/vendas-pdv?sale_id={row.id}'
-        assert review.requires_ack and review.requires_response
         assert {r.user_id for r in db.query(NotificationRecipient).filter_by(notification_id=completed.id)} == {ids['Lucas']}
-        assert {r.user_id for r in db.query(NotificationRecipient).filter_by(notification_id=review.id)} == {ids['Lucas'], ids['Sol']}
-        assert review.action_path == f'/vendas-pdv?sale_id={row.id}'
         # Reading, re-committing or subsequently editing a historical sale cannot replay it.
         row.notas = 'Context supplied later'
         db.commit()
-        assert db.query(Notification).count() == 2
+        assert db.query(Notification).count() == 1
 
 
 @pytest.mark.parametrize('reason,avulso', [('Legitimate manual sale', True), (None, False)])

@@ -19,7 +19,7 @@
             <small v-if="paperMode === 'continuous'">{{ uiText('Um ticket inteiro, sem dividir em páginas. Requer o Eleven Tickets atualizado no Windows e bobina contínua na Zebra ZD220.') }}</small>
             <small v-else>{{ uiText('Use o mesmo tamanho no driver Zebra. Etiquetas 6 × 8 cm: 60 × 80 mm. Vendas longas usam várias etiquetas.') }}</small>
             <label class="printer-check"><input v-model="form.auto_receipts" type="checkbox" />{{ uiText('Imprimir ao confirmar a venda, inclusive pelo celular') }}</label>
-            <p v-if="device">{{ uiText('Último contato:') }} {{ device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : uiText('Ainda não conectado') }}</p>
+            <p v-if="device">{{ uiText('Último contato:') }} {{ device.last_seen_at ? businessDateTime(device.last_seen_at) : uiText('Ainda não conectado') }}</p>
             <div v-if="token" class="printer-secret">
               <strong>{{ uiText('Credencial exclusiva da Zebra') }}</strong>
               <p>{{ uiText('Copie agora para o instalador Eleven Tickets. Ela só é exibida nesta criação; não use a credencial da Samsung.') }}</p>
@@ -44,6 +44,7 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import MacTicketSetup from './MacTicketSetup.vue'
 import { onMounted, ref, reactive } from 'vue'

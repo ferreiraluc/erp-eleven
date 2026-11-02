@@ -7,7 +7,7 @@ from datetime import timezone
 
 from sqlalchemy import case, func
 
-from ..config import settings
+from .business_time import stored_instant
 from ..models.cliente import Cliente
 from ..models.pdv import PdvCliente, PdvSale
 from ..models.pedido import Pedido
@@ -88,10 +88,10 @@ def customer_activity(db, customer_ids, user):
     for row in query.all():
         values = dict(row._mapping)
         customer_id = values.pop('id')
-        for field, tz in (('last_purchase_at', settings.tz), ('last_print_at', timezone.utc)):
-            value = values[field]
-            if value is not None and value.tzinfo is None:
-                values[field] = value.replace(tzinfo=tz)
+        values['last_purchase_at'] = stored_instant(values['last_purchase_at'], db)
+        value = values['last_print_at']
+        if value is not None and value.tzinfo is None:
+            values['last_print_at'] = value.replace(tzinfo=timezone.utc)
         values['own_sales_only'] = own_sales(user)
         result[customer_id] = values
     return result

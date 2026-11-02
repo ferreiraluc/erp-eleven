@@ -1,3 +1,4 @@
+import { parseDateTime } from '@/utils/datetime'
 import { useI18n } from 'vue-i18n'
 
 // UI copy only. Customer names, addresses and operational values are never translated.
@@ -472,7 +473,7 @@ export function createAddressI18n(getLocale: () => string) {
   const tr = (text: string | null | undefined): string => text ? knownCopy(text) ?? text : ''
   const formatLocale = () => choose('pt-BR','es-PY','en-US')
   const date = (value: string, short = false): string => {
-    const parsed = new Date(value)
+    const parsed = parseDateTime(value)
     return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleString(formatLocale(), { timeZone:'America/Sao_Paulo', ...(short ? { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' } as const : {}) })
   }
   const number = (value: number) => value.toLocaleString(formatLocale())

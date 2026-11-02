@@ -162,21 +162,18 @@ def execute_tool(db, message, identity, name, arguments):
         from .assistant_senders import active_sender_catalog, sender_candidates, sender_choices
         from .sender_addresses import sender_address
         from .print_diagnostics import diagnostic_message
-        from sqlalchemy import cast,String,or_
         if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
         term=SearchArgs.model_validate(arguments).termo
         senders=active_sender_catalog(db)
-        q=db.query(SavedAddress).filter(SavedAddress.active.is_(True),SavedAddress.merged_into_id.is_(None))
-        if term not in ('todos','remetentes'):
-            q=q.filter(or_(SavedAddress.label.ilike(literal_pattern(term),escape="\\"),cast(SavedAddress.data,String).ilike(literal_pattern(term),escape="\\")))
-        jobs=db.query(PrintJob).filter(PrintJob.snapshot.isnot(None),PrintJob.source.in_(('bot','erp')))
-        if term not in ('todos','remetentes'):
-            jobs=jobs.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(term),escape="\\"))
+        from .assistant_address_search import address_queries
+        q,jobs,approximate=address_queries(db,term)
         printed=[] if term=='remetentes' else [
             {'print_job_id':str(j.id),'data':(j.snapshot or {}).get('editor') or (j.snapshot or {}).get('endereco'),
              'remetente':(j.snapshot or {}).get('remetente'),'status':j.status,'diagnostico':diagnostic_message(j),'created_at':j.created_at.isoformat()}
             for j in jobs.order_by(PrintJob.created_at.desc()).limit(10)]
-        return {"enderecos_impressos":printed,"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
+        return {"busca_aproximada":approximate,"termo_consultado":term,
+                "orientacao_destinatarios":"Confira o nome e os dados reais retornados. Busca aproximada sugere grafia próxima, não confirma identidade. Havendo candidatos diferentes, peça a escolha antes de preparar a impressão. A impressão continua exigindo prévia e confirmação.",
+                "enderecos_impressos":printed,"enderecos":[{"id":str(a.id),"label":a.label,"data":a.data} for a in q.order_by(SavedAddress.updated_at.desc()).limit(10)],
                 "remetentes":[{"id":s.id,"nome":s.name,"dados_frete":sender_address(s),"texto_impressao":s.lines,"orientacao":"Use dados_frete ou extraia texto_impressao e complemente com os dados enviados pelo usuário. Passe remetente na cotação; não bloqueie por falta de cadastro estruturado."} for s in senders],
                 "remetentes_correspondentes":sender_choices(sender_candidates(db,term,rows=senders)),
                 "orientacao_remetentes":"remetentes é o catálogo ativo atual, separado dos destinatários em enderecos. Endereços vazios não significam remetente ausente. ID ou nome identifica; mais de um candidato exige escolha.",

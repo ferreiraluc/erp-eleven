@@ -109,6 +109,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { reactive, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { RouterLink } from 'vue-router'
@@ -118,7 +119,7 @@ import { useNotificationCenter } from '@/stores/notificationCenter'
 import { useAuthStore } from '@/stores/auth'
 import { type NotificationItem, safeNotificationPath } from '@/services/notifications'
 import { notificationText as n } from '@/services/notificationText'
-import { uiLocale } from '@/i18n/uiText'
+
 defineProps<{ compact?: boolean }>()
 const emit = defineEmits<{ navigate: [] }>()
 const center = useNotificationCenter(),
@@ -134,7 +135,7 @@ watch(
   { flush: 'sync' },
 )
 const date = (value: string) =>
-  new Date(value).toLocaleString(uiLocale(), { dateStyle: 'short', timeStyle: 'short' })
+  businessDateTime(value, { dateStyle: 'short', timeStyle: 'short' })
 function openItem(id: string) {
   void center.act(id, 'read')
   emit('navigate')

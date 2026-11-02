@@ -356,6 +356,7 @@
 </template>
 
 <script setup lang="ts">
+import { parseDateTime, TIMEZONE } from '@/utils/datetime'
 import { computed, onMounted, onUnmounted, ref, watch, type WatchStopHandle } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowUpRight, PackageCheck, Printer, RefreshCw, Search } from 'lucide-vue-next'
@@ -493,11 +494,11 @@ const storeExitFormatter = computed(
   () =>
     new Intl.DateTimeFormat(
       locale.value === 'es' ? 'es-PY' : locale.value === 'en' ? 'en-US' : 'pt-BR',
-      { dateStyle: 'short', timeStyle: 'short' },
+      { dateStyle: 'short', timeStyle: 'short', timeZone: TIMEZONE },
     ),
 )
 function storeHistoryLabel(item: ReplenishmentProduct) {
-  const date = item.last_store_exit_at ? new Date(item.last_store_exit_at) : null
+  const date = item.last_store_exit_at ? parseDateTime(item.last_store_exit_at) : null
   if (date && Number.isFinite(date.getTime())) {
     return t('lastStoreExit', { date: storeExitFormatter.value.format(date) })
   }

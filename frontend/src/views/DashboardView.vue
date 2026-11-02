@@ -305,6 +305,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import ExchangeRateModal from '@/components/currency/ExchangeRateModal.vue'
 import { storeToRefs } from 'pinia'
@@ -392,7 +393,7 @@ const updateTime = () => {
 watch(locale, updateTime)
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString(uiLocale())
+  return businessDate(dateString)
 }
 
 // Exchange Rate Modal Functions

@@ -6,7 +6,7 @@
     <p v-else-if="!loading && !parcels.length" class="muted">{{ t('emptyParcels') }}</p>
     <article v-for="parcel in parcels" :key="parcel.id" class="logistics-row">
       <div class="row-top"><RouterLink class="tracking-code" :to="{ path: '/rastreamento', query: { search: parcel.codigo_rastreio } }">{{ parcel.codigo_rastreio }}</RouterLink><span class="state">{{ parcel.ativo ? t(`states.${parcel.status}`) : t('archived') }}</span></div>
-      <p>{{ parcel.destinatario || t('noName') }}</p><small>{{ new Date(parcel.created_at).toLocaleDateString(locale) }}</small>
+      <p>{{ parcel.destinatario || t('noName') }}</p><small>{{ businessDate(parcel.created_at) }}</small>
     </article>
     <button class="erp-button erp-button--secondary erp-button--sm" v-if="hasMore" :disabled="loading" @click="load(true)">{{ t('more') }}</button>
     <details class="link-form">
@@ -21,6 +21,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isAxiosError } from 'axios'
@@ -29,7 +30,7 @@ import { customerLogisticsAPI, type CustomerParcel } from '@/services/customerLo
 import { messages } from './messages'
 const props = defineProps<{ order: Pedido }>()
 const emit = defineEmits<{ linked: [] }>()
-const { t, locale } = useI18n({ useScope: 'local', messages })
+const { t } = useI18n({ useScope: 'local', messages })
 const parcels = ref<CustomerParcel[]>([]), candidate = ref<CustomerParcel | null>(null)
 const loading = ref(false), loadError = ref(false), hasMore = ref(false), saving = ref(false), finding = ref(false)
 const code = ref(''), feedback = ref(''), feedbackError = ref(false)

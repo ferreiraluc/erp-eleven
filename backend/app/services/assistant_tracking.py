@@ -32,11 +32,14 @@ def current_customer_request(content):
 
 def customer_tracking(db,args):
     base=dict(termo=args.termo,ordem='priorizar_abertos',pagina=args.pagina,limite=20)
-    result=query_shipments(db,ShipmentArgs(**base,situacao='EM_TRANSITO'))
+    result=query_shipments(db,ShipmentArgs(**base,situacao='EM_TRANSITO'),allow_fuzzy=False)
     if not result['total']:
+        result=query_shipments(db,ShipmentArgs(**base,situacao='em_aberto'),allow_fuzzy=False)
+    if not result['total']:
+        # Exact pending recipients take priority over a similar name in transit.
         result=query_shipments(db,ShipmentArgs(**base,situacao='em_aberto'))
     result['somente_atuais']=True
-    result['instrucao']='Envios entregues não fazem parte desta consulta. Envie código sozinho e detalhes em seguida, sem pedir confirmação quando o cliente está identificado.'
+    result['instrucao']='Envios entregues não fazem parte desta consulta. Envie código sozinho e detalhes em seguida, sem pedir confirmação quando o cliente está identificado. Em busca aproximada, informe a grafia cadastrada. Mais de um destinatário exige escolha.'
     return result
 
 
@@ -47,9 +50,17 @@ def customer_tracking_reply(result):
     if result.get('clientes_distintos'):
         options=[]
         for row in rows:
-            name=row.get('cliente') or 'Destinatário não informado'
-            if name not in options:options.append(name)
-        return 'Encontrei envios em andamento para mais de um destinatário. Qual deles?\n'+'\n'.join(f'{i+1}. {v}' for i,v in enumerate(options))
+            name=row.get('destinatario') or row.get('cliente') or 'Destinatário não informado'
+            if row.get('destinatario') and row.get('cliente') != name:
+                name+=f" (cliente: {row.get('cliente') or 'não informado'})"
+            # Do not collapse homonyms/different recipient snapshots into one
+            # unselectable option. The order/date help distinguish real records.
+            if row.get('pedido'):name+=f" · Pedido {row['pedido']}"
+            if row.get('data_envio'):name+=f" · Envio {row['data_envio']}"
+            options.append(name)
+        reply='Encontrei envios em andamento para mais de um destinatário. Qual deles?\n'+'\n'.join(f'{i+1}. {v}' for i,v in enumerate(options))
+        if result.get('tem_mais'):reply+='\nHá outros resultados. Informe o sobrenome ou peça os próximos.'
+        return reply
     parts=[]
     for row in rows:parts.extend(tracking_reply(row).parts)
     if result.get('tem_mais'):parts.append(f"Há {result['total']} envios em andamento. Mostrei 20; peça os próximos para continuar.")

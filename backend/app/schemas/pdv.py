@@ -196,7 +196,7 @@ class PdvSaleCreate(BaseModel):
     cliente_id: Optional[uuid.UUID] = None
     cliente_nome: Optional[str] = None
     items: List[PdvSaleItemCreate]
-    desconto_gs: float = 0.0
+    desconto_gs: float = Field(default=0.0, ge=0, le=9999999999999.99, allow_inf_nan=False)
     payments: List[PdvPaymentCreate]
     notas: Optional[str] = None
 

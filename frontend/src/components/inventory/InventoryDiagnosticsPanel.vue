@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { parseDateTime, formatDateTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -110,8 +111,8 @@ const displayLocale = computed(() => locale.value === 'es' ? 'es-PY' : locale.va
 const pages = computed(() => data.value ? Math.max(1, Math.ceil(data.value.total_items / data.value.page_size)) : 1)
 const checkedAt = computed(() => {
   if (!data.value) return ''
-  const date = new Date(data.value.checked_at)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString(displayLocale.value, {
+  const date = parseDateTime(data.value.checked_at)
+  return Number.isNaN(date.getTime()) ? '' : formatDateTime(date, {
     timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 })

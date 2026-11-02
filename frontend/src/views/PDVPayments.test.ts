@@ -289,13 +289,108 @@ it('applies the charge only to the card portion and removes it with the payment'
 it('uses net value for a manual partial card charge, rejects fractional guaranis and never repeats the fee', async () => {
   await method('card_debit_py'); await set('.pay-amount-input','200000,50')
   expect(button('.pay-btn-add').disabled).toBe(true)
-  await set('.pay-amount-input','200000'); button('.pay-btn-add').click(); await tick()
+  await set('.pay-amount-input','200000')
+  expect(root.querySelector('.pay-card-preview')?.textContent).toContain('Valor na máquina: G$ 200.000')
+  expect(root.querySelector('.pay-card-preview')?.textContent).toContain('Aplicado à venda: G$ 188.000')
+  expect(root.querySelector('.pay-card-preview')?.textContent).toContain('Acréscimo cartão: G$ 12.000')
+  button('.pay-btn-add').click(); await tick()
   expect(usePdvStore().payments[0]).toMatchObject({amount_gs:188000,card_fee_gs:12000})
   await method('cash_gs'); button('.pay-btn-total').click(); await tick()
   expect(Number(input('.pay-amount-input').value.replace(',', '.'))).toBe(462000)
   button('.pay-btn-add').click(); await tick()
   expect(usePdvStore().total).toBe(650000)
   expect(usePdvStore().payments.reduce((sum,p)=>sum+(p.card_fee_gs||0),0)).toBe(12000)
+})
+
+async function waiveCardFee() {
+  input('.pay-card-fee-choice input').click()
+  await tick()
+}
+
+it.each(['card_credit_py', 'card_debit_py'])('allows %s without surcharge and keeps the explicit choice in checkout', async (selected) => {
+  await method(selected)
+  expect(input('.pay-card-fee-choice input').checked).toBe(true)
+  button('.pay-btn-total').click(); await tick()
+  await waiveCardFee()
+  expect(input('.pay-amount-input').value).toBe('')
+  expect(root.querySelector('.pay-card-preview')?.textContent).toContain('Sem acréscimo de cartão')
+  button('.pay-btn-total').click(); await tick()
+  expect(Number(input('.pay-amount-input').value.replace(',', '.'))).toBe(650000)
+  button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().payments[0]).toMatchObject({method:selected, amount_original:650000, amount_gs:650000, card_fee_gs:0, card_fee_percent:0})
+  expect(root.querySelector('.pay-card-summary')).toBeNull()
+  expect(button('.pay-confirm-btn').disabled).toBe(false)
+  mocks.createSale.mockRejectedValueOnce({response:{status:409,data:{detail:'Synthetic validation'}}})
+  button('.pay-confirm-btn').click(); await tick()
+  expect(mocks.createSale).toHaveBeenCalledWith(expect.objectContaining({payments:[expect.objectContaining({card_fee_gs:0,card_fee_percent:0})]}))
+})
+
+it('keeps the surcharge on an earlier installment when the next card payment is exempt', async () => {
+  await method('card_credit_py'); await set('.pay-amount-input','200000'); button('.pay-btn-add').click(); await tick()
+  await waiveCardFee(); button('.pay-btn-total').click(); await tick(); button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().payments).toEqual([
+    expect.objectContaining({amount_original:200000,amount_gs:188000,card_fee_percent:6,card_fee_gs:12000}),
+    expect.objectContaining({amount_original:462000,amount_gs:462000,card_fee_percent:0,card_fee_gs:0}),
+  ])
+  expect(usePdvStore().total).toBe(650000)
+  expect(button('.pay-confirm-btn').disabled).toBe(false)
+})
+
+it('shows the exact exempt terminal amount when a converted payment leaves fractional guaranis', async () => {
+  await method('cash_brl'); await set('.pay-rate-input', '1234,567891'); await set('.pay-amount-input', '1'); button('.pay-btn-add').click(); await tick()
+  await method('card_credit_py'); await waiveCardFee(); button('.pay-btn-total').click(); await tick()
+  expect(root.querySelector('.pay-card-preview')?.textContent).toContain('Valor na máquina: G$ 648.765,43')
+  button('.pay-btn-add').click(); await tick()
+  expect(usePdvStore().payments[1]).toMatchObject({amount_original:648765.43,amount_gs:648765.43,card_fee_gs:0,card_fee_percent:0})
+  expect(button('.pay-confirm-btn').disabled).toBe(false)
+})
+
+it('settles a negotiated reais payment with one discount click without automatically creating the sale', async () => {
+  mocks.rates['G$'] = 6000; mocks.rates['R$'] = 5.1; await tick()
+  await set('.pdv-ci-price', '576')
+  expect(button('.pay-discount-label').disabled).toBe(true)
+  await method('cash_brl'); await set('.pay-amount-input', '2800'); button('.pay-btn-add').click(); await tick()
+  expect(button('.pay-confirm-btn').disabled).toBe(true)
+  button('.pay-discount-label').click(); await tick()
+  expect(usePdvStore().discountGs).toBe(161882.35)
+  expect(usePdvStore().total).toBeCloseTo(3294117.65, 2)
+  expect(usePdvStore().payments[0].amount_original).toBe(2800)
+  expect(button('.pay-confirm-btn').disabled).toBe(false)
+  expect(button('.pay-discount-label').disabled).toBe(true)
+  expect(mocks.createSale).not.toHaveBeenCalled()
+})
+
+it('keeps existing discounts, never gives unpaid merchandise away, and never discounts cash change', async () => {
+  await set('.pay-discount-input', '65000')
+  expect(button('.pay-discount-label').disabled).toBe(true)
+  await set('.pay-amount-input', '80'); button('.pay-btn-add').click(); await tick()
+  button('.pay-discount-label').click(); await tick()
+  expect(usePdvStore().discountGs).toBe(130000)
+  expect(usePdvStore().total).toBe(520000)
+  button('.pay-entry-remove').click(); await tick()
+  await set('.pay-amount-input', '100'); button('.pay-btn-add').click(); await tick()
+  expect(button('.pay-discount-label').disabled).toBe(true)
+  expect(usePdvStore().discountGs).toBe(130000)
+  expect(root.querySelector('.pay-troco')).not.toBeNull()
+})
+
+it('discounts only the unpaid merchandise in a mixed payment, keeping the card fee separate', async () => {
+  await method('card_credit_py'); await set('.pay-amount-input', '200000'); button('.pay-btn-add').click(); await tick()
+  await method('cash_usd'); await set('.pay-amount-input', '50'); button('.pay-btn-add').click(); await tick()
+  button('.pay-discount-label').click(); await tick()
+  expect(usePdvStore().discountGs).toBe(137000)
+  expect(usePdvStore().total).toBe(513000)
+  expect(usePdvStore().payments[0]).toMatchObject({amount_gs:188000,card_fee_gs:12000})
+  expect(button('.pay-confirm-btn').disabled).toBe(false)
+  expect(mocks.createSale).not.toHaveBeenCalled()
+})
+
+it('opens the existing standalone item form directly from the search toolbar', async () => {
+  expect(root.querySelector('.pdv-quick-avulso')?.nextElementSibling?.classList.contains('pdv-scan-btn')).toBe(true)
+  button('.pdv-quick-avulso').click(); await tick()
+  expect(document.body.textContent).toContain('Adicionar item avulso')
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+  expect(mocks.createSale).not.toHaveBeenCalled()
 })
 
 

@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from datetime import date, datetime
 from enum import Enum
-from sqlalchemy import event, inspect
+from sqlalchemy import event, inspect, select
 from sqlalchemy.orm import Session
 from ..models.access import AuditEvent, now
 
@@ -14,7 +14,7 @@ SAFE_VALUES = {'status', 'state', 'ativo', 'active', 'is_active', 'role', 'sales
                'current_stock', 'stock_loja', 'stock_deposito', 'quantity', 'quantity_before',
                'quantity_after', 'total_gs', 'valor_bruto', 'valor_liquido', 'moeda',
                'sale_price', 'cost_price', 'label_status', 'tipo', 'aprovada',
-               'group_key'}  # Grade moves retain before/after identities in product history.
+               'group_key', 'stock_loja_before', 'stock_loja_after'}  # Grade moves retain before/after identities in product history.
 SECRET_FIELDS = {'senha_hash', 'auth_version', 'token_hash', 'token', 'webhook_secret',
                  'document_pdf', 'pdf', 'image_data', 'additional_images', 'snapshot', 'payload', 'response', 'text',
                  'content', 'data', 'raw_data', 'lines', 'config'}
@@ -46,8 +46,15 @@ def actor(user, source='web', **context):
     return {'user_id': user.id, 'actor_name': user.nome, 'source': source, **context}
 
 
-def bind_actor(db, user, source='web', **context):
-    value = actor(user, source, **context)
+def bind_actor(db, user, source=None, **context):
+    previous = db.info.get('audit_actor', {})
+    same_user = previous.get('user_id') == user.id
+    # Services may rebind the authenticated user inside a confirmed operation.
+    # Keep its exact correlation/channel; never carry another actor's context.
+    inherited = {key: previous[key] for key in ('request_id', 'route', 'method')
+                 if same_user and key in previous}
+    channel = source if source is not None else previous.get('source', 'web') if same_user else 'web'
+    value = actor(user, channel, **{**inherited, **context})
     db.info['audit_actor'] = value
     return value
 
@@ -66,10 +73,56 @@ def scalar(value):
     return None
 
 
+def operation_context(obj, table, products):
+    """Persist only structural IDs and product/quantity facts, never private payloads."""
+    context = {}
+    sale_id = None
+    if table == 'pdv_sales':
+        sale_id = obj.id
+    elif table in ('pdv_sale_items', 'pdv_payments', 'pdv_fiado_movements', 'pdv_sale_events'):
+        sale_id = obj.sale_id
+    elif table == 'stock_movements' and obj.reference_type == 'pdv_sale':
+        sale_id = obj.reference_id
+    elif table == 'print_jobs' and obj.source == 'pdv_receipt':
+        sale_id = (obj.snapshot or {}).get('sale_id')
+    if sale_id:
+        try: context['sale_id'] = str(uuid.UUID(str(sale_id)))
+        except (ValueError, TypeError, AttributeError): pass
+    if table == 'pdv_sale_items':
+        context['product'] = {'id': str(obj.item_id) if obj.item_id else None, 'name': obj.item_name, 'code': obj.item_sku}
+    if table == 'pdv_payments':
+        context['payment'] = {key: scalar(getattr(obj, key)) for key in ('method', 'currency', 'amount_original', 'amount_gs', 'card_fee_percent', 'card_fee_gs')}
+    if table == 'inventory_items':
+        context['product'] = products.get(obj.id) or {'id': str(obj.id), 'name': obj.name, 'code': obj.inventory_code or obj.sku_internal}
+    if table == 'stock_movements':
+        context['movement'] = {key: scalar(getattr(obj, key)) for key in (
+            'item_id', 'movement_type', 'quantity', 'quantity_before', 'quantity_after',
+            'stock_loja_before', 'stock_loja_after')}
+        for key in ('location_from', 'location_to'):
+            value = getattr(obj, key)
+            if value in ('loja', 'deposito'): context['movement'][key] = value
+        product = products.get(obj.item_id)
+        if product: context['product'] = product
+    return context
+
+
 @event.listens_for(Session, 'after_flush')
 def audit_flush(db, context):
     if not db.info.get('audit_enabled') or not db.info.get('audit_actor'):
         return
+    product_ids = set()
+    for obj in list(db.new) + list(db.dirty) + list(db.deleted):
+        table = inspect(obj).mapper.local_table.name
+        if table == 'stock_movements': product_ids.add(obj.item_id)
+        elif table == 'inventory_items': product_ids.add(obj.id)
+    products = {}
+    if product_ids:
+        from ..models.inventory import Item
+        # One bounded projection also covers products loaded with load_only;
+        # don't trigger a lazy query per item or fetch any image/description.
+        rows = db.connection().execute(select(Item.id, Item.name, Item.inventory_code, Item.sku_internal)
+                                       .where(Item.id.in_(product_ids)))
+        products = {row.id: {'id': str(row.id), 'name': row.name, 'code': row.inventory_code or row.sku_internal} for row in rows}
     for action, objects in [('create', db.new), ('update', db.dirty), ('delete', db.deleted)]:
         for obj in list(objects):
             state = inspect(obj)
@@ -94,6 +147,8 @@ def audit_flush(db, context):
                     changes[col.key] = {'changed': True}
             if action == 'update' and not changes:
                 continue
+            operation_info = operation_context(obj, table, products)
+            if operation_info: changes['_context'] = operation_info
             db.connection().execute(AuditEvent.__table__.insert().values(
                 id=uuid.uuid4(), occurred_at=now(), **db.info['audit_actor'], action=action,
                 module=module_name(table), entity=table, entity_id=str(getattr(obj, 'id', ''))[:100], changes=changes))

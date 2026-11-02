@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
 import {computed, onMounted, onUnmounted, ref, watch} from 'vue'
@@ -113,7 +114,7 @@ function weekLabel(value:string){const match=/^Semana (\d+)$/.exec(value);return
 function explain(e:unknown){const detail=(e as {response?:{data?:{detail?:unknown}}})?.response?.data?.detail;return typeof detail==='string'?detail:messages.pt.queryError}
 function usd(v:number|null|undefined){return v===null||v===undefined?'—':v.toLocaleString(locale.value,{style:'currency',currency:'USD',minimumFractionDigits:2})}
 function amount(v:number|null,c:string){return v===null?'—':v.toLocaleString(locale.value,{style:'currency',currency:c,maximumFractionDigits:c==='PYG'?0:2})}
-function date(v:string|null|undefined){return v?new Date(v).toLocaleString(locale.value,{dateStyle:'short',timeStyle:'short'}):'—'}
+function date(v:string|null|undefined){return v?businessDateTime(v, {dateStyle:'short',timeStyle:'short'}):'—'}
 const periodLabel=computed(()=>`${month.value ? monthNames.value[month.value-1] : t('allMonths')} · ${year.value || t('allHistoryLower')}`)
 const annualRows=computed(()=>data.value?.annual.filter(a=>!year.value||a.year===year.value)||[])
 const annualTotal=computed(()=>{const vals=annualRows.value.filter(a=>a.total_usd!==null);return vals.length?vals.reduce((n,a)=>n+(a.total_usd||0),0):null})

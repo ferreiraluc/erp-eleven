@@ -65,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
@@ -83,7 +84,7 @@ const phoneHelpId = computed(() => `customer-phone-help-${props.customer.id}`)
 const whatsappUrl = computed(() => whatsappConversationUrl(props.customer.telefone))
 const initials = computed(() => props.customer.nome.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toLocaleUpperCase())
 const number = (value: number) => value.toLocaleString(locale.value)
-const date = (value: string) => new Date(value).toLocaleString(locale.value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
+const date = (value: string) => businessDateTime(value, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
 </script>
 
 <style scoped>

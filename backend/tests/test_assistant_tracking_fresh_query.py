@@ -8,11 +8,12 @@ from app.services import assistant_agent as agent, assistant_channels as channel
 
 
 @pytest.mark.parametrize("channel", ["telegram", "whatsapp", "whatsapp_web"])
-def test_historical_negative_cannot_replace_current_tracking_lookup(setup, monkeypatch, channel):
+@pytest.mark.parametrize('term,registered', [('Davi Muniz', 'Davi Almeida Muniz'), ('Murilo', 'Murillo Almeida')])
+def test_historical_negative_cannot_replace_current_tracking_lookup(setup, monkeypatch, channel, term, registered):
     factory, _, user_id = setup
     replies = iter([
         {"content": "Não encontrei envio em andamento para esse cliente no ERP."},
-        tool_call("buscar_rastreios", {"termo": "Davi Muniz", "ordem": "priorizar_abertos"}),
+        tool_call("buscar_rastreios", {"termo": term, "ordem": "priorizar_abertos"}),
     ])
     choices = []
 
@@ -25,16 +26,16 @@ def test_historical_negative_cannot_replace_current_tracking_lookup(setup, monke
         if channel == "whatsapp_web":
             db.add(AssistantIdentity(channel=channel, external_id="123", user_id=user_id))
             db.flush()
-        previous = incoming(db, user_id, "Me passa o rastreio do Davi Muniz", channel=channel)
+        previous = incoming(db, user_id, f"Me passa o rastreio do {term}", channel=channel)
         previous.status = "done"
         previous.response = "Não encontrei envio em andamento para esse cliente no ERP."
-        shipment(db, "AA123456789BR", name="Davi Almeida Muniz")
+        shipment(db, "AA123456789BR", name=registered)
         db.flush()
-        message = incoming(db, user_id, "Me passa o rastreio do Davi Muniz", channel=channel)
+        message = incoming(db, user_id, f"Me passa o rastreio do {term}", channel=channel)
         result = agent.respond(db, message, channels.authorized_identity(db, channel, message.sender_id))
 
     assert result.parts[0] == "AA123456789BR"
-    assert "Davi Almeida Muniz" in result.parts[1]
+    assert registered in result.parts[1]
     assert "Em trânsito" in result.parts[1]
     assert len(result.parts) == 2
     assert choices == [None, {"type": "function", "function": {"name": "buscar_rastreios"}}]

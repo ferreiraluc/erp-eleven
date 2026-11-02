@@ -17,6 +17,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -32,7 +33,7 @@ let sequence=0
 const years=computed(()=>[...new Set([new Date().getFullYear(),year.value,...(data.value?.sales?.years || [])])].sort((a,b)=>b-a))
 const months=computed(()=>data.value?.sales?.months.filter(m=>m.year===year.value && (!month.value || m.month===month.value)).reverse() || [])
 const amount=(v:number|null|undefined)=>v==null?'—':v.toLocaleString(locale.value,{minimumFractionDigits:2,maximumFractionDigits:2})
-const date=(v:string)=>new Date(v).toLocaleDateString(locale.value)
+const date=(v:string)=>businessDate(v)
 const monthLabel=(m:number)=>new Date(2026,m-1,1).toLocaleDateString(locale.value,{month:'long'})
 async function load(){const seq=++sequence;loading.value=true;error.value=false;try{const r=await api.get<Activity>(`/api/vendedores/${props.vendor.id}/atividade`,{params:{ano:year.value,mes:month.value || undefined}});if(seq===sequence)data.value=r.data}catch{if(seq===sequence){error.value=true;data.value=null}}finally{if(seq===sequence)loading.value=false}}
 watch(()=>props.vendor.id,()=>{data.value=null;void load()},{immediate:true})

@@ -418,7 +418,7 @@
           :options="
             history.map((b) => ({
               value: b.id,
-              label: `${new Date(b.created_at).toLocaleString()} · ${b.name}`,
+              label: `${businessDateTime(b.created_at)} · ${b.name}`,
             }))
           "
           :label="tr('Impressões recentes')"
@@ -518,6 +518,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Camera, Eye, Printer } from 'lucide-vue-next'
 import ModuleHeader from '@/components/ModuleHeader.vue'

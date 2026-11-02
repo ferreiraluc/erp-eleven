@@ -31,15 +31,24 @@ export function isCardPayment(method: string) {
   return method === 'card_credit_py' || method === 'card_debit_py'
 }
 /** Whole-guarani charge that leaves the requested merchandise amount after 6%. */
-export function cardCharge(netGs: number) {
-  return Math.ceil(Math.round(netGs * 100) / 94)
+export function cardCharge(netGs: number, applyFee = true) {
+  return applyFee ? Math.ceil(Math.round(netGs * 100) / 94) : Math.round(netGs * 100) / 100
 }
-export function cardPaymentAmounts(grossGs: number, remainingGs?: number) {
+export function cardPaymentAmounts(grossGs: number, remainingGs?: number, applyFee = true) {
+  if (!applyFee) return { amount_gs: Math.round(grossGs * 100) / 100, card_fee_gs: 0, card_fee_percent: 0 }
   let net = Math.round(grossGs * 94) / 100
   // The Total button's rounding must not change a product's price or create change.
   if (remainingGs !== undefined && remainingGs > 0 && cardCharge(remainingGs) === grossGs)
     net = Math.round(remainingGs * 100) / 100
   return { amount_gs: net, card_fee_gs: Math.round((grossGs - net) * 100) / 100, card_fee_percent: 6 }
+}
+
+/** Set the accumulated discount so already-added payments settle the goods only. */
+export function discountToCoverShortfall(subtotalGs: number, discountGs: number, paidGs: number): number | null {
+  if (![subtotalGs, discountGs, paidGs].every(Number.isFinite) || subtotalGs <= 0 || discountGs < 0 || paidGs <= 0) return null
+  const subtotal = Math.round(subtotalGs * 100), discount = Math.round(discountGs * 100), paid = Math.round(paidGs * 100)
+  if (subtotal - discount <= paid || paid > subtotal) return null
+  return (subtotal - paid) / 100
 }
 export function paymentCurrency(method: string): PaymentCurrency | undefined {
   return paymentMethods.find(m => m.value === method)?.currency

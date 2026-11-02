@@ -133,11 +133,15 @@ estáveis reduzem avisos duplicados, sem garantir entrega exatamente uma vez.
 | Evento | Destinatários padrão, sem seleção | Comportamento inicial |
 | --- | --- | --- |
 | Nova venda do PDV concluída | Lucas | Aviso informativo |
-| Nova venda com avulsos e sem observação | Lucas e vendedor daquela venda | Pede motivo e confirmação, sem impedir uma venda legítima |
 | Ticket em falha ou envio incerto | Lucas e vendedor daquela venda | Solicita conferir a fila; não reimprime |
 | Rastreio existente muda de situação | Lucas e criador do rastreio | Atalho para a consulta |
 | Bom dia / boa tarde | Todos os usuários ativos | 09h / 14h de Brasília, uma vez ao dia |
 | Lembrete diário | Todos os usuários ativos | Desligado até configuração |
+
+Vendas com itens avulsos enviam somente o aviso normal de venda concluída, conforme
+os destinatários configurados. Não geram mais o alerta automático pedindo motivo.
+Avisos antigos, respostas e o modelo para cobranças manuais permanecem disponíveis;
+essa mudança não remove histórico nem altera a auditoria da venda.
 
 Ao marcar usuários e salvar uma regra, a seleção **substitui** os destinatários
 padrão nos próximos eventos. Lucas precisa estar marcado para continuar recebendo

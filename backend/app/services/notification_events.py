@@ -13,7 +13,7 @@ from sqlalchemy import event, inspect, func
 from sqlalchemy.orm import Session
 
 from ..models.usuario import Usuario, UsuarioRole
-from ..models.pdv import PdvSale, PdvSaleItem
+from ..models.pdv import PdvSale
 from ..models.rastreamento import Rastreamento
 from ..models.printing import PrintJob
 from .pdv_ticket_identity import ticket_code
@@ -67,13 +67,8 @@ def _sale_event(db, sale, owners, emit):
     path = '/vendas-pdv?' + urlencode({'sale_id': str(sale.id)})
     emit(db, 'sale_completed', context=context, user_ids=owners, action_path=path,
          dedupe_key=f'sale-completed:{sale.id}', entity_type='pdv_sale', entity_id=str(sale.id))
-    has_unlinked = db.query(PdvSaleItem.id).filter(
-        PdvSaleItem.sale_id == sale.id, PdvSaleItem.is_avulso.is_(True)).first() is not None
-    if has_unlinked and not (sale.notas or '').strip():
-        # Avulso is valid: ask for context, never fabricate stock loss or fraud.
-        targets = [*owners, *([sale.vendedor_id] if sale.vendedor_id else [])]
-        emit(db, 'sale_avulso_without_reason', context=context, user_ids=targets, action_path=path,
-             dedupe_key=f'sale-avulso:{sale.id}', entity_type='pdv_sale', entity_id=str(sale.id))
+    # Standalone items are an ordinary sale flow. Keep the sale notice without
+    # automatically requesting a reason or sending a second warning to its seller.
 
 
 def _tracking_event(db, row, before, owners, emit, event_changed=False):

@@ -107,6 +107,32 @@ diário persistido; a migração aditiva limita sessões legadas ao primeiro cor
 após sua aplicação, sem revogar o turno atual. Alterar um valor antigo do ambiente
 não muda essa regra. A inscrição de push é revalidada após entrar novamente.
 
+### Horário de operação e armazenamento
+
+Horários de vendas, usuários/logins, auditoria, clientes, estoque, notificações,
+relatórios e tickets são apresentados em **America/Sao_Paulo (Brasília, UTC−3)**,
+independentemente do fuso do celular ou computador. `frontend/src/utils/datetime.ts`
+centraliza a conversão e os controles de agendamento; a opção `datetime-local` das
+notificações significa horário de Brasília. O corte de login às 21h, BI às 18h e
+os demais agendamentos existentes continuam com suas regras.
+
+A conexão PostgreSQL fixa `timezone=UTC`: os instantes permanecem em UTC, inclusive
+nas colunas legadas `timestamp without time zone`, conforme o contrato já usado
+pela busca do assistente e lotes de recebimento. `business_time` converte essas
+leituras sem aplicar o deslocamento duas vezes em valores que já têm offset.
+Filtros de data do PDV usam meia-noite de Brasília (03h UTC) até o início do dia
+seguinte, exclusivo. Snapshots de novos tickets incluem offset; snapshots já
+emitidos e históricos não são regravados.
+
+Datas sem hora (BI, folgas, aniversário etc.) preservam o dia original. Eventos
+sem offset recebidos da Wonca/Correios são hora local informada pelo provedor;
+a data de atualização interna do ERP é um instante UTC. Não tentar adivinhar o
+fuso pelo formato ou aplicar uma alteração de três horas diretamente no banco.
+Registros importados manualmente com uma convenção diferente precisam de análise
+de origem antes de qualquer correção de dados. Fixtures SQLite descartam o offset
+de `settings.now()` e conservam hora local; os testes de armazenamento e limites
+por dia são feitos também no PostgreSQL isolado, que comprova o comportamento real.
+
 A configuração OneDrive fica em `sales_bi_config`, pelo painel **Fontes**, somente ADMIN.
 Não há `MSAL_CLIENT_ID` ou OAuth Microsoft implementado nesse conector. Ele usa os links
 compartilhados configurados para leitura. Dados de remetentes ficam no banco, não no código.

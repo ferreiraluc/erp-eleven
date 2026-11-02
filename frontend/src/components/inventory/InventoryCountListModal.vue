@@ -72,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { vErpDialog } from '@/directives/erpDialog'
@@ -91,7 +92,7 @@ function t(key: MessageKey, params: Record<string, string | number> = {}) {
 }
 const numberLocale = computed(() => locale.value === 'en' ? 'en-US' : locale.value === 'es' ? 'es-PY' : 'pt-BR')
 const format = (n: number) => n.toLocaleString(numberLocale.value)
-const date = (value: string) => new Date(value).toLocaleString(numberLocale.value)
+const date = (value: string) => businessDateTime(value)
 const owner = auth.user?.id
 const token = auth.token
 const storageKey = `eleven:inventory-count-list:pending:${owner}`

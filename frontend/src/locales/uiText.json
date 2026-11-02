@@ -4723,5 +4723,25 @@
     "pt": "Use para trocar o número ou quando o WhatsApp confirmar o encerramento do vínculo. Antes de refazer por falha de conexão, confira o diagnóstico acima. A sessão será substituída, preservando as filas e o histórico do ERP.",
     "es": "Use esta opción para cambiar el número o cuando WhatsApp confirme que terminó la vinculación. Antes de volver a vincular por un fallo de conexión, revise el diagnóstico anterior. Se sustituirá la sesión, conservando las colas y el historial del ERP.",
     "en": "Use this to change the number or when WhatsApp confirms that pairing has ended. Before pairing again due to a connection failure, review the diagnosis above. The session will be replaced, preserving queues and ERP history."
+  },
+  "Adicionar item avulso": {
+    "pt": "Adicionar item avulso",
+    "es": "Añadir artículo suelto",
+    "en": "Add standalone item"
+  },
+  "Sem acréscimo de cartão": {
+    "pt": "Sem acréscimo de cartão",
+    "es": "Sin recargo por tarjeta",
+    "en": "No card surcharge"
+  },
+  "Repassar taxa de 6% do cartão": {
+    "pt": "Repassar taxa de 6% do cartão",
+    "es": "Cobrar la comisión del 6% de la tarjeta",
+    "en": "Pass on the 6% card fee"
+  },
+  "Usar o valor faltante como desconto": {
+    "pt": "Usar o valor faltante como desconto",
+    "es": "Usar el importe pendiente como descuento",
+    "en": "Use the remaining balance as a discount"
   }
 }

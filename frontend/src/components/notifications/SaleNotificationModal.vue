@@ -70,6 +70,7 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import { parseDateTime } from '@/utils/datetime'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { vErpDialog } from '@/directives/erpDialog'
@@ -180,7 +181,7 @@ async function send() {
     error.value = n('validation')
     return
   }
-  const scheduled = form.value.scheduled_at ? new Date(form.value.scheduled_at) : null
+  const scheduled = form.value.scheduled_at ? parseDateTime(form.value.scheduled_at, 'business') : null
   if (scheduled && (!Number.isFinite(scheduled.getTime()) || scheduled.getTime() <= Date.now())) {
     error.value = n('invalidSchedule')
     return

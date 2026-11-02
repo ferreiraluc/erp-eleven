@@ -32,6 +32,10 @@ def tracking_reply(row):
               "ERRO": "Erro na consulta do rastreio", "NAO_ENCONTRADO": "Rastreio não encontrado",
               "CANCELADO": "Pedido cancelado"}.get(row["status"], row["status"])
     details = [f"Cliente: {row.get('cliente') or 'não informado'}", f"Status: {status}"]
+    if row.get("destinatario"):
+        details.append(f"Destinatário: {row['destinatario']}")
+    if row.get("nome_aproximado"):
+        details.append(f"Nome próximo à busca: {row.get('termo_consultado', '')}. Confira o destinatário acima.")
     if row.get("pedido"):
         details.append(f"Pedido: {row['pedido']}")
     if row.get("data_envio"):

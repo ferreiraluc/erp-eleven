@@ -127,12 +127,13 @@
   </article>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ArrowUpRight } from 'lucide-vue-next'
 import { qualityFindingPath, type QualityRunDetail } from '@/services/systemQuality'
 import { qualityText as q, type QualityCopyKey } from '@/services/systemQualityText'
-import { uiLocale } from '@/i18n/uiText'
+
 const props = defineProps<{ run: QualityRunDetail; loading?: boolean }>()
 defineEmits<{ page: [offset: number] }>()
 const active = computed(() => ['queued', 'running'].includes(props.run.status))
@@ -140,7 +141,7 @@ const incomplete = computed(() =>
   Object.values(props.run.coverage).some((value) => !value.complete),
 )
 const date = (value: string) =>
-  new Date(value).toLocaleString(uiLocale(), {
+  businessDateTime(value, {
     dateStyle: 'short',
     timeStyle: 'short',
   })

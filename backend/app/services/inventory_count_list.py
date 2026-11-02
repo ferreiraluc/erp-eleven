@@ -6,7 +6,6 @@ import json
 import re
 from datetime import timedelta
 from html import escape
-from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 from reportlab.lib import colors
@@ -25,6 +24,7 @@ from ..models.inventory import Item
 from ..models.printing import PrintDevice, PrintJob
 from ..schemas.inventory_count_list import CountSnapshot, MAX_ITEMS
 from .print_diagnostics import diagnostic_message
+from .business_time import business_datetime
 
 SOURCE = 'inventory_list'
 MAX_PDF_BYTES = 5 * 1024 * 1024
@@ -96,7 +96,7 @@ def preview(db, user_id, item_ids):
 def render(snapshot):
     """Deterministic PDF from the approved snapshot, including after PDF cleanup."""
     snapshot = CountSnapshot.model_validate(snapshot)
-    created = snapshot.created_at.astimezone(ZoneInfo(settings.TIMEZONE)).strftime('%d/%m/%Y %H:%M')
+    created = business_datetime(snapshot.created_at).strftime('%d/%m/%Y %H:%M')
     buffer = io.BytesIO()
     margin = 12 * mm
     body = ParagraphStyle('count-body', fontName='Helvetica', fontSize=8.2, leading=10.5, spaceAfter=0)

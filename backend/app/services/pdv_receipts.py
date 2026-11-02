@@ -9,6 +9,8 @@ from ..models.printing import PrintDevice, PrintJob
 from ..models.pdv import PdvSale
 from .access_policy import sales_query
 from .print_diagnostics import diagnostic_message
+from .business_time import stored_instant
+from sqlalchemy.orm import object_session
 
 
 from .pdv_receipt_layout import render, view
@@ -77,7 +79,7 @@ def enqueue(db, sale, user_id, *, copy_key=None):
             raise HTTPException(409, 'O ticket anterior ainda está na fila. Aguarde antes de pedir outra cópia.')
         if not previous:
             raise HTTPException(409, 'Envie primeiro o ticket original.')
-    snap = build_snapshot(sale, device, copy=copy_key is not None)
+    snap = build_snapshot(sale, device, copy=copy_key is not None, db=db)
     job = PrintJob(device_id=device.id, user_id=user_id, request_key=copy_key or key,
                    source='pdv_receipt', parent_id=previous.id if previous else None,
                    snapshot=snap, pdf=b'', sha256='', expires_at=utcnow()+timedelta(hours=24))
@@ -86,8 +88,9 @@ def enqueue(db, sale, user_id, *, copy_key=None):
     return job
 
 
-def build_snapshot(sale, device=None, *, copy=False):
-    return dict(sale_id=str(sale.id), version=sale.version, date=sale.created_at.isoformat(),
+def build_snapshot(sale, device=None, *, copy=False, db=None):
+    db = db or object_session(sale)
+    return dict(sale_id=str(sale.id), version=sale.version, date=stored_instant(sale.created_at, db).isoformat(),
                 usd_rate_gs=str(sale.usd_rate_gs) if sale.usd_rate_gs else None,
                 customer=sale.cliente_nome, seller=sale.vendedor.nome if sale.vendedor else None,
                 width=device.paper_width_mm if device else 80, height=device.paper_height_mm if device else 0,
@@ -108,7 +111,7 @@ def snapshot_for_view(db, sale):
         # Reflow the immutable financial data for today's media, without rewriting jobs.
         return dict(original.snapshot, usd_rate_gs=original.snapshot.get('usd_rate_gs') or (str(sale.usd_rate_gs) if sale.usd_rate_gs else None), width=device.paper_width_mm if device else 80,
                     height=device.paper_height_mm if device else 0)
-    return build_snapshot(sale, device)
+    return build_snapshot(sale, device, db=db)
 
 
 def prepare_document(job):

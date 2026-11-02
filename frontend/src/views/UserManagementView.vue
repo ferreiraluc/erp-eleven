@@ -22,6 +22,7 @@
   </main>
 </template>
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { vErpDialog } from '@/directives/erpDialog'
@@ -32,11 +33,11 @@ import { accessAPI, type UserAccess } from '@/services/access'
 import { vendorsAPI, type User, type VendorResponse } from '@/services/api'
 import { salesBi } from '@/services/salesBi'
 import { useAuthStore } from '@/stores/auth'
-const auth=useAuthStore(), {t,locale}=useI18n()
+const auth=useAuthStore(), {t}=useI18n()
 const users=ref<User[]>([]),vendors=ref<VendorResponse[]>([]),sellers=ref<string[]>([])
 const loading=ref(true),saving=ref(false),editing=ref(false),editingId=ref(''),email=ref(''),temporary=ref(''),error=ref(''),notice=ref(''),resetUser=ref<User|null>(null)
 const form=ref<UserAccess>({nome:'',ativo:true,sales_scope:'own',sales_seller:null,vendedor_id:null})
-const date=(value?:string)=>value?new Date(value).toLocaleString(locale.value):'—'
+const date=(value?:string)=>value?businessDateTime(value):'—'
 async function load(){users.value=await accessAPI.users()}
 async function loadPage(){
   loading.value=true;error.value=''

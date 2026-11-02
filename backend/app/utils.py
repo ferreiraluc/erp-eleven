@@ -89,18 +89,17 @@ def calculate_net_amount(valor_bruto: float, metodo_pagamento: str) -> tuple[flo
 # DATETIME UTILITIES
 # =============================================================================
 
-def ensure_timezone_aware(dt: Optional[datetime]) -> Optional[datetime]:
+def ensure_timezone_aware(dt: Optional[datetime], db=None) -> Optional[datetime]:
     """
     Ensure a datetime object is timezone-aware.
-    If it's naive, assume it's in the configured timezone.
+    Naive legacy database values follow the explicit UTC storage contract.
     """
     if dt is None:
         return None
     
     if dt.tzinfo is None:
-        # Naive datetime - assume it's in our configured timezone
-        from .config import settings
-        return dt.replace(tzinfo=settings.tz)
+        from .services.business_time import stored_instant
+        return stored_instant(dt, db)
     
     return dt
 

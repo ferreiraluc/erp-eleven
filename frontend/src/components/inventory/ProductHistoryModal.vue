@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { vErpDialog } from '@/directives/erpDialog'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { inventoryHistoryAPI, type HistorySection, type ProductHistory } from '@/services/inventoryHistory'
@@ -81,7 +82,7 @@ const section = ref<HistorySection>(props.initialSection), page = ref(1), loadin
 let generation = 0, previousFocus: HTMLElement | null = null
 const labels = { movements: 'Movimentações', sales: 'Vendas', counts: 'Contagens', changes: 'Alterações' }
 const tabs = computed(() => (Object.keys(labels) as HistorySection[]).filter(key => key !== 'changes' || data.value?.can_view_changes).map(key => ({ key, label: labels[key] })))
-const date = (v: string | null) => v ? new Date(v).toLocaleString(numberLocale(), { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }) : tr('Não registrado')
+const date = (v: string | null) => v ? businessDateTime(v, { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }) : tr('Não registrado')
 const quantity = (v: string | number | null) => v === null ? tr('Não informado') : Number(v).toLocaleString(numberLocale())
 const money = (v: string | null) => v === null ? tr('Não informado') : `G$ ${Number(v).toLocaleString(numberLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const location = (v: string | null) => tr(v === 'loja' ? 'Loja' : v === 'deposito' ? 'Depósito' : v || 'Não informado')

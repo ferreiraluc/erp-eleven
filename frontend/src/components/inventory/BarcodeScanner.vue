@@ -15,6 +15,19 @@
           <div id="qr-reader" class="qr-reader"></div>
           <div class="scan-line"></div>
           <p class="scanner-hint">{{ tr('Aponte a câmera para o QR Code ou código de barras') }}</p>
+          <p class="scanner-hint">{{ tr('Se estiver desfocado, afaste um pouco a etiqueta e use o zoom.') }}</p>
+        </div>
+
+        <p v-if="switching" role="status" class="scanner-hint">{{ tr('Preparando câmera...') }}</p>
+        <div v-if="!cameraError" class="camera-controls">
+          <ErpSelect v-if="cameras.length > 1" :model-value="selectedCamera" :disabled="switching" :label="tr('Câmera')" @update:model-value="changeCamera(String($event))">
+            <option v-for="(camera, index) in cameras" :key="camera.deviceId" :value="camera.deviceId">{{ camera.label || `${tr('Câmera')} ${index + 1}` }}</option>
+          </ErpSelect>
+          <label v-if="zoomRange" class="camera-zoom">{{ tr('Zoom') }}
+            <input :value="zoom" type="range" :min="zoomRange.min" :max="zoomRange.max" :step="zoomRange.step || 0.1" :disabled="switching" @change="changeZoom" />
+            <span>{{ zoom.toFixed(1) }}×</span>
+          </label>
+          <button v-if="hasTorch" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="switching" :aria-pressed="torch" @click="toggleTorch">{{ tr(torch ? 'Apagar luz' : 'Acender luz') }}</button>
         </div>
 
         <div v-if="cameraError" class="camera-error">
@@ -54,6 +67,9 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { Html5Qrcode } from 'html5-qrcode'
+import ErpSelect from '@/components/ui/ErpSelect.vue'
+import { cameraConstraintFailure, preferredScannerCamera, scannerFocusConstraints, scannerVideoConstraints, type ScannerCapabilities } from '@/services/scannerCamera'
 
 const emit = defineEmits<{
   (e: 'barcode-detected', code: string): void
@@ -64,49 +80,131 @@ const cameraError = ref(false)
 const manualCode = ref('')
 const timeoutWarning = ref(false)
 const manualInputRef = ref<HTMLInputElement>()
-let html5QrCode: any = null
+const cameras = ref<MediaDeviceInfo[]>([])
+const selectedCamera = ref('')
+const switching = ref(false)
+const hasTorch = ref(false), torch = ref(false)
+const zoomRange = ref<ScannerCapabilities['zoom'] | null>(null)
+const zoom = ref(1)
+let html5QrCode: Html5Qrcode | null = null
+let cameraRun = 0
 let detected = false
 let disposed = false
 let timeoutId: ReturnType<typeof setTimeout> | null = null
 
-onMounted(async () => {
+async function listCameras() {
   try {
+    const devices = await navigator.mediaDevices?.enumerateDevices()
+    if (!disposed) cameras.value = (devices || []).filter(device => device.kind === 'videoinput' && device.deviceId)
+  } catch { /* Camera enumeration is optional; facingMode remains available. */ }
+}
+
+async function startCamera(deviceId = '') {
+  const run = ++cameraRun
+  switching.value = true
+  hasTorch.value = false; torch.value = false; zoomRange.value = null
+  if (timeoutId) clearTimeout(timeoutId)
+  try {
+    const previous = html5QrCode
+    if (previous) { await previous.stop(); if (html5QrCode === previous) html5QrCode = null }
+    if (disposed || detected || run !== cameraRun) return
     const { Html5Qrcode } = await import('html5-qrcode')
-    if (disposed) return
+    if (disposed || detected || run !== cameraRun) return
     const scanner = new Html5Qrcode('qr-reader')
     html5QrCode = scanner
-
-    await scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: (width: number, height: number) => { const side = Math.min(250, Math.floor(Math.min(width, height) * 0.8)); return { width: side, height: side } } },
-      (decodedText: string) => {
-        if (detected || disposed) return
+    const success = (decodedText: string) => {
+        if (detected || disposed || run !== cameraRun) return
         detected = true
         if (navigator.vibrate) navigator.vibrate(200)
         stopScanner()
         emit('barcode-detected', decodedText)
-      },
-      () => {}
-    )
+    }
+    const config = { fps: 15, qrbox: (width: number, height: number) => {
+      const side = Math.min(360, Math.floor(Math.min(width, height) * 0.88))
+      return { width: side, height: side }
+    } }
+    try {
+      await scanner.start(deviceId || { facingMode: 'environment' },
+        { ...config, videoConstraints: scannerVideoConstraints(deviceId) }, success, () => {})
+    } catch (error) {
+      if (disposed || detected || run !== cameraRun || !cameraConstraintFailure(error)) throw error
+      // Do not retry denied permission. Unsupported resolution/device gets the
+      // library's compatible rear-camera request, without mandatory constraints.
+      await scanner.start({ facingMode: 'environment' }, config, success, () => {})
+    }
 
-    if (disposed || detected) {
+    if (disposed || detected || run !== cameraRun) {
       // A close may happen while camera permission/start is still pending.
       // Keep the local instance so that stream is stopped after start resolves.
       try { await scanner.stop() } catch { /* already stopped */ }
       if (html5QrCode === scanner) html5QrCode = null
       return
     }
-    // 30s timeout
+    selectedCamera.value = deviceId
+    let settings: MediaTrackSettings & { zoom?: number } = {}
+    try {
+      settings = scanner.getRunningTrackSettings()
+      selectedCamera.value = settings.deviceId || deviceId
+    } catch { /* Reading camera identity is optional on older browsers. */ }
+    try {
+      const capabilities = scanner.getRunningTrackCapabilities() as ScannerCapabilities
+      hasTorch.value = capabilities.torch === true
+      if (capabilities.zoom && capabilities.zoom.max > capabilities.zoom.min) {
+        zoomRange.value = { ...capabilities.zoom, max: Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, 4)) }
+        zoom.value = Math.max(zoomRange.value.min, Math.min(zoomRange.value.max, settings.zoom || capabilities.zoom.min))
+      }
+      const focus = scannerFocusConstraints(capabilities)
+      if (focus) await scanner.applyVideoConstraints(focus).catch(() => {})
+    } catch { /* Older Safari lacks camera controls; decoding must continue. */ }
+    if (disposed || detected || run !== cameraRun) return
+    timeoutWarning.value = false
     timeoutId = setTimeout(() => {
       timeoutWarning.value = true
-      manualInputRef.value?.focus()
     }, 30000)
   } catch {
-    if (disposed) return
+    if (disposed || detected || run !== cameraRun) return
     cameraError.value = true
     manualInputRef.value?.focus()
-  }
+  } finally { if (!disposed && run === cameraRun) switching.value = false }
+}
+
+onMounted(async () => {
+  await listCameras()
+  let saved = ''
+  try { saved = localStorage.getItem('eleven:scanner:camera') || '' } catch { /* optional preference */ }
+  await startCamera(preferredScannerCamera(cameras.value, saved))
+  if (disposed || detected || cameraError.value) return
+  // Labels are available only after camera permission on a first visit.
+  const run = cameraRun
+  await listCameras()
+  const preferred = preferredScannerCamera(cameras.value, saved)
+  if (!disposed && !detected && run === cameraRun && preferred && selectedCamera.value && preferred !== selectedCamera.value) await startCamera(preferred)
 })
+
+async function changeCamera(id: string) {
+  if (switching.value || disposed || detected || id === selectedCamera.value) return
+  try { localStorage.setItem('eleven:scanner:camera', id) } catch { /* optional preference */ }
+  await startCamera(id)
+}
+async function changeZoom(event: Event) {
+  if (!html5QrCode || !zoomRange.value || switching.value || disposed || detected) return
+  const scanner = html5QrCode, run = cameraRun
+  const value = Math.max(zoomRange.value.min, Math.min(zoomRange.value.max, Number((event.target as HTMLInputElement).value)))
+  if (!Number.isFinite(value)) return
+  try {
+    await scanner.applyVideoConstraints({ advanced: [{ zoom: value } as MediaTrackConstraintSet] })
+    if (!disposed && !detected && run === cameraRun) zoom.value = value
+  } catch { /* Unsupported controls cannot interrupt a live scanner. */ }
+}
+async function toggleTorch() {
+  if (!html5QrCode || !hasTorch.value || switching.value || disposed || detected) return
+  const scanner = html5QrCode, run = cameraRun
+  const value = !torch.value
+  try {
+    await scanner.applyVideoConstraints({ advanced: [{ torch: value } as MediaTrackConstraintSet] })
+    if (!disposed && !detected && run === cameraRun) torch.value = value
+  } catch { /* Keep scanning if the browser refuses the light. */ }
+}
 
 onUnmounted(() => {
   disposed = true
@@ -173,6 +271,10 @@ function submitManual() {
   0% { top: 20%; } 100% { top: 80%; }
 }
 .scanner-hint { text-align: center; font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem; }
+.camera-controls { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.camera-zoom { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569; }
+.camera-zoom input { flex: 1; min-width: 0; }
+.camera-zoom span { min-width: 32px; }
 .camera-error { text-align: center; padding: 1.5rem 0; color: #ef4444; }
 .error-icon { margin: 0 auto 0.5rem; display: block; }
 .manual-entry { margin-top: 1rem; }
