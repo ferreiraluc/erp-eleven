@@ -129,7 +129,7 @@
             type="button"
             class="erp-button erp-button--ghost erp-button--sm"
             :disabled="controlsDisabled"
-            @click="selectedIds = []"
+            @click="clearSelection"
           >
             {{ t('clear') }}
           </button>
@@ -149,7 +149,10 @@
               class="product-check"
               :checked="selectedIds.includes(item.id)"
               :aria-label="t('select', { name: item.name })"
-              :disabled="controlsDisabled || !canReplenish(item)"
+              :disabled="
+                controlsDisabled ||
+                (!selectedIds.includes(item.id) && (!canReplenish(item) || selectedIds.length >= 100))
+              "
               @change="selectItem(item, ($event.target as HTMLInputElement).checked)"
             />
             <button
@@ -389,7 +392,7 @@ const items = ref<ReplenishmentProduct[]>([]),
   total = ref(0),
   pageSize = ref(40)
 const quantities = ref<Record<string, number>>({}),
-  selectedIds = ref<string[]>([])
+  selectedItems = ref<Record<string, ReplenishmentProduct>>({})
 const photoItem = ref<InventoryItem | null>(null),
   photoLoadingId = ref(''),
   photoError = ref<{ id: string; message: 'photoError' | 'photoUnavailable' } | null>(null)
@@ -422,9 +425,10 @@ const controlsDisabled = computed(
   () => locked.value || busy.value || loading.value || loadError.value || reviewOpen.value,
 )
 const eligible = computed(() => items.value.filter(canReplenish))
-const selectedProducts = computed(() =>
-  items.value.filter((item) => selectedIds.value.includes(item.id)),
-)
+// Selection belongs to this replenishment, rather than to the visible page.
+// Keep the reviewed identity/stock snapshot so confirmation can reject stale rows.
+const selectedProducts = computed(() => Object.values(selectedItems.value))
+const selectedIds = computed(() => Object.keys(selectedItems.value))
 const selectedUnits = computed(() =>
   selectedProducts.value.reduce((sum, item) => sum + (Number(quantities.value[item.id]) || 0), 0),
 )
@@ -514,13 +518,35 @@ function validQuantity(item: ReplenishmentProduct) {
   )
 }
 function selectItem(item: ReplenishmentProduct, checked: boolean) {
-  if (controlsDisabled.value || !canReplenish(item)) return
-  selectedIds.value = checked
-    ? [...new Set([...selectedIds.value, item.id])]
-    : selectedIds.value.filter((id) => id !== item.id)
+  if (controlsDisabled.value || (checked && !canReplenish(item))) return
+  if (checked) addSelection([item])
+  else {
+    const next = { ...selectedItems.value }
+    delete next[item.id]
+    selectedItems.value = next
+  }
 }
 function selectPage() {
-  if (!controlsDisabled.value) selectedIds.value = eligible.value.map((item) => item.id)
+  if (!controlsDisabled.value) addSelection(eligible.value)
+}
+function addSelection(rows: ReplenishmentProduct[]) {
+  const next = { ...selectedItems.value }
+  for (const item of rows) {
+    if (!next[item.id]) next[item.id] = { ...item }
+  }
+  if (Object.keys(next).length > 100) {
+    error.value = t('limits')
+    return
+  }
+  selectedItems.value = next
+  error.value = ''
+}
+function clearSelection() {
+  selectedItems.value = {}
+}
+function resetSelection() {
+  clearSelection()
+  quantities.value = {}
 }
 
 async function loadCatalog() {
@@ -532,7 +558,6 @@ async function loadCatalog() {
   listController = new AbortController()
   loading.value = true
   loadError.value = false
-  selectedIds.value = []
   try {
     const result = await inventoryReplenishment.list(
       appliedQuery.value,
@@ -550,7 +575,13 @@ async function loadCatalog() {
     items.value = result.items
     total.value = result.total
     pageSize.value = result.page_size
-    quantities.value = Object.fromEntries(result.items.map((item) => [item.id, 1]))
+    // Retain drafts for selected rows on other pages, without caching the catalog.
+    quantities.value = Object.fromEntries(
+      [...new Set([...selectedIds.value, ...result.items.map((item) => item.id)])].map((id) => [
+        id,
+        quantities.value[id] ?? 1,
+      ]),
+    )
     lastLoadedAt = Date.now()
   } catch {
     if (current(ownerEpoch) && request === listGeneration) loadError.value = true
@@ -585,7 +616,9 @@ async function loadLayouts() {
 }
 function search() {
   if (locked.value || busy.value || reviewOpen.value) return
-  appliedQuery.value = query.value.trim()
+  const nextQuery = query.value.trim()
+  if (nextQuery !== appliedQuery.value) resetSelection()
+  appliedQuery.value = nextQuery
   page.value = 1
   void loadCatalog()
 }
@@ -597,6 +630,7 @@ function changePage(delta: number) {
 }
 function refresh() {
   if (loading.value || locked.value || busy.value || reviewOpen.value || photoLoadingId.value || photoItem.value) return
+  resetSelection()
   void Promise.allSettled([loadCatalog(), loadDevice(), loadLayouts()])
 }
 function onFocus() {
@@ -742,7 +776,7 @@ async function submit() {
     attempt.value = null
     confirmed.value = false
     reviewOpen.value = false
-    selectedIds.value = []
+    resetSelection()
     clearPreview()
     await loadCatalog()
   } catch (cause) {
@@ -758,6 +792,7 @@ async function submit() {
       attempt.value = null
       confirmed.value = false
       reviewOpen.value = false
+      resetSelection()
       clearPreview()
       error.value = typeof response.data?.detail === 'string' ? response.data.detail : t('conflict')
       await loadCatalog()
@@ -804,8 +839,7 @@ async function initialize(userId: string | undefined) {
   listController?.abort()
   clearPreview()
   items.value = []
-  selectedIds.value = []
-  quantities.value = {}
+  resetSelection()
   reviewRows.value = []
   attempt.value = null
   invalidPending.value = false
@@ -883,8 +917,8 @@ async function initialize(userId: string | undefined) {
 }
 onMounted(() => {
   stopUserWatch = watch(
-    () => auth.user?.id,
-    (id) => {
+    () => [auth.user?.id, auth.token] as const,
+    ([id]) => {
       void initialize(id)
     },
     { immediate: true },

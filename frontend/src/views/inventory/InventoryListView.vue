@@ -71,7 +71,7 @@
       <InventoryViewControls
         :mode="viewMode"
         v-model:grid-zoom="mobileGridZoom"
-        :zoom-enabled="inlineProducts"
+        zoom-enabled
         :selection-mode="selectionMode"
         :busy="searchBusy"
         :ready="resultsReady"
@@ -123,14 +123,14 @@
     </div>
 
     <!-- Items list -->
-    <div v-else-if="flatList.length > 0 && (!searchError || showDeviceResults)" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, inlineProducts && `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
+    <div v-else-if="flatList.length > 0 && (!searchError || showDeviceResults)" ref="itemsContainer" class="items-container" :aria-busy="searchBusy || inventoryStore.loadingMore" :class="[`view-${viewMode}`, `grid-zoom-${mobileGridZoom}`, { 'drag-selecting': isDragSelecting }]">
       <svg v-if="inlineProducts && gradeConnections.length" class="grade-connections" aria-hidden="true">
         <path v-for="connection in gradeConnections" :key="connection.id" :d="connection.path" />
       </svg>
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
-        <div v-if="entry.type === 'group'" class="group-card" :class="'alert-' + groupAlertLevel(entry.group.items)" @click="selectionMode ? toggleGroupSelection(entry.group) : toggleExpand(entry.group.group_key)">
+        <div v-if="entry.type === 'group'" class="group-card" :data-grade-key="entry.group.group_key" :class="['alert-' + groupAlertLevel(entry.group.items), { 'card-selected': groupSelectionComplete(entry.group) }]" @click="selectionMode ? toggleGroupSelection(entry.group) : toggleExpand(entry.group.group_key)">
           <div class="group-header">
             <!-- Imagem do grupo (primeira imagem disponível) -->
             <button
@@ -165,10 +165,12 @@
                 v-else-if="canManageGrades"
                 class="group-name group-name-editable"
                 @click.stop="startEditGroupName(entry.group.group_key)"
-                :title="tr('Clique para renomear o grupo')"
+                :title="groupTitle(entry.group.group_key) + ' · ' + tr('Clique para renomear o grupo')"
               >{{ groupTitle(entry.group.group_key) }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
-              <span v-else class="group-name">{{ groupTitle(entry.group.group_key) }}</span>
+              <span v-else class="group-name" :title="groupTitle(entry.group.group_key)">{{ groupTitle(entry.group.group_key) }}</span>
+              <InventoryStockBalances class="group-stock-balances" :loja="entry.group.stock_loja" :deposito="entry.group.stock_deposito" />
               <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr('Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
+              <span v-if="entry.group.matching_count < entry.group.items.length" class="group-context-note">{{ tr('{matching} de {count} variações correspondem aos filtros', { matching: entry.group.matching_count, count: entry.group.items.length }) }}</span>
               <span v-if="groupAlertLevel(entry.group.items) === 'unknown'" class="alert-badge badge-unknown">{{ tr('Revisar estoque') }}</span>
               <span
                 v-if="groupLocationBadge(entry.group.items) === 'deposito'"
@@ -189,8 +191,8 @@
                 :aria-pressed="groupSelectionComplete(entry.group)" @click.stop="toggleGroupSelection(entry.group)">
                 {{ groupSelectionComplete(entry.group) ? '☑' : '☐' }}
               </button>
-              <button v-if="canManageGrades" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Grades') }}</button>
-              <button @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
+              <button v-if="canManageGrades" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')"><span class="group-manage-full">{{ tr('+ Grades') }}</span><span class="group-manage-short" aria-hidden="true">+</span></button>
+              <button type="button" @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :aria-expanded="expandedGroups.includes(entry.group.group_key)" :aria-label="tr(expandedGroups.includes(entry.group.group_key) ? 'Recolher grade {name}' : 'Expandir grade {name}', { name: groupTitle(entry.group.group_key) })" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                 </svg>
@@ -198,19 +200,18 @@
             </div>
           </div>
           <div class="size-chips">
-            <span
+            <div
               v-for="v in sortedByColorThenSize(entry.group.items)"
               :key="v.id"
               class="size-chip"
               :class="'chip-alert-' + stockAlertLevel(v)"
               :title="v.name + ' · ' + (v.inventory_code || v.sku_internal)"
             >
-              <span class="chip-label" @click.stop="openEdit(v)">
-                {{ v.size || v.name }}<template v-if="groupHasMultipleColors(entry.group.items) && v.color"> · {{ v.color }}</template>&nbsp;
-                <template v-if="hasKnownStock(v) && v.stock_deposito > 0 && v.stock_loja > 0">{{ displayStock(v.stock_loja) }}|{{ displayStock(v.stock_deposito) }}</template>
-                <template v-else>{{ displayStock(v.current_stock) }}</template>
-                <span v-if="!hasKnownStock(v)" :title="tr('Revisar estoque')"> · {{ tr('Não informado') }}</span>
-              </span>
+              <button type="button" class="chip-label erp-button erp-button--ghost" :aria-label="tr('Editar {name}', { name: v.name })" @click.stop="openEdit(v)">
+                <span class="chip-identity">{{ v.size || v.name }}<template v-if="groupHasMultipleColors(entry.group.items) && v.color"> · {{ v.color }}</template></span>
+                <InventoryStockBalances :loja="v.stock_loja" :deposito="v.stock_deposito" />
+                <span v-if="!hasKnownStock(v)" class="chip-unknown" :title="tr('Revisar estoque')" :aria-label="tr('Revisar estoque')">?</span>
+              </button>
               <div v-if="canManageGrades" class="chip-remove-wrap">
                 <button
                   class="chip-remove erp-button erp-button--danger erp-button--icon"
@@ -223,7 +224,7 @@
                   <button class="erp-button erp-button--secondary" @click.stop="confirmRemoveChip = null">{{ tr('Não') }}</button>
                 </div>
               </div>
-            </span>
+            </div>
           </div>
 
           <!-- ── Itens expandidos (dentro do card, nunca invadem colunas adjacentes) ── -->
@@ -239,17 +240,15 @@
                 <span v-if="item.color" class="exp-color">{{ item.color }}</span>
               </div>
               <div class="exp-stock-info">
-                <span class="exp-stock-val">{{ tr('L:') }}{{ displayStock(item.stock_loja) }}</span>
-                <span class="exp-stock-sep">·</span>
-                <span class="exp-stock-val">{{ tr('D:') }}{{ displayStock(item.stock_deposito) }}</span>
+                <InventoryStockBalances class="exp-stock-val" :loja="item.stock_loja" :deposito="item.stock_deposito" />
                 <span v-if="!hasKnownStock(item)" class="stock-unknown">{{ tr('Revisar estoque') }}</span>
               </div>
               <span v-if="Number(item.sale_price) > 0" class="exp-price">
                 {{ currencySymbol(item.sale_currency || item.currency) }}&nbsp;{{ Number(item.sale_price).toLocaleString(numberLocale(), { minimumFractionDigits: 0 }) }}
               </span>
               <div class="exp-actions">
-                <button @click.stop="openMovement(item)" :disabled="!hasKnownStock(item)" class="exp-btn exp-move erp-button erp-button--ghost erp-button--icon" :title="tr('Movimentar')">⇅</button>
-                <button @click.stop="openEdit(item)" class="exp-btn exp-edit erp-button erp-button--ghost erp-button--icon" :title="tr('Editar')">✏</button>
+                <button type="button" @click.stop="openMovement(item)" :disabled="!hasKnownStock(item)" class="exp-btn exp-move erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Movimentar {name}', { name: item.name })" :title="tr('Movimentar')">⇅</button>
+                <button type="button" @click.stop="openEdit(item)" class="exp-btn exp-edit erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Editar {name}', { name: item.name })" :title="tr('Editar')">✏</button>
               </div>
             </div>
           </div>
@@ -308,7 +307,7 @@
               </template>
               <span class="list-sep list-sep-spaced">·</span>
               <span class="list-stock" :class="'stock-' + stockAlertLevel(entry.item)">
-                {{ tr('L:') }}{{ displayStock(entry.item.stock_loja) }} {{ tr('D:') }}{{ displayStock(entry.item.stock_deposito) }}
+                <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" />
                 <span v-if="!hasKnownStock(entry.item)" class="stock-unknown"> · {{ tr('Revisar estoque') }}</span>
               </span>
               <template v-if="Number(entry.item.sale_price) > 0">
@@ -356,9 +355,8 @@
               <div class="item-bottom-row">
                 <div class="item-left-info">
                   <span class="stock-number" :class="'stock-' + stockAlertLevel(entry.item)">
-                    {{ tr('Loja:') }}{{ displayStock(entry.item.stock_loja) }} {{ tr('· Dep.:') }}{{ displayStock(entry.item.stock_deposito) }}
+                    <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" />
                   </span>
-                  <span class="dense-stock-total" :class="'stock-' + stockAlertLevel(entry.item)" :aria-label="tr('Saldo total: {count}', { count: displayStock(entry.item.current_stock) })">{{ displayStock(entry.item.current_stock) }} <span>{{ entry.item.unit || 'un' }}</span></span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
                   <span v-if="stockAlertLevel(entry.item) !== 'ok'" class="alert-badge" :class="'badge-' + stockAlertLevel(entry.item)">{{ alertLabel(stockAlertLevel(entry.item)) }}</span>
@@ -506,6 +504,7 @@
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="countListSelection = [...selectedIds]; showCountList = true">{{ tr('Imprimir lista') }}</button>
           <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
+          <button v-if="canManageGrades" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openGradeAi">{{ gradeAiText('title') }}</button>
           <button v-if="canManageGrades" type="button" @click="openSelectionGradeAction" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Grades') }}</button>
           <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
@@ -524,6 +523,8 @@
         </div>
       </div>
     </transition>
+
+    <GradeAiModal v-if="showGradeAi && canManageGrades" :item-ids="gradeAiSelection" :existing-group-keys="existingGroupKeys" @close="showGradeAi = false" @applied="onGradeAiApplied" />
 
     <GradeMembershipModal
       v-if="gradeManagerItem || gradeManagerKey"
@@ -587,7 +588,7 @@ import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { uniqueLabels } from '@/services/inventoryTaxonomy'
 import { vErpDialog } from '@/directives/erpDialog'
 import { startInventoryDrag } from '@/services/inventoryDragSelection'
-import { displayStock, hasKnownStock, stockAlertLevel, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
+import { displayStock, hasKnownStock, stockAlertLevel, sumStock, UNKNOWN_STOCK_MESSAGE } from '@/services/inventoryStock'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr, numberLocale } = useInventoryI18n()
 import ErpLoadingState from '@/components/ui/ErpLoadingState.vue'
@@ -599,6 +600,7 @@ import { useInventoryStore } from '@/stores/inventory'
 import { useAuthStore } from '@/stores/auth'
 import { prepareCatalogIndex, searchDeviceCatalog } from '@/services/catalogIndex'
 import ProductThumbnail from '@/components/inventory/ProductThumbnail.vue'
+import InventoryStockBalances from '@/components/inventory/InventoryStockBalances.vue'
 import { type RelatedProductCursor } from '@/services/api'
 import ProductGalleryModal from '@/components/inventory/ProductGalleryModal.vue'
 import InventoryProductLink from '@/components/inventory/InventoryProductLink.vue'
@@ -617,6 +619,8 @@ import BulkEditModal from '@/components/inventory/BulkEditModal.vue'
 import BulkTransferModal from '@/components/inventory/BulkTransferModal.vue'
 import InventoryCountListModal from '@/components/inventory/InventoryCountListModal.vue'
 import GroupingSuggestionModal from '@/components/inventory/GroupingSuggestionModal.vue'
+import GradeAiModal from '@/components/inventory/GradeAiModal.vue'
+import { useGradeAiText } from '@/components/inventory/gradeAiMessages'
 import GradeMembershipModal from '@/components/inventory/GradeMembershipModal.vue'
 import LabelTemplatesModal from '@/components/inventory/LabelTemplatesModal.vue'
 import InventoryDiagnosticsPanel from '@/components/inventory/InventoryDiagnosticsPanel.vue'
@@ -658,7 +662,12 @@ function filterReceiving(lot:ReceivingLot) {
 function clearReceiving() { receivingFilterName.value=''; inventoryStore.filters.receiving_lot_id=''; reloadItems(); if(groupMode.value) loadGroupsFiltered() }
 
 const auth = useAuthStore()
+const gradeAiText = useGradeAiText()
+const showGradeAi = ref(false), gradeAiSelection = ref<string[]>([])
+function openGradeAi() { if (canManageGrades.value) { gradeAiSelection.value = [...selectedIds.value]; showGradeAi.value = true } }
+async function onGradeAiApplied() { showGradeAi.value = false; await onGradeMembershipChanged() }
 const canManageGrades = computed(() => ['ADMIN', 'GERENTE'].includes(auth.userRole))
+watch(canManageGrades, allowed => { if (!allowed) showGradeAi.value = false })
 
 const searchQuery = ref(inventoryStore.filters.search || '')
 const activeStatus = ref((route.query.status as string) || inventoryStore.filters.status || '')
@@ -784,7 +793,7 @@ const suggestionModalItems = ref<InventoryItem[]>([])
 const selectionDialogOpen = computed(() =>
   showReceiving.value || showDiagnostics.value || showScanner.value || showDeletedHistory.value ||
   showItemForm.value || showMovementModal.value || showImport.value || showBulkEdit.value ||
-  showBulkTransfer.value || showCountList.value || showBulkDelete.value || showSuggestionModal.value ||
+  showGradeAi.value || showBulkTransfer.value || showCountList.value || showBulkDelete.value || showSuggestionModal.value ||
   showLabelTemplates.value || showGroupModal.value || !!gradeManagerItem.value ||
   !!gradeManagerKey.value || !!imageModalItem.value || Object.hasOwn(route.query, 'item_id')
 )
@@ -1126,6 +1135,9 @@ interface GroupEntry {
   group_key: string
   items: InventoryItem[]
   total_stock: number | null
+  stock_loja: number | null
+  stock_deposito: number | null
+  matching_count: number
 }
 
 type FlatEntry = { type: 'group'; group: GroupEntry } | { type: 'item'; item: InventoryItem }
@@ -1197,6 +1209,9 @@ const flatList = computed<FlatEntry[]>(() => {
       group_key: g.group_key,
       items: visibleItems,
       total_stock: g.total_stock,
+      stock_loja: sumStock(visibleItems, 'stock_loja'),
+      stock_deposito: sumStock(visibleItems, 'stock_deposito'),
+      matching_count: g.matching_count ?? visibleItems.length,
     }})
     // Itens expandidos são renderizados DENTRO do card de grupo (não como vizinhos no grid)
   }
@@ -1825,14 +1840,15 @@ onMounted(async () => {
 /* ── Group card ───────────────────────────────────────────────── */
 .group-card {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr) auto;
-  gap: 8px 14px;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 7px 10px;
+  min-width: 0;
+  align-content: start;
   background: white;
   border-radius: 7px;
   border: 1px solid #e5e7eb;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
-  grid-column: 1 / -1; /* sempre largura total — nunca invadem colunas */
   transition: box-shadow 0.15s;
   user-select: none;
 }
@@ -1844,6 +1860,7 @@ onMounted(async () => {
 
 /* Lista: card compacto como linha de lista */
 .view-list .group-card {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   border-radius: 5px;
   padding: 0.35rem 0.65rem;
   border-left-width: 3px;
@@ -1851,6 +1868,9 @@ onMounted(async () => {
 
 /* Grade (grid): fundo levemente diferente para distinguir das tiles de item */
 .view-grid .group-card {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 0;
   background: #f8fafc;
   border-style: solid;
   border-color: #e2e8f0;
@@ -1874,6 +1894,7 @@ onMounted(async () => {
 .group-exp-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.28rem 0.5rem;
   border-radius: 5px;
@@ -1886,12 +1907,11 @@ onMounted(async () => {
 .exp-alert-low  { border-left-color: #f59e0b; }
 .exp-alert-high { border-left-color: #8b5cf6; }
 .exp-alert-ok   { border-left-color: #d1d5db; }
-.exp-left { display: flex; align-items: center; gap: 0.35rem; flex: 1; min-width: 0; }
+.exp-left { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; flex: 1 1 72px; min-width: 0; }
 .exp-size { font-size: 0.75rem; font-weight: 700; color: #111827; white-space: nowrap; }
 .exp-color { font-size: 0.7rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.exp-stock-info { display: flex; align-items: center; gap: 0.2rem; flex-shrink: 0; }
+.exp-stock-info { display: flex; align-items: center; flex-wrap: wrap; gap: 0.2rem; min-width: 0; }
 .exp-stock-val { font-size: 0.7rem; font-weight: 600; color: #374151; }
-.exp-stock-sep { font-size: 0.65rem; color: #d1d5db; }
 .exp-price { font-size: 0.7rem; font-weight: 600; color: #059669; white-space: nowrap; flex-shrink: 0; }
 .exp-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
 .exp-btn {
@@ -1909,20 +1929,22 @@ onMounted(async () => {
 .exp-edit { background: #eff6ff; color: #2563eb; }
 
 .group-header { display: contents; }
-.group-thumb-wrap { grid-column: 1; grid-row: 1 / span 2; align-self: start; width: 112px; height: 112px; padding: 0; border-radius: 10px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; }
+.group-thumb-wrap { grid-column: 1; grid-row: 1; align-self: start; width: 56px; height: 56px; padding: 0; border-radius: 7px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; }
 .group-thumb { width: 100%; height: 100%; object-fit: contain; }
 .group-thumb-wrap:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
 .group-title-area { grid-column: 2; grid-row: 1; align-self: center; }
 .group-title-area .group-name { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-.group-btns { grid-column: 3; grid-row: 1; align-self: start; }
-.group-card > .size-chips { grid-column: 2 / -1; grid-row: 2; align-content: start; }
-.group-card > .group-exp-section { grid-column: 1 / -1; }
-@media (max-width: 600px) {
-  .group-card { grid-template-columns: 80px minmax(0, 1fr) auto; gap: 8px; }
-  .group-thumb-wrap { width: 80px; height: 80px; }
-  .group-card .group-btns { flex-direction: column; gap: 4px; }
-  .group-card > .size-chips { grid-column: 1 / -1; grid-row: 3; }
-}
+.group-btns { grid-column: 1 / -1; grid-row: 3; align-self: start; justify-content: flex-end; }
+.group-card > .size-chips { grid-column: 1 / -1; grid-row: 2; align-content: start; }
+.group-card > .group-exp-section { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
+.view-list .group-thumb-wrap { width: 32px; height: 32px; }
+.view-list .group-btns { grid-column: 3; grid-row: 1; }
+.view-list .group-card > .size-chips { grid-column: 2 / -1; }
+.view-grid .group-thumb-wrap { grid-column: 1; grid-row: 1; width: 100%; height: 110px; border: 0; border-bottom: 1px solid #e2e8f0; border-radius: 6px 6px 0 0; }
+.view-grid .group-title-area { grid-column: 1; grid-row: 2; padding: 0 .5rem; }
+.view-grid .group-card > .size-chips { grid-row: 3; padding: 0 .5rem; }
+.view-grid .group-btns { grid-row: 4; padding: 0 .5rem .5rem; }
+.view-grid .group-card > .group-exp-section { grid-row: 5; margin: 0 .5rem .5rem; }
 .group-thumb-placeholder { color: #9ca3af; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .thumb-clickable { cursor: zoom-in; }
 .group-title-area { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; flex-wrap: wrap; }
@@ -1931,18 +1953,23 @@ onMounted(async () => {
 .group-name-editable:hover { background: #eff6ff; color: #2563eb; }
 .edit-pencil { opacity: 0; flex-shrink: 0; transition: opacity 0.15s; }
 .group-name-editable:hover .edit-pencil { opacity: 1; }
-.group-name-input { font-weight: 700; font-size: 0.85rem; color: #111827; border: 1.5px solid #3b82f6; border-radius: 5px; padding: 0.05rem 0.35rem; outline: none; background: #eff6ff; min-width: 80px; max-width: 200px; }
-.group-total-stock { font-size: 0.72rem; color: #6b7280; white-space: nowrap; }
+.group-name-input { font-weight: 700; font-size: 0.85rem; color: #111827; border: 1.5px solid #3b82f6; border-radius: 5px; padding: 0.05rem 0.35rem; outline: none; background: #eff6ff; min-width: 0; width: 100%; max-width: 200px; box-sizing: border-box; }
+.group-stock-balances { font-size: .72rem; font-weight: 700; color: #334155; }
+.group-total-stock { font-size: 0.68rem; color: #6b7280; white-space: nowrap; }
+.group-context-note { flex-basis: 100%; font-size: .65rem; color: #64748b; }
 .group-loc-badge { font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 10px; white-space: nowrap; }
 .badge-deposito { background: #ede9fe; color: #7c3aed; }
 .badge-mixed { background: #e0f2fe; color: #0369a1; }
 .group-barcode { font-family: monospace; font-size: 0.68rem; color: #9ca3af; display: flex; align-items: center; gap: 0.2rem; white-space: nowrap; }
 .group-btns { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.group-manage-short { display: none; }
 .group-select-btn { min-width: 32px; padding-inline: .35rem; font-size: 1rem; }
 .group-select-btn[aria-pressed='true'] { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
 .size-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.size-chip { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.35rem 0.18rem 0.55rem; border-radius: 20px; border: 1px solid transparent; white-space: nowrap; }
-.chip-label { cursor: pointer; }
+.size-chip { display: inline-flex; align-items: center; gap: 0.2rem; min-width: 0; max-width: 100%; font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.35rem 0.18rem 0.55rem; border-radius: 9px; border: 1px solid transparent; }
+:is(#app, body) .size-chip .chip-label { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:flex-start; gap:3px 5px; min-width:0; min-height:0; height:auto; padding:0; border:0; border-radius:0; background:none; color:inherit; font:inherit; text-align:left; }
+.chip-identity { overflow-wrap: anywhere; }
+.chip-unknown { font-weight: 700; }
 .chip-remove { background: none; border: none; cursor: pointer; font-size: 0.75rem; line-height: 1; padding: 0 0.1rem; opacity: 0.45; font-weight: 700; }
 .chip-remove:hover { opacity: 1; }
 .chip-alert-out      { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
@@ -2181,8 +2208,9 @@ onMounted(async () => {
 .items-container:has(.grade-connections) { gap:.6rem; }
 
 /* Only the photo-square view becomes denser; compact, list and desktop retain their sizing. */
-.dense-action-icon, .dense-stock-total, .grade-label-short, .list-action-icon { display:none; }
+.dense-action-icon, .grade-label-short, .list-action-icon { display:none; }
 @media (max-width:600px) {
+  .chip-remove-confirm { position:fixed; bottom:12px; bottom:calc(12px + env(safe-area-inset-bottom, 0px)); left:12px; right:12px; z-index:1001; justify-content:center; flex-wrap:wrap; white-space:normal; padding:10px; }
   .view-list .list-left { gap:5px; }
   .view-list .list-name { flex:1; min-width:0; }
   .view-list :is(.list-sep,.list-attr,.list-brand-tag,.list-price,.list-barcode,.list-actions .action-label) { display:none; }
@@ -2203,12 +2231,11 @@ onMounted(async () => {
   .view-grid.grid-zoom-0 .item-name { font-size:.6875rem; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-color-tag { padding:0; max-width:100%; background:none; font-size:.625rem; line-height:1.2; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-name-row { gap:2px; }
-  .view-grid:is(.grid-zoom-0,.grid-zoom-1) :is(.item-barcode-row,.item-sub,.stock-number,.item-location-inline,.alert-badge) { display:none; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) :is(.item-barcode-row,.item-sub,.item-location-inline,.alert-badge) { display:none; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-bottom-row { margin:0; gap:4px; }
-  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-left-info { width:100%; justify-content:space-between; gap:2px; flex-wrap:nowrap; min-width:0; }
-  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .dense-stock-total { display:inline-flex; gap:2px; align-items:baseline; font-size:.65rem; font-weight:700; min-width:0; overflow:hidden; white-space:nowrap; }
-  .dense-stock-total > span { font-size:.6rem; font-weight:400; }
-  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-size-inline { font-size:.625rem; padding:1px 3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-left-info { width:100%; justify-content:space-between; gap:3px; min-width:0; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .stock-number { display:block; font-size:.625rem; min-width:0; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-size-inline { font-size:.625rem; padding:1px 3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .action-label { display:none; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .dense-action-icon { display:block; }
   :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-actions > .action-btn { flex:1 1 0; min-height:28px; height:28px; padding:3px; border-radius:6px; gap:0; }
@@ -2219,5 +2246,28 @@ onMounted(async () => {
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .card-check { top:3px; left:3px; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-extra { padding:5px; overflow-wrap:anywhere; }
   .view-grid:is(.grid-zoom-0,.grid-zoom-1) .item-extra-row { flex-wrap:wrap; gap:2px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-card { border-radius:8px; border-left-width:2px; gap:5px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-thumb-wrap { height:clamp(68px,22vw,110px); }
+  .view-grid.grid-zoom-0 .group-thumb-wrap { height:clamp(50px,15vw,78px); }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-title-area { padding:0 4px; gap:3px 5px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-name { font-size:.6875rem; line-height:1.2; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) :is(.group-stock-balances,.group-total-stock,.group-context-note) { font-size:.6rem; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-barcode { display:none; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-card > .size-chips { padding:0 3px; gap:3px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .size-chip { width:100%; padding:2px 3px; gap:1px; font-size:.6rem; border-radius:5px; }
+  :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .chip-label { flex:1; gap:1px 3px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .chip-remove-wrap { align-self:flex-start; }
+  :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .chip-remove { width:16px; min-height:22px; height:22px; padding:0; font-size:.8rem; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-btns { padding:0 3px 4px; gap:3px; }
+  :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-btns > button { flex:1 1 0; min-width:0; width:auto; min-height:28px; height:28px; padding:2px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-manage-full { display:none; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-manage-short { display:inline; font-size:1rem; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-card > .group-exp-section { margin:0 3px 4px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .group-exp-row { padding:3px; gap:3px; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .exp-left { flex-basis:100%; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) :is(.exp-size,.exp-color,.exp-price) { white-space:normal; overflow-wrap:anywhere; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) :is(.exp-stock-val,.exp-size,.exp-color,.exp-price,.stock-unknown) { font-size:.6rem; }
+  .view-grid:is(.grid-zoom-0,.grid-zoom-1) .exp-actions { width:100%; }
+  :is(#app,body) .view-grid:is(.grid-zoom-0,.grid-zoom-1) .exp-actions > button { flex:1 1 0; min-width:0; width:auto; min-height:28px; height:28px; padding:2px; }
 }
 </style>

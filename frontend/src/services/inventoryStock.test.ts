@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canWithdrawStock, displayStock, hasKnownStock, stockAlertLevel } from './inventoryStock'
+import { canWithdrawStock, displayStock, hasKnownStock, stockAlertLevel, sumStock } from './inventoryStock'
 
 const complete = { current_stock: 5, stock_loja: 5, stock_deposito: 0, alert_level: 'ok' }
 describe('Nullable inventory stock', () => {
@@ -19,5 +19,12 @@ describe('Nullable inventory stock', () => {
   it('retains inactive status priority and permits a known positive withdrawal', () => {
     expect(stockAlertLevel({ ...complete, stock_loja: null, alert_level: 'inactive' })).toBe('inactive')
     expect(canWithdrawStock(complete)).toBe(true)
+  })
+  it('sums each location independently without deriving a missing balance from the total', () => {
+    const items = [complete, { current_stock: null, stock_loja: null, stock_deposito: 2 }]
+    expect(sumStock(items, 'stock_loja')).toBeNull()
+    expect(sumStock(items, 'stock_deposito')).toBe(2)
+    expect(sumStock(items, 'current_stock')).toBeNull()
+    expect(sumStock([{ ...complete, stock_loja: 0 }], 'stock_loja')).toBe(0)
   })
 })
