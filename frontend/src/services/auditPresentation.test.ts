@@ -28,3 +28,10 @@ describe('Audit operation descriptions',()=>{
     expect(eventSummary(event,'en',label)).toBe('Removed 1 units from Store')
   })
 })
+
+
+it('describes confirmed grade links using the reviewed destination instead of internal receipt hashes',()=>{
+  const event={...entry({target_group_key:'Polo Eleven',item_ids:['one','two'],preview_hash:'internal'}),entity:'inventory_grade_links',action:'grade_link'}
+  expect(eventSummary(event,'pt',label)).toBe('Vinculou 2 produtos à grade Polo Eleven')
+  expect(eventSummary(event,'es',label)).toBe('Vinculó 2 productos al grupo Polo Eleven')
+})

@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   layouts: vi.fn(),
   preview: vi.fn(),
   batch: vi.fn(),
-  auth: { user: { id: 'owner' }, userRole: 'ADMIN', isOwner: true },
+  auth: { user: { id: 'owner' }, token: 'owner-session', userRole: 'ADMIN', isOwner: true },
 }))
 vi.mock('@/services/inventoryReplenishment', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/inventoryReplenishment')>()),
@@ -124,10 +124,10 @@ async function click(text: string, index = 0) {
   button.click()
   await flush()
 }
-async function check(selector: string) {
+async function check(selector: string, checked = true) {
   const input = document.querySelector<HTMLInputElement>(selector)!
   expect(input).toBeTruthy()
-  input.checked = true
+  input.checked = checked
   input.dispatchEvent(new Event('change', { bubbles: true }))
   await flush()
 }
@@ -136,6 +136,16 @@ async function quantity(value: string, index = 0) {
   input.value = value
   input.dispatchEvent(new Event('input', { bubbles: true }))
   await flush()
+}
+function paginatedProducts(pages: ReplenishmentProduct[][]) {
+  mocks.list.mockImplementation((_q: string, page: number) =>
+    Promise.resolve({
+      items: pages[page - 1],
+      total: pages.reduce((sum, rows) => sum + rows.length, 0),
+      page,
+      page_size: pages[0].length,
+    }),
+  )
 }
 async function mount(locale = 'pt') {
   root = document.createElement('div')
@@ -162,7 +172,9 @@ beforeEach(() => {
   vi.resetAllMocks()
   sessionStorage.clear()
   localStorage.clear()
-  mocks.auth = reactive({ user: { id: 'owner' }, userRole: 'ADMIN', isOwner: true })
+  mocks.auth = reactive({
+    user: { id: 'owner' }, token: 'owner-session', userRole: 'ADMIN', isOwner: true,
+  })
   vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:preview'), revokeObjectURL: vi.fn() })
   mocks.list.mockResolvedValue({
     items: [product, other, blocked],
@@ -214,6 +226,14 @@ it('validates identity, coherent stock, quantity limits and recoverable frozen r
         { ...product, copies: 1 },
         { ...product, copies: 1 },
       ],
+      'key',
+    ),
+  ).toThrow()
+  expect(() =>
+    replenishmentRequest(
+      Array.from({ length: 21 }, (_, i) => ({
+        ...product, id: `p${i}`, stock_deposito: 100, current_stock: 100, copies: 100,
+      })),
       'key',
     ),
   ).toThrow()
@@ -335,13 +355,21 @@ it('requires real preview and explicit confirmation before one atomic transfer p
 })
 
 it('freezes the original request after timeout and recovers it after reload without a new preview or key', async () => {
+  paginatedProducts([[product], [other]])
   await mount()
   await quantity('2')
-  await click('Reposto')
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await quantity('2')
+  await click('Selecionar esta página')
+  await click('Repor selecionados')
   await check('.confirmation-line input')
   mocks.confirm.mockRejectedValueOnce(new Error('timeout'))
   await click('Confirmar reposição e imprimir')
   const original = JSON.parse(JSON.stringify(mocks.confirm.mock.calls[0][0]))
+  expect(original.items.map((item: { item_id: string; copies: number }) => [item.item_id, item.copies])).toEqual([
+    ['p1', 2], ['p2', 2],
+  ])
   expect(buttons('Recuperar confirmação')).toHaveLength(2)
   await click('Cancelar')
   expect(buttons('Reposto')[0].disabled).toBe(true)
@@ -432,6 +460,148 @@ it('supports batch quantities, uses the chosen layout revision and refreshes pre
       { item_id: 'p2', copies: 1 },
     ],
   })
+})
+
+it('keeps selected identities and quantities across pages and reviews every selected label', async () => {
+  paginatedProducts([[product], [other]])
+  await mount()
+  await quantity('3')
+  await check('.product-check')
+  await click('Próxima')
+  expect(root.querySelector('.selection-footer')?.textContent).toContain('1 produtos · 3 unidades · 3 etiquetas')
+  await quantity('2')
+  await check('.product-check')
+  expect(root.querySelector('.selection-footer')?.textContent).toContain('2 produtos · 5 unidades · 5 etiquetas')
+  await click('Anterior')
+  expect(root.querySelector<HTMLInputElement>('.product-check')?.checked).toBe(true)
+  expect(root.querySelector<HTMLInputElement>('.product-actions input')?.value).toBe('3')
+  await click('Repor selecionados')
+  expect(Array.from(document.querySelectorAll('.review-product')).map((row) => row.textContent)).toEqual([
+    expect.stringContaining(product.name), expect.stringContaining(other.name),
+  ])
+  expect(document.querySelector('.review-summary')?.textContent).toContain('2 produtos · 5 unidades · 5 etiquetas')
+  await chooseDropdown(document.querySelectorAll('.replenishment-dialog .erp-dropdown')[1], 'p2')
+  await flush()
+  expect(mocks.preview).toHaveBeenLastCalledWith('p2', undefined)
+  expect(mocks.confirm).not.toHaveBeenCalled()
+  await check('.confirmation-line input')
+  await click('Confirmar reposição e imprimir')
+  expect(mocks.confirm).toHaveBeenCalledTimes(1)
+  expect(mocks.confirm.mock.calls[0][0].items).toEqual([
+    expect.objectContaining({ item_id: 'p1', copies: 3, expected_stock_deposito: 4 }),
+    expect.objectContaining({ item_id: 'p2', copies: 2, expected_stock_deposito: 2 }),
+  ])
+  expect(root.querySelector('.selection-footer')).toBeNull()
+})
+
+it('adds each page without duplicates and deselects rows without losing selections on other pages', async () => {
+  const third = { ...product, id: 'p4', name: 'Terceiro produto' }
+  paginatedProducts([[product, other], [third]])
+  await mount()
+  await quantity('2', 1)
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await click('Selecionar esta página')
+  await click('Selecionar esta página')
+  expect(root.querySelector('.selection-footer')?.textContent).toContain('3 produtos · 4 unidades · 4 etiquetas')
+  await check('.product-check', false)
+  expect(root.querySelector('.selection-footer')?.textContent).toContain('2 produtos · 3 unidades · 3 etiquetas')
+  await click('Anterior')
+  await check('.product-check', false)
+  expect(root.querySelector('.selection-footer')?.textContent).toContain('1 produtos · 2 unidades · 2 etiquetas')
+  await click('Próxima')
+  expect(root.querySelector<HTMLInputElement>('.product-check')?.checked).toBe(false)
+  await click('Repor selecionados')
+  expect(document.querySelectorAll('.review-product')).toHaveLength(1)
+  expect(document.querySelector('.review-product')?.textContent).toContain(other.name)
+  expect(document.querySelector('.review-summary')?.textContent).toContain('1 produtos · 2 unidades · 2 etiquetas')
+  await click('Cancelar')
+  await click('Limpar seleção')
+  expect(root.querySelector('.selection-footer')).toBeNull()
+  expect(mocks.confirm).not.toHaveBeenCalled()
+})
+
+it('refuses an entire page exceeding the 100-product limit without truncating existing selection', async () => {
+  const rows = Array.from({ length: 120 }, (_, index) => ({ ...product, id: `p${index}` }))
+  paginatedProducts([rows.slice(0, 40), rows.slice(40, 80), rows.slice(80)])
+  await mount()
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await click('Selecionar esta página')
+  expect(root.querySelector('.selection-footer')?.textContent).toContain('80 selecionados')
+  expect(root.textContent).toContain('Selecione até 100 produtos')
+  expect(root.querySelectorAll('.product-check:checked')).toHaveLength(0)
+  expect(mocks.confirm).not.toHaveBeenCalled()
+})
+
+it('clears all pages and quantity drafts on an explicit refresh or a changed search', async () => {
+  paginatedProducts([[product], [other]])
+  await mount()
+  await quantity('3')
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await quantity('2')
+  await click('Selecionar esta página')
+  root.querySelector<HTMLButtonElement>('[aria-label="Atualizar"]')!.click()
+  await flush()
+  expect(root.querySelector('.selection-footer')).toBeNull()
+  expect(root.querySelector<HTMLInputElement>('.product-actions input')?.value).toBe('1')
+  await click('Anterior')
+  expect(root.querySelector<HTMLInputElement>('.product-actions input')?.value).toBe('1')
+  await quantity('3')
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await click('Selecionar esta página')
+  const input = root.querySelector<HTMLInputElement>('[type=search]')!
+  input.value = 'camiseta'
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  await click('Buscar')
+  expect(root.querySelector('.selection-footer')).toBeNull()
+  expect(root.querySelector<HTMLInputElement>('.product-check')?.checked).toBe(false)
+  expect(root.querySelector<HTMLInputElement>('.product-actions input')?.value).toBe('1')
+})
+
+it('retains selected snapshots from other pages until the backend definitively rejects stale stock', async () => {
+  paginatedProducts([[product], [other]])
+  await mount()
+  await quantity('3')
+  await click('Selecionar esta página')
+  await click('Próxima')
+  await click('Selecionar esta página')
+  await click('Repor selecionados')
+  await check('.confirmation-line input')
+  mocks.confirm.mockRejectedValueOnce({ response: { status: 409, data: { detail: 'O saldo mudou.' } } })
+  await click('Confirmar reposição e imprimir')
+  expect(mocks.confirm.mock.calls[0][0].items).toHaveLength(2)
+  expect(mocks.confirm.mock.calls[0][0].items[0]).toMatchObject({ item_id: 'p1', copies: 3, expected_stock_deposito: 4 })
+  expect(root.querySelector('.selection-footer')).toBeNull()
+  expect(sessionStorage.getItem('eleven-replenishment-confirmation:owner')).toBeNull()
+  await click('Anterior')
+  expect(root.querySelector<HTMLInputElement>('.product-check')?.checked).toBe(false)
+  expect(root.querySelector<HTMLInputElement>('.product-actions input')?.value).toBe('1')
+  expect(mocks.confirm).toHaveBeenCalledTimes(1)
+})
+
+it('clears selections for a new session of the same user and ignores a late page response', async () => {
+  paginatedProducts([[product], [other]])
+  await mount()
+  await quantity('3')
+  await click('Selecionar esta página')
+  const latePage = deferred<{ items: ReplenishmentProduct[]; total: number; page: number; page_size: number }>()
+  mocks.list.mockReturnValueOnce(latePage.promise)
+  await click('Próxima')
+  mocks.auth.token = 'new-owner-session'
+  await flush()
+  expect(root.querySelector('.selection-footer')).toBeNull()
+  expect(root.querySelector('.product-row')?.textContent).toContain(product.name)
+  expect(root.querySelector<HTMLInputElement>('.product-actions input')?.value).toBe('1')
+  latePage.resolve({ items: [other], total: 2, page: 2, page_size: 1 })
+  await flush()
+  expect(root.querySelector('.product-row')?.textContent).toContain(product.name)
+  expect(root.textContent).toContain('Página 1 de 2')
+  expect(mocks.confirm).not.toHaveBeenCalled()
 })
 
 it('blocks new replenishment without a configured printer or a successful preview', async () => {

@@ -16,7 +16,8 @@ export const replenishmentMessages = {
     selectPage: 'Selecionar esta página',
     clear: 'Limpar seleção',
     selected: '{count} selecionados',
-    selectionHint: 'A seleção é desta página; mudar a busca ou atualizar limpa a seleção.',
+    selectionHint:
+      'A seleção e as quantidades acompanham você entre páginas. Selecionar esta página acrescenta seus produtos; mudar a busca ou atualizar limpa a seleção.',
     select: 'Selecionar {name}',
     quantity: 'Quantidade de {name}',
     store: 'Loja',
@@ -109,7 +110,7 @@ export const replenishmentMessages = {
     clear: 'Limpiar selección',
     selected: '{count} seleccionados',
     selectionHint:
-      'La selección corresponde a esta página; cambiar la búsqueda o actualizar la elimina.',
+      'La selección y las cantidades se conservan entre páginas. Seleccionar esta página agrega sus productos; cambiar la búsqueda o actualizar elimina la selección.',
     select: 'Seleccionar {name}',
     quantity: 'Cantidad de {name}',
     store: 'Tienda',
@@ -197,7 +198,7 @@ export const replenishmentMessages = {
     clear: 'Clear selection',
     selected: '{count} selected',
     selectionHint:
-      'Selection is limited to this page; changing the search or refreshing clears it.',
+      'Selection and quantities stay with you across pages. Select this page adds its products; changing the search or refreshing clears selection.',
     select: 'Select {name}',
     quantity: 'Quantity for {name}',
     store: 'Store',

@@ -1,6 +1,7 @@
 import type { AuditEvent, AuditGroup } from './access'
 
 const messages = {
+  gradeLinked: ['Vinculou {count} produtos à grade {name}', 'Vinculó {count} productos al grupo {name}', 'Linked {count} products to group {name}'],
   operations: ['Operações', 'Operaciones', 'Operations'],
   groupedHelp: ['Cada venda reúne seus registros. Outras alterações são agrupadas pela operação confirmada. Os filtros também se aplicam aos detalhes.', 'Cada venta reúne sus registros. Los demás cambios se agrupan por operación confirmada. Los filtros también se aplican a los detalles.', 'Each sale contains its records. Other changes are grouped by confirmed operation. Filters also apply to the details.'],
   records: ['{count} registros', '{count} registros', '{count} records'],
@@ -51,6 +52,7 @@ export function stockBalanceText(event:AuditEvent,locale:string) {
   return pair('totalStock',before,after)
 }
 export function eventSummary(event:AuditEvent,locale:string,actionName:(value:string)=>string) {
+  if(event.entity==='inventory_grade_links'&&event.action==='grade_link') return auditText('gradeLinked',locale,{count:Array.isArray(event.changes.item_ids)?event.changes.item_ids.length:0,name:typeof event.changes.target_group_key==='string'?event.changes.target_group_key:''})
   const movement={...object(eventContext(event).movement)}
   if(event.entity==='stock_movements') {
     if(event.action!=='create') return `${actionName(event.action)} · ${auditText('stockRecord',locale)}`

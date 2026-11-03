@@ -3180,5 +3180,11 @@
   "Há saldo desconhecido. Confira o estoque antes de movimentar.": [
     "Hay existencias sin confirmar. Revise el inventario antes de moverlas.",
     "Some stock is unconfirmed. Check inventory before making a movement."
-  ]
+  ],
+  "L": ["T", "S"],
+  "D": ["D", "W"],
+  "Loja: {loja} · Depósito: {deposito}": ["Tienda: {loja} · Depósito: {deposito}", "Store: {loja} · Warehouse: {deposito}"],
+  "Expandir grade {name}": ["Expandir grupo {name}", "Expand variant group {name}"],
+  "Recolher grade {name}": ["Contraer grupo {name}", "Collapse variant group {name}"],
+  "{matching} de {count} variações correspondem aos filtros": ["{matching} de {count} variantes coinciden con los filtros", "{matching} of {count} variants match the filters"]
 }

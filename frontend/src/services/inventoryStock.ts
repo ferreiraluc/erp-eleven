@@ -14,6 +14,17 @@ export function displayStock(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : '—'
 }
 
+/** A group balance is known only when every member has a balance for that location. */
+export function sumStock(items: readonly Balances[], field: keyof Balances): number | null {
+  let total = 0
+  for (const item of items) {
+    const value = item[field]
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null
+    total += value
+  }
+  return total
+}
+
 export function canWithdrawStock(item: Balances): boolean {
   return hasKnownStock(item) && item.current_stock > 0 && (item.stock_loja > 0 || item.stock_deposito > 0)
 }

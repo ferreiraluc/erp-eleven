@@ -1273,10 +1273,10 @@ continua sendo duas colunas com os detalhes atuais; a preferência de zoom fica
 salva naquele navegador. Se os filtros estiverem recolhidos, abra **Filtros** para
 acessar o ícone. O ajuste não altera a busca, a seleção nem os produtos já carregados.
 
-Nas posições menores, cada card prioriza foto, nome, cor, tamanho e saldo total
-(loja + depósito). Movimentar e Editar aparecem como ícones identificados; os
-vínculos e indicadores de grade continuam visíveis. Amplie o zoom para conferir
-os demais dados e a separação dos saldos por local. Quatro colunas permitem ver
+Nas posições menores, cada card prioriza foto, nome, cor, tamanho e saldos por
+local: **1 L | 2 D** significa uma unidade na loja e duas no depósito. Zero é
+exibido como zero; saldo ausente permanece **—**. Movimentar e Editar aparecem
+como ícones identificados; vínculos e indicadores de grade continuam visíveis. Quatro colunas permitem ver
 oito cards em duas linhas no espaço do print de referência (408 × 622 px), mas
 a quantidade inteiramente visível depende da altura da tela e do texto ampliado.
 
@@ -1284,9 +1284,8 @@ a quantidade inteiramente visível depende da altura da tela e do texto ampliado
 No celular, prioriza nome, tamanho e saldos, com as ações em ícones. Tocar na
 miniatura abre a foto; itens sem foto mostram um ícone neutro. As imagens usam
 o carregamento progressivo e o cache limitado existentes; o original só é
-solicitado ao abrir a foto ou a edição. **Compacto**, **Ver grades** e o tamanho
-dos cards em tablets/desktop preservam seus controles anteriores; o zoom é
-exclusivo dos quadrados individuais no celular.
+solicitado ao abrir a foto ou a edição. **Ver grades** acompanha Lista, Compacto e Quadrados. O zoom dos Quadrados
+também ajusta os cards de grades no celular; os controles ficam no mesmo dropdown.
 
 
 ## Edição em lote: painel unificado (26/10/2026)
@@ -1446,3 +1445,69 @@ alternativa disponível. A precisão/foco em iPhones reais depende da câmera e 
 Safari e deve ser conferida no aparelho; os testes automatizados verificam
 seleção, fallback, controles opcionais e leitura única, sem comprovar tempo de
 foco físico. API de referência: [Html5Qrcode](https://scanapp.org/html5-qrcode-docs/docs/apis/classes/Html5Qrcode).
+
+
+## Reposição entre páginas e visualização de grades (02/11/2026)
+
+Na reposição, a seleção e as quantidades são mantidas por ID entre páginas.
+**Selecionar esta página** acrescenta os itens elegíveis sem substituir os já
+selecionados e sem duplicar produtos. A prévia reúne todos os selecionados, mesmo
+fora da página atual; as quantidades individuais permanecem ao voltar à página.
+Mudar o termo da busca ou usar **Atualizar** limpa a seleção, conforme o aviso na
+tela. Sessão/usuário, conflito de estoque e conclusão conservam as regras de
+isolamento e recuperação do pedido existentes. Os limites continuam 100 produtos,
+100 unidades por produto e 2.000 etiquetas por confirmação.
+
+A confirmação revalida a seleção inteira no PostgreSQL, com locks e transação
+única. Um item de outra página que tenha mudado recusa o lote inteiro; não gera
+transferências ou etiquetas parciais. Recuperar a mesma solicitação preserva a
+identificação original e não cria outra reposição.
+
+Os saldos são exibidos por local nos cards individuais, inclusive no zoom mínimo,
+nos chips de tamanhos e no resumo da grade. O resumo soma cada local de forma
+independente: um saldo desconhecido no depósito não apaga o total conhecido da
+loja. **Ver grades** funciona como linhas em Lista e como cards em Compacto ou
+Quadrados, com expansão dos membros, foto, seleção, gestão, edição e movimentação.
+Os resumos consideram somente as variantes retornadas pelo status/lote ativo.
+Quando apenas parte das variantes corresponde à busca, o card informa essa
+proporção. O endpoint de grades continua sem paginação; itens avulsos são paginados.
+
+## Análise de grades por IA (02/11/2026)
+
+Gestores podem selecionar **2 a 24 produtos** e usar **Grades com IA** na barra de
+seleção. A análise compara nomes, marcas, categorias, tamanhos, cores e, se marcado,
+as fotos principais disponíveis. As sugestões mostram os produtos reais,
+evidências, indicação de confiança e diferenças a conferir. Não há varredura
+contínua de todas as imagens nem chamada de IA ao pesquisar produtos ou abrir a
+listagem. Um lote maior deve ser separado em seleções menores.
+
+O gestor escolhe uma sugestão, pode retirar itens e indica uma grade existente
+ou o nome de uma nova. **Preparar conferência** relê o estado atual e mostra os
+vínculos de destino, os itens que saem de outras grades e quantos permanecem nelas.
+**Confirmar vínculos** exige a conferência explícita dos produtos, tamanhos e cores.
+A operação altera apenas `group_key`; IDs, códigos, fotos, preços, saldos, vendas e
+movimentações são preservados. Produtos não são fundidos ou excluídos.
+
+A comparação reutiliza o provedor de visão configurado (DeepSeek ou Anthropic),
+com até 4 MiB de imagens preparadas por chamada e 35 segundos de espera do provedor.
+Fotos inválidas ou acima do limite são identificadas como não analisadas. Somente
+metadados do catálogo necessários à comparação e fotos seguem para o provedor;
+preços, saldos e dados de pessoas/clientes ficam fora da solicitação. O limite por
+gestor é 20 novas análises por hora, com cache limitado de dez minutos por seleção
+versionada. Falhas de configuração/provedor são informadas sem produzir sugestões
+falsas. Textos das fotos e produtos são tratados como dados, não instruções.
+
+A prévia é assinada, vinculada ao usuário e válida por **15 minutos**. O destino
+aceita até 500 membros para esta conferência; grades maiores usam o gerenciador
+manual. Produtos alterados depois da análise/prévia, inclusive saldos, exigem nova
+conferência. Tamanho/cor repetidos, inclusive em membros inativos já no destino,
+recusam toda a operação. Locks de grade e de produto são compartilhados com os
+fluxos existentes. Aplicação e recibo de auditoria entram na mesma transação;
+repetir a mesma confirmação consulta o recibo e o estado final, sem reaplicar.
+
+Antes de salvar, o aparelho guarda a confirmação em sessionStorage, isolada por
+usuário. Uma resposta perdida mantém o mesmo token para **Conferir resultado**;
+a reabertura recupera a confirmação pendente. Mudança posterior dos produtos ou
+expiração exige nova revisão no servidor. Este fluxo não solicita impressão.
+As regras de permissão são verificadas no backend em `/api/inventory/grades/ai-analysis`,
+`/grades/preview` e `/grades/commit`; as três ações exigem ADMIN/GERENTE.

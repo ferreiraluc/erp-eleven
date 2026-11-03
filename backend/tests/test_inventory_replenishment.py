@@ -181,6 +181,52 @@ def test_confirm_moves_exact_quantities_and_queues_one_label_per_piece(replenish
     assert client.get(URL + '/items').json()['total'] == 0
 
 
+@pytest.mark.parametrize('stale_first_page', [False, True])
+def test_selection_from_different_pages_is_confirmed_or_rejected_as_one_batch(replenishment_env, stale_first_page):
+    factory, client, _ = replenishment_env
+    setup_device(client)
+    with factory() as db:
+        for index in range(42):
+            row = make_item(db, current_stock=5, stock_loja=0, stock_deposito=5)
+            row.name = f'Reposição entre páginas {index:02}'
+        db.commit()
+    first = client.get(URL + '/items').json()
+    second = client.get(URL + '/items', params={'page': 2}).json()
+    selected = [first['items'][0], second['items'][0]]
+    lines = [dict(item_id=row['id'], code=row['inventory_code'], name=row['name'],
+                  size=row['size'], color=row['color'], sale_price=row['sale_price'],
+                  sale_currency=row['sale_currency'], copies=copies,
+                  expected_stock_loja=row['stock_loja'], expected_stock_deposito=row['stock_deposito'],
+                  expected_current_stock=row['current_stock'])
+             for row, copies in zip(selected, (2, 3))]
+    body = dict(request_key=str(uuid.uuid4()), confirm=True, items=lines)
+    ids = [row['id'] for row in selected]
+    with factory() as db:
+        if stale_first_page:
+            # The operator is viewing page 2 while an earlier selected item changes.
+            db.execute(update(Item).where(Item.id == uuid.UUID(ids[0])).values(
+                stock_deposito=4, current_stock=4))
+            db.commit()
+        before = [stock(db, item_id) for item_id in ids]
+    response = client.post(URL + '/confirm', json=body)
+    if stale_first_page:
+        assert response.status_code == 409, response.text
+        no_writes(factory, ids, before)
+        return
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result['replenished_items'] == 2 and result['total'] == 5
+    assert [job['copies'] for job in result['jobs']] == [2, 3]
+    assert {movement['item_id'] for movement in result['movements']} == set(ids)
+    with factory() as db:
+        for item_id, balances, copies in zip(ids, before, (2, 3)):
+            assert stock(db, item_id) == (balances[0], copies, balances[2] - copies)
+        assert db.query(StockMovement).count() == db.query(PrintJob).count() == 2
+    assert confirm(client, body) == result
+    with factory() as db:
+        assert db.query(StockMovement).count() == db.query(PrintJob).count() == 2
+
+
 def test_exact_replay_survives_product_device_and_layout_changes(replenishment_env):
     factory, client, ids = replenishment_env
     setup_device(client)

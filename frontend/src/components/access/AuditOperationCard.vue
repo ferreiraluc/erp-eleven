@@ -50,7 +50,7 @@ async function load(){if(loading.value)return;loading.value=true;error.value='';
   const result=await accessAPI.auditGroup({...props.filters,key:props.group.key,offset:events.value.length})
   if(alive){events.value.push(...result.events.filter(e=>!events.value.some(old=>old.id===e.id)));total.value=result.total}
 }catch{if(alive)error.value=t('access.connectionError')}finally{if(alive)loading.value=false}}
-function fields(event:AuditEvent){return Object.fromEntries(Object.entries(event.changes).filter(([key])=>key!=='_context'))}
+function fields(event:AuditEvent){return Object.fromEntries(Object.entries(event.changes).filter(([key])=>key!=='_context'&&!(event.entity==='inventory_grade_links'&&['after','preview_hash','destination_ids'].includes(key))))}
 function fieldName(key:string){const names:Record<string,AuditTextKey>={quantity_before:'totalBefore',quantity_after:'totalAfter',stock_loja_before:'storeBefore',stock_loja_after:'storeAfter',stock_loja:'store',stock_deposito:'warehouse'};return names[key]?at(names[key]):key}
 function change(value:unknown){if(value&&typeof value==='object'&&'changed' in value)return t('access.fieldChanged');if(value&&typeof value==='object'&&'before' in value&&'after' in value)return `${value.before??'—'} → ${value.after??'—'}`;return typeof value==='object'?JSON.stringify(value):String(value)}
 onBeforeUnmount(()=>{alive=false})
