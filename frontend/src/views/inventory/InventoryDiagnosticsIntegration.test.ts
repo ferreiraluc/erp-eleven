@@ -114,6 +114,7 @@ describe('Grouped stock refresh', () => {
       .mockResolvedValue([{ group_key: 'grade-1', total_stock: 4, items: [{ ...item, current_stock: 4, stock_loja: 4 }] }])
     await mount()
     expect(container.querySelector('.group-total-stock')?.textContent).toContain('1')
+    container.querySelector<HTMLButtonElement>('.expand-btn')!.click(); await nextTick()
     container.querySelector<HTMLElement>('.size-chip .chip-label')!.click()
     await nextTick()
     button('Save test item').click()
@@ -432,6 +433,7 @@ describe('Readable automatic grade names', () => {
     mocks.getGradeMembers.mockResolvedValue({ items: [item], total: 1, page: 1, limit: 100 })
     await mount()
     expect(container.querySelector('.group-name')?.textContent?.trim()).toBe('Coleção DN0281')
+    container.querySelector<HTMLButtonElement>('.expand-btn')!.click(); await nextTick()
     container.querySelector<HTMLButtonElement>('.group-manage-btn')!.click(); await nextTick()
     const ungroup = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button')).find(node => node.textContent?.trim() === 'Desagrupar toda a grade')!
     await vi.waitFor(() => expect(ungroup.disabled).toBe(false))

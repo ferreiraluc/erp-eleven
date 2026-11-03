@@ -1467,7 +1467,11 @@ Os saldos são exibidos por local nos cards individuais, inclusive no zoom míni
 nos chips de tamanhos e no resumo da grade. O resumo soma cada local de forma
 independente: um saldo desconhecido no depósito não apaga o total conhecido da
 loja. **Ver grades** funciona como linhas em Lista e como cards em Compacto ou
-Quadrados, com expansão dos membros, foto, seleção, gestão, edição e movimentação.
+Quadrados. A primeira visualização mantém foto, nome e totais da grade (geral e
+por local). Tamanhos, cores, saldos individuais, código e ações de gestão aparecem
+somente ao expandir pela seta; recolher oculta novamente os detalhes. Foto e
+seleção continuam acessíveis no resumo, e filtros parciais/saldos desconhecidos
+permanecem sinalizados. Edição e movimentação continuam disponíveis na expansão.
 Os resumos consideram somente as variantes retornadas pelo status/lote ativo.
 Quando apenas parte das variantes corresponde à busca, o card informa essa
 proporção. O endpoint de grades continua sem paginação; itens avulsos são paginados.

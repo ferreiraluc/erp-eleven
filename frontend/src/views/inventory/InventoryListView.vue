@@ -130,7 +130,7 @@
       <template v-for="entry in flatList" :key="entry.type === 'group' ? 'g-' + entry.group.group_key : entry.item.id">
 
         <!-- ── CARD DE GRUPO ── -->
-        <div v-if="entry.type === 'group'" class="group-card" :data-grade-key="entry.group.group_key" :class="['alert-' + groupAlertLevel(entry.group.items), { 'card-selected': groupSelectionComplete(entry.group) }]" @click="selectionMode ? toggleGroupSelection(entry.group) : toggleExpand(entry.group.group_key)">
+        <div v-if="entry.type === 'group'" class="group-card" :data-grade-key="entry.group.group_key" :class="['alert-' + groupAlertLevel(entry.group.items), { 'card-selected': groupSelectionComplete(entry.group), 'group-expanded': expandedGroups.includes(entry.group.group_key) }]" @click="selectionMode ? toggleGroupSelection(entry.group) : toggleExpand(entry.group.group_key)">
           <div class="group-header">
             <!-- Imagem do grupo (primeira imagem disponível) -->
             <button
@@ -172,18 +172,20 @@
               <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr('Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
               <span v-if="entry.group.matching_count < entry.group.items.length" class="group-context-note">{{ tr('{matching} de {count} variações correspondem aos filtros', { matching: entry.group.matching_count, count: entry.group.items.length }) }}</span>
               <span v-if="groupAlertLevel(entry.group.items) === 'unknown'" class="alert-badge badge-unknown">{{ tr('Revisar estoque') }}</span>
-              <span
-                v-if="groupLocationBadge(entry.group.items) === 'deposito'"
-                class="group-loc-badge badge-deposito"
-              >{{ tr('Depósito') }}</span>
-              <span
-                v-else-if="groupLocationBadge(entry.group.items) === 'mixed'"
-                class="group-loc-badge badge-mixed"
-              >{{ tr('Loja + Dep.') }}</span>
-              <span v-if="entry.group.items.find(i => i.barcode)" class="group-barcode">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="9" height="9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
-                {{ entry.group.items.find(i => i.barcode)!.barcode }}
-              </span>
+              <template v-if="expandedGroups.includes(entry.group.group_key)">
+                <span
+                  v-if="groupLocationBadge(entry.group.items) === 'deposito'"
+                  class="group-loc-badge badge-deposito"
+                >{{ tr('Depósito') }}</span>
+                <span
+                  v-else-if="groupLocationBadge(entry.group.items) === 'mixed'"
+                  class="group-loc-badge badge-mixed"
+                >{{ tr('Loja + Dep.') }}</span>
+                <span v-if="entry.group.items.find(i => i.barcode)" class="group-barcode">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="9" height="9"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9V5a2 2 0 012-2h2M3 15v4a2 2 0 002 2h2m10-18h2a2 2 0 012 2v4m0 10v4a2 2 0 01-2 2h-2M9 3h6M9 21h6" /></svg>
+                  {{ entry.group.items.find(i => i.barcode)!.barcode }}
+                </span>
+              </template>
             </div>
             <div class="group-btns">
               <button v-if="selectionMode" type="button" class="action-btn group-select-btn erp-button erp-button--secondary erp-button--sm"
@@ -191,7 +193,7 @@
                 :aria-pressed="groupSelectionComplete(entry.group)" @click.stop="toggleGroupSelection(entry.group)">
                 {{ groupSelectionComplete(entry.group) ? '☑' : '☐' }}
               </button>
-              <button v-if="canManageGrades" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')"><span class="group-manage-full">{{ tr('+ Grades') }}</span><span class="group-manage-short" aria-hidden="true">+</span></button>
+              <button v-if="canManageGrades && expandedGroups.includes(entry.group.group_key)" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')"><span class="group-manage-full">{{ tr('+ Grades') }}</span><span class="group-manage-short" aria-hidden="true">+</span></button>
               <button type="button" @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :aria-expanded="expandedGroups.includes(entry.group.group_key)" :aria-label="tr(expandedGroups.includes(entry.group.group_key) ? 'Recolher grade {name}' : 'Expandir grade {name}', { name: groupTitle(entry.group.group_key) })" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
@@ -199,7 +201,7 @@
               </button>
             </div>
           </div>
-          <div class="size-chips">
+          <div v-if="expandedGroups.includes(entry.group.group_key)" class="size-chips" @click.stop>
             <div
               v-for="v in sortedByColorThenSize(entry.group.items)"
               :key="v.id"
@@ -815,6 +817,7 @@ function toggleGroupMode() {
 }
 
 function toggleExpand(groupKey: string) {
+  confirmRemoveChip.value = null
   const idx = expandedGroups.value.indexOf(groupKey)
   if (idx === -1) expandedGroups.value.push(groupKey)
   else expandedGroups.value.splice(idx, 1)
@@ -1937,6 +1940,7 @@ onMounted(async () => {
 .group-btns { grid-column: 1 / -1; grid-row: 3; align-self: start; justify-content: flex-end; }
 .group-card > .size-chips { grid-column: 1 / -1; grid-row: 2; align-content: start; }
 .group-card > .group-exp-section { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
+.view-compact .group-card:not(.group-expanded) .group-btns { grid-row: 2; }
 .view-list .group-thumb-wrap { width: 32px; height: 32px; }
 .view-list .group-btns { grid-column: 3; grid-row: 1; }
 .view-list .group-card > .size-chips { grid-column: 2 / -1; }
@@ -1944,6 +1948,7 @@ onMounted(async () => {
 .view-grid .group-title-area { grid-column: 1; grid-row: 2; padding: 0 .5rem; }
 .view-grid .group-card > .size-chips { grid-row: 3; padding: 0 .5rem; }
 .view-grid .group-btns { grid-row: 4; padding: 0 .5rem .5rem; }
+.view-grid .group-card:not(.group-expanded) .group-btns { grid-row: 3; }
 .view-grid .group-card > .group-exp-section { grid-row: 5; margin: 0 .5rem .5rem; }
 .group-thumb-placeholder { color: #9ca3af; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .thumb-clickable { cursor: zoom-in; }
