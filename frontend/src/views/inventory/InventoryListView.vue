@@ -1940,7 +1940,8 @@ onMounted(async () => {
 .group-btns { grid-column: 1 / -1; grid-row: 3; align-self: start; justify-content: flex-end; }
 .group-card > .size-chips { grid-column: 1 / -1; grid-row: 2; align-content: start; }
 .group-card > .group-exp-section { grid-column: 1 / -1; grid-row: 4; min-width: 0; }
-.view-compact .group-card:not(.group-expanded) .group-btns { grid-row: 2; }
+.view-compact .group-card:not(.group-expanded) { grid-template-columns: 56px minmax(0, 1fr) auto; }
+.view-compact .group-card:not(.group-expanded) .group-btns { grid-column: 3; grid-row: 1; align-self: center; }
 .view-list .group-thumb-wrap { width: 32px; height: 32px; }
 .view-list .group-btns { grid-column: 3; grid-row: 1; }
 .view-list .group-card > .size-chips { grid-column: 2 / -1; }
