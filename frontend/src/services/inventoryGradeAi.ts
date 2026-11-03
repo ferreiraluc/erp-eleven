@@ -131,3 +131,20 @@ export function gradeError(error: unknown, fallback: string): string {
   const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
   return typeof detail === 'string' ? detail : fallback
 }
+
+/** Suggest a family name without discarding model numbers or unrelated suffixes. */
+export function gradeFamilyName(product: Pick<GradeProduct, 'name' | 'size' | 'color'>): string {
+  let name = product.name.trim().replace(/\s+/g, ' ')
+  for (let pass = 0; pass < 2; pass++) {
+    for (const value of [product.size, product.color]) {
+      const suffix = value?.trim() ? ' ' + value.trim().replace(/\s+/g, ' ') : ''
+      if (
+        suffix &&
+        name.length > suffix.length &&
+        name.toLocaleLowerCase().endsWith(suffix.toLocaleLowerCase())
+      )
+        name = name.slice(0, -suffix.length).trimEnd()
+    }
+  }
+  return name.slice(0, 100)
+}

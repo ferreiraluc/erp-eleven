@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearGradePreview, gradeError, inventoryGradeAi, restoreGradePreview, saveGradePreview, type GradePreview } from './inventoryGradeAi'
+import { clearGradePreview, gradeFamilyName, gradeError, inventoryGradeAi, restoreGradePreview, saveGradePreview, type GradePreview } from './inventoryGradeAi'
 
 const transport = vi.hoisted(() => ({ post: vi.fn() }))
 vi.mock('./api', () => ({ default: transport }))
@@ -64,4 +64,14 @@ describe('Grade analysis transport and uncertain confirmation recovery', () => {
     expect(gradeError({ response: { data: { detail: [{ msg: 'invalid' }] } } }, 'fallback')).toBe('fallback')
     expect(gradeError(new Error('offline'), 'fallback')).toBe('fallback')
   })
+})
+
+
+it.each([
+  ['Camiseta Boss Y-26-09 Azul S', 'S', 'Azul', 'Camiseta Boss Y-26-09'],
+  ['Camiseta Boss Y-26-09 S Azul', 'S', 'Azul', 'Camiseta Boss Y-26-09'],
+  ['Polo Eleven 2026', 'M', 'Azul', 'Polo Eleven 2026'],
+  ['Modelo AM', 'M', null, 'Modelo AM'],
+])('prefills a model family name without the individual variant suffix: %s', (name,size,color,expected)=>{
+  expect(gradeFamilyName({name,size,color})).toBe(expected)
 })

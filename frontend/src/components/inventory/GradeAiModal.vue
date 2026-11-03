@@ -228,6 +228,7 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { useAuthStore } from '@/stores/auth'
 import {
   clearGradePreview,
+  gradeFamilyName,
   gradeError,
   inventoryGradeAi,
   restoreGradePreview,
@@ -301,7 +302,7 @@ function choose(index: number) {
   chosenIndex.value = index
   chosenIds.value = [...analysis.value!.suggestions[index].item_ids]
   const product = productsFor(analysis.value!.suggestions[index])[0]
-  newName.value = (product?.name || '').slice(0, 100)
+  newName.value = product ? gradeFamilyName(product) : ''
   targetKey.value = product?.group_key || ''
   destinationMode.value = targetKey.value ? 'existing' : 'new'
   error.value = ''
