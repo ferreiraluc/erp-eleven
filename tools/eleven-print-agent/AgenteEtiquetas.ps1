@@ -39,7 +39,7 @@ function Run-Label($record, $recordPath) {
 try {
     . (Join-Path $root 'Impressao.ps1')
     . (Join-Path $root 'Etiquetas.ps1')
-    $script:AgentVersion = '2026.10.21.1'
+    $script:AgentVersion = '2026.11.05.1'
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Add-Type -AssemblyName System.Drawing
     $lockStream = [IO.File]::Open((Join-Path $root 'agent.lock'), 'OpenOrCreate', 'ReadWrite', 'None')

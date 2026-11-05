@@ -3,15 +3,24 @@ import json
 
 import pytest
 
-from test_assistant import setup, incoming
+from test_assistant import setup, incoming as base_incoming
 from test_address_manager import env
 from test_assistant_queries import tool_call
-from app.models.assistant import AssistantAction, AssistantIdentity, AssistantKnowledge
+from app.models.assistant import AssistantAction, AssistantIdentity, AssistantKnowledge, AssistantWhatsAppBridge
 from app.models.printing import PrintJob, PrintSender
 from app.models.usuario import Usuario, UsuarioRole
 from app.services import assistant_agent as agent, assistant_channels as channels
 from app.services.assistant_routines import ROUTINE_KEY, save_routine
 from app.services.assistant_tools import execute_tool
+
+
+def incoming(db, user_id, text, channel='whatsapp', reply=True):
+    message = base_incoming(db, user_id, text, channel=channel, reply=reply)
+    if channel == 'whatsapp_web':
+        message.sender_id = 'whatsapp:+5511888888888'
+        message.conversation_id = '12000012345@g.us'
+        db.flush()
+    return message
 
 
 @pytest.fixture
@@ -24,7 +33,8 @@ def sender_owner(env):
             PrintSender(id='mona', name='Mona Silva', lines=['Rua de teste, 10']),
             PrintSender(id='debora', name='Débora Almeida', lines=['Rua de teste, 20']),
             PrintSender(id='old', name='Mona anterior', lines=[], active=False),
-            AssistantIdentity(channel='whatsapp_web', external_id='123', user_id=user_id, can_register=True),
+            AssistantIdentity(channel='whatsapp_web', external_id='whatsapp:+5511888888888', user_id=user_id, can_register=True),
+            AssistantWhatsAppBridge(id='primary', enabled=True, allowed_groups=['12000012345@g.us']),
         ])
         db.flush()
         save_routine(db, {

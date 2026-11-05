@@ -273,6 +273,7 @@ def jobs(user=Depends(administrator), db: Session = Depends(get_db)):
 def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tickets: bool = False,
           driver: Literal['windows', 'escpos_tcp'] = 'windows', claim_key: UUID | None = None, product_labels: bool = False):
     from ...services.assistant_documents import cleanup_documents
+    from ...services.assistant_print_policy import bot_print_job_authorized
     authenticated_hash = device.token_hash
     device = db.query(PrintDevice).filter_by(id=device.id, active=True).populate_existing().with_for_update().first()
     if not device or device.token_hash != authenticated_hash:
@@ -282,7 +283,7 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
     if driver == 'escpos_tcp' and (device.purpose != 'tickets' or not claim_key or not continuous_tickets):
         raise HTTPException(422, 'O agente macOS requer tickets contínuos e chave persistente de coleta.')
     label_device = device.purpose == 'product_labels'
-    durable_claim = driver == 'escpos_tcp' or label_device
+    durable_claim = driver == 'escpos_tcp' or label_device or claim_key is not None
     if label_device and (not product_labels or not claim_key):
         raise HTTPException(409, 'Use o agente Eleven Etiquetas atualizado. Os trabalhos continuam na fila.')
     cleanup_documents(db)
@@ -293,16 +294,36 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
                                  PrintJob.expires_at <= utcnow()).update({"status": "expired", "pdf": b""})
     job = None
     if durable_claim:
-        # Persisted before the HTTP request on the Mac. A lost response can be
+        # Persisted before the HTTP request on current agents. A lost response can be
         # recovered without claiming a second job or resetting dispatch state.
         job = db.query(PrintJob).filter_by(claim_key=claim_key).first()
         if job and (job.device_id != device.id or job.status != 'claimed'):
             raise HTTPException(409, 'Chave de coleta já finalizada ou de outro dispositivo.')
         if not job and db.query(PrintJob.id).filter_by(device_id=device.id, status='claimed').first():
-            raise HTTPException(409, 'Existe uma coleta anterior. Recupere o diário do agente; não reenvie o ticket.')
+            raise HTTPException(409, 'Existe uma coleta anterior. Recupere o diário do agente; não reenvie o trabalho.')
+    elif db.query(PrintJob.id).filter(PrintJob.device_id == device.id, PrintJob.status == 'claimed',
+                                     PrintJob.claim_key.is_not(None)).first():
+        # An older installation sharing a credential cannot bypass a recoverable
+        # in-flight claim made by an updated agent.
+        raise HTTPException(409, 'Existe uma coleta anterior. Recupere o diário do agente atualizado.')
+    if job and not bot_print_job_authorized(db, job):
+        # The claim response may have been lost before the agent could journal
+        # its job ID. Return only that same identity, never document/customer
+        # data, so it can record the denied download and acknowledge failure.
+        # Otherwise a revoked author strands claim.json and the entire device.
+        db.commit()
+        return {'id': str(job.id), 'sha256': job.sha256}
     job = job or db.query(PrintJob).filter_by(device_id=device.id, status="pending").order_by(
         PrintJob.created_at, PrintJob.id).with_for_update(skip_locked=True).first()
     if not job:
+        db.commit()
+        return Response(status_code=204)
+    if not bot_print_job_authorized(db, job):
+        # Keep the audit record and skip only this unauthorized, never-dispatched
+        # job. The next poll continues with the next pending job.
+        job.status, job.finished_at = 'failed', utcnow()
+        job.diagnostic = {'code': 'bot_authorization_revoked'}
+        job.pdf = b''
         db.commit()
         return Response(status_code=204)
     if label_device != (job.source == 'product_labels'):
@@ -343,9 +364,12 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
 
 @router.get("/agent/jobs/{job_id}/pdf")
 def document(job_id: UUID, device=Depends(printer), db: Session = Depends(get_db)):
+    from ...services.assistant_print_policy import bot_print_job_authorized, PRINT_AUTHORIZATION_ERROR
     job = db.query(PrintJob).filter_by(id=job_id, device_id=device.id, status="claimed").first()
     if not job:
         raise HTTPException(404, "Trabalho indisponível")
+    if not bot_print_job_authorized(db, job):
+        raise HTTPException(403, PRINT_AUTHORIZATION_ERROR)
     if job.source == 'product_labels':
         raise HTTPException(409, 'Etiqueta interna utiliza o documento ZPL, não PDF.')
     if job.source=='bot_pdf_ephemeral':

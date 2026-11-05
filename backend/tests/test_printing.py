@@ -105,8 +105,11 @@ def test_bot_print_confirm_permissions_and_duplicate(print_env):
         identity = db.query(AssistantIdentity).filter_by(channel='telegram').one()
         args = AddressArgs(pais='PY', nome='Cliente Teste', endereco='Calle de Prueba 123', cidade='Asunción', remetente='mona')
         msg = incoming(db, user.id, 'Imprime este endereço', channel='telegram')
+        identity.active = False
         assert 'erro' in prepare_print(db, msg, identity, args)
-        user.role = UsuarioRole.ADMIN
+        identity.active = True
+        identity.can_register = False
+        assert user.role == UsuarioRole.VENDEDOR
         assert 'confirmacao' in prepare_print(db, msg, identity, args)
         assert db.query(PrintJob).count() == 0
         action = db.query(AssistantAction).one()

@@ -95,7 +95,7 @@ Entre no ERP como ADMIN e abra **Assistente IA**. Para cada funcionário:
 
 - Cadastre `whatsapp:+DDINUMERO` vinculado ao usuário ERP correto.
 - Cadastre o ID numérico Telegram vinculado ao **mesmo usuário ERP**.
-- Ative “Pode registrar ocorrências” apenas para quem deve criar/confirmar registros. O padrão é consulta.
+- Ative “Pode registrar ocorrências” apenas para quem deve criar/confirmar registros. Usuários vinculados ativos também podem imprimir endereços/PDFs e suas etiquetas já emitidas, com prévia e confirmação, sem essa opção; isso não permite compras nem alterações no estoque.
 
 Confirme os identificadores diretamente com o funcionário. Não é permitido reatribuir uma identidade existente a outro usuário pelo painel. Desative acessos quando alguém sair da equipe. O grupo deve ser restrito a pessoas autorizadas a ver os dados operacionais publicados nele; a autorização de quem pergunta não impede outros membros de lerem a resposta.
 

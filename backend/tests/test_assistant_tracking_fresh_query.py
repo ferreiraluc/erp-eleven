@@ -38,7 +38,7 @@ def test_historical_negative_cannot_replace_current_tracking_lookup(setup, monke
     assert registered in result.parts[1]
     assert "Em trânsito" in result.parts[1]
     assert len(result.parts) == 2
-    assert choices == [None, {"type": "function", "function": {"name": "buscar_rastreios"}}]
+    assert choices == []  # The routine lookup no longer depends on model routing.
 
 
 def test_empty_current_query_allows_negative_answer(setup, monkeypatch):
@@ -78,7 +78,7 @@ def test_unqueried_negative_has_bounded_retries_and_reports_unavailable(setup, m
 
     monkeypatch.setattr(agent, "complete", complete)
     with factory() as db:
-        message = incoming(db, user_id, "Me passa o rastreio do Davi")
+        message = incoming(db, user_id, "Me passa o último rastreio do Davi")
         result = agent.respond(db, message, channels.authorized_identity(db, message.channel, message.sender_id))
     assert len(calls) == 3
     assert "Não consegui verificar" in result
@@ -101,7 +101,7 @@ def test_invalid_query_does_not_count_as_current_evidence(setup, monkeypatch):
     monkeypatch.setattr(agent, "complete", complete)
     with factory() as db:
         shipment(db, "AA123456789BR", name="Davi Almeida Muniz")
-        message = incoming(db, user_id, "Me passa o rastreio do Davi")
+        message = incoming(db, user_id, "Não consultei ainda, me passa o rastreio do Davi")
         result = agent.respond(db, message, channels.authorized_identity(db, message.channel, message.sender_id))
     assert result.parts[0] == "AA123456789BR"
     assert choices[-1] == {"type": "function", "function": {"name": "buscar_rastreios"}}
@@ -115,6 +115,8 @@ def test_invalid_query_does_not_count_as_current_evidence(setup, monkeypatch):
     ("Qual o status do rastreio AA123456789BR?", None, True),
     ("Cadastre os rastreios deste comprovante", None, False),
     ("Imprima o endereço do rastreio do Davi", None, False),
+    ("Reimprima o endereço do rastreio do Davi", None, False),
+    ("Reimpressão do rastreio AA123456789BR", None, False),
     ("Consulte o PDF da etiqueta do rastreio do Davi", None, False),
     ("Qual o código do produto Camiseta?", None, False),
     ("Qual o código interno desse item?", "Qual o rastreio do Davi?", False),

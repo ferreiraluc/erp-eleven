@@ -6,12 +6,13 @@ import uuid
 from datetime import timedelta
 import requests
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import String,cast
-from sqlalchemy.orm import object_session
+from sqlalchemy import String,cast,func
+from sqlalchemy.orm import object_session,defer
 from ..config import settings
 from ..models.assistant import AssistantMessage,AssistantAction,utcnow
 from ..models.printing import PrintDevice,PrintJob
 from .assistant_schedule import may_schedule
+from .assistant_print_policy import may_print
 from .assistant_controls import preview_reply
 from .assistant_queries import QueryArgs,literal_pattern
 
@@ -80,7 +81,7 @@ def file_preview(action):
 
 
 def prepare_file(db,message,identity,args):
-    if not message.should_reply or not may_schedule(db,message,identity):return {'erro':'Impressão de arquivos exige gestor habilitado e pedido direto.'}
+    if not message.should_reply or not may_print(db,message,identity):return {'erro':'Impressão de arquivos exige usuário autorizado nesta conversa e pedido direto.'}
     previous=db.query(AssistantAction).filter_by(source_message_id=message.id).first()
     if previous:return {'confirmacao':file_preview(previous)} if previous.kind=='arquivo_imprimir' else {'erro':'Esta mensagem já possui outra prévia. Conclua-a antes de pedir uma nova.'}
     if message.channel not in ('telegram', 'whatsapp_web'):return {'erro':'Envie o PDF pelo Telegram ou WhatsApp conectado por QR.'}
@@ -171,12 +172,19 @@ def cleanup_documents(db):
 
 def query_prints(db,message,identity,args):
     from .print_diagnostics import diagnostic_message
-    if not may_schedule(db,message,identity):return {'erro':'Histórico de impressões exige gestor habilitado.'}
+    if not may_print(db,message,identity):return {'erro':'Consulta de impressões exige usuário autorizado nesta conversa.'}
     q=db.query(PrintJob).filter(PrintJob.source.notin_(('bot_pdf_ephemeral', 'pdv_receipt', 'printer_test', 'inventory_list')))
+    if not may_schedule(db,message,identity):q=q.filter(PrintJob.user_id==message.user_id)
     if args.termo:q=q.filter(cast(PrintJob.snapshot,String).ilike(literal_pattern(args.termo),escape='\\'))
-    total=q.count();rows=q.order_by(PrintJob.created_at.desc()).offset((args.pagina-1)*args.limite).limit(args.limite).all()
+    total=q.count()
+    rows=q.options(defer(PrintJob.pdf)).add_columns(func.length(PrintJob.pdf)).order_by(PrintJob.created_at.desc()).offset((args.pagina-1)*args.limite).limit(args.limite).all()
     return {'impressoras':[{'nome':d.name,'ultimo_contato':d.last_seen_at.isoformat() if d.last_seen_at else None} for d in db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True)],
         'total':total,'resultados':[{'id':str(j.id),'status':j.status,'origem':j.source,'data':j.created_at.isoformat(),
         'diagnostico':diagnostic_message(j),'detalhes_tecnicos':j.diagnostic,
-        'arquivo':(j.snapshot or {}).get('filename'),'destinatario':(j.snapshot or {}).get('endereco',{}).get('nome')} for j in rows],
-        'aviso':'submitted significa enviado pelo agente à impressora, não comprova saída física do papel. Nunca reimprima sem pedido explícito.'}
+        'pdf_armazenado_agora':bool(pdf_bytes),
+        'endereco_salvo_para_nova_previa':j.source=='bot' and bool((j.snapshot or {}).get('endereco')),
+        'proxima_acao':('Aguardar o trabalho atual; não criar cópia.' if j.status in ('pending','claimed') else
+            'Se o autor pediu outra cópia, use preparar_reimpressao_endereco com este id e mostre a prévia para confirmação.' if j.source=='bot' and (j.snapshot or {}).get('endereco') else
+            'Consulte o documento de origem antes de preparar outra cópia.'),
+        'arquivo':(j.snapshot or {}).get('filename'),'destinatario':(j.snapshot or {}).get('endereco',{}).get('nome')} for j,pdf_bytes in rows],
+        'aviso':'submitted significa enviado pelo agente à impressora, não comprova saída física do papel. O ERP limpa o PDF temporário após o retorno do agente, inclusive incerto: pdf_armazenado_agora=false não significa falha na geração. O endereço salvo permite nova prévia. Em documentos A4, renderer_exit_error é erro do Sumatra após iniciar o envio; etiquetas product_labels usam ZPL e não Sumatra. Nenhum erro após iniciar o envio prova que nada imprimiu. Confira papel/fila antes de outra cópia. Nunca reimprima sem pedido explícito e nova confirmação.'}

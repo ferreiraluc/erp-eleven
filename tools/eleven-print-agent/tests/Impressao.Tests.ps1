@@ -61,11 +61,13 @@ try {
         Assert ($record.diagnostic.exit_code -eq $code) 'Process handle did not retain the actual exit code'
         if ($code -eq 0) { Assert ($record.status -eq 'submitted') 'Exit 0 was reported as uncertain' }
         else { Assert ($record.status -eq 'uncertain') 'Renderer error must not be automatically retried' }
+        Assert ($record.renderer_exited -eq $true) 'Known process exit must survive PID reuse'
         Assert (-not (Test-OwnedRendererRunning $record)) 'Finished child detected as running'
     }
     $record = @{id='test';status='started';acked=$false}
     Invoke-Renderer $record $journal $exe '-NoProfile -NonInteractive -Command "Start-Sleep -Seconds 30"' 200
     Assert ($record.status -eq 'uncertain' -and $record.diagnostic.code -eq 'renderer_timeout') 'Timeout outcome missing'
+    Assert ($record.renderer_exited -eq $true) 'Confirmed killed process should not block future jobs'
     Assert (-not (Test-OwnedRendererRunning $record)) 'Timed-out child must be stopped'
     $record = @{id='test';status='started';acked=$false}
     Invoke-Renderer $record $journal (Join-Path $folder 'missing.exe') ''

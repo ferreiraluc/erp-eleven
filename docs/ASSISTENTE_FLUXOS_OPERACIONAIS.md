@@ -1,6 +1,6 @@
 # Fluxos operacionais do assistente
 
-Atualização de 02/11/2026, conforme os fluxos implementados e testes isolados.
+Atualização de 05/11/2026, conforme os fluxos implementados e testes isolados.
 
 Telegram e WhatsApp Web para a equipe reutilizam as mesmas ferramentas, vínculos
 de usuário e confirmações. A conexão WhatsApp por QR, grupos autorizados e limites
@@ -30,6 +30,16 @@ A ambiguidade é verificada em todos os resultados, não só na página exibida.
 Pedidos claros de consulta de rastreio precisam consultar uma ferramenta nesta
 solicitação antes de responder, inclusive para dizer que não há resultados. Uma
 falha de consulta ou de permissão é informada como falha, não como ausência de envio.
+
+Consultas simples como “Me passe o rastreio do Murilo”, “Rastreio Davi Muniz” e
+“Manda os rastreios do Davi” consultam diretamente o ERP, sem depender da escolha
+de ferramenta ou disponibilidade da IA. “E do Murilo?” também continua uma consulta
+de cliente imediatamente anterior. Pedidos de impressão/PDF, histórico, períodos,
+resumos e relatos de erro continuam nos seus fluxos próprios.
+Uma escolha numérica só usa a resposta de destinatários ambíguos mais recente do
+mesmo autor, canal e conversa, por até 30 minutos. Os envios são consultados de novo
+e a lista precisa permanecer igual antes de interpretar o número; se mudou, o bot
+pede nova identificação em vez de entregar o rastreio de outra pessoa.
 
 Avisos automáticos de novos rastreios no WhatsApp exigem ativação explícita no
 painel e só alcançam os grupos autorizados. O código é enviado primeiro, isolado;
@@ -73,6 +83,16 @@ Cotações só são apresentadas após uma operação real persistida. Escolhas 
 
 ## Prévias de impressão e confirmação
 
+Todos os usuários ativos já vinculados ao bot podem solicitar impressão de endereços A4,
+PDFs recebidos e etiquetas já emitidas do próprio usuário, inclusive vendedores e equipe
+de estoque, sem habilitar “Pode registrar ocorrências”. A prévia e a confirmação continuam
+obrigatórias, pelo mesmo usuário e na mesma conversa autorizada. Cotação, compra de frete,
+cadastros e alterações no estoque mantêm as permissões anteriores. Consultas de endereços
+e remetentes apoiam essa impressão; o histórico de filas dos demais funcionários continua
+restrito aos gestores habilitados. A fila revalida vínculo, usuário e grupo antes de entregar
+um documento ao agente. Revogar o acesso impede trabalhos ainda não enviados, sem repetir
+automaticamente trabalhos cujo envio já começou.
+
 Depois de um pedido de impressão, enviar somente os dados do destinatário continua o pedido na mesma conversa. Para PY, use os dados disponíveis, sem exigir rua, remetente ou documento; RUC/C.I é opcional.
 
 A confirmação é vinculada a uma solicitação persistida. O servidor devolve sua prévia com **Imprimir** e **Cancelar** assim que a ferramenta a prepara, sem outra chamada à IA para reescrever o resultado. Respostas em texto que imitam a prévia A4 ou pedem “diga confirmo” sem criar essa solicitação são retidas e encaminhadas novamente à preparação. Essas prévias inválidas antigas deixam de servir como exemplo no contexto da IA, preservando os dados enviados pelo autor e o histórico original no ERP.
@@ -83,6 +103,27 @@ A confirmação é vinculada a uma solicitação persistida. O servidor devolve 
 (endereço A4, PDF avulso ou etiqueta já emitida). Mesmo quando resta apenas uma
 prévia de pagamento, esse pedido não autoriza pagar ou emitir outra etiqueta.
 “Pode imprimir NOME” também mantém essa restrição ao selecionar o destinatário.
+
+Pedidos de situação/reimpressão precisam consultar a fila atual antes de responder.
+Um erro do Sumatra não prova que o papel não saiu; o PDF temporário também é limpo
+no retorno do agente, inclusive quando incerto. PDF vazio no histórico não significa
+falha de geração. O diagnóstico distingue estado do envio e dados salvos.
+
+Para outra cópia de um endereço A4 gerado pelo bot, `preparar_reimpressao_endereco`
+reutiliza o endereço salvo do trabalho consultado e os remetentes/configuração atuais,
+mostra nova prévia e exige nova confirmação. O funcionário não precisa redigitar
+dados existentes. Gestores habilitados podem consultar trabalhos da equipe; demais
+usuários usam os próprios trabalhos. Outra cópia não é preparada/enviada enquanto
+o original ou uma cópia direta estiver pendente/em processamento. A confirmação
+continua idempotente e o novo trabalho referencia o anterior, sem alterá-lo.
+PDF externo expirado precisa ser reenviado; etiqueta SuperFrete já emitida usa seu
+fluxo próprio, sem comprar novamente. Nenhum erro inicia reimpressão automática.
+
+A recuperação de fila do Windows exige instalar o agente **2026.11.05.1** ou mais
+recente: publicar o ERP não troca os arquivos locais. Consulte
+[Impressão no Windows](IMPRESSAO_WINDOWS.md). Causas físicas de `exit_code=1` do
+Sumatra ainda dependem da fila, driver e estado da impressora; o bot não deve
+atribuir uma causa específica sem evidência.
 
 ## Comprovantes dos Correios em foto
 
