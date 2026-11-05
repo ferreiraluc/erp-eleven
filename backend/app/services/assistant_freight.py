@@ -9,6 +9,7 @@ from ..models.address_book import SavedAddress,FreightOrder
 from ..models.printing import PrintDevice
 from ..schemas.address_book import AddressData
 from .assistant_schedule import may_schedule
+from .assistant_print_policy import may_print
 from . import superfrete as sf
 
 
@@ -76,7 +77,8 @@ def preview(action):
 
 
 def execute(db,message,identity,name,args):
-    if not message.should_reply or not may_schedule(db,message,identity):return {'erro':'Fretes exigem pedido direto de ADMIN/GERENTE habilitado.'}
+    authorize = may_print if name in ('consultar_etiqueta','preparar_impressao_etiqueta') else may_schedule
+    if not message.should_reply or not authorize(db,message,identity):return {'erro':'Esta operação exige pedido direto de um usuário habilitado.'}
     try:
         if name=='cotar_superfrete':
             previous=db.query(FreightOrder).filter_by(request_key=message.id).first()
@@ -164,6 +166,8 @@ def confirm(db,message,action):
         devices=db.query(PrintDevice).filter(PrintDevice.purpose == 'documents').filter_by(active=True).limit(2).all()
         if len(devices)!=1:return 'Configure uma única impressora ativa no ERP.'
         # Printing is read-only externally; queue and confirmation commit together.
+        order=db.get(FreightOrder,key)
+        if not order or order.user_id!=message.user_id:return 'Frete não encontrado para seu usuário.'
         job=sf.print_label(db,key,devices[0].id,action.id,message.user_id)
         action.status='executed';action.result_id=job.id;action.executed_at=utcnow()
         return f'Etiqueta enviada à fila da loja: uma cópia A4. Impressora: {devices[0].name}. Confira a saída na impressora.'

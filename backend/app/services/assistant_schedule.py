@@ -113,10 +113,15 @@ def prepare_schedule(db, message, identity, args):
 
 
 def confirm_action(db, message, identity, action, cancel=False):
+    from .assistant_print_policy import PRINT_ACTION_KINDS, may_print
+    from .assistant_channels import authorized_identity
     source = db.get(AssistantMessage, action.source_message_id)
-    if action.user_id != message.user_id or source.channel != message.channel or source.conversation_id != message.conversation_id:
+    if not source or action.user_id != message.user_id or source.channel != message.channel or source.conversation_id != message.conversation_id:
         return "Confirme na mesma conversa e com o usuário que pediu o cadastro."
-    if not may_schedule(db, message, identity):
+    authorize = may_print if action.kind in PRINT_ACTION_KINDS else may_schedule
+    if (not authorize(db, message, identity) or
+            action.kind in PRINT_ACTION_KINDS and not may_print(
+                db, source, authorized_identity(db, source.channel, source.sender_id))):
         return "Você não tem permissão para executar esta ação pelo assistente."
     if action.status != "draft":
         return f"Essa solicitação está {action.status}. Nenhuma alteração foi repetida."

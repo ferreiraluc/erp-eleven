@@ -100,9 +100,12 @@ def test_print_preview_uses_canonical_sender_id_preserves_confirmation_and_permi
         user = db.query(Usuario).one()
         identity = db.query(AssistantIdentity).filter_by(channel='telegram').one()
         message = incoming(db, user.id, 'Imprima com remetente Débora Santos', channel='telegram')
+        identity.active = False
         assert 'erro' in prepare_print(db, message, identity, args)
         assert db.query(AssistantAction).count() == 0
-        user.role = UsuarioRole.ADMIN
+        identity.active = True
+        identity.can_register = False
+        assert user.role == UsuarioRole.VENDEDOR
         result = prepare_print(db, message, identity, args)
         assert 'confirmacao' in result and 'Débora Almeida Santos' in result['confirmacao']
         action = db.query(AssistantAction).one()

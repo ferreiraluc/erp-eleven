@@ -16,7 +16,7 @@ from reportlab.platypus.doctemplate import LayoutError
 
 from ..models.assistant import AssistantAction, utcnow
 from ..models.printing import PrintDevice, PrintJob
-from .assistant_schedule import may_schedule
+from .assistant_print_policy import may_print
 
 
 def printable_cpf(value):
@@ -98,6 +98,40 @@ class AddressArgs(BaseModel):
         return self
 
 
+class ReprintAddressArgs(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    trabalho_id: uuid.UUID = Field(description='ID completo de um trabalho de endereço retornado pela consulta atual. Nunca invente.')
+
+
+def prepare_address_reprint(db, message, identity, args):
+    """Reuse a saved address, but require a new, explicit confirmation for a copy."""
+    from .assistant_schedule import may_schedule, action_preview
+    from .print_diagnostics import diagnostic_message
+    if not message.should_reply or not may_print(db, message, identity):
+        return {'erro': 'Reimpressão exige pedido direto de um usuário autorizado nesta conversa.'}
+    previous = db.query(AssistantAction).filter_by(source_message_id=message.id).first()
+    if previous:
+        return {'confirmacao': action_preview(previous)}
+    query = db.query(PrintJob).filter_by(id=args.trabalho_id, source='bot')
+    if not may_schedule(db, message, identity):
+        query = query.filter_by(user_id=message.user_id)
+    original = query.first()
+    data = (original.snapshot or {}).get('endereco') if original else None
+    if not data:
+        return {'erro': 'Esse trabalho não contém um endereço disponível para reimpressão. Consulte os endereços salvos. Para etiqueta de frete use preparar_impressao_etiqueta; para PDF externo solicite o arquivo novamente.'}
+    if original.status in ('pending', 'claimed') or db.query(PrintJob.id).filter(
+            PrintJob.parent_id == original.id, PrintJob.status.in_(('pending', 'claimed'))).first():
+        return {'erro': 'O endereço ainda está na fila ou em processamento. Consulte a situação; nenhuma segunda cópia foi preparada.'}
+    result = prepare_print(db, message, identity, AddressArgs.model_validate(data))
+    if 'confirmacao' not in result:
+        return result
+    action = db.query(AssistantAction).filter_by(source_message_id=message.id).one()
+    action.payload = {**action.payload, 'reprint_of': str(original.id),
+                      'previous_print_status': original.status,
+                      'previous_print_diagnostic': diagnostic_message(original)}
+    return {'confirmacao': print_preview(action)}
+
+
 def render_address(payload):
     """One fresh A4 sheet, only the requested recipient; no legacy document history."""
     data = io.BytesIO()
@@ -141,6 +175,10 @@ def print_preview(action):
     lines += action.payload.get('postal_warnings', [])
     if document := document_line(p, preview=True):
         lines.append(document)
+    if action.payload.get('reprint_of'):
+        lines += ['Nova cópia do endereço já salvo.',
+                  action.payload.get('previous_print_diagnostic') or 'O estado anterior não comprova a saída física do papel.',
+                  'Confira o papel e a fila da impressora antes de confirmar outra cópia.']
     sender = action.payload.get('remetente')
     from .assistant_controls import preview_reply
     from .address_layouts import TEMPLATES
@@ -154,8 +192,8 @@ def print_preview(action):
 
 
 def prepare_print(db, message, identity, args, postal_check=None):
-    if not message.should_reply or not may_schedule(db, message, identity):
-        return {'erro': 'Impressão exige pedido direto de ADMIN/GERENTE habilitado para registros.'}
+    if not message.should_reply or not may_print(db, message, identity):
+        return {'erro': 'Impressão exige pedido direto de um usuário autorizado nesta conversa.'}
     omit_document = re.search(r'\bsem\s+(?:o\s+)?cpf\b', message.text, re.I)
     if args.pais == 'PY':
         omit_document = omit_document or re.search(r'\bsem\s+(?:o\s+)?(?:ruc|c\.?\s*i\.?|documento)(?=\W|$)', message.text, re.I)
@@ -197,13 +235,20 @@ def enqueue_print(db, action):
     # Action UUID is stable across retries; confirmation and queue commit atomically.
     job = db.query(PrintJob).filter_by(request_key=action.id).first()
     if not job:
+        parent_id = uuid.UUID(action.payload['reprint_of']) if action.payload.get('reprint_of') else None
+        if parent_id:
+            parent = db.query(PrintJob).filter_by(id=parent_id).with_for_update().first()
+            pending_copy = db.query(PrintJob.id).filter(
+                PrintJob.parent_id == parent_id, PrintJob.status.in_(('pending', 'claimed'))).first()
+            if not parent or parent.status in ('pending', 'claimed') or pending_copy:
+                return 'O trabalho anterior está em processamento ou indisponível. Nenhuma segunda cópia foi enviada.'
         try:
             pdf = render_address(action.payload)
         except ValueError:
             return 'O endereço excedeu uma folha A4. Cancele esta prévia e envie um endereço mais curto.'
         data = {k:v for k,v in action.payload['endereco'].items() if k in AddressData.model_fields}
         saved=save_print_address(db,AddressData.model_validate(data).model_dump(),action.user_id)
-        job = PrintJob(device_id=device.id, user_id=action.user_id, request_key=action.id, address_id=saved.id,
+        job = PrintJob(device_id=device.id, user_id=action.user_id, request_key=action.id, address_id=saved.id, parent_id=parent_id,
                        pdf=pdf, snapshot=action.payload, source='bot', sha256=hashlib.sha256(pdf).hexdigest(), expires_at=utcnow()+timedelta(hours=24))
         db.add(job)
         db.flush()

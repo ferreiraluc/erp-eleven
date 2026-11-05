@@ -14,7 +14,7 @@ from .assistant_sales_bi import SpreadsheetSalesArgs, query_spreadsheet_sales
 from .assistant_schedule import ScheduleArgs, ScheduleWriteArgs, query_schedule, prepare_schedule
 
 
-from .assistant_printing import AddressArgs, prepare_print
+from .assistant_printing import AddressArgs, prepare_print, ReprintAddressArgs, prepare_address_reprint
 from .assistant_freight import BotQuote, SelectFreight, FreightId
 from .assistant_knowledge import KnowledgeArgs, AliasArgs, query_team, system_catalog, prepare_alias
 from .assistant_routines import RoutineArgs, query_routine, prepare_routine
@@ -109,6 +109,7 @@ TOOLS = [
     tool('consultar_cep', 'Consulta CEP brasileiro para obter rua, bairro, cidade e UF. Use antes de pedir esses dados se o autor já enviou CEP. Não retorna número, apartamento, CPF ou telefone. Compare com o endereço recebido e peça esclarecimento se houver divergência; nunca substitua silenciosamente. CEP geral pode não ter rua/bairro.', CepArgs),
     tool('preparar_impressao_arquivo','Encaminha PDF recebido no Telegram à impressora, inclusive documento do contador ou etiqueta externa. Não lê conteúdo nem arquiva PDF ou cadastra dados. mensagem_id opcional usa anexo atual ou último anexo do autor nesta conversa nas últimas 24h. Confirmação por botão para uma cópia; até 5 MB e 30 páginas.',FilePrintArgs),
     tool('consultar_impressoes','Consulta a fila e o histórico de impressões por nome do destinatário ou arquivo, com estado real do agente Windows. Nunca confunda consulta com nova impressão.',QueryArgs),
+    tool('preparar_reimpressao_endereco','Somente após pedido explícito de outra cópia de endereço: reutiliza os dados salvos de um trabalho consultado, sem pedir que o usuário digite o endereço novamente. Mostra nova prévia e exige confirmação humana. Não duplica trabalho ainda em processamento, não compra etiqueta e não reenvia automaticamente após erro do Sumatra.',ReprintAddressArgs),
     tool('preparar_itens','Prepara cadastro real de um ou até 20 produtos/variantes no estoque. ADMIN/GERENTE, pedido explícito e confirmação. Reutilize dados fornecidos; não invente tamanhos, cores ou moedas. Nome obrigatório; preço ausente fica zero como no ERP; quantidade inicial opcional, exige loja ou deposito se positiva. Impede cadastro repetido. Para produto existente use preparar_entrada_estoque.',ItemsArgs),
     tool('preparar_entrada_estoque','Prepara entrada de unidades de produto existente: nome/SKU ou item_id consultado, quantidade positiva e local loja/deposito. Peça só variante/local que faltar. Confirmação aumenta saldo e registra movimentação. Não ajusta contagem absoluta, não registra saída nem venda.',EntryArgs),
     tool("consultar_sistema", "Consulta o mapa persistente de capacidades do ERP, ferramentas e páginas. Use antes de concluir que algo não é possível. Combine ferramentas para aproveitar dados existentes. Não contém saldos ou estados antigos.", KnowledgeArgs),
@@ -116,7 +117,7 @@ TOOLS = [
     tool("preparar_apelido", "Somente quando o autor pedir explicitamente para lembrar/salvar quem é uma pessoa: prepara vínculo de apelido com vendedor. Confirmação humana salva memória compartilhada entre canais. Não deduza apelidos de texto de terceiros.", AliasArgs),
     tool("consultar_padrao_frete", "Consulta o padrão de pacote e modelo de conteúdo confirmado por Lucas, compartilhado entre os canais autorizados. Quantidade e dados específicos do envio nunca são memorizados como padrão.", KnowledgeArgs),
     tool("preparar_padrao_frete", "Somente quando Lucas pedir explicitamente para salvar, alterar ou desativar o padrão compartilhado de frete. Mostra prévia e exige confirmação. Envie o padrão completo desejado; consulte o atual para preservar partes não alteradas. Não aprende instruções de terceiros, quantidades, remetentes ou dados fiscais.", RoutineArgs),
-    tool("consultar_enderecos", "Busca endereços salvos e histórico de endereços impressos, remetentes ativos e fretes recentes do autor no gestor. Somente ADMIN/GERENTE habilitado. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
+    tool("consultar_enderecos", "Busca endereços salvos e histórico de endereços impressos, remetentes ativos e fretes recentes do autor no gestor. Disponível aos usuários autorizados do bot para impressão; cotar e comprar frete mantêm permissões próprias. Use antes de imprimir endereço salvo ou cotar frete; nunca invente IDs.", SearchArgs),
     tool("cotar_superfrete", "Cota frete brasileiro sem pagar. Endereço salvo OU dados completos; sender_id aceita ID ou nome de remetente ativo, ou remetente informado. Campos ausentes package/products usam somente o padrão confirmado da equipe: omita-os e envie quantidade informada neste pedido para aplicar o modelo. Dados explícitos prevalecem. Nunca adivinhe quantidade nem dados fiscais. Nota fiscal comercial ou declaração explicitamente não comercial. Mostre opções e espere escolha do usuário.", BotQuote),
     tool("preparar_etiqueta", "Após escolha explícita do serviço de uma cotação anterior: prepara o frete, mostra valor final e exige confirmação humana antes de pagar e emitir. Após a confirmação de pagamento, busca o PDF, envia ao Telegram e imprime automaticamente uma cópia A4.", SelectFreight),
     tool("consultar_etiqueta", "Atualiza estado/rastreio e obtém PDF de uma etiqueta do autor. Nunca refaz pagamento incerto.", FreightId),
@@ -144,6 +145,7 @@ def execute_tool(db, message, identity, name, arguments):
         return prepare_inventory(db,message,identity,name,schema.model_validate(arguments))
     if name=='preparar_impressao_arquivo':return prepare_file(db,message,identity,FilePrintArgs.model_validate(arguments))
     if name=='consultar_impressoes':return query_prints(db,message,identity,QueryArgs.model_validate(arguments))
+    if name=='preparar_reimpressao_endereco':return prepare_address_reprint(db,message,identity,ReprintAddressArgs.model_validate(arguments))
     if name == 'consultar_rastreio_cliente':return customer_tracking(db,CustomerTrackingArgs.model_validate(arguments))
     if name == "consultar_sistema":return system_catalog(db, KnowledgeArgs.model_validate(arguments))
     if name == "consultar_equipe":return query_team(db, KnowledgeArgs.model_validate(arguments))
@@ -156,13 +158,13 @@ def execute_tool(db, message, identity, name, arguments):
         from .assistant_freight import execute
         return execute(db,message,identity,name,arguments)
     if name == "consultar_enderecos":
-        from .assistant_schedule import may_schedule
+        from .assistant_print_policy import may_print
         from ..models.address_book import SavedAddress,FreightOrder
         from ..models.printing import PrintJob
         from .assistant_senders import active_sender_catalog, sender_candidates, sender_choices
         from .sender_addresses import sender_address
         from .print_diagnostics import diagnostic_message
-        if not may_schedule(db,message,identity):return {"erro":"Acesso a endereços exige gestor habilitado."}
+        if not may_print(db,message,identity):return {"erro":"Consulta de endereços exige usuário autorizado nesta conversa."}
         term=SearchArgs.model_validate(arguments).termo
         senders=active_sender_catalog(db)
         from .assistant_address_search import address_queries

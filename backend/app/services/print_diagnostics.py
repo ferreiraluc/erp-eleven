@@ -15,6 +15,7 @@ class PrintDiagnostic(BaseModel):
 
 
 MESSAGES = {
+    'bot_authorization_revoked': 'A autorização do solicitante mudou. Peça uma nova impressão com um usuário autorizado.',
     'invalid_label': 'A etiqueta não passou na verificação de integridade. Nada foi enviado à impressora.',
     'label_accepted': 'Etiquetas aceitas pelo spooler do Windows. Confira a saída física na Zebra.',
     'label_send_uncertain': 'Envio de etiquetas incerto. Confira o papel e a fila do Windows antes de pedir outra cópia.',

@@ -183,15 +183,19 @@ não consultar o ERP inteiro.
 
 ## Solicitar no bot ou no ERP
 
-Pelo Telegram, envie os dados e peça a impressão em linguagem natural. ADMIN/GERENTE
-habilitado recebe prévia e botões; confirmar cria um trabalho na mesma transação da
-ação. Várias prévias podem ser selecionadas por nome ou pela lista de botões.
+Pelo Telegram ou WhatsApp, envie os dados e peça a impressão em linguagem natural.
+Funcionários ativos vinculados a um telefone autorizado recebem prévia e botões
+na conversa permitida, inclusive vendedores sem permissão de cadastro no ERP.
+Confirmar cria um trabalho na mesma transação da ação; isso não libera compra de
+frete nem outras alterações. Várias prévias podem ser selecionadas por nome ou
+pela lista de botões.
 
 No dashboard, **Gerar endereço** abre a preparação. No gestor é possível consultar
 PDF, editar como nova cópia, escolher remetente/impressora e enviar. O histórico de
 utilização reúne A4 e etiquetas, vinculados ao endereço único da agenda.
 
-Para um documento avulso, envie **PDF** ao Telegram e peça para imprimir. Limites:
+Para um documento avulso, envie **PDF** ao Telegram ou WhatsApp conectado por QR
+e peça para imprimir. Limites:
 5 MB, 1–30 páginas, sem senha. Há confirmação e referência técnica temporária, sem
 extrair texto, enviar conteúdo à IA ou armazenar o PDF no ERP. O Windows usa arquivo
 temporário e o remove após processamento/retorno; a recuperação conclui a limpeza
@@ -202,8 +206,9 @@ quando necessário. Detalhes em [Fluxos do assistente](ASSISTENTE_FLUXOS_OPERACI
 `pending` → `claimed` → `submitted`, `uncertain` ou `failed`; também existem
 `cancelled` e `expired`. **Enviado à impressora não significa papel fisicamente impresso.**
 
-A API usa locks e a chave da solicitação para impedir execução duplicada. Não há
-reatribuição automática de um claim perdido. O diário local é salvo antes de chamar
+A API usa locks e a chave da solicitação para impedir execução duplicada. Agentes
+atuais recuperam a resposta de coleta perdida pela mesma chave; não há reatribuição
+do trabalho para outro agente. O diário local é salvo antes de chamar
 Sumatra; se o agente reiniciar após iniciar impressão, informa resultado incerto e
 não reenvia o mesmo arquivo automaticamente.
 
@@ -249,6 +254,47 @@ retornam 503 no download; nesses ambientes distribua o ZIP a partir do repositó
 - Publicação confirmada Live: frontend `dep-db32gobl550s73cd7u50`, backend
   `dep-db32gobl550s73cd7to0`, ambos no commit `85ab59d`. O [CI completo](https://github.com/ferreiraluc/erp-eleven/actions/runs/37612169262)
   passou nos três jobs: backend, frontend e agente Windows.
+
+## Recuperação de coleta e processos — 05/11/2026
+
+Agente Windows **2026.11.05.1**: o A4 passa a salvar uma chave em `claim.json`
+antes da requisição de coleta, como já fazem as etiquetas internas e o macOS.
+Se o ERP coletar o documento e a resposta HTTP se perder, a próxima tentativa
+recupera **o mesmo trabalho**. A chave só é removida após salvar o diário do
+trabalho; reinício nesse intervalo também é recuperável. Outra chave ou uma
+instalação antiga não pode avançar sobre uma coleta durável ainda em andamento.
+Agentes antigos continuam compatíveis quando não há coleta durável pendente.
+
+O diário guarda quando o encerramento do renderizador foi efetivamente confirmado,
+inclusive em saída com erro e timeout com encerramento confirmado. Isso evita
+inspecionar um PID posteriormente reutilizado pelo Windows. Diários antigos com
+`renderer_exit_error` e código de saída também comprovam esse encerramento.
+O resultado permanece
+`uncertain`; não significa que o papel saiu e não autoriza reimpressão automática.
+Quando o processo ainda pode estar ativo, a proteção e a pausa permanecem.
+Diários já concluídos são conferidos uma vez por execução do agente, mantendo
+o histórico no disco sem reler todos os arquivos a cada consulta.
+
+O servidor também verifica novamente a autorização atual de pedidos do bot na
+coleta e no download. Trabalho pendente cujo solicitante perdeu acesso recebe
+falha explícita; não bloqueia permanentemente os próximos pedidos da fila.
+Se a autorização mudar após uma coleta cuja resposta se perdeu, a mesma chave
+recupera somente ID e hash, sem PDF nem dados do destinatário. O download é
+recusado; o agente registra a falha e confirma o resultado, liberando a fila
+sem resetar nem reimprimir o trabalho.
+
+**Instalação necessária no Windows:** atualizar o Render não modifica o agente
+da loja. Baixe o ZIP do mesmo perfil, feche aquele agente, extraia tudo e abra
+`Instalar.cmd` na mesma conta. Pressione Enter para preservar a credencial;
+nunca apague `claim.json`, `journal`, a fila ou o histórico para destravar.
+Trabalhos antigos coletados sem chave e sem diário precisam de conferência
+individual; não são reatribuídos automaticamente por esta atualização.
+
+Testes de regressão cobrem resposta perdida, reinício entre gravações, retorno
+de resultado repetido, reutilização de PID, isolamento e coleta concorrente no
+PostgreSQL. A suíte Windows usa somente processos inofensivos. Sem diagnóstico
+do trabalho não é possível atribuir um `renderer_exit_error` específico ao
+driver, ao PDF ou ao Sumatra; a validação física continua no Windows da loja.
 
 ## Fila pausada — 16/10/2026
 

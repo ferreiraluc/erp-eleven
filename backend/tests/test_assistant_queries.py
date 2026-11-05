@@ -355,14 +355,14 @@ def test_cached_tracking_answer_forces_fresh_customer_lookup(setup, monkeypatch)
         msg = incoming(db, user_id, "Qual o rastreio do Peter?")
         answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
         assert answer.parts[0] == "OY859210230BR" and len(answer.parts) == 2
-        assert choices == [None, {"type": "function", "function": {"name": "buscar_rastreios"}}]
+        assert choices == []  # A simple current lookup bypasses remembered/model answers.
 
 
 def test_unverified_code_in_plain_answer_is_never_delivered(setup, monkeypatch):
     factory, _, user_id = setup
     monkeypatch.setattr(agent, "complete", lambda _, **kwargs: {"content": "AA123456789BR"})
     with factory() as db:
-        msg = incoming(db, user_id, "Qual o rastreio do Peter?")
+        msg = incoming(db, user_id, "Qual o rastreio mais recente do Peter?")
         answer = agent.respond(db, msg, channels.authorized_identity(db, msg.channel, msg.sender_id))
         assert "AA123456789BR" not in answer and "verificar" in answer
 

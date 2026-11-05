@@ -6,7 +6,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     Read-Host 'Pressione Enter para fechar'
     return
 }
-$script:AgentVersion = '2026.10.16.1'
+$script:AgentVersion = '2026.11.05.1'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"
@@ -14,6 +14,52 @@ function Save-Journal($path, $item) {
     $stream = [IO.File]::Open($tmp, 'Create', 'Write', 'None')
     try { $stream.Write($bytes, 0, $bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }
     Move-Item -LiteralPath $tmp -Destination $path -Force
+}
+
+function Clear-JournalClaim($claimPath, $record) {
+    # The job journal must already be durable before clearing the request key.
+    # This also closes the crash window between those two filesystem operations.
+    if ($record.claim_key -and (Test-Path -LiteralPath $claimPath)) {
+        $claim = Get-Content -LiteralPath $claimPath -Raw | ConvertFrom-Json
+        if ([Guid]::Parse([string]$claim.key).ToString() -eq $record.claim_key) {
+            Remove-Item -LiteralPath $claimPath -Force
+        }
+    }
+}
+
+function Invoke-DurableClaim($claimPath, $journal, [scriptblock]$claim) {
+    $script:stage = 'journal_write'
+    if (-not (Test-Path -LiteralPath $claimPath)) {
+        Save-Journal $claimPath @{ key = [Guid]::NewGuid().ToString() }
+    }
+    $script:stage = 'journal_read'
+    $pending = Get-Content -LiteralPath $claimPath -Raw | ConvertFrom-Json
+    $key = [Guid]::Parse([string]$pending.key).ToString()
+    $script:stage = 'claim'
+    # A timeout or dropped response keeps this key. The server returns the same
+    # job on the next attempt, never a second job behind an invisible first one.
+    $job = & $claim $key
+    if (-not $job) {
+        $script:stage = 'cleanup'
+        Remove-Item -LiteralPath $claimPath -Force
+        return $null
+    }
+    $id = [Guid]::Parse([string]$job.id).ToString()
+    $path = Join-Path $journal "$id.json"
+    $record = @{ id = $id; claim_key = $key; status = 'preparing'; sha256 = $job.sha256; acked = $false; profile = $job.profile; paper_mode = $job.paper_mode; paper_width_mm = $job.paper_width_mm; paper_height_mm = $job.paper_height_mm }
+    if (Test-Path -LiteralPath $path) {
+        $script:stage = 'journal_read'
+        $loaded = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+        if ($loaded.id -ne $id -or $loaded.claim_key -ne $key) { throw 'Trabalho repetido recusado.' }
+        # Never replace a started/final journal with a new preparing record.
+        $record = @{}; foreach ($property in $loaded.PSObject.Properties) { $record[$property.Name] = $property.Value }
+    } else {
+        $script:stage = 'journal_write'
+        Save-Journal $path $record
+    }
+    $script:stage = 'cleanup'
+    Clear-JournalClaim $claimPath $record
+    return @{ record = $record; path = $path }
 }
 
 function Set-PrintOutcome($record, $status, $code, $duration = 0, $exitCode = $null) {
@@ -27,7 +73,10 @@ function Set-PrintOutcome($record, $status, $code, $duration = 0, $exitCode = $n
 function Test-OwnedRendererRunning($record) {
     # These outcomes prove the child exited or was never started. Windows can
     # reuse its old PID for an unrelated/protected process; do not inspect it.
-    if ($record.status -in @('submitted', 'failed')) { return $false }
+    if ($record.status -in @('submitted', 'failed') -or $record.renderer_exited -eq $true) { return $false }
+    # Older journals have no renderer_exited flag, but an exit-code diagnostic
+    # is also written only after WaitForExit succeeds. Preserve their uncertainty.
+    if ($record.diagnostic.code -eq 'renderer_exit_error' -and $null -ne $record.diagnostic.exit_code) { return $false }
     if (-not $record.process_id -or -not $record.process_started_ticks) { return $false }
     try {
         $p = [Diagnostics.Process]::GetProcessById([int]$record.process_id)
@@ -103,16 +152,18 @@ function Invoke-Renderer($record, $recordPath, $executable, $arguments, $timeout
         # Preserve the process handle until ExitCode has been read (PowerShell 5.1).
         if (-not $p.Start()) { throw 'Renderer did not start' }
         $launched = $true
+        $record.renderer_exited = $false
         $record.process_id = $p.Id
         $record.process_started_ticks = $p.StartTime.ToUniversalTime().Ticks.ToString()
         Save-Journal $recordPath $record
         if ($p.WaitForExit($timeoutMs)) {
+            $record.renderer_exited = $true
             $exitCode = $p.ExitCode
             if ($exitCode -eq 0) { Set-PrintOutcome $record 'submitted' 'renderer_accepted' $watch.ElapsedMilliseconds $exitCode }
             else { Set-PrintOutcome $record 'uncertain' 'renderer_exit_error' $watch.ElapsedMilliseconds $exitCode }
         } else {
             # Stop only the process we launched. Never clear the Windows queue or kill other Sumatra windows.
-            try { $p.Kill(); $p.WaitForExit(5000) | Out-Null } catch { }
+            try { $p.Kill(); $record.renderer_exited = $p.WaitForExit(5000) } catch { }
             Set-PrintOutcome $record 'uncertain' 'renderer_timeout' $watch.ElapsedMilliseconds
         }
     } catch {

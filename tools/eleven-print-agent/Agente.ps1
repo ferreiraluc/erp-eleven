@@ -90,6 +90,8 @@ try {
     finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
     $journal = Join-Path $root 'journal'
     New-Item -ItemType Directory -Force -Path $journal | Out-Null
+    $claimPath = Join-Path $root 'claim.json'
+    $processed = New-Object 'Collections.Generic.HashSet[string]'
     $profile = if ($config.profile -eq 'tickets') { 'tickets' } else { 'documents' }
     Write-Host "Eleven Impressao | $($config.printer) | $profile | agente $script:AgentVersion"
     Write-Host 'Conectando ao ERP. Feche esta janela para parar.'
@@ -114,10 +116,13 @@ try {
             # Resume only preparation/download. Dispatch is never repeated after a restart.
             $script:stage = 'journal_read'
             foreach ($file in Get-ChildItem -LiteralPath $journal -Filter '*.json') {
+                if ($processed.Contains($file.FullName)) { continue }
                 $record = $null
                 $script:stage = 'journal_read'
                 $loaded = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
                 $record = @{}; foreach ($property in $loaded.PSObject.Properties) { $record[$property.Name] = $property.Value }
+                $script:stage = 'cleanup'
+                Clear-JournalClaim $claimPath $record
                 $script:stage = 'renderer_check'
                 Assert-RendererStopped $record
                 $pdf = Join-Path $journal "$($record.id).pdf"
@@ -126,20 +131,18 @@ try {
                     Process-Job $record $file.FullName $pdf
                     Acknowledge $file.FullName $record
                 }
+                $script:stage = 'renderer_check'
+                Assert-RendererStopped $record
                 $script:stage = 'cleanup'
                 Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
+                $processed.Add($file.FullName) | Out-Null
             }
             $record = $null
-            $script:stage = 'claim'
-            $job = Api 'POST' 'claim?continuous_tickets=true'
-            if ($job) {
-                $id = [Guid]::Parse($job.id).ToString()
-                $recordPath = Join-Path $journal "$id.json"
-                if (Test-Path -LiteralPath $recordPath) { throw 'Trabalho repetido recusado.' }
-                $pdf = Join-Path $journal "$id.pdf"
-                $record = @{ id = $id; status = 'preparing'; sha256 = $job.sha256; acked = $false; profile = $job.profile; paper_mode = $job.paper_mode; paper_width_mm = $job.paper_width_mm; paper_height_mm = $job.paper_height_mm }
-                $script:stage = 'journal_write'
-                Save-Journal $recordPath $record
+            $claimed = Invoke-DurableClaim $claimPath $journal { param($key); Api 'POST' ("claim?continuous_tickets=true&claim_key=$key") }
+            if ($claimed) {
+                $record = $claimed.record
+                $recordPath = $claimed.path
+                $pdf = Join-Path $journal "$($record.id).pdf"
                 $script:stage = 'process_job'
                 Process-Job $record $recordPath $pdf
                 Acknowledge $recordPath $record
@@ -147,6 +150,7 @@ try {
                 Assert-RendererStopped $record
                 $script:stage = 'cleanup'
                 Remove-Item -LiteralPath $pdf -Force -ErrorAction SilentlyContinue
+                $processed.Add($recordPath) | Out-Null
             }
             if ($paused) { Write-Host "$(Get-Date -Format 'HH:mm:ss') Fila retomada. Trabalhos enviados nao foram repetidos."; $paused = $false }
             if ($profile -eq 'tickets') { Start-Sleep -Seconds 3 } else { Start-Sleep -Seconds 10 }
