@@ -50,7 +50,7 @@ const { tr } = useInventoryI18n()
 const preview = ref<ItemDeletionPreview | null>(null), dialog = ref<HTMLElement>()
 const loading = ref(true), busy = ref(false), confirmed = ref(false), error = ref('')
 let mounted = true
-const blockerLabels = { sales: 'Vendas, inclusive canceladas', inventory_counts: 'Contagens de inventário', linked_movements: 'Movimentações vinculadas a outras operações' }
+const blockerLabels = { sales: 'Vendas, inclusive canceladas', inventory_counts: 'Contagens de inventário', linked_movements: 'Movimentações vinculadas a outras operações', orders: 'Pedidos vinculados', order_reservations: 'Peças reservadas em pedidos' }
 const quantity = (value: number | null) => value == null ? tr('Não informado') : value
 function close() { if (!busy.value) emit('close') }
 async function load() {

@@ -3,7 +3,7 @@
     <div v-erp-dialog class="modal-container erp-dialog erp-dialog--lg" @click.stop>
       <div class="modal-header erp-dialog__header">
         <h2 class="modal-title">
-          {{ isEditing ? uiText(`Editar Pedido`) : uiText(`Novo Pedido`) }}
+          {{ logisticsOnly ? uiText('Entrega e anexos') : isEditing ? uiText(`Editar Pedido`) : uiText(`Novo Pedido`) }}
         </h2>
         <button data-dialog-close :aria-label="uiText('Fechar')" @click="closeModal" class="modal-close erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -17,7 +17,7 @@
           <!-- Pedido Section -->
           <div class="form-section">
             <h3 class="section-title">{{ $tr("Informações do Pedido") }}</h3>
-            <div class="form-row">
+            <div v-if="!logisticsOnly" class="form-row">
               <div class="form-group required full-width">
                 <label for="descricao">{{ $tr("Descrição dos Itens") }}</label>
                 <textarea
@@ -31,7 +31,7 @@
               </div>
             </div>
             <div class="form-row">
-              <div class="form-group required">
+              <div v-if="!logisticsOnly" class="form-group required">
                 <label for="valor_total">{{ $tr("Valor Total") }}</label>
                 <div class="valor-with-moeda">
                   <ErpSelect compact
@@ -66,7 +66,7 @@
                   <option value="PROCESSANDO">{{ $tr("Processando") }}</option>
                   <option value="ENVIADO">{{ $tr("Enviado") }}</option>
                   <option value="ENTREGUE">{{ $tr("Entregue") }}</option>
-                  <option value="CANCELADO">{{ $tr("Cancelado") }}</option>
+                  <option v-if="!logisticsOnly" value="CANCELADO">{{ $tr("Cancelado") }}</option>
                 </ErpSelect>
               </div>
               <div class="form-group rastreio-group">
@@ -141,7 +141,7 @@
           </div>
 
           <!-- Cliente Section (Opcional) -->
-          <div class="form-section">
+          <div v-if="!logisticsOnly" class="form-section">
             <h3 class="section-title">{{ $tr("Dados do Cliente (Opcional)") }}</h3>
 
             <!-- Autocomplete para vincular cliente existente -->
@@ -471,6 +471,7 @@ const formData = ref<PedidoCreate>({
 // Computed
 const router = useRouter()
 const isEditing = computed(() => !!props.pedido)
+const logisticsOnly = computed(() => !!props.pedido?.commerce_status)
 
 function verRastreamento() {
   const code = selectedRastreio.value?.codigo_rastreio || formData.value.codigo_rastreio
@@ -481,6 +482,7 @@ function verRastreamento() {
 }
 
 const isFormValid = computed(() => {
+  if (logisticsOnly.value) return true
   return !!(
     formData.value.descricao &&
     formData.value.valor_total > 0
@@ -582,7 +584,12 @@ const handleSubmit = async () => {
     let result: Pedido
 
     if (isEditing.value && props.pedido) {
-      result = await pedidosAPI.update(props.pedido.id, submitData)
+      result = await pedidosAPI.update(props.pedido.id, logisticsOnly.value ? {
+        ...(formData.value.status !== props.pedido.status ? { status: formData.value.status } : {}),
+        endereco_entrega: formData.value.endereco_entrega,
+        codigo_rastreio: formData.value.codigo_rastreio,
+        tag_ids: selectedTags.value,
+      } : submitData)
     } else {
       result = await pedidosAPI.create(submitData)
       // Upload any files that were added before the pedido was saved

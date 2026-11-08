@@ -13,7 +13,7 @@ const VendasView = () => import('@/views/VendasView.vue')
 const PedidosView = () => import('@/views/PedidosView.vue')
 const InventoryListView = () => import('@/views/inventory/InventoryListView.vue')
 const ClientesView = () => import('@/views/ClientesView.vue')
-const PDVView = () => import('@/views/PDVView.vue')
+const PDVView = () => import('@/views/PDVEntryView.vue')
 const FiadoView = () => import('@/views/FiadoView.vue')
 
 const router = createRouter({

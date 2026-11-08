@@ -52,6 +52,16 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); root?.remove(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('Inventory grades and local balances across views', () => {
+  it('shows available stock and reservations together, including the grade summary', async () => {
+    localStorage.setItem('inv_group_mode', 'true'); localStorage.setItem('inv_view', 'grid')
+    api.getGroups.mockResolvedValue([{ ...group(), items: [a(), { ...b(), reserved_deposito: 2 }] }])
+    api.getItems.mockResolvedValue({ items: [item('loose', { reserved_loja: 1 })], page: 1, page_size: 50, total: 1, total_pages: 1 })
+    await mount()
+    expect(balances('.group-stock-balances')).toBe('1 L | 3 D2 reservado(s)')
+    expect(balances('[data-item-id="loose"] .stock-number')).toBe('0 L | 2 D1 reservado(s)')
+    expect(root.querySelector('[data-item-id="loose"] .stock-balances')?.getAttribute('aria-label')).toContain('Reservado: 1 na loja')
+    expect(root.querySelector('[data-item-id="loose"] .reserved-count')?.getAttribute('href')).toBe('#/pedidos?q=Camiseta%20loose')
+  })
   it('keeps separate real balances at minimum zoom, including zero and an unknown local balance', async () => {
     localStorage.setItem('inv_view', 'grid'); localStorage.setItem('inv_mobile_grid_zoom', '0')
     api.getItems.mockResolvedValue({ items: [item('known', { current_stock: 99 }), item('zero', { stock_loja: 0 }), item('unknown', { current_stock: 9, stock_loja: null })], page: 1, page_size: 50, total: 3, total_pages: 1 })

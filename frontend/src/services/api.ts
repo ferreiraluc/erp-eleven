@@ -400,6 +400,13 @@ export interface Pedido {
   tags: Tag[]
   cliente?: { id: string; nome: string; telefone?: string; email?: string; cpf?: string; endereco?: string }
   anexos_count?: number
+  commerce_status?: 'reserved' | 'completed' | 'cancelled' | null
+  commerce_version?: number
+  sale_id?: string | null
+  total_gs?: number | string | null
+  paid_gs?: number | string | null
+  usd_rate_gs?: number | string | null
+  reserved_at?: string | null
 }
 
 export interface PedidoCreate {
@@ -424,6 +431,7 @@ export const pedidosAPI = {
     search?: string
     status?: string
     tag_id?: string
+    commerce_status?: string
   }): Promise<{ items: Pedido[]; total: number; page: number; page_size: number }> =>
     api.get('/api/pedidos/pagina', { params }).then(res => res.data),
 
@@ -589,6 +597,11 @@ export interface InventoryItem {
   current_stock: number | null
   stock_loja: number | null
   stock_deposito: number | null
+  reserved_loja?: number
+  reserved_deposito?: number
+  available_loja?: number | null
+  available_deposito?: number | null
+  available_stock?: number | null
   is_active: boolean
   alert_level?: string
   image_data?: string | null

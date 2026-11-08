@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { canWithdrawStock, displayStock, hasKnownStock, stockAlertLevel, sumStock } from './inventoryStock'
+import { availableStock, canWithdrawStock, displayStock, hasKnownStock, stockAlertLevel, sumStock } from './inventoryStock'
 
 const complete = { current_stock: 5, stock_loja: 5, stock_deposito: 0, alert_level: 'ok' }
 describe('Nullable inventory stock', () => {
+  it('excludes order reservations without changing physical counts or guessing unknown stock', () => {
+    const held = { ...complete, reserved_loja: 5, reserved_deposito: 0 }
+    expect(availableStock(held, 'loja')).toBe(0)
+    expect(canWithdrawStock(held)).toBe(false)
+    expect(held.stock_loja).toBe(5)
+    expect(availableStock({ ...held, stock_deposito: null }, 'deposito')).toBeNull()
+    expect(canWithdrawStock({ ...held, stock_deposito: 2, current_stock: 7, reserved_deposito: 1 })).toBe(true)
+  })
   it('preserves zero and missing balances distinctly', () => {
     expect(displayStock(0)).toBe('0')
     expect(displayStock(null)).toBe('—')

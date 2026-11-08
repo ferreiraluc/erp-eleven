@@ -4,10 +4,10 @@ export interface ItemDeletionPreview {
   item: { id: string; name: string; sku_internal: string; size: string | null; color: string | null;
     current_stock: number | null; stock_loja: number | null; stock_deposito: number | null }
   allowed: boolean
-  blockers: Array<{ code: 'sales' | 'inventory_counts' | 'linked_movements'; count: number }>
+  blockers: Array<{ code: 'sales' | 'inventory_counts' | 'linked_movements' | 'orders' | 'order_reservations'; count: number }>
   movement_count: number
   plan_token: string | null
-  preserve_history_token?: string
+  preserve_history_token?: string | null
 }
 
 export const inventoryDeletionAPI = {

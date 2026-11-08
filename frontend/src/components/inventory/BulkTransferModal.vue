@@ -84,7 +84,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, computed } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
-import { displayStock, hasKnownStock } from '@/services/inventoryStock'
+import { availableStock, displayStock, hasKnownStock } from '@/services/inventoryStock'
 
 const props = defineProps<{
   items: InventoryItem[]
@@ -110,7 +110,7 @@ const quantities = reactive<Record<string, number>>(
 )
 
 function sourceStockFor(item: InventoryItem, dir: string): number | null {
-  return dir === 'deposito_to_loja' ? item.stock_deposito : item.stock_loja
+  return availableStock(item, dir === 'deposito_to_loja' ? 'deposito' : 'loja')
 }
 
 function sourceStock(item: InventoryItem): number | null {

@@ -91,10 +91,11 @@
               <label class="pdv-stock-location" @click.stop>
                 {{ cartText('location') }}
                 <ErpSelect compact :label="(cartText('location'))" :value="productLocation(item)" @change="selectedLocations[item.id] = $event as StockLocation">
-                  <option value="loja">{{ cartText('loja') }}: {{ displayStock(item.stock_loja) }}</option>
-                  <option value="deposito">{{ cartText('deposito') }}: {{ displayStock(item.stock_deposito) }}</option>
+                  <option value="loja">{{ cartText('loja') }}: {{ displayStock(availableStock(item, 'loja')) }}</option>
+                  <option value="deposito">{{ cartText('deposito') }}: {{ displayStock(availableStock(item, 'deposito')) }}</option>
                 </ErpSelect>
               </label>
+              <span v-if="(item.reserved_loja || 0) + (item.reserved_deposito || 0) > 0" class="pdv-result-meta">{{ uiText('Reservado em pedidos') }}: {{ (item.reserved_loja || 0) + (item.reserved_deposito || 0) }}</span>
               <div class="pdv-result-price">
                 <span class="pdv-price-orig">{{ currencyLabel(item.sale_currency) }} {{ fmtNum(catalogPrice(item.sale_price)) }}</span>
                 <span v-for="price in productEquivalents(catalogPrice(item.sale_price), item.sale_currency)" :key="price.currency" class="pdv-price-gs">≈ {{ currencyLabel(price.currency) }} {{ fmtNum(price.amount) }}</span>
@@ -347,7 +348,7 @@ import { useCurrencyStore } from '@/stores/currency'
 import { prepareCatalogIndex, searchDeviceCatalog } from '@/services/catalogIndex'
 import { saleUsd } from '@/services/saleUsd'
 import { inventoryAPI, type InventoryItem, type ProductRelation, type RelatedProductCursor } from '@/services/api'
-import { displayStock } from '@/services/inventoryStock'
+import { displayStock, availableStock } from '@/services/inventoryStock'
 import { paymentMethods, paymentCurrency, paymentLabel, paymentSymbol, paymentRate, isCardPayment, cardCharge, cardPaymentAmounts, validPaymentAmount, discountToCoverShortfall } from '@/services/pdvPayments'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr: inventoryText } = useInventoryI18n()
@@ -653,7 +654,7 @@ function clearSearch() {
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
 function productLocation(item: InventoryItem): StockLocation {
-  return selectedLocations[item.id] || (item.stock_loja !== null && item.stock_loja > 0 ? 'loja' : 'deposito')
+  return selectedLocations[item.id] || ((availableStock(item, 'loja') ?? 0) > 0 ? 'loja' : 'deposito')
 }
 function productAvailable(item: InventoryItem) { if(item.catalog_cached)return null; return pdv.availableStock(item.id, productLocation(item)) }
 function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return catalogPrice(item.sale_price) !== null && ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && available !== null && available >= 1 }
