@@ -13,7 +13,7 @@ vi.mock('@/components/PedidoDetailsModal.vue', () => ({ default: { props: ['pedi
 let app: App | undefined
 let container: HTMLDivElement
 const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); await nextTick() }
-const order = (id: string) => ({ id, numero_pedido: id, cliente_nome: `Cliente ${id}`, tags: [], status: 'PENDENTE', created_at: '2026-10-14', codigo_rastreio: 'QA123456789BR' })
+const order = (id: string) => ({ id, numero_pedido: id, descricao: '1 camiseta', valor_total: 80, cliente_nome: `Cliente ${id}`, tags: [], status: 'PENDENTE', created_at: '2026-10-14', updated_at: '2026-10-14', codigo_rastreio: 'QA123456789BR' })
 const page = (id: string, total = 45) => ({ items: [order(id)], total, page: 1, page_size: 20 })
 async function mount(path = '/') {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { render: () => null } }, { path: '/rastreamento', name: 'rastreamento', component: { render: () => null } }] })
@@ -34,6 +34,11 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); app = undefined; container.remove(); vi.useRealTimers(); vi.resetAllMocks() })
 
 describe('Order directory navigation', () => {
+  it('searches the item code from an inventory reservation link', async () => {
+    await mount('/?q=INV-QN5SPN')
+    expect(api.getPage).toHaveBeenCalledWith(expect.objectContaining({ search: 'INV-QN5SPN' }))
+    expect(container.querySelector('input')?.value).toBe('INV-QN5SPN')
+  })
   it('fetches another page and applies search to the server, resetting the page', async () => {
     await mount()
     api.getPage.mockResolvedValueOnce(page('Segunda'))

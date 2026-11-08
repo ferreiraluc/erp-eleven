@@ -9,6 +9,10 @@ import {
 import type { ProductLabelLayout } from './productLabelDesign'
 
 export interface ReplenishmentProduct extends LabelProduct {
+  reserved_loja?: number
+  reserved_deposito?: number
+  available_loja?: number | null
+  available_deposito?: number | null
   sale_price: string
   sale_currency: string
   brand: string | null
@@ -18,6 +22,10 @@ export interface ReplenishmentProduct extends LabelProduct {
   blocked_reason: string | null
   last_store_exit_at: string | null
   has_store_history: boolean
+}
+
+export function replenishmentAvailable(item: ReplenishmentProduct): number {
+  return typeof item.stock_deposito === 'number' ? item.stock_deposito - (item.reserved_deposito || 0) : 0
 }
 export interface ReplenishmentLine extends LabelLine {
   sale_price: string
@@ -63,6 +71,7 @@ export function canReplenish(item: ReplenishmentProduct) {
     item.stock_loja === 0 &&
     Number.isInteger(item.stock_deposito) &&
     item.stock_deposito! > 0 &&
+    replenishmentAvailable(item) > 0 &&
     item.current_stock === item.stock_deposito &&
     /^INV-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/.test(item.inventory_code || '')
   )
@@ -78,7 +87,7 @@ export function replenishmentRequest(
     !rows.length ||
     rows.length > 100 ||
     new Set(rows.map((row) => row.id)).size !== rows.length ||
-    rows.some((row) => !canReplenish(row) || row.copies > row.stock_deposito!)
+    rows.some((row) => !canReplenish(row) || row.copies > replenishmentAvailable(row))
   )
     throw new Error('invalid-replenishment')
   const body = labelRequest(rows, key, layout)

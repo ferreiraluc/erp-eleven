@@ -1,4 +1,7 @@
 {
+  "Ver pedidos com este produto": ["Ver pedidos con este producto", "View orders with this product"],
+  "{count} reservado(s)": ["{count} reservado(s)", "{count} reserved"],
+  "Disponível: {loja} na loja · {deposito} no depósito. Reservado: {reservedLoja} na loja · {reservedDeposito} no depósito.": ["Disponible: {loja} en tienda · {deposito} en depósito. Reservado: {reservedLoja} en tienda · {reservedDeposito} en depósito.", "Available: {loja} in store · {deposito} in warehouse. Reserved: {reservedLoja} in store · {reservedDeposito} in warehouse."],
   "Acender luz": ["Encender luz", "Turn light on"],
   "Apagar luz": ["Apagar luz", "Turn light off"],
   "Câmera": ["Cámara", "Camera"],
@@ -2080,6 +2083,22 @@
   "Contagens de inventário": [
     "Recuentos de inventario",
     "Inventory counts"
+  ],
+  "Pedidos vinculados": [
+    "Pedidos vinculados",
+    "Linked orders"
+  ],
+  "Total físico:": [
+    "Total físico:",
+    "Physical total:"
+  ],
+  "Peças reservadas em pedidos": [
+    "Unidades reservadas en pedidos",
+    "Units reserved for orders"
+  ],
+  "Libere ou conclua as reservas antes de excluir este produto.": [
+    "Libere o complete las reservas antes de eliminar este producto.",
+    "Release or complete reservations before deleting this product."
   ],
   "Movimentações vinculadas a outras operações": [
     "Movimientos vinculados a otras operaciones",

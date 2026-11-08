@@ -2,13 +2,16 @@
   <div class="pedidos-view">
     <!-- Header -->
     <ModuleHeader :title="$tr('Pedidos')">
-      <button @click="openCreateModal" class="btn btn-primary erp-button erp-button--primary">
+      <button @click="openReservationEditor()" class="btn btn-primary erp-button erp-button--primary">
         <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
-        {{ $tr("Novo Pedido") }}
+        {{ $tr("Separar produtos") }}
       </button>
+      <button @click="openCreateModal" class="erp-button erp-button--ghost legacy-create">{{ $tr('Pedido sem reserva') }}</button>
     </ModuleHeader>
+
+    <div class="reservation-intro"><ShoppingBag :size="19" /><p><strong>{{ $tr('Cada peça no lugar certo.') }}</strong> {{ $tr('Separe para um cliente, acompanhe os pagamentos e conclua a venda pelo PDV.') }}</p></div>
 
     <!-- Filters and Controls -->
     <div class="filters-section">
@@ -27,6 +30,16 @@
         </div>
 
         <!-- Status Filter -->
+        <div class="filter-group">
+          <label class="filter-label">{{ $tr('Separação') }}</label>
+          <ErpSelect :label="$tr('Separação')" v-model="commerceFilter" class="filter-select">
+            <option value="">{{ $tr('Todos os pedidos') }}</option>
+            <option value="reserved">{{ $tr('Separados') }}</option>
+            <option value="completed">{{ $tr('Vendas concluídas') }}</option>
+            <option value="cancelled">{{ $tr('Reservas canceladas') }}</option>
+            <option value="legacy">{{ $tr('Sem reserva de estoque') }}</option>
+          </ErpSelect>
+        </div>
         <div class="filter-group">
           <label class="filter-label">{{ $tr("Status") }}</label>
           <ErpSelect :label="($tr('Status'))" v-model="statusFilter" class="filter-select">
@@ -137,8 +150,8 @@
             </div>
           </div>
           <div class="col col-status">
-            <span :class="['status-badge', getStatusClass(pedido.status)]">
-              {{ getStatusLabel(pedido.status) }}
+            <span :class="['status-badge', pedido.commerce_status ? `commerce-${pedido.commerce_status}` : getStatusClass(pedido.status)]">
+              {{ pedido.commerce_status ? reservationStatusLabel(pedido.commerce_status, Number(pedido.paid_gs || 0), Math.max(0, Number(pedido.total_gs || 0) - Number(pedido.paid_gs || 0))) : getStatusLabel(pedido.status) }}
             </span>
           </div>
           <div class="col col-tags">
@@ -182,14 +195,10 @@
 
       <!-- Cards View -->
       <div v-else class="pedidos-cards">
-        <PedidoCard
-          v-for="pedido in pedidos"
-          :key="pedido.id"
-          :pedido="pedido"
-          @edit="openEditModal"
-          @view="openDetailsModal"
-          @track="createRastreamento"
-        />
+        <template v-for="pedido in pedidos" :key="pedido.id">
+          <ReservationCard v-if="pedido.commerce_status" :pedido="pedido" @view="openDetailsModal" />
+          <PedidoCard v-else :pedido="pedido" @edit="openEditModal" @view="openDetailsModal" @track="createRastreamento" />
+        </template>
       </div>
 
       <!-- Pagination -->
@@ -228,9 +237,11 @@
       v-if="showDetailsModal && selectedPedido"
       :pedido="selectedPedido"
       @close="closeDetailsModal"
-      @edit="openEditModal"
+      @edit="openLogisticsEdit"
       @updated="selectedPedido = $event; handlePedidoSaved()"
     />
+    <OrderReservationEditor v-if="showReservationEditor" :order-id="reservationEditingId || undefined" @close="closeReservationEditor" @saved="onReservationSaved" />
+    <OrderReservationDetails v-if="reservationDetailsId" :order-id="reservationDetailsId" @close="reservationDetailsId = null" @edit="openReservationEditor" @updated="onReservationUpdated" @logistics="openReservationLogistics" />
   </div>
 </template>
 
@@ -238,13 +249,18 @@
 import { formatDate as businessDate } from '@/utils/datetime'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import ModuleHeader from '@/components/ModuleHeader.vue'
+import { ShoppingBag } from 'lucide-vue-next'
 import { uiText } from '@/i18n/uiText'
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PedidoCard from '@/components/PedidoCard.vue'
 import PedidoModal from '@/components/PedidoModal.vue'
 import PedidoDetailsModal from '@/components/PedidoDetailsModal.vue'
 import { pedidosAPI, tagsAPI, type Pedido, type Tag } from '@/services/api'
+import ReservationCard from '@/components/orders/ReservationCard.vue'
+import { reservationStatusLabel, type ReservationDetail } from '@/services/orderReservations'
+const OrderReservationEditor = defineAsyncComponent(() => import('@/components/orders/OrderReservationEditor.vue'))
+const OrderReservationDetails = defineAsyncComponent(() => import('@/components/orders/OrderReservationDetails.vue'))
 
 import { orderTrackingLocation } from '@/services/orderNavigation'
 
@@ -260,10 +276,11 @@ let linkedRequest = 0
 const totalItems = ref(0)
 let requestVersion = 0
 let searchTimer: ReturnType<typeof setTimeout> | undefined
-const searchQuery = ref('')
+const searchQuery = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const statusFilter = ref('')
 const tagFilter = ref('')
-const viewMode = ref<'list' | 'cards'>('list')
+const commerceFilter = ref('')
+const viewMode = ref<'list' | 'cards'>('cards')
 const currentPage = ref(1)
 const itemsPerPage = 20
 
@@ -272,6 +289,9 @@ const showCreateModal = ref(false)
 const showDetailsModal = ref(false)
 const editingPedido = ref<Pedido | null>(null)
 const selectedPedido = ref<Pedido | null>(null)
+const showReservationEditor = ref(false)
+const reservationEditingId = ref<string | null>(null)
+const reservationDetailsId = ref<string | null>(null)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage)))
 
@@ -287,6 +307,7 @@ const loadPedidos = async () => {
       search: searchQuery.value.trim() || undefined,
       status: statusFilter.value || undefined,
       tag_id: tagFilter.value || undefined,
+      commerce_status: commerceFilter.value || undefined,
     })
     if (version !== requestVersion) return
     totalItems.value = result.total
@@ -354,6 +375,7 @@ const clearFilters = () => {
   searchQuery.value = ''
   statusFilter.value = ''
   tagFilter.value = ''
+  commerceFilter.value = ''
 }
 
 const openCreateModal = () => {
@@ -362,15 +384,21 @@ const openCreateModal = () => {
 }
 
 const openEditModal = (pedido: Pedido) => {
+  if (pedido.commerce_status) { openReservationEditor(pedido.id); return }
   showDetailsModal.value = false
   selectedPedido.value = null
   editingPedido.value = pedido
   showCreateModal.value = true
 }
+const openLogisticsEdit = (pedido: Pedido) => {
+  showDetailsModal.value = false; selectedPedido.value = null
+  editingPedido.value = pedido; showCreateModal.value = true
+}
 
 const openDetailsModal = (pedido: Pedido) => {
   ++linkedRequest
   linkedOrderError.value = false
+  if (pedido.commerce_status) { reservationDetailsId.value = pedido.id; return }
   selectedPedido.value = pedido
   showDetailsModal.value = true
 }
@@ -391,6 +419,24 @@ const handlePedidoSaved = async () => {
   await loadPedidos()
 }
 
+function openReservationEditor(id?: string) {
+  showDetailsModal.value = false; selectedPedido.value = null; reservationDetailsId.value = null
+  reservationEditingId.value = id || null; showReservationEditor.value = true
+}
+function closeReservationEditor() { showReservationEditor.value = false; reservationEditingId.value = null }
+async function onReservationSaved(value: ReservationDetail) {
+  closeReservationEditor(); reservationDetailsId.value = value.id; await loadPedidos()
+}
+async function onReservationUpdated() { await loadPedidos() }
+async function openReservationLogistics(id: string) {
+  const request = ++linkedRequest
+  try {
+    const pedido = await pedidosAPI.getById(id)
+    if (request !== linkedRequest) return
+    reservationDetailsId.value = null; selectedPedido.value = pedido; showDetailsModal.value = true
+  } catch { if (request === linkedRequest) linkedOrderError.value = true }
+}
+
 const createRastreamento = (pedido: Pedido) => router.push(orderTrackingLocation(pedido))
 
 const previousPage = () => {
@@ -408,7 +454,7 @@ const nextPage = () => {
 }
 
 // Watchers
-watch([statusFilter, tagFilter], () => {
+watch([statusFilter, tagFilter, commerceFilter], () => {
   currentPage.value = 1
   loadPedidos()
 })
@@ -436,6 +482,7 @@ async function loadLinkedOrder() {
   }
 }
 watch(() => route.query.pedido_id, loadLinkedOrder, { immediate: true })
+watch(() => route.query.q, value => { if (typeof value === 'string') searchQuery.value = value })
 onMounted(() => { void loadPedidos(); void loadTags() })
 </script>
 
@@ -894,4 +941,6 @@ onMounted(() => { void loadPedidos(); void loadTags() })
     padding: 1rem;
   }
 }
+.reservation-intro{display:flex;gap:9px;align-items:center;padding:0 0 18px;color:#64748b;font-size:.8rem;line-height:1.6}.reservation-intro>svg{flex-shrink:0;color:#3b82f6}.reservation-intro p{margin:0}.reservation-intro strong{color:#334155}.filters-section{border:1px solid #e2e8f0;border-radius:16px;box-shadow:none;padding:16px;margin-bottom:16px}.filters-row{gap:12px}.search-input{box-sizing:border-box;border-color:#dbe3ee;border-radius:11px}.filter-select{padding:0;border:0;background:transparent}.filter-label{color:#64748b}.pedidos-container{background:transparent;box-shadow:none;overflow:visible}.pedidos-list{background:white;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden}.pedidos-cards{padding:0;gap:16px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));align-items:start}.view-toggle{border-color:#e2e8f0;border-radius:11px}.toggle-btn{padding:10px}.toggle-btn.active{background:#eff6ff;color:#2563eb}.commerce-reserved{color:#9a3412;background:#fff7ed}.commerce-completed{color:#047857;background:#ecfdf5}.commerce-cancelled{color:#64748b;background:#f1f5f9}.pagination{border:0;padding-top:22px}.legacy-create{font-size:.76rem;color:#64748b}
+@media(max-width:768px){.pedidos-view{padding:12px}.filters-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.search-box{grid-column:1/-1}.search-input{font-size:16px}.view-toggle{align-self:end;justify-self:end}.filter-group{min-width:0}.filter-select{min-width:0}.pedidos-cards{grid-template-columns:1fr;padding:0;gap:12px}.reservation-intro{font-size:.73rem;padding:4px 2px 14px}.reservation-intro strong{display:block}.filters-section{padding:13px}.legacy-create{padding:8px!important;font-size:.68rem}.filter-label{font-size:.69rem}}
 </style>

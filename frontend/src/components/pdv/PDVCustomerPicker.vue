@@ -1,6 +1,6 @@
 <template>
   <div class="customer-picker">
-    <label for="pdv-customer-search">{{ text('customer') }}</label>
+    <label for="pdv-customer-search">{{ required ? uiText('Cliente') : text('customer') }}</label>
     <div v-if="customerName" class="customer-selected">
       <div><strong>{{ customerName }}</strong><small>{{ customerId ? selectedDetails : text('unlinked') }}</small></div>
       <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="text('remove')"
@@ -32,7 +32,7 @@
         </li>
       </ul>
       <p v-if="hasMore">{{ text('more') }}</p>
-      <button v-if="canUseName" type="button" class="customer-name-only erp-button erp-button--ghost"
+      <button v-if="canUseName && !required" type="button" class="customer-name-only erp-button erp-button--ghost"
         :disabled="disabled || selecting" @click="useName">{{ text('nameOnly') }}</button>
     </template>
     <ClienteFormModal v-if="showCreate" :is-visible="true" quick :initial-name="canUseName ? query.trim() : ''"
@@ -48,7 +48,7 @@ import { uiText } from '@/i18n/uiText'
 import { pdvAPI, type Cliente, type PdvCustomerOption } from '@/services/api'
 import { usePdvEntryText } from './entryMessages'
 
-const props = defineProps<{ customerId: string | null; customerName: string | null; disabled?: boolean }>()
+const props = defineProps<{ customerId: string | null; customerName: string | null; disabled?: boolean; required?: boolean }>()
 const emit = defineEmits<{
   (event: 'update:customerId', value: string | null): void
   (event: 'update:customerName', value: string | null): void
@@ -117,7 +117,7 @@ async function choose(option: PdvCustomerOption) {
   } finally { if (selection === selectionRequest) { selecting.value = false; emit('busy', false) } }
 }
 function useName() {
-  if (!canUseName.value || props.disabled || selecting.value) return
+  if (!canUseName.value || props.required || props.disabled || selecting.value) return
   const name = query.value.trim(); invalidate()
   emit('update:customerId', null); emit('update:customerName', name); query.value = ''
 }

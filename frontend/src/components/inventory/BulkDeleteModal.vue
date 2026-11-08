@@ -44,7 +44,7 @@ type Row = { id: string; name: string; preview?: ItemDeletionPreview; deleted: b
 const rows = ref<Row[]>([...new Map(props.items.map(item => [item.id, item])).values()].map(item => ({ id: item.id, name: item.name, deleted: false, error: '' })))
 const loading = ref(true), busy = ref(false), confirmed = ref(false), needsReview = ref(false)
 const progress = ref(0), total = ref(0)
-const blockerLabels = { sales: 'Vendas, inclusive canceladas', inventory_counts: 'Contagens de inventário', linked_movements: 'Movimentações vinculadas a outras operações' }
+const blockerLabels = { sales: 'Vendas, inclusive canceladas', inventory_counts: 'Contagens de inventário', linked_movements: 'Movimentações vinculadas a outras operações', orders: 'Pedidos vinculados', order_reservations: 'Peças reservadas em pedidos' }
 let mounted = true
 function mode(row: Row) { return row.preview?.allowed && row.preview.plan_token ? 'permanent' : !row.preview?.allowed && row.preview?.preserve_history_token ? 'history' : null }
 const actionable = computed(() => rows.value.filter(row => !row.deleted && !row.error && mode(row)))
@@ -67,7 +67,8 @@ async function load() {
         if (!mounted) return
         if (preview.item.id !== row.id) throw new Error('Preview identity mismatch')
         row.preview = preview
-        if (!mode(row)) row.error = 'Não foi possível conferir os vínculos do produto.'
+        if (!mode(row)) row.error = preview.blockers.some(blocker => blocker.code === 'order_reservations')
+          ? 'Libere ou conclua as reservas antes de excluir este produto.' : 'Não foi possível conferir os vínculos do produto.'
       } catch (cause) { if (mounted) row.error = errorMessage(cause, 'Não foi possível conferir os vínculos do produto.') }
     }
   }))

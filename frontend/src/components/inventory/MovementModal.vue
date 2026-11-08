@@ -18,6 +18,13 @@
             <span class="item-stock-sep">·</span>
             <span class="item-stock">{{ tr('Depósito:') }} <strong>{{ displayStock(item.stock_deposito) }}</strong></span>
           </div>
+          <small v-if="(item.reserved_loja || 0) + (item.reserved_deposito || 0)" class="stock-warning">
+            {{ tr('{count} reservado(s)', { count: (item.reserved_loja || 0) + (item.reserved_deposito || 0) }) }} ·
+            {{ tr('Disponível: {loja} na loja · {deposito} no depósito. Reservado: {reservedLoja} na loja · {reservedDeposito} no depósito.', {
+              loja: displayStock(availableStock(item, 'loja')), deposito: displayStock(availableStock(item, 'deposito')),
+              reservedLoja: item.reserved_loja || 0, reservedDeposito: item.reserved_deposito || 0,
+            }) }}
+          </small>
         </div>
         <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Um ou mais saldos não foram informados. Movimentações ficam bloqueadas até a revisão dos dados do estoque.') }}</p>
 
@@ -127,7 +134,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
 import { ref, reactive, computed } from 'vue'
 import { inventoryAPI, type InventoryItem } from '@/services/api'
-import { displayStock, hasKnownStock } from '@/services/inventoryStock'
+import { availableStock, displayStock, hasKnownStock } from '@/services/inventoryStock'
 
 const props = defineProps<{
   item?: InventoryItem | null

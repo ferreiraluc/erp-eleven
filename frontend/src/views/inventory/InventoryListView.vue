@@ -168,8 +168,8 @@
                 :title="groupTitle(entry.group.group_key) + ' · ' + tr('Clique para renomear o grupo')"
               >{{ groupTitle(entry.group.group_key) }} <svg class="edit-pencil" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></span>
               <span v-else class="group-name" :title="groupTitle(entry.group.group_key)">{{ groupTitle(entry.group.group_key) }}</span>
-              <InventoryStockBalances class="group-stock-balances" :loja="entry.group.stock_loja" :deposito="entry.group.stock_deposito" />
-              <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr('Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
+              <InventoryStockBalances class="group-stock-balances" :loja="entry.group.stock_loja" :deposito="entry.group.stock_deposito" :reserved-loja="entry.group.reserved_loja" :reserved-deposito="entry.group.reserved_deposito" />
+              <span class="group-total-stock" :title="entry.group.total_stock === null ? tr('Não informado') : undefined">{{ tr(entry.group.reserved_loja || entry.group.reserved_deposito ? 'Total físico:' : 'Total:') }} {{ displayStock(entry.group.total_stock) }}</span>
               <span v-if="entry.group.matching_count < entry.group.items.length" class="group-context-note">{{ tr('{matching} de {count} variações correspondem aos filtros', { matching: entry.group.matching_count, count: entry.group.items.length }) }}</span>
               <span v-if="groupAlertLevel(entry.group.items) === 'unknown'" class="alert-badge badge-unknown">{{ tr('Revisar estoque') }}</span>
               <template v-if="expandedGroups.includes(entry.group.group_key)">
@@ -211,7 +211,7 @@
             >
               <button type="button" class="chip-label erp-button erp-button--ghost" :aria-label="tr('Editar {name}', { name: v.name })" @click.stop="openEdit(v)">
                 <span class="chip-identity">{{ v.size || v.name }}<template v-if="groupHasMultipleColors(entry.group.items) && v.color"> · {{ v.color }}</template></span>
-                <InventoryStockBalances :loja="v.stock_loja" :deposito="v.stock_deposito" />
+                <InventoryStockBalances :loja="v.stock_loja" :deposito="v.stock_deposito" :reserved-loja="v.reserved_loja" :reserved-deposito="v.reserved_deposito" />
                 <span v-if="!hasKnownStock(v)" class="chip-unknown" :title="tr('Revisar estoque')" :aria-label="tr('Revisar estoque')">?</span>
               </button>
               <div v-if="canManageGrades" class="chip-remove-wrap">
@@ -242,7 +242,7 @@
                 <span v-if="item.color" class="exp-color">{{ item.color }}</span>
               </div>
               <div class="exp-stock-info">
-                <InventoryStockBalances class="exp-stock-val" :loja="item.stock_loja" :deposito="item.stock_deposito" />
+                <InventoryStockBalances class="exp-stock-val" :loja="item.stock_loja" :deposito="item.stock_deposito" :reserved-loja="item.reserved_loja" :reserved-deposito="item.reserved_deposito" :order-query="item.inventory_code || item.name" />
                 <span v-if="!hasKnownStock(item)" class="stock-unknown">{{ tr('Revisar estoque') }}</span>
               </div>
               <span v-if="Number(item.sale_price) > 0" class="exp-price">
@@ -309,7 +309,7 @@
               </template>
               <span class="list-sep list-sep-spaced">·</span>
               <span class="list-stock" :class="'stock-' + stockAlertLevel(entry.item)">
-                <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" />
+                <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" :reserved-loja="entry.item.reserved_loja" :reserved-deposito="entry.item.reserved_deposito" :order-query="entry.item.inventory_code || entry.item.name" />
                 <span v-if="!hasKnownStock(entry.item)" class="stock-unknown"> · {{ tr('Revisar estoque') }}</span>
               </span>
               <template v-if="Number(entry.item.sale_price) > 0">
@@ -357,7 +357,7 @@
               <div class="item-bottom-row">
                 <div class="item-left-info">
                   <span class="stock-number" :class="'stock-' + stockAlertLevel(entry.item)">
-                    <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" />
+                    <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" :reserved-loja="entry.item.reserved_loja" :reserved-deposito="entry.item.reserved_deposito" :order-query="entry.item.inventory_code || entry.item.name" />
                   </span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
@@ -1140,6 +1140,8 @@ interface GroupEntry {
   total_stock: number | null
   stock_loja: number | null
   stock_deposito: number | null
+  reserved_loja: number
+  reserved_deposito: number
   matching_count: number
 }
 
@@ -1214,6 +1216,8 @@ const flatList = computed<FlatEntry[]>(() => {
       total_stock: g.total_stock,
       stock_loja: sumStock(visibleItems, 'stock_loja'),
       stock_deposito: sumStock(visibleItems, 'stock_deposito'),
+      reserved_loja: visibleItems.reduce((total, item) => total + (item.reserved_loja || 0), 0),
+      reserved_deposito: visibleItems.reduce((total, item) => total + (item.reserved_deposito || 0), 0),
       matching_count: g.matching_count ?? visibleItems.length,
     }})
     // Itens expandidos são renderizados DENTRO do card de grupo (não como vizinhos no grid)

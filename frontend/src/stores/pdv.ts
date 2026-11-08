@@ -85,7 +85,8 @@ export const usePdvStore = defineStore('pdv', () => {
 
   function rememberStock(items: CatalogStockSnapshot[]) {
     for (const item of items) stockSnapshots.value[item.id] = { id: item.id, current_stock: item.current_stock,
-      stock_loja: item.stock_loja, stock_deposito: item.stock_deposito, is_active: item.is_active }
+      stock_loja: item.stock_loja, stock_deposito: item.stock_deposito, is_active: item.is_active,
+      reserved_loja: item.reserved_loja, reserved_deposito: item.reserved_deposito }
   }
 
   function reservedStock(itemId: string, location: string, excludeId?: string) {

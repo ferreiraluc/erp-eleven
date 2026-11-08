@@ -60,10 +60,10 @@ describe('manual item currency', () => {
 })
 
 describe('PDV customer picker', () => {
-  function picker() {
+  function picker(required = false) {
     const id = ref<string | null>(null), name = ref<string | null>(null), busy = ref(false)
     const i18n = mount(defineComponent({ setup: () => () => h(PDVCustomerPicker, {
-      customerId: id.value, customerName: name.value,
+      customerId: id.value, customerName: name.value, required,
       'onUpdate:customerId': (v: string | null) => id.value = v,
       'onUpdate:customerName': (v: string | null) => name.value = v,
       onBusy: (v: boolean) => busy.value = v,
@@ -101,6 +101,15 @@ describe('PDV customer picker', () => {
     expect(state.name.value).toBe('Visitante'); expect(state.id.value).toBeNull()
     state.name.value = null; await nextTick()
     expect((container.querySelector('input') as HTMLInputElement).value).toBe('')
+  })
+  it('requires a registered customer for reservations without changing ordinary PDV entry', async () => {
+    const state = picker(true)
+    await set('input', 'Visitante'); await tick()
+    expect(container.querySelector('.customer-name-only')).toBeNull()
+    expect(container.textContent).not.toContain('Cliente (opcional)')
+    expect(state.id.value).toBeNull(); expect(state.name.value).toBeNull()
+    ;(container.querySelector('li button') as HTMLButtonElement).click(); await tick()
+    expect(state.id.value).toBe('pdv-1')
   })
   it('does not link an old session response and clears pending state on logout', async () => {
     let finish!: (value: any) => void

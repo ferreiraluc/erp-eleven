@@ -53,6 +53,16 @@ describe('Reviewed bulk deletion', () => {
     await mount(['a']); expect(root.querySelector('input')).toBeNull(); expect(api.remove).not.toHaveBeenCalled()
     expect(root.textContent).toContain('Não foi possível conferir')
   })
+  it('keeps reserved items out of the actionable selection and explains how to release them', async () => {
+    api.preview.mockImplementation(async id => id === 'a' ? { ...preview(id), allowed: false,
+      plan_token: null, preserve_history_token: null, blockers: [{ code: 'order_reservations', count: 2 }] } : preview(id))
+    await mount(['a', 'b'])
+    expect(root.textContent).toContain('Peças reservadas em pedidos: 2')
+    expect(root.textContent).toContain('Libere ou conclua as reservas')
+    await approve(); button('Excluir 1 itens').click()
+    await vi.waitFor(() => expect(api.remove).toHaveBeenCalledExactlyOnceWith('b', { sku: 'SKU-b', plan_token: 'token-b', confirm: true }))
+    expect(api.preserveHistory).not.toHaveBeenCalled()
+  })
   it('blocks closing during deletion and starts no further requests after unmount', async () => {
     let resolve!: (result: unknown) => void
     api.remove.mockReturnValueOnce(new Promise(yes => { resolve = yes }))

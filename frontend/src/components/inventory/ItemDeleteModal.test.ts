@@ -36,6 +36,16 @@ describe('Permanent product deletion', () => {
     expect(button('Excluir definitivamente')).toBeUndefined(); expect(root.querySelector('input')).toBeNull()
     expect(api.remove).not.toHaveBeenCalled()
   })
+  it('names order reservations and offers neither deletion mode while pieces are held', async () => {
+    api.preview.mockResolvedValue({ ...preview, allowed: false, plan_token: null, preserve_history_token: null,
+      blockers: [{ code: 'orders', count: 1 }, { code: 'order_reservations', count: 2 }] })
+    await mount()
+    expect(root.textContent).toContain('Pedidos vinculados: 1')
+    expect(root.textContent).toContain('Peças reservadas em pedidos: 2')
+    expect(button('Excluir definitivamente')).toBeUndefined()
+    expect(button('Excluir e manter histórico')).toBeUndefined()
+    expect(root.querySelector('input')).toBeNull()
+  })
   it('does not delete if checking failed, and requires another review after a stale confirmation', async () => {
     api.preview.mockRejectedValueOnce(new Error('offline'))
     const deleted = vi.fn(); await mount({ onDeleted: deleted })

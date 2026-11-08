@@ -2,6 +2,7 @@ import type { InventoryItem } from './api'
 
 type Balances = Pick<InventoryItem, 'current_stock' | 'stock_loja' | 'stock_deposito'>
 type KnownBalances = { current_stock: number; stock_loja: number; stock_deposito: number }
+type ReservedBalances = Pick<InventoryItem, 'reserved_loja' | 'reserved_deposito'>
 
 export const UNKNOWN_STOCK_MESSAGE = 'Há saldo desconhecido neste produto. Nenhuma movimentação foi registrada; confira os dados do estoque.'
 
@@ -25,8 +26,14 @@ export function sumStock(items: readonly Balances[], field: keyof Balances): num
   return total
 }
 
-export function canWithdrawStock(item: Balances): boolean {
-  return hasKnownStock(item) && item.current_stock > 0 && (item.stock_loja > 0 || item.stock_deposito > 0)
+export function availableStock(item: Balances & ReservedBalances, location: 'loja' | 'deposito'): number | null {
+  const stock = item[`stock_${location}`]
+  if (typeof stock !== 'number' || !Number.isFinite(stock)) return null
+  return stock - (item[`reserved_${location}`] ?? 0)
+}
+
+export function canWithdrawStock(item: Balances & ReservedBalances): boolean {
+  return hasKnownStock(item) && ((availableStock(item, 'loja') ?? 0) > 0 || (availableStock(item, 'deposito') ?? 0) > 0)
 }
 
 export function stockAlertLevel(item: Balances & { alert_level?: string }): string {

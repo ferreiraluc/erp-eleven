@@ -4069,9 +4069,21 @@
     "es": "La política de esta página bloqueó compartir. Cierre y vuelva a abrir el ERP para cargar la configuración actualizada. Guardar PDF sigue disponible.",
     "en": "This page’s policy blocked sharing. Close and reopen the ERP to load the updated configuration. Save PDF is still available."
   },
-  "Selecione uma opção": {"pt": "Selecione uma opção", "es": "Seleccione una opción", "en": "Select an option"},
-  "Buscar opções...": {"pt": "Buscar opções...", "es": "Buscar opciones...", "en": "Search options..."},
-  "Nenhuma opção encontrada": {"pt": "Nenhuma opção encontrada", "es": "No se encontraron opciones", "en": "No options found"},
+  "Selecione uma opção": {
+    "pt": "Selecione uma opção",
+    "es": "Seleccione una opción",
+    "en": "Select an option"
+  },
+  "Buscar opções...": {
+    "pt": "Buscar opções...",
+    "es": "Buscar opciones...",
+    "en": "Search options..."
+  },
+  "Nenhuma opção encontrada": {
+    "pt": "Nenhuma opção encontrada",
+    "es": "No se encontraron opciones",
+    "en": "No options found"
+  },
   "3nStar no iMac": {
     "pt": "3nStar no iMac",
     "es": "3nStar en el iMac",
@@ -4357,43 +4369,191 @@
     "es": "Ver más relacionados",
     "en": "More related products"
   },
-  "Valor na máquina (G$)": {"pt": "Valor na máquina (G$)", "es": "Valor en la máquina (G$)", "en": "Terminal amount (G$)"},
-  "Valor na máquina": {"pt": "Valor na máquina", "es": "Valor en la máquina", "en": "Terminal amount"},
-  "Câmbio cartão": {"pt": "Câmbio cartão", "es": "Cambio tarjeta", "en": "Card exchange rate"},
-  "Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.": {"pt": "Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.", "es": "Operación 6%: importe ÷ 0,94. Recargo solo en la parte pagada con tarjeta.", "en": "Processing 6%: amount ÷ 0.94. Surcharge only on the card portion."},
-  "Acréscimo cartão": {"pt": "Acréscimo cartão", "es": "Recargo tarjeta", "en": "Card surcharge"},
-  "Aplicado à venda": {"pt": "Aplicado à venda", "es": "Aplicado a la venta", "en": "Applied to sale"},
-  "Total a cobrar": {"pt": "Total a cobrar", "es": "Total a cobrar", "en": "Total to charge"},
-  "Busca rápida neste aparelho": {"pt": "Busca rápida neste aparelho", "es": "Búsqueda rápida en este dispositivo", "en": "Fast search on this device"},
-  "Índice local de produtos para agilizar as consultas no estoque e no PDV. Fotos e saldos não são armazenados; vendas continuam confirmadas no servidor.": {"pt": "Índice local de produtos para agilizar as consultas no estoque e no PDV. Fotos e saldos não são armazenados; vendas continuam confirmadas no servidor.", "es": "Índice local de productos para agilizar las consultas de inventario y PDV. No se guardan fotos ni saldos; las ventas se confirman en el servidor.", "en": "Local product index for faster inventory and POS lookups. Photos and balances are not stored; sales remain confirmed on the server."},
-  "Este navegador não oferece armazenamento local para a busca.": {"pt": "Este navegador não oferece armazenamento local para a busca.", "es": "Este navegador no ofrece almacenamiento local para la búsqueda.", "en": "This browser does not support local search storage."},
-  "produtos disponíveis na consulta local": {"pt": "produtos disponíveis na consulta local", "es": "productos disponibles en la consulta local", "en": "products available in local search"},
-  "Preparando o índice em segundo plano… Você pode continuar usando o sistema.": {"pt": "Preparando o índice em segundo plano… Você pode continuar usando o sistema.", "es": "Preparando el índice en segundo plano… Puede seguir usando el sistema.", "en": "Preparing the index in the background… You can keep using the system."},
-  "A cópia local não foi atualizada. A última cópia completa foi preservada. Tente novamente com uma conexão estável.": {"pt": "A cópia local não foi atualizada. A última cópia completa foi preservada. Tente novamente com uma conexão estável.", "es": "No se actualizó la copia local. Se conservó la última copia completa. Inténtelo con una conexión estable.", "en": "Local copy was not updated. The last complete copy was preserved. Try again with a stable connection."},
-  "Atualizar consulta local": {"pt": "Atualizar consulta local", "es": "Actualizar consulta local", "en": "Refresh local search"},
-  "Limpar cópia deste aparelho": {"pt": "Limpar cópia deste aparelho", "es": "Limpiar copia de este dispositivo", "en": "Clear this device copy"},
-  "Consulta local · saldos e alterações aguardam confirmação online.": {"pt": "Consulta local · saldos e alterações aguardam confirmação online.", "es": "Consulta local · saldos y cambios pendientes de confirmación en línea.", "en": "Local results · balances and changes await online confirmation."},
-  "Consulta local · conferir saldo online": {"pt": "Consulta local · conferir saldo online", "es": "Consulta local · verificar saldo en línea", "en": "Local result · confirm balance online"},
-  "Não foi possível confirmar o saldo. Tente novamente online.": {"pt": "Não foi possível confirmar o saldo. Tente novamente online.", "es": "No se pudo confirmar el saldo. Inténtelo nuevamente en línea.", "en": "Could not confirm the balance. Try again online."},
-  "Produto indisponível no catálogo.": {"pt": "Produto indisponível no catálogo.", "es": "Producto no disponible en el catálogo.", "en": "Product unavailable in the catalog."},
-  "{count} itens exibidos · QR e relacionados": {"pt": "{count} itens exibidos · QR e relacionados", "es": "{count} artículos mostrados · QR y relacionados", "en": "{count} items shown · QR and related"},
-  "Consulta local · {count} produtos. Saldos a confirmar.": {"pt": "Consulta local · {count} produtos. Saldos a confirmar.", "es": "Consulta local · {count} productos. Saldos por confirmar.", "en": "Local results · {count} products. Balances unconfirmed."},
-  "Remover rastreio": {"pt": "Remover rastreio", "es": "Quitar rastreo", "en": "Remove tracking"},
-  "Remover tamanho": {"pt": "Remover tamanho", "es": "Quitar talla", "en": "Remove size"},
-  "Remover cor": {"pt": "Remover cor", "es": "Quitar color", "en": "Remove color"},
-  "Remover produto": {"pt": "Remover produto", "es": "Quitar producto", "en": "Remove product"},
-  "Limpar busca": {"pt": "Limpar busca", "es": "Limpiar búsqueda", "en": "Clear search"},
-  "Remover pagamento": {"pt": "Remover pagamento", "es": "Quitar pago", "en": "Remove payment"},
-  "Ver anexo": {"pt": "Ver anexo", "es": "Ver adjunto", "en": "View attachment"},
-  "Calendário completo": {"pt": "Calendário completo", "es": "Calendario completo", "en": "Full calendar"},
-  "Mês anterior": {"pt": "Mês anterior", "es": "Mes anterior", "en": "Previous month"},
-  "Próximo mês": {"pt": "Próximo mês", "es": "Próximo mes", "en": "Next month"},
-  "Editar vendedor": {"pt": "Editar vendedor", "es": "Editar vendedor", "en": "Edit salesperson"},
-  "Editar folga": {"pt": "Editar folga", "es": "Editar descanso", "en": "Edit time off"},
-  "Excluir folga": {"pt": "Excluir folga", "es": "Eliminar descanso", "en": "Delete time off"},
-  "Remover arquivo": {"pt": "Remover arquivo", "es": "Quitar archivo", "en": "Remove file"},
-  "Excluir venda": {"pt": "Excluir venda", "es": "Eliminar venta", "en": "Delete sale"},
-  "Editar venda": {"pt": "Editar venda", "es": "Editar venta", "en": "Edit sale"},
+  "Valor na máquina (G$)": {
+    "pt": "Valor na máquina (G$)",
+    "es": "Valor en la máquina (G$)",
+    "en": "Terminal amount (G$)"
+  },
+  "Valor na máquina": {
+    "pt": "Valor na máquina",
+    "es": "Valor en la máquina",
+    "en": "Terminal amount"
+  },
+  "Câmbio cartão": {
+    "pt": "Câmbio cartão",
+    "es": "Cambio tarjeta",
+    "en": "Card exchange rate"
+  },
+  "Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.": {
+    "pt": "Operação 6%: valor ÷ 0,94. Acréscimo somente na parte paga no cartão.",
+    "es": "Operación 6%: importe ÷ 0,94. Recargo solo en la parte pagada con tarjeta.",
+    "en": "Processing 6%: amount ÷ 0.94. Surcharge only on the card portion."
+  },
+  "Acréscimo cartão": {
+    "pt": "Acréscimo cartão",
+    "es": "Recargo tarjeta",
+    "en": "Card surcharge"
+  },
+  "Aplicado à venda": {
+    "pt": "Aplicado à venda",
+    "es": "Aplicado a la venta",
+    "en": "Applied to sale"
+  },
+  "Total a cobrar": {
+    "pt": "Total a cobrar",
+    "es": "Total a cobrar",
+    "en": "Total to charge"
+  },
+  "Busca rápida neste aparelho": {
+    "pt": "Busca rápida neste aparelho",
+    "es": "Búsqueda rápida en este dispositivo",
+    "en": "Fast search on this device"
+  },
+  "Índice local de produtos para agilizar as consultas no estoque e no PDV. Fotos e saldos não são armazenados; vendas continuam confirmadas no servidor.": {
+    "pt": "Índice local de produtos para agilizar as consultas no estoque e no PDV. Fotos e saldos não são armazenados; vendas continuam confirmadas no servidor.",
+    "es": "Índice local de productos para agilizar las consultas de inventario y PDV. No se guardan fotos ni saldos; las ventas se confirman en el servidor.",
+    "en": "Local product index for faster inventory and POS lookups. Photos and balances are not stored; sales remain confirmed on the server."
+  },
+  "Este navegador não oferece armazenamento local para a busca.": {
+    "pt": "Este navegador não oferece armazenamento local para a busca.",
+    "es": "Este navegador no ofrece almacenamiento local para la búsqueda.",
+    "en": "This browser does not support local search storage."
+  },
+  "produtos disponíveis na consulta local": {
+    "pt": "produtos disponíveis na consulta local",
+    "es": "productos disponibles en la consulta local",
+    "en": "products available in local search"
+  },
+  "Preparando o índice em segundo plano… Você pode continuar usando o sistema.": {
+    "pt": "Preparando o índice em segundo plano… Você pode continuar usando o sistema.",
+    "es": "Preparando el índice en segundo plano… Puede seguir usando el sistema.",
+    "en": "Preparing the index in the background… You can keep using the system."
+  },
+  "A cópia local não foi atualizada. A última cópia completa foi preservada. Tente novamente com uma conexão estável.": {
+    "pt": "A cópia local não foi atualizada. A última cópia completa foi preservada. Tente novamente com uma conexão estável.",
+    "es": "No se actualizó la copia local. Se conservó la última copia completa. Inténtelo con una conexión estable.",
+    "en": "Local copy was not updated. The last complete copy was preserved. Try again with a stable connection."
+  },
+  "Atualizar consulta local": {
+    "pt": "Atualizar consulta local",
+    "es": "Actualizar consulta local",
+    "en": "Refresh local search"
+  },
+  "Limpar cópia deste aparelho": {
+    "pt": "Limpar cópia deste aparelho",
+    "es": "Limpiar copia de este dispositivo",
+    "en": "Clear this device copy"
+  },
+  "Consulta local · saldos e alterações aguardam confirmação online.": {
+    "pt": "Consulta local · saldos e alterações aguardam confirmação online.",
+    "es": "Consulta local · saldos y cambios pendientes de confirmación en línea.",
+    "en": "Local results · balances and changes await online confirmation."
+  },
+  "Consulta local · conferir saldo online": {
+    "pt": "Consulta local · conferir saldo online",
+    "es": "Consulta local · verificar saldo en línea",
+    "en": "Local result · confirm balance online"
+  },
+  "Não foi possível confirmar o saldo. Tente novamente online.": {
+    "pt": "Não foi possível confirmar o saldo. Tente novamente online.",
+    "es": "No se pudo confirmar el saldo. Inténtelo nuevamente en línea.",
+    "en": "Could not confirm the balance. Try again online."
+  },
+  "Produto indisponível no catálogo.": {
+    "pt": "Produto indisponível no catálogo.",
+    "es": "Producto no disponible en el catálogo.",
+    "en": "Product unavailable in the catalog."
+  },
+  "{count} itens exibidos · QR e relacionados": {
+    "pt": "{count} itens exibidos · QR e relacionados",
+    "es": "{count} artículos mostrados · QR y relacionados",
+    "en": "{count} items shown · QR and related"
+  },
+  "Consulta local · {count} produtos. Saldos a confirmar.": {
+    "pt": "Consulta local · {count} produtos. Saldos a confirmar.",
+    "es": "Consulta local · {count} productos. Saldos por confirmar.",
+    "en": "Local results · {count} products. Balances unconfirmed."
+  },
+  "Remover rastreio": {
+    "pt": "Remover rastreio",
+    "es": "Quitar rastreo",
+    "en": "Remove tracking"
+  },
+  "Remover tamanho": {
+    "pt": "Remover tamanho",
+    "es": "Quitar talla",
+    "en": "Remove size"
+  },
+  "Remover cor": {
+    "pt": "Remover cor",
+    "es": "Quitar color",
+    "en": "Remove color"
+  },
+  "Remover produto": {
+    "pt": "Remover produto",
+    "es": "Quitar producto",
+    "en": "Remove product"
+  },
+  "Limpar busca": {
+    "pt": "Limpar busca",
+    "es": "Limpiar búsqueda",
+    "en": "Clear search"
+  },
+  "Remover pagamento": {
+    "pt": "Remover pagamento",
+    "es": "Quitar pago",
+    "en": "Remove payment"
+  },
+  "Ver anexo": {
+    "pt": "Ver anexo",
+    "es": "Ver adjunto",
+    "en": "View attachment"
+  },
+  "Calendário completo": {
+    "pt": "Calendário completo",
+    "es": "Calendario completo",
+    "en": "Full calendar"
+  },
+  "Mês anterior": {
+    "pt": "Mês anterior",
+    "es": "Mes anterior",
+    "en": "Previous month"
+  },
+  "Próximo mês": {
+    "pt": "Próximo mês",
+    "es": "Próximo mes",
+    "en": "Next month"
+  },
+  "Editar vendedor": {
+    "pt": "Editar vendedor",
+    "es": "Editar vendedor",
+    "en": "Edit salesperson"
+  },
+  "Editar folga": {
+    "pt": "Editar folga",
+    "es": "Editar descanso",
+    "en": "Edit time off"
+  },
+  "Excluir folga": {
+    "pt": "Excluir folga",
+    "es": "Eliminar descanso",
+    "en": "Delete time off"
+  },
+  "Remover arquivo": {
+    "pt": "Remover arquivo",
+    "es": "Quitar archivo",
+    "en": "Remove file"
+  },
+  "Excluir venda": {
+    "pt": "Excluir venda",
+    "es": "Eliminar venta",
+    "en": "Delete sale"
+  },
+  "Editar venda": {
+    "pt": "Editar venda",
+    "es": "Editar venta",
+    "en": "Edit sale"
+  },
   "A credencial conecta o agente ao ERP. Salve-a no ambiente protegido do serviço; ela não substitui o vínculo do WhatsApp por QR Code.": {
     "pt": "A credencial conecta o agente ao ERP. Salve-a no ambiente protegido do serviço; ela não substitui o vínculo do WhatsApp por QR Code.",
     "es": "La credencial conecta el agente al ERP. Guárdela en el entorno protegido del servicio; no sustituye la vinculación de WhatsApp por QR.",
@@ -4743,5 +4903,625 @@
     "pt": "Usar o valor faltante como desconto",
     "es": "Usar el importe pendiente como descuento",
     "en": "Use the remaining balance as a discount"
+  },
+  "A conclusão registra o recebimento acima e aproveita os pagamentos anteriores.": {
+    "pt": "A conclusão registra o recebimento acima e aproveita os pagamentos anteriores.",
+    "es": "La finalización registra el cobro indicado y aprovecha los pagos anteriores.",
+    "en": "Completing the sale records the payment above and applies earlier payments."
+  },
+  "A conexão falhou antes da confirmação. Confira e tente novamente; a mesma solicitação será recuperada sem duplicar o recebimento.": {
+    "pt": "A conexão falhou antes da confirmação. Confira e tente novamente; a mesma solicitação será recuperada sem duplicar o recebimento.",
+    "es": "La conexión falló antes de la confirmación. Revise y vuelva a intentar; se recuperará la misma solicitud sin duplicar el cobro.",
+    "en": "The connection failed before confirmation. Check and try again; the same request will be recovered without duplicating the payment."
+  },
+  "A resposta não foi confirmada. Repita a mesma confirmação para recuperar o resultado, sem criar outra reserva.": {
+    "pt": "A resposta não foi confirmada. Repita a mesma confirmação para recuperar o resultado, sem criar outra reserva.",
+    "es": "No se confirmó la respuesta. Repita la misma confirmación para recuperar el resultado sin crear otra reserva.",
+    "en": "The response was not confirmed. Repeat the same confirmation to recover the result without creating another reservation."
+  },
+  "Adicione os produtos. A reserva será feita ao confirmar.": {
+    "pt": "Adicione os produtos. A reserva será feita ao confirmar.",
+    "es": "Añada los productos. La reserva se realizará al confirmar.",
+    "en": "Add products. They will be reserved when you confirm."
+  },
+  "Antes de liberar as peças, Lucas precisa conferir e registrar a devolução dos pagamentos.": {
+    "pt": "Antes de liberar as peças, Lucas precisa conferir e registrar a devolução dos pagamentos.",
+    "es": "Antes de liberar las prendas, Lucas debe verificar y registrar la devolución de los pagos.",
+    "en": "Before releasing the items, Lucas must verify and record the payment refunds."
+  },
+  "Aplicado ao pedido": {
+    "pt": "Aplicado ao pedido",
+    "es": "Aplicado al pedido",
+    "en": "Applied to order"
+  },
+  "Atualizar câmbio": {
+    "pt": "Atualizar câmbio",
+    "es": "Actualizar cambio",
+    "en": "Refresh exchange rate"
+  },
+  "Atualizar pedido": {
+    "pt": "Atualizar pedido",
+    "es": "Actualizar pedido",
+    "en": "Refresh order"
+  },
+  "Buscar produtos para separar": {
+    "pt": "Buscar produtos para separar",
+    "es": "Buscar productos para separar",
+    "en": "Find products to set aside"
+  },
+  "Cada peça no lugar certo.": {
+    "pt": "Cada peça no lugar certo.",
+    "es": "Cada prenda en su lugar.",
+    "en": "Every item in the right place."
+  },
+  "Cancelar reserva": {
+    "pt": "Cancelar reserva",
+    "es": "Cancelar reserva",
+    "en": "Cancel reservation"
+  },
+  "Carregando pedido…": {
+    "pt": "Carregando pedido…",
+    "es": "Cargando pedido…",
+    "en": "Loading order…"
+  },
+  "Carregando separação…": {
+    "pt": "Carregando separação…",
+    "es": "Cargando reserva…",
+    "en": "Loading reservation…"
+  },
+  "Conferi o cliente, as peças e os locais da separação.": {
+    "pt": "Conferi o cliente, as peças e os locais da separação.",
+    "es": "Verifiqué el cliente, las prendas y los lugares de la reserva.",
+    "en": "I checked the customer, items and stock locations."
+  },
+  "Conferir e tentar novamente": {
+    "pt": "Conferir e tentar novamente",
+    "es": "Revisar y volver a intentar",
+    "en": "Check and try again"
+  },
+  "Confira o câmbio deste recebimento antes de confirmar.": {
+    "pt": "Confira o câmbio deste recebimento antes de confirmar.",
+    "es": "Revise el cambio de este cobro antes de confirmar.",
+    "en": "Check the exchange rate for this payment before confirming."
+  },
+  "Confirme somente valores já recebidos. O pedido continua reservado.": {
+    "pt": "Confirme somente valores já recebidos. O pedido continua reservado.",
+    "es": "Confirme solo importes ya recibidos. El pedido permanece reservado.",
+    "en": "Confirm only amounts already received. The order stays reserved."
+  },
+  "Consultando produtos e disponibilidade…": {
+    "pt": "Consultando produtos e disponibilidade…",
+    "es": "Consultando productos y disponibilidad…",
+    "en": "Checking products and availability…"
+  },
+  "Depósito": {
+    "pt": "Depósito",
+    "es": "Depósito",
+    "en": "Warehouse"
+  },
+  "Desconto (U$)": {
+    "pt": "Desconto (U$)",
+    "es": "Descuento (U$)",
+    "en": "Discount (US$)"
+  },
+  "Devolução registrada": {
+    "pt": "Devolução registrada",
+    "es": "Devolución registrada",
+    "en": "Refund recorded"
+  },
+  "Editar separação": {
+    "pt": "Editar separação",
+    "es": "Editar reserva",
+    "en": "Edit reservation"
+  },
+  "Entrega e anexos": {
+    "pt": "Entrega e anexos",
+    "es": "Entrega y adjuntos",
+    "en": "Delivery and attachments"
+  },
+  "Este código pertence a mais de um produto. Escolha a variação correta.": {
+    "pt": "Este código pertence a mais de um produto. Escolha a variação correta.",
+    "es": "Este código pertenece a más de un producto. Elija la variante correcta.",
+    "en": "This code belongs to more than one product. Choose the correct variation."
+  },
+  "Este pedido já foi convertido em venda.": {
+    "pt": "Este pedido já foi convertido em venda.",
+    "es": "Este pedido ya se convirtió en venta.",
+    "en": "This order has already been converted to a sale."
+  },
+  "Este pedido não está mais reservado. Feche e atualize a listagem.": {
+    "pt": "Este pedido não está mais reservado. Feche e atualize a listagem.",
+    "es": "Este pedido ya no está reservado. Cierre y actualice la lista.",
+    "en": "This order is no longer reserved. Close and refresh the list."
+  },
+  "Estornado": {
+    "pt": "Estornado",
+    "es": "Revertido",
+    "en": "Reversed"
+  },
+  "Etapas do pedido": {
+    "pt": "Etapas do pedido",
+    "es": "Etapas del pedido",
+    "en": "Order steps"
+  },
+  "Ex.: sacola 3, prateleira do caixa": {
+    "pt": "Ex.: sacola 3, prateleira do caixa",
+    "es": "Ej.: bolsa 3, estante de la caja",
+    "en": "E.g. bag 3, checkout shelf"
+  },
+  "Falta pagar": {
+    "pt": "Falta pagar",
+    "es": "Falta pagar",
+    "en": "Remaining balance"
+  },
+  "Histórico de pagamentos": {
+    "pt": "Histórico de pagamentos",
+    "es": "Historial de pagos",
+    "en": "Payment history"
+  },
+  "Há um recebimento aguardando confirmação. Confira e tente novamente para recuperar o resultado.": {
+    "pt": "Há um recebimento aguardando confirmação. Confira e tente novamente para recuperar o resultado.",
+    "es": "Hay un cobro pendiente de confirmación. Revise y vuelva a intentar para recuperar el resultado.",
+    "en": "A payment is awaiting confirmation. Check and try again to recover the result."
+  },
+  "Há uma confirmação anterior sem resposta. Recupere o resultado antes de começar outra separação.": {
+    "pt": "Há uma confirmação anterior sem resposta. Recupere o resultado antes de começar outra separação.",
+    "es": "Hay una confirmación anterior sin respuesta. Recupere el resultado antes de iniciar otra reserva.",
+    "en": "An earlier confirmation has no response. Recover the result before starting another reservation."
+  },
+  "Há uma solicitação aguardando confirmação. Confira e tente novamente para recuperar o resultado.": {
+    "pt": "Há uma solicitação aguardando confirmação. Confira e tente novamente para recuperar o resultado.",
+    "es": "Hay una solicitud pendiente de confirmación. Revise y vuelva a intentar para recuperar el resultado.",
+    "en": "A request is awaiting confirmation. Check and try again to recover the result."
+  },
+  "Impressora do caixa": {
+    "pt": "Impressora do caixa",
+    "es": "Impresora de la caja",
+    "en": "Checkout printer"
+  },
+  "Imprimir separação": {
+    "pt": "Imprimir separação",
+    "es": "Imprimir reserva",
+    "en": "Print reservation"
+  },
+  "Ler QR ou código de barras": {
+    "pt": "Ler QR ou código de barras",
+    "es": "Leer QR o código de barras",
+    "en": "Scan QR or barcode"
+  },
+  "Local para separar": {
+    "pt": "Local para separar",
+    "es": "Lugar de separación",
+    "en": "Stock location"
+  },
+  "Loja": {
+    "pt": "Loja",
+    "es": "Tienda",
+    "en": "Store"
+  },
+  "Monte a sacola do cliente": {
+    "pt": "Monte a sacola do cliente",
+    "es": "Prepare la bolsa del cliente",
+    "en": "Prepare the customer's bag"
+  },
+  "Nenhum produto encontrado. Tente o nome ou código interno.": {
+    "pt": "Nenhum produto encontrado. Tente o nome ou código interno.",
+    "es": "No se encontraron productos. Pruebe el nombre o código interno.",
+    "en": "No products found. Try the name or internal code."
+  },
+  "Nenhum valor recebido ainda. Use Receber no PDV para registrar um sinal ou quitar o pedido.": {
+    "pt": "Nenhum valor recebido ainda. Use Receber no PDV para registrar um sinal ou quitar o pedido.",
+    "es": "Aún no se recibió ningún importe. Use Cobrar en el PDV para registrar una seña o pagar el pedido.",
+    "en": "No payment received yet. Use Receive in POS to record a deposit or settle the order."
+  },
+  "Novo recebimento": {
+    "pt": "Novo recebimento",
+    "es": "Nuevo cobro",
+    "en": "New payment"
+  },
+  "Não foi possível confirmar o câmbio. Atualize antes de reservar.": {
+    "pt": "Não foi possível confirmar o câmbio. Atualize antes de reservar.",
+    "es": "No se pudo confirmar el cambio. Actualice antes de reservar.",
+    "en": "The exchange rate could not be confirmed. Refresh before reserving."
+  },
+  "Não há mais unidades disponíveis nesse local.": {
+    "pt": "Não há mais unidades disponíveis nesse local.",
+    "es": "No quedan unidades disponibles en ese lugar.",
+    "en": "No more units are available at this location."
+  },
+  "O desconto deve ficar entre zero e o subtotal.": {
+    "pt": "O desconto deve ficar entre zero e o subtotal.",
+    "es": "El descuento debe estar entre cero y el subtotal.",
+    "en": "The discount must be between zero and the subtotal."
+  },
+  "O pedido separado sai do saldo disponível. A venda e a baixa física acontecem na conclusão pelo PDV.": {
+    "pt": "O pedido separado sai do saldo disponível. A venda e a baixa física acontecem na conclusão pelo PDV.",
+    "es": "El pedido reservado se resta del saldo disponible. La venta y la salida física se registran al finalizar en el PDV.",
+    "en": "Reserved items are removed from available stock. The sale and physical stock deduction happen when completed in POS."
+  },
+  "Observações / onde está separado": {
+    "pt": "Observações / onde está separado",
+    "es": "Observaciones / dónde está separado",
+    "en": "Notes / where it is set aside"
+  },
+  "PDV · Pedido separado": {
+    "pt": "PDV · Pedido separado",
+    "es": "PDV · Pedido reservado",
+    "en": "POS · Reserved order"
+  },
+  "PEDIDO SEPARADO": {
+    "pt": "PEDIDO SEPARADO",
+    "es": "PEDIDO RESERVADO",
+    "en": "RESERVED ORDER"
+  },
+  "PEDIDOS · SEPARAÇÃO": {
+    "pt": "PEDIDOS · SEPARAÇÃO",
+    "es": "PEDIDOS · RESERVAS",
+    "en": "ORDERS · RESERVATIONS"
+  },
+  "Pagamentos registrados": {
+    "pt": "Pagamentos registrados",
+    "es": "Pagos registrados",
+    "en": "Recorded payments"
+  },
+  "Para mudar produtos, preços ou desconto, volte ao pedido.": {
+    "pt": "Para mudar produtos, preços ou desconto, volte ao pedido.",
+    "es": "Para cambiar productos, precios o descuentos, vuelva al pedido.",
+    "en": "Return to the order to change products, prices or discounts."
+  },
+  "Pedido pago. Os itens continuam separados até concluir a venda.": {
+    "pt": "Pedido pago. Os itens continuam separados até concluir a venda.",
+    "es": "Pedido pagado. Los artículos permanecen reservados hasta finalizar la venta.",
+    "en": "Order paid. Items stay reserved until the sale is completed."
+  },
+  "Pedido sem reserva": {
+    "pt": "Pedido sem reserva",
+    "es": "Pedido sin reserva",
+    "en": "Order without reservation"
+  },
+  "Peças a separar": {
+    "pt": "Peças a separar",
+    "es": "Prendas a separar",
+    "en": "Items to set aside"
+  },
+  "Peças do pedido": {
+    "pt": "Peças do pedido",
+    "es": "Prendas del pedido",
+    "en": "Order items"
+  },
+  "Preço em dólares de {0}": {
+    "pt": "Preço em dólares de {0}",
+    "es": "Precio en dólares de {0}",
+    "en": "Dollar price of {0}"
+  },
+  "Preços e câmbio preservados da separação.": {
+    "pt": "Preços e câmbio preservados da separação.",
+    "es": "Precios y cambio conservados de la reserva.",
+    "en": "Prices and exchange rate are preserved from the reservation."
+  },
+  "Produto, marca, tamanho ou código…": {
+    "pt": "Produto, marca, tamanho ou código…",
+    "es": "Producto, marca, talla o código…",
+    "en": "Product, brand, size or code…"
+  },
+  "Quantidade de {0}": {
+    "pt": "Quantidade de {0}",
+    "es": "Cantidad de {0}",
+    "en": "Quantity of {0}"
+  },
+  "Quantidade indisponível nesse local. Atualize o produto ou confira o estoque.": {
+    "pt": "Quantidade indisponível nesse local. Atualize o produto ou confira o estoque.",
+    "es": "Cantidad no disponible en ese lugar. Actualice el producto o revise el inventario.",
+    "en": "This quantity is unavailable at that location. Refresh the product or check stock."
+  },
+  "Recebido": {
+    "pt": "Recebido",
+    "es": "Recibido",
+    "en": "Received"
+  },
+  "Recebimento registrado. Pedido mantido separado.": {
+    "pt": "Recebimento registrado. Pedido mantido separado.",
+    "es": "Cobro registrado. El pedido permanece reservado.",
+    "en": "Payment recorded. Order remains reserved."
+  },
+  "Registrar devolução": {
+    "pt": "Registrar devolução",
+    "es": "Registrar devolución",
+    "en": "Record refund"
+  },
+  "Registrar e manter separado": {
+    "pt": "Registrar e manter separado",
+    "es": "Registrar y mantener reservado",
+    "en": "Record and keep reserved"
+  },
+  "Remover {0}": {
+    "pt": "Remover {0}",
+    "es": "Quitar {0}",
+    "en": "Remove {0}"
+  },
+  "Reserva cancelada": {
+    "pt": "Reserva cancelada",
+    "es": "Reserva cancelada",
+    "en": "Reservation cancelled"
+  },
+  "Reservas canceladas": {
+    "pt": "Reservas canceladas",
+    "es": "Reservas canceladas",
+    "en": "Cancelled reservations"
+  },
+  "Resposta não confirmada. Repetir recupera a mesma solicitação sem duplicar a operação.": {
+    "pt": "Resposta não confirmada. Repetir recupera a mesma solicitação sem duplicar a operação.",
+    "es": "Respuesta no confirmada. Reintentar recupera la misma solicitud sin duplicar la operación.",
+    "en": "Response unconfirmed. Retrying recovers the same request without duplicating the operation."
+  },
+  "Saldo a pagar": {
+    "pt": "Saldo a pagar",
+    "es": "Saldo a pagar",
+    "en": "Balance due"
+  },
+  "Salvar ticket PDF": {
+    "pt": "Salvar ticket PDF",
+    "es": "Guardar ticket PDF",
+    "en": "Save ticket PDF"
+  },
+  "Selecione um cliente cadastrado para manter a reserva e os pagamentos associados.": {
+    "pt": "Selecione um cliente cadastrado para manter a reserva e os pagamentos associados.",
+    "es": "Seleccione un cliente registrado para vincular la reserva y los pagos.",
+    "en": "Select a registered customer to link the reservation and payments."
+  },
+  "Sem reserva de estoque": {
+    "pt": "Sem reserva de estoque",
+    "es": "Sin reserva de inventario",
+    "en": "No stock reservation"
+  },
+  "Separado por": {
+    "pt": "Separado por",
+    "es": "Separado por",
+    "en": "Set aside by"
+  },
+  "Separados": {
+    "pt": "Separados",
+    "es": "Reservados",
+    "en": "Reserved"
+  },
+  "Separar produtos": {
+    "pt": "Separar produtos",
+    "es": "Separar productos",
+    "en": "Set aside products"
+  },
+  "Separar {0}": {
+    "pt": "Separar {0}",
+    "es": "Separar {0}",
+    "en": "Set aside {0}"
+  },
+  "Separação": {
+    "pt": "Separação",
+    "es": "Reserva",
+    "en": "Reservation"
+  },
+  "Separe para um cliente, acompanhe os pagamentos e conclua a venda pelo PDV.": {
+    "pt": "Separe para um cliente, acompanhe os pagamentos e conclua a venda pelo PDV.",
+    "es": "Reserve para un cliente, acompañe los pagos y finalice la venta en el PDV.",
+    "en": "Set items aside for a customer, track payments and complete the sale in POS."
+  },
+  "Todos os pedidos": {
+    "pt": "Todos os pedidos",
+    "es": "Todos los pedidos",
+    "en": "All orders"
+  },
+  "Total do pedido": {
+    "pt": "Total do pedido",
+    "es": "Total del pedido",
+    "en": "Order total"
+  },
+  "Troco só pode vir de pagamento em dinheiro.": {
+    "pt": "Troco só pode vir de pagamento em dinheiro.",
+    "es": "El vuelto solo puede provenir de pagos en efectivo.",
+    "en": "Change can only come from a cash payment."
+  },
+  "Valor recebido": {
+    "pt": "Valor recebido",
+    "es": "Importe recibido",
+    "en": "Amount received"
+  },
+  "Venda concluída": {
+    "pt": "Venda concluída",
+    "es": "Venta finalizada",
+    "en": "Sale completed"
+  },
+  "Venda concluída. Os pagamentos anteriores foram aproveitados.": {
+    "pt": "Venda concluída. Os pagamentos anteriores foram aproveitados.",
+    "es": "Venta finalizada. Se aplicaron los pagos anteriores.",
+    "en": "Sale completed. Earlier payments have been applied."
+  },
+  "Vendas concluídas": {
+    "pt": "Vendas concluídas",
+    "es": "Ventas finalizadas",
+    "en": "Completed sales"
+  },
+  "Ver venda": {
+    "pt": "Ver venda",
+    "es": "Ver venta",
+    "en": "View sale"
+  },
+  "Vinculado à venda": {
+    "pt": "Vinculado à venda",
+    "es": "Vinculado a la venta",
+    "en": "Linked to sale"
+  },
+  "Voltar": {
+    "pt": "Voltar",
+    "es": "Volver",
+    "en": "Back"
+  },
+  "Voltar ao pedido": {
+    "pt": "Voltar ao pedido",
+    "es": "Volver al pedido",
+    "en": "Back to order"
+  },
+  "{0} adicionado à separação.": {
+    "pt": "{0} adicionado à separação.",
+    "es": "{0} añadido a la reserva.",
+    "en": "{0} added to the reservation."
+  },
+  "{0}% pago": {
+    "pt": "{0}% pago",
+    "es": "{0}% pagado",
+    "en": "{0}% paid"
+  },
+  "Editar peças separadas": {
+    "pt": "Editar peças separadas",
+    "es": "Editar prendas reservadas",
+    "en": "Edit reserved items"
+  },
+  "Selecione o produto e o local de onde será separado.": {
+    "pt": "Selecione o produto e o local de onde será separado.",
+    "es": "Seleccione el producto y el lugar de separación.",
+    "en": "Select the product and the stock location."
+  },
+  "Produtos recentes · busque ou leia a etiqueta": {
+    "pt": "Produtos recentes · busque ou leia a etiqueta",
+    "es": "Productos recientes · busque o lea la etiqueta",
+    "en": "Recent products · search or scan the label"
+  },
+  "Repetir confirmação": {
+    "pt": "Repetir confirmação",
+    "es": "Repetir confirmación",
+    "en": "Repeat confirmation"
+  },
+  "Salvar separação": {
+    "pt": "Salvar separação",
+    "es": "Guardar reserva",
+    "en": "Save reservation"
+  },
+  "Confirmar reserva": {
+    "pt": "Confirmar reserva",
+    "es": "Confirmar reserva",
+    "en": "Confirm reservation"
+  },
+  "Ticket de separação": {
+    "pt": "Ticket de separação",
+    "es": "Ticket de reserva",
+    "en": "Reservation ticket"
+  },
+  "Cancelar e liberar as peças": {
+    "pt": "Cancelar e liberar as peças",
+    "es": "Cancelar y liberar las prendas",
+    "en": "Cancel and release items"
+  },
+  "Registrar devolução do pagamento": {
+    "pt": "Registrar devolução do pagamento",
+    "es": "Registrar devolución del pago",
+    "en": "Record payment refund"
+  },
+  "O ticket identifica pedido, cliente, vendedor, peças e horário. Confira a saída anterior antes de solicitar outra cópia.": {
+    "pt": "O ticket identifica pedido, cliente, vendedor, peças e horário. Confira a saída anterior antes de solicitar outra cópia.",
+    "es": "El ticket identifica pedido, cliente, vendedor, prendas y horario. Revise la impresión anterior antes de pedir otra copia.",
+    "en": "The ticket identifies the order, customer, seller, items and time. Check the previous print before requesting another copy."
+  },
+  "As unidades voltam a ficar disponíveis para outros clientes. O histórico do pedido é preservado.": {
+    "pt": "As unidades voltam a ficar disponíveis para outros clientes. O histórico do pedido é preservado.",
+    "es": "Las unidades vuelven a estar disponibles para otros clientes. Se conserva el historial del pedido.",
+    "en": "Units become available to other customers again. Order history is preserved."
+  },
+  "Este registro não devolve dinheiro pela operadora. Confirme somente depois de conferir a devolução realizada fora do ERP.": {
+    "pt": "Este registro não devolve dinheiro pela operadora. Confirme somente depois de conferir a devolução realizada fora do ERP.",
+    "es": "Este registro no devuelve dinero por la operadora. Confirme solo después de verificar la devolución realizada fuera del ERP.",
+    "en": "This record does not refund money through the provider. Confirm only after verifying the refund completed outside the ERP."
+  },
+  "Conferi este pedido e quero imprimir o ticket.": {
+    "pt": "Conferi este pedido e quero imprimir o ticket.",
+    "es": "Verifiqué este pedido y quiero imprimir el ticket.",
+    "en": "I checked this order and want to print the ticket."
+  },
+  "Conferi as peças que serão liberadas.": {
+    "pt": "Conferi as peças que serão liberadas.",
+    "es": "Verifiqué las prendas que serán liberadas.",
+    "en": "I checked the items that will be released."
+  },
+  "Conferi a devolução do valor ao cliente.": {
+    "pt": "Conferi a devolução do valor ao cliente.",
+    "es": "Verifiqué la devolución del importe al cliente.",
+    "en": "I verified the refund to the customer."
+  },
+  "Imprimir ticket": {
+    "pt": "Imprimir ticket",
+    "es": "Imprimir ticket",
+    "en": "Print ticket"
+  },
+  "Receber no PDV": {
+    "pt": "Receber no PDV",
+    "es": "Cobrar en el PDV",
+    "en": "Receive in POS"
+  },
+  "Concluir venda no PDV": {
+    "pt": "Concluir venda no PDV",
+    "es": "Finalizar venta en el PDV",
+    "en": "Complete sale in POS"
+  },
+  "Envio incerto. Confira a fila e o papel antes de pedir outra cópia.": {
+    "pt": "Envio incerto. Confira a fila e o papel antes de pedir outra cópia.",
+    "es": "Envío incierto. Revise la cola y el papel antes de pedir otra copia.",
+    "en": "Delivery uncertain. Check the queue and paper before requesting another copy."
+  },
+  "Falha ao enviar. Confira o diagnóstico antes de tentar outra cópia.": {
+    "pt": "Falha ao enviar. Confira o diagnóstico antes de tentar outra cópia.",
+    "es": "Error al enviar. Revise el diagnóstico antes de intentar otra copia.",
+    "en": "Sending failed. Check the diagnosis before attempting another copy."
+  },
+  "Ticket expirado sem coleta.": {
+    "pt": "Ticket expirado sem coleta.",
+    "es": "Ticket vencido sin recoger.",
+    "en": "Ticket expired before collection."
+  },
+  "Consulte a fila para conferir o envio.": {
+    "pt": "Consulte a fila para conferir o envio.",
+    "es": "Consulte la cola para verificar el envío.",
+    "en": "Check the queue to verify delivery."
+  },
+  "Reserva cancelada. As peças foram liberadas.": {
+    "pt": "Reserva cancelada. As peças foram liberadas.",
+    "es": "Reserva cancelada. Las prendas fueron liberadas.",
+    "en": "Reservation cancelled. Items have been released."
+  },
+  "Devolução registrada no histórico do pedido.": {
+    "pt": "Devolução registrada no histórico do pedido.",
+    "es": "Devolución registrada en el historial del pedido.",
+    "en": "Refund recorded in the order history."
+  },
+  "Abrir separação": {
+    "pt": "Abrir separação",
+    "es": "Abrir reserva",
+    "en": "Open reservation"
+  },
+  "Receber saldo, concluir e imprimir": {
+    "pt": "Receber saldo, concluir e imprimir",
+    "es": "Cobrar saldo, finalizar e imprimir",
+    "en": "Receive balance, complete and print"
+  },
+  "Concluir venda e imprimir": {
+    "pt": "Concluir venda e imprimir",
+    "es": "Finalizar venta e imprimir",
+    "en": "Complete sale and print"
+  },
+  "Pago · aguardando conclusão": {
+    "pt": "Pago · aguardando conclusão",
+    "es": "Pagado · pendiente de finalizar",
+    "en": "Paid · awaiting completion"
+  },
+  "Pagamento parcial": {
+    "pt": "Pagamento parcial",
+    "es": "Pago parcial",
+    "en": "Partial payment"
+  },
+  "Separado": {
+    "pt": "Separado",
+    "es": "Reservado",
+    "en": "Reserved"
+  },
+  "Reservado em pedidos": {
+    "pt": "Reservado em pedidos",
+    "es": "Reservado en pedidos",
+    "en": "Reserved for orders"
   }
 }

@@ -181,8 +181,9 @@
               >
               <div class="stock-line">
                 <span>{{ t('store') }}: {{ item.stock_loja ?? '—' }}</span
-                ><strong>{{ t('warehouse') }}: {{ item.stock_deposito ?? '—' }}</strong>
+                ><strong>{{ t('warehouse') }}: {{ replenishmentAvailable(item) }}</strong>
               </div>
+              <small v-if="item.reserved_deposito">{{ t('reserved', { count: item.reserved_deposito }) }}</small>
               <small class="store-history">{{ storeHistoryLabel(item) }}</small>
               <template v-if="!canReplenish(item)"
                 ><p class="blocked-reason">{{ item.blocked_reason || t('blocked') }}</p>
@@ -199,7 +200,7 @@
               <StockQuantityInput
                 v-model="quantities[item.id]"
                 :min="1"
-                :max="Math.min(100, item.stock_deposito!)"
+                :max="Math.min(100, replenishmentAvailable(item))"
                 always-show-buttons
                 :aria-label="t('quantity', { name: item.name })"
                 :disabled="controlsDisabled"
@@ -378,6 +379,7 @@ import {
   inventoryReplenishment,
   canReplenish,
   replenishmentRequest,
+  replenishmentAvailable,
   restoreReplenishmentRequest,
   type ReplenishmentProduct,
   type ReplenishmentRequest,
@@ -514,7 +516,7 @@ function validQuantity(item: ReplenishmentProduct) {
   return (
     Number.isInteger(quantity) &&
     quantity >= 1 &&
-    quantity <= Math.min(100, item.stock_deposito ?? 0)
+    quantity <= Math.min(100, replenishmentAvailable(item))
   )
 }
 function selectItem(item: ReplenishmentProduct, checked: boolean) {
