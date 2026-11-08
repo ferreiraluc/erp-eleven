@@ -97,6 +97,7 @@ def test_simultaneous_plain_label_and_replenishment_do_not_share_confirmation(re
     {'stock_loja': 1, 'stock_deposito': 4},
     {'current_stock': 4, 'stock_deposito': 4},
     {'current_stock': None},
+    {'reserved_deposito': 5},
     {'is_active': False},
 ])
 def test_confirm_waits_for_item_lock_and_rechecks_changed_stock(replenishment_pg, change):

@@ -21,6 +21,9 @@ def blocked_reason(item):
     if (any(value < 0 for value in balances) or
             item.current_stock != item.stock_loja + item.stock_deposito):
         return 'O saldo por local diverge do total. Confira o estoque antes de repor.'
+    if (item.reserved_loja < 0 or item.reserved_deposito < 0 or
+            item.available_loja < 0 or item.available_deposito < 0):
+        return 'As reservas do produto precisam de conferência antes de repor.'
     if not labels.CODE.fullmatch(item.inventory_code or ''):
         return 'O produto precisa de um código interno válido para imprimir a etiqueta.'
     return None
@@ -64,7 +67,7 @@ def store_history(db, candidates):
 
 
 def list_items(db, *, q='', page=1):
-    query = labels.items_query(db).filter(Item.stock_loja == 0, Item.stock_deposito > 0)
+    query = labels.items_query(db).filter(Item.stock_loja == 0, Item.available_deposito > 0)
     search = build_search(db, q) if q.strip() else None
     if search:
         query = query.filter(search.condition)
@@ -83,6 +86,8 @@ def list_items(db, *, q='', page=1):
             .order_by(*order).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all())
     return dict(items=[dict(labels.item_view(item), brand=item.brand, location=item.location,
                             updated_at=item.updated_at, has_image=bool(has_image),
+                            reserved_loja=item.reserved_loja, reserved_deposito=item.reserved_deposito,
+                            available_loja=item.available_loja, available_deposito=item.available_deposito,
                             blocked_reason=blocked_reason(item),
                             last_store_exit_at=timestamp(last_store_exit_at),
                             has_store_history=bool(has_store_history))
@@ -117,8 +122,8 @@ def confirm_replenishment(db, user, body):
                 raise HTTPException(409, reason)
             if item.stock_loja != 0 or item.stock_deposito <= 0:
                 raise HTTPException(409, 'Este produto já foi reposto ou não tem saldo no depósito. Atualize a lista.')
-            if line.copies > item.stock_deposito:
-                raise HTTPException(409, 'A quantidade para repor excede o saldo no depósito. Atualize a lista.')
+            if line.copies > item.available_deposito:
+                raise HTTPException(409, 'A quantidade para repor excede o saldo disponível no depósito. Peças reservadas em pedidos não podem ser repostas. Atualize a lista.')
 
         movements = {}
         for line in sorted(body.items, key=lambda row: str(row.item_id)):

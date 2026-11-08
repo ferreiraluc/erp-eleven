@@ -100,6 +100,13 @@ devolve ao local original ao cancelar. Quantidades de catálogo são inteiras;
 avulsos não movimentam estoque. Limites, concorrência e pendências do cancelamento
 financeiro estão no [guia de estoque](ESTOQUE_OCR.md#estoque-no-pdv).
 
+Pedidos comerciais vinculam produtos do catálogo, local e cliente à separação.
+Peças reservadas continuam no saldo físico, mas deixam de estar disponíveis para
+vender/transferir. Recebimentos parciais ficam no pedido até sua conclusão única
+no PDV; reservas não contam como outra venda. O ticket de separação identifica a
+sacola pela impressora de tickets. Pedidos logísticos antigos não são convertidos
+automaticamente: nenhuma peça é inferida de uma descrição livre durante o deploy.
+
 Ajustes manuais incorporados nas células entram no resultado do BI sem expor fórmulas.
 Arquivos mensais têm prioridade sobre a planilha corrente do mesmo período, evitando
 contagem dupla. Um valor ausente permanece ausente; zero é um resultado válido.

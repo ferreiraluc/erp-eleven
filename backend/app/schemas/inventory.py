@@ -63,6 +63,11 @@ class ItemResponse(ItemBase):
     current_stock: int | None
     stock_loja: int | None
     stock_deposito: int | None
+    reserved_loja: int = 0
+    reserved_deposito: int = 0
+    available_loja: int | None = None
+    available_deposito: int | None = None
+    available_stock: int | None = None
     created_at: datetime
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None

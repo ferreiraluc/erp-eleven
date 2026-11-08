@@ -177,6 +177,7 @@ def test_reversed_product_order_in_two_sales_locks_consistently_and_conserves_st
 @pytest.mark.parametrize('change',[
     {'current_stock':2,'stock_loja':2},  # insufficient after another completed exit
     {'current_stock':10,'stock_loja':2},  # a preexisting/manual total mismatch
+    {'current_stock':10,'stock_loja':10,'reserved_loja':3},  # order held stock while this sale waited
 ])
 def test_sale_waits_for_real_lock_then_rejects_new_balance_or_mismatch(pdv_pg,change):
     factory,client,cid,control,observer_engine=pdv_pg

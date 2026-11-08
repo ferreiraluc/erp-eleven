@@ -289,9 +289,10 @@ def query_shipments(db, args, *, allow_fuzzy=True):
                          "não afirme identidade exata nem invente dados."}
 
 
-def query_orders(db, args):
+def query_orders(db, args, user=None):
+    from .access_policy import orders_query
     p = Pedido
-    q = db.query(p)
+    q = orders_query(db.query(p), user)
     if args.termo:
         q = q.filter(contains([p.cliente_nome, p.numero_pedido, p.codigo_rastreio, p.cliente_telefone], args.termo))
     if args.situacao == "em_aberto":
@@ -314,7 +315,7 @@ def query_stock(db, args):
     from .inventory_taxonomy import facet_filter
     from .inventory_search import build_search
     i = Item
-    qty = {"total": i.current_stock, "loja": i.stock_loja, "deposito": i.stock_deposito}[args.local]
+    qty = {"total": i.available_stock, "loja": i.available_loja, "deposito": i.available_deposito}[args.local]
     q = db.query(i).filter(i.is_active.is_(True), i.deleted_at.is_(None))
     searched = build_search(db, args.termo) if args.termo else None
     if searched:
@@ -335,7 +336,7 @@ def query_stock(db, args):
         if args.local != "total":
             return {"erro": "O estoque mínimo é global por produto; use local=total para abaixo_minimo."}
         q = q.filter(qty < i.min_stock)
-    columns = (i.current_stock, i.stock_loja, i.stock_deposito)
+    columns = (i.available_stock, i.available_loja, i.available_deposito)
     aggregate = q.with_entities(func.count(), *(func.sum(column) for column in columns),
                                *(func.count(column) for column in columns)).one()
     locations = ("total", "loja", "deposito")
@@ -349,14 +350,18 @@ def query_stock(db, args):
             "saldos_por_local": by_location,
             "subtotal_saldos_conhecidos": known, "itens_sem_saldo": missing,
             "escopo_dos_saldos": "Todos os produtos filtrados, não só a página exibida.",
-            "instrucao": "Saldo nulo significa não informado, nunca zero. Se faltarem saldos, informe "
+            "instrucao": "Unidades e saldos por local são DISPONÍVEIS: já descontam peças reservadas em pedidos. "
+                         "Estoque físico inclui sacolas separadas; não prometa disponibilidade de unidades reservadas. "
+                         "Saldo nulo significa não informado, nunca zero. Se faltarem saldos, informe "
                          "a quantidade de cadastros incompletos; o subtotal conhecido não é o total. "
                          "Calçados incluem equivalências e meios tamanhos da tabela da loja. "
                          "Informe sempre o tamanho original cadastrado de cada resultado; não prometa ajuste idêntico. "
                          "Não confirme disponibilidade de um valor ausente. A conferência está em Estoque → Conferir estoque.",
             "resultados": [{"id":str(x.id),"produto": x.name, "sku": x.sku_internal, "codigo": x.inventory_code, "categoria": x.category,
                             "tamanho": x.size, "cor": x.color, "marca": x.brand,
-                            "total": x.current_stock, "loja": x.stock_loja, "deposito": x.stock_deposito,
+                            "total": x.available_stock, "loja": x.available_loja, "deposito": x.available_deposito,
+                            "estoque_fisico": {"total": x.current_stock, "loja": x.stock_loja, "deposito": x.stock_deposito},
+                            "reservado": {"loja": x.reserved_loja, "deposito": x.reserved_deposito},
                             "saldo_incompleto": any(value is None for value in (x.current_stock, x.stock_loja, x.stock_deposito)),
                             "minimo": x.min_stock, "preco_venda": scalar(x.sale_price), "moeda": x.sale_currency} for x in rows]}
 

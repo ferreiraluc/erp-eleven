@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from test_access_postgres import pg
 from app.database import Base
 from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
-from app.models.pdv import PdvCliente
+from app.models.pdv import PdvCliente, PdvSale
 from app.models.address_book import SavedAddress
 from app.models.access import AuditEvent
 from app.services.customer_maintenance import merge_customer_selection
@@ -24,7 +24,7 @@ def group(pg, monkeypatch):
     engine, schema = pg
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
     Base.metadata.create_all(isolated, tables=[model.__table__ for model in
-        (Usuario, Vendedor, Cliente, PdvCliente, Pedido, Rastreamento, SavedAddress, AuditEvent)])
+        (Usuario, Vendedor, Cliente, PdvCliente, PdvSale, Pedido, Rastreamento, SavedAddress, AuditEvent)])
     factory = sessionmaker(bind=isolated, autoflush=False)
     uid = uuid.uuid4()
     target_id, first_id, second_id = [uuid.uuid4() for _ in range(3)]

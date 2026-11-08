@@ -45,6 +45,15 @@ class PedidoResponse(PedidoBase):
     tags: List[TagStatusSimple] = []
     cliente: Optional[ClienteSimple] = None
     anexos_count: int = 0
+    commerce_status: Optional[str] = None
+    commerce_version: int = 1
+    sale_id: Optional[uuid.UUID] = None
+    subtotal_gs: Optional[Decimal] = None
+    desconto_gs: Optional[Decimal] = None
+    total_gs: Optional[Decimal] = None
+    paid_gs: Optional[Decimal] = None
+    usd_rate_gs: Optional[Decimal] = None
+    reserved_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

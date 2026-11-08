@@ -13,7 +13,7 @@ from app.database import Base
 from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
 from app.models.access import AuditEvent
 from app.models.address_book import SavedAddress
-from app.models.pdv import PdvCliente
+from app.models.pdv import PdvCliente, PdvSale
 from app.services import address_book, pdv_customers
 from app.services.customer_maintenance import merge_customers
 
@@ -24,7 +24,7 @@ def test_pdv_selection_rechecks_cached_identity_after_concurrent_customer_merge(
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
     try:
         Base.metadata.create_all(isolated, tables=[model.__table__ for model in (
-            Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, SavedAddress, AuditEvent,
+            Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, PdvSale, SavedAddress, AuditEvent,
         )])
         factory = sessionmaker(bind=isolated, autoflush=False)
         uid, source_id, target_id, pdv_id = (uuid.uuid4() for _ in range(4))

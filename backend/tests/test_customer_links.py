@@ -12,6 +12,7 @@ from app.dependencies import get_current_active_user, get_current_user
 from app.models import Cliente, Pedido, Rastreamento, Usuario
 from app.models.pedido import PedidoStatus
 from app.models.pedido_anexo import PedidoAnexo
+from app.models.pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation
 from app.models.pedido_tag import TagStatus, pedido_tags_association
 from app.models.rastreamento import RastreamentoStatus
 from app.services.customer_links import validate_tracking_links, customer_shipments
@@ -23,7 +24,8 @@ from app.services.assistant_queries import query_shipments, ShipmentArgs
 def logistics(setup):
     factory, _, user_id = setup
     with factory() as db:
-        Base.metadata.create_all(db.bind, tables=[TagStatus.__table__, pedido_tags_association, PedidoAnexo.__table__])
+        Base.metadata.create_all(db.bind, tables=[TagStatus.__table__, pedido_tags_association, PedidoAnexo.__table__,
+            PedidoItem.__table__, PedidoPayment.__table__, PedidoOperation.__table__])
     app = FastAPI()
     app.include_router(clientes.router, prefix='/api/clientes')
     app.include_router(pedidos.router, prefix='/api/pedidos')

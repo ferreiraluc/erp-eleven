@@ -42,7 +42,7 @@ def reconcile(db):
             result['address_reviews'].append({'id': str(row.id), 'reason': row.customer_link_reason})
     db.flush()
     customers = db.query(Cliente).all()
-    for row in db.query(Pedido).order_by(Pedido.id).with_for_update():
+    for row in db.query(Pedido).filter(Pedido.commerce_status.is_(None)).order_by(Pedido.id).with_for_update():
         if not row.cliente_id:
             customer = match_recipient(db, row.cliente_nome, row.cliente_telefone, row.cliente_email,
                 address=row.endereco_entrega, customers=customers)
@@ -284,7 +284,7 @@ def _customer_link_plan(db, customer, limit=200):
             if reason:
                 add('address', row, row.label, reason)
 
-        orders = inspect_rows('order', db.query(Pedido).filter(Pedido.cliente_id.is_(None),
+        orders = inspect_rows('order', db.query(Pedido).filter(Pedido.cliente_id.is_(None), Pedido.commerce_status.is_(None),
             normalize(Pedido.cliente_nome).in_(sql_names)))
         for row in orders:
             reason = eligible({'nome': row.cliente_nome, 'telefone': row.cliente_telefone,

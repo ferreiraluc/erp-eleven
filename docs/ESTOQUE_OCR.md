@@ -873,12 +873,38 @@ A conferência dos locais deve usar a contagem real, evitando transferir para um
 localização arbitrária apenas para fazer o total fechar.
 
 O formulário de movimentação permite selecionar loja/depósito também no ajuste
-físico, inclusive ajustar a zero. A criação de item avulso e de lotes com várias cores ainda usa
+físico, inclusive ajustar a zero quando não houver reserva naquele local. A criação de item avulso e de lotes com várias cores ainda usa
 etapas distintas; uma chamada de grade de tamanhos é atômica. Se um item/parte da grade foi criado e a próxima etapa falhar,
 o formulário mostra os nomes e SKUs já persistidos, atualiza a lista e bloqueia
 repetir aquele cadastro. O operador deve conferir os saldos e movimentar somente
 o que faltar. Uma interrupção de rede sem resposta de criação também pede essa
 conferência: não se supõe que houve rollback no servidor.
+
+### Peças separadas para pedidos
+
+Reservar um pedido conserva o saldo físico da peça em Loja ou Depósito e separa a
+quantidade indisponível para outras vendas. `stock_loja`, `stock_deposito` e
+`current_stock` continuam representando o físico; `reserved_loja` e
+`reserved_deposito` registram as reservas ativas. O disponível é a diferença e
+acompanha cada resposta de catálogo, sem uma consulta adicional por produto.
+
+Nos cards, listas e resumos de grades, os números **L | D** mostram o disponível;
+quando há reserva, uma indicação discreta informa a quantidade reservada. O texto
+acessível detalha ambos os locais. Na peça individual, tocar nessa indicação abre
+Pedidos buscando seu código interno para localizar o cliente e a sacola. Contagens e ajustes continuam tratando o saldo
+físico: não se deve zerar uma peça só porque ela está numa sacola separada.
+
+Saídas comuns, transferências e reposição não consomem peças reservadas. Ajustes
+não podem deixar o saldo físico abaixo das reservas; inativação e retirada do
+catálogo exigem liberar ou concluir as reservas primeiro. A mesma validação é
+aplicada no servidor após reler os contadores sob lock, inclusive quando o operador
+está com uma listagem antiga. Finalizar o pedido libera sua reserva e baixa a
+venda na mesma transação; cancelar a reserva não cria uma entrada física.
+
+A reposição permanece limitada a itens com saldo físico **zero na loja**, mas
+considera apenas o disponível no depósito. Um produto inteiramente reservado na
+loja não é tratado como fisicamente zerado. A consulta local do navegador conserva
+somente metadados e nunca usa reservas/saldos armazenados para autorizar uma operação.
 
 ## Conferência dos cadastros e saldos
 

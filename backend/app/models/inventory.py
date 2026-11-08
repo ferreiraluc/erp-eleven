@@ -1,6 +1,7 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, DECIMAL, Integer, Text, JSON, Enum as SAEnum
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, DECIMAL, Integer, Text, JSON, CheckConstraint, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, deferred
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 import uuid
 import enum
@@ -61,6 +62,10 @@ class Item(Base):
     current_stock = Column(Integer, default=0)
     stock_loja = Column(Integer, default=0)
     stock_deposito = Column(Integer, default=0)
+    # Physical stock remains in its original location while held for an order.
+    # Counters are changed with the order lines under the same Item row locks.
+    reserved_loja = Column(Integer, nullable=False, default=0, server_default='0')
+    reserved_deposito = Column(Integer, nullable=False, default=0, server_default='0')
     brand = Column(String(100), nullable=True)
     group_key = Column(String(100), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
@@ -75,12 +80,41 @@ class Item(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     deleted_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
 
+    @hybrid_property
+    def available_loja(self):
+        return None if self.stock_loja is None else self.stock_loja - (self.reserved_loja or 0)
+
+    @available_loja.expression
+    def available_loja(cls):
+        return cls.stock_loja - cls.reserved_loja
+
+    @hybrid_property
+    def available_deposito(self):
+        return None if self.stock_deposito is None else self.stock_deposito - (self.reserved_deposito or 0)
+
+    @available_deposito.expression
+    def available_deposito(cls):
+        return cls.stock_deposito - cls.reserved_deposito
+
+    @hybrid_property
+    def available_stock(self):
+        return None if self.current_stock is None else self.current_stock - (self.reserved_loja or 0) - (self.reserved_deposito or 0)
+
+    @available_stock.expression
+    def available_stock(cls):
+        return cls.current_stock - cls.reserved_loja - cls.reserved_deposito
+
     @property
     def history_name(self):
         return f'Produto excluído — {self.name}' if self.deleted_at else self.name
 
     supplier = relationship("Supplier", back_populates="items")
     movements = relationship("StockMovement", back_populates="item")
+
+    __table_args__ = (
+        CheckConstraint('reserved_loja >= 0', name='ck_inventory_reserved_loja'),
+        CheckConstraint('reserved_deposito >= 0', name='ck_inventory_reserved_deposito'),
+    )
 
 
 class StockMovement(Base):

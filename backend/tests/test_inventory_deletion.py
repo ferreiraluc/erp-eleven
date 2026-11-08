@@ -8,6 +8,7 @@ from app.models import Usuario
 from app.models.usuario import UsuarioRole
 from app.models.inventory import Item, StockMovement, InventorySession, InventorySessionItem
 from app.models.pdv import PdvSale, PdvSaleItem
+from app.models.pedido_reserva import PedidoItem
 from app.models.access import AuditEvent
 from app.services.inventory_service import create_movement
 from app.dependencies import get_current_active_user
@@ -18,7 +19,7 @@ def deletion_app(stock_app):
     factory, client, uid = stock_app
     with factory() as db:
         Base.metadata.create_all(db.bind, tables=[m.__table__ for m in
-            (PdvSaleItem, InventorySession, InventorySessionItem, AuditEvent)])
+            (PdvSaleItem, PedidoItem, InventorySession, InventorySessionItem, AuditEvent)])
         user = db.get(Usuario, uid); user.email = 'lucas@eleven.com'; user.role = UsuarioRole.ADMIN
         row = item(db, loja=0, deposito=0, image_data='fixture-photo', group_key='Same model', barcode='SHARED')
         create_movement(db, row.id, 'entry', 2, uid, reason='Cadastro de teste')

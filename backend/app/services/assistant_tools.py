@@ -200,6 +200,9 @@ def execute_tool(db, message, identity, name, arguments):
     }
     if name in queries:
         schema, function = queries[name]
+        if name == 'consultar_pedidos':
+            from ..models.usuario import Usuario
+            return function(db, schema.model_validate(arguments), user=db.get(Usuario, message.user_id))
         return function(db, schema.model_validate(arguments))
     if name == "consultar_vendas_planilhas":
         if not message.should_reply or not identity or not identity.active or identity.user_id != message.user_id or identity.channel != message.channel or identity.external_id != message.sender_id:

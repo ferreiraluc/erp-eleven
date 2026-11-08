@@ -328,7 +328,7 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
         return Response(status_code=204)
     if label_device != (job.source == 'product_labels'):
         raise HTTPException(409, 'Trabalho de outra finalidade. Confira a fila antes de trocar o papel.')
-    continuous = job.source in ('pdv_receipt', 'printer_test') and job.snapshot.get('height') == 0
+    continuous = job.source in ('pdv_receipt', 'printer_test', 'order_reservation') and job.snapshot.get('height') == 0
     if driver == 'escpos_tcp' and (not continuous or job.snapshot.get('width') != 80):
         raise HTTPException(409, 'A 3nStar recebe somente tickets contínuos de 80 mm.')
     if continuous and not continuous_tickets:
@@ -352,7 +352,7 @@ def claim(device=Depends(printer), db: Session = Depends(get_db), continuous_tic
     result = {"id": str(job.id), "sha256": job.sha256}
     if label_device:
         result.update(profile="product_labels", paper_width_mm=60, paper_height_mm=30, copies=job.snapshot["copies"], format="zpl")
-    if job.source in ('pdv_receipt', 'printer_test'):
+    if job.source in ('pdv_receipt', 'printer_test', 'order_reservation'):
         result.update(profile='tickets', paper_width_mm=job.snapshot['width'], paper_height_mm=job.snapshot['height'])
         if continuous:
             from pypdf import PdfReader

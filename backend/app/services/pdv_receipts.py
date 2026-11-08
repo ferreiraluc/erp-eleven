@@ -115,6 +115,10 @@ def snapshot_for_view(db, sale):
 
 
 def prepare_document(job):
+    if job.source == 'order_reservation' and not job.pdf:
+        from .order_tickets import render as render_order_ticket
+        job.pdf = render_order_ticket(job.snapshot)
+        job.sha256 = hashlib.sha256(job.pdf).hexdigest()
     if job.source == 'inventory_list' and not job.pdf:
         from .inventory_count_list import render as render_count_list
         job.pdf = render_count_list(job.snapshot)

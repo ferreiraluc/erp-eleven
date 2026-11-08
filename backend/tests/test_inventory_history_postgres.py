@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, joinedload
 from test_access_postgres import pg, upgrade
 from app.database import Base
-from app.models import Usuario, Vendedor, Cliente
+from app.models import Usuario, Vendedor, Cliente, Pedido, PedidoItem
 from app.models.usuario import UsuarioRole
 from app.models.inventory import Item, StockMovement, Supplier, InventorySession, InventorySessionItem
 from app.models.pdv import PdvSale, PdvSaleItem, PdvCliente
@@ -38,7 +38,7 @@ def test_catalog_removal_serializes_with_stock_and_history_retains_links(pg):
     engine,schema=pg
     isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
     try:
-        Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Item,Supplier,StockMovement,InventorySession,InventorySessionItem,PdvSale,PdvSaleItem,PdvCliente,AuditEvent)])
+        Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Item,Supplier,StockMovement,InventorySession,InventorySessionItem,PdvSale,PdvSaleItem,PdvCliente,Pedido,PedidoItem,AuditEvent)])
         factory=sessionmaker(bind=isolated,autoflush=False)
         with factory() as db:
             user=Usuario(nome='Lucas',email='lucas@eleven.com',senha_hash='unused',role=UsuarioRole.ADMIN)

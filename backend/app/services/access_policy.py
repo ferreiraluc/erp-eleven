@@ -21,6 +21,19 @@ def sales_query(query, model, user, pdv=False):
     return query.filter(model.vendedor_id == seller_id) if seller_id else query.filter(False)
 
 
+def orders_query(query, user):
+    """Legacy logistics stay shared; commercial orders use the PDV sales scope."""
+    from sqlalchemy import or_
+    from ..models.pedido import Pedido
+    legacy = Pedido.commerce_status.is_(None)
+    if (user is None or not user.ativo or
+            user.role not in (UsuarioRole.ADMIN, UsuarioRole.GERENTE, UsuarioRole.VENDEDOR)):
+        return query.filter(legacy)
+    if own_sales(user):
+        return query.filter(or_(legacy, Pedido.vendedor_id == user.id))
+    return query
+
+
 def require_all_sales(user):
     if own_sales(user):
         raise HTTPException(403, 'Esta conta pode consultar apenas suas próprias vendas.')
