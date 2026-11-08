@@ -24,6 +24,7 @@ MAX_COPIES = 100
 CODE = re.compile(r'^INV-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$')
 FIELDS = (Item.id, Item.name, Item.inventory_code, Item.color, Item.size,
           Item.group_key, Item.stock_loja, Item.stock_deposito, Item.current_stock,
+          Item.reserved_loja, Item.reserved_deposito,
           Item.sale_price, Item.sale_currency, Item.barcode)
 
 

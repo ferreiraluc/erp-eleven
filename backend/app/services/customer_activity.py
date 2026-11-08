@@ -13,7 +13,7 @@ from ..models.pdv import PdvCliente, PdvSale
 from ..models.pedido import Pedido
 from ..models.printing import PrintJob
 from ..models.rastreamento import Rastreamento
-from .access_policy import own_sales, sales_query
+from .access_policy import own_sales, sales_query, orders_query
 from .customer_shipping_links import address_owners
 
 
@@ -72,9 +72,9 @@ def customer_activity(db, customer_ids, user):
     ).outerjoin(Pedido, Pedido.id == Rastreamento.pedido_id).filter(
         shipment_owner.in_(customer_ids),
     ).group_by(shipment_owner).subquery()
-    orders = db.query(
+    orders = orders_query(db.query(
         Pedido.cliente_id.label('customer_id'), func.count(Pedido.id).label('order_count'),
-    ).filter(Pedido.cliente_id.in_(customer_ids)).group_by(Pedido.cliente_id).subquery()
+    ), user).filter(Pedido.cliente_id.in_(customer_ids)).group_by(Pedido.cliente_id).subquery()
     columns = [
         purchases.c.purchase_count, orders.c.order_count, shipments.c.shipment_count,
         prints.c.print_count, prints.c.submitted_print_count,

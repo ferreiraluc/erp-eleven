@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from test_access_postgres import pg
 from test_assistant_queries import shipment
 from app.database import Base
-from app.models import Cliente, Pedido, Rastreamento, Usuario, Vendedor
+from app.models import Cliente, Pedido, Rastreamento, Usuario, Vendedor, PdvCliente, PdvSale
 from app.services.assistant_queries import ShipmentArgs, query_shipments
 from app.services.assistant_tracking import CustomerTrackingArgs, customer_tracking, customer_tracking_reply
 
@@ -23,7 +23,7 @@ def tracking_db(request):
         isolated = sa.create_engine('sqlite://')
     try:
         Base.metadata.create_all(isolated, tables=[model.__table__ for model in (
-            Usuario, Vendedor, Cliente, Pedido, Rastreamento,
+            Usuario, Vendedor, Cliente, PdvCliente, PdvSale, Pedido, Rastreamento,
         )])
         with sessionmaker(bind=isolated, autoflush=False)() as db:
             yield db

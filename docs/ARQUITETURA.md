@@ -134,6 +134,23 @@ permite recuperar respostas perdidas sem recolher outro trabalho. O agente nativ
 guarda token no Chaves e diário durável antes do envio; usa o mesmo PDF em espanhol.
 Ver [instalação, reconexão e limites macOS](IMPRESSAO_MACOS.md).
 
+**Pedidos com reserva:** `order_reservations` mantém linhas de catálogo por local,
+recebimentos e operações idempotentes em `pedido_items`, `pedido_payments` e
+`pedido_operations`. Os contadores `Item.reserved_loja/deposito` são atualizados
+com a reserva sob locks ordenados, preservando os saldos físicos. Propriedades
+`available_*` são expressões SQL, sem consulta individual por produto. Movimentações
+compartilhadas impedem consumir a reserva de outro pedido. A conclusão libera a
+própria reserva e usa `create_sale_record` na mesma transação, ligando um único PDV.
+O estado comercial é separado de `Pedido.status`, usado por rastreios/logística.
+
+**Ticket de separação:** `order_tickets` cria `print_jobs.source=order_reservation`
+somente após confirmação, com snapshot imutável e chave de solicitação. A fila
+`tickets`, o agente macOS e sua saída ESC/POS de 80 mm são reutilizados; A4 e
+Zebra de etiquetas continuam em seus próprios perfis. O PDF é uma página contínua
+com cliente, vendedor, data/hora de Brasília, peças, recebido/saldo e QR do pedido.
+Não comprova venda nem provoca recebimento. Uma cópia pendente/buscada bloqueia
+outra cópia do mesmo pedido. Não há impressão física em testes automatizados.
+
 **Etiquetas de produtos:** `/inventory/labels` resolve seleção de itens/grades/lotes com
 projeção de metadados sem fotos; confirmação cria jobs/snapshots por variação.
 `purpose=product_labels` isola a Zebra de tickets e A4. Coleta usa chave persistente,

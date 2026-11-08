@@ -1,5 +1,41 @@
 # Gestor de Vendas do PDV
 
+## Concluir pedidos separados
+
+**Pedidos → Separar produtos** cria reservas por produto e local, sem registrar
+venda ou reduzir o saldo físico. **Receber / concluir no PDV** abre
+`/pdv?pedido_id=...` com cliente, vendedor, itens, preços e desconto do pedido.
+O carrinho comum do PDV fica preservado, separado dessa operação. Mudanças nos
+produtos/preços/desconto são feitas voltando à edição do pedido.
+
+O recebimento permite o mesmo conjunto de moedas/métodos e a opção de repassar
+os 6% do cartão. **Registrar e manter separado** salva um pagamento efetivamente
+recebido, que pode ser parcial; pagar tudo não conclui a venda automaticamente.
+**Receber saldo, concluir e imprimir** aproveita os valores anteriores e registra
+somente o recebimento adicional mostrado. Quando o saldo já é zero, **Concluir
+venda e imprimir** não cria outro pagamento. Fiado não quita reservas.
+
+A cotação em dólares e os preços da separação ficam congelados. O câmbio inicial
+de recebimentos considera esse dólar e as relações atuais com real/euro; pode
+ser conferido e negociado no formulário. Cada recebimento guarda seu próprio
+valor, moeda, câmbio e data. O ticket final apresenta os pagamentos anteriores;
+o PDV cria a venda e movimenta as peças uma única vez na mesma transação.
+Pagamentos antecipados não entram como outra venda no BI nem como fiado.
+
+Na reserva, preços não são arredondados silenciosamente ao receber. **Total**
+arredonda dinheiro para o centavo suficiente e mostra o troco; outros métodos
+conservam o centavo inferior quando a conversão não for exata, deixando o saldo
+visível para completar em outra moeda ou ajustar explicitamente o pedido.
+Cartão com taxa segue o cálculo existente por `0,94`. Troco só é permitido na
+conclusão com dinheiro; depósitos mantidos na reserva não excedem o saldo.
+
+Comandos têm chave única, versão e confirmação. Uma resposta perdida conserva a
+solicitação exata no aparelho para recuperação; nova versão exige conferência.
+O servidor serializa pedido/produtos e impede duas vendas para o mesmo pedido.
+Uma correção posterior da venda por Lucas mantém o histórico da separação e dos
+recebimentos; o histórico do pedido não é reescrito como se fosse a venda corrigida.
+Veja também [Pedidos, reservas e pagamentos](CLIENTES_PEDIDOS_RASTREIOS.md).
+
 ## Ticket automático no caixa
 
 Lucas configura **Configurações → Impressora de tickets** para o agente Windows/Zebra ou prepara a

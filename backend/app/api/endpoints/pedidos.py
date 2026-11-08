@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload, selectinload
-from typing import List, Optional
+from typing import List, Optional, Literal
+import uuid
 from ...database import get_db
 from ...models.pedido import Pedido, PedidoStatus
+from ...models.pedido_reserva import PedidoItem
 from ...models.pedido_tag import TagStatus
 from ...models.cliente import Cliente
 from ...models.usuario import Usuario
@@ -17,6 +19,9 @@ from ...services.rastreamento_sync import RastreamentoSyncService
 from ...services.customer_links import validate_order_customer, inherit_order_customer
 from ...models.rastreamento import Rastreamento
 from ...schemas.rastreamento import RastreamentoResponse
+from ...schemas.pedido_reserva import ReservaWrite, ReservaPayment, ReservaReason, ReservaCheckout
+from ...services import order_reservations
+from ...services.access_policy import orders_query
 
 MAX_ANEXOS_POR_PEDIDO = 10
 MAX_TAMANHO_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -37,6 +42,70 @@ def _sync_cliente_fields(db_pedido: Pedido, cliente: Cliente) -> None:
 router = APIRouter()
 
 
+def _commercial_scope(query, user):
+    return orders_query(query, user)
+
+
+def _reservation_write(db, operation, *args):
+    try:
+        result = operation(db, *args)
+        db.commit()
+        return result
+    except Exception:
+        db.rollback()
+        raise
+
+
+@router.post('/reservas', status_code=201)
+def reservar_pedido(body: ReservaWrite, db: Session = Depends(get_db),
+                    user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.create, body, user)
+
+
+@router.get('/{pedido_id}/reserva')
+def consultar_reserva(pedido_id: uuid.UUID, db: Session = Depends(get_db),
+                      user: Usuario = Depends(get_current_active_user)):
+    return order_reservations.detail(db, pedido_id, user)
+
+
+@router.put('/{pedido_id}/reserva')
+def atualizar_reserva(pedido_id: uuid.UUID, body: ReservaWrite, db: Session = Depends(get_db),
+                      user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.update, pedido_id, body, user)
+
+
+@router.post('/{pedido_id}/pagamentos')
+def receber_pagamento_pedido(pedido_id: uuid.UUID, body: ReservaPayment, db: Session = Depends(get_db),
+                             user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.add_payment, pedido_id, body, user)
+
+
+@router.post('/{pedido_id}/pagamentos/{payment_id}/estornar')
+def registrar_devolucao_pagamento(pedido_id: uuid.UUID, payment_id: uuid.UUID, body: ReservaReason,
+                                  db: Session = Depends(get_db), user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.reverse_payment, pedido_id, payment_id, body, user)
+
+
+@router.post('/{pedido_id}/cancelar')
+def cancelar_reserva(pedido_id: uuid.UUID, body: ReservaReason, db: Session = Depends(get_db),
+                     user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.cancel, pedido_id, body, user)
+
+
+@router.post('/{pedido_id}/checkout')
+def concluir_reserva(pedido_id: uuid.UUID, body: ReservaCheckout, db: Session = Depends(get_db),
+                     user: Usuario = Depends(get_current_active_user)):
+    from .pdv import _sale_to_response
+    try:
+        sale = order_reservations.checkout(db, pedido_id, body, user)
+        db.commit()
+        db.refresh(sale)
+        return _sale_to_response(sale)
+    except Exception:
+        db.rollback()
+        raise
+
+
 @router.get("/pagina", response_model=PedidoPage)
 def listar_pagina_pedidos(
     page: int = Query(1, ge=1),
@@ -44,11 +113,14 @@ def listar_pagina_pedidos(
     search: str = Query('', max_length=200),
     status: Optional[PedidoStatus] = Query(None),
     tag_id: Optional[str] = Query(None),
+    commerce_status: Optional[Literal['reserved', 'completed', 'cancelled', 'legacy']] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Filter the complete order directory before counting and paging."""
-    query = db.query(Pedido)
+    query = _commercial_scope(db.query(Pedido), current_user)
+    if commerce_status:
+        query = query.filter(Pedido.commerce_status.is_(None) if commerce_status == 'legacy' else Pedido.commerce_status == commerce_status)
     if status:
         query = query.filter(Pedido.status == status)
     if tag_id:
@@ -56,9 +128,13 @@ def listar_pagina_pedidos(
     term = search.strip()
     if term:
         pattern = '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
-        query = query.filter(or_(*(column.ilike(pattern, escape='\\') for column in (
-            Pedido.numero_pedido, Pedido.cliente_nome, Pedido.endereco_entrega, Pedido.codigo_rastreio,
-        ))))
+        query = query.filter(or_(
+            *(column.ilike(pattern, escape='\\') for column in (
+                Pedido.numero_pedido, Pedido.cliente_nome, Pedido.endereco_entrega, Pedido.codigo_rastreio,
+            )),
+            Pedido.reserved_items.any(or_(PedidoItem.item_name.ilike(pattern, escape='\\'),
+                                           PedidoItem.item_sku.ilike(pattern, escape='\\'))),
+        ))
     total = query.count()
     rows = query.options(selectinload(Pedido.tags), joinedload(Pedido.cliente)).order_by(
         Pedido.created_at.desc(), Pedido.id,
@@ -76,7 +152,7 @@ def listar_pedidos(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """List orders with pagination and filters"""
-    query = db.query(Pedido).options(joinedload(Pedido.tags))
+    query = _commercial_scope(db.query(Pedido).options(joinedload(Pedido.tags)), current_user)
 
     if status:
         query = query.filter(Pedido.status == status)
@@ -170,7 +246,7 @@ def obter_pedido(
 ):
     """Get order by ID"""
     pedido_uuid = validate_uuid(pedido_id)
-    pedido = db.query(Pedido).options(joinedload(Pedido.tags)).filter(Pedido.id == pedido_uuid).first()
+    pedido = _commercial_scope(db.query(Pedido).options(joinedload(Pedido.tags)), current_user).filter(Pedido.id == pedido_uuid).first()
     if not pedido:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -185,7 +261,7 @@ def obter_pedido_por_numero(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """Get order by order number"""
-    pedido = db.query(Pedido).options(joinedload(Pedido.tags)).filter(Pedido.numero_pedido == numero_pedido).first()
+    pedido = _commercial_scope(db.query(Pedido).options(joinedload(Pedido.tags)), current_user).filter(Pedido.numero_pedido == numero_pedido).first()
     if not pedido:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -208,6 +284,14 @@ def atualizar_pedido(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found"
         )
+
+    if db_pedido.commerce_status:
+        # The legacy route cannot change money, identity or cancel reservations.
+        # Shipping fields/tags remain available through this existing module.
+        order_reservations.authorized_order(db, pedido_uuid, current_user)
+        permitted_fields = {'codigo_rastreio', 'endereco_entrega', 'tag_ids', 'status'}
+        if pedido_update.model_fields_set - permitted_fields or pedido_update.status == PedidoStatus.CANCELADO:
+            raise HTTPException(409, 'Use a edição do pedido reservado para alterar itens, cliente ou valores; o cancelamento precisa liberar a reserva.')
 
     cliente_obj = None
     # An explicit link is validated independently of name/address snapshots.
@@ -301,6 +385,8 @@ def excluir_pedido(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found"
         )
+    if db_pedido.commerce_status:
+        raise HTTPException(409, 'Pedidos com reserva preservam itens e pagamentos. Cancele pelo fluxo de reserva, sem excluir o histórico.')
     
     # Check if order can be deleted (only pending orders)
     if db_pedido.status not in [PedidoStatus.PENDENTE, PedidoStatus.CANCELADO]:

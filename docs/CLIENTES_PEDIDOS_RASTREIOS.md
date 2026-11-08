@@ -3,7 +3,119 @@
 O cliente é um cadastro reutilizável. Um cliente pode ter vários pedidos, e um pedido
 pode ter vários pacotes, cada um com seu código e histórico. Um rastreio também pode
 pertencer diretamente ao cliente sem exigir um pedido. Isso não cria uma venda no BI,
-no módulo de vendas operacionais ou no PDV.
+no módulo de vendas operacionais ou no PDV. Os novos **pedidos com reserva** só
+geram uma venda PDV quando o operador confirma sua conclusão; pedidos antigos
+continuam como cadastros logísticos, sem reservas presumidas.
+
+## Pedidos separados e conclusão no PDV
+
+**Novo pedido** oferece seleção de cliente e produtos de catálogo, com foto,
+tamanho, cor, quantidade e origem **Loja/Depósito**, no estilo do PDV. Cada linha
+guarda o ID real do produto; texto, código de barras repetido ou nome semelhante
+não vinculam peças automaticamente. A busca inclui o nome e o código interno dos
+produtos separados, permitindo localizar o pedido de uma peça reservada.
+
+Ao confirmar a separação, o estoque físico continua igual. Os contadores
+`reserved_loja`/`reserved_deposito` descontam apenas o **disponível** de cada local.
+Por exemplo: físico 1, reservado 1, disponível 0. O produto continua pertencendo à
+loja, mas não pode ser vendido, transferido, excluído ou reduzido por ajuste como
+se estivesse disponível. Reservar não gera baixa, receita, fiado ou movimentação
+fictícia. A lista mostra a reserva e oferece acesso a Pedidos para identificar a
+sacola. Cada local tem seu saldo próprio; reservar na loja não ocupa o depósito.
+
+Pedidos mantêm duas situações independentes: **comercial** (`reserved`,
+`completed`, `cancelled`) e **logística** (pendente, processando, enviado,
+entregue, cancelado). Uma atualização de rastreamento não libera reservas nem
+conclui pagamentos. A reserva não expira automaticamente: permanece até concluir
+ou cancelar explicitamente. Pedidos existentes não reservam produtos por análise
+de sua descrição; para separar suas peças, crie um pedido com seleção do catálogo.
+
+O cliente é selecionado pela identidade PDV existente; o vínculo ao diretório é
+preservado por `cadastro_cliente_id`. Não é criada outra pessoa por comparação de
+nome. Vendedor e data/hora são registrados ao separar. Contas com acesso às
+próprias vendas também veem somente seus pedidos comerciais; cadastros logísticos
+antigos conservam o compartilhamento existente. O backend aplica esse filtro nas
+listas, nos históricos de Clientes e nas consultas do assistente.
+
+### Pagamentos parciais
+
+**Receber no PDV** abre o pedido já montado e identificado. Um pagamento parcial
+pode ser registrado sem concluir a venda: a sacola permanece reservada, com
+**Recebido** e **Saldo pendente**. Cada lançamento conserva moeda original,
+câmbio, método, valor aplicado, eventual taxa opcional de cartão, referência,
+operador e data. A taxa de cartão segue as regras existentes do PDV. O câmbio de
+apresentação do pedido fica congelado na separação; pagamentos conservam suas
+próprias taxas acordadas. Não há cobrança automática em banco ou operadora.
+
+Adiantamentos precisam ser positivos, não podem exceder o saldo e não aceitam
+fiado. O pedido totalmente pago continua reservado até o operador concluir. A
+edição de itens não pode reduzir o total abaixo do recebido; pedidos com
+pagamentos não podem trocar de cliente. Para desistência, **Lucas** registra a
+devolução conferida fora do ERP, com motivo. O registro original permanece no
+histórico. Enquanto houver recebimentos ativos, cancelar é bloqueado. Registrar
+a devolução no ERP não executa um reembolso bancário.
+
+Na conclusão, os adiantamentos são aplicados uma única vez, somados aos novos
+pagamentos. O servidor valida que cobrem o total; fiado não conclui pedidos
+reservados. Excesso somente gera troco quando há dinheiro suficiente, conforme o
+PDV. O histórico do pedido inclui também os pagamentos finais e mostra o troco.
+Na mesma transação, o sistema libera suas reservas, baixa o estoque físico e
+grava **uma única venda PDV**, mantendo cliente, vendedor e o câmbio do pedido.
+Os pagamentos antecipados conservam sua data original na venda. O ticket final
+usa o fluxo de vendas existente. Cancelar ou corrigir depois da venda usa o
+gestor de vendas; não reabre automaticamente a reserva.
+
+### Ticket da sacola
+
+O ticket de separação identifica **ELEVEN**, pedido, cliente, vendedor,
+data/hora de separação, peças, cores/tamanhos, local, total, recebido e saldo.
+É um comprovante de separação, e não uma venda ou outro recebimento. Pode ser
+baixado em PDF ou enviado explicitamente à impressora de tickets de bobina
+contínua de 80 mm. Utiliza a mesma fila e agente do caixa, sem mudar etiquetas
+Zebra nem a impressão A4. Novas cópias exigem solicitação; pedidos com ticket
+pendente não disparam outra impressão. O snapshot de cada trabalho é imutável.
+
+### Concorrência, histórico e contratos
+
+Criação, edição, recebimento, devolução registrada, cancelamento e checkout usam
+`request_id` durável, confirmação explícita e revisão `expected_version`.
+Uma resposta de rede perdida pode ser repetida com a mesma chave e conteúdo;
+isso não duplica reservas, pagamentos ou vendas. Conteúdo diferente com a mesma
+chave é recusado. Revisão antiga exige atualizar e conferir. Locks seguem chave
+da operação, identidade de clientes, pedido, produtos ordenados, cliente e fila.
+O saldo é relido sob lock; dois funcionários não podem reservar/vender a mesma
+última peça. Qualquer falha reverte todo o conjunto.
+
+- `POST /api/pedidos/reservas`: criar com cliente PDV, itens, preços e câmbio.
+- `GET/PUT /api/pedidos/{id}/reserva`: ficha e edição revisada.
+- `POST /api/pedidos/{id}/pagamentos`: registrar um recebimento parcial.
+- `POST /api/pedidos/{id}/pagamentos/{payment_id}/estornar`: registrar devolução
+  conferida, exclusiva do proprietário, sem contato com provedores.
+- `POST /api/pedidos/{id}/cancelar`: liberar reserva sem apagar o histórico.
+- `POST /api/pedidos/{id}/checkout`: aplicar adiantamentos e concluir no PDV.
+- `GET /api/pedidos/pagina`: `commerce_status=reserved|completed|cancelled|legacy`,
+  busca e paginação no servidor. Resumos financeiros são campos da própria
+  listagem, sem carregar todas as linhas/pagamentos de cada card.
+
+A migração `z8i9j0k1l2m3` é aditiva: inicia reservas em zero, conserva saldos
+físicos e pedidos históricos e cria linhas, pagamentos e recibos de operações.
+Não deduz reservas antigas, não junta clientes e não registra vendas no deploy.
+As operações guardam antes/depois e o responsável. O endpoint antigo não pode
+alterar valores, cliente ou cancelar um pedido comercial, e a exclusão física é
+bloqueada. Correções do Lucas na venda final preservam os pagamentos originais do
+pedido, mesmo quando o gestor substitui as linhas de pagamento da venda.
+
+Na publicação, disponibilizar primeiro o backend e aguardar a instância anterior
+encerrar, antes de liberar as telas de reserva. Depois que houver reservas ativas,
+não reverter para uma versão do backend que desconheça os saldos reservados;
+uma correção deve preservar essas proteções. Aparelhos com a interface antiga
+precisam recarregar para mostrar o disponível, mas o backend atualizado já recusa
+saídas que consumiriam peças separadas.
+
+Os testes isolados cobrem alterações por local, pagamentos e estornos registrados,
+edição obsoleta, cancelamento, rollback, limites e escopo de acesso. PostgreSQL
+valida a migração, concorrência na última peça e repetição simultânea de criação,
+pagamento e conclusão; nenhuma validação envia pagamentos ou impressões reais.
 
 ## No ERP
 

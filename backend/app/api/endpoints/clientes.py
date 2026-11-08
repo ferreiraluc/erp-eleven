@@ -23,6 +23,7 @@ from ...services.customer_activity import customer_activity, order_customer_dire
 from ...services.customer_search import directory_match
 from ...services.customer_phone import normalize_customer_phone
 from ...services.address_book import lock_addresses
+from ...services.access_policy import orders_query
 from ...dependencies import get_current_active_user, require_role, require_owner
 from ..validators import validate_uuid
 from .directory_duplicates import router as duplicates_router
@@ -236,7 +237,7 @@ def listar_pedidos_do_cliente(
     uuid_ = validate_uuid(cliente_id)
     uuid_ = _customer(db, uuid_).id
     return (
-        db.query(Pedido)
+        orders_query(db.query(Pedido), current_user)
         .filter(Pedido.cliente_id == uuid_)
         .order_by(desc(Pedido.created_at))
         .offset(skip)
@@ -256,7 +257,7 @@ def logistica_do_cliente(
 ):
     customer_id = validate_uuid(cliente_id)
     customer_id = _customer(db, customer_id).id
-    orders = db.query(Pedido).filter(Pedido.cliente_id == customer_id)
+    orders = orders_query(db.query(Pedido), current_user).filter(Pedido.cliente_id == customer_id)
     shipments = customer_shipments(db, customer_id)
     result = []
     for row in shipments.order_by(Rastreamento.created_at.desc(), Rastreamento.id).offset(shipments_skip).limit(limit).all():
@@ -286,9 +287,11 @@ def vincular_ao_cliente(
     if not cliente.ativo:
         raise HTTPException(404, "Cliente não encontrado ou inativo.")
     if link.kind == "pedido":
-        order = db.query(Pedido).filter(Pedido.id == link.target_id).with_for_update().first()
+        order = orders_query(db.query(Pedido), current_user).filter(Pedido.id == link.target_id).with_for_update().first()
         if not order:
             raise HTTPException(404, "Pedido não encontrado.")
+        if order.commerce_status is not None:
+            raise HTTPException(409, 'O cliente de um pedido com reserva deve ser conferido na edição do pedido, preservando a conta PDV e os pagamentos.')
         if order.cliente_id and order.cliente_id != customer_id:
             raise HTTPException(409, "O pedido já está vinculado a outro cliente. Revise o cadastro do pedido.")
         order.cliente_id = customer_id

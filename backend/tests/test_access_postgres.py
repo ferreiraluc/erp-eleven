@@ -118,7 +118,7 @@ def test_manual_and_receipt_registration_serialize_the_same_code(pg, monkeypatch
     from fastapi import HTTPException
     from app.config import settings
     from app.database import Base
-    from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
+    from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, PdvSale
     from app.models.assistant import AssistantAction, AssistantMessage
     from app.services.receipt_tracking import confirm_receipt, KIND
     from app.api.endpoints.rastreamento import criar_rastreamento
@@ -127,7 +127,7 @@ def test_manual_and_receipt_registration_serialize_the_same_code(pg, monkeypatch
     monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
     engine,schema=pg
     isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
-    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento,AssistantMessage,AssistantAction)])
+    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,PdvCliente,PdvSale,Pedido,Rastreamento,AssistantMessage,AssistantAction)])
     factory=sessionmaker(bind=isolated,autoflush=False)
     uid,mid,aid=uuid.uuid4(),uuid.uuid4(),uuid.uuid4()
     code='RR473124829BR'
@@ -165,7 +165,7 @@ def test_scheduler_preserves_newer_manual_results_and_updates_order_atomically(p
     from app.config import settings
     from app import database, main
     from app.database import Base
-    from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
+    from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, PdvSale
     from app.models.pedido import PedidoStatus
     from app.models.rastreamento import RastreamentoStatus as Status
     from app.models.operations import ScheduledRun
@@ -175,7 +175,7 @@ def test_scheduler_preserves_newer_manual_results_and_updates_order_atomically(p
     monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
     engine,schema=pg
     isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
-    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento,ScheduledRun,WoncaSubscription)])
+    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,PdvCliente,PdvSale,Pedido,Rastreamento,ScheduledRun,WoncaSubscription)])
     factory=sessionmaker(bind=isolated,autoflush=False)
     monkeypatch.setattr(database,'SessionLocal',factory)
     order_id=uuid.uuid4()
@@ -217,14 +217,14 @@ def test_manual_refresh_never_applies_old_provider_data_to_an_edited_code(pg,mon
     from fastapi import HTTPException
     from app.config import settings
     from app.database import Base
-    from app.models import Usuario,Vendedor,Cliente,Pedido,Rastreamento
+    from app.models import Usuario,Vendedor,Cliente,Pedido,Rastreamento,PdvCliente,PdvSale
     from app.models.rastreamento import RastreamentoStatus as Status
     from app.api.endpoints import rastreamento as api
     from app.services import wonca_service
     monkeypatch.setattr(settings,'ASSISTANT_ENABLED',False)
     engine,schema=pg
     isolated=sa.create_engine(engine.url,connect_args={'options':f'-csearch_path={schema}'})
-    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,Pedido,Rastreamento)])
+    Base.metadata.create_all(isolated,tables=[m.__table__ for m in (Usuario,Vendedor,Cliente,PdvCliente,PdvSale,Pedido,Rastreamento)])
     factory=sessionmaker(bind=isolated,autoflush=False)
     tracking_id=uuid.uuid4()
     with factory() as db:

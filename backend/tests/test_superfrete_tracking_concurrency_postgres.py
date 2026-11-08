@@ -12,7 +12,7 @@ from app.config import settings
 from app.database import Base
 from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
 from app.models.address_book import SavedAddress, FreightOrder
-from app.models.pdv import PdvCliente
+from app.models.pdv import PdvCliente, PdvSale
 from app.models.printing import PrintDevice, PrintJob
 from app.services import superfrete
 from app.services.rastreamento_sync import RastreamentoSyncService
@@ -30,7 +30,7 @@ def shipping_pg(pg, monkeypatch):
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
     try:
         Base.metadata.create_all(isolated, tables=[model.__table__ for model in (
-            Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente,
+            Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, PdvSale,
             SavedAddress, PrintDevice, PrintJob, FreightOrder,
         )])
         factory = sessionmaker(bind=isolated, autoflush=False)

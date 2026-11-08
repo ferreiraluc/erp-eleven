@@ -172,6 +172,8 @@ def _generate_sku() -> str:
 
 def _item_to_response(item: Item) -> dict:
     data = {c.name: getattr(item, c.name) for c in item.__table__.columns}
+    data.update(available_loja=item.available_loja, available_deposito=item.available_deposito,
+                available_stock=item.available_stock)
     data["alert_level"] = _compute_alert_level(item)
     return data
 
@@ -650,6 +652,8 @@ def update_item(
         raise HTTPException(409, 'A grade do produto mudou. Atualize a listagem e tente novamente.')
 
     update_data = _normalize_item(item_update.dict(exclude_unset=True))
+    if 'is_active' in update_data and not update_data['is_active'] and (db_item.reserved_loja or db_item.reserved_deposito):
+        raise HTTPException(409, 'Produto reservado em pedido. Libere ou conclua a reserva antes de inativar.')
     if 'group_key' in update_data and update_data['group_key'] != db_item.group_key:
         raise HTTPException(409, 'Use Gerenciar grade para vincular ou remover o produto.')
     wanted = variant_identity(update_data.get('size', db_item.size),
@@ -921,6 +925,8 @@ def batch_edit_items(
             if item.updated_at is None or aware(item.updated_at) != aware(entry.expected_updated_at):
                 raise HTTPException(409, 'O cadastro mudou desde a abertura da edição. Nenhuma alteração foi salva; reabra para conferir.')
         values = _normalize_item({**shared, **(metadata(entry) if entry else {})})
+        if 'is_active' in values and not values['is_active'] and (item.reserved_loja or item.reserved_deposito):
+            raise HTTPException(409, 'Há produto reservado em pedido na seleção. Libere ou conclua a reserva antes de inativar.')
         if 'group_key' in values and values['group_key'] != item.group_key and (
                 not entry or entry.expected_updated_at is None):
             raise HTTPException(409, 'Reabra a edição para conferir o vínculo atual da grade.')
@@ -1108,6 +1114,8 @@ def delete_item(
     db_item = db.query(Item).filter(Item.deleted_at.is_(None), Item.id == item_uuid).with_for_update().populate_existing().first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
+    if db_item.reserved_loja or db_item.reserved_deposito:
+        raise HTTPException(409, 'Produto reservado em pedido. Libere ou conclua a reserva antes de inativar.')
     db_item.is_active = False
     db.commit()
     return {"message": "Item deactivated successfully"}

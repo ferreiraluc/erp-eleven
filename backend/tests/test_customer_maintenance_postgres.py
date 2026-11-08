@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from test_access_postgres import pg, upgrade
 from app.database import Base
 from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
-from app.models.pdv import PdvCliente
+from app.models.pdv import PdvCliente, PdvSale
 from app.models.address_book import SavedAddress
 from app.models.access import AuditEvent
 from app.services.customer_maintenance import merge_customers
@@ -78,7 +78,7 @@ def test_customer_merge_is_atomic_serialized_and_future_addresses_reuse_principa
     isolated = sa.create_engine(engine.url, connect_args={'options':f'-csearch_path={schema}'})
     try:
         Base.metadata.create_all(isolated, tables=[m.__table__ for m in
-            (Usuario, Vendedor, Cliente, PdvCliente, Pedido, Rastreamento, SavedAddress, AuditEvent)])
+            (Usuario, Vendedor, Cliente, PdvCliente, PdvSale, Pedido, Rastreamento, SavedAddress, AuditEvent)])
         factory = sessionmaker(bind=isolated, autoflush=False)
         uid, target_id, source_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         with factory() as db:

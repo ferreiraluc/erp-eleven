@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from test_access_postgres import pg
 from app.database import Base
 from app.models import Usuario, Vendedor, Cliente, Pedido, Rastreamento
-from app.models.pdv import PdvCliente
+from app.models.pdv import PdvCliente, PdvSale
 from app.models.address_book import SavedAddress
 from app.models.access import AuditEvent
 from app.services.customer_reconciliation import preview_customer_links, apply_customer_links
@@ -22,7 +22,7 @@ def test_concurrent_history_confirmations_apply_one_reviewed_plan_and_preserve_s
     isolated = sa.create_engine(engine.url, connect_args={'options': f'-csearch_path={schema}'})
     try:
         Base.metadata.create_all(isolated, tables=[model.__table__ for model in
-            (Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, SavedAddress, AuditEvent)])
+            (Usuario, Vendedor, Cliente, Pedido, Rastreamento, PdvCliente, PdvSale, SavedAddress, AuditEvent)])
         factory = sessionmaker(bind=isolated, autoflush=False)
         uid, cid = uuid.uuid4(), uuid.uuid4()
         with factory() as db:

@@ -47,7 +47,7 @@ def create_movement(
         raise ValueError(f"Item {item_id} not found")
     # A prior lookup may have populated this session before the row lock waited.
     # Refresh stock columns explicitly so the identity map cannot supply stale balances.
-    refresh_fields = ['current_stock', 'stock_loja', 'stock_deposito', 'deleted_at']
+    refresh_fields = ['current_stock', 'stock_loja', 'stock_deposito', 'reserved_loja', 'reserved_deposito', 'deleted_at']
     if not inspect(item).attrs.cost_price.history.has_changes():
         refresh_fields.append('cost_price')
     db.refresh(item, attribute_names=refresh_fields, with_for_update=True)
@@ -79,11 +79,19 @@ def create_movement(
         except (ValueError, ArithmeticError):
             raise StockMovementError("Custo unitário deve ser um valor não negativo.") from None
     loja, deposito = item.stock_loja or 0, item.stock_deposito or 0
+    reserved_loja, reserved_deposito = item.reserved_loja, item.reserved_deposito
+    if any(value is None or value < 0 for value in (reserved_loja, reserved_deposito)):
+        raise StockMovementError('As reservas deste produto precisam de conferência antes de movimentar o estoque.', 409)
     if mv_type != MovementType.adjustment and (loja < 0 or deposito < 0 or item.current_stock != loja + deposito):
         raise StockMovementError("O saldo por local diverge do total ou está negativo. Confira o inventário e registre um ajuste antes de movimentar.", 409)
     source = deposito if (loc_from if mv_type == MovementType.transfer else loc) == 'deposito' else loja
     if mv_type in (MovementType.exit, MovementType.transfer) and quantity > source:
         raise StockMovementError(f"Saldo insuficiente no local de origem: disponível {source}, solicitado {quantity}.", 409)
+    held = reserved_deposito if (loc_from if mv_type == MovementType.transfer else loc) == 'deposito' else reserved_loja
+    if mv_type in (MovementType.exit, MovementType.transfer) and quantity > source - held:
+        raise StockMovementError(f'Este produto tem {held} unidade(s) reservada(s) em pedidos no local de origem. Disponível: {source - held}. Confira o pedido antes de movimentar.', 409)
+    if mv_type == MovementType.adjustment and quantity < held:
+        raise StockMovementError(f'O saldo informado é menor que as {held} unidade(s) reservada(s) em pedidos. Libere ou confira a reserva antes de ajustar o estoque.', 409)
     destination = deposito if (loc_to if mv_type == MovementType.transfer else loc) == 'deposito' else loja
     if mv_type in (MovementType.entry, MovementType.transfer) and destination + quantity > 2_147_483_647:
         raise StockMovementError("O saldo resultante excede o limite permitido.")

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List, Optional
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import date
 import uuid
 
@@ -159,6 +159,18 @@ def create_sale(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
+    sale = create_sale_record(db, body, current_user)
+    db.commit()
+    db.refresh(sale)
+    return _sale_to_response(sale)
+
+
+def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, *, frozen_usd_rate=None):
+    """Build the sale in the caller's transaction, including stock and its ticket.
+
+    Reserved orders use their persisted quote. Public checkout still validates the
+    current quote; callers must never pass a client-supplied frozen rate directly.
+    """
     require_sale_owner(current_user, body.vendedor_id or current_user.id, pdv=True)
     if not body.items:
         raise HTTPException(status_code=400, detail="A venda deve ter pelo menos 1 item")
@@ -168,20 +180,24 @@ def create_sale(
         raise HTTPException(422, 'Selecione o cliente para lançar fiado.')
 
     from ...services.pdv_usd import current_rate
-    usd_rate = current_rate(db, body.usd_rate_gs)
+    usd_rate = frozen_usd_rate if frozen_usd_rate is not None else current_rate(db, body.usd_rate_gs)
+    if body.cliente_id:
+        # Customer consolidation takes this namespace before order/customer rows.
+        # Reserve checkout and ordinary sales must share that order before stock.
+        from ...services.address_book import lock_addresses
+        lock_addresses(db)
     stock_items = _lock_sale_stock(db, body.items)
     customer = pdv_customers.select(db, PdvCustomerSelection(source='pdv', id=body.cliente_id), current_user) if body.cliente_id else None
 
     # Compute totals
-    subtotal = sum(
-        float(i.quantity) * float(i.unit_price_gs) - float(i.discount_gs)
-        for i in body.items
-    )
-    desconto = float(body.desconto_gs)
+    def money(value):
+        return Decimal(str(value)).quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
+    line_totals = [money(i.quantity * Decimal(str(i.unit_price_gs)) - Decimal(str(i.discount_gs))) for i in body.items]
+    subtotal = sum(line_totals, Decimal(0))
+    desconto = money(body.desconto_gs)
     if desconto > subtotal:
         raise HTTPException(422, 'O desconto não pode ultrapassar o subtotal da venda.')
-    total = max(0.0, subtotal - desconto)
-    total_gs = Decimal(str(round(total, 2)))
+    total_gs = max(Decimal(0), subtotal - desconto)
     paid_gs = sum((payment['amount_gs'] for payment in payments), Decimal(0))
     if paid_gs < total_gs:
         raise HTTPException(422, 'Os pagamentos não cobrem o total da venda.')
@@ -194,8 +210,8 @@ def create_sale(
         vendedor_id=body.vendedor_id or current_user.id,
         cliente_id=body.cliente_id,
         cliente_nome=customer.nome if customer else body.cliente_nome,
-        subtotal_gs=Decimal(str(round(subtotal, 2))),
-        desconto_gs=Decimal(str(round(desconto, 2))),
+        subtotal_gs=subtotal,
+        desconto_gs=desconto,
         total_gs=total_gs,
         usd_rate_gs=usd_rate,
         notas=body.notas,
@@ -205,8 +221,7 @@ def create_sale(
     db.add(sale)
     db.flush()  # get sale.id
 
-    for i in body.items:
-        item_total = float(i.quantity) * float(i.unit_price_gs) - float(i.discount_gs)
+    for i, item_total in zip(body.items, line_totals):
         db.add(PdvSaleItem(
             id=uuid.uuid4(),
             sale_id=sale.id,
@@ -220,7 +235,7 @@ def create_sale(
             unit_price_gs=Decimal(str(i.unit_price_gs)),
             original_price_gs=Decimal(str(i.original_price_gs)) if i.original_price_gs else None,
             discount_gs=Decimal(str(i.discount_gs)),
-            total_gs=Decimal(str(round(item_total, 2))),
+            total_gs=item_total,
             is_avulso=i.is_avulso,
             location=i.location,
         ))
@@ -236,9 +251,7 @@ def create_sale(
         from ...services.pdv_receipts import enqueue
         enqueue(db, sale, current_user.id)
 
-    db.commit()
-    db.refresh(sale)
-    return _sale_to_response(sale)
+    return sale
 
 
 @router.get('/sales/{sale_id}/receipt')
