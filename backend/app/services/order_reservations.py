@@ -1,4 +1,4 @@
-"""Transactional reservations: physical stock stays put until a single PDV sale.
+"""Transactional reservations and delivered conditionals settle into one PDV sale.
 
 Lock order: request key -> customer identity lock -> order -> sorted products -> customer -> printer.
 No provider payments or printer I/O; callers commit all effects together.
@@ -7,7 +7,7 @@ import hashlib
 import json
 import uuid
 from collections import defaultdict
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING
 
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -15,7 +15,7 @@ from sqlalchemy.orm import defer
 
 from ..config import settings
 from ..models.pedido import Pedido, PedidoStatus
-from ..models.pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation
+from ..models.pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation, PedidoPaymentRefund
 from ..models.pdv import PdvSale
 from ..models.inventory import Item
 from ..models.usuario import UsuarioRole
@@ -58,6 +58,111 @@ def _date(db, value):
     return stored_instant(value, db).isoformat() if value else None
 
 
+def _payment_net(payment):
+    values = {key: getattr(payment, key) for key in PAYMENT_FIELDS}
+    for key in ('amount_gs', 'amount_original', 'card_fee_gs'):
+        values[key] = Decimal(0) if payment.reversed_at else _money(getattr(payment, key)) - sum(
+            (_money(getattr(refund, key)) for refund in payment.refunds), Decimal(0))
+    if any(values[key] < 0 for key in ('amount_gs', 'amount_original', 'card_fee_gs')):
+        raise HTTPException(409, 'O histórico de devoluções do pagamento precisa de conferência.')
+    return values
+
+
+def _refund_detail(db, payment):
+    net = _payment_net(payment)
+    return dict(refunded_gs=str(_money(payment.amount_gs) - net['amount_gs']),
+        refunded_original=str(_money(payment.amount_original) - net['amount_original']),
+        remaining_gs=str(net['amount_gs']), remaining_original=str(net['amount_original']),
+        refunds=[dict(id=str(r.id), amount_gs=str(r.amount_gs), amount_original=str(r.amount_original),
+            card_fee_gs=str(r.card_fee_gs), reason=r.reason, created_at=_date(db, r.created_at),
+            created_by=str(r.created_by)) for r in payment.refunds])
+
+
+def _close_returned(order):
+    if order.commerce_status == 'conditional' and order.paid_gs == 0 and all(
+            line.quantity == line.returned_quantity for line in order.reserved_items):
+        order.commerce_status = 'returned'
+        order.status = PedidoStatus.CANCELADO
+
+
+def _reprice_conditional(order):
+    # Freeze the original discount allocation at handoff. Cumulative allocation
+    # makes multiple returns equal one combined return, including cent residues.
+    original_subtotal, original_total = order.delivered_subtotal_gs, order.delivered_total_gs
+    if original_subtotal is None or original_total is None:
+        raise HTTPException(409, 'Os valores originais da condicional precisam de conferência.')
+    cumulative = allocated = subtotal = total = Decimal(0)
+    lines = sorted(order.reserved_items, key=lambda line: (line.position, str(line.id)))
+    for index, line in enumerate(lines):
+        cumulative += line.total_gs
+        target = original_total if index == len(lines) - 1 else _money(cumulative * original_total / original_subtotal) if original_subtotal else Decimal(0)
+        net = target - allocated
+        allocated = target
+        subtotal += _money(line.unit_price_gs * (line.quantity - line.returned_quantity))
+        total += net - _money(net * line.returned_quantity / line.quantity)
+    order.subtotal_gs, order.total_gs = subtotal, total
+    order.desconto_gs = subtotal - total
+    order.valor_total = _money(total / order.usd_rate_gs)
+
+
+def dispatch(db, order_id, body, user):
+    previous, fingerprint = _request(db, user, 'conditional_dispatch', order_id, body)
+    order = authorized_order(db, order_id, user, lock=True)
+    if previous:
+        return detail(db, order)
+    _writable(order, body.expected_version)
+    before = detail(db, order)
+    _change_reservations(db, order.reserved_items, [])
+    from .inventory_service import create_movement, StockMovementError
+    try:
+        for line in sorted(order.reserved_items, key=lambda row: (str(row.item_id), row.location)):
+            create_movement(db, line.item_id, 'exit', line.quantity, user.id,
+                reason='order_conditional_out', reference_type='pedido', reference_id=str(order.id),
+                location=line.location, notes=f'Entrega em condicional {order.numero_pedido}')
+    except StockMovementError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from None
+    order.commerce_status = 'conditional'
+    order.delivered_at = settings.now()
+    order.delivered_subtotal_gs, order.delivered_total_gs = order.subtotal_gs, order.total_gs
+    order.commerce_version += 1
+    return _record(db, order, user, body, 'conditional_dispatch', fingerprint, before)
+
+
+def return_items(db, order_id, body, user):
+    previous, fingerprint = _request(db, user, 'conditional_return', order_id, body)
+    order = authorized_order(db, order_id, user, lock=True)
+    if previous:
+        return detail(db, order)
+    _writable(order, body.expected_version, conditional=True)
+    if order.commerce_status != 'conditional':
+        raise HTTPException(409, 'Somente peças entregues em condicional podem ser devolvidas por este fluxo.')
+    selected = {line.line_id: line.quantity for line in body.lines}
+    by_id = {line.id: line for line in order.reserved_items}
+    if len(selected) != len(body.lines) or set(selected) - set(by_id):
+        raise HTTPException(422, 'Confira as peças selecionadas: cada linha deve pertencer a este pedido e aparecer uma vez.')
+    for key, quantity in selected.items():
+        line = by_id[key]
+        if quantity > line.quantity - line.returned_quantity:
+            raise HTTPException(409, 'Quantidade de devolução maior que as peças ainda com o cliente.')
+    before = detail(db, order)
+    # Never block receiving physical pieces because money is owed to the client.
+    # The resulting refund_due remains visible and prevents settlement.
+    from .inventory_service import create_movement, StockMovementError
+    try:
+        for key in sorted(selected, key=lambda key: (str(by_id[key].item_id), by_id[key].location)):
+            line = by_id[key]
+            create_movement(db, line.item_id, 'entry', selected[key], user.id,
+                reason='order_conditional_return', reference_type='pedido', reference_id=str(order.id),
+                location=line.location, notes=body.reason)
+            line.returned_quantity += selected[key]
+    except StockMovementError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from None
+    _reprice_conditional(order)
+    _close_returned(order)
+    order.commerce_version += 1
+    return _record(db, order, user, body, 'conditional_return', fingerprint, before)
+
+
 def detail(db, order, user=None):
     if user is not None:
         order = authorized_order(db, order, user, lock=True)
@@ -74,14 +179,19 @@ def detail(db, order, user=None):
         'cliente_nome': order.cliente_nome, 'vendedor_id': str(order.vendedor_id),
         'vendedor_nome': order.vendedor.nome if order.vendedor else None,
         'reserved_at': _date(db, order.reserved_at), 'created_at': _date(db, order.created_at),
+        'delivered_at': _date(db, order.delivered_at),
+        'delivered_total_gs': str(order.delivered_total_gs) if order.delivered_total_gs is not None else None,
+        'refund_due_gs': str(_money(max(Decimal(0), paid - _money(order.total_gs)))) if order.commerce_status == 'conditional' else '0.00',
         'usd_rate_gs': str(order.usd_rate_gs), 'subtotal_gs': str(order.subtotal_gs),
         'desconto_gs': str(order.desconto_gs), 'total_gs': str(order.total_gs),
         'paid_gs': str(paid), 'balance_gs': str(max(Decimal(0), _money(order.total_gs) - paid)),
-        'change_gs': str(max(Decimal(0), sum((p.amount_gs for p in order.reservation_payments if not p.reversed_at), Decimal(0)) - _money(order.total_gs))) if order.commerce_status == 'completed' else '0.00',
+        'change_gs': str(max(Decimal(0), sum((_payment_net(p)['amount_gs'] for p in order.reservation_payments), Decimal(0)) - _money(order.total_gs))) if order.commerce_status == 'completed' else '0.00',
         'sale_id': str(order.sale_id) if order.sale_id else None, 'notas': order.commerce_notes,
         'items': [dict(id=str(line.id), item_id=str(line.item_id), item_name=line.item_name,
                        item_sku=line.item_sku, item_size=line.item_size, item_color=line.item_color,
                        item_category=line.item_category, location=line.location, quantity=line.quantity,
+                       returned_quantity=line.returned_quantity or 0, remaining_quantity=line.quantity - (line.returned_quantity or 0),
+                       remaining_total_gs=str(_money(line.unit_price_gs * (line.quantity - (line.returned_quantity or 0)))),
                        unit_price_gs=str(line.unit_price_gs), total_gs=str(line.total_gs),
                        available_loja=product_info[line.item_id].available_loja if line.item_id in product_info else None,
                        available_deposito=product_info[line.item_id].available_deposito if line.item_id in product_info else None,
@@ -93,7 +203,7 @@ def detail(db, order, user=None):
             else str(getattr(payment, key)) if key == 'cambista_id' and getattr(payment, key)
             else getattr(payment, key) for key in PAYMENT_FIELDS}, created_at=_date(db, payment.created_at),
             created_by=str(payment.created_by), reversed_at=_date(db, payment.reversed_at),
-            reversal_reason=payment.reversal_reason)
+            reversal_reason=payment.reversal_reason, **_refund_detail(db, payment))
             for payment in order.reservation_payments],
     }
 
@@ -122,8 +232,8 @@ def _request(db, user, operation, order_id, body):
     return previous, fingerprint
 
 
-def _writable(order, version):
-    if order.commerce_status != 'reserved':
+def _writable(order, version, *, conditional=False):
+    if order.commerce_status not in (('reserved', 'conditional') if conditional else ('reserved',)):
         raise HTTPException(409, 'Este pedido já foi concluído ou cancelado. Seu histórico foi preservado.')
     if version is None or version != order.commerce_version:
         raise HTTPException(409, 'O pedido mudou em outro aparelho. Atualize e confira antes de confirmar.')
@@ -137,10 +247,12 @@ def _record(db, order, user, body, operation, fingerprint, before):
     db.add(PedidoOperation(id=body.request_id, pedido_id=order.id, actor_id=user.id,
                           operation=operation, fingerprint=fingerprint, before=before, after=after))
     bind_actor(db, user)
-    record(db, f'order_{operation}', 'pedidos', entity='pedidos', entity_id=str(order.id),
-           changes={'order_id': str(order.id), 'version': order.commerce_version,
+    record(db, f'order_{operation.split(":", 1)[0]}', 'pedidos', entity='pedidos', entity_id=str(order.id),
+           changes={'order_id': str(order.id), 'operation': operation, 'version': order.commerce_version,
                     'status': order.commerce_status, 'total_gs': str(order.total_gs),
-                    'paid_gs': str(order.paid_gs), 'items': sum(line.quantity for line in order.reserved_items)})
+                    'paid_gs': str(order.paid_gs),
+                    'items': sum(line.quantity - (line.returned_quantity or 0) for line in order.reserved_items),
+                    'returned_items': sum(line.returned_quantity or 0 for line in order.reserved_items)})
     db.flush()
     return after
 
@@ -273,7 +385,7 @@ def add_payment(db, order_id, body, user):
     order = authorized_order(db, order_id, user, lock=True)
     if previous:
         return detail(db, order)
-    _writable(order, body.expected_version)
+    _writable(order, body.expected_version, conditional=True)
     before = detail(db, order)
     values = _payment(db, body.payment)
     if order.paid_gs + values['amount_gs'] > order.total_gs:
@@ -286,6 +398,38 @@ def add_payment(db, order_id, body, user):
     return _record(db, order, user, body, 'payment', fingerprint, before)
 
 
+def _refund_values(payment, requested):
+    current = _payment_net(payment)
+    amount = current['amount_gs'] if requested is None else _money(requested)
+    if amount <= 0 or amount > current['amount_gs']:
+        raise HTTPException(422, 'A devolução deve ser positiva e não ultrapassar o saldo recebido deste pagamento.')
+    remaining = current['amount_gs'] - amount
+    if payment.card_fee_percent:
+        original = (remaining / Decimal('.94')).to_integral_value(rounding=ROUND_CEILING)
+        fee = original - remaining
+    else:
+        original = _money(payment.amount_original * remaining / payment.amount_gs)
+        fee = Decimal(0)
+    if current['amount_original'] - original <= 0 or current['card_fee_gs'] - fee < 0:
+        raise HTTPException(422, 'O valor é menor que o arredondamento da moeda/taxa original. Confira um valor de devolução maior.')
+    return dict(amount_gs=amount, amount_original=current['amount_original'] - original,
+                card_fee_gs=current['card_fee_gs'] - fee,
+                remaining_gs=remaining, remaining_original=original)
+
+
+def refund_preview(db, order_id, payment_id, body, user):
+    if not is_owner(user):
+        raise HTTPException(403, 'Somente Lucas pode registrar a devolução de um pagamento.')
+    order = authorized_order(db, order_id, user, lock=True)
+    _writable(order, body.expected_version, conditional=True)
+    payment = next((p for p in order.reservation_payments if p.id == payment_id), None)
+    if not payment or payment.reversed_at:
+        raise HTTPException(409, 'Pagamento não encontrado ou já devolvido. Confira o histórico.')
+    values = _refund_values(payment, body.amount_gs)
+    return dict(payment_id=str(payment.id), currency=payment.currency,
+                expected_version=order.commerce_version, **{key: str(value) for key, value in values.items()})
+
+
 def reverse_payment(db, order_id, payment_id, body, user):
     if not is_owner(user):
         raise HTTPException(403, 'Somente Lucas pode registrar a devolução de um pagamento.')
@@ -293,13 +437,18 @@ def reverse_payment(db, order_id, payment_id, body, user):
     order = authorized_order(db, order_id, user, lock=True)
     if previous:
         return detail(db, order)
-    _writable(order, body.expected_version)
+    _writable(order, body.expected_version, conditional=True)
     payment = next((p for p in order.reservation_payments if p.id == payment_id), None)
     if not payment or payment.reversed_at:
         raise HTTPException(409, 'Pagamento não encontrado ou já devolvido. Confira o histórico.')
     before = detail(db, order)
-    payment.reversed_at, payment.reversed_by, payment.reversal_reason = settings.now(), user.id, body.reason
-    order.paid_gs -= payment.amount_gs
+    values = _refund_values(payment, body.amount_gs)
+    payment.refunds.append(PedidoPaymentRefund(created_by=user.id, reason=body.reason,
+        **{key: values[key] for key in ('amount_gs', 'amount_original', 'card_fee_gs')}))
+    if values['remaining_gs'] == 0:
+        payment.reversed_at, payment.reversed_by, payment.reversal_reason = settings.now(), user.id, body.reason
+    order.paid_gs -= values['amount_gs']
+    _close_returned(order)
     order.commerce_version += 1
     return _record(db, order, user, body, f'refund:{payment_id}', fingerprint, before)
 
@@ -326,15 +475,19 @@ def checkout(db, order_id, body, user):
         if not order.sale_id:
             raise HTTPException(409, 'A conclusão do pedido precisa de conferência.')
         return db.get(PdvSale, order.sale_id)
-    _writable(order, body.expected_version)
+    _writable(order, body.expected_version, conditional=True)
     before = detail(db, order)
+    conditional = order.commerce_status == 'conditional'
+    retained = [line for line in order.reserved_items if line.quantity > (line.returned_quantity or 0)]
+    if not retained:
+        raise HTTPException(409, 'Todas as peças foram devolvidas. Registre os valores a devolver para encerrar, sem criar uma venda.')
+    if order.paid_gs > order.total_gs:
+        raise HTTPException(409, 'Há valor a devolver ao cliente. Registre a devolução antes de concluir a venda.')
     payments = [_payment(db, payment) for payment in body.payments]
-    deposits = [p for p in order.reservation_payments if not p.reversed_at]
-    if sum((p.amount_gs for p in deposits), Decimal(0)) != order.paid_gs:
+    deposits = [(p, _payment_net(p)) for p in order.reservation_payments if not p.reversed_at]
+    deposits = [(p, values) for p, values in deposits if values['amount_gs'] > 0]
+    if sum((values['amount_gs'] for _, values in deposits), Decimal(0)) != order.paid_gs:
         raise HTTPException(409, 'O histórico dos pagamentos precisa de conferência antes de concluir.')
-    # A reservation is never discharged as fiado. Whole stored deposits are
-    # credited exactly once and retain their original currency/rate/date.
-    combined = [{key: getattr(p, key) for key in PAYMENT_FIELDS} for p in deposits] + payments
     from ..api.endpoints.pdv import create_sale_record
     sale_body = PdvSaleCreate(
         vendedor_id=order.vendedor_id, cliente_id=order.pdv_cliente_id, cliente_nome=order.cliente_nome,
@@ -342,24 +495,22 @@ def checkout(db, order_id, body, user):
         notas=order.commerce_notes,
         items=[PdvSaleItemCreate(item_id=i.item_id, item_name=i.item_name, item_sku=i.item_sku,
             item_size=i.item_size, item_color=i.item_color, item_category=i.item_category,
-            quantity=i.quantity, unit_price_gs=i.unit_price_gs, location=i.location) for i in order.reserved_items],
-        payments=[PdvPaymentCreate(**values) for values in combined],
+            quantity=i.quantity - (i.returned_quantity or 0), unit_price_gs=i.unit_price_gs,
+            location=i.location) for i in retained],
+        payments=[PdvPaymentCreate(**values) for values in payments],
     )
-    _change_reservations(db, order.reserved_items, [])
-    sale = create_sale_record(db, sale_body, user, frozen_usd_rate=order.usd_rate_gs)
-    # create_sale_record inserts in combined order; identify rows explicitly by
-    # SQLAlchemy's pending identity data rather than relying on unordered SELECT.
-    sale_payments = list(sale.payments)
-    unmatched = list(sale_payments)
-    for deposit in deposits:
-        matching = next((p for p in unmatched if all(getattr(p, key) == getattr(deposit, key) for key in PAYMENT_FIELDS)), None)
+    if not conditional:
+        _change_reservations(db, order.reserved_items, [])
+    sale = create_sale_record(db, sale_body, user, frozen_usd_rate=order.usd_rate_gs,
+        stock_already_withdrawn=conditional, trusted_deposits=[values for _, values in deposits])
+    unmatched = list(sale.payments)
+    for deposit, values in deposits:
+        matching = next((p for p in unmatched if all(getattr(p, key) == values.get(key) for key in PAYMENT_FIELDS)), None)
         if matching is None:
             raise HTTPException(409, 'Não foi possível conciliar o pagamento do pedido. Nenhuma venda foi concluída.')
         unmatched.remove(matching)
         matching.created_at = deposit.created_at
         deposit.sale_payment_id = matching.id
-    # The order's ledger remains complete after checkout. Cash overpayment is
-    # represented by the actual amount and explicit change, not hidden deposits.
     for values in payments:
         matching = next((p for p in unmatched if all(getattr(p, key) == values.get(key) for key in PAYMENT_FIELDS)), None)
         if matching is None:

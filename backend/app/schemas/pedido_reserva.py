@@ -45,3 +45,16 @@ class ReservaReason(ReservaCommand):
 class ReservaCheckout(ReservaCommand):
     payments: list[PdvPaymentCreate] = Field(default_factory=list, max_length=30)
     print_receipt: bool = False
+
+
+class ReservaRefund(ReservaReason):
+    amount_gs: Optional[Decimal] = Field(default=None, gt=0, le=9999999999999.99, max_digits=15, decimal_places=2, allow_inf_nan=False)
+
+
+class ReservaReturnLine(BaseModel):
+    line_id: uuid.UUID
+    quantity: int = Field(ge=1, le=9999999, strict=True)
+
+
+class ReservaReturn(ReservaReason):
+    lines: list[ReservaReturnLine] = Field(min_length=1, max_length=200)

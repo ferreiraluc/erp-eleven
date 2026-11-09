@@ -143,6 +143,14 @@ compartilhadas impedem consumir a reserva de outro pedido. A conclusão libera a
 própria reserva e usa `create_sale_record` na mesma transação, ligando um único PDV.
 O estado comercial é separado de `Pedido.status`, usado por rastreios/logística.
 
+Condicionais liberam a reserva e registram a saída física na entrega; as linhas
+mantêm quantidade original e devolvida. O acerto usa apenas as peças retidas e
+créditos líquidos do ledger bloqueado, sem outra saída física. Reembolsos parciais
+imutáveis em `pedido_payment_refunds` preservam valores originais e arredondamento
+por moeda. A confirmação exige versão; duplicatas de entrega/devolução/acerto
+retornam a mesma operação. Arquivamento usa prévia com fingerprint e recibo
+durável em `pedido_archive_operations`; não altera vínculos, pagamentos ou estoque.
+
 **Ticket de separação:** `order_tickets` cria `print_jobs.source=order_reservation`
 somente após confirmação, com snapshot imutável e chave de solicitação. A fila
 `tickets`, o agente macOS e sua saída ESC/POS de 80 mm são reutilizados; A4 e

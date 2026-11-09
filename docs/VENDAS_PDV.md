@@ -36,6 +36,22 @@ Uma correção posterior da venda por Lucas mantém o histórico da separação 
 recebimentos; o histórico do pedido não é reescrito como se fosse a venda corrigida.
 Veja também [Pedidos, reservas e pagamentos](CLIENTES_PEDIDOS_RASTREIOS.md).
 
+## Entrega em condicional
+
+Em um pedido separado, **Entregar em condicional** confirma a saída física das
+peças sem criar uma venda. O ticket de controle identifica cliente, vendedor,
+data/hora e saldo pendente. **Receber peças de volta** registra as quantidades
+devolvidas no local original e recalcula o total com o desconto proporcional
+congelado na entrega. Somente as peças mantidas seguem para a venda no PDV, sem
+uma segunda baixa de estoque. A condicional não é fiado.
+
+É possível registrar sinais ou pagamentos parciais enquanto o cliente escolhe.
+Se uma devolução deixar crédito para o cliente, a venda fica bloqueada até Lucas
+conferir e registrar o reembolso externo. A prévia informa o valor na moeda
+original, incluindo a parcela correspondente da taxa de cartão. O ERP não executa
+estornos na operadora. A devolução de todas as peças e valores encerra o pedido
+como **Devolvida**, sem criar venda.
+
 ## Ticket automático no caixa
 
 Lucas configura **Configurações → Impressora de tickets** para o agente Windows/Zebra ou prepara a

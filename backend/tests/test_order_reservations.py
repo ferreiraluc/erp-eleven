@@ -18,7 +18,7 @@ from app.api.endpoints import pedidos, pdv
 from app.models import Usuario, Cliente, Pedido, Rastreamento
 from app.models.usuario import UsuarioRole
 from app.models.pedido import PedidoStatus
-from app.models.pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation
+from app.models.pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation, PedidoPaymentRefund
 from app.models.pedido_tag import TagStatus, pedido_tags_association
 from app.models.pedido_anexo import PedidoAnexo
 from app.models.pdv import PdvCliente, PdvSale, PdvPayment, PdvSaleItem
@@ -33,7 +33,7 @@ def sqlite_jsonb(element, compiler, **kwargs):
     return 'JSON'
 
 TABLES = list(dict.fromkeys([*(m.__table__ for m in PDV_TABLES), Pedido.__table__, PedidoItem.__table__,
-    PedidoPayment.__table__, PedidoOperation.__table__, TagStatus.__table__, pedido_tags_association,
+    PedidoPayment.__table__, PedidoPaymentRefund.__table__, PedidoOperation.__table__, TagStatus.__table__, pedido_tags_association,
     PedidoAnexo.__table__, Rastreamento.__table__, PrintSender.__table__, PrintLayout.__table__, PrintDevice.__table__, PrintJob.__table__]))
 
 

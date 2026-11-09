@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from ..models.inventory import Item, StockMovement, InventorySessionItem
 from ..models.pdv import PdvSaleItem
 from ..models.pedido_reserva import PedidoItem
+from ..models.pedido import Pedido
 from .access_policy import is_owner
 from .user_audit import bind_actor, record
 from .inventory_links import product_sale_link
@@ -25,6 +26,10 @@ def _review(db, item_id, user):
     sale_lines = db.query(PdvSaleItem).filter(product_sale_link(item)).order_by(PdvSaleItem.id).all()
     count_lines = db.query(InventorySessionItem).filter_by(item_id=item.id).order_by(InventorySessionItem.id).all()
     order_lines = db.query(PedidoItem).filter_by(item_id=item.id).order_by(PedidoItem.id).all()
+    active_conditionals = {row.id for row in db.query(Pedido.id).filter(
+        Pedido.id.in_({line.pedido_id for line in order_lines}), Pedido.commerce_status == 'conditional')}
+    conditional_pieces = sum(line.quantity - (line.returned_quantity or 0) for line in order_lines
+                            if line.pedido_id in active_conditionals)
     sales = len({line.sale_id for line in sale_lines})
     counts = len(count_lines)
     movements = db.query(StockMovement).filter_by(item_id=item.id).order_by(StockMovement.id).all()
@@ -33,6 +38,7 @@ def _review(db, item_id, user):
     blockers = [{'code': code, 'count': count} for code, count in
                 [('sales', sales), ('inventory_counts', counts), ('linked_movements', linked_movements),
                  ('orders', len({line.pedido_id for line in order_lines})),
+                 ('conditional_pieces', conditional_pieces),
                  ('order_reservations', (item.reserved_loja or 0) + (item.reserved_deposito or 0))] if count]
     snapshot = lambda row: {col.name: str(getattr(row, col.name)) for col in row.__table__.columns}
     token = hashlib.sha256(json.dumps({'item': snapshot(item), 'movements': [snapshot(r) for r in movements],
@@ -43,7 +49,7 @@ def _review(db, item_id, user):
                ('id', 'name', 'sku_internal', 'size', 'color', 'current_stock', 'stock_loja', 'stock_deposito')},
                'allowed': not blockers, 'blockers': blockers, 'movement_count': len(movements),
                'plan_token': token if not blockers else None,
-               'preserve_history_token': None if item.reserved_loja or item.reserved_deposito else token}
+               'preserve_history_token': None if item.reserved_loja or item.reserved_deposito or conditional_pieces else token}
     return item, preview
 
 
@@ -55,6 +61,8 @@ def delete_from_catalog(db, item_id, user, body):
     item, preview = _review(db, item_id, user)
     if item.reserved_loja or item.reserved_deposito:
         raise HTTPException(409, 'Produto reservado em pedido. Libere ou conclua a reserva antes de retirar do catálogo.')
+    if any(blocker['code'] == 'conditional_pieces' for blocker in preview['blockers']):
+        raise HTTPException(409, 'Produto com peças em condicional. Receba a devolução ou conclua a venda antes de retirar do catálogo.')
     if not body.confirm or body.sku != item.sku_internal or body.plan_token != preview['preserve_history_token']:
         raise HTTPException(409, 'O produto mudou ou a confirmação não corresponde. Confira novamente antes de excluir.')
     bind_actor(db, user)

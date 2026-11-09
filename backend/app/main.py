@@ -194,6 +194,8 @@ app.include_router(cambistas.router, prefix="/api/cambistas", tags=["cambistas"]
 app.include_router(pedidos.router, prefix="/api/pedidos", tags=["pedidos"])
 from .api.endpoints import pedidos_tickets
 app.include_router(pedidos_tickets.router, prefix="/api/pedidos", tags=["pedidos"])
+from .api.endpoints import pedidos_archive
+app.include_router(pedidos_archive.router, prefix="/api/pedidos", tags=["pedidos"])
 app.include_router(tags.router, prefix="/api/tags", tags=["tags"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(exchange_rates.router, prefix="/api/exchange-rates", tags=["exchange-rates"])

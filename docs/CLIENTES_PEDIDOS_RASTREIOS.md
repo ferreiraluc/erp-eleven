@@ -117,6 +117,38 @@ edição obsoleta, cancelamento, rollback, limites e escopo de acesso. PostgreSQ
 valida a migração, concorrência na última peça e repetição simultânea de criação,
 pagamento e conclusão; nenhuma validação envia pagamentos ou impressões reais.
 
+### Arquivar a listagem e começar uma lista nova
+
+Lucas pode conferir a prévia e **arquivar os pedidos existentes**. O arquivo
+altera somente a visibilidade na listagem: os registros, clientes, rastreios,
+anexos, pagamentos e vendas permanecem vinculados e consultáveis. O seletor
+**Atuais / Arquivados / Todos** permite acessar o histórico com o mesmo escopo de
+permissões; vendedores continuam vendo apenas seus pedidos comerciais.
+
+A operação exige confirmação explícita de toda a prévia. Pedidos legados e
+comerciais concluídos, cancelados ou totalmente devolvidos podem ser arquivados.
+Qualquer reserva, condicional ou devolução com recebimento ainda pendente bloqueia
+o lote inteiro, para não ocultar peças separadas, peças com clientes ou valores a
+resolver. O arquivamento nunca libera reservas, devolve peças, estorna pagamentos
+ou exclui pedidos. Pedidos arquivados também não podem ser excluídos pela rota
+antiga de exclusão.
+
+- `GET /api/pedidos/arquivo/preview`: contagem completa, bloqueios e amostra dos
+  primeiros 50 pedidos; exclusivo de Lucas.
+- `POST /api/pedidos/arquivo/confirm`: `request_id`, `confirm: true`, `plan_token`
+  e `expected_count` da prévia. Mudanças desde a conferência são recusadas sob
+  lock; repetir a mesma confirmação devolve o recibo persistido sem duplicar o
+  arquivamento. Uma nova inclusão concorrente que não constava da prévia permanece
+  atual, e o resultado informa `remaining_count`.
+- As listagens `/api/pedidos/pagina` e `/api/pedidos/` aceitam
+  `listing=current|archived|all`, com `current` como padrão. Consultas por ID e
+  históricos de clientes preservam o acesso aos registros arquivados.
+
+A migração `b0k1l2m3n4o5` apenas adiciona `archived_at`, `archived_by` e o recibo
+de operação. Não arquiva nenhum registro durante a publicação. Os testes isolados
+verificam escopo, bloqueios, preservação de estoque, repetição e prévia obsoleta;
+PostgreSQL verifica migração aditiva e confirmações concorrentes.
+
 ## No ERP
 
 ### Cards e atividade do cliente
