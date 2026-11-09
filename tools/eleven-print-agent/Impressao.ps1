@@ -6,7 +6,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     Read-Host 'Pressione Enter para fechar'
     return
 }
-$script:AgentVersion = '2026.11.09.1'
+$script:AgentVersion = '2026.11.09.2'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"
@@ -129,9 +129,35 @@ namespace Eleven {
     return [Eleven.RendererProcessProbe]::Read($processNumber)
 }
 
+function Get-CimRendererIdentity([int]$processNumber) {
+    # Local provider only; no executable paths, command lines or remote sessions.
+    Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $processNumber" -Property ProcessId, CreationDate -OperationTimeoutSec 10 -ErrorAction Stop
+}
+
+function Test-CimRendererReused([int]$processNumber, [long]$expectedTicks,
+    [scriptblock]$getCimIdentity = { param($number); Get-CimRendererIdentity $number }) {
+    if ($processNumber -le 0 -or $expectedTicks -le 0 -or $expectedTicks -gt [DateTime]::MaxValue.Ticks) { return $false }
+    try {
+        $rows = @(& $getCimIdentity $processNumber)
+        if ($rows.Count -ne 1) { return $false }
+        $currentNumber = 0
+        if (-not [int]::TryParse([string]$rows[0].ProcessId, [ref]$currentNumber) -or $currentNumber -ne $processNumber) { return $false }
+        $created = $rows[0].CreationDate
+        if ($created -isnot [DateTime] -or $created.Ticks -le 0 -or
+            $created.Kind -notin @([DateTimeKind]::Utc, [DateTimeKind]::Local)) { return $false }
+        $actualTicks = $created.ToUniversalTime().Ticks
+        # CIM can discard fractional precision. Within one second the identity
+        # remains ambiguous; only a larger difference proves this PID was reused.
+        # Keep integer arithmetic: converting 100ns ticks to double loses bits.
+        return ([Math]::Abs([long]($actualTicks - $expectedTicks)) -gt [TimeSpan]::TicksPerSecond)
+    } catch { return $false }
+    # Empty/partial/failed CIM queries do not prove a process has disappeared.
+}
+
 function Test-OwnedRendererRunning($record,
     [scriptblock]$getProcess = { param($processNumber); [Diagnostics.Process]::GetProcessById($processNumber) },
-    [scriptblock]$getNativeIdentity = { param($processNumber); Get-NativeRendererIdentity $processNumber }) {
+    [scriptblock]$getNativeIdentity = { param($processNumber); Get-NativeRendererIdentity $processNumber },
+    [scriptblock]$getCimIdentity = { param($processNumber); Get-CimRendererIdentity $processNumber }) {
     # These outcomes prove the child exited or was never started. Windows can
     # reuse its old PID for an unrelated/protected process; do not inspect it.
     if ($record.status -in @('submitted', 'failed') -or $record.renderer_exited -eq $true) { return $false }
@@ -159,7 +185,13 @@ function Test-OwnedRendererRunning($record,
         finally { $p.Dispose() }
     } catch [ArgumentException] { return $false }
     catch {
-        $identity = & $getNativeIdentity $processNumber
+        try { $identity = & $getNativeIdentity $processNumber }
+        catch {
+            $nativeFailure = $_
+            if (Test-CimRendererReused $processNumber $expectedTicks $getCimIdentity) { return $false }
+            # Preserve the original Win32 code even if CIM fails or has no date.
+            throw $nativeFailure
+        }
         if ($null -eq $identity -or $identity.Exists -isnot [bool]) {
             throw (New-Object InvalidOperationException 'Nao foi possivel confirmar a identidade do renderizador.')
         }
@@ -173,7 +205,7 @@ function Test-OwnedRendererRunning($record,
         }
         return ($identity.StartedTicks -eq $expectedTicks)
     }
-    # Access denied in both readers still blocks. Never assume an old PID ended.
+    # If every reader remains inconclusive, block. Never assume an old PID ended.
 }
 
 function Assert-RendererStopped($record) {

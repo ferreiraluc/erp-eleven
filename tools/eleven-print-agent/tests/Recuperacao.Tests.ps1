@@ -44,10 +44,47 @@ Assert (-not (Test-OwnedRendererRunning $record $openProbe { return @{Exists=$fa
 $probe.FailExit = $true
 Assert (Test-OwnedRendererRunning $record $openProbe $sameIdentity) 'HasExited getter failures must use independent identity too'
 $denied = $null
-try { Test-OwnedRendererRunning $record $openProbe { throw (New-Object ComponentModel.Win32Exception 5) } | Out-Null } catch { $denied = $_ }
+try { Test-OwnedRendererRunning $record $openProbe { throw (New-Object ComponentModel.Win32Exception 5) } { return $null } | Out-Null } catch { $denied = $_ }
 Assert ($null -ne $denied) 'Unknown/protected process must not be assumed stopped'
 $diagnostic = Get-AgentPauseDiagnostic $denied 'renderer_check' $record
 Assert ($diagnostic.code -eq 'renderer_check_failed' -and $diagnostic.windows_error -eq 5) 'Native access denial must retain safe numeric reason'
+$nativeDenied = { throw (New-Object ComponentModel.Win32Exception 5) }
+$cimReused = { param($number); return @{ProcessId=$number;CreationDate=$probe.Created.AddDays(1)} }
+Assert (-not (Test-OwnedRendererRunning $record $openProbe $nativeDenied $cimReused)) 'CIM must release a positively identified reused protected PID'
+$cimLocal = { param($number); return @{ProcessId=$number;CreationDate=$probe.Created.AddDays(1).ToLocalTime()} }
+Assert (-not (Test-OwnedRendererRunning $record $openProbe $nativeDenied $cimLocal)) 'CIM local date must be compared in UTC'
+$legacyTimeout = $record.Clone()
+$legacyTimeout.process_started_ticks = [DateTime]::Parse('2020-01-02T17:00:04.7171796Z', [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).Ticks.ToString()
+$legacyTimeout.diagnostic = @{code='renderer_timeout';duration_ms=120045;exit_code=$null}
+$legacyBefore = $legacyTimeout | ConvertTo-Json -Compress
+$incidentCim = { param($number); return @{ProcessId=$number;CreationDate=[DateTime]::Parse('2020-01-15T16:00:41.0000000Z', [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()} }
+Assert (-not (Test-OwnedRendererRunning $legacyTimeout $openProbe $nativeDenied $incidentCim)) 'Old timeout must release a PID positively reused by a later process'
+Assert (($legacyTimeout | ConvertTo-Json -Compress) -eq $legacyBefore) 'CIM recovery must preserve the acknowledged uncertain timeout without retrying it'
+foreach ($difference in @([long]-10000000, [long]-9, [long]0, [long]9, [long]10000000)) {
+    $query = { param($number); return @{ProcessId=$number;CreationDate=$probe.Created.AddTicks($difference)} }
+    $blocked = $null
+    try { Test-OwnedRendererRunning $record $openProbe $nativeDenied $query | Out-Null } catch { $blocked = $_ }
+    Assert ($blocked -and (Get-AgentPauseDiagnostic $blocked 'renderer_check' $record).windows_error -eq 5) 'Same/nearby CIM timestamp must remain blocked with original Win32 code'
+}
+foreach ($difference in @([long]-10000001, [long]10000001)) {
+    $query = { param($number); return @{ProcessId=$number;CreationDate=$probe.Created.AddTicks($difference)} }
+    Assert (-not (Test-OwnedRendererRunning $record $openProbe $nativeDenied $query)) 'One-second boundary must use exact integer arithmetic'
+}
+foreach ($query in @(
+    { return $null },
+    { param($number); return @{ProcessId=$number;Name='svchost.exe'} },
+    { param($number); return @{ProcessId=$number;CreationDate=$null} },
+    { param($number); return @{ProcessId=$number;CreationDate=[DateTime]::MinValue} },
+    { param($number); return @{ProcessId=$number;CreationDate=[DateTime]::SpecifyKind($probe.Created.AddDays(1), [DateTimeKind]::Unspecified)} },
+    { param($number); return @{ProcessId=($number + 1);CreationDate=$probe.Created.AddDays(1)} },
+    { param($number); return @(@{ProcessId=$number;CreationDate=$probe.Created}, @{ProcessId=$number;CreationDate=$probe.Created.AddDays(1)}) },
+    { throw (New-Object TimeoutException 'Synthetic CIM timeout') },
+    { throw (New-Object UnauthorizedAccessException 'Synthetic CIM denied') }
+)) {
+    $blocked = $null
+    try { Test-OwnedRendererRunning $record $openProbe $nativeDenied $query | Out-Null } catch { $blocked = $_ }
+    Assert ($blocked -and (Get-AgentPauseDiagnostic $blocked 'renderer_check' $record).windows_error -eq 5) 'Invalid/partial/failed CIM result must preserve native denial and block'
+}
 foreach ($unavailable in @({ return $null }, { return @{Exists=$true;HasExited=$false} })) {
     $failed = $false
     try { Test-OwnedRendererRunning $record $openProbe $unavailable | Out-Null } catch { $failed = $true }
@@ -73,6 +110,10 @@ try {
     $native = Get-NativeRendererIdentity $self.Id
     Assert ($native.Exists -and -not $native.HasExited -and $native.StartedTicks -eq $self.get_StartTime().ToUniversalTime().Ticks) 'Limited native query must preserve exact 100ns process identity'
     Assert (-not (Get-NativeRendererIdentity ([int]::MaxValue)).Exists) 'Native query must identify a nonexistent PID'
+    $cim = @(Get-CimRendererIdentity $self.Id)
+    Assert ($cim.Count -eq 1 -and $cim[0].ProcessId -eq $self.Id -and $cim[0].CreationDate -is [DateTime]) 'Local CIM must identify the test process'
+    Assert ($cim[0].CreationDate.Kind -in @([DateTimeKind]::Utc, [DateTimeKind]::Local)) 'Local CIM creation time must have an explicit time zone'
+    Assert (-not (Test-CimRendererReused $self.Id $native.StartedTicks)) 'Real CIM precision must not mark the same running process as reused'
     $record = @{id='d0fdbd00-5e5a-465f-9cea-968a6558f29a'; process_id=$self.Id; process_started_ticks=$self.StartTime.ToUniversalTime().Ticks.ToString()}
     foreach ($status in @('submitted','failed')) {
         $record.status = $status

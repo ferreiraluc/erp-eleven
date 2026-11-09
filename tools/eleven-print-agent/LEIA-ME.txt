@@ -1,4 +1,12 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.11.09.1
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.11.09.2
+
+PROCESSO PROTEGIDO / WINDOWS=5 — 2026.11.09.2
+Se os leitores diretos nao conseguirem verificar o processo anterior, o agente
+agora consulta a data de criacao via CIM local, somente leitura. Uma data diferente
+por mais de um segundo comprova reutilizacao do PID e permite continuar a fila.
+Nome do processo sozinho nao libera a fila. Se a data for desconhecida ou proxima,
+a pausa continua. Nao encerra processos do Windows nem reimprime trabalhos incertos.
+Atualize pelo Instalar.cmd do mesmo perfil A4 e mantenha a credencial com Enter.
 
 CORRECAO DA FILA A4 / HP — 2026.11.09.1
 Corrige a verificacao do processo antigo que podia repetir renderer_check_failed
