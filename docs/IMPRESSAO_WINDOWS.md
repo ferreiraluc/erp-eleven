@@ -1,5 +1,26 @@
 # Impressão da Eleven no Windows
 
+## Processo protegido com PID reutilizado — 09/11/2026
+
+A versão **2026.11.09.2** complementa a recuperação da HP quando os leitores
+diretos retornam `Windows=5` e o PID antigo foi reutilizado por um serviço
+protegido do Windows. O acesso negado não comprova, por si só, que o Sumatra
+ainda esteja ativo. Um trabalho antigo com `renderer_timeout`, estado `uncertain`
+e resultado já confirmado ao ERP permanece incerto e não é impresso novamente
+pela recuperação.
+
+Quando as consultas diretas falham, o agente consulta `Win32_Process` localmente
+por CIM, somente para ler PID e data de criação. Só libera a fila se essa data
+for diferente da registrada no diário por **mais de um segundo**. A margem evita
+confundir a precisão menor do CIM com reutilização do PID. Nome do processo não
+é critério de liberação; data ausente, ambígua, próxima ou consulta indisponível
+mantêm a pausa. A comparação usa UTC e não infere encerramento pelo horário do
+último boot. Não mata processos, modifica o diário ou reenvia documentos incertos.
+
+Instale o pacote **2026.11.09.2** pelo mesmo procedimento abaixo, preservando a
+credencial e o histórico. Confira a versão ao abrir o atalho. A atualização
+anterior 2026.11.09.1 não resolveu o acesso negado confirmado nesta máquina.
+
 ## Recuperação do agente A4 / HP — 09/11/2026
 
 Versão **2026.11.09.1**. A loja informou `renderer_check_failed`, etapa
@@ -23,7 +44,7 @@ apenas o código Windows numérico, sem mensagens livres ou credenciais.
    na sugestão, mesmo que exista outra Samsung instalada.
 4. Pressione Enter na credencial para manter a atual. Não exclua `journal`,
    `claim.json` ou `config.json`.
-5. Abra o atalho **Eleven Impressao** e confira a versão **2026.11.09.1**.
+5. Abra o atalho **Eleven Impressao** e confira a versão atual **2026.11.09.2**.
 
 Atualizar o Render disponibiliza o pacote, mas não atualiza o programa local.
 Trabalhos já enviados/incertos não são repetidos automaticamente. Confira papel
