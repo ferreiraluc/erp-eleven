@@ -26,6 +26,8 @@ MODULES = {
     'inventory_receiving_lots': 'inventory', 'inventory_receiving_lot_items': 'inventory',
     'inventory-labels': 'inventory', 'label_templates': 'inventory', 'ocr': 'inventory', 'product-photo': 'inventory',
     'rastreamentos': 'rastreamento', 'pedido_anexos': 'pedidos', 'tags_status': 'pedidos', 'tags': 'pedidos',
+    'pedido_items': 'pedidos', 'pedido_payments': 'pedidos', 'pedido_operations': 'pedidos',
+    'pedido_payment_refunds': 'pedidos', 'pedido_archive_operations': 'pedidos',
     'saved_addresses': 'enderecos', 'print_layouts': 'enderecos', 'print_jobs': 'enderecos',
     'print_devices': 'enderecos', 'print_senders': 'enderecos', 'freight_orders': 'enderecos',
     'freight_webhooks': 'enderecos', 'address-manager': 'enderecos', 'printing': 'enderecos', 'freight': 'enderecos',
@@ -73,7 +75,47 @@ def scalar(value):
     return None
 
 
-def operation_context(obj, table, products):
+def sale_snapshots(db, objects):
+    """Freeze safe sale facts in this transaction, without loading private ORM fields."""
+    sales_by_table = {}
+    for obj in objects:
+        table = inspect(obj).mapper.local_table.name
+        if table in ('pdv_sales', 'vendas'):
+            sales_by_table.setdefault(table, {})[obj.id] = obj
+    snapshots = {}
+    for table, sales in sales_by_table.items():
+        if table == 'pdv_sales':
+            from ..models.pdv import PdvSale as Sale
+            from ..models.usuario import Usuario as Seller
+            fields = {'seller_id': 'vendedor_id', 'total_gs': 'total_gs',
+                      'usd_rate_gs': 'usd_rate_gs', 'status': 'status'}
+        else:
+            from ..models.venda import Venda as Sale
+            from ..models.vendedor import Vendedor as Seller
+            fields = {'seller_id': 'vendedor_id', 'amount': 'valor_bruto', 'currency': 'moeda'}
+        # A deleted row is no longer in the table. Only its already loaded facts
+        # can be retained; never lazy-load relationships or private sale details.
+        facts = {sale_id: {key: inspect(obj).dict.get(attr) for key, attr in fields.items()}
+                 for sale_id, obj in sales.items()}
+        sale_ids = list(sales)
+        for offset in range(0, len(sale_ids), 250):
+            rows = db.connection().execute(select(Sale.id, *(getattr(Sale, attr).label(key)
+                for key, attr in fields.items())).where(Sale.id.in_(sale_ids[offset:offset + 250])))
+            for row in rows:
+                facts[row.id] = {key: row._mapping[key] for key in fields}
+        seller_ids = list({values['seller_id'] for values in facts.values() if values['seller_id'] is not None})
+        names = {}
+        for offset in range(0, len(seller_ids), 250):
+            rows = db.connection().execute(select(Seller.id, Seller.nome)
+                .where(Seller.id.in_(seller_ids[offset:offset + 250])))
+            names.update({row.id: row.nome for row in rows})
+        snapshots[table] = {sale_id: {**{key: scalar(value) for key, value in values.items()},
+                                   'seller_name': names.get(values['seller_id'])}
+                            for sale_id, values in facts.items()}
+    return snapshots
+
+
+def operation_context(obj, table, products, sales):
     """Persist only structural IDs and product/quantity facts, never private payloads."""
     context = {}
     sale_id = None
@@ -88,6 +130,8 @@ def operation_context(obj, table, products):
     if sale_id:
         try: context['sale_id'] = str(uuid.UUID(str(sale_id)))
         except (ValueError, TypeError, AttributeError): pass
+    if table in sales:
+        context['sale' if table == 'pdv_sales' else 'operational_sale'] = sales[table][obj.id]
     if table == 'pdv_sale_items':
         context['product'] = {'id': str(obj.item_id) if obj.item_id else None, 'name': obj.item_name, 'code': obj.item_sku}
     if table == 'pdv_payments':
@@ -110,8 +154,9 @@ def operation_context(obj, table, products):
 def audit_flush(db, context):
     if not db.info.get('audit_enabled') or not db.info.get('audit_actor'):
         return
+    objects = list(db.new) + list(db.dirty) + list(db.deleted)
     product_ids = set()
-    for obj in list(db.new) + list(db.dirty) + list(db.deleted):
+    for obj in objects:
         table = inspect(obj).mapper.local_table.name
         if table == 'stock_movements': product_ids.add(obj.item_id)
         elif table == 'inventory_items': product_ids.add(obj.id)
@@ -123,6 +168,7 @@ def audit_flush(db, context):
         rows = db.connection().execute(select(Item.id, Item.name, Item.inventory_code, Item.sku_internal)
                                        .where(Item.id.in_(product_ids)))
         products = {row.id: {'id': str(row.id), 'name': row.name, 'code': row.inventory_code or row.sku_internal} for row in rows}
+    sales = sale_snapshots(db, objects)
     for action, objects in [('create', db.new), ('update', db.dirty), ('delete', db.deleted)]:
         for obj in list(objects):
             state = inspect(obj)
@@ -147,7 +193,7 @@ def audit_flush(db, context):
                     changes[col.key] = {'changed': True}
             if action == 'update' and not changes:
                 continue
-            operation_info = operation_context(obj, table, products)
+            operation_info = operation_context(obj, table, products, sales)
             if operation_info: changes['_context'] = operation_info
             db.connection().execute(AuditEvent.__table__.insert().values(
                 id=uuid.uuid4(), occurred_at=now(), **db.info['audit_actor'], action=action,
