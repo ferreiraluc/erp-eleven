@@ -17,7 +17,7 @@ from ..models.usuario import Usuario
 from ..schemas.pdv import validate_pdv_quantity
 from .access_policy import is_owner, own_sales, sales_query
 from .inventory_service import create_movement, StockMovementError
-from .user_audit import bind_actor, record
+from .user_audit import bind_actor, record, sale_snapshots
 from .pdv_payments import validate_payment, unchanged_payment
 from .pdv_ticket_identity import ticket_code, ticket_range
 
@@ -350,7 +350,10 @@ def commit(db,sid,user,body):
         event=PdvSaleEvent(sale_id=sid,request_id=body.request_id,fingerprint=fingerprint,operation=body.command.operation,
             reason=body.command.reason,before=before,after=snapshot(sale),effects={k:v for k,v in preview.items() if k!='plan_token'},created_by=user.id)
         db.add(event);db.flush()
-        record(db,'pdv_'+body.command.operation,'pdv',entity='pdv_sales',entity_id=str(sid),changes={'version':sale.version,'event_id':str(event.id),'refund_gs':preview['refund_gs']})
+        audit_sale = sale_snapshots(db, [sale])['pdv_sales'][sale.id]
+        record(db,'pdv_'+body.command.operation,'pdv',entity='pdv_sales',entity_id=str(sid),changes={
+            'version':sale.version,'event_id':str(event.id),'refund_gs':preview['refund_gs'],
+            '_context':{'sale_id':str(sid),'sale':audit_sale}})
         result={'ok':True,'sale_id':str(sid),'event_id':str(event.id),'replayed':False}
         db.commit();return result
     except (StockMovementError,ValueError) as e:

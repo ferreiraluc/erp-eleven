@@ -11,6 +11,7 @@ from app.models.pdv import PdvSale, PdvSaleItem, PdvPayment
 from app.models.usuario import Usuario
 from app.services.user_audit import bind_actor
 from app.services.inventory_service import create_movement
+from app.services import audit_groups
 from test_access import setup, login  # noqa: F401
 
 
@@ -158,3 +159,94 @@ def test_new_sale_children_keep_sale_reference_after_raw_rows_are_deleted(setup)
     assert result['groups'][0]['event_count']==3
     details=client.get('/api/access/audit/group',params={'key':'pdv_sale:'+str(sale_id)},headers=login(client)).json()
     assert all(e['changes']['_context']['sale_id']==str(sale_id) for e in details['events'])
+
+
+def test_semantic_anchor_is_bounded_independent_of_stock_samples_and_obeys_filters(setup):
+    from sqlalchemy import event as sql_event
+
+    _, factory, ids = setup
+    sale, request = str(uuid.uuid4()), str(uuid.uuid4())
+    stamp = now() - timedelta(minutes=2)
+    with factory() as db:
+        db.add(event(ids['Sol'][0], entity_id=sale, request_id=request, occurred_at=stamp,
+                     changes={'_context': {'sale_id': sale, 'sale': {'seller_name': 'Sol', 'total_gs': '0', 'usd_rate_gs': '6000'}}}))
+        for i in range(100):
+            db.add(event(ids['Sol'][0], entity='stock_movements', module='inventory', request_id=request,
+                         occurred_at=stamp + timedelta(seconds=i),
+                         changes={'_context': {'sale_id': sale, 'movement': {'movement_type': 'exit'}}}))
+        db.commit()
+        queries = []
+        def capture(_conn, _cursor, statement, _parameters, _context, _many):
+            queries.append(statement)
+        sql_event.listen(db.get_bind(), 'before_cursor_execute', capture)
+        try:
+            total, groups = audit_groups.grouped(db, audit_groups.scope(db, stamp), 0, 50)
+        finally:
+            sql_event.remove(db.get_bind(), 'before_cursor_execute', capture)
+        assert total == 1 and len(queries) == 3
+        group = groups[0]
+        assert group['event_count'] == 101 and len(group['samples']) == 3
+        assert all(row['entity'] == 'stock_movements' for row in group['samples'])
+        assert group['summary_event']['entity'] == 'pdv_sales'
+        assert group['summary_event']['changes']['_context']['sale']['total_gs'] == '0'
+        assert (group['entity_count'], group['action_count'], group['module_count']) == (2, 1, 2)
+        _, filtered = audit_groups.grouped(db, audit_groups.scope(db, stamp, module='inventory'), 0, 50)
+        assert filtered[0]['summary_event']['entity'] == 'stock_movements'
+        assert filtered[0]['event_count'] == 100 and filtered[0]['module_count'] == 1
+        assert db.query(AuditEvent).count() == 101
+
+
+def test_mixed_movement_cannot_be_classified_from_just_three_samples(setup):
+    _, factory, ids = setup
+    stamp = now() - timedelta(minutes=2)
+    request = str(uuid.uuid4())
+    with factory() as db:
+        # The oldest entry does not fit in three latest transfer samples.
+        db.add(event(ids['Sol'][0], entity='stock_movements', module='inventory', request_id=request,
+                     occurred_at=stamp, changes={'_context': {'movement': {'movement_type': 'entry'}}}))
+        for i in range(1, 5):
+            db.add(event(ids['Sol'][0], entity='stock_movements', module='inventory', request_id=request,
+                         occurred_at=stamp + timedelta(seconds=i),
+                         changes={'_context': {'movement': {'movement_type': 'transfer'}}}))
+        db.commit()
+        _, groups = audit_groups.grouped(db, audit_groups.scope(db, stamp), 0, 50)
+        assert groups[0]['movement_kind'] is None
+        assert all(row['changes']['_context']['movement']['movement_type'] == 'transfer' for row in groups[0]['samples'])
+        assert (groups[0]['entity_count'], groups[0]['action_count']) == (1, 1)
+
+
+def test_product_registration_and_conditional_actions_have_correct_anchors(setup):
+    _, factory, ids = setup
+    stamp = now() - timedelta(minutes=2)
+    product_request, order_request = str(uuid.uuid4()), str(uuid.uuid4())
+    with factory() as db:
+        db.add_all([
+            event(ids['Sol'][0], entity='inventory_items', module='inventory', request_id=product_request, occurred_at=stamp),
+            event(ids['Sol'][0], entity='stock_movements', module='inventory', request_id=product_request,
+                  occurred_at=stamp + timedelta(seconds=1), changes={'_context': {'movement': {'movement_type': 'entry'}}}),
+            event(ids['Sol'][0], entity='pedidos', module='pedidos', action='order_conditional_dispatch', request_id=order_request, occurred_at=stamp),
+            event(ids['Sol'][0], entity='stock_movements', module='inventory', request_id=order_request,
+                  occurred_at=stamp + timedelta(seconds=1), changes={'_context': {'movement': {'movement_type': 'exit'}}}),
+        ])
+        db.commit()
+        _, groups = audit_groups.grouped(db, audit_groups.scope(db, stamp), 0, 50)
+        by_key = {group['key']: group for group in groups}
+        assert by_key['request:' + product_request]['summary_event']['entity'] == 'inventory_items'
+        assert by_key['request:' + order_request]['summary_event']['action'] == 'order_conditional_dispatch'
+        assert all(group['sale_id'] is None for group in groups)
+
+
+def test_deleted_or_unknown_movement_does_not_report_new_physical_transfer(setup):
+    _, factory, ids = setup
+    stamp = now() - timedelta(minutes=2)
+    with factory() as db:
+        for action, changes in [('delete', {'_context': {'movement': {'movement_type': 'transfer'}}}),
+                                ('create', {'movement_type': {'changed': True}}),
+                                ('create', {'movement_type': {'after': 'transfer'}})]:
+            db.add(event(ids['Sol'][0], entity='stock_movements', module='inventory', action=action,
+                         occurred_at=stamp, changes=changes))
+        db.commit()
+        _, groups = audit_groups.grouped(db, audit_groups.scope(db, stamp), 0, 50)
+        assert len(groups) == 3
+        assert sum(group['movement_kind'] == 'transfer' for group in groups) == 1
+        assert next(group for group in groups if group['summary_event']['action'] == 'delete')['movement_kind'] is None

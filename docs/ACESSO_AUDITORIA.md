@@ -150,6 +150,30 @@ antigos sem saldo por local mostram somente o saldo total conhecido. Exclusão d
 um registro histórico é identificada como exclusão, não como uma nova saída física.
 Datas e horas usam o horário de Brasília (`America/Sao_Paulo`).
 
+Os títulos descrevem o acontecimento: **Alteração de nome do cliente**,
+**Cadastro de produto**, **Cadastro de cliente**, **Entrada de estoque**,
+**Saída de estoque**, **Transferência de estoque** e **Login**.
+Campos técnicos, como `updated_at`, não transformam uma alteração de nome em
+um título genérico. O responsável e o horário ficam logo abaixo; referências,
+IDs e alterações individuais permanecem nos detalhes expansíveis. O card não
+repete a mesma descrição em uma prévia quando há somente um registro.
+
+Novos registros de vendas do PDV guardam o vendedor da venda, total em guaranis,
+câmbio congelado e situação em `_context.sale`. O título usa esse vendedor e
+o valor em dólares calculado com o câmbio da própria venda; o responsável pela
+ação continua separado. Um operador editando a venda de outra pessoa não se
+torna seu vendedor. Sem câmbio registrado, o histórico exibe G$, sem converter
+pela cotação atual. Cancelamentos, devoluções e alterações preservam suas ações;
+o total original da venda não é apresentado como valor de reembolso.
+Vendas operacionais usam `_context.operational_sale`, com vendedor, valor bruto
+e moeda próprios. Reservas, condicionais e pagamentos de pedidos continuam
+distintos de vendas concluídas.
+
+As descrições também aproveitam registros antigos, sem regravá-los. Se o log
+antigo guardou apenas que `nome` mudou, é possível mostrar **Alteração de nome do
+cliente**, mas não recuperar os nomes anterior e posterior. O sistema não busca
+valores atuais do cadastro para apresentá-los como fatos históricos.
+
 O servidor aplica os filtros **antes de agrupar e paginar**; os detalhes usam os
 mesmos filtros. Por isso um filtro por usuário ou estoque mostra somente os
 registros correspondentes dentro da venda, e o total do card reflete esse recorte.
@@ -158,6 +182,14 @@ apenas ao abrir o card, com paginação independente; uma venda grande não desa
 nem se divide artificialmente entre páginas de operações. O resumo de cada usuário
 conta operações distintas, com logins em coluna separada. A exportação contém os
 grupos da página atual.
+
+Cada grupo inclui ainda um `summary_event` representativo, limitado a um registro,
+independente dos três exemplos. Assim, uma venda com muitos movimentos não perde
+seu valor/vendedor e o estoque inicial de um produto não esconde seu cadastro.
+`entity_count`, `action_count`, `module_count` e `movement_kind` consideram todos
+os eventos abrangidos pelos filtros. Um lote misto não é descrito como transferência
+só porque seus três exemplos são transferências. Não há uma consulta por card;
+os registros retornados continuam limitados por página.
 
 `/api/access/audit?grouped=true` habilita a leitura agrupada e
 `/api/access/audit/group` pagina os registros de um grupo. Sem `grouped`, a API
@@ -208,6 +240,9 @@ e `auditPresentation.test.ts` verificam agrupamento e paginação, filtros, isol
 de permissão, referências históricas, rollback, saldos, detalhes sob demanda e
 recuperação após falha de rede. A consulta de agrupamento é validada também em
 PostgreSQL isolado, incluindo extração JSON e identificadores UUID.
+`test_audit_sale_context.py` e `test_audit_sale_context_postgres.py` verificam
+vendedor diferente do operador, valores zerados, captura em lotes, campos privados,
+câmbio histórico e rollback, sem depender de vendas reais.
 `test_daily_sessions.py`, `test_daily_sessions_postgres.py`,
 `authDailyExpiry.test.ts` e `sessionStorage.test.ts` cobrem a virada das 21h,
 logins após o fechamento, atualização de sessões legadas em PostgreSQL isolado,
