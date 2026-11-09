@@ -9,6 +9,7 @@
         {{ $tr("Separar produtos") }}
       </button>
       <button @click="openCreateModal" class="erp-button erp-button--ghost legacy-create">{{ $tr('Pedido sem reserva') }}</button>
+      <button v-if="auth.isOwner" class="erp-button erp-button--ghost legacy-create" @click="showArchive = true">{{ $tr('Arquivar anteriores') }}</button>
     </ModuleHeader>
 
     <div class="reservation-intro"><ShoppingBag :size="19" /><p><strong>{{ $tr('Cada peça no lugar certo.') }}</strong> {{ $tr('Separe para um cliente, acompanhe os pagamentos e conclua a venda pelo PDV.') }}</p></div>
@@ -35,6 +36,8 @@
           <ErpSelect :label="$tr('Separação')" v-model="commerceFilter" class="filter-select">
             <option value="">{{ $tr('Todos os pedidos') }}</option>
             <option value="reserved">{{ $tr('Separados') }}</option>
+            <option value="conditional">{{ $tr('Condicionais pendentes') }}</option>
+            <option value="returned">{{ $tr('Condicionais devolvidas') }}</option>
             <option value="completed">{{ $tr('Vendas concluídas') }}</option>
             <option value="cancelled">{{ $tr('Reservas canceladas') }}</option>
             <option value="legacy">{{ $tr('Sem reserva de estoque') }}</option>
@@ -52,6 +55,12 @@
           </ErpSelect>
         </div>
 
+        <div class="filter-group">
+          <label class="filter-label">{{ $tr('Listagem') }}</label>
+          <ErpSelect :label="$tr('Listagem')" v-model="listing" class="filter-select">
+            <option value="current">{{ $tr('Pedidos atuais') }}</option><option value="archived">{{ $tr('Arquivo de pedidos') }}</option><option value="all">{{ $tr('Atuais e arquivados') }}</option>
+          </ErpSelect>
+        </div>
         <!-- Tag Filter -->
         <div class="filter-group">
           <label class="filter-label">{{ $tr("Tag") }}</label>
@@ -225,6 +234,7 @@
       </div>
     </div>
 
+    <OrderArchiveDialog v-if="showArchive && auth.isOwner" @close="showArchive = false" @archived="onArchived" />
     <!-- Modals -->
     <PedidoModal
       :is-visible="showCreateModal"
@@ -241,7 +251,7 @@
       @updated="selectedPedido = $event; handlePedidoSaved()"
     />
     <OrderReservationEditor v-if="showReservationEditor" :order-id="reservationEditingId || undefined" @close="closeReservationEditor" @saved="onReservationSaved" />
-    <OrderReservationDetails v-if="reservationDetailsId" :order-id="reservationDetailsId" @close="reservationDetailsId = null" @edit="openReservationEditor" @updated="onReservationUpdated" @logistics="openReservationLogistics" />
+    <OrderReservationDetails v-if="reservationDetailsId" :key="reservationDetailsId" :order-id="reservationDetailsId" @close="reservationDetailsId = null" @edit="openReservationEditor" @updated="onReservationUpdated" @logistics="openReservationLogistics" />
   </div>
 </template>
 
@@ -261,6 +271,11 @@ import ReservationCard from '@/components/orders/ReservationCard.vue'
 import { reservationStatusLabel, type ReservationDetail } from '@/services/orderReservations'
 const OrderReservationEditor = defineAsyncComponent(() => import('@/components/orders/OrderReservationEditor.vue'))
 const OrderReservationDetails = defineAsyncComponent(() => import('@/components/orders/OrderReservationDetails.vue'))
+
+import { useAuthStore } from '@/stores/auth'
+const OrderArchiveDialog = defineAsyncComponent(() => import('@/components/orders/OrderArchiveDialog.vue'))
+const auth = useAuthStore(), showArchive = ref(false), listing = ref<'current' | 'archived' | 'all'>('current')
+function onArchived() { showArchive.value = false; listing.value = 'current'; currentPage.value = 1; void loadPedidos() }
 
 import { orderTrackingLocation } from '@/services/orderNavigation'
 
@@ -308,6 +323,7 @@ const loadPedidos = async () => {
       status: statusFilter.value || undefined,
       tag_id: tagFilter.value || undefined,
       commerce_status: commerceFilter.value || undefined,
+      listing: listing.value,
     })
     if (version !== requestVersion) return
     totalItems.value = result.total
@@ -376,6 +392,7 @@ const clearFilters = () => {
   statusFilter.value = ''
   tagFilter.value = ''
   commerceFilter.value = ''
+  listing.value = 'current'
 }
 
 const openCreateModal = () => {
@@ -384,7 +401,7 @@ const openCreateModal = () => {
 }
 
 const openEditModal = (pedido: Pedido) => {
-  if (pedido.commerce_status) { openReservationEditor(pedido.id); return }
+  if (pedido.commerce_status) { if (pedido.commerce_status === 'reserved' && !pedido.archived_at) openReservationEditor(pedido.id); else reservationDetailsId.value = pedido.id; return }
   showDetailsModal.value = false
   selectedPedido.value = null
   editingPedido.value = pedido
@@ -454,7 +471,7 @@ const nextPage = () => {
 }
 
 // Watchers
-watch([statusFilter, tagFilter, commerceFilter], () => {
+watch([statusFilter, tagFilter, commerceFilter, listing], () => {
   currentPage.value = 1
   loadPedidos()
 })

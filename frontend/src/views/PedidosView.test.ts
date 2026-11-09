@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, nextTick, type App } from 'vue'
+import { createApp, nextTick, reactive, type App } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import i18n from '@/i18n'
 import { uiText } from '@/i18n/uiText'
 import PedidosView from './PedidosView.vue'
+import { chooseDropdown } from '@/test/dropdown'
 import { orderTrackingLocation } from '@/services/orderNavigation'
 
+const auth = reactive({ isOwner: false, user: { id: 'seller-qa' } })
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 const api = vi.hoisted(() => ({ getPage: vi.fn(), getById: vi.fn(), tags: vi.fn() }))
 vi.mock('@/services/api', () => ({ pedidosAPI: api, tagsAPI: { getAll: api.tags } }))
 vi.mock('@/components/PedidoModal.vue', () => ({ default: { render: () => null } }))
@@ -25,7 +28,7 @@ async function mount(path = '/') {
 }
 const button = (label: string) => Array.from(container.querySelectorAll('button')).find(el => el.textContent?.trim() === label)!
 beforeEach(() => {
-  vi.useFakeTimers()
+  vi.useFakeTimers(); auth.isOwner = false
   i18n.global.locale.value = 'pt'
   container = document.createElement('div'); document.body.append(container)
   api.getPage.mockResolvedValue(page('Inicial'))
@@ -100,4 +103,11 @@ describe('Order directory navigation', () => {
     expect(api.getById).toHaveBeenCalledTimes(2)
     expect(container.querySelector('[data-details]')?.textContent).toBe('Antigo')
   })
+})
+
+it('defaults to current orders and changes archive history without mixing lists', async () => {
+  await mount(); expect(api.getPage).toHaveBeenLastCalledWith(expect.objectContaining({ listing: 'current' })); expect(button('Arquivar anteriores')).toBeUndefined()
+  await chooseDropdown(container.querySelectorAll('.erp-dropdown')[2], 'archived'); await settle()
+  expect(api.getPage).toHaveBeenLastCalledWith(expect.objectContaining({ listing: 'archived', page: 1 }))
+  auth.isOwner = true; await settle(); expect(button('Arquivar anteriores')).toBeDefined()
 })
