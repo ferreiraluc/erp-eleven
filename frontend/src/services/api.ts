@@ -400,7 +400,11 @@ export interface Pedido {
   tags: Tag[]
   cliente?: { id: string; nome: string; telefone?: string; email?: string; cpf?: string; endereco?: string }
   anexos_count?: number
-  commerce_status?: 'reserved' | 'completed' | 'cancelled' | null
+  commerce_status?: 'reserved' | 'conditional' | 'returned' | 'completed' | 'cancelled' | null
+  archived_at?: string | null
+  delivered_at?: string | null
+  remaining_quantity?: number | null
+  vendedor_nome?: string | null
   commerce_version?: number
   sale_id?: string | null
   total_gs?: number | string | null
@@ -432,6 +436,7 @@ export const pedidosAPI = {
     status?: string
     tag_id?: string
     commerce_status?: string
+    listing?: 'current' | 'archived' | 'all'
   }): Promise<{ items: Pedido[]; total: number; page: number; page_size: number }> =>
     api.get('/api/pedidos/pagina', { params }).then(res => res.data),
 

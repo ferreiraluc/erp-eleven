@@ -136,3 +136,37 @@ it('ignores an old payment response after switching orders and preserves its rec
   expect(sessionStorage.getItem('eleven.order-payment.seller-qa.second-order')).toBeNull()
   expect(root.querySelector('fieldset')?.disabled).toBe(false)
 })
+
+
+it('settles only retained conditional pieces after explicit choice review, without adding returned lines', async () => {
+  const conditional = { ...initial, commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', balance_gs: 0, total_gs: 240000, paid_gs: 240000, items: [{ ...initial.items[0], returned_quantity: 1, remaining_quantity: 1, remaining_total_gs: 240000 }] }
+  mocks.detail.mockResolvedValue(conditional); mocks.checkout.mockResolvedValue({ id: 'sale-trial' }); await mount()
+  expect(root.querySelector('.order-piece-count')?.textContent).toBe('1×'); expect(button('.order-finish').disabled).toBe(true)
+  const consent = root.querySelector<HTMLInputElement>('.order-checkbox input')!; consent.click(); await tick(); expect(button('.order-finish').disabled).toBe(false)
+  button('.order-finish').click(); await tick(); expect(mocks.checkout.mock.calls[0][1].payments).toEqual([])
+})
+
+it('keeps conditional partial payments open and forbids settlement when a refund is pending', async () => {
+  mocks.detail.mockResolvedValue({ ...initial, commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z' }); mocks.payment.mockResolvedValue({ ...initial, commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', paid_gs: 240000, balance_gs: 240000 })
+  await mount(); await amount('20'); button('.order-save-payment').click(); await tick()
+  expect(root.textContent).toContain('Condicional mantida'); expect(mocks.checkout).not.toHaveBeenCalled()
+  app!.unmount(); root.remove(); mocks.detail.mockResolvedValue({ ...initial, commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', refund_due_gs: 60000, balance_gs: 0 }); await mount()
+  expect(button('.order-finish').disabled).toBe(true); expect(root.textContent).toContain('Valor a devolver ao cliente')
+})
+
+
+it('explains original, refunded and retained payment amounts in conditional history', async () => {
+  mocks.detail.mockResolvedValue({ ...initial, commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', paid_gs: 60000, payments: [{ ...initial.payments[0], refunded_original: 10, refunded_gs: 60000, remaining_original: 10, remaining_gs: 60000 }] })
+  await mount(); const history = root.querySelector('.order-history')!.textContent!
+  expect(history).toContain('U$ 20'); expect(history).toContain('Devolvido ao cliente: U$ 10'); expect(history).toContain('Mantido no pedido: U$ 10'); expect(root.querySelector('.order-payment-summary')!.textContent).toContain('US$ 10')
+})
+
+it('requires a new retained-piece review after a checkout conflict reloads a newer version', async () => {
+  const conditional = { ...initial, commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', balance_gs: 0, paid_gs: 480000 }
+  mocks.detail.mockResolvedValue(conditional); await mount()
+  root.querySelector<HTMLInputElement>('.order-checkbox input')!.click(); await tick(); expect(button('.order-finish').disabled).toBe(false)
+  mocks.checkout.mockRejectedValueOnce({ response: { status: 409, data: { detail: 'Pedido atualizado. Confira novamente.' } } }); button('.order-finish').click(); await tick()
+  mocks.detail.mockResolvedValueOnce({ ...conditional, commerce_version: 3, total_gs: 240000, paid_gs: 240000, items: [{ ...initial.items[0], remaining_quantity: 1, returned_quantity: 1, remaining_total_gs: 240000 }] })
+  button('.order-error button').click(); await tick()
+  expect(root.querySelector('.order-piece-count')?.textContent).toBe('1×'); expect(root.querySelector<HTMLInputElement>('.order-checkbox input')!.checked).toBe(false); expect(button('.order-finish').disabled).toBe(true)
+})

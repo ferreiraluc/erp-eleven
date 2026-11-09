@@ -5,9 +5,9 @@ import i18n from '@/i18n'
 import { uiText } from '@/i18n/uiText'
 import OrderReservationDetails from './OrderReservationDetails.vue'
 
-const mock = vi.hoisted(() => ({ detail: vi.fn(), cancel: vi.fn(), reversePayment: vi.fn(), printTicket: vi.fn(), ticketState: vi.fn(), ticketPdf: vi.fn() }))
+const mock = vi.hoisted(() => ({ detail: vi.fn(), dispatch: vi.fn(), returnItems: vi.fn(), refundPreview: vi.fn(), cancel: vi.fn(), reversePayment: vi.fn(), printTicket: vi.fn(), ticketState: vi.fn(), ticketPdf: vi.fn() }))
 vi.mock('@/services/orderReservations', async importOriginal => ({ ...await importOriginal<typeof import('@/services/orderReservations')>(), orderReservations: mock }))
-const auth = reactive({ isOwner: false })
+const auth = reactive({ isOwner: false, user: { id: 'seller-qa' } })
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 vi.mock('@/components/inventory/ProductThumbnail.vue', () => ({ default: { props: ['item', 'alt'], template: '<img :alt="alt" />' } }))
 let app: App | undefined, container: HTMLDivElement
@@ -22,8 +22,8 @@ async function mount() {
 }
 const button = (text: string) => Array.from(document.querySelectorAll('button')).find(node => node.textContent?.trim() === text)!
 beforeEach(() => {
-  vi.useFakeTimers(); auth.isOwner = false; i18n.global.locale.value = 'pt'; container = document.createElement('div'); document.body.append(container)
-  mock.detail.mockResolvedValue(order()); mock.ticketState.mockResolvedValue({ printer: null, job: null }); updated.mockReset()
+  vi.useFakeTimers(); sessionStorage.clear(); auth.isOwner = false; i18n.global.locale.value = 'pt'; container = document.createElement('div'); document.body.append(container)
+  mock.refundPreview.mockResolvedValue({ payment_id: payment.id, currency: 'USD', amount_gs: 180000, amount_original: 30, card_fee_gs: 0, expected_version: 4 }); mock.detail.mockResolvedValue(order()); mock.ticketState.mockResolvedValue({ printer: null, job: null }); updated.mockReset()
 })
 afterEach(() => { app?.unmount(); app = undefined; container.remove(); vi.useRealTimers(); vi.resetAllMocks() })
 
@@ -52,7 +52,8 @@ describe('Reserved order details', () => {
     mock.reversePayment.mockResolvedValue(order({ commerce_version: 5, paid_gs: 0, balance_gs: 480000, payments: [{ ...payment, reversed_at: '2026-11-08T16:00:00Z', reversal_reason: 'Cliente desistiu' }] }))
     button('Registrar devolução').click(); await settle()
     expect(button('Confirmar').disabled).toBe(true)
-    const reason = document.querySelector<HTMLTextAreaElement>('.confirmation-panel textarea')!; reason.value = 'Cliente desistiu'; reason.dispatchEvent(new Event('input'))
+    const reason = document.querySelector<HTMLTextAreaElement>('.confirmation-panel textarea')!; reason.value = 'Cliente desistiu'; reason.dispatchEvent(new Event('input')); await settle(); button('Calcular devolução').click(); await settle()
+    expect(document.body.textContent).toContain('Devolva ao cliente'); expect(mock.reversePayment).not.toHaveBeenCalled()
     document.querySelector<HTMLInputElement>('.confirm-check input')!.click(); await settle(); button('Confirmar').click(); await settle()
     expect(mock.reversePayment).toHaveBeenCalledWith('order-1', 'payment-1', expect.objectContaining({ reason: 'Cliente desistiu', confirm: true, expected_version: 4 }))
     expect(button('Cancelar reserva').disabled).toBe(false); expect(updated).toHaveBeenCalledTimes(1)
@@ -65,4 +66,34 @@ describe('Reserved order details', () => {
     expect(mock.cancel).toHaveBeenCalledWith('order-1', expect.objectContaining({ reason: 'Cliente cancelou', expected_version: 4, confirm: true }))
     expect(button('Receber no PDV')).toBeUndefined()
   })
+})
+
+it('delivers only after reviewing identity, then exposes return and pending-ticket actions', async () => {
+  mock.detail.mockResolvedValue(order({ paid_gs: 0, payments: [] })); mock.dispatch.mockResolvedValue(order({ commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', commerce_version: 5 }))
+  await mount(); button('Entregar em condicional').click(); await settle()
+  expect(mock.dispatch).not.toHaveBeenCalled(); expect(button('Confirmar').disabled).toBe(true)
+  document.querySelector<HTMLInputElement>('.confirm-check input')!.click(); await settle(); button('Confirmar').click(); await settle()
+  expect(mock.dispatch).toHaveBeenCalledWith('order-1', expect.objectContaining({ expected_version: 4, confirm: true }))
+  expect(button('Receber peças de volta')).toBeDefined(); expect(button('Imprimir condicional')).toBeDefined(); expect(button('Cancelar reserva')).toBeUndefined(); expect(mock.printTicket).not.toHaveBeenCalled()
+})
+
+it('returns selected quantities once after remount, keeping exact lines and version on retry', async () => {
+  mock.detail.mockResolvedValue(order({ commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z' })); mock.returnItems.mockRejectedValueOnce(new Error('response lost')).mockResolvedValueOnce(order({ commerce_status: 'returned', items: [] }))
+  await mount(); button('Receber peças de volta').click(); await settle()
+  const qty = document.querySelector<HTMLInputElement>('.return-lines input')!; qty.value = '1'; qty.dispatchEvent(new Event('input'))
+  const reason = document.querySelector<HTMLTextAreaElement>('.confirmation-panel textarea')!; reason.value = 'Cliente devolveu'; reason.dispatchEvent(new Event('input')); await settle()
+  document.querySelector<HTMLInputElement>('.confirm-check input')!.click(); await settle(); button('Confirmar').click(); await settle()
+  const first = structuredClone(mock.returnItems.mock.calls[0][1]); expect(first.lines).toEqual([{ line_id: 'line-1', quantity: 1 }])
+  app!.unmount(); app = undefined; await mount(); expect(button('Repetir confirmação')).toBeDefined(); button('Repetir confirmação').click(); await settle()
+  expect(mock.returnItems.mock.calls[1][1]).toEqual(first); expect(sessionStorage.getItem('eleven.order-action.seller-qa.order-1')).toBeNull()
+})
+
+it('blocks settlement with a refund due and invalidates the quote when the refund amount changes', async () => {
+  auth.isOwner = true; mock.detail.mockResolvedValue(order({ commerce_status: 'conditional', delivered_at: '2026-11-08T16:00:00Z', refund_due_gs: 60000, total_gs: 120000, balance_gs: 0 }))
+  mock.refundPreview.mockResolvedValue({ payment_id: payment.id, currency: 'USD', amount_gs: 60000, amount_original: 10, card_fee_gs: 0, expected_version: 4 })
+  await mount(); expect(button('Concluir venda no PDV').disabled).toBe(true); button('Registrar devolução').click(); await settle()
+  const reason = document.querySelector<HTMLTextAreaElement>('.confirmation-panel textarea')!; reason.value = 'Uma peça devolvida'; reason.dispatchEvent(new Event('input')); await settle(); button('Calcular devolução').click(); await settle()
+  expect(mock.refundPreview.mock.calls[0][2]).toMatchObject({ amount_gs: 60000 }); expect(document.querySelector('.refund-preview')!.textContent).toContain('10,00')
+  const field = document.querySelector<HTMLInputElement>('input[aria-label="Valor do pedido a devolver (G$)"]')!; field.value = '30000'; field.dispatchEvent(new Event('input')); await settle()
+  expect(document.querySelector('.refund-preview')).toBeNull(); expect(button('Confirmar').disabled).toBe(true); expect(mock.reversePayment).not.toHaveBeenCalled()
 })

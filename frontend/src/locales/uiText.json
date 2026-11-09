@@ -5523,5 +5523,265 @@
     "pt": "Reservado em pedidos",
     "es": "Reservado en pedidos",
     "en": "Reserved for orders"
+  },
+  "Arquivar anteriores": {
+    "pt": "Arquivar anteriores",
+    "es": "Archivar anteriores",
+    "en": "Archive previous orders"
+  },
+  "Arquivar lista": {
+    "pt": "Arquivar lista",
+    "es": "Archivar lista",
+    "en": "Archive list"
+  },
+  "Arquivar pedidos anteriores": {
+    "pt": "Arquivar pedidos anteriores",
+    "es": "Archivar pedidos anteriores",
+    "en": "Archive previous orders"
+  },
+  "Arquivo de pedidos": {
+    "pt": "Arquivo de pedidos",
+    "es": "Archivo de pedidos",
+    "en": "Order archive"
+  },
+  "As peças acima são as escolhidas pelo cliente. Já registrei todas as devoluções.": {
+    "pt": "As peças acima são as escolhidas pelo cliente. Já registrei todas as devoluções.",
+    "es": "Las prendas de arriba son las elegidas por el cliente. Ya registré todas las devoluciones.",
+    "en": "The items above are those kept by the customer. I have recorded all returns."
+  },
+  "As peças saem do estoque físico e ficam com o cliente para escolha. Ainda não é uma venda concluída.": {
+    "pt": "As peças saem do estoque físico e ficam com o cliente para escolha. Ainda não é uma venda concluída.",
+    "es": "Las prendas salen del stock físico y quedan con el cliente para elegir. Aún no es una venta finalizada.",
+    "en": "Items leave physical stock and stay with the customer to choose. This is not yet a completed sale."
+  },
+  "Atuais e arquivados": {
+    "pt": "Atuais e arquivados",
+    "es": "Actuales y archivados",
+    "en": "Current and archived"
+  },
+  "Calcular devolução": {
+    "pt": "Calcular devolução",
+    "es": "Calcular devolución",
+    "en": "Calculate refund"
+  },
+  "Comece uma lista nova mantendo clientes, pagamentos, vendas e rastreios no histórico. Nenhum registro será excluído.": {
+    "pt": "Comece uma lista nova mantendo clientes, pagamentos, vendas e rastreios no histórico. Nenhum registro será excluído.",
+    "es": "Comience una lista nueva manteniendo clientes, pagos, ventas y seguimientos en el historial. No se eliminará ningún registro.",
+    "en": "Start a new list while keeping customers, payments, sales and tracking in history. No records will be deleted."
+  },
+  "Condicionais devolvidas": {
+    "pt": "Condicionais devolvidas",
+    "es": "Condicionales devueltas",
+    "en": "Returned trial orders"
+  },
+  "Condicionais pendentes": {
+    "pt": "Condicionais pendentes",
+    "es": "Condicionales pendientes",
+    "en": "Pending trial orders"
+  },
+  "Condicional pendente": {
+    "pt": "Condicional pendente",
+    "es": "Condicional pendiente",
+    "en": "Pending trial order"
+  },
+  "Condicional devolvida": {
+    "pt": "Condicional devolvida",
+    "es": "Condicional devuelta",
+    "en": "Returned trial order"
+  },
+  "Condicional registrada. Imprima o ticket para acompanhar as peças.": {
+    "pt": "Condicional registrada. Imprima o ticket para acompanhar as peças.",
+    "es": "Condicional registrada. Imprima el ticket para controlar las prendas.",
+    "en": "Trial order recorded. Print the ticket to track the items."
+  },
+  "Conferi o cliente e todas as peças entregues.": {
+    "pt": "Conferi o cliente e todas as peças entregues.",
+    "es": "Verifiqué el cliente y todas las prendas entregadas.",
+    "en": "I checked the customer and all delivered items."
+  },
+  "Conferi os pedidos. Quero arquivar esta lista e preservar o histórico.": {
+    "pt": "Conferi os pedidos. Quero arquivar esta lista e preservar o histórico.",
+    "es": "Verifiqué los pedidos. Quiero archivar esta lista y conservar el historial.",
+    "en": "I reviewed the orders. I want to archive this list and preserve history."
+  },
+  "Conferindo pedidos…": {
+    "pt": "Conferindo pedidos…",
+    "es": "Verificando pedidos…",
+    "en": "Checking orders…"
+  },
+  "Conferir pedidos que serão arquivados": {
+    "pt": "Conferir pedidos que serão arquivados",
+    "es": "Revisar pedidos que se archivarán",
+    "en": "Review orders to be archived"
+  },
+  "Confira as peças recebidas. Cada quantidade volta ao local de origem indicado abaixo.": {
+    "pt": "Confira as peças recebidas. Cada quantidade volta ao local de origem indicado abaixo.",
+    "es": "Verifique las prendas recibidas. Cada cantidad vuelve al lugar de origen indicado abajo.",
+    "en": "Check the returned items. Each quantity returns to its original location shown below."
+  },
+  "Confirme somente valores já recebidos. As peças continuam com o cliente.": {
+    "pt": "Confirme somente valores já recebidos. As peças continuam com o cliente.",
+    "es": "Confirme solo importes ya recibidos. Las prendas continúan con el cliente.",
+    "en": "Confirm only money already received. Items remain with the customer."
+  },
+  "Devolva ao cliente": {
+    "pt": "Devolva ao cliente",
+    "es": "Devuelva al cliente",
+    "en": "Refund to the customer"
+  },
+  "Devolva as peças não escolhidas antes de concluir a venda.": {
+    "pt": "Devolva as peças não escolhidas antes de concluir a venda.",
+    "es": "Registre las prendas no elegidas antes de finalizar la venta.",
+    "en": "Return the items not kept before completing the sale."
+  },
+  "Entregar em condicional": {
+    "pt": "Entregar em condicional",
+    "es": "Entregar en condicional",
+    "en": "Deliver for customer trial"
+  },
+  "Existem pedidos com peças reservadas ou em condicional. Conclua essas pendências antes de arquivar a lista.": {
+    "pt": "Existem pedidos com peças reservadas ou em condicional. Conclua essas pendências antes de arquivar a lista.",
+    "es": "Hay pedidos con prendas reservadas o en condicional. Resuelva esos pendientes antes de archivar la lista.",
+    "en": "Some orders have reserved or trial items. Resolve these before archiving the list."
+  },
+  "Imprimir condicional": {
+    "pt": "Imprimir condicional",
+    "es": "Imprimir condicional",
+    "en": "Print trial ticket"
+  },
+  "Inclui a taxa de cartão correspondente.": {
+    "pt": "Inclui a taxa de cartão correspondente.",
+    "es": "Incluye el cargo de tarjeta correspondiente.",
+    "en": "Includes the corresponding card fee."
+  },
+  "Lucas precisa registrar a devolução do pagamento para concluir.": {
+    "pt": "Lucas precisa registrar a devolução do pagamento para concluir.",
+    "es": "Lucas debe registrar la devolución del pago para finalizar.",
+    "en": "Lucas must record the payment refund before completion."
+  },
+  "PDV · Condicional": {
+    "pt": "PDV · Condicional",
+    "es": "PDV · Condicional",
+    "en": "POS · Trial order"
+  },
+  "Para devolver peças, volte ao pedido. A conclusão não baixa o estoque novamente.": {
+    "pt": "Para devolver peças, volte ao pedido. A conclusão não baixa o estoque novamente.",
+    "es": "Para devolver prendas, vuelva al pedido. La finalización no descuenta stock nuevamente.",
+    "en": "Return to the order to return items. Completion does not deduct stock again."
+  },
+  "Pedidos atuais": {
+    "pt": "Pedidos atuais",
+    "es": "Pedidos actuales",
+    "en": "Current orders"
+  },
+  "Peças devolvidas ao estoque. Confira o saldo atualizado.": {
+    "pt": "Peças devolvidas ao estoque. Confira o saldo atualizado.",
+    "es": "Prendas devueltas al stock. Verifique el saldo actualizado.",
+    "en": "Items returned to stock. Check the updated balance."
+  },
+  "Peças entregues ao cliente em": {
+    "pt": "Peças entregues ao cliente em",
+    "es": "Prendas entregadas al cliente el",
+    "en": "Items delivered to the customer on"
+  },
+  "Quantidade devolvida de {0}": {
+    "pt": "Quantidade devolvida de {0}",
+    "es": "Cantidad devuelta de {0}",
+    "en": "Returned quantity of {0}"
+  },
+  "Receber peças de volta": {
+    "pt": "Receber peças de volta",
+    "es": "Recibir prendas devueltas",
+    "en": "Receive returned items"
+  },
+  "Recebi e conferi fisicamente estas peças.": {
+    "pt": "Recebi e conferi fisicamente estas peças.",
+    "es": "Recibí y verifiqué físicamente estas prendas.",
+    "en": "I physically received and checked these items."
+  },
+  "Recebimento registrado. Condicional mantida.": {
+    "pt": "Recebimento registrado. Condicional mantida.",
+    "es": "Pago registrado. Condicional mantenida.",
+    "en": "Payment recorded. Trial order remains open."
+  },
+  "Registrar e manter condicional": {
+    "pt": "Registrar e manter condicional",
+    "es": "Registrar y mantener condicional",
+    "en": "Record and keep trial order open"
+  },
+  "Retorna para": {
+    "pt": "Retorna para",
+    "es": "Vuelve a",
+    "en": "Returns to"
+  },
+  "Valor a devolver ao cliente": {
+    "pt": "Valor a devolver ao cliente",
+    "es": "Importe a devolver al cliente",
+    "en": "Amount to refund to customer"
+  },
+  "Valor do pedido a devolver (G$)": {
+    "pt": "Valor do pedido a devolver (G$)",
+    "es": "Importe del pedido a devolver (G$)",
+    "en": "Order amount to refund (G$)"
+  },
+  "Valores recebidos. Confira as peças escolhidas antes de concluir a venda.": {
+    "pt": "Valores recebidos. Confira as peças escolhidas antes de concluir a venda.",
+    "es": "Importes recibidos. Verifique las prendas elegidas antes de finalizar la venta.",
+    "en": "Payment received. Check retained items before completing the sale."
+  },
+  "Ver condicional": {
+    "pt": "Ver condicional",
+    "es": "Ver condicional",
+    "en": "View trial order"
+  },
+  "Volte ao pedido para registrar a devolução do pagamento.": {
+    "pt": "Volte ao pedido para registrar a devolução do pagamento.",
+    "es": "Vuelva al pedido para registrar la devolución del pago.",
+    "en": "Return to the order to record the payment refund."
+  },
+  "CONDICIONAL": {
+    "pt": "CONDICIONAL",
+    "es": "CONDICIONAL",
+    "en": "CUSTOMER TRIAL"
+  },
+  "Devolvidas": {
+    "pt": "Devolvidas",
+    "es": "Devueltas",
+    "en": "Returned"
+  },
+  "Arquivado": {
+    "pt": "Arquivado",
+    "es": "Archivado",
+    "en": "Archived"
+  },
+  "Listagem": {
+    "pt": "Listagem",
+    "es": "Listado",
+    "en": "Listing"
+  },
+  "peças com o cliente": {
+    "pt": "peças com o cliente",
+    "es": "prendas con el cliente",
+    "en": "items with customer"
+  },
+  "peças": {
+    "pt": "peças",
+    "es": "prendas",
+    "en": "items"
+  },
+  "pedidos a arquivar": {
+    "pt": "pedidos a arquivar",
+    "es": "pedidos para archivar",
+    "en": "orders to archive"
+  },
+  "Devolvido ao cliente": {
+    "pt": "Devolvido ao cliente",
+    "es": "Devuelto al cliente",
+    "en": "Refunded to customer"
+  },
+  "Mantido no pedido": {
+    "pt": "Mantido no pedido",
+    "es": "Mantenido en el pedido",
+    "en": "Remaining on order"
   }
 }

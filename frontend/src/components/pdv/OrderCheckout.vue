@@ -1,6 +1,6 @@
 <template>
   <main class="order-checkout">
-    <ModuleHeader :title="uiText('PDV · Pedido separado')" :show-back="false">
+    <ModuleHeader :title="uiText(order?.delivered_at ? 'PDV · Condicional' : 'PDV · Pedido separado')" :show-back="false">
       <button class="erp-button erp-button--secondary" :disabled="busy || !!pending" @click="back">{{ uiText('Voltar ao pedido') }}</button>
     </ModuleHeader>
     <ErpLoadingState v-if="loading" :label="uiText('Carregando pedido…')" :rows="3" />
@@ -18,10 +18,10 @@
           <p>{{ order.vendedor_nome }} · {{ formatDateTime(order.reserved_at) }}</p>
           <span class="order-badge">{{ reservationStatusLabel(order.commerce_status, order.paid_gs, order.balance_gs) }}</span>
         </header>
-        <div v-for="item in order.items" :key="item.id" class="order-line">
-          <div class="order-piece-count">{{ item.quantity }}×</div>
+        <div v-for="item in order.items.filter(line => (line.remaining_quantity ?? line.quantity) > 0)" :key="item.id" class="order-line">
+          <div class="order-piece-count">{{ item.remaining_quantity ?? item.quantity }}×</div>
           <div><strong>{{ item.item_name }}</strong><small>{{ [item.item_size, item.item_color, item.location === 'loja' ? uiText('Loja') : uiText('Depósito')].filter(Boolean).join(' · ') }}</small><small>{{ item.item_sku }}</small></div>
-          <strong class="order-line-value">{{ usd(item.total_gs) }}</strong>
+          <strong class="order-line-value">{{ usd(item.remaining_total_gs ?? item.total_gs) }}</strong>
         </div>
         <footer class="order-totals">
           <div><span>{{ uiText('Subtotal') }}</span><span>{{ usd(order.subtotal_gs) }}</span></div>
@@ -39,10 +39,10 @@
           <summary>{{ uiText('Histórico de pagamentos') }} · {{ order.payments.length }}</summary>
           <div v-for="payment in order.payments" :key="payment.id" class="order-payment" :class="{ reversed: payment.reversed_at }">
             <div><strong>{{ paymentLabel(payment.method) }}</strong><small>{{ formatDateTime(payment.created_at) }}</small><small v-if="payment.reversed_at">{{ uiText('Estornado') }} · {{ payment.reversal_reason }}</small></div>
-            <span>{{ paymentSymbol(payment.currency) }} {{ number(payment.amount_original) }}</span>
+            <div class="order-payment-amounts"><span>{{ paymentSymbol(payment.currency) }} {{ number(payment.amount_original) }}</span><small v-if="Number(payment.refunded_original) > 0">{{ uiText('Devolvido ao cliente') }}: {{ paymentSymbol(payment.currency) }} {{ number(Number(payment.refunded_original)) }}</small><small v-if="Number(payment.refunded_original) > 0">{{ uiText('Mantido no pedido') }}: <strong>{{ paymentSymbol(payment.currency) }} {{ number(Number(payment.remaining_original || 0)) }}</strong></small></div>
           </div>
         </details>
-        <fieldset v-if="order.commerce_status === 'reserved'" :disabled="busy || !!pending" class="order-payment-form">
+        <fieldset v-if="active" :disabled="busy || !!pending" class="order-payment-form">
           <template v-if="order.balance_gs > 0">
             <h3>{{ uiText('Novo recebimento') }}</h3>
             <label>{{ uiText('Método de pagamento') }}
@@ -61,15 +61,17 @@
             </div>
             <p v-if="invalidChange" class="order-error">{{ uiText('Troco só pode vir de pagamento em dinheiro.') }}</p>
             <p v-if="ratesError" class="order-error">{{ uiText('Confira o câmbio deste recebimento antes de confirmar.') }}</p>
-            <button class="erp-button erp-button--secondary order-save-payment" :disabled="!canDeposit" @click="submit('payment')">{{ uiText('Registrar e manter separado') }}</button>
-            <small>{{ uiText('Confirme somente valores já recebidos. O pedido continua reservado.') }}</small>
+            <button class="erp-button erp-button--secondary order-save-payment" :disabled="!canDeposit" @click="submit('payment')">{{ uiText(order.delivered_at ? 'Registrar e manter condicional' : 'Registrar e manter separado') }}</button>
+            <small>{{ uiText(order.delivered_at ? 'Confirme somente valores já recebidos. As peças continuam com o cliente.' : 'Confirme somente valores já recebidos. O pedido continua reservado.') }}</small>
           </template>
-          <div v-else class="order-paid" role="status">{{ uiText('Pedido pago. Os itens continuam separados até concluir a venda.') }}</div>
+          <div v-else class="order-paid" role="status">{{ uiText(order.delivered_at ? 'Valores recebidos. Confira as peças escolhidas antes de concluir a venda.' : 'Pedido pago. Os itens continuam separados até concluir a venda.') }}</div>
+          <p v-if="Number(order.refund_due_gs) > 0" class="order-error">{{ uiText('Valor a devolver ao cliente') }}: {{ usd(order.refund_due_gs!) }}. {{ uiText('Volte ao pedido para registrar a devolução do pagamento.') }}</p>
+          <label v-if="order.delivered_at && retainedCount > 0 && !Number(order.refund_due_gs)" class="order-checkbox"><input v-model="retainedConfirmed" type="checkbox" />{{ uiText('As peças acima são as escolhidas pelo cliente. Já registrei todas as devoluções.') }}</label>
           <button class="erp-button erp-button--primary order-finish" :disabled="!canComplete" @click="submit('checkout')">
             {{ uiText(order.balance_gs > 0 ? 'Receber saldo, concluir e imprimir' : 'Concluir venda e imprimir') }}
           </button>
           <small v-if="order.balance_gs > 0 && canComplete">{{ uiText('A conclusão registra o recebimento acima e aproveita os pagamentos anteriores.') }}</small>
-          <small>{{ uiText('Para mudar produtos, preços ou desconto, volte ao pedido.') }}</small>
+          <small>{{ uiText(order.delivered_at ? 'Para devolver peças, volte ao pedido. A conclusão não baixa o estoque novamente.' : 'Para mudar produtos, preços ou desconto, volte ao pedido.') }}</small>
         </fieldset>
         <div v-else-if="order.sale_id" class="order-completed">
           <p>{{ uiText('Este pedido já foi convertido em venda.') }}</p>
@@ -124,7 +126,13 @@ const payment = computed<PdvPaymentCreate | null>(() => {
 const change = computed(() => Math.max(0, cents((payment.value?.amount_gs || 0) - (order.value?.balance_gs || 0))))
 const invalidChange = computed(() => change.value > 0 && !method.value.startsWith('cash_'))
 const canDeposit = computed(() => !!payment.value && !invalidChange.value && !!order.value && payment.value.amount_gs > 0 && payment.value.amount_gs <= order.value.balance_gs)
-const canComplete = computed(() => !!order.value && order.value.commerce_status === 'reserved' && !invalidChange.value && (order.value.balance_gs === 0 || !!payment.value && cents(payment.value.amount_gs) >= cents(order.value.balance_gs)))
+const active = computed(() => ['reserved', 'conditional'].includes(order.value?.commerce_status || ''))
+const retainedCount = computed(() => order.value?.items.reduce((sum, item) => sum + (item.remaining_quantity ?? item.quantity), 0) || 0)
+const retainedConfirmed = ref(false)
+// A changed server version can include returns made by another device. Review
+// the refreshed retained items again, even when recovering from a 409 conflict.
+watch(() => order.value?.commerce_version, (version, previous) => { if (version !== previous) retainedConfirmed.value = false })
+const canComplete = computed(() => !!order.value && active.value && retainedCount.value > 0 && !Number(order.value.refund_due_gs) && (!order.value.delivered_at || retainedConfirmed.value) && !invalidChange.value && (order.value.balance_gs === 0 || !!payment.value && cents(payment.value.amount_gs) >= cents(order.value.balance_gs)))
 type Pending = { kind: 'payment' | 'checkout'; orderId: string; userId: string; body: ReservationCommand & { payment?: PdvPaymentCreate; payments?: PdvPaymentCreate[]; print_receipt?: boolean } }
 const pending = ref<Pending | null>(null)
 const storageKey = computed(() => `eleven.order-payment.${auth.user?.id || ''}.${props.pedidoId}`)
@@ -174,7 +182,7 @@ async function retry() {
     if (intent.kind === 'payment') {
       const updated = await orderReservations.payment(intent.orderId, { ...intent.body, payment: intent.body.payment! })
       if (disposed || request !== generation) return
-      order.value = updated; notice.value = uiText('Recebimento registrado. Pedido mantido separado.')
+      order.value = updated; notice.value = uiText(updated.delivered_at ? 'Recebimento registrado. Condicional mantida.' : 'Recebimento registrado. Pedido mantido separado.')
     } else {
       const sale = await orderReservations.checkout(intent.orderId, { ...intent.body, payments: intent.body.payments || [], print_receipt: true })
       if (disposed || request !== generation) return
@@ -198,7 +206,7 @@ async function retry() {
 watch(() => props.pedidoId, async () => {
   generation++; busy.value = false
   const requestedOrder = props.pedidoId
-  order.value = null; pending.value = null; amount.value = null
+  order.value = null; pending.value = null; amount.value = null; retainedConfirmed.value = false
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey.value) || 'null') as Pending | null
     if (saved && saved.orderId === props.pedidoId && saved.userId === auth.user?.id && ['payment', 'checkout'].includes(saved.kind) && saved.body?.request_id) {
@@ -217,6 +225,7 @@ onBeforeUnmount(() => { disposed = true; generation++ })
 </script>
 
 <style scoped>
+.order-payment-amounts{display:flex;flex-direction:column;gap:5px;text-align:right;max-width:60%}.order-payment-amounts small{font-size:.72rem;color:#64748b}
 .order-checkout { min-height: 100%; background: #f7f9fc; color: #182235; }
 .order-columns { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr); gap: 20px; max-width: 1150px; margin: 20px auto; padding: 0 20px 28px; align-items: start; }
 .order-card { background: white; border: 1px solid #e0e7f0; border-radius: 18px; overflow: hidden; box-shadow: 0 3px 14px #14243b05; }
