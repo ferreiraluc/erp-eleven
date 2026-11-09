@@ -23,10 +23,11 @@ try {
     if (-not $printers.Count) { throw 'Nenhuma impressora instalada. Instale o driver da impressora e teste um PDF no Windows.' }
     if ($AgentProfile -eq 'product_labels') { Write-Host 'Etiquetas de produtos: Zebra ZD220 USB. Feche o antigo Eleven Tickets da Zebra.' }
     elseif ($AgentProfile -eq 'tickets') { Write-Host 'Tickets Zebra ZD220. Selecione a fila USB que imprime no Windows.' }
-    else { Write-Host 'Atualizacao para Samsung SL-M2035W. Selecione a fila que ja imprime no Windows.' }
+    else { Write-Host 'Atualizacao do Eleven Impressao (A4). Selecione a fila que ja imprime no Windows.' }
     Write-Host 'O nome do driver pode ser diferente do modelo escrito na impressora.'
     if ($existing) { Write-Host "Destino anterior: $($existing.printer)" }
-    $suggested = Get-SuggestedPrinterIndex $printers $AgentProfile
+    $currentPrinter = if ($existing -and ($existing.profile -eq $AgentProfile -or (-not $existing.profile -and $AgentProfile -eq 'documents'))) { $existing.printer } else { '' }
+    $suggested = Get-SuggestedPrinterIndex $printers $AgentProfile $currentPrinter
     for ($i = 0; $i -lt $printers.Count; $i++) { Write-Host "$($i + 1): $($printers[$i])" }
     $prompt = 'Numero da impressora da loja'
     if ($suggested -ge 0) { $prompt += " (Enter = $($suggested + 1))" }

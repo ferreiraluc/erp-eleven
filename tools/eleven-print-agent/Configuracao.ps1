@@ -1,5 +1,12 @@
 # Shared by the installer; never touches the print queue.
-function Get-SuggestedPrinterIndex([string[]]$Printers, [string]$Profile = 'documents') {
+function Get-SuggestedPrinterIndex([string[]]$Printers, [string]$Profile = 'documents', [string]$CurrentPrinter = '') {
+    # Upgrades keep the installed destination as the suggestion, including HP
+    # queues. The operator still confirms it before the configuration is saved.
+    if ($CurrentPrinter) {
+        for ($i = 0; $i -lt $Printers.Count; $i++) {
+            if ($Printers[$i] -eq $CurrentPrinter) { return $i }
+        }
+    }
     $matchingIndexes = @()
     for ($i = 0; $i -lt $Printers.Count; $i++) {
         if (($Profile -in @('tickets', 'product_labels') -and $Printers[$i] -match '(?i)ZD220\b') -or ($Profile -eq 'documents' -and $Printers[$i] -match '(?i)(?:SL[- ]?)?M2035W\b')) { $matchingIndexes += $i }
