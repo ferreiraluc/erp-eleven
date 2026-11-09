@@ -4,7 +4,8 @@ from .cambista import Cambista
 from .comprovante import Comprovante
 from .cliente import Cliente
 from .pedido import Pedido
-from .pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation
+from .pedido_archive import PedidoArchiveOperation
+from .pedido_reserva import PedidoItem, PedidoPayment, PedidoOperation, PedidoPaymentRefund
 from .pedido_tag import TagStatus, pedido_tags_association
 from .funcionario import Funcionario
 from .folga import Folga, TipoFolga

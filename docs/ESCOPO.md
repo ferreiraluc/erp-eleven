@@ -107,6 +107,12 @@ no PDV; reservas não contam como outra venda. O ticket de separação identific
 sacola pela impressora de tickets. Pedidos logísticos antigos não são convertidos
 automaticamente: nenhuma peça é inferida de uma descrição livre durante o deploy.
 
+Pedidos também suportam entrega em condicional para escolha e devolução de peças,
+com saída física, ticket de controle e acerto posterior das peças mantidas no PDV.
+Devoluções e reembolsos permanecem auditáveis. Lucas pode arquivar a listagem antiga
+após prévia, conservando histórico e vínculos; reservas e condicionais pendentes
+impedem zerar a lista. Não existe remoção de tabelas ou histórico nesse fluxo.
+
 Ajustes manuais incorporados nas células entram no resultado do BI sem expor fórmulas.
 Arquivos mensais têm prioridade sobre a planilha corrente do mesmo período, evitando
 contagem dupla. Um valor ausente permanece ausente; zero é um resultado válido.

@@ -103,3 +103,31 @@ def test_long_description_is_wrapped_without_html_interpretation(tickets):
     pdf = PdfReader(io.BytesIO(order_tickets.render(data)))
     assert len(pdf.pages) == 1
     assert '<Boss> &' in pdf.pages[0].extract_text()
+
+
+def test_conditional_ticket_tracks_handoff_returns_and_keeps_queued_snapshot(tickets):
+    factory, client, cid, iid, *_ = tickets
+    order = reserve(client, cid, iid, 3)
+    url = f"/api/pedidos/{order['id']}"
+    response = client.post(url + '/condicional', json=command(1))
+    assert response.status_code == 200, response.text
+    ticket = url + '/reserva/ticket'
+    queued = client.post(ticket, json=command(2))
+    assert queued.status_code == 200, queued.text
+    returned = client.post(url + '/devolver-itens', json=command(2,
+        reason='Devolução sintética de uma peça', lines=[{'line_id': order['items'][0]['id'], 'quantity': 1}]))
+    assert returned.status_code == 200, returned.text
+    pdf_response = client.get(ticket)
+    assert 'condicional' in pdf_response.headers['content-disposition']
+    pdf = PdfReader(io.BytesIO(pdf_response.content))
+    text = pdf.pages[0].extract_text()
+    assert len(pdf.pages) == 1
+    for expected in ('ENTREGA EN CONDICIONAL', 'PENDIENTE DE RESOLUCIÓN', 'Entregado:',
+                     'Devueltas: 1', 'Por resolver: 2', 'Saldo pendiente: US$ 20,00', 'Comprobante de control'):
+        assert expected in text
+    with factory() as db:
+        saved = db.get(PrintJob, uuid.UUID(queued.json()['job']['id']))
+        assert saved.snapshot['items'][0]['remaining_quantity'] == 3
+        assert saved.snapshot['commerce_status'] == 'conditional'
+        assert db.query(PdvSale).count() == 0
+    assert balances(factory, iid) == (8, 4, 4, 0, 0)

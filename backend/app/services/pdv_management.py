@@ -8,7 +8,7 @@ import json
 import uuid
 from fastapi import HTTPException
 from sqlalchemy import or_, func, case as sa_case
-from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm import joinedload, load_only, selectinload
 from sqlalchemy.exc import IntegrityError
 from ..config import settings
 from ..models.pdv import PdvSale, PdvSaleItem, PdvPayment, PdvCliente, PdvFiadoMovement, PdvSaleEvent
@@ -142,6 +142,31 @@ def _debt(db,sale):
     return money(sum((r.valor_gs if r.tipo=='debit' else -r.valor_gs if r.tipo=='credit' else 0)
                      for r in db.query(PdvFiadoMovement).filter_by(sale_id=sale.id).all()))
 
+
+def _refunded_order_payment(db, original):
+    """Preserve an exact audited net deposit, including foreign-cent rounding.
+
+    Owner revisions replace sale payment rows, so their original FK may already
+    be NULL. The immutable order/sale link and complete financial tuple survive.
+    A changed input never reaches this path: it must first match a current row.
+    """
+    from ..models.pedido import Pedido
+    from ..models.pedido_reserva import PedidoPayment
+    from .order_reservations import _payment_net, PAYMENT_FIELDS
+
+    deposits = db.query(PedidoPayment).join(Pedido, Pedido.id == PedidoPayment.pedido_id).options(
+        selectinload(PedidoPayment.refunds)).filter(
+        Pedido.sale_id == original.sale_id, Pedido.commerce_status == 'completed',
+        PedidoPayment.reversed_at.is_(None)).all()
+    for deposit in deposits:
+        if not deposit.refunds:
+            continue
+        net = _payment_net(deposit)
+        if net['amount_gs'] > 0 and all(getattr(original, key) == net[key] for key in PAYMENT_FIELDS):
+            return net
+    return None
+
+
 def _validated_edit(db,body,original_payments=()):
     if not body.items or len(body.items)>200 or not body.payments or len(body.payments)>30:raise HTTPException(422,'Informe de 1 a 200 itens e de 1 a 30 pagamentos.')
     data=body.model_dump()
@@ -163,7 +188,13 @@ def _validated_edit(db,body,original_payments=()):
         original = next((old for old in legacy_candidates if unchanged_payment(p, old)), None)
         if original is not None:
             legacy_candidates.remove(original)
-        p.update(validate_payment(p, preserve_legacy=original is not None))
+        try:
+            validated = validate_payment(p, preserve_legacy=original is not None)
+        except HTTPException:
+            validated = _refunded_order_payment(db, original) if original is not None else None
+            if validated is None:
+                raise
+        p.update(validated)
         paid+=p['amount_gs']
     # For a correction, payments represent the amount applied, excluding change.
     if money(paid)!=data['total_gs']:raise HTTPException(422,'Os pagamentos corrigidos devem somar o total da venda, sem incluir troco.')
