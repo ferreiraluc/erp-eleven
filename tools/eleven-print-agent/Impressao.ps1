@@ -6,7 +6,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     Read-Host 'Pressione Enter para fechar'
     return
 }
-$script:AgentVersion = '2026.11.05.1'
+$script:AgentVersion = '2026.11.09.1'
 
 function Save-Journal($path, $item) {
     $tmp = "$path.tmp"
@@ -70,20 +70,110 @@ function Set-PrintOutcome($record, $status, $code, $duration = 0, $exitCode = $n
     }
 }
 
-function Test-OwnedRendererRunning($record) {
+function Get-NativeRendererIdentity([int]$processNumber) {
+    # .NET Framework Process.HasExited/StartTime can require more access than
+    # this read-only query. Never open a terminate handle or inspect by PID alone.
+    if (-not ('Eleven.RendererProcessProbe' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+namespace Eleven {
+    public sealed class RendererProcessIdentity {
+        public bool Exists { get; set; }
+        public bool HasExited { get; set; }
+        public long StartedTicks { get; set; }
+    }
+    public static class RendererProcessProbe {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FileTime { public uint Low; public uint High; }
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint access, bool inherit, int processId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetProcessTimes(IntPtr process, out FileTime created, out FileTime exited, out FileTime kernel, out FileTime user);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetExitCodeProcess(IntPtr process, out uint code);
+        [DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr handle);
+        private static long Value(FileTime value) { return ((long)value.High << 32) | value.Low; }
+        public static RendererProcessIdentity Read(int processId) {
+            if (processId <= 0) throw new ArgumentOutOfRangeException("processId");
+            IntPtr handle = OpenProcess(0x1000, false, processId); // PROCESS_QUERY_LIMITED_INFORMATION
+            if (handle == IntPtr.Zero) {
+                int error = Marshal.GetLastWin32Error();
+                // With a valid positive PID, ERROR_INVALID_PARAMETER means no
+                // such process. Access denied/other errors prove nothing.
+                if (error == 87) return new RendererProcessIdentity { Exists = false };
+                throw new Win32Exception(error);
+            }
+            try {
+                FileTime created, exited, kernel, user;
+                if (!GetProcessTimes(handle, out created, out exited, out kernel, out user))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                if (Value(created) <= 0) throw new InvalidOperationException("Process creation time unavailable");
+                uint exitCode;
+                if (!GetExitCodeProcess(handle, out exitCode))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                return new RendererProcessIdentity {
+                    // GetProcessTimes' exit timestamp is undefined while active.
+                    // STILL_ACTIVE (259) is conservatively treated as running.
+                    Exists = true, HasExited = exitCode != 259,
+                    StartedTicks = DateTime.FromFileTimeUtc(Value(created)).Ticks
+                };
+            } finally { CloseHandle(handle); }
+        }
+    }
+}
+'@
+    }
+    return [Eleven.RendererProcessProbe]::Read($processNumber)
+}
+
+function Test-OwnedRendererRunning($record,
+    [scriptblock]$getProcess = { param($processNumber); [Diagnostics.Process]::GetProcessById($processNumber) },
+    [scriptblock]$getNativeIdentity = { param($processNumber); Get-NativeRendererIdentity $processNumber }) {
     # These outcomes prove the child exited or was never started. Windows can
     # reuse its old PID for an unrelated/protected process; do not inspect it.
     if ($record.status -in @('submitted', 'failed') -or $record.renderer_exited -eq $true) { return $false }
     # Older journals have no renderer_exited flag, but an exit-code diagnostic
     # is also written only after WaitForExit succeeds. Preserve their uncertainty.
     if ($record.diagnostic.code -eq 'renderer_exit_error' -and $null -ne $record.diagnostic.exit_code) { return $false }
-    if (-not $record.process_id -or -not $record.process_started_ticks) { return $false }
+    if (-not $record.process_id) { return $false }
+    $processNumber = 0; $expectedTicks = [long]0
+    if (-not [int]::TryParse([string]$record.process_id, [ref]$processNumber) -or $processNumber -le 0) {
+        throw (New-Object InvalidOperationException 'Identidade do renderizador invalida no diario.')
+    }
+    if ($record.process_started_ticks -and (-not [long]::TryParse([string]$record.process_started_ticks, [ref]$expectedTicks) -or
+        $expectedTicks -le 0 -or $expectedTicks -gt [DateTime]::MaxValue.Ticks)) {
+        throw (New-Object InvalidOperationException 'Horario do renderizador invalido no diario.')
+    }
     try {
-        $p = [Diagnostics.Process]::GetProcessById([int]$record.process_id)
-        try { return (-not $p.HasExited -and $p.StartTime.ToUniversalTime().Ticks.ToString() -eq $record.process_started_ticks) }
+        $p = & $getProcess $processNumber
+        # PowerShell silently turns exceptions from property getters into null.
+        # Explicit methods preserve Win32/exit errors for the safe fallback.
+        try {
+            if ($p.get_HasExited()) { return $false }
+            if (-not $expectedTicks) { throw (New-Object InvalidOperationException 'Horario do renderizador ausente no diario.') }
+            return ($p.get_StartTime().ToUniversalTime().Ticks -eq $expectedTicks)
+        }
         finally { $p.Dispose() }
     } catch [ArgumentException] { return $false }
-    # Access denied must block, not assume an old process ended.
+    catch {
+        $identity = & $getNativeIdentity $processNumber
+        if ($null -eq $identity -or $identity.Exists -isnot [bool]) {
+            throw (New-Object InvalidOperationException 'Nao foi possivel confirmar a identidade do renderizador.')
+        }
+        if (-not $identity.Exists) { return $false }
+        if ($identity.HasExited -isnot [bool]) {
+            throw (New-Object InvalidOperationException 'Identidade incompleta do renderizador.')
+        }
+        if ($identity.HasExited) { return $false }
+        if (-not $expectedTicks -or $identity.StartedTicks -isnot [long] -or $identity.StartedTicks -le 0) {
+            throw (New-Object InvalidOperationException 'Horario do renderizador indisponivel; processo ainda ativo.')
+        }
+        return ($identity.StartedTicks -eq $expectedTicks)
+    }
+    # Access denied in both readers still blocks. Never assume an old PID ended.
 }
 
 function Assert-RendererStopped($record) {
@@ -97,11 +187,12 @@ function Assert-RendererStopped($record) {
 function Get-AgentPauseDiagnostic($failure, [string]$stage, $record) {
     $stages = @('connect', 'journal_read', 'journal_write', 'renderer_check', 'resume_job', 'acknowledge', 'claim', 'process_job', 'cleanup')
     if ($stage -notin $stages) { $stage = 'unknown' }
-    $status = 0; $rendererActive = $false; $exception = $failure.Exception
+    $status = 0; $rendererActive = $false; $windowsError = 0; $exception = $failure.Exception
     # Read only typed metadata: never expose HTTP bodies, headers, token, document
     # contents, local paths or Exception.Message (which can contain any of those).
     for ($depth = 0; $exception -and $depth -lt 5; $depth++) {
         if ($exception.Data['ElevenPauseCode'] -eq 'renderer_active') { $rendererActive = $true }
+        if ($exception -is [ComponentModel.Win32Exception]) { $windowsError = [int]$exception.NativeErrorCode }
         if ($exception.PSObject.Properties['Response'] -and $exception.Response) {
             try { $status = [int]$exception.Response.StatusCode } catch { }
         }
@@ -109,7 +200,11 @@ function Get-AgentPauseDiagnostic($failure, [string]$stage, $record) {
     }
     $code = 'agent_error'; $hint = 'Envie este diagnostico ao suporte. Nao apague journal nem solicite outra copia sem conferir o papel.'
     if ($rendererActive) { $code = 'renderer_active'; $hint = 'Um processo de impressao deste trabalho ainda esta ativo. Confira o processo e a fila do Windows antes de outra copia.' }
-    elseif ($stage -eq 'renderer_check') { $code = 'renderer_check_failed'; $hint = 'O Windows nao permitiu verificar um renderizador anterior. Confira a fila; nao apague o diario para destravar.' }
+    elseif ($stage -eq 'renderer_check') {
+        $code = 'renderer_check_failed'
+        $hint = if ($windowsError -eq 5) { 'O Windows negou acesso ao processo anterior. Nenhum processo foi encerrado. Confira a fila e envie o diagnostico; nao apague o diario.' }
+            else { 'Nao foi possivel confirmar se o renderizador anterior terminou. Confira a fila e envie o diagnostico; nao apague o diario para destravar.' }
+    }
     elseif ($status -in @(401, 403)) { $code = 'credential_rejected'; $hint = 'O ERP recusou a credencial. Confira o perfil A4/Tickets/Etiquetas e a credencial no instalador; nao apague o diario.' }
     elseif ($status -eq 409 -and $stage -eq 'connect') { $code = 'profile_conflict'; $hint = 'A credencial nao corresponde ao perfil A4/Tickets/Etiquetas. Use o instalador do mesmo perfil.' }
     elseif ($status -eq 409) { $code = 'job_conflict'; $hint = 'O ERP recusou a operacao por conflito. Confira o trabalho no ERP e envie este diagnostico; nao reimprima nem apague o diario.' }
@@ -122,11 +217,11 @@ function Get-AgentPauseDiagnostic($failure, [string]$stage, $record) {
     $processId = 0
     if ($record) { [int]::TryParse([string]$record.process_id, [ref]$processId) | Out-Null }
     $errorType = if ($failure.Exception) { $failure.Exception.GetType().Name } else { 'Unknown' }
-    return @{ code=$code; hint=$hint; stage=$stage; http=$status; job=$jobId; process_id=[Math]::Max(0,$processId); error_type=$errorType; agent_version=$script:AgentVersion }
+    return @{ code=$code; hint=$hint; stage=$stage; http=$status; job=$jobId; process_id=[Math]::Max(0,$processId); windows_error=[Math]::Max(0,$windowsError); error_type=$errorType; agent_version=$script:AgentVersion }
 }
 
 function Write-AgentPause($folder, $diagnostic) {
-    $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Fila pausada [$($diagnostic.code)] | etapa=$($diagnostic.stage) | HTTP=$($diagnostic.http) | trabalho=$($diagnostic.job) | PID=$($diagnostic.process_id) | erro=$($diagnostic.error_type) | agente=$($diagnostic.agent_version)"
+    $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Fila pausada [$($diagnostic.code)] | etapa=$($diagnostic.stage) | HTTP=$($diagnostic.http) | trabalho=$($diagnostic.job) | PID=$($diagnostic.process_id) | Windows=$($diagnostic.windows_error) | erro=$($diagnostic.error_type) | agente=$($diagnostic.agent_version)"
     Write-Host $line
     Write-Host $diagnostic.hint
     Write-Host 'Nova verificacao em 30 segundos. Nenhum trabalho enviado sera reimpresso automaticamente.'
@@ -153,12 +248,17 @@ function Invoke-Renderer($record, $recordPath, $executable, $arguments, $timeout
         if (-not $p.Start()) { throw 'Renderer did not start' }
         $launched = $true
         $record.renderer_exited = $false
-        $record.process_id = $p.Id
-        $record.process_started_ticks = $p.StartTime.ToUniversalTime().Ticks.ToString()
+        $record.process_id = $p.get_Id()
+        try { $record.process_started_ticks = $p.get_StartTime().ToUniversalTime().Ticks.ToString() }
+        catch {
+            $identity = Get-NativeRendererIdentity $record.process_id
+            if (-not $identity.Exists) { throw 'Nao foi possivel identificar o renderizador iniciado.' }
+            $record.process_started_ticks = $identity.StartedTicks.ToString()
+        }
         Save-Journal $recordPath $record
         if ($p.WaitForExit($timeoutMs)) {
             $record.renderer_exited = $true
-            $exitCode = $p.ExitCode
+            $exitCode = $p.get_ExitCode()
             if ($exitCode -eq 0) { Set-PrintOutcome $record 'submitted' 'renderer_accepted' $watch.ElapsedMilliseconds $exitCode }
             else { Set-PrintOutcome $record 'uncertain' 'renderer_exit_error' $watch.ElapsedMilliseconds $exitCode }
         } else {

@@ -15,6 +15,9 @@ Assert ((Get-SuggestedPrinterIndex @('Microsoft Print to PDF', 'Samsung M203x Se
 Assert ((Get-SuggestedPrinterIndex @('Samsung SL-M2035W', 'ZDesigner ZD220') 'tickets') -eq 1) 'Ticket installer must suggest Zebra only'
 Assert ((Get-SuggestedPrinterIndex @('Samsung SL-M2035W') 'tickets') -eq -1) 'Ticket installer must not reuse Samsung'
 Assert ((Get-SuggestedPrinterIndex @('ZDesigner ZD220', 'ZDesigner ZD220 USB') 'tickets') -eq -1) 'Ambiguous Zebra queues require choice'
+Assert ((Get-SuggestedPrinterIndex @('HP Laser 103 107 108', 'Samsung SL-M2035W') 'documents' 'HP Laser 103 107 108') -eq 0) 'Upgrade must suggest the existing HP destination before another model'
+Assert ((Get-SuggestedPrinterIndex @('HP Laser 103 107 108') 'documents' 'Removed printer') -eq -1) 'Missing configured destination still requires a selection'
+Assert ((Get-SuggestedPrinterIndex @('ZDesigner ZD220', 'ZDesigner ZD220 USB') 'product_labels' 'ZDesigner ZD220 USB') -eq 1) 'Explicit existing destination disambiguates an upgrade'
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('eleven-config-test-' + [Guid]::NewGuid())
 New-Item -ItemType Directory -Path $root | Out-Null

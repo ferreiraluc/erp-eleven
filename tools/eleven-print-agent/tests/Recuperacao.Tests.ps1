@@ -2,10 +2,77 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Impressao.ps1')
 function Assert($condition, $message) { if (-not $condition) { throw $message } }
 
+# Reproduce PowerShell's suppressed .NET property-getter failure. This is a fake
+# process: no credentials, spooler, Sumatra, protected process or network access.
+if (-not ('ElevenRecoveryTestProcess' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+public sealed class ElevenRecoveryTestProcess : IDisposable {
+    public bool Exited;
+    public bool FailExit;
+    public int FailStart;
+    public bool Disposed;
+    public DateTime Created = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc).AddTicks(7);
+    public bool HasExited { get { if (FailExit) throw new Win32Exception(5); return Exited; } }
+    public DateTime StartTime { get {
+        if (FailStart == -1) throw new InvalidOperationException("Synthetic process exited during inspection");
+        if (FailStart != 0) throw new Win32Exception(FailStart);
+        return Created;
+    } }
+    public void Dispose() { Disposed = true; }
+}
+'@
+}
+$probe = New-Object ElevenRecoveryTestProcess
+$probe.FailStart = 5
+$legacyFailure = $null
+try { $probe.StartTime.ToUniversalTime() | Out-Null } catch { $legacyFailure = $_ }
+Assert ($legacyFailure -and $legacyFailure.Exception.GetType().Name -eq 'RuntimeException') 'Missing reproduction of swallowed StartTime failure'
+$record = @{id='d0fdbd00-5e5a-465f-9cea-968a6558f29a';status='uncertain';acked=$true;process_id=1684;process_started_ticks=$probe.Created.Ticks.ToString();diagnostic=@{code='agent_restarted'}}
+$before = $record | ConvertTo-Json -Compress
+$openProbe = { param($processNumber); Assert ($processNumber -eq 1684) 'Wrong renderer PID'; return $probe }
+$sameIdentity = { param($processNumber); return @{Exists=$true;HasExited=$false;StartedTicks=[long]$probe.Created.Ticks} }
+Assert (Test-OwnedRendererRunning $record $openProbe $sameIdentity) 'Same inaccessible renderer must still block'
+Assert ($probe.Disposed) 'Failed .NET inspection leaked its process handle'
+$reusedIdentity = { param($processNumber); return @{Exists=$true;HasExited=$false;StartedTicks=[long]$probe.Created.AddSeconds(1).Ticks} }
+Assert (-not (Test-OwnedRendererRunning $record $openProbe $reusedIdentity)) 'Independent creation time must identify reused PID'
+$exitedIdentity = { param($processNumber); return @{Exists=$true;HasExited=$true;StartedTicks=[long]$probe.Created.Ticks} }
+Assert (-not (Test-OwnedRendererRunning $record $openProbe $exitedIdentity)) 'Proven exited renderer must not block'
+$probe.FailStart = -1
+Assert (-not (Test-OwnedRendererRunning $record $openProbe { return @{Exists=$false} })) 'Exit during StartTime read must recover safely'
+$probe.FailExit = $true
+Assert (Test-OwnedRendererRunning $record $openProbe $sameIdentity) 'HasExited getter failures must use independent identity too'
+$denied = $null
+try { Test-OwnedRendererRunning $record $openProbe { throw (New-Object ComponentModel.Win32Exception 5) } | Out-Null } catch { $denied = $_ }
+Assert ($null -ne $denied) 'Unknown/protected process must not be assumed stopped'
+$diagnostic = Get-AgentPauseDiagnostic $denied 'renderer_check' $record
+Assert ($diagnostic.code -eq 'renderer_check_failed' -and $diagnostic.windows_error -eq 5) 'Native access denial must retain safe numeric reason'
+foreach ($unavailable in @({ return $null }, { return @{Exists=$true;HasExited=$false} })) {
+    $failed = $false
+    try { Test-OwnedRendererRunning $record $openProbe $unavailable | Out-Null } catch { $failed = $true }
+    Assert ($failed) 'Incomplete independent inspection must fail closed'
+}
+$missingTicks = $record.Clone(); $missingTicks.Remove('process_started_ticks')
+$probe.FailExit = $false; $probe.FailStart = 0; $probe.Exited = $false
+$blocked = $false
+try { Test-OwnedRendererRunning $missingTicks $openProbe $sameIdentity | Out-Null } catch { $blocked = $true }
+Assert ($blocked) 'PID persisted without creation time must not release a live process'
+$probe.Exited = $true
+Assert (-not (Test-OwnedRendererRunning $missingTicks $openProbe { throw 'Native reader not needed' })) 'Confirmed exit may release a journal with missing creation time'
+$probe.Exited = $false
+Assert (-not (Test-OwnedRendererRunning $missingTicks $openProbe { return @{Exists=$false} })) 'Confirmed absence may release a journal with missing creation time'
+$noProcess = $missingTicks.Clone(); $noProcess.Remove('process_id')
+Assert (-not (Test-OwnedRendererRunning $noProcess { throw 'No process was recorded' })) 'Journal before process start must not inspect arbitrary processes'
+Assert (($record | ConvertTo-Json -Compress) -eq $before) 'Renderer inspection must not rewrite uncertain status or acknowledge/reprint it'
+
 # Use our own harmless test process to represent a reused PID. Never open the
 # spooler, invoke Sumatra, contact the ERP or terminate a real printer process.
 $self = [Diagnostics.Process]::GetCurrentProcess()
 try {
+    $native = Get-NativeRendererIdentity $self.Id
+    Assert ($native.Exists -and -not $native.HasExited -and $native.StartedTicks -eq $self.get_StartTime().ToUniversalTime().Ticks) 'Limited native query must preserve exact 100ns process identity'
+    Assert (-not (Get-NativeRendererIdentity ([int]::MaxValue)).Exists) 'Native query must identify a nonexistent PID'
     $record = @{id='d0fdbd00-5e5a-465f-9cea-968a6558f29a'; process_id=$self.Id; process_started_ticks=$self.StartTime.ToUniversalTime().Ticks.ToString()}
     foreach ($status in @('submitted','failed')) {
         $record.status = $status

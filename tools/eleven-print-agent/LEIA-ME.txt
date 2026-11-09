@@ -1,4 +1,14 @@
-ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.11.05.1
+ELEVEN IMPRESSAO - WINDOWS DA LOJA - VERSAO 2026.11.09.1
+
+CORRECAO DA FILA A4 / HP — 2026.11.09.1
+Corrige a verificacao do processo antigo que podia repetir renderer_check_failed
+com RuntimeException. A consulta alternativa confirma PID e horario exato de
+criacao usando somente leitura; nao encerra programas nem limpa filas.
+Se ambas as consultas falharem, a fila continua pausada e mostra o codigo Windows.
+Feche apenas Eleven Impressao, extraia TODO o ZIP e abra Instalar.cmd na mesma
+conta Windows. Confira a HP sugerida e use Enter para manter a credencial.
+Eleven Etiquetas pode continuar aberto. Nao apague journal nem claim.json.
+Trabalhos incertos precisam de conferencia; nao serao reimpressos automaticamente.
 
 QUAL ARQUIVO ABRIR
 Para instalar: extraia TODO o ZIP e abra Instalar.cmd.
@@ -41,7 +51,7 @@ ATUALIZAR O AGENTE / IMPRESSORA
 2. Extraia TODOS os arquivos do ZIP para uma pasta. Use a mesma conta Windows.
 3. Abra Instalar.cmd. Nao e necessario executar como administrador.
 4. Selecione o numero da fila que ja imprime no Windows. O nome da fila pode diferir do modelo.
-   Se houver exatamente uma SL-M2035W, Enter aceita a sugestao; confira antes.
+   A fila ja configurada tem prioridade na sugestao; confira a HP antes de aceitar.
 5. Na credencial, pressione Enter para MANTER a credencial existente.
    A primeira instalacao precisa da credencial exclusiva do dispositivo ERP.
    Nunca informe senha de login, token Telegram ou chave da IA.
@@ -91,11 +101,12 @@ Feche o agente, revogue a credencial no ERP e guarde o diario antes de remover.
 Nao remova/reinstale para trocar apenas a impressora; use a atualizacao acima.
 
 FILA PAUSADA - DIAGNOSTICO
-A janela agora mostra versao, codigo do motivo, etapa, HTTP, trabalho e PID.
+A janela mostra versao, codigo do motivo, etapa, HTTP, trabalho, PID e codigo Windows.
 O mesmo diagnostico fica em agente-diagnostico.log na pasta instalada, com uma
 copia rotativa .1. Nao contem credencial, endereco, conteudo do PDF nem erro HTTP bruto.
 - renderer_active: renderizador deste trabalho ainda ativo; confira Windows/papel.
-- renderer_check_failed: Windows nao permitiu verificar um processo anterior.
+- renderer_check_failed: nao foi possivel confirmar o processo anterior; Windows=5
+  indica acesso negado. Envie o diagnostico, sem excluir o diario.
 - erp_connection_failed/erp_unavailable: comunicacao falhou; aguarda e tenta novamente.
 - credential_rejected/profile_conflict: confira perfil/credencial, sem apagar diario.
 - journal_unavailable: diario nao pode ser lido/salvo; nao o exclua para destravar.

@@ -1,5 +1,36 @@
 # Impressão da Eleven no Windows
 
+## Recuperação do agente A4 / HP — 09/11/2026
+
+Versão **2026.11.09.1**. A loja informou `renderer_check_failed`, etapa
+`renderer_check`, `HTTP=0`, `RuntimeException`, após conectar ao ERP. O código
+usava `Process.StartTime.ToUniversalTime()`; o PowerShell pode ocultar uma exceção
+do getter e devolver `null`, causando essa falha. O teste de regressão reproduz
+esse mecanismo; a foto não comprova qual erro do Windows iniciou o incidente.
+
+As leituras usam getters explícitos. Se a inspeção .NET falhar, uma consulta
+Windows somente leitura (`PROCESS_QUERY_LIMITED_INFORMATION` / `GetProcessTimes`)
+confere PID e horário de criação com precisão de 100 ns. Processo encerrado ou
+PID reutilizado não bloqueia trabalhos seguintes. Um processo ainda ativo, ou
+cuja identidade não possa ser confirmada, continua bloqueando. Essa verificação
+não encerra processos, altera o diário ou limpa a fila. O diagnóstico inclui
+apenas o código Windows numérico, sem mensagens livres ou credenciais.
+
+**Atualização no Windows da loja:**
+1. Feche apenas **Eleven Impressao**; **Eleven Etiquetas** pode continuar aberto.
+2. Extraia todo o ZIP do perfil `documents` e abra `Instalar.cmd` na mesma conta.
+3. Confira **HP Laser 103 107 108**. A impressora já configurada agora tem prioridade
+   na sugestão, mesmo que exista outra Samsung instalada.
+4. Pressione Enter na credencial para manter a atual. Não exclua `journal`,
+   `claim.json` ou `config.json`.
+5. Abra o atalho **Eleven Impressao** e confira a versão **2026.11.09.1**.
+
+Atualizar o Render disponibiliza o pacote, mas não atualiza o programa local.
+Trabalhos já enviados/incertos não são repetidos automaticamente. Confira papel
+e fila antes de pedir outra cópia. Falhas reais de permissão, Sumatra, driver ou
+impressora ainda exigem diagnóstico; esta correção não comprova impressão física.
+Os testes Windows usam processos inofensivos e erros sintéticos, sem impressão.
+
 ## Lista A4 para conferência de estoque
 
 Em **Estoque → Selecionar → Imprimir lista**, ADMIN/GERENTE pode baixar o PDF ou
@@ -126,10 +157,11 @@ SL-M2035W**, já imprimindo pelo Windows. O responsável confirmou a configuraç
 O laptop de desenvolvimento é outra máquina; não instalar nele um segundo agente.
 
 Pacote: `tools/eleven-print-agent/`, com `Instalar.cmd`, `Instalar.ps1`,
-`Configuracao.ps1`, `Agente.ps1`, `Impressao.ps1` e `LEIA-ME.txt`. Após a configuração da Samsung,
+`Configuracao.ps1`, `Agente.ps1`, `Impressao.ps1`, `TicketContinuo.ps1`,
+`AgenteEtiquetas.ps1`, `Etiquetas.ps1` e `LEIA-ME.txt`. Após a configuração da Samsung,
 o painel de instalação/download foi retirado de Endereços a pedido do responsável.
 O pacote continua no repositório e no endpoint administrativo autenticado
-`/api/printing/agent-package`, que inclui somente esses seis arquivos e nunca
+`/api/printing/agent-package`, que inclui somente esses nove arquivos e nunca
 credenciais ou configurações locais. O driver e o SumatraPDF devem estar instalados;
 o instalador não baixa nem substitui drivers/programas de terceiros.
 
