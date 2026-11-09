@@ -43,6 +43,7 @@ class PedidoResponse(PedidoBase):
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
     tags: List[TagStatusSimple] = []
+    archived_at: Optional[datetime] = None
     cliente: Optional[ClienteSimple] = None
     anexos_count: int = 0
     commerce_status: Optional[str] = None
@@ -54,6 +55,9 @@ class PedidoResponse(PedidoBase):
     paid_gs: Optional[Decimal] = None
     usd_rate_gs: Optional[Decimal] = None
     reserved_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    remaining_quantity: Optional[int] = None
+    vendedor_nome: Optional[str] = None
 
     class Config:
         from_attributes = True

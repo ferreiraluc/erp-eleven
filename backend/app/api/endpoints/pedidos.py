@@ -19,9 +19,10 @@ from ...services.rastreamento_sync import RastreamentoSyncService
 from ...services.customer_links import validate_order_customer, inherit_order_customer
 from ...models.rastreamento import Rastreamento
 from ...schemas.rastreamento import RastreamentoResponse
-from ...schemas.pedido_reserva import ReservaWrite, ReservaPayment, ReservaReason, ReservaCheckout
+from ...schemas.pedido_reserva import ReservaWrite, ReservaPayment, ReservaReason, ReservaCheckout, ReservaCommand, ReservaReturn, ReservaRefund
 from ...services import order_reservations
 from ...services.access_policy import orders_query
+from ...services.order_archive import listing_filter
 
 MAX_ANEXOS_POR_PEDIDO = 10
 MAX_TAMANHO_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -81,9 +82,27 @@ def receber_pagamento_pedido(pedido_id: uuid.UUID, body: ReservaPayment, db: Ses
 
 
 @router.post('/{pedido_id}/pagamentos/{payment_id}/estornar')
-def registrar_devolucao_pagamento(pedido_id: uuid.UUID, payment_id: uuid.UUID, body: ReservaReason,
+def registrar_devolucao_pagamento(pedido_id: uuid.UUID, payment_id: uuid.UUID, body: ReservaRefund,
                                   db: Session = Depends(get_db), user: Usuario = Depends(get_current_active_user)):
     return _reservation_write(db, order_reservations.reverse_payment, pedido_id, payment_id, body, user)
+
+
+@router.post('/{pedido_id}/condicional')
+def entregar_condicional(pedido_id: uuid.UUID, body: ReservaCommand, db: Session = Depends(get_db),
+                         user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.dispatch, pedido_id, body, user)
+
+
+@router.post('/{pedido_id}/devolver-itens')
+def devolver_condicional(pedido_id: uuid.UUID, body: ReservaReturn, db: Session = Depends(get_db),
+                         user: Usuario = Depends(get_current_active_user)):
+    return _reservation_write(db, order_reservations.return_items, pedido_id, body, user)
+
+
+@router.post('/{pedido_id}/pagamentos/{payment_id}/estorno-previa')
+def previa_devolucao_pagamento(pedido_id: uuid.UUID, payment_id: uuid.UUID, body: ReservaRefund,
+                               db: Session = Depends(get_db), user: Usuario = Depends(get_current_active_user)):
+    return order_reservations.refund_preview(db, pedido_id, payment_id, body, user)
 
 
 @router.post('/{pedido_id}/cancelar')
@@ -113,12 +132,13 @@ def listar_pagina_pedidos(
     search: str = Query('', max_length=200),
     status: Optional[PedidoStatus] = Query(None),
     tag_id: Optional[str] = Query(None),
-    commerce_status: Optional[Literal['reserved', 'completed', 'cancelled', 'legacy']] = Query(None),
+    listing: Literal['current', 'archived', 'all'] = Query('current'),
+    commerce_status: Optional[Literal['reserved', 'conditional', 'returned', 'completed', 'cancelled', 'legacy']] = Query(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """Filter the complete order directory before counting and paging."""
-    query = _commercial_scope(db.query(Pedido), current_user)
+    query = listing_filter(_commercial_scope(db.query(Pedido), current_user), listing)
     if commerce_status:
         query = query.filter(Pedido.commerce_status.is_(None) if commerce_status == 'legacy' else Pedido.commerce_status == commerce_status)
     if status:
@@ -136,7 +156,8 @@ def listar_pagina_pedidos(
                                            PedidoItem.item_sku.ilike(pattern, escape='\\'))),
         ))
     total = query.count()
-    rows = query.options(selectinload(Pedido.tags), joinedload(Pedido.cliente)).order_by(
+    rows = query.options(selectinload(Pedido.tags), joinedload(Pedido.cliente),
+                         selectinload(Pedido.reserved_items), joinedload(Pedido.vendedor)).order_by(
         Pedido.created_at.desc(), Pedido.id,
     ).offset((page - 1) * page_size).limit(page_size).all()
     return {'items': rows, 'total': total, 'page': page, 'page_size': page_size}
@@ -148,11 +169,12 @@ def listar_pedidos(
     status: Optional[PedidoStatus] = Query(None),
     cidade: Optional[str] = Query(None),
     tag_id: Optional[str] = Query(None, description="Filter by tag ID"),
+    listing: Literal['current', 'archived', 'all'] = Query('current'),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user)
 ):
     """List orders with pagination and filters"""
-    query = _commercial_scope(db.query(Pedido).options(joinedload(Pedido.tags)), current_user)
+    query = listing_filter(_commercial_scope(db.query(Pedido).options(joinedload(Pedido.tags)), current_user), listing)
 
     if status:
         query = query.filter(Pedido.status == status)
@@ -165,7 +187,7 @@ def listar_pedidos(
         tag_uuid = validate_uuid(tag_id)
         query = query.join(Pedido.tags).filter(TagStatus.id == tag_uuid)
 
-    pedidos = query.order_by(Pedido.created_at.desc()).offset(skip).limit(limit).all()
+    pedidos = query.options(selectinload(Pedido.reserved_items), joinedload(Pedido.vendedor)).order_by(Pedido.created_at.desc()).offset(skip).limit(limit).all()
     return pedidos
 
 @router.post("/", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
@@ -385,6 +407,8 @@ def excluir_pedido(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Order not found"
         )
+    if db_pedido.archived_at:
+        raise HTTPException(409, 'Pedidos arquivados preservam o histórico e não podem ser excluídos.')
     if db_pedido.commerce_status:
         raise HTTPException(409, 'Pedidos com reserva preservam itens e pagamentos. Cancele pelo fluxo de reserva, sem excluir o histórico.')
     

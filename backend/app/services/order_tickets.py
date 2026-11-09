@@ -32,9 +32,11 @@ def snapshot(db, order):
     # Only the bag document's fields, not live availability or full payment history.
     return {key: data[key] for key in (
         'id', 'numero_pedido', 'commerce_status', 'commerce_version', 'cliente_nome',
-        'vendedor_nome', 'reserved_at', 'usd_rate_gs', 'total_gs', 'paid_gs', 'balance_gs', 'notas',
+        'vendedor_nome', 'reserved_at', 'delivered_at', 'refund_due_gs',
+        'usd_rate_gs', 'total_gs', 'paid_gs', 'balance_gs', 'notas',
     )} | {'width': 80, 'height': 0, 'items': [
-        {key: item[key] for key in ('item_name', 'item_sku', 'item_size', 'item_color', 'quantity', 'location')}
+        {key: item[key] for key in ('item_name', 'item_sku', 'item_size', 'item_color', 'quantity',
+                                   'returned_quantity', 'remaining_quantity', 'location')}
         for item in data['items']]}
 
 
@@ -58,15 +60,22 @@ def render(data):
     def money(value):
         return 'US$ ' + number(Decimal(str(value)) / Decimal(str(data['usd_rate_gs'])), 2)
 
+    conditional = bool(data.get('delivered_at'))
+    remaining_label = 'Conservadas' if data['commerce_status'] == 'completed' else 'Por resolver'
+    caption = 'ENTREGA EN CONDICIONAL' if conditional else 'PEDIDO SEPARADO'
     line('ELEVEN', title)
-    line('PEDIDO SEPARADO', ParagraphStyle('caption', parent=center, fontName='Helvetica-Bold', fontSize=11))
+    line(caption, ParagraphStyle('caption', parent=center, fontName='Helvetica-Bold', fontSize=11))
     line(data['numero_pedido'], center)
     divider()
-    if data['commerce_status'] != 'reserved':
-        line('RESERVA CANCELADA' if data['commerce_status'] == 'cancelled' else 'VENTA YA CONCLUIDA', strong)
+    status_label = {'cancelled': 'RESERVA CANCELADA', 'completed': 'VENTA YA CONCLUIDA',
+                    'conditional': 'PENDIENTE DE RESOLUCIÓN', 'returned': 'PIEZAS DEVUELTAS'}
+    if data['commerce_status'] in status_label:
+        line(status_label[data['commerce_status']], strong)
     line(data['cliente_nome'], customer)
     line('Vendedor: ' + (data['vendedor_nome'] or '-'))
     line('Separado: ' + business_datetime(data['reserved_at']).strftime('%d/%m/%Y %H:%M'))
+    if conditional:
+        line('Entregado: ' + business_datetime(data['delivered_at']).strftime('%d/%m/%Y %H:%M'))
     line('Revisión: ' + str(data['commerce_version']), small)
     divider()
     for item in data['items']:
@@ -78,18 +87,26 @@ def render(data):
         line(' · '.join(str(value) for value in (item.get('item_size'), item.get('item_color'), 'Tienda' if item['location'] == 'loja' else 'Depósito') if value), small)
         if item.get('item_sku'):
             line(item['item_sku'], small)
+        if conditional:
+            line(f"Devueltas: {item.get('returned_quantity', 0)} · {remaining_label}: {item.get('remaining_quantity', item['quantity'])}", small)
         story.append(Spacer(1, 4))
     divider()
     line('Piezas: ' + str(sum(item['quantity'] for item in data['items'])), strong)
+    if conditional:
+        line('Devueltas: ' + str(sum(item.get('returned_quantity', 0) for item in data['items'])))
+        line(remaining_label + ': ' + str(sum(item.get('remaining_quantity', item['quantity']) for item in data['items'])))
     line('Total del pedido: ' + money(data['total_gs']), strong)
     line('Recibido: ' + money(data['paid_gs']))
     line('Saldo pendiente: ' + money(data['balance_gs']), strong)
+    if Decimal(str(data.get('refund_due_gs', 0))) > 0:
+        line('A devolver al cliente: ' + money(data['refund_due_gs']), strong)
     if data.get('notas'):
         divider()
         line(data['notas'], small)
     divider()
-    line('Reservado hasta la conclusión o cancelación del pedido.', center)
-    line('Comprobante de separación. No confirma una venta ni un nuevo pago.', ParagraphStyle('footer', parent=center, fontSize=7, leading=9))
+    line('Piezas entregadas para elegir. Registre las devoluciones antes de concluir la venta.' if conditional
+         else 'Reservado hasta la conclusión o cancelación del pedido.', center)
+    line('Comprobante de control. No confirma una venta ni un nuevo pago.', ParagraphStyle('footer', parent=center, fontSize=7, leading=9))
     code = qr.QrCodeWidget('https://elevenparispy.com/#/pedidos?pedido_id=' + data['id'])
     bounds = code.getBounds()
     size = 23*mm
@@ -104,7 +121,7 @@ def render(data):
     if height > 991:
         raise ValueError('O pedido excede o comprimento de um ticket contínuo (991 mm). Reduza as observações ou separe em pedidos menores.')
     canvas = Canvas(output, pagesize=(80*mm, height*mm))
-    canvas.setTitle('ELEVEN - Pedido separado ' + data['numero_pedido'])
+    canvas.setTitle('ELEVEN - ' + caption + ' ' + data['numero_pedido'])
     canvas.setAuthor('ELEVEN')
     canvas.setViewerPreference('PrintScaling', 'None')
     y = height*mm-4*mm
@@ -137,8 +154,8 @@ def enqueue(db, order, body, user):
                 existing.snapshot.get('commerce_version') != body.expected_version):
             raise HTTPException(409, 'Confirmação já utilizada em outro trabalho.')
         return existing
-    if order.commerce_status != 'reserved':
-        raise HTTPException(409, 'O pedido não está mais separado. Consulte seu histórico.')
+    if order.commerce_status not in ('reserved', 'conditional'):
+        raise HTTPException(409, 'O pedido não está mais separado ou em condicional. Consulte seu histórico.')
     if body.expected_version != order.commerce_version:
         raise HTTPException(409, 'O pedido mudou. Atualize os dados antes de imprimir.')
     device = pdv_receipts.destination(db, lock=True)

@@ -165,17 +165,24 @@ def create_sale(
     return _sale_to_response(sale)
 
 
-def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, *, frozen_usd_rate=None):
+def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, *, frozen_usd_rate=None,
+                       stock_already_withdrawn=False, trusted_deposits=None):
     """Build the sale in the caller's transaction, including stock and its ticket.
 
     Reserved orders use their persisted quote. Public checkout still validates the
     current quote; callers must never pass a client-supplied frozen rate directly.
+    Only locked order settlement may supply previously withdrawn stock or net
+    deposits from its audited ledger. Refund rounding must not reinterpret the
+    original payment's exchange rate. Neither override exists in the public schema.
     """
     require_sale_owner(current_user, body.vendedor_id or current_user.id, pdv=True)
     if not body.items:
         raise HTTPException(status_code=400, detail="A venda deve ter pelo menos 1 item")
 
-    payments = [validate_payment(p.model_dump()) for p in body.payments]
+    if (stock_already_withdrawn or trusted_deposits) and frozen_usd_rate is None:
+        raise ValueError('Order settlement requires its persisted exchange rate.')
+    payments = [dict(payment) for payment in (trusted_deposits or [])]
+    payments.extend(validate_payment(p.model_dump()) for p in body.payments)
     if any(p['method'] == 'fiado' and p['amount_gs'] > 0 for p in payments) and not body.cliente_id:
         raise HTTPException(422, 'Selecione o cliente para lançar fiado.')
 
@@ -186,7 +193,7 @@ def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, 
         # Reserve checkout and ordinary sales must share that order before stock.
         from ...services.address_book import lock_addresses
         lock_addresses(db)
-    stock_items = _lock_sale_stock(db, body.items)
+    stock_items = _lock_sale_stock(db, body.items, allow_inactive=stock_already_withdrawn)
     customer = pdv_customers.select(db, PdvCustomerSelection(source='pdv', id=body.cliente_id), current_user) if body.cliente_id else None
 
     # Compute totals
@@ -244,7 +251,12 @@ def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, 
         db.add(PdvPayment(id=uuid.uuid4(), sale_id=sale.id, **payment))
 
     db.flush()
-    _apply_stock(db, sale, current_user.id, stock_items)
+    if stock_already_withdrawn:
+        # The conditional delivery already recorded the physical exit. Mark it
+        # applied so later authorized sale returns restore the retained pieces.
+        sale.stock_applied = True
+    else:
+        _apply_stock(db, sale, current_user.id, stock_items)
     _update_fiado(db, sale, current_user.id)
 
     if body.print_receipt:

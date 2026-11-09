@@ -25,7 +25,7 @@ def ticket_pdf(order_id: uuid.UUID, db: Session = Depends(get_db), user=Depends(
     except ValueError as error:
         raise HTTPException(422, str(error)) from None
     return Response(pdf, media_type='application/pdf', headers={'Cache-Control': 'no-store',
-        'Content-Disposition': f'attachment; filename="Eleven-separado-{order.id.hex[:10]}.pdf"'})
+        'Content-Disposition': f'attachment; filename="Eleven-{"condicional" if order.delivered_at else "separado"}-{order.id.hex[:10]}.pdf"'})
 
 
 @router.post('/{order_id}/reserva/ticket')

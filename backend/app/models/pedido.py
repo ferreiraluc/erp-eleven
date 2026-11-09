@@ -19,7 +19,7 @@ class PedidoStatus(enum.Enum):
 class Pedido(Base):
     __tablename__ = "pedidos"
     __table_args__ = (
-        CheckConstraint("commerce_status IS NULL OR commerce_status IN ('reserved','completed','cancelled')",
+        CheckConstraint("commerce_status IS NULL OR commerce_status IN ('reserved','conditional','returned','completed','cancelled')",
                         name='ck_pedidos_commerce_status'),
     )
 
@@ -50,6 +50,8 @@ class Pedido(Base):
     created_at = Column(DateTime, default=lambda: settings.now())
     updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
+    archived_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    archived_by = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True)
 
     # FK para Cliente (opcional, retrocompatível)
     cliente_id = Column(UUID(as_uuid=True), ForeignKey("clientes.id"), nullable=True, index=True)
@@ -67,6 +69,9 @@ class Pedido(Base):
     total_gs = Column(Numeric(15, 2), nullable=True)
     paid_gs = Column(Numeric(15, 2), nullable=True)
     reserved_at = Column(DateTime(timezone=True), nullable=True)
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
+    delivered_subtotal_gs = Column(Numeric(15, 2), nullable=True)
+    delivered_total_gs = Column(Numeric(15, 2), nullable=True)
     commerce_notes = Column(Text, nullable=True)
 
     # Relacionamentos
@@ -78,3 +83,13 @@ class Pedido(Base):
     reserved_items = relationship('PedidoItem', back_populates='pedido', cascade='all, delete-orphan', order_by='PedidoItem.position')
     reservation_payments = relationship('PedidoPayment', back_populates='pedido', order_by='PedidoPayment.created_at')
     vendedor = relationship('Usuario', foreign_keys=[vendedor_id])
+
+    @property
+    def remaining_quantity(self):
+        if self.commerce_status is None:
+            return None
+        return sum(line.quantity - (line.returned_quantity or 0) for line in self.reserved_items)
+
+    @property
+    def vendedor_nome(self):
+        return self.vendedor.nome if self.vendedor else None
