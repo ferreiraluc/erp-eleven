@@ -184,6 +184,7 @@ const props = withDefaults(
     placeholder?: string
     displayLabel?: string
     editable?: boolean
+    preserveTypedOnEnter?: boolean
     disabled?: boolean
     required?: boolean
     maxlength?: number
@@ -309,6 +310,10 @@ function choose(value: T) {
   close(true)
 }
 function chooseFirst() {
+  if (props.editable && props.preserveTypedOnEnter && query.value.trim()) {
+    choose(query.value.trim() as T)
+    return
+  }
   const first = filtered.value.find((o) => !o.disabled)
   if (first) choose(first.value)
   else if (props.editable && query.value.trim()) choose(query.value.trim() as T)

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, defer
 from typing import List, Optional
+from datetime import datetime
 import uuid
 
 from ...database import get_db
@@ -12,6 +14,8 @@ from pydantic import BaseModel
 from ...schemas.ocr import LabelParseRequest, LabelParseResponse, TemplateSaveRequest
 from ...services.ocr_images import prepare_label_image, OcrImageError
 from ...services.ocr_service import OcrUnavailable, OcrProviderError
+from ...services.ocr_templates import brand_counts, matching_brands, reading_examples
+from ...services.inventory_taxonomy import canonical, key
 from ...models.inventory import Item
 
 router = APIRouter()
@@ -24,6 +28,7 @@ class TemplateResponse(BaseModel):
     brand: str
     notes: Optional[str] = None
     has_image: bool
+    created_at: Optional[datetime] = None
     parsed_name: Optional[str] = None
     parsed_size: Optional[str] = None
     parsed_color: Optional[str] = None
@@ -47,18 +52,12 @@ def parse_label(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Parse a product label image using Claude Vision with optional brand few-shot examples."""
+    """Read a label with reviewed examples for the chosen brand, without saving products."""
     try:
         image = prepare_label_image(request.image)
     except OcrImageError as error:
         raise HTTPException(422, str(error)) from None
-    templates = []
-    if request.brand:
-        # A literal equality avoids wildcard input selecting examples of other brands.
-        from sqlalchemy import func
-        templates = db.query(LabelTemplate).filter(
-            func.lower(LabelTemplate.brand) == request.brand.lower(), LabelTemplate.is_active == True,
-        ).order_by(LabelTemplate.created_at.desc()).limit(3).all()
+    templates = reading_examples(db, request.brand)
     try:
         from ...services.ocr_service import parse_label_image
         result = parse_label_image(image, request.brand, templates)
@@ -82,15 +81,7 @@ def get_brands(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """List brands that have saved templates with counts."""
-    rows = (
-        db.query(LabelTemplate.brand)
-        .filter(LabelTemplate.is_active == True)
-        .all()
-    )
-    counts: dict = {}
-    for (brand,) in rows:
-        counts[brand] = counts.get(brand, 0) + 1
-    return [{"brand": b, "count": c} for b, c in sorted(counts.items())]
+    return brand_counts(db)
 
 
 @router.get("/templates", response_model=List[TemplateResponse])
@@ -100,17 +91,21 @@ def list_templates(
     current_user: Usuario = Depends(get_current_active_user),
 ):
     """List saved label templates (without images for performance)."""
-    q = db.query(LabelTemplate).filter(LabelTemplate.is_active == True)
+    q = db.query(LabelTemplate, func.length(LabelTemplate.sample_image) > 0).options(
+        defer(LabelTemplate.sample_image),
+    ).filter(LabelTemplate.is_active == True)
     if brand:
-        q = q.filter(LabelTemplate.brand.ilike(f"%{brand}%"))
+        q = q.filter(LabelTemplate.brand.in_(matching_brands(db, brand)))
     templates = q.order_by(LabelTemplate.brand, LabelTemplate.created_at.desc()).all()
+    labels = {key(row['brand'], 'brand'): row['brand'] for row in brand_counts(db)}
     result = []
-    for t in templates:
+    for t, has_image in templates:
         result.append(TemplateResponse(
             id=t.id,
-            brand=t.brand,
+            brand=labels.get(key(t.brand, 'brand'), canonical(t.brand, 'brand')),
             notes=t.notes,
-            has_image=bool(t.sample_image),
+            has_image=bool(has_image),
+            created_at=t.created_at,
             parsed_name=t.parsed_name,
             parsed_size=t.parsed_size,
             parsed_color=t.parsed_color,
@@ -134,8 +129,10 @@ def get_template(
     t = db.query(LabelTemplate).filter(LabelTemplate.id == tid).first()
     if not t:
         raise HTTPException(status_code=404, detail="Template não encontrado")
+    labels = {key(row['brand'], 'brand'): row['brand'] for row in brand_counts(db)}
     return TemplateWithImageResponse(
-        id=t.id, brand=t.brand, notes=t.notes, has_image=bool(t.sample_image),
+        id=t.id, brand=labels.get(key(t.brand, 'brand'), canonical(t.brand, 'brand')), notes=t.notes, has_image=bool(t.sample_image),
+        created_at=t.created_at,
         sample_image=t.sample_image,
         parsed_name=t.parsed_name, parsed_size=t.parsed_size,
         parsed_color=t.parsed_color, parsed_barcode=t.parsed_barcode,
@@ -149,13 +146,13 @@ def save_template(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    """Save a label example as a training template for a brand."""
+    """Save an explicitly reviewed example for future readings; no model training."""
     try:
         image = prepare_label_image(request.sample_image)
     except OcrImageError as error:
         raise HTTPException(422, str(error)) from None
     t = LabelTemplate(
-        brand=request.brand.strip(),
+        brand=canonical(request.brand, 'brand'),
         notes=request.notes,
         sample_image=image.data_url,
         parsed_name=request.parsed_name,

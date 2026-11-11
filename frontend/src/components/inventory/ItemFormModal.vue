@@ -131,12 +131,16 @@
           <div class="form-row">
             <div class="form-group">
               <label>{{ tr('Categoria') }}</label>
-              <ErpDropdown v-model="categoryParent" :options="[{ value: '', label: tr('Selecione...') }, ...parentCategories.map(value => ({ value, label: tr(value) })), { value: '_custom', label: tr('Outra...') }]" :label="tr('Categoria')" />
-              <input v-if="categoryParent === '_custom'" v-model="categoryCustom" type="text" class="form-input" style="margin-top:0.3rem" :placeholder="tr('Nome da categoria')" />
+              <ErpDropdown :model-value="categoryParent" editable preserve-typed-on-enter :options="parentCategories.map(value => ({ value, label: value }))" :label="tr('Categoria')" :placeholder="tr('Nome da categoria')" @update:model-value="updateCategoryParent" />
+              <span v-if="categoriesLoading" class="form-hint" role="status">{{ tr('Carregando categorias...') }}</span>
+              <div v-else-if="categoriesLoadError" class="form-hint category-load-error" role="status">
+                {{ tr('Não foi possível carregar as categorias. Você pode digitar ou tentar novamente.') }}
+                <button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="loadCategories">{{ tr('Tentar novamente') }}</button>
+              </div>
             </div>
             <div class="form-group">
               <label>{{ tr('Subcategoria') }}</label>
-              <ErpDropdown v-model="categorySub" editable :options="subcategorySuggestions.map(value => ({ value, label: tr(value) }))" :label="tr('Subcategoria')" :placeholder="tr('Ex: Sociais, Tênis...')" :disabled="!categoryParent || categoryParent === '_custom'" />
+              <ErpDropdown :model-value="categorySub" editable preserve-typed-on-enter :options="subcategorySuggestions.map(value => ({ value, label: `${categoryParent.trim()} > ${value.replace(/>/g, ' > ')}` }))" :label="tr('Subcategoria')" :placeholder="tr('Ex: Sociais, Tênis...')" :disabled="!categoryParent.trim()" @update:model-value="updateCategorySub" />
             </div>
           </div>
 
@@ -257,7 +261,6 @@
           <p v-if="editingGradeOptions" class="form-hint">{{ tr('Remova qualquer botão pelo ×, inclusive os padrões. Produtos cadastrados não são alterados.') }}</p>
           <p v-if="optionRemovalNotice" class="form-hint" role="status">{{ optionRemovalNotice }}</p>
           <div class="tab-content">
-          <p class="intake-hint">{{ tr('Escolha um modelo de tamanhos. Cada variação recebe a foto, marca, descrição e preços desta peça. Sem selecionar outras cores, será usada a cor {color}.', { color: form.color || '—' }) }}</p>
           <div class="grade-banner">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="flex-shrink:0">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -499,7 +502,7 @@
 
     <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" :start-with-hanger="startWithHanger" :initial-image="photoSeed" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
-    <OcrScanner v-if="labelOpened" :open="showOcr" draft @result="onOcrResult" @close="showOcr = false" />
+    <OcrScanner v-if="labelOpened" :open="showOcr" :reference-brand="form.brand" draft @result="onOcrResult" @close="showOcr = false" />
     <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
   </div>
 </template>
@@ -509,6 +512,7 @@ import { colorKey, uniqueColors } from '@/services/inventoryColors'
 import ErpDropdown from '@/components/ui/ErpDropdown.vue'
 import StockQuantityInput from './StockQuantityInput.vue'
 import { canonicalSize, canonicalBrand } from '@/services/inventoryTaxonomy'
+import { categoryKey, categoryOptions, splitCategoryPath } from '@/services/inventoryCategories'
 import { vErpDialog } from '@/directives/erpDialog'
 import ProductVariantsModal from './ProductVariantsModal.vue'
 import { inventoryVariantsAPI, type VariantResult, type VariantContext, type DuplicateRequest } from '@/services/inventoryVariants'
@@ -866,32 +870,48 @@ function focusChipInput() {
   chipInputRef.value?.focus()
 }
 
-// Hierarchical category
-const parentCategories = ['Camisetas', 'Calças', 'Vestidos', 'Acessórios', 'Calçados', 'Outros']
+// Suggestions come from the whole catalog, independently of the visible page.
+const savedCategories = ref<string[]>([])
+const categoriesLoading = ref(false), categoriesLoadError = ref(false)
 const categoryParent = ref('')
 const categorySub = ref('')
-const categoryCustom = ref('')
-
-const subcategorySuggestions = computed(() => {
-  const map: Record<string, string[]> = {
-    'Calçados': ['Sociais', 'Tênis', 'Mocassim', 'Sandálias', 'Botas', 'Chinelos', 'Sapatilhas'],
-    'Camisetas': ['Gola Redonda', 'Polo', 'Regata', 'Manga Longa', 'Cropped'],
-    'Calças': ['Jeans', 'Social', 'Moletom', 'Bermuda', 'Short', 'Legging'],
-    'Vestidos': ['Casual', 'Festa', 'Midi', 'Longo', 'Curto'],
-    'Acessórios': ['Cintos', 'Bolsas', 'Carteiras', 'Chapéus', 'Meias', 'Gravatas'],
-  }
-  return map[categoryParent.value] || []
+const categoryDirectory = computed(() => {
+  const source = props.item || props.duplicateContext?.source || props.gradeContext?.source
+  return categoryOptions([...savedCategories.value, source?.category || ''])
 })
-
-watch([categoryParent, categorySub, categoryCustom], () => {
-  if (categoryParent.value === '_custom') {
-    form.category = categoryCustom.value
-  } else if (categoryParent.value && categorySub.value) {
-    form.category = `${categoryParent.value}>${categorySub.value}`
-  } else {
-    form.category = categoryParent.value === '_custom' ? '' : categoryParent.value
+const parentCategories = computed(() => categoryDirectory.value.parents)
+const subcategorySuggestions = computed(() => categoryDirectory.value.children.get(categoryKey(categoryParent.value)) || [])
+async function loadCategories() {
+  if (categoriesLoading.value) return
+  categoriesLoading.value = true; categoriesLoadError.value = false
+  try {
+    const values = await inventoryAPI.getDistinctValues()
+    if (!disposed) savedCategories.value = values.categories
+  } catch {
+    if (!disposed) categoriesLoadError.value = true
+  } finally {
+    if (!disposed) categoriesLoading.value = false
   }
-})
+}
+function updateCategoryParent(value: string) {
+  if (categoryKey(value) !== categoryKey(categoryParent.value)) categorySub.value = ''
+  categoryParent.value = value
+  syncCategoryPath()
+}
+function updateCategorySub(value: string) {
+  categorySub.value = value
+  syncCategoryPath()
+}
+function syncCategoryPath() {
+  const parent = categoryParent.value.trim(), child = categorySub.value.trim()
+  form.category = parent ? [parent, child].filter(Boolean).join('>') : ''
+}
+function hydrateCategory(value: string) {
+  const { parent, child } = splitCategoryPath(value)
+  categoryParent.value = parent; categorySub.value = child
+  // Existing paths are not rewritten simply by opening or saving another field.
+  form.category = value
+}
 
 // Category → Unit mapping
 const categoryUnitMap: Record<string, string> = {
@@ -946,6 +966,7 @@ function removeCover() {
 }
 onMounted(() => {
   void loadGallery()
+  void loadCategories()
   void nextTick(() => { initializingCopy = false })
   const source = props.item || props.duplicateContext?.source || props.gradeContext?.source
   if (source) {
@@ -976,16 +997,7 @@ onMounted(() => {
       gradeSizes.value = source.size ? [canonicalSize(source.size)] : []
       gradeColors.value = source.color ? [source.color] : []
     }
-    // Init hierarchical category
-    const cat = source.category || ''
-    const parts = cat.split('>')
-    if (parentCategories.includes(parts[0])) {
-      categoryParent.value = parts[0]
-      categorySub.value = parts[1] || ''
-    } else if (cat) {
-      categoryParent.value = '_custom'
-      categoryCustom.value = cat
-    }
+    hydrateCategory(source.category || '')
   }
 })
 
@@ -1276,11 +1288,7 @@ function applyIntake(data: IntakeDraft) {
     if (data[field] !== undefined) form[field] = data[field]
   }
   if (data.category !== undefined) {
-    const [parent, ...sub] = data.category.split('>')
-    categorySub.value = sub.join('>')
-    categoryParent.value = parentCategories.includes(parent) ? parent : '_custom'
-    categoryCustom.value = data.category
-    form.category = data.category
+    hydrateCategory(data.category)
   }
   if (data.price) {
     const [currency, amount] = data.price.split(' ')

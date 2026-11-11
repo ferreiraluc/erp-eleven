@@ -6,7 +6,7 @@ const flush = async () => {
   await nextTick()
   await nextTick()
 }
-async function mount(editable = true) {
+async function mount(editable = true, preserveTypedOnEnter = false) {
   root = document.createElement('div')
   document.body.append(root)
   app = createApp({
@@ -23,6 +23,7 @@ async function mount(editable = true) {
             ],
             label: 'Marca',
             editable,
+            preserveTypedOnEnter,
           }),
           h('output', value.value),
           h('button', { id: 'outside' }, 'Fora'),
@@ -82,4 +83,25 @@ it('supports keyboard selection and Escape without closing its parent dialog', a
   await flush()
   expect(document.querySelector('[role=listbox]')).toBeNull()
   expect(document.activeElement).toBe(trigger)
+})
+it('can preserve a typed substring on Enter while keeping explicit keyboard option selection', async () => {
+  await mount(true, true)
+  const input = root.querySelector('input')!
+  input.value = 'pra'
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  await flush()
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+  await flush()
+  expect(root.querySelector('output')?.textContent).toBe('pra')
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+  await flush()
+  const focused = document.activeElement as HTMLButtonElement
+  expect(focused.getAttribute('role')).toBe('option')
+  expect(focused.value).toBe('Boss')
+  focused.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+  const selected = document.activeElement as HTMLButtonElement
+  expect(selected.value).toBe('Prada')
+  selected.click() // Native keyboard activation on the focused option uses the same click handler.
+  await flush()
+  expect(root.querySelector('output')?.textContent).toBe('Prada')
 })

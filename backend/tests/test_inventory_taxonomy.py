@@ -1,5 +1,6 @@
 import importlib.util
 import uuid
+from datetime import datetime, timezone
 
 import pytest
 import sqlalchemy as sa
@@ -59,6 +60,37 @@ def test_all_orm_writes_normalize_and_api_filters_find_legacy_spellings(manager_
         assert row.brand == 'Emporio Armani'
         assert db.query(Item).count() == 5
         assert row.group_key == 'grade-0'
+
+
+def test_category_directory_includes_all_pages_and_inactive_items_but_not_deleted(manager_stock_app):
+    factory, client, _ = manager_stock_app
+    with factory() as db:
+        db.add_all([
+            Item(name=f'Peça {n}', sku_internal=f'CAT-DIRECTORY-{n}',
+                 category=f'Coleção {n} > Linha {n}', is_active=n != 64)
+            for n in range(65)
+        ])
+        db.add(Item(name='Histórico', sku_internal='CAT-DIRECTORY-DELETED',
+                    category='Somente Excluída > Antiga', deleted_at=datetime.now(timezone.utc)))
+        db.commit()
+    response = client.get('/api/inventory/items/distinct-values')
+    assert response.status_code == 200, response.text
+    assert set(response.json()['categories']) == {f'Coleção {n} > Linha {n}' for n in range(65)}
+
+
+def test_new_category_and_subcategory_are_reusable_and_parent_filter_includes_children(manager_stock_app):
+    _, client, _ = manager_stock_app
+    response = client.post('/api/inventory/items', json={
+        'name': 'Peça de coleção', 'category': 'Linha Praia > Saídas > Linho',
+    })
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created['category'] == 'Linha Praia > Saídas > Linho'
+    assert 'Linha Praia > Saídas > Linho' in client.get('/api/inventory/items/distinct-values').json()['categories']
+    for category in ('Linha Praia', 'Linha Praia > Saídas', 'Linha Praia > Saídas > Linho'):
+        result = client.get('/api/inventory/items', params={'category': category}).json()
+        assert result['total'] == 1
+        assert result['items'][0]['id'] == created['id']
 
 
 def test_migration_preserves_identity_stock_history_and_deleted_rows(pg):

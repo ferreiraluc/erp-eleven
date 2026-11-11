@@ -3205,5 +3205,7 @@
   "Loja: {loja} · Depósito: {deposito}": ["Tienda: {loja} · Depósito: {deposito}", "Store: {loja} · Warehouse: {deposito}"],
   "Expandir grade {name}": ["Expandir grupo {name}", "Expand variant group {name}"],
   "Recolher grade {name}": ["Contraer grupo {name}", "Collapse variant group {name}"],
-  "{matching} de {count} variações correspondem aos filtros": ["{matching} de {count} variantes coinciden con los filtros", "{matching} of {count} variants match the filters"]
+  "{matching} de {count} variações correspondem aos filtros": ["{matching} de {count} variantes coinciden con los filtros", "{matching} of {count} variants match the filters"],
+  "Carregando categorias...": ["Cargando categorías...", "Loading categories..."],
+  "Não foi possível carregar as categorias. Você pode digitar ou tentar novamente.": ["No se pudieron cargar las categorías. Puede escribir o volver a intentarlo.", "Could not load categories. You can type or try again."]
 }

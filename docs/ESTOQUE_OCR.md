@@ -662,6 +662,25 @@ sem destino em um toque não descarta a escolha. Setas/Home/End e Enter permitem
 uso por teclado. Marca de referência orienta os exemplos, mas não é preenchida
 como marca detectada pela IA sem evidência da etiqueta.
 
+No cadastro, edição, duplicação e criação de grade, **Categoria** e **Subcategoria**
+são campos editáveis: escolha uma opção ou escreva um novo nome no próprio campo.
+As sugestões vêm das categorias reais do catálogo inteiro, incluindo produtos
+inativos e excluindo os retirados do catálogo; não dependem da página do estoque.
+A consulta é feita ao abrir o formulário, sem carregar produtos ou fotos.
+Não há opções artificiais **Outros** ou **Outra...**, nem uma segunda caixa para
+digitar a categoria. Valores antigos continuam preservados ao editar.
+
+Subcategorias são sugeridas dentro da categoria escolhida e ficam gravadas como
+**Categoria > Subcategoria**. Caminhos antigos com mais níveis são conservados.
+Trocar a categoria principal limpa a subcategoria anterior para não mover uma
+classificação sem intenção; depois é possível escolher ou escrever a nova.
+A escrita permanece no campo durante a edição; ao salvar, continuam valendo as
+regras existentes do vocabulário de categorias. A nova opção passa a fazer parte
+do catálogo quando o produto é salvo. Em caso de falha ao consultar sugestões,
+o formulário informa o problema e permite tentar novamente ou continuar digitando.
+O bloco **Grade de tamanhos e cores** mantém seus controles e prévia, sem o texto
+de orientação “Escolha um modelo de tamanhos…”.
+
 ## Leitura revisável com IA
 
 Em **Foto e etiqueta → Ler etiqueta**, o leitor aceita câmera ou arquivo
@@ -696,6 +715,22 @@ não estabelece SKU, quantidade disponível, entrada, saída ou transferência.
 sanitizada e os campos corrigidos no ERP para serem enviados como exemplos em
 leituras futuras. Não é treinamento de um modelo novo. Exemplos antigos inválidos
 são ignorados na leitura; não são apagados automaticamente.
+
+A marca já informada no cadastro inicia a referência do leitor; uma escolha manual
+no leitor tem prioridade, inclusive ao reabrir a conferência. As referências usam
+os mesmos aliases de marca do estoque: por exemplo, **DG** e **Dolce & Gabbana**
+localizam os mesmos exemplos, sem regravar o histórico. A leitura verifica até
+12 candidatos recentes da marca e envia no máximo **3 exemplos válidos**; um exemplo
+inválido não ocupa a vaga de outro válido dentro desse limite. Sem marca selecionada,
+nenhum exemplo de outra marca é escolhido por suposição. O resultado informa quantos
+exemplos foram realmente usados, sem preencher valores da etiqueta por cópia.
+
+Na galeria **Exemplos de etiquetas salvos**, as marcas equivalentes compartilham a
+mesma contagem. **Ver foto do exemplo** carrega somente a foto escolhida, sob demanda;
+a listagem não carrega os originais no aplicativo. Isso permite conferir os padrões antes de guardar
+novas referências. A conferência de precisão com etiquetas reais continua necessária:
+os testes automatizados verificam seleção, contexto enviado e preservação dos exemplos,
+sem medir acurácia do provedor nem treinar um modelo.
 
 A IA pode errar mesmo quando fornece uma evidência. O GTIN válido não comprova
 que os dígitos correspondem à foto, nem a autenticidade do produto. Não há contagem

@@ -4,6 +4,7 @@ import io
 import json
 from decimal import Decimal
 from types import SimpleNamespace
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi import FastAPI
@@ -168,6 +169,85 @@ def test_only_explicit_template_save_persists_sanitized_image(stock_app):
         saved = db.query(LabelTemplate).one()
         assert saved.sample_image != raw and saved.sample_image.startswith('data:image/jpeg;base64,')
         assert db.query(Item).count() == db.query(StockMovement).count() == 0
+
+
+def test_template_brand_aliases_share_counts_filter_and_reading_without_rewriting_history(stock_app, monkeypatch):
+    factory, client, _ = stock_app
+    with factory() as db:
+        db.add_all([LabelTemplate(brand=brand, sample_image=picture(), parsed_name='Reference')
+                    for brand in ('DG', 'Dolce&Gabbana', 'Dolce & Gabbana', 'Other Brand')])
+        db.add(LabelTemplate(brand='DG', sample_image=picture(), is_active=False))
+        db.commit()
+    groups = client.get('/api/ocr/brands').json()
+    assert {'brand': 'Dolce & Gabbana', 'count': 3} in groups
+    response = client.get('/api/ocr/templates', params={'brand': 'dolcegabbana'})
+    assert response.status_code == 200 and len(response.json()) == 3
+    assert all(row['brand'] == 'Dolce & Gabbana' and row['has_image']
+               and row['created_at'] and 'sample_image' not in row for row in response.json())
+    seen = []
+    def read(_image, _brand, templates):
+        seen.extend(template.brand for template in templates)
+        return validate_extraction(json.dumps(extracted())).model_dump()
+    monkeypatch.setattr('app.services.ocr_service.parse_label_image', read)
+    assert client.post('/api/ocr/parse', json={'image': picture(), 'brand': 'D&G'}).status_code == 200
+    assert set(seen) == {'DG', 'Dolce&Gabbana', 'Dolce & Gabbana'}
+    seen.clear()
+    assert client.post('/api/ocr/parse', json={'image': picture(), 'brand': '%'}).status_code == 200
+    assert seen == []
+    assert client.get('/api/ocr/templates', params={'brand': '%'}).json() == []
+    with factory() as db:
+        assert db.query(LabelTemplate).count() == 5
+        assert db.query(LabelTemplate).filter(LabelTemplate.brand == 'DG').count() == 2
+
+
+def test_template_list_uses_same_accented_label_as_brand_selector(stock_app):
+    factory, client, _ = stock_app
+    with factory() as db:
+        db.add_all([LabelTemplate(brand=brand, sample_image=picture()) for brand in ('Hermes', 'Hermès')])
+        db.commit()
+    assert client.get('/api/ocr/brands').json() == [{'brand': 'Hermès', 'count': 2}]
+    templates = client.get('/api/ocr/templates').json()
+    assert len(templates) == 2 and all(row['brand'] == 'Hermès' for row in templates)
+    detail = client.get('/api/ocr/templates/' + templates[0]['id']).json()
+    assert detail['brand'] == 'Hermès' and detail['sample_image']
+
+
+def test_invalid_recent_templates_do_not_hide_older_valid_examples(stock_app, monkeypatch):
+    factory, client, _ = stock_app
+    baseline = datetime(2020, 1, 1)
+    with factory() as db:
+        for index in range(7):
+            db.add(LabelTemplate(brand='Test Brand', sample_image='invalid' if index >= 4 else picture(),
+                parsed_name=f'Example {index}', notes=f'Format hint {index}', created_at=baseline + timedelta(days=index)))
+        db.commit()
+    calls = []
+    monkeypatch.setattr('app.services.ocr_service.configured_provider', lambda: 'anthropic')
+    monkeypatch.setattr('app.services.ocr_service.complete_vision', lambda **kwargs: calls.append(kwargs) or json.dumps(extracted()))
+    response = client.post('/api/ocr/parse', json={'image': picture(), 'brand': 'test brand'})
+    assert response.status_code == 200
+    assert response.json()['examples_used'] == 3
+    assert 'ignored_template' in response.json()['avisos']
+    messages = calls[0]['messages']
+    assert len(messages) == 7
+    for offset, index in enumerate((3, 2, 1)):
+        assert f'Example {index}' in messages[offset * 2]['content'][1]['text']
+        assert f'Format hint {index}' in messages[offset * 2]['content'][1]['text']
+    assert messages[-1]['content'][0]['type'] == 'image'
+
+
+def test_reading_template_candidates_are_bounded_and_no_brand_does_not_choose_examples(stock_app, monkeypatch):
+    factory, client, _ = stock_app
+    with factory() as db:
+        db.add_all([LabelTemplate(brand='Test Brand', sample_image=picture()) for _ in range(15)])
+        db.commit()
+    candidates = []
+    def read(_image, _brand, templates):
+        candidates.append(len(list(templates)))
+        return validate_extraction(json.dumps(extracted())).model_dump()
+    monkeypatch.setattr('app.services.ocr_service.parse_label_image', read)
+    assert client.post('/api/ocr/parse', json={'image': picture(), 'brand': 'Test Brand'}).status_code == 200
+    assert client.post('/api/ocr/parse', json={'image': picture()}).status_code == 200
+    assert candidates == [12, 0]
 
 
 @pytest.mark.parametrize(('movement', 'quantity', 'kwargs'), [

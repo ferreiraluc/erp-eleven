@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, nextTick, type App } from 'vue'
+import { createApp, h, nextTick, reactive, type App } from 'vue'
 import { createI18n } from 'vue-i18n'
 import OcrScanner from './OcrScanner.vue'
 import type { OcrParsedLabel } from '@/services/ocr'
@@ -19,10 +19,11 @@ function button(text: string): HTMLButtonElement {
 async function mount(props = {}) {
   container = document.createElement('div'); document.body.append(container)
   const result = vi.fn()
+  const propsState = reactive<Record<string, unknown>>({ ...props })
   const i18n = createI18n({ legacy: false, locale: 'pt', fallbackLocale: 'pt', messages: { pt: {}, es: {}, en: {} } })
-  app = createApp(OcrScanner, { onResult: result, ...props }).use(i18n); app.mount(container)
+  app = createApp({ render: () => h(OcrScanner, { onResult: result, ...propsState }) }).use(i18n); app.mount(container)
   await nextTick()
-  return { result, i18n }
+  return { result, i18n, propsState }
 }
 async function upload() {
   const file = container.querySelector('input[type=file]') as HTMLInputElement
@@ -38,6 +39,37 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); container?.remove(); vi.clearAllMocks() })
 
 describe('OCR review', () => {
+  it('uses the product brand as reference through an alias, never as detected data', async () => {
+    mocked.getBrands.mockResolvedValue([{ brand: 'Dolce & Gabbana', count: 8 }])
+    mocked.parseLabel.mockResolvedValue({ ...example, examples_used: 3 })
+    await mount({ referenceBrand: 'DG' }); await nextTick()
+    expect((container.querySelector('.brand-picker input') as HTMLInputElement).value).toBe('Dolce & Gabbana')
+    await upload()
+    expect(mocked.parseLabel.mock.calls[0]?.[1]).toBe('Dolce & Gabbana')
+    expect((container.querySelector('#ocr-brand') as HTMLInputElement).value).toBe('')
+    expect(container.textContent).toContain('Exemplos usados nesta leitura: 3')
+  })
+  it('preserves an explicit cleared reference when the product changes or the reader reopens', async () => {
+    mocked.getBrands.mockResolvedValue([{ brand: 'Prada', count: 2 }])
+    mocked.parseLabel.mockResolvedValue({ ...example, examples_used: 0 })
+    const { propsState } = await mount({ referenceBrand: 'Prada' }); await nextTick()
+    const brand = container.querySelector('.brand-picker input') as HTMLInputElement
+    brand.value = ''; brand.dispatchEvent(new Event('input', { bubbles: true })); await nextTick()
+    propsState.open = false; propsState.referenceBrand = 'Boss'; await nextTick()
+    propsState.open = true; await nextTick()
+    expect(brand.value).toBe('')
+    await upload()
+    expect(mocked.parseLabel.mock.calls[0]?.[1]).toBeUndefined()
+    expect(container.textContent).toContain('Exemplos usados nesta leitura: 0')
+  })
+  it('does not substitute an alias embedded inside a different brand', async () => {
+    mocked.getBrands.mockResolvedValue([{ brand: 'Dolce & Gabbana Sport', count: 4 }])
+    await mount({ referenceBrand: 'DG Sport' }); await nextTick()
+    expect((container.querySelector('.brand-picker input') as HTMLInputElement).value).toBe('DG Sport')
+    expect(container.querySelector('.brand-trained-badge')).toBeNull()
+    await upload()
+    expect(mocked.parseLabel.mock.calls[0]?.[1]).toBe('DG Sport')
+  })
   it('adds draft fields to unified review while still requiring review to save an example', async () => {
     const { result } = await mount({ draft: true }); await upload()
     expect(button('Salvar exemplo revisado').disabled).toBe(true)

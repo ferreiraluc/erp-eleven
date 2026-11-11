@@ -14,6 +14,7 @@ export interface OcrParsedLabel {
   requires_review: true
   matches: Array<{ id: string; name: string; sku_internal: string }>
   matches_total: number
+  examples_used?: number
 }
 export interface OcrAppliedFields {
   name?: string

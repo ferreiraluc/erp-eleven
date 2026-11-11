@@ -2,7 +2,7 @@
   <div v-show="open" class="ocr-overlay erp-dialog-backdrop" @click.self="emit('close')">
     <div v-erp-dialog="open" class="ocr-modal erp-dialog erp-dialog--media" role="dialog" aria-modal="true" :aria-label="t('title')">
       <div class="ocr-header erp-dialog__header"><h3>{{ t('title') }}</h3><button data-dialog-close class="close-btn erp-button erp-button--ghost erp-button--icon" :aria-label="t('close')" @click="emit('close')">×</button></div>
-      <div class="brand-bar erp-dialog__tabs"><ErpDropdown v-model="selectedBrand" class="brand-picker" editable :options="knownBrands.map(b => ({ value: b.brand, label: `${b.brand} · ${t('examples', { count: b.count })}` }))" :label="t('brandHint')" :disabled="phase === 'processing'" /><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
+      <div class="brand-bar erp-dialog__tabs"><ErpDropdown v-model="selectedBrand" class="brand-picker" editable :options="knownBrands.map(b => ({ value: b.brand, label: `${b.brand} · ${t('examples', { count: b.count })}` }))" :label="t('brandHint')" :disabled="phase === 'processing'" @update:model-value="brandChosen = true" /><span v-if="templateCount" class="brand-trained-badge">{{ t('examples', { count: templateCount }) }}</span></div>
       <div class="ocr-body erp-dialog__body">
         <p class="ocr-notice">{{ t('transient') }}</p>
         <div v-if="phase === 'camera'" class="camera-wrap">
@@ -15,6 +15,7 @@
         <div v-if="phase === 'processing'" class="processing-wrap"><img :src="capturedImageUrl" class="preview-img" alt="" /><p class="processing-title" role="status">{{ t('processing') }}</p></div>
         <div v-if="phase === 'results'" class="results-wrap">
           <div class="results-top"><img :src="capturedImageUrl" class="preview-thumb" alt="" /><p class="results-hint">{{ t('reviewHint') }}</p></div>
+          <p v-if="reading?.examples_used != null" class="ocr-example-status" role="status">{{ t('examplesUsed', { count: reading.examples_used }) }}</p>
           <ul v-if="warningKeys.length" class="ocr-warnings"><li v-for="key in warningKeys" :key="key">{{ t(key) }}</li></ul>
           <div v-if="reading && reading.matches_total" class="ocr-matches"><p>{{ t('matches', { count: reading.matches_total }) }}</p><ul><li v-for="match in reading.matches" :key="match.id">{{ match.name }} · {{ match.sku_internal }}</li></ul></div>
           <details v-if="reading?.texto_bruto" class="raw-text-details"><summary>{{ t('raw') }}</summary><pre class="raw-text">{{ reading.texto_bruto }}</pre></details>
@@ -52,14 +53,16 @@ import { isAxiosError } from 'axios'
 import { ocrAPI } from '@/services/api'
 import type { OcrAppliedFields, OcrParsedLabel, OcrCurrency } from '@/services/ocr'
 import { ocrMessages } from './ocrMessages'
+import { canonicalBrand } from '@/services/inventoryTaxonomy'
 const { t } = useI18n({ useScope: 'local', messages: ocrMessages })
-const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean }>(), { draft: false, open: true })
+const props = withDefaults(defineProps<{ draft?: boolean; open?: boolean; referenceBrand?: string }>(), { draft: false, open: true, referenceBrand: '' })
 const emit = defineEmits<{ result: [data: OcrAppliedFields]; close: [] }>()
 const videoRef = ref<HTMLVideoElement>()
 const phase = ref<'camera' | 'processing' | 'results' | 'saving-template' | 'error'>('camera')
 const capturedImageUrl = ref(''), selectedBrand = ref(''), errorKey = ref('cameraFailed'), formError = ref('')
 const reading = ref<OcrParsedLabel | null>(null), reviewed = ref(false), savingTemplate = ref(false), exampleSaved = ref(false)
 const knownBrands = ref<Array<{ brand: string; count: number }>>([])
+const brandChosen = ref(false)
 const currencies: OcrCurrency[] = ['PYG', 'BRL', 'USD', 'EUR']
 const currency = ref<OcrCurrency | ''>('')
 const fields = [
@@ -70,10 +73,17 @@ const values = reactive({ name: '', brand: '', size: '', color: '', barcode: '',
 const originals = reactive({ ...values })
 const saveForm = reactive({ brand: '', notes: '' })
 const hasAnyField = computed(() => Object.values(values).some(value => value.trim()))
-const templateCount = computed(() => knownBrands.value.find(brand => brand.brand.toLowerCase() === selectedBrand.value.toLowerCase())?.count || 0)
+function referenceBrandKey(value: string): string {
+  const normalized = value.normalize('NFKD').replace(/\p{M}/gu, '').trim().toLowerCase().replace(/\s+/g, ' ')
+  return normalized === 'ea7 emporio armani' ? 'emporio armani' : canonicalBrand(normalized).toLowerCase()
+}
+const templateCount = computed(() => knownBrands.value.find(brand => referenceBrandKey(brand.brand) === referenceBrandKey(selectedBrand.value))?.count || 0)
 const warningKeys = computed(() => [...new Set((reading.value?.avisos || []).filter(key => key !== 'barcode_exists').map(key => key.startsWith('unverified_') ? 'unverified' : key))])
 let stream: MediaStream | null = null, controller: AbortController | null = null
 let disposed = false, cameraRequest = 0
+watch([() => props.referenceBrand, knownBrands], () => {
+  if (!brandChosen.value) selectedBrand.value = knownBrands.value.find(brand => referenceBrandKey(brand.brand) === referenceBrandKey(props.referenceBrand))?.brand || props.referenceBrand.trim()
+}, { immediate: true })
 watch([values, currency], () => { reviewed.value = false; formError.value = '' }, { deep: true })
 watch(() => props.open, open => {
   if (!open) stopCamera()
@@ -148,6 +158,7 @@ onUnmounted(() => { disposed = true; stopCamera(); controller?.abort(); captured
 </script>
 
 <style scoped>
+.ocr-example-status { margin: 0; color: #475569; font-size: .75rem; }
 .brand-picker{flex:1;min-width:0}
 .ocr-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 600;
