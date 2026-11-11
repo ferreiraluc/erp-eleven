@@ -35,6 +35,7 @@
         class="erp-dropdown__value"
         :disabled="disabled"
         :aria-label="label"
+        :aria-describedby="selectionId"
         :aria-expanded="open"
         :aria-controls="menuId"
         :aria-invalid="invalid || undefined"
@@ -47,7 +48,7 @@
         <span v-if="selected?.icon" class="erp-dropdown__icon" aria-hidden="true">{{
           selected.icon
         }}</span>
-        <span class="erp-dropdown__text">{{
+        <span :id="selectionId" class="erp-dropdown__text">{{
           displayLabel ?? selected?.triggerLabel ?? selected?.label ?? placeholder ?? label ?? '—'
         }}</span>
       </button>
@@ -208,6 +209,7 @@ const open = ref(false),
   invalid = ref(false),
   dialogId = ref('')
 const menuId = `erp-options-${useId()}`
+const selectionId = `${menuId}-selection`
 const position = ref<Record<string, string>>({})
 const key = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim()
 const filtered = computed(() =>

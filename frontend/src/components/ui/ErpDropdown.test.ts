@@ -84,6 +84,19 @@ it('supports keyboard selection and Escape without closing its parent dialog', a
   expect(document.querySelector('[role=listbox]')).toBeNull()
   expect(document.activeElement).toBe(trigger)
 })
+it('keeps the field name and announces the selected value after a choice', async () => {
+  await mount(false)
+  const trigger = root.querySelector<HTMLButtonElement>('.erp-dropdown__value')!
+  const selectedText = () => document.getElementById(trigger.getAttribute('aria-describedby')!)?.textContent
+  expect(trigger.getAttribute('aria-label')).toBe('Marca')
+  expect(selectedText()).toContain('Marca')
+  trigger.click()
+  await flush()
+  document.querySelector<HTMLButtonElement>('[role=option][value="Prada"]')!.click()
+  await flush()
+  expect(trigger.getAttribute('aria-label')).toBe('Marca')
+  expect(selectedText()).toContain('Prada')
+})
 it('can preserve a typed substring on Enter while keeping explicit keyboard option selection', async () => {
   await mount(true, true)
   const input = root.querySelector('input')!

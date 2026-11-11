@@ -111,4 +111,14 @@ withDefaults(defineProps<{ title: string; showBack?: boolean }>(), { showBack: t
     padding: 6px;
   }
 }
+/* Keep compact typography while giving fingers the same reliable target on
+   phones and tablets. Mouse layouts retain their existing density. */
+@media (any-pointer: coarse) {
+  :is(#app, body) .erp-module-header :deep(.erp-button) { min-height: 44px; }
+  :is(#app, body) .erp-module-header :deep(.erp-button--icon) {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+}
 </style>

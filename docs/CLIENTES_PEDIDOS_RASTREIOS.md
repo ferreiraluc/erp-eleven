@@ -228,6 +228,14 @@ sem barras vazias ou detalhes repetidos. Busca e status ficam lado a lado no tab
 no celular, empilhados. Copiar/expandir e as três ações têm áreas de toque uniformes.
 O histórico expandido acompanha o conteúdo, sem limite de altura que corte eventos.
 
+Falha ao carregar a página de rastreamentos apresenta **Tentar novamente**, sem
+mostrar registros em cache ou contadores zerados como dados confirmados. Se apenas
+o resumo falhar, a lista consultada permanece disponível e os contadores ficam
+ocultos até a recuperação. Busca ou status sem resultados oferece **Limpar Filtros**;
+a opção de cadastrar um novo rastreamento pertence ao estado vazio sem filtros.
+Leituras sobrepostas de listagem e resumo mantêm apenas a resposta mais recente;
+uma carga antiga não apaga o erro nem substitui os dados da recarga após salvar.
+
 - Em **Clientes**, Ativos é a seleção inicial; Inativos mostra apenas os cadastros
   desativados e Todos inclui os dois estados. A busca respeita a seleção. A API
   mantém ativos como padrão e aceita `include_inactive=true` para consultar ambos.

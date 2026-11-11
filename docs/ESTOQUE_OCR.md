@@ -337,14 +337,18 @@ O assistente usa a mesma busca, inclusive quando recebe tamanho como campo
 separado, e deve informar a numeração original de cada resultado. A consulta
 não faz chamadas a provedores de IA.
 
-No celular (até 600px), a barra reúne voltar, **Estoque**, **Novo**, menu **Mais
-ações** e **Filtros**. O painel inicia recolhido e conserva busca/filtros/seleção
-ao fechar. Aberto, organiza tags arredondadas em duas linhas: status, marca,
-categoria, local, sem grade e ver grades. A seleção recebe destaque azul; textos
-longos cabem na tag e o nome completo aparece nas opções. Os modos de visualização
-usam ícones com nomes acessíveis, ao lado de seleção e quantidade de resultados.
-Ações de importação, etiquetas, conferência e histórico continuam disponíveis no
-menu, respeitando o perfil. Desktop preserva filtros visíveis e as mesmas tags.
+A busca, a câmera e os modos de visualização ficam sempre acessíveis, inclusive
+no celular. O botão **Filtros**, ao lado da câmera, abre somente as opções de
+filtragem; o painel inicia recolhido em todas as larguras. Uma contagem no botão
+e o resumo logo abaixo da busca indicam os filtros ativos mesmo com o painel
+fechado. Recolher não limpa filtros, busca nem seleção. Escape fecha o painel e
+retorna o foco ao botão; abrir um modal operacional também recolhe os filtros.
+
+As opções mantêm os dropdowns do ERP e o painel tem rolagem própria limitada à
+altura da tela. O cabeçalho compacto reúne voltar, **Estoque**, **Novo** e **Mais
+ações**. Importação, etiquetas, conferência e histórico continuam no menu,
+respeitando o perfil. A busca textual não conta como filtro oculto, pois seu
+campo permanece visível; ordenação e modo de grades conservam suas preferências.
 O filtro de situação usa um único menu com Todos, Baixo, Sem estoque, Excesso,
 Inativos e Revisar estoque no celular e no desktop; os números do resumo não
 duplicam esses botões. O filtro de categoria inclui **Sem categoria** mesmo quando
@@ -1327,12 +1331,16 @@ continuam no SQL antes da paginação, sem IA nem leitura de fotos para pesquisa
 
 Em telas de até 600 px, tocar no ícone **Quadrados** seleciona essa visualização
 e abre um dropdown com **Zoom** em três posições: quatro, três ou duas colunas.
-O controle fica sobre os produtos, sem acrescentar altura ao cabeçalho. Tocar
-novamente no ícone, fora do dropdown, mudar de visualização ou pressionar Escape
-fecha o controle. Os botões −/+ também mudam a posição. O padrão
-continua sendo duas colunas com os detalhes atuais; a preferência de zoom fica
-salva naquele navegador. Se os filtros estiverem recolhidos, abra **Filtros** para
-acessar o ícone. O ajuste não altera a busca, a seleção nem os produtos já carregados.
+Com Quadrados ativo, o botão mostra **Zoom** e o número atual de colunas, para
+o ajuste não depender de descobrir uma ação escondida no ícone. O controle fica
+sobre os produtos, sem acrescentar uma barra permanente ao cabeçalho. Tocar
+novamente, fora do dropdown, mudar de visualização, abrir um modal ou pressionar
+Escape fecha o controle. Os botões −/+ e o slider têm área de toque de 44 px.
+O padrão continua sendo duas colunas; a preferência fica salva naquele navegador.
+Busca, câmera e visualização permanecem acessíveis com os filtros recolhidos.
+O ajuste não altera a busca, a seleção nem os produtos já carregados. Em tablets
+e desktop, Quadrados mantém a grade responsiva existente, sem oferecer um zoom
+que não alteraria as colunas nessa largura.
 
 Nas posições menores, cada card prioriza foto, nome, cor, tamanho e saldos por
 local: **1 L | 2 D** significa uma unidade na loja e duas no depósito. Zero é

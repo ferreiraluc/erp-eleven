@@ -57,6 +57,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+:is(#app, body) .erp-dropdown__value:focus-visible,
+:is(#app, body) .erp-dropdown__control input:focus-visible,
+:is(#app, body) .erp-dropdown__arrow:focus-visible {
+  outline: 2px solid var(--color-brand-600, #2563eb);
+  outline-offset: 2px;
+}
 .erp-dropdown__arrow {
   border: 0;
   background: transparent;

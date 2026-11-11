@@ -72,11 +72,16 @@ describe('Customer-to-sale navigation', () => {
 
   it('puts scanned ticket codes in the search and clears stale date filters', async () => {
     await mount('/vendas-pdv')
+    button('Buscar e filtrar')!.click(); await settle()
     const date = container.querySelector<HTMLInputElement>('input[type="date"]')!
     date.value = '2024-01-01'; date.dispatchEvent(new Event('input', { bubbles:true })); await settle()
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
+    expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ date_from: '2024-01-01' }))
     button('Ler ticket')!.click(); await settle(); button('fixture scan ticket')!.click(); await settle()
     expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({q:'ABCDEF1234',page:1}))
     expect(mocks.list.mock.calls.at(-1)![0]).not.toHaveProperty('date_from')
+    expect(container.querySelector('.active-filters')?.textContent).toContain('ABCDEF1234')
+    expect(container.querySelector('.sales-filters')).toBeNull()
     expect(mocks.detail).not.toHaveBeenCalled(); expect(receipts.print).not.toHaveBeenCalled()
   })
   it('opens a linked sale outside the current page and retains employee permissions', async () => {
@@ -118,5 +123,83 @@ describe('Customer-to-sale navigation', () => {
     await mount('/vendas-pdv?sale_id=one&sale_id=two')
     expect(mocks.detail).not.toHaveBeenCalled()
     expect(document.querySelector('[role="dialog"]')).toBeNull()
+  })
+})
+
+describe('Sales search disclosure', () => {
+  it('opens on request, preserves a draft on Escape and only applies it after submitting', async () => {
+    await mount('/vendas-pdv')
+    const trigger = container.querySelector<HTMLButtonElement>('.filter-trigger')!
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(container.querySelector('.sales-filters')).toBeNull()
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); await settle()
+    const input = container.querySelector<HTMLInputElement>('input[type="search"]')!
+    expect(document.activeElement).toBe(input)
+    expect(trigger.getAttribute('aria-controls')).toBe(container.querySelector('form')?.id)
+    input.value = '  Cliente teste  '; input.dispatchEvent(new Event('input', { bubbles:true })); await settle()
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await settle()
+    expect(container.querySelector('.sales-filters')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+    button('Atualizar')!.click(); await settle()
+    expect(mocks.list.mock.calls.at(-1)![0]).not.toHaveProperty('q')
+    trigger.click(); await settle()
+    expect(container.querySelector<HTMLInputElement>('input[type="search"]')?.value).toBe('  Cliente teste  ')
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle()
+    expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ q:'Cliente teste', page:1 }))
+    expect(container.querySelector('.sales-filters')).toBeNull()
+    expect(container.querySelector('.active-filters')?.textContent).toContain('Cliente teste')
+    container.querySelector<HTMLButtonElement>('.filter-chip')!.click(); await settle()
+    expect(mocks.list.mock.calls.at(-1)![0]).not.toHaveProperty('q')
+    expect(container.querySelector('.active-filters')).toBeNull()
+  })
+
+  it('keeps the filter panel open while selecting a teleported dropdown option', async () => {
+    await mount('/vendas-pdv')
+    button('Buscar e filtrar')!.click(); await settle()
+    container.querySelector<HTMLButtonElement>('.sales-filters button[aria-label="Situação"]')!.click(); await settle()
+    const option = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]')).find(b => b.textContent?.trim() === 'Concluída')!
+    option.dispatchEvent(new Event('pointerdown', { bubbles:true })); option.click(); await settle()
+    expect(container.querySelector('.sales-filters')).not.toBeNull()
+    expect(mocks.list).toHaveBeenCalledTimes(1)
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true })); await settle()
+    expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({status:'completed'}))
+    expect(container.querySelector('.active-filters')?.textContent).toContain('Concluída')
+  })
+
+  it('closes on an outside tap without making a query or exposing owner filters to employees', async () => {
+    await mount('/vendas-pdv')
+    button('Buscar e filtrar')!.click(); await settle()
+    expect(container.querySelector('.sales-filters')?.textContent).not.toContain('Histórico de excluídas')
+    expect(container.querySelector('.sales-filters button[aria-label="Vendedor"]')).toBeNull()
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles:true })); await settle()
+    expect(container.querySelector('.sales-filters')).toBeNull()
+    expect(mocks.list).toHaveBeenCalledTimes(1)
+    expect(mocks.commit).not.toHaveBeenCalled()
+    expect(receipts.print).not.toHaveBeenCalled()
+  })
+
+  it('clamps filters inside a short visible viewport and closes when keyboard focus leaves', async () => {
+    const viewport = Object.assign(new EventTarget(), { width:844, height:390, offsetTop:0, offsetLeft:0 })
+    vi.stubGlobal('visualViewport', viewport)
+    const scrollHeight = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(500)
+    try {
+      await mount('/vendas-pdv')
+      const trigger = container.querySelector<HTMLButtonElement>('.filter-trigger')!
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left:16, right:240, top:181, bottom:225, width:224, height:44, x:16, y:181, toJSON:() => ({}) })
+      trigger.click(); await settle()
+      const panel = container.querySelector<HTMLFormElement>('.sales-filters')!
+      expect(panel.style.top).toBe('12px')
+      expect(panel.style.maxHeight).toBe('366px')
+      expect(panel.style.left).toBe('16px')
+      expect(panel.style.width).toBe('680px')
+      panel.querySelector<HTMLInputElement>('input')!.focus(); await settle()
+      expect(container.querySelector('.sales-filters')).not.toBeNull()
+      button('Ler ticket')!.focus(); await settle()
+      expect(container.querySelector('.sales-filters')).toBeNull()
+      expect(mocks.list).toHaveBeenCalledTimes(1)
+    } finally {
+      app?.unmount(); app = undefined
+      scrollHeight.mockRestore(); vi.unstubAllGlobals()
+    }
   })
 })
