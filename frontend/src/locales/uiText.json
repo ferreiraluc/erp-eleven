@@ -1,4 +1,19 @@
 {
+  "Não foi possível carregar os rastreamentos.": {
+    "pt": "Não foi possível carregar os rastreamentos.",
+    "es": "No se pudieron cargar los seguimientos.",
+    "en": "Could not load shipments."
+  },
+  "Não foi possível carregar o resumo dos rastreamentos.": {
+    "pt": "Não foi possível carregar o resumo dos rastreamentos.",
+    "es": "No se pudo cargar el resumen de los seguimientos.",
+    "en": "Could not load the shipment summary."
+  },
+  "Nenhum rastreamento corresponde aos filtros aplicados.": {
+    "pt": "Nenhum rastreamento corresponde aos filtros aplicados.",
+    "es": "Ningún seguimiento coincide con los filtros aplicados.",
+    "en": "No shipments match the applied filters."
+  },
   "Não foi possível abrir o pedido solicitado.": {
     "pt": "Não foi possível abrir o pedido solicitado.",
     "es": "No se pudo abrir el pedido solicitado.",

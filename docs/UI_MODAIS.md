@@ -205,3 +205,58 @@ seleção/toque, foco e menus em modais. Há uma verificação para impedir reto
 selects/datalists nativos nos templates. A inspeção visual local utiliza dados
 fictícios em larguras de 360/412/834/1440px; não substitui validação em Safari e
 Samsung Internet físicos.
+
+## Consulta e descoberta de controles — revisão de 10/11/2026
+
+Vendas começa com um resumo compacto, **Buscar e filtrar** e **Ler ticket**.
+Os filtros ficam em um painel ancorado: rascunhos não alteram a consulta até
+**Filtrar**, e os filtros aplicados permanecem visíveis em chips removíveis.
+Cards com cliente/valor em destaque, contexto curto e miniaturas substituem a
+tabela no celular e no iPad; a tabela permanece em telas largas. Veja
+[Vendas](VENDAS_PDV.md#busca-e-listagem-no-celular-e-ipad).
+
+No Estoque, **Filtros** fica junto à busca, com contador e resumo; recolher o
+painel não esconde busca, câmera, seleção ou visualização. O botão de quadrados
+ativo mostra **Zoom** e a quantidade de colunas no celular. O ajuste continua
+em um popover, evitando uma barra fixa extra. No tablet/desktop, a grade segue
+a largura disponível: não se oferece zoom que não muda o layout.
+
+O cabeçalho compartilhado conserva texto compacto e passa a oferecer alvos de
+44px em aparelhos com toque. Seletores têm foco de teclado contrastante e
+descrevem o valor escolhido para tecnologia assistiva. Buscas de Clientes e
+Pedidos possuem nome acessível; opções de visualização e seções de Endereços
+expõem seu estado selecionado. Rastreamento diferencia falha de carregamento,
+lista realmente vazia e busca sem resultado, com recuperação apropriada.
+
+### Referências aplicadas
+
+- [Apple — Layout](https://developer.apple.com/design/human-interface-guidelines/layout):
+  hierarquia, agrupamento, adaptação e revelação gradual de detalhes.
+- [Apple — Searching](https://developer.apple.com/design/human-interface-guidelines/searching):
+  acesso identificável à busca e escopo visível dos resultados.
+- [Zoho Inventory — Busca](https://www.zoho.com/us/inventory/help/advanced-search/search.html):
+  busca principal e critérios avançados reunidos em um acesso consistente.
+- [Meta — Engenharia do Facebook](https://engineering.fb.com/2020/05/08/web/facebook-redesign/):
+  estilos compartilhados, acessibilidade e carregamento do necessário. Trata-se
+  de uma referência de engenharia; os componentes Vue mantêm a identidade Eleven.
+
+### Continuidade da revisão
+
+A inspeção de código cobriu componentes compartilhados e fluxos de Vendas,
+Estoque, Clientes, Pedidos, Endereços, Rastreamento e Reposição. A revisão visual
+desta entrega concentra-se em Vendas e Estoque com dados fictícios; não afirma
+certificação de acessibilidade ou teste físico de todos os modais.
+
+Próximas aplicações, ainda não implementadas nesta revisão:
+
+1. Reunir filtros de Pedidos em acesso compacto com resumo aplicado, preservando
+   estados comerciais, reservas e arquivos.
+2. Reduzir os indicadores secundários de Endereços, mantendo conexão da loja e
+   estados incertos de impressão sempre explícitos.
+3. Uniformizar a ação de limpar buscas e estados de carregamento por módulo,
+   sem trocar silenciosamente falhas por listas vazias ou números zero.
+
+Toda próxima etapa deve verificar teclado/foco, PT/ES/EN, larguras estreitas,
+orientação paisagem, textos longos e os controles abertos. Métricas financeiras,
+permissões, ações de estoque e confirmações de impressão não mudam para compactar
+a apresentação.

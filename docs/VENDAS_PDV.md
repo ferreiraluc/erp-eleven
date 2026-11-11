@@ -96,6 +96,25 @@ A API de detalhes continua conferindo o acesso do vendedor. O atalho não conced
 edição, estorno ou exclusão: essas operações continuam exclusivas do Lucas, com
 prévia, confirmação e idempotência.
 
+## Busca e listagem no celular e iPad
+
+A listagem começa com um resumo compacto e o botão **Buscar e filtrar**. O botão
+abre os campos em um painel abaixo dele; **Ler ticket** continua acessível na mesma
+barra. Em paisagem ou com teclado aberto, o painel se reposiciona dentro da área
+visível, com rolagem própria e ações no rodapé. Digitar ou escolher filtros prepara
+uma consulta: **Filtrar** aplica os valores, volta à primeira página e recolhe o
+painel. Fechar por Escape, pelo botão, ao tocar fora ou ao sair com Tab preserva
+o rascunho; **Atualizar** e a paginação usam os filtros
+efetivamente aplicados. Esses filtros permanecem visíveis em etiquetas removíveis,
+inclusive com o painel fechado. Ler um ticket limpa os demais filtros como antes.
+
+Em telas até 1199px, as vendas usam cards separados, com cliente e valor líquido
+em destaque, vendedor, data/código, miniaturas, pagamento e situação próximos.
+No iPad há duas colunas quando a largura permite; no celular há uma coluna.
+**Ver venda** e **Notificar vendedor** conservam seus controles e permissões; em
+telas maiores a tabela continua disponível. Nenhuma leitura dispara impressão
+ou alteração financeira.
+
 ## Consultar, baixar e reimprimir tickets
 
 Em **Vendas → Ver venda → Ticket / PDF**, o operador autorizado a consultar a venda

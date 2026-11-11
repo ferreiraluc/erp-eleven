@@ -25,6 +25,7 @@
           <input
             v-model="searchQuery"
             type="text"
+            :aria-label="$tr('Buscar por número, cliente ou cidade...')"
             :placeholder='$tr("Buscar por número, cliente ou cidade...")'
             class="search-input"
           />
@@ -76,6 +77,7 @@
         <div class="view-toggle">
           <button class="erp-control"
             @click="viewMode = 'list'"
+            :aria-pressed="viewMode === 'list'"
             :class="['toggle-btn', { active: viewMode === 'list' }]"
           >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,6 +87,7 @@
           </button>
           <button class="erp-control"
             @click="viewMode = 'cards'"
+            :aria-pressed="viewMode === 'cards'"
             :class="['toggle-btn', { active: viewMode === 'cards' }]"
           >
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -15,7 +15,7 @@
     </ModuleHeader>
 
     <!-- Stats Cards -->
-    <div class="stats-section">
+    <div v-if="resumo && !loading && !loadError && !summaryError" class="stats-section">
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon blue">
@@ -100,8 +100,13 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-section">
+    <div v-if="summaryError && !loading && !loadError" class="tracking-load-error" role="alert">
+      <p>{{ $tr('Não foi possível carregar o resumo dos rastreamentos.') }}</p>
+      <button type="button" class="erp-button erp-button--secondary" @click="carregarDados">{{ $tr('Tentar novamente') }}</button>
+    </div>
+
+    <!-- Loading, failure and empty results are separate states. -->
+    <div v-if="loading" class="loading-section" role="status">
       <div class="loading-spinner">
         <svg class="spinner" fill="none" viewBox="0 0 24 24">
           <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -111,6 +116,11 @@
       <p>{{ $tr("Carregando rastreamentos...") }}</p>
     </div>
 
+    <div v-else-if="loadError" class="tracking-load-error" role="alert">
+      <p>{{ $tr('Não foi possível carregar os rastreamentos.') }}</p>
+      <button type="button" class="erp-button erp-button--secondary" @click="carregarDados">{{ $tr('Tentar novamente') }}</button>
+    </div>
+
     <!-- Lista de Rastreamentos -->
     <div v-else class="rastreamentos-section">
       <div v-if="rastreamentosFiltrados.length === 0" class="empty-state">
@@ -118,10 +128,16 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v4m-6 0h6" />
         </svg>
         <h3>{{ $tr("Nenhum rastreamento encontrado") }}</h3>
-        <p>{{ $tr("Adicione um novo rastreamento para começar") }}</p>
-        <button @click="abrirModalCriacao" class="btn btn-primary erp-button erp-button--primary">
-          {{ $tr("Adicionar Rastreamento") }}
-        </button>
+        <template v-if="hasFilters">
+          <p>{{ $tr('Nenhum rastreamento corresponde aos filtros aplicados.') }}</p>
+          <button type="button" @click="clearFilters" class="erp-button erp-button--secondary">{{ $tr('Limpar Filtros') }}</button>
+        </template>
+        <template v-else>
+          <p>{{ $tr("Adicione um novo rastreamento para começar") }}</p>
+          <button @click="abrirModalCriacao" class="btn btn-primary erp-button erp-button--primary">
+            {{ $tr("Adicionar Rastreamento") }}
+          </button>
+        </template>
       </div>
 
       <div v-else class="rastreamentos-list">
@@ -634,7 +650,9 @@ function goToPedido(rastreamento: Rastreamento) {
 }
 
 // Estado da página
-const loading = ref(false)
+const loading = ref(true)
+const loadError = ref(false)
+const summaryError = ref(false)
 const showModal = ref(false)
 const salvando = ref(false)
 const modalError = ref<string | null>(null)
@@ -725,6 +743,13 @@ const filtros = ref({
   busca: '',
   status: ''
 })
+const hasFilters = computed(() => !!filtros.value.busca.trim() || !!filtros.value.status)
+function clearFilters() {
+  filtros.value = { busca: '', status: '' }
+  const query = { ...route.query }
+  delete query.search
+  void router.replace({ query })
+}
 
 // Form data
 const formData = ref<RastreamentoCreate>({
@@ -763,8 +788,8 @@ function getBadgeText(info: any): string {
 const rastreamentosFiltrados = computed(() => {
   let lista = rastreamentoStore.rastreamentosAtivos
   
-  if (filtros.value.busca) {
-    const busca = filtros.value.busca.toLowerCase()
+  if (filtros.value.busca.trim()) {
+    const busca = filtros.value.busca.trim().toLowerCase()
     lista = lista.filter(r => 
       r.codigo_rastreio.toLowerCase().includes(busca) ||
       r.destinatario?.toLowerCase().includes(busca) ||
@@ -790,19 +815,23 @@ const rastreamentosFiltrados = computed(() => {
 })
 
 // Methods
+let loadGeneration = 0
 async function carregarDados() {
-  try {
-    loading.value = true
-    await Promise.all([
-      rastreamentoStore.listarRastreamentos(),
-      rastreamentoStore.obterResumoDashboard()
-    ])
-    resumo.value = rastreamentoStore.resumoDashboard
-  } catch (error) {
-    console.error('Erro ao carregar dados:', error)
-  } finally {
-    loading.value = false
-  }
+  const generation = ++loadGeneration
+  loading.value = true
+  loadError.value = false
+  summaryError.value = false
+  // Creation can request another reload while the initial read is pending.
+  // Only the newest pair may confirm its data or expose a retry.
+  const [listing, summary] = await Promise.allSettled([
+    rastreamentoStore.listarRastreamentos(),
+    rastreamentoStore.obterResumoDashboard()
+  ])
+  if (generation !== loadGeneration) return
+  loadError.value = listing.status === 'rejected'
+  summaryError.value = summary.status === 'rejected'
+  resumo.value = summary.status === 'fulfilled' ? rastreamentoStore.resumoDashboard : null
+  loading.value = false
 }
 
 function aplicarFiltros() {
@@ -1059,6 +1088,9 @@ function hideOrderSuggestions() {
   min-height: 100vh;
   background-color: #f1f5f9;
 }
+.tracking-load-error { margin: 0 24px 20px; padding: 18px; border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #991b1b; }
+.tracking-load-error p { margin: 0 0 12px; }
+@media (max-width: 600px) { .tracking-load-error { margin-inline: 12px; padding: 14px; } }
 
 /* Header */
 

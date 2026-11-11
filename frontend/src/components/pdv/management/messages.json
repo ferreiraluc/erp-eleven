@@ -554,5 +554,21 @@
   "Cotação histórica indisponível": [
     "Cotización histórica no disponible",
     "Historical exchange rate unavailable"
+  ],
+  "Buscar e filtrar": [
+    "Buscar y filtrar",
+    "Search and filter"
+  ],
+  "Fechar filtros": [
+    "Cerrar filtros",
+    "Close filters"
+  ],
+  "Filtros aplicados": [
+    "Filtros aplicados",
+    "Applied filters"
+  ],
+  "Remover filtro": [
+    "Quitar filtro",
+    "Remove filter"
   ]
 }

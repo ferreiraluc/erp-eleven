@@ -50,6 +50,31 @@ beforeEach(() => {
 afterEach(() => { app?.unmount(); root?.remove(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('Inventory search counts and mobile progress', () => {
+  it('keeps search and view controls available with filters collapsed, preserves selected filters and restores focus on Escape', async () => {
+    api.getDistinctValues.mockResolvedValue({ brands: ['Boss'], categories: ['Camisetas'] })
+    const { store } = await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
+    const trigger = root.querySelector<HTMLButtonElement>('.inventory-filters-trigger')!
+    const panel = root.querySelector<HTMLElement>('#inventory-filter-panel')!
+    expect(trigger.textContent).toContain('Filtros')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(panel.style.display).toBe('none')
+    expect(panel.contains(root.querySelector('.search-input'))).toBe(false)
+    expect(panel.contains(root.querySelector('.view-controls'))).toBe(false)
+    trigger.click(); await nextTick()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    const category = root.querySelector<HTMLButtonElement>('[aria-label="Categoria"]')!
+    await chooseDropdown(category, 'Camisetas'); await nextTick()
+    expect(store.filters.category).toBe('Camisetas')
+    panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await nextTick()
+    expect(panel.style.display).toBe('none')
+    expect(document.activeElement).toBe(trigger)
+    expect(root.querySelector('.filter-count')?.textContent).toBe('1')
+    expect(root.querySelector('.active-filter-summary')?.textContent).toContain('Camisetas')
+    const calls = api.getItems.mock.calls.length
+    trigger.click(); await nextTick()
+    expect(store.filters.category).toBe('Camisetas')
+    expect(api.getItems).toHaveBeenCalledTimes(calls)
+  })
   it('shows the full total beside Select, partial progress, then explicit end of results', async () => {
     const initial = deferred(); api.getItems.mockReturnValueOnce(initial.promise)
     await mount()
@@ -179,8 +204,8 @@ it('does not turn an unknown selected balance into zero', async () => {
 it('changes photo zoom without reloading results or losing selection, and remembers it across visits', async () => {
   vi.stubGlobal('matchMedia', () => ({ matches: true }))
   const openZoom = async () => {
-    const trigger = button('Quadrados')
-    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 80, bottom: 240, width: 34 } as DOMRect)
+    const trigger = root.querySelector<HTMLButtonElement>('[data-view="grid"]')!
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 80, top: 196, bottom: 240, width: 80 } as DOMRect)
     trigger.click(); await nextTick(); await nextTick()
   }
   localStorage.setItem('inv_view', 'grid')

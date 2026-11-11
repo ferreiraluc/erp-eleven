@@ -3207,5 +3207,6 @@
   "Recolher grade {name}": ["Contraer grupo {name}", "Collapse variant group {name}"],
   "{matching} de {count} variações correspondem aos filtros": ["{matching} de {count} variantes coinciden con los filtros", "{matching} of {count} variants match the filters"],
   "Carregando categorias...": ["Cargando categorías...", "Loading categories..."],
-  "Não foi possível carregar as categorias. Você pode digitar ou tentar novamente.": ["No se pudieron cargar las categorías. Puede escribir o volver a intentarlo.", "Could not load categories. You can type or try again."]
+  "Não foi possível carregar as categorias. Você pode digitar ou tentar novamente.": ["No se pudieron cargar las categorías. Puede escribir o volver a intentarlo.", "Could not load categories. You can type or try again."],
+  "Limpar filtros": ["Limpiar filtros", "Clear filters"]
 }

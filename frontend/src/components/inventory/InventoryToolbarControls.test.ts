@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h, nextTick, type App, type Component } from 'vue'
+import { createApp, defineComponent, h, nextTick, reactive, type App, type Component } from 'vue'
 import { createI18n } from 'vue-i18n'
 import InventorySearchBar from './InventorySearchBar.vue'
 import InventoryViewControls from './InventoryViewControls.vue'
@@ -45,8 +45,10 @@ describe('Inventory toolbar controls', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: true }))
     const update = vi.fn()
     await mount(InventoryViewControls, { mode: 'grid', selectionMode: false, busy: false, ready: true, resultText: '42 itens', zoomEnabled: true, gridZoom: 1, 'onUpdate:gridZoom': update })
-    const trigger = button('Quadrados')
-    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 80, bottom: 240, width: 34 } as DOMRect)
+    const trigger = container.querySelector<HTMLButtonElement>('[data-view="grid"]')!
+    expect(trigger.textContent).toContain('Zoom')
+    expect(trigger.getAttribute('aria-label')).toBe('Zoom dos produtos · 3 colunas')
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 80, top: 196, bottom: 240, width: 80 } as DOMRect)
     expect(container.querySelector('[type="range"]')).toBeNull()
     trigger.click(); await nextTick(); await nextTick()
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
@@ -65,6 +67,20 @@ describe('Inventory toolbar controls', () => {
     expect(document.activeElement).toBe(trigger)
     trigger.click(); await nextTick(); await nextTick()
     button('Lista').click(); await nextTick()
+    expect(container.querySelector('[type="range"]')).toBeNull()
+  })
+
+  it('closes zoom when an operational modal opens and does not leave its slider above the modal', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    const props = reactive({ mode: 'grid', selectionMode: false, busy: false, ready: true, resultText: '42 itens', zoomEnabled: true, overlayOpen: false })
+    await mount(InventoryViewControls, props)
+    const trigger = container.querySelector<HTMLButtonElement>('[data-view="grid"]')!
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({ left: 20, top: 100, bottom: 144, width: 80 } as DOMRect)
+    trigger.click(); await nextTick(); await nextTick()
+    expect(container.querySelector('[type="range"]')).not.toBeNull()
+    props.overlayOpen = true; await nextTick()
+    expect(container.querySelector('[type="range"]')).toBeNull()
+    props.overlayOpen = false; await nextTick()
     expect(container.querySelector('[type="range"]')).toBeNull()
   })
 

@@ -91,6 +91,8 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
   const resumoDashboard = ref<RastreamentoResumo | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  let listGeneration = 0
+  let summaryGeneration = 0
 
   // Computed
   const rastreamentosAtivos = computed(() => 
@@ -122,6 +124,7 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
     status_filter?: string
     ativo?: boolean
   }) {
+    const generation = ++listGeneration
     try {
       loading.value = true
       error.value = null
@@ -135,13 +138,13 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
       const url = `/api/rastreamento/${params.toString() ? '?' + params.toString() : ''}`
       const response = await api.get(url)
       
-      rastreamentos.value = response.data
+      if (generation === listGeneration) rastreamentos.value = response.data
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || uiText("Erro ao listar rastreamentos")
+      if (generation === listGeneration) error.value = err.response?.data?.detail || uiText("Erro ao listar rastreamentos")
       throw err
     } finally {
-      loading.value = false
+      if (generation === listGeneration) loading.value = false
     }
   }
 
@@ -284,19 +287,20 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
   }
 
   async function obterResumoDashboard() {
+    const generation = ++summaryGeneration
     try {
       loading.value = true
       error.value = null
 
       const response = await api.get('/api/rastreamento/resumo/dashboard')
       
-      resumoDashboard.value = response.data
+      if (generation === summaryGeneration) resumoDashboard.value = response.data
       return response.data
     } catch (err: any) {
-      error.value = err.response?.data?.detail || uiText("Erro ao obter resumo da dashboard")
+      if (generation === summaryGeneration) error.value = err.response?.data?.detail || uiText("Erro ao obter resumo da dashboard")
       throw err
     } finally {
-      loading.value = false
+      if (generation === summaryGeneration) loading.value = false
     }
   }
 
@@ -384,6 +388,8 @@ export const useRastreamentoStore = defineStore('rastreamento', () => {
 
   // Reset
   function resetState() {
+    listGeneration++
+    summaryGeneration++
     rastreamentos.value = []
     rastreamentoAtual.value = null
     resumoDashboard.value = null
