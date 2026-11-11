@@ -6,7 +6,7 @@ import ItemFormModal from './ItemFormModal.vue'
 const mock = vi.hoisted(() => ({ prepare: vi.fn(), photos: vi.fn(), update: vi.fn() }))
 vi.mock('@/services/productGallery', () => ({ MAX_PRODUCT_PHOTOS: 5, prepareGalleryFile: mock.prepare, galleryPreview: async (v: string) => 'preview:' + v }))
 vi.mock('@/services/productPhoto', () => ({ catalogForStorage: async (v: string) => v }))
-vi.mock('@/services/api', () => ({ inventoryAPI: { getItemPhotos: mock.photos, updateItem: mock.update, getByBarcode: async () => [] }, ocrAPI: {} }))
+vi.mock('@/services/api', () => ({ inventoryAPI: { getItemPhotos: mock.photos, updateItem: mock.update, getByBarcode: async () => [], getDistinctValues: async () => ({ brands: [], categories: [] }) }, ocrAPI: {} }))
 let app: App, root: HTMLDivElement
 const state = reactive({ cover: 'main', additional: ['side'] })
 const flush = async () => { for (let i = 0; i < 5; i++) { await Promise.resolve(); await nextTick() } }

@@ -36,6 +36,7 @@
       </div>
 
       <div class="lt-body erp-dialog__body">
+        <p v-if="previewError" role="alert">{{ ocrText('exampleLoadFailed') }}</p>
         <!-- Loading -->
         <div v-if="loading" class="lt-loading">
           <div class="lt-spinner"></div>
@@ -61,15 +62,11 @@
             :class="{ 'lt-card-deleting': deletingId === tpl.id }"
           >
             <!-- Thumbnail -->
-            <div class="lt-thumb-wrap">
-              <img
-                v-if="tpl.sample_image"
-                :src="ensureDataUrl(tpl.sample_image)"
-                class="lt-thumb"
-                :alt="tr('etiqueta')"
-                @click="openPreview(tpl)"
-              />
-              <div v-else class="lt-thumb-placeholder">
+            <button v-if="tpl.has_image || tpl.sample_image" type="button" class="lt-thumb-wrap lt-view-example erp-button erp-button--secondary" :disabled="loadingPreviewId !== null" @click="openPreview(tpl)">
+              {{ ocrText(loadingPreviewId === tpl.id ? 'loadingExample' : 'viewExample') }}
+            </button>
+            <div v-else class="lt-thumb-wrap">
+              <div class="lt-thumb-placeholder">
                 <svg fill="none" viewBox="0 0 24 24" stroke="#d1d5db" width="24" height="24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -143,9 +140,9 @@
   </div>
 
   <!-- Image preview lightbox -->
-  <div v-if="previewImage" class="lt-lightbox" @click="previewImage = null">
+  <div v-if="previewImage" v-erp-dialog class="lt-lightbox erp-dialog-backdrop" role="dialog" aria-modal="true" :aria-label="ocrText('viewExample')" @click.self="previewImage = null">
     <img :src="previewImage" class="lt-lightbox-img" :alt="tr('etiqueta')" />
-    <button class="lt-lightbox-close erp-button erp-button--ghost erp-button--icon" @click="previewImage = null" :aria-label="tr('Fechar')">
+    <button data-dialog-close class="lt-lightbox-close erp-button erp-button--ghost erp-button--icon" @click="previewImage = null" :aria-label="tr('Fechar')">
       <svg fill="none" viewBox="0 0 24 24" stroke="white" width="24" height="24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
@@ -173,7 +170,7 @@ import { formatDate as businessDate } from '@/utils/datetime'
 import { vErpDialog } from '@/directives/erpDialog'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 const { tr } = useInventoryI18n()
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ocrAPI } from '@/services/api'
 import { useI18n } from 'vue-i18n'
 import { ocrMessages } from './ocrMessages'
@@ -184,6 +181,7 @@ interface LabelTemplate {
   brand: string
   notes?: string
   sample_image?: string
+  has_image?: boolean
   parsed_name?: string
   parsed_size?: string
   parsed_color?: string
@@ -204,6 +202,9 @@ const activeBrand = ref<string | null>(null)
 const deletingId = ref<string | null>(null)
 const deleteTarget = ref<LabelTemplate | null>(null)
 const previewImage = ref<string | null>(null)
+const loadingPreviewId = ref<string | null>(null)
+const previewError = ref(false)
+let disposed = false
 
 const filteredTemplates = computed(() =>
   activeBrand.value
@@ -222,9 +223,17 @@ function formatDate(iso: string): string {
   return businessDate(iso, { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-function openPreview(tpl: LabelTemplate) {
-  if (tpl.sample_image) {
-    previewImage.value = ensureDataUrl(tpl.sample_image)
+async function openPreview(tpl: LabelTemplate) {
+  if (loadingPreviewId.value) return
+  loadingPreviewId.value = tpl.id; previewError.value = false
+  try {
+    const detail = tpl.sample_image ? tpl : await ocrAPI.getTemplate(tpl.id)
+    if (!detail.sample_image) throw new Error('Missing image')
+    if (!disposed) previewImage.value = ensureDataUrl(detail.sample_image)
+  } catch {
+    if (!disposed) previewError.value = true
+  } finally {
+    if (!disposed) loadingPreviewId.value = null
   }
 }
 
@@ -260,6 +269,7 @@ onMounted(async () => {
       ocrAPI.getTemplates(),
       ocrAPI.getBrands(),
     ])
+    if (disposed) return
     templates.value = tpls
     brands.value = brnds
   } catch (e) {
@@ -268,9 +278,11 @@ onMounted(async () => {
     loading.value = false
   }
 })
+onUnmounted(() => { disposed = true; previewImage.value = null })
 </script>
 
 <style scoped>
+.lt-view-example { min-width: 80px; min-height: 80px; font-size: .7rem; padding: .3rem; }
 /* ── Overlay & Modal ── */
 .lt-overlay {
   position: fixed;
