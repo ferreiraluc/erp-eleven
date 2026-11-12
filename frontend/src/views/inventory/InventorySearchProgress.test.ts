@@ -156,19 +156,23 @@ describe('Inventory search counts and mobile progress', () => {
   })
 })
 
-it('keeps default order until requested, resets pagination, and passes newest ordering to following pages', async () => {
+it('starts with newest products, keeps that order across pages, and allows the former default order', async () => {
   await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
-  expect(api.getItems.mock.calls[0][0]).not.toHaveProperty('sort_by')
+  expect(api.getItems.mock.calls[0][0]).toMatchObject({ sort_by: 'created_at', page: 1 })
+  expect(root.querySelector('[aria-label="Ordenação dos produtos"]')?.textContent).toContain('Mais recentes')
   const choose = async (value: string) => {
     const select = root.querySelector<HTMLButtonElement>('[aria-label="Ordenação dos produtos"]')!
     await chooseDropdown(select, value); await nextTick(); await nextTick()
   }
-  await choose('created_at')
-  expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', page: 1 }), expect.any(AbortSignal))
   api.getItems.mockResolvedValueOnce(page(['c', 'd'], 2)); button('Carregar mais').click(); await nextTick()
   expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', page: 2 }), expect.any(AbortSignal))
   await choose('')
   expect(api.getItems.mock.lastCall![0]).not.toHaveProperty('sort_by'); expect(api.getItems.mock.lastCall![0].page).toBe(1)
+  expect(root.querySelector('[aria-label="Ordenação dos produtos"]')?.textContent).toContain('Ordem padrão')
+  api.getItems.mockResolvedValueOnce(page(['c', 'd'], 2)); button('Carregar mais').click(); await nextTick()
+  expect(api.getItems.mock.lastCall![0]).not.toHaveProperty('sort_by'); expect(api.getItems.mock.lastCall![0].page).toBe(2)
+  await choose('created_at')
+  expect(api.getItems).toHaveBeenLastCalledWith(expect.objectContaining({ sort_by: 'created_at', page: 1 }), expect.any(AbortSignal))
 })
 
 it('counts distinct selected grades and stock without counting contextual unselected sizes', async () => {
@@ -179,7 +183,7 @@ it('counts distinct selected grades and stock without counting contextual unsele
   expect(text('.sel-stock-summary')).toBe('1 grades · 1 peças na seleção')
 })
 
-it('orders groups by their newest member alongside loose items only when newest is chosen', async () => {
+it('starts grades and loose items in newest order and preserves the alternative default order', async () => {
   localStorage.setItem('inv_group_mode', 'true')
   api.getItems.mockResolvedValue({ ...page(['loose'], 1, 1), items: [{ ...item('loose'), created_at: '2026-10-10T12:00:00Z' }] })
   api.getGroups.mockResolvedValue([
@@ -188,8 +192,10 @@ it('orders groups by their newest member alongside loose items only when newest 
   ])
   await mount(); await vi.waitFor(() => expect(api.getDistinctValues).toHaveBeenCalled())
   const names = () => Array.from(root.querySelectorAll('.items-container > .group-card, .items-container > .item-card')).map(el => el.textContent)
-  expect(names()[0]).toContain('Older')
+  expect(names()[0]).toContain('Newer'); expect(names()[1]).toContain('Camiseta loose'); expect(names()[2]).toContain('Older')
   const select = root.querySelector<HTMLButtonElement>('[aria-label="Ordenação dos produtos"]')!
+  await chooseDropdown(select, ''); await nextTick(); await nextTick()
+  expect(names()[0]).toContain('Older')
   await chooseDropdown(select, 'created_at'); await nextTick(); await nextTick()
   expect(names()[0]).toContain('Newer'); expect(names()[1]).toContain('Camiseta loose'); expect(names()[2]).toContain('Older')
 })

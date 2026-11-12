@@ -55,7 +55,6 @@
     <main class="dashboard-main">
       <div class="dashboard-content">
         <DashboardQuickActions v-if="!authStore.isReseller" primary-only />
-        <p v-else class="reseller-access-note" role="note">{{ $t('access.resellerHelp') }}</p>
 
         <!-- Row 1: Large Inventory Card + Rastreamento -->
         <div class="main-top-grid">
@@ -483,7 +482,6 @@ onUnmounted(() => {
 <style scoped>
 .dashboard--reseller .main-top-grid,.dashboard--reseller .bottom-grid { grid-template-columns:minmax(0,1fr); }
 .dashboard--reseller .dashboard-content { max-width:960px; margin-inline:auto; }
-.reseller-access-note { margin:0 0 16px; padding:12px 16px; background:#eff6ff; border:1px solid #dbeafe; border-radius:12px; color:#475569; font-size:13px; line-height:1.5; }
 .adot-unknown { background: #d97706; }
 .slevel-unknown { color: #92400e; }
 /* ── Inventory Card (large dashboard card) ───────────────────────────── */
