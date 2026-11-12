@@ -40,7 +40,6 @@ describe('reseller inventory consultation', () => {
   it('preserves search, filters and selection but blocks creation, bulk operations and print before any API call', async () => {
     route.query.new='1'
     const state = await mount(InventoryListView)
-    expect(root.textContent).toContain('Acesso de consulta')
     expect(root.querySelector('.modal-container')).toBeNull()
     expect(button('Novo item').disabled).toBe(true)
     button('Filtros').click(); await flush()

@@ -1,6 +1,5 @@
 <template>
   <div class="inventory-view">
-    <p v-if="readOnly" class="inventory-readonly-notice" role="status">{{ tr(READ_ONLY_MESSAGE) }}</p>
     <div class="sticky-toolbar">
       <div class="mobile-toolbar-bar">
         <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Voltar ao dashboard')" @click="$router.replace('/dashboard')">←</button>
@@ -1742,7 +1741,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.inventory-readonly-notice { margin: 0; padding: 8px 16px; background: #eff6ff; color: #475569; font-size: .8rem; }
 .local-search-notice{margin:8px 16px;color:#475569;font-size:12px}.card-cached .action-btn,.card-cached .card-check{opacity:.4}.card-scanned{outline:2px solid #2563eb;outline-offset:-2px}.related-inline-status{display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;font-size:12px;color:#64748b}
 .receiving-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:.85rem}
 .stock-unknown { color: #92400e; }

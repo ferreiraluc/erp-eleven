@@ -1251,9 +1251,10 @@ fica protegida pelo fluxo de recuperação existente.
 
 ### Ordem de cadastro e conferência de quantidades
 
-O seletor **Ordem padrão → Adicionados mais recentemente** ordena por data de
-criação, sem confundir edição ou movimentação com cadastro novo. A ordem inicial
-continua a mesma. A API aplica a ordenação antes da paginação, com desempate por ID;
+O estoque inicia em **Adicionados mais recentemente** para todos os perfis. Essa
+opção ordena por data de criação, sem confundir edição ou movimentação com cadastro
+novo. **Ordem padrão** continua disponível no seletor. A API aplica a ordenação
+antes da paginação, com desempate por ID;
 busca, filtros e carregamento progressivo permanecem ativos. Em **Ver grades**, a
 posição do grupo considera o cadastro mais recente entre suas variações visíveis.
 Limpar filtros conserva a ordem escolhida; selecione **Ordem padrão** para voltar.
@@ -1596,7 +1597,8 @@ Os botões **Editar** e **Movimentar** abrem os mesmos formulários em modo de c
 campos desabilitados, abas e galeria navegáveis, sem salvar ou registrar. **Histórico**
 fica desabilitado e não carrega o modal. Novo, duplicar, grades, edição em lote,
 transferências, importação, impressão e ferramentas de IA não podem executar operações;
-os controles visíveis indicam acesso de consulta. A abertura por `?new=1` também é ignorada.
+os controles bloqueados mantêm a indicação de acesso de consulta. Dashboard e cabeçalho
+do Estoque não exibem um aviso extra de perfil. A abertura por `?new=1` também é ignorada.
 As reservas mostram sua quantidade sem oferecer atalho para Pedidos.
 
 O modo de consulta é uma restrição adicional às permissões já existentes. Os handlers

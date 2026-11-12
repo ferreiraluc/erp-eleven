@@ -16,7 +16,7 @@
         <X aria-hidden="true" />
       </button>
     </div>
-    <button type="button" class="scan-button erp-button erp-button--secondary erp-button--icon" :aria-label="tr('Escanear código')" :title="tr('Escanear código')" @click="emit('scan')">
+    <button type="button" class="scan-button erp-button erp-button--secondary" :aria-label="tr('Escanear código')" :title="tr('Escanear código')" @click="emit('scan')">
       <ScanLine aria-hidden="true" />
     </button>
     <slot name="actions" />
@@ -33,6 +33,6 @@ const { tr } = useInventoryI18n()
 </script>
 
 <style scoped>
-.inventory-search{display:flex;gap:var(--space-3);margin-bottom:var(--space-3)}.search-box{position:relative;flex:1;min-width:0}.search-icon{position:absolute;left:12px;top:50%;width:16px;height:16px;color:#64748b;transform:translateY(-50%);pointer-events:none}.search-input{width:100%;min-height:42px;padding:10px 12px 10px 36px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:.875rem;box-sizing:border-box}.search-input:hover{border-color:#94a3b8}.search-input:focus-visible{border-color:var(--color-brand-600);box-shadow:0 0 0 3px rgb(37 99 235 / 10%)}.search-input-clearable{padding-right:44px}.search-clear{position:absolute;right:5px;top:50%;transform:translateY(-50%)}.scan-button{width:42px;min-width:42px;height:42px;min-height:42px}.search-clear :deep(svg),.scan-button :deep(svg){width:18px;height:18px}@media(max-width:600px){.inventory-search{gap:var(--space-2)}.search-input,.scan-button{min-height:44px}.scan-button{width:44px;min-width:44px;height:44px}}
+.inventory-search{display:flex;align-items:stretch;gap:var(--space-3);margin-bottom:var(--space-3)}.search-box{position:relative;display:flex;flex:1;min-width:0}.search-icon{position:absolute;left:12px;top:50%;width:16px;height:16px;color:#64748b;transform:translateY(-50%);pointer-events:none}.search-input{width:100%;min-height:44px;padding:10px 12px 10px 36px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:.875rem;box-sizing:border-box}.search-input:hover{border-color:#94a3b8}.search-input:focus-visible{border-color:var(--color-brand-600);box-shadow:0 0 0 3px rgb(37 99 235 / 10%)}.search-input-clearable{padding-right:44px}.search-clear{position:absolute;right:5px;top:50%;transform:translateY(-50%)}.scan-button{flex:0 0 44px;width:44px;min-width:44px}.search-clear :deep(svg),.scan-button :deep(svg){width:18px;height:18px}@media(max-width:600px){.inventory-search{gap:var(--space-2)}}
 @media(max-width:1024px){.search-input{font-size:16px}}
 </style>
