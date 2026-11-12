@@ -1,5 +1,6 @@
 """Transactional inbox/outbox. No provider call or commit belongs to this module."""
 import uuid
+import hashlib
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
@@ -13,7 +14,7 @@ from ..models.notification import (
 )
 from ..models.usuario import Usuario
 from ..schemas.notification import CATEGORIES, NotificationFields, validate_action_path
-from .access_policy import is_owner, own_sales
+from .access_policy import is_owner, is_reseller, own_sales
 from .notification_context import notification_allowed
 from .user_sessions import aware
 
@@ -112,6 +113,8 @@ def action_allowed(db, user, path):
         parts = urlsplit(validate_action_path(path))
     except ValueError:
         return False
+    if is_reseller(user) and parts.path not in {'/dashboard', '/inventory', '/exchange-rates', '/conta', '/notificacoes'}:
+        return False
     if parts.path in {'/auditoria', '/configuracoes', '/usuarios'} and not is_owner(user):
         return False
     if parts.path == '/assistente' and not is_owner(user):
@@ -145,9 +148,11 @@ def action_allowed(db, user, path):
     return True
 
 
-def validate_targets(db, user_ids, action_path):
+def validate_targets(db, user_ids, action_path, *, sale_summaries=False):
     users = active_users(db, user_ids, exact=True)
-    if any(not action_allowed(db, user, action_path) for user in users):
+    if not sale_summaries and any(is_reseller(user) for user in users):
+        raise HTTPException(400, 'Revendedores recebem somente o resumo automático de vendas concluídas. Configure os destinatários dessa regra.')
+    if any(not action_allowed(db, user, action_path) for user in users if not is_reseller(user)):
         raise HTTPException(400, 'O atalho escolhido não está disponível para todos os destinatários.')
     return users
 
@@ -202,7 +207,8 @@ def emit_notification(db, *, title, body, user_ids, category='manual', severity=
         existing = db.query(Notification).filter_by(**filters).first()
         if existing:
             return existing
-    users = active_users(db, user_ids)
+    users = [user for user in active_users(db, user_ids)
+             if not is_reseller(user) or entity_type == 'pdv_sale_summary']
     if not users:
         return None
     moment = utcnow()
@@ -243,11 +249,36 @@ def publish_due_notifications(db, now=None):
     return len(notices)
 
 
+def _reseller_sale_summary(db, users, entity_type, entity_id, dedupe_key):
+    """Read the sale once and publish only value/seller, never its private details."""
+    if not users or entity_type != 'pdv_sale':
+        return None
+    from .notification_context import sale_metadata
+    from .pdv_usd import notification_amount
+    try:
+        identity = uuid.UUID(str(entity_id))
+    except (ValueError, TypeError):
+        return None
+    sale = sale_metadata(db, identity, required=False)
+    if not sale or sale.status != 'completed':
+        return None
+    return emit_notification(db,
+        title=f'Venda U$ {notification_amount(sale.total_gs, sale.usd_rate_gs)} concluída',
+        body=f'{sale.seller_name or "Equipe Eleven"} concluiu uma venda.',
+        category='sales', severity='success', user_ids=[user.id for user in users],
+        action_path=None, dedupe_key=dedupe_key, entity_type='pdv_sale_summary', entity_id=identity)
+
+
 def emit_event(db, event_key, *, context, user_ids, dedupe_key, action_path=None, entity_type=None, entity_id=None):
     ensure_defaults(db)
     rule = db.get(NotificationRule, event_key)
     if not rule or not rule.enabled:
         return None
+    summary_key = 'reseller-sale:' + hashlib.sha256(dedupe_key.encode('utf-8')).hexdigest()
+    # An audience change never replays an already emitted event to a new group.
+    existing = db.query(Notification).filter(Notification.dedupe_key.in_([dedupe_key, summary_key])).first()
+    if existing:
+        return existing
     template = db.get(NotificationTemplate, rule.template_id)
     moment = utcnow().astimezone(BRT)
     values = {'user_name': 'equipe', 'cliente_username': 'destinatário não informado', 'sale_code': '', 'sale_total': '—', 'tracking_code': '', 'status': '',
@@ -257,6 +288,8 @@ def emit_event(db, event_key, *, context, user_ids, dedupe_key, action_path=None
     # Event defaults are a fallback, not an allowlist. Explicit recipients must
     # still have access to the underlying sale before any inbox/push is created.
     users = active_users(db, rule.user_ids or user_ids)
+    reseller_users = [user for user in users if is_reseller(user)]
+    users = [user for user in users if not is_reseller(user)]
     path = action_path or template.action_path
     reference = Notification(action_path=path, entity_type=entity_type,
                              entity_id=str(entity_id) if entity_id is not None else None)
@@ -273,10 +306,13 @@ def emit_event(db, event_key, *, context, user_ids, dedupe_key, action_path=None
     # remains unchanged; database failures are deliberately not swallowed.
     title = template.title.format_map(values).strip() or default_title.format_map(values).strip()
     body = template.body.format_map(values).strip() or default_body.format_map(values).strip()
-    return emit_notification(db, title=title[:120], body=body[:2000],
+    notice = emit_notification(db, title=title[:120], body=body[:2000],
         category=template.category, severity=template.severity, requires_ack=template.requires_ack,
         requires_response=template.requires_response, user_ids=[user.id for user in users], action_path=path,
         dedupe_key=dedupe_key, entity_type=entity_type, entity_id=entity_id)
+    summary = (_reseller_sale_summary(db, reseller_users, entity_type, entity_id, summary_key)
+               if event_key == 'sale_completed' else None)
+    return notice or summary
 
 
 def run_notification_rules(db, now=None):

@@ -176,7 +176,7 @@
     "resetDescription": "Enter a temporary password. The user must change it on the next sign-in.",
     "saved": "Changes saved.",
     "userSaveError": "Could not save. Check the details, email and salesperson link.",
-    "userRules": "Administration and auditing are exclusive to Lucas. Other users operate the store with the sales access defined here.",
+    "userRules": "Administration and auditing are exclusive to Lucas. Current team keeps its configured operational access; Reseller can only view inventory, exchange rates and personal notifications.",
     "auditSubtitle": "Operations, queries and activity by user and component.",
     "auditNotice": "Records logins and changes to the system. Queries and browsing time are not recorded.",
     "period": "Period",
@@ -267,6 +267,11 @@
       "exchange-rates": "Exchange rates",
       "fiado": "Payers",
       "folgas": "Days off"
-    }
+    },
+    "reseller": "Reseller",
+    "standardProfile": "Current team",
+    "resellerProfile": "Reseller — read only",
+    "noSalesAccess": "No sales access",
+    "resellerHelp": "Read-only access to products, quantities and exchange rates. Changes, sales, orders, customers, history and printing are not available."
   }
 }

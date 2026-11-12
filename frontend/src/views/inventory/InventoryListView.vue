@@ -1,23 +1,25 @@
 <template>
   <div class="inventory-view">
+    <p v-if="readOnly" class="inventory-readonly-notice" role="status">{{ tr(READ_ONLY_MESSAGE) }}</p>
     <div class="sticky-toolbar">
       <div class="mobile-toolbar-bar">
         <button type="button" class="erp-button erp-button--ghost erp-button--icon" :aria-label="tr('Voltar ao dashboard')" @click="$router.replace('/dashboard')">←</button>
         <div class="mobile-toolbar-title"><strong>{{ tr('Estoque') }}</strong></div>
-        <button type="button" class="erp-button erp-button--primary erp-button--sm mobile-new-item" @click="openCreate" :aria-label="tr('Novo item')">+ {{ tr('Novo') }}</button>
-        <InventoryActionsMenu compact :is-owner="auth.isOwner" :diagnostics-open="showDiagnostics"
-          @open-deleted="showDeletedHistory = true" @toggle-diagnostics="showDiagnostics = !showDiagnostics"
-          @open-labels="showLabelTemplates = true" @open-import="showImport = true" @open-receiving="openReceiving(false)" />
+        <button type="button" class="erp-button erp-button--primary erp-button--sm mobile-new-item" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="openCreate" :aria-label="tr('Novo item')">+ {{ tr('Novo') }}</button>
+        <InventoryActionsMenu compact :read-only="readOnly" :is-owner="auth.isOwner" :diagnostics-open="showDiagnostics"
+          @open-deleted="!readOnly && (showDeletedHistory = true)" @toggle-diagnostics="!readOnly && (showDiagnostics = !showDiagnostics)"
+          @open-labels="!readOnly && (showLabelTemplates = true)" @open-import="!readOnly && (showImport = true)" @open-receiving="openReceiving(false)" />
       </div>
       <div class="inventory-toolbar-panel">
     <InventoryHeaderActions
+      :read-only="readOnly"
       :is-owner="auth.isOwner"
       :diagnostics-open="showDiagnostics"
       @create="openCreate"
-      @open-deleted="showDeletedHistory = true"
-      @toggle-diagnostics="showDiagnostics = !showDiagnostics"
-      @open-labels="showLabelTemplates = true"
-      @open-import="showImport = true" @open-receiving="openReceiving(false)"
+      @open-deleted="!readOnly && (showDeletedHistory = true)"
+      @toggle-diagnostics="!readOnly && (showDiagnostics = !showDiagnostics)"
+      @open-labels="!readOnly && (showLabelTemplates = true)"
+      @open-import="!readOnly && (showImport = true)" @open-receiving="openReceiving(false)"
     />
 
     <!-- Search + Camera -->
@@ -99,9 +101,9 @@
     </div><!-- /sticky-toolbar -->
 
     <div v-if="inventoryStore.filters.receiving_lot_id" class="receiving-filter-bar"><span>{{ tr('Lote de recebimento') }}: <strong>{{ receivingFilterName || tr('Selecionado') }}</strong></span><button type="button" class="erp-button erp-button--ghost erp-button--sm" @click="clearReceiving">{{ tr('Limpar filtro') }} ×</button></div>
-    <ReceivingLotsModal v-if="showReceiving" :selection="receivingSelection" :can-manage="['ADMIN','GERENTE'].includes(auth.userRole)" @close="showReceiving=false" @filter="filterReceiving" />
+    <ReceivingLotsModal v-if="showReceiving" :selection="receivingSelection" :can-manage="!readOnly && ['ADMIN','GERENTE'].includes(auth.userRole)" @close="showReceiving=false" @filter="filterReceiving" />
     <InventoryDiagnosticsPanel
-      v-if="showDiagnostics"
+      v-if="showDiagnostics && !readOnly"
       :revision="diagnosticsRevision"
       :opening-id="diagnosticsOpeningId"
       :open-error="diagnosticsOpenError"
@@ -130,7 +132,7 @@
       </svg>
       <p>{{ tr('Nenhum item encontrado') }}</p>
       <button v-if="hasActiveFilters" @click="clearItemFilters" class="btn btn-secondary erp-button erp-button--secondary" style="margin-top:1rem;">{{ tr('Limpar Filtros') }}</button>
-      <button v-else @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem;">{{ tr('Novo item') }}</button>
+      <button v-else :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="openCreate" class="btn btn-primary erp-button erp-button--primary" style="margin-top:1rem;">{{ tr('Novo item') }}</button>
     </div>
 
     <!-- Items list -->
@@ -204,7 +206,7 @@
                 :aria-pressed="groupSelectionComplete(entry.group)" @click.stop="toggleGroupSelection(entry.group)">
                 {{ groupSelectionComplete(entry.group) ? '☑' : '☐' }}
               </button>
-              <button v-if="canManageGrades && expandedGroups.includes(entry.group.group_key)" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')"><span class="group-manage-full">{{ tr('+ Grades') }}</span><span class="group-manage-short" aria-hidden="true">+</span></button>
+              <button v-if="(canManageGrades || readOnly) && expandedGroups.includes(entry.group.group_key)" :disabled="readOnly" type="button" @click.stop="openGradeManagerForGroup(entry.group)" class="action-btn group-manage-btn erp-button erp-button--secondary erp-button--sm" :aria-label="tr('Gerenciar grade {name}', { name: groupTitle(entry.group.group_key) })" :title="tr('Adicionar ou remover peças da grade')"><span class="group-manage-full">{{ tr('+ Grades') }}</span><span class="group-manage-short" aria-hidden="true">+</span></button>
               <button type="button" @click.stop="toggleExpand(entry.group.group_key)" class="action-btn expand-btn erp-button erp-button--ghost erp-button--icon" :aria-expanded="expandedGroups.includes(entry.group.group_key)" :aria-label="tr(expandedGroups.includes(entry.group.group_key) ? 'Recolher grade {name}' : 'Expandir grade {name}', { name: groupTitle(entry.group.group_key) })" :title="expandedGroups.includes(entry.group.group_key) ? tr('Recolher') : tr('Expandir')">
                 <svg class="expand-chevron" :class="{ 'chevron-open': expandedGroups.includes(entry.group.group_key) }" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
@@ -253,7 +255,7 @@
                 <span v-if="item.color" class="exp-color">{{ item.color }}</span>
               </div>
               <div class="exp-stock-info">
-                <InventoryStockBalances class="exp-stock-val" :loja="item.stock_loja" :deposito="item.stock_deposito" :reserved-loja="item.reserved_loja" :reserved-deposito="item.reserved_deposito" :order-query="item.inventory_code || item.name" />
+                <InventoryStockBalances class="exp-stock-val" :loja="item.stock_loja" :deposito="item.stock_deposito" :reserved-loja="item.reserved_loja" :reserved-deposito="item.reserved_deposito" :order-query="readOnly ? undefined : item.inventory_code || item.name" />
                 <span v-if="!hasKnownStock(item)" class="stock-unknown">{{ tr('Revisar estoque') }}</span>
               </div>
               <span v-if="Number(item.sale_price) > 0" class="exp-price">
@@ -320,7 +322,7 @@
               </template>
               <span class="list-sep list-sep-spaced">·</span>
               <span class="list-stock" :class="'stock-' + stockAlertLevel(entry.item)">
-                <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" :reserved-loja="entry.item.reserved_loja" :reserved-deposito="entry.item.reserved_deposito" :order-query="entry.item.inventory_code || entry.item.name" />
+                <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" :reserved-loja="entry.item.reserved_loja" :reserved-deposito="entry.item.reserved_deposito" :order-query="readOnly ? undefined : entry.item.inventory_code || entry.item.name" />
                 <span v-if="!hasKnownStock(entry.item)" class="stock-unknown"> · {{ tr('Revisar estoque') }}</span>
               </span>
               <template v-if="Number(entry.item.sale_price) > 0">
@@ -368,7 +370,7 @@
               <div class="item-bottom-row">
                 <div class="item-left-info">
                   <span class="stock-number" :class="'stock-' + stockAlertLevel(entry.item)">
-                    <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" :reserved-loja="entry.item.reserved_loja" :reserved-deposito="entry.item.reserved_deposito" :order-query="entry.item.inventory_code || entry.item.name" />
+                    <InventoryStockBalances :loja="entry.item.stock_loja" :deposito="entry.item.stock_deposito" :reserved-loja="entry.item.reserved_loja" :reserved-deposito="entry.item.reserved_deposito" :order-query="readOnly ? undefined : entry.item.inventory_code || entry.item.name" />
                   </span>
                   <span v-if="entry.item.size" class="item-size-inline">{{ entry.item.size }}</span>
                   <span v-if="entry.item.location" class="item-location-inline">· {{ entry.item.location }}</span>
@@ -384,7 +386,7 @@
 
           <!-- Expanded detail section -->
           <div v-if="expandedCardIds.includes(entry.item.id)" class="item-extra" @click.stop>
-            <button v-if="canManageGrades" type="button" class="item-grade-action erp-button erp-button--secondary erp-button--sm" @click.stop="openGradeManagerForItem(entry.item)">{{ entry.item.group_key ? tr('Gerenciar grade') : tr('Vincular à grade') }}</button>
+            <button v-if="canManageGrades || readOnly" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" type="button" class="item-grade-action erp-button erp-button--secondary erp-button--sm" @click.stop="openGradeManagerForItem(entry.item)">{{ entry.item.group_key ? tr('Gerenciar grade') : tr('Vincular à grade') }}</button>
             <div class="item-extra-row">
               <span class="item-extra-label">{{ tr('SKU anterior') }}</span>
               <span class="item-extra-val mono">{{ entry.item.sku_internal }}</span>
@@ -443,15 +445,16 @@
     <!-- Modals -->
     <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
 
-    <DeletedProductsModal v-if="showDeletedHistory" @close="showDeletedHistory = false" />
+    <DeletedProductsModal v-if="showDeletedHistory && !readOnly" @close="showDeletedHistory = false" />
     <ItemFormModal
       v-if="showItemForm"
       :item="editingItem"
+      :read-only="readOnly"
       :suppliers="suppliers"
       :existing-group-keys="existingGroupKeys"
       :existing-brands="existingBrands"
       :can-delete-permanently="auth.isOwner"
-      :can-create-variants="['ADMIN', 'GERENTE'].includes(auth.userRole)"
+      :can-create-variants="readOnly || ['ADMIN', 'GERENTE'].includes(auth.userRole)"
       @variants-created="onVariantsCreated"
       @deleted="onItemDeleted"
       @saved="onItemSaved"
@@ -462,18 +465,19 @@
     <MovementModal
       v-if="showMovementModal"
       :item="movementItem"
+      :read-only="readOnly"
       @saved="onMovementSaved"
       @close="showMovementModal = false"
     />
 
     <ImportModal
-      v-if="showImport"
+      v-if="showImport && !readOnly"
       @imported="() => { diagnosticsRevision++; void refreshVisibleInventory() }"
       @close="showImport = false"
     />
 
     <BulkEditModal
-      v-if="showBulkEdit"
+      v-if="showBulkEdit && !readOnly"
       :items="selectedItemsForBulkEdit"
       :distinct-brands="distinctBrands"
       :distinct-categories="distinctCategories"
@@ -482,12 +486,12 @@
     />
 
     <BulkTransferModal
-      v-if="showBulkTransfer"
+      v-if="showBulkTransfer && !readOnly"
       :items="selectedItemsForTransfer"
       @saved="onBulkTransferSaved"
       @close="showBulkTransfer = false"
     />
-    <InventoryCountListModal v-if="showCountList" :item-ids="countListSelection" @close="showCountList = false" />
+    <InventoryCountListModal v-if="showCountList && !readOnly" :item-ids="countListSelection" @close="showCountList = false" />
 
     <GroupingSuggestionModal
       v-if="showSuggestionModal && canManageGrades"
@@ -499,11 +503,11 @@
     />
 
     <LabelTemplatesModal
-      v-if="showLabelTemplates"
+      v-if="showLabelTemplates && !readOnly"
       @close="showLabelTemplates = false"
     />
 
-    <BulkDeleteModal v-if="showBulkDelete && auth.isOwner" :items="itemsForDeletion"
+    <BulkDeleteModal v-if="showBulkDelete && auth.isOwner && !readOnly" :items="itemsForDeletion"
       @close="closeBulkDelete" @deleted="forgetDeletedItem" @settled="refreshAfterDeletion" />
 
     <!-- Barra flutuante de seleção -->
@@ -514,20 +518,20 @@
           <span v-if="selectedOutsideViewCount" class="sel-outside-view">{{ tr('{count} fora da lista atual', { count: selectedOutsideViewCount }) }}</span>
         </div>
         <div class="sel-actions">
-          <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="$router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } })">{{ tr('Imprimir etiquetas') }}</button>
-          <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="countListSelection = [...selectedIds]; showCountList = true">{{ tr('Imprimir lista') }}</button>
-          <button v-if="['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openReceiving(true)">{{ tr('Vincular a lote') }}</button>
-          <button v-if="canManageGrades" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" @click="openGradeAi">{{ gradeAiText('title') }}</button>
-          <button v-if="canManageGrades" type="button" @click="openSelectionGradeAction" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm" :title="tr('Adicionar ou remover peças da grade')">{{ tr('+ Grades') }}</button>
-          <button @click="openBulkEdit" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
+          <button v-if="readOnly || ['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && ($router.push({ path: '/inventory/labels', state: { labelItemIds: [...selectedIds] } }))">{{ tr('Imprimir etiquetas') }}</button>
+          <button v-if="readOnly || ['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="if (!readOnly) { countListSelection = [...selectedIds]; showCountList = true }">{{ tr('Imprimir lista') }}</button>
+          <button v-if="readOnly || ['ADMIN','GERENTE'].includes(auth.userRole)" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && (openReceiving(true))">{{ tr('Vincular a lote') }}</button>
+          <button v-if="readOnly || canManageGrades" type="button" class="sel-btn erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && openGradeAi()">{{ gradeAiText('title') }}</button>
+          <button v-if="readOnly || canManageGrades" type="button" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && openSelectionGradeAction()" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">{{ tr('+ Grades') }}</button>
+          <button :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && openBulkEdit()" class="sel-btn sel-btn-primary erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Editar massivo') }}</span>
             <span class="sel-label-short">{{ tr('Editar') }}</span>
           </button>
-          <button @click="openBulkTransfer" class="sel-btn sel-btn-transfer erp-button erp-button--primary erp-button--sm">
+          <button :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && openBulkTransfer()" class="sel-btn sel-btn-transfer erp-button erp-button--primary erp-button--sm">
             <span class="sel-label-full">{{ tr('Transferir') }}</span>
             <span class="sel-label-short">{{ tr('Transf.') }}</span>
           </button>
-          <button v-if="auth.isOwner" @click="openBulkDelete" class="sel-btn sel-btn-delete erp-button erp-button--danger erp-button--sm">{{ tr('Excluir') }}</button>
+          <button v-if="auth.isOwner" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" @click="!readOnly && openBulkDelete()" class="sel-btn sel-btn-delete erp-button erp-button--danger erp-button--sm">{{ tr('Excluir') }}</button>
           <button @click="selectAll" class="sel-btn erp-button erp-button--secondary erp-button--sm">
             <span class="sel-label-full">{{ tr('Sel. todos') }}</span>
             <span class="sel-label-short">{{ tr('Todos') }}</span>
@@ -540,7 +544,7 @@
     <GradeAiModal v-if="showGradeAi && canManageGrades" :item-ids="gradeAiSelection" :existing-group-keys="existingGroupKeys" @close="showGradeAi = false" @applied="onGradeAiApplied" />
 
     <GradeMembershipModal
-      v-if="gradeManagerItem || gradeManagerKey"
+      v-if="!readOnly && (gradeManagerItem || gradeManagerKey)"
       :item="gradeManagerItem"
       :group-key="gradeManagerKey"
       :group-name="gradeManagerName"
@@ -550,7 +554,7 @@
     />
 
     <!-- Modal de nome do grupo -->
-    <div v-if="showGroupModal" class="gmodal-overlay erp-dialog-backdrop" @click.self="showGroupModal = false">
+    <div v-if="showGroupModal && !readOnly" class="gmodal-overlay erp-dialog-backdrop" @click.self="showGroupModal = false">
       <div v-erp-dialog class="gmodal erp-dialog erp-dialog--sm">
         <h3 class="gmodal-title erp-dialog__header">{{ tr('Adicionar peças à grade') }}</h3>
         <div class="erp-dialog__body"><p class="gmodal-sub">
@@ -663,6 +667,7 @@ const route = useRoute()
 const inventoryStore = useInventoryStore()
 const showReceiving=ref(false), receivingSelection=ref<ReceivingCandidate[]>([]), receivingFilterName=ref('')
 function openReceiving(manual:boolean) {
+  if (manual && readOnly.value) return
   receivingSelection.value=manual ? selectedIds.value.map(id => ({ id, name:allVisibleItems.value.get(id)?.name || id, size:allVisibleItems.value.get(id)?.size, color:allVisibleItems.value.get(id)?.color })) : []
   showReceiving.value=true
 }
@@ -674,11 +679,13 @@ function filterReceiving(lot:ReceivingLot) {
 function clearReceiving() { receivingFilterName.value=''; inventoryStore.filters.receiving_lot_id=''; reloadItems(); if(groupMode.value) loadGroupsFiltered() }
 
 const auth = useAuthStore()
+const readOnly = computed(() => !!auth.isReseller)
+const READ_ONLY_MESSAGE = 'Acesso de consulta: alterações, impressões e histórico não estão disponíveis.'
 const gradeAiText = useGradeAiText()
 const showGradeAi = ref(false), gradeAiSelection = ref<string[]>([])
 function openGradeAi() { if (canManageGrades.value) { gradeAiSelection.value = [...selectedIds.value]; showGradeAi.value = true } }
 async function onGradeAiApplied() { showGradeAi.value = false; await onGradeMembershipChanged() }
-const canManageGrades = computed(() => ['ADMIN', 'GERENTE'].includes(auth.userRole))
+const canManageGrades = computed(() => !readOnly.value && ['ADMIN', 'GERENTE'].includes(auth.userRole))
 watch(canManageGrades, allowed => { if (!allowed) showGradeAi.value = false })
 
 const searchQuery = ref(inventoryStore.filters.search || '')
@@ -705,6 +712,7 @@ const gradeManagerName = ref('')
 const gradeManagerMembers = ref<InventoryItem[]>([])
 
 function openGradeManagerForItem(item: InventoryItem) {
+  if (readOnly.value) return
   gradeManagerItem.value = item
   gradeManagerKey.value = null
   gradeManagerName.value = item.group_key ? groupTitle(item.group_key) : ''
@@ -712,6 +720,7 @@ function openGradeManagerForItem(item: InventoryItem) {
 }
 
 function openGradeManagerForGroup(group: GroupResponse) {
+  if (readOnly.value) return
   gradeManagerItem.value = null
   gradeManagerKey.value = group.group_key
   gradeManagerName.value = groupTitle(group.group_key)
@@ -997,6 +1006,7 @@ function selectedItemsInView(): InventoryItem[] | null {
 const selectedItemsForBulkEdit = ref<InventoryItem[]>([])
 const showBulkDelete = ref(false), itemsForDeletion = ref<Array<{ id: string; name: string }>>([])
 function openBulkDelete() {
+  if (readOnly.value) return
   if (!auth.isOwner) return
   itemsForDeletion.value = selectedIds.value.map(id => ({ id, name: allVisibleItems.value.get(id)?.name || id }))
   if (itemsForDeletion.value.length) showBulkDelete.value = true
@@ -1006,6 +1016,7 @@ function refreshAfterDeletion() { return Promise.all([reloadItems(), loadGroupsF
 
 
 function openBulkEdit() {
+  if (readOnly.value) return
   // Capture items eagerly at click time to avoid reactivity timing issues.
   // backendGroups may reload while the modal is open, so we snapshot now.
   const items = selectedItemsInView()
@@ -1017,6 +1028,7 @@ function openBulkEdit() {
 const selectedItemsForTransfer = ref<InventoryItem[]>([])
 
 function openBulkTransfer() {
+  if (readOnly.value) return
   const items = selectedItemsInView()
   if (!items) return
   selectedItemsForTransfer.value = items
@@ -1127,6 +1139,7 @@ function bulkGroupOptionLabel(entry: InventoryGradeDirectoryEntry): string {
 }
 
 async function confirmGroup() {
+  if (readOnly.value) return
   const key = selectedExistingGroup.value || groupNameInput.value.trim()
   const name = selectedExistingGroup.value ? bulkGroupChoices.value.find(entry => entry.group_key === key)?.display_name || groupTitle(key) : key
   if (!key || grouping.value) return
@@ -1379,6 +1392,7 @@ function startEditGroupName(groupKey: string) {
 }
 
 async function saveGroupName(oldKey: string) {
+  if (readOnly.value) return
   if (editingGroupKey.value !== oldKey) return
   const newKey = editingGroupName.value.trim()
   editingGroupKey.value = null
@@ -1393,6 +1407,7 @@ async function saveGroupName(oldKey: string) {
 }
 
 async function removeItemFromGroup(itemId: string, groupKey: string) {
+  if (readOnly.value) return
   const name = groupTitle(groupKey)
   try {
     await inventoryAPI.removeFromGroup(itemId, groupKey)
@@ -1532,6 +1547,7 @@ function loadMore() {
 }
 
 function openCreate() {
+  if (readOnly.value) return
   editOpenGeneration++
   editingItem.value = null
   showItemForm.value = true
@@ -1698,7 +1714,7 @@ onMounted(async () => {
     inventoryStore.loadAlerts(),
     groupMode.value ? loadGroupsFiltered() : Promise.resolve(),
   ])
-  if (route.query.new === '1') {
+  if (!readOnly.value && route.query.new === '1') {
     showItemForm.value = true
   }
   try {
@@ -1726,6 +1742,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.inventory-readonly-notice { margin: 0; padding: 8px 16px; background: #eff6ff; color: #475569; font-size: .8rem; }
 .local-search-notice{margin:8px 16px;color:#475569;font-size:12px}.card-cached .action-btn,.card-cached .card-check{opacity:.4}.card-scanned{outline:2px solid #2563eb;outline-offset:-2px}.related-inline-status{display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;font-size:12px;color:#64748b}
 .receiving-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:.85rem}
 .stock-unknown { color: #92400e; }

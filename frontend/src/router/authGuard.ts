@@ -1,6 +1,7 @@
 import type { RouteLocationNormalized } from 'vue-router'
 import type { useAuthStore } from '@/stores/auth'
 import { storedToken } from '@/services/sessionStorage'
+import { resellerCanVisit } from '@/services/accessProfile'
 
 export function createAuthGuard(getAuth: () => ReturnType<typeof useAuthStore>) {
   let navigationEpoch = 0
@@ -14,6 +15,7 @@ export function createAuthGuard(getAuth: () => ReturnType<typeof useAuthStore>) 
     if (!verified) return true
     if (auth.user?.must_change_password && to.path !== '/conta') return '/conta'
     if (to.meta.requiresGuest) return '/dashboard'
+    if (auth.isReseller && !resellerCanVisit(to.path)) return '/dashboard'
     if (to.meta.requiresOwner && !auth.isOwner) return '/dashboard'
     if (to.meta.requiresAdmin && !auth.isOwner) return '/dashboard'
     if (to.meta.requiresManager && !['ADMIN', 'GERENTE'].includes(auth.user?.role || '')) return '/dashboard'

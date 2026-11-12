@@ -3,12 +3,13 @@ import { createApp, nextTick, type App } from 'vue'
 import { createPinia } from 'pinia'
 import ExchangeRateModal from './ExchangeRateModal.vue'
 const mocks = vi.hoisted(() => ({ get: vi.fn(), update: vi.fn() }))
-vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({ user: { id: '1', nome: 'Lucas', role: 'ADMIN' } }) }))
+const auth = vi.hoisted(() => ({ user: { id: '1', nome: 'Lucas', role: 'ADMIN' }, isReseller: false }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 vi.mock('@/services/api', () => ({ exchangeRateAPI: { getCurrentRates: mocks.get, quickUpdate: mocks.update } }))
 let app: App, root: HTMLDivElement
 const rates = { usd_to_pyg: '6000.0000', usd_to_brl: '5.1000', eur_to_usd: '1.2000', eur_to_brl: '6.1200' }
 async function tick() { for (let i=0;i<5;i++) { await Promise.resolve(); await nextTick() } }
-beforeEach(() => { vi.resetAllMocks(); localStorage.clear(); mocks.get.mockResolvedValue(rates); root=document.createElement('div'); document.body.append(root) })
+beforeEach(() => { auth.isReseller = false; vi.resetAllMocks(); localStorage.clear(); mocks.get.mockResolvedValue(rates); root=document.createElement('div'); document.body.append(root) })
 afterEach(() => { app?.unmount(); root.remove() })
 it('loads real values in a teleported modal and saves comma decimals without inventing EUR rates', async () => {
   const close=vi.fn(); app=createApp(ExchangeRateModal,{onClose:close}).use(createPinia()); app.mount(root)
@@ -32,4 +33,15 @@ it('shows a recoverable load error, without enabling save with cached defaults',
   const retry=Array.from(document.querySelectorAll('button')).find(b=>b.textContent?.includes('Tentar novamente'))!
   retry.click();await tick()
   expect(document.querySelector('input')?.value).toBe('6000')
+})
+
+it('keeps rate consultation available but blocks reseller submission even when a manager role is present', async () => {
+  auth.isReseller = true
+  app=createApp(ExchangeRateModal).use(createPinia());app.mount(root);await tick()
+  const dialog=document.querySelector('[role=dialog]')!
+  expect(dialog.textContent).toContain('Acesso de consulta')
+  expect(Array.from(dialog.querySelectorAll('input')).every(input => input.disabled)).toBe(true)
+  expect(dialog.querySelector<HTMLButtonElement>('button[type=submit]')?.disabled).toBe(true)
+  dialog.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await tick()
+  expect(mocks.update).not.toHaveBeenCalled()
 })

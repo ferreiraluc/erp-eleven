@@ -28,7 +28,8 @@
         </div>
         <p v-if="unknownStock" role="alert" class="stock-warning">{{ tr('Um ou mais saldos não foram informados. Movimentações ficam bloqueadas até a revisão dos dados do estoque.') }}</p>
 
-        <fieldset :disabled="unknownStock" class="movement-fields">
+        <p v-if="readOnly" role="status" class="stock-warning">{{ tr('Acesso de consulta: nenhuma movimentação pode ser registrada.') }}</p>
+        <fieldset :disabled="unknownStock || readOnly" class="movement-fields">
         <div class="form-group">
           <label>{{ tr('Tipo de Movimentação *') }}</label>
           <div class="movement-type-grid">
@@ -119,7 +120,7 @@
 
       <div class="modal-footer erp-dialog__footer">
         <button @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr('Cancelar') }}</button>
-        <button @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || unknownStock">
+        <button @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || unknownStock || readOnly">
           {{ saving ? tr('Salvando...') : tr('Registrar') }}
         </button>
       </div>
@@ -138,6 +139,7 @@ import { availableStock, displayStock, hasKnownStock } from '@/services/inventor
 
 const props = defineProps<{
   item?: InventoryItem | null
+  readOnly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -180,7 +182,7 @@ function validate() {
 }
 
 async function handleSubmit() {
-  if (saving.value || unknownStock.value) return
+  if (props.readOnly || saving.value || unknownStock.value) return
   if (!validate()) return
   saving.value = true
   try {

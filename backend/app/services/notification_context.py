@@ -17,7 +17,7 @@ from ..models.rastreamento import Rastreamento
 from ..models.pedido import Pedido
 from ..models.cliente import Cliente
 from ..schemas.notification import MANUAL_TOKEN, NotificationContext, NotificationFields, TEMPLATE_VARIABLES
-from .access_policy import is_owner, own_sales
+from .access_policy import is_owner, is_reseller, own_sales
 from .pdv_ticket_identity import ticket_code
 from .pdv_usd import notification_amount
 from .user_sessions import aware
@@ -98,7 +98,7 @@ def notice_context(notice, snapshot=None):
     if isinstance(context, dict):
         return context
     from_path = path_context(notice.action_path)
-    if notice.entity_type == 'pdv_sale' and _uuid(notice.entity_id):
+    if notice.entity_type in ('pdv_sale', 'pdv_sale_summary') and _uuid(notice.entity_id):
         return {'sale_id': str(_uuid(notice.entity_id)), **(from_path or {'target': 'sale'})}
     if notice.entity_type == 'inventory_item' and _uuid(notice.entity_id):
         return {'item_id': str(_uuid(notice.entity_id)), 'target': 'product'}
@@ -122,11 +122,15 @@ def matches_request(snapshot, authored):
 
 
 def inbox_sale_visibility(db, user):
+    if is_reseller(user):
+        sale_ids = db.query(func.lower(func.replace(cast(PdvSale.id, String), '-', ''))).filter(PdvSale.deleted_at.is_(None))
+        return and_(Notification.entity_type == 'pdv_sale_summary', Notification.category == 'sales',
+                    func.lower(func.replace(Notification.entity_id, '-', '')).in_(sale_ids))
     if not own_sales(user):
         return True
     sale_id_text = func.lower(func.replace(cast(PdvSale.id, String), '-', ''))
     allowed_ids = db.query(sale_id_text).filter(PdvSale.vendedor_id == user.id, PdvSale.deleted_at.is_(None))
-    entity_sale = func.coalesce(Notification.entity_type == 'pdv_sale', False)
+    entity_sale = func.coalesce(Notification.entity_type.in_(('pdv_sale', 'pdv_sale_summary')), False)
     entity_allowed = func.lower(func.replace(Notification.entity_id, '-', '')).in_(allowed_ids)
     # Before explicit contexts existed, the only reference could be an internal
     # sale URL. Guard those legacy rows in SQL too, before counts/pagination.
@@ -141,6 +145,13 @@ def inbox_sale_visibility(db, user):
 
 
 def notification_allowed(db, user, notice):
+    if is_reseller(user):
+        # Only the dedicated, minimal sale summary is available to external
+        # readers. A prior employee inbox never becomes a reseller data source.
+        if notice.entity_type != 'pdv_sale_summary' or notice.category != 'sales':
+            return False
+        return bool(db.query(PdvSale.id).filter(PdvSale.id == _uuid(notice.entity_id),
+                                               PdvSale.deleted_at.is_(None)).first())
     if notice.action_path:
         path = urlsplit(notice.action_path)
         if path.path == '/vendas-pdv' and path.query:

@@ -24,6 +24,16 @@ describe('verified sessions',()=>{
     expect(await auth.ensureSession()).toBe(true);expect(auth.ownSales).toBe(true);expect(auth.isOwner).toBe(false)
     await auth.ensureSession();expect(get).toHaveBeenCalledTimes(1)
   })
+  it('derives reseller access only from the verified account and clears it on logout',async()=>{
+    saveToken(token())
+    localStorage.setItem('user_data',JSON.stringify({...user('Lucas'),access_profile:'reseller'}))
+    const get=vi.spyOn(authAPI,'getCurrentUser').mockResolvedValue(user('Lucas'))
+    const auth=useAuthStore()
+    await auth.ensureSession();expect(auth.isReseller).toBe(false);expect(auth.isOwner).toBe(true)
+    get.mockResolvedValue({...user('Lucas'),access_profile:'reseller'})
+    await auth.ensureSession(true);expect(auth.isReseller).toBe(true);expect(auth.isOwner).toBe(false)
+    auth.expire();expect(auth.isReseller).toBe(false)
+  })
   it('clears expired/revoked sessions and never shows components as authenticated',async()=>{
     saveToken(token());vi.spyOn(authAPI,'getCurrentUser').mockRejectedValue(failure(401))
     const auth=useAuthStore();expect(await auth.ensureSession()).toBe(false);expect(auth.status).toBe('guest');expect(storedToken()).toBe(null)

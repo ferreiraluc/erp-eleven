@@ -34,6 +34,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { uiText } from '@/i18n/uiText'
+import { resellerCanVisit } from '@/services/accessProfile'
 
 const props = defineProps<{ primaryOnly?: boolean }>()
 const router = useRouter()
@@ -124,6 +125,7 @@ const actions = [
 const visibleActions = computed(() =>
   actions
     .filter((action) => {
+      if (authStore.isReseller && !resellerCanVisit(action.path)) return false
       if (props.primaryOnly && !primaryPaths.includes(action.path)) return false
       if (action.access === 'manager')
         return ['ADMIN', 'GERENTE'].includes(authStore.user?.role || '')

@@ -176,7 +176,7 @@
     "resetDescription": "Informe uma senha temporária. A pessoa precisará trocá-la no próximo login.",
     "saved": "Alterações salvas.",
     "userSaveError": "Não foi possível salvar. Confira os dados, o e-mail e o vínculo do vendedor.",
-    "userRules": "A administração e a auditoria são exclusivas do Lucas. Os demais usuários operam a loja conforme o acesso às vendas definido aqui.",
+    "userRules": "A administração e a auditoria são exclusivas do Lucas. Equipe atual mantém o acesso operacional definido; Revendedor consulta somente estoque, câmbio e suas notificações.",
     "auditSubtitle": "Operações, consultas e atividade por pessoa e componente.",
     "auditNotice": "Registra logins e alterações no sistema. Consultas e tempo de navegação não são registrados.",
     "period": "Período",
@@ -267,6 +267,11 @@
       "exchange-rates": "Câmbio",
       "fiado": "Pagadores",
       "folgas": "Folgas"
-    }
+    },
+    "reseller": "Revendedor",
+    "standardProfile": "Equipe atual",
+    "resellerProfile": "Revendedor — somente consulta",
+    "noSalesAccess": "Sem acesso às vendas",
+    "resellerHelp": "Perfil de consulta: veja produtos, quantidades e câmbio. Alterações, vendas, pedidos, clientes, históricos e impressão não estão disponíveis."
   }
 }

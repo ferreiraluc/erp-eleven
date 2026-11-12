@@ -12,7 +12,7 @@
       <div><button class="erp-button erp-button--secondary" @click="retrySession">{{ $t('common.refresh') }}</button><button class="erp-button erp-button--secondary" @click="logout">{{ $t('common.logout') }}</button></div>
     </section>
     <main v-else-if="!route.meta.requiresAuth || auth.isAuthenticated" id="main-content" tabindex="-1">
-      <RouterView :key="auth.user?.id || 'guest'" />
+      <RouterView v-if="!auth.isReseller || resellerCanVisit(route.path)" :key="`${auth.user?.id || 'guest'}:${auth.user?.access_profile || 'standard'}`" />
     </main>
     <NotificationToast />
   </div>
@@ -28,8 +28,12 @@ import { logoutToLogin } from '@/services/logoutNavigation'
 import NotificationInvitation from '@/components/notifications/NotificationInvitation.vue'
 import { useNotificationCenter } from '@/stores/notificationCenter'
 import { safeNotificationPath } from '@/services/notifications'
+import { resellerCanVisit } from '@/services/accessProfile'
 const auth = useAuthStore(), router = useRouter(), route = useRoute()
 const notificationCenter = useNotificationCenter()
+watch([() => auth.isAuthenticated, () => auth.isReseller, () => route.path], ([authenticated, reseller]) => {
+  if (authenticated && reseller && !resellerCanVisit(route.path)) void router.replace(auth.user?.must_change_password ? '/conta' : '/dashboard')
+}, { immediate: true })
 function notificationMessage(event: MessageEvent) {
   if (!auth.isAuthenticated || event.data?.user_id !== auth.user?.id) return
   if (event.data.type === 'eleven-notification-refresh') void notificationCenter.load()

@@ -1584,3 +1584,28 @@ a reabertura recupera a confirmação pendente. Mudança posterior dos produtos 
 expiração exige nova revisão no servidor. Este fluxo não solicita impressão.
 As regras de permissão são verificadas no backend em `/api/inventory/grades/ai-analysis`,
 `/grades/preview` e `/grades/commit`; as três ações exigem ADMIN/GERENTE.
+
+## Consulta por perfil de revendedor
+
+O perfil `access_profile=reseller` reutiliza a listagem completa de Estoque, seus filtros,
+leitura de QR, consulta local, grades, fotos e saldos por local. Custo e depósito permanecem
+visíveis, conforme a autorização de consulta. Selecionar itens, alternar visualização e
+filtrar lotes são ações locais permitidas.
+
+Os botões **Editar** e **Movimentar** abrem os mesmos formulários em modo de consulta:
+campos desabilitados, abas e galeria navegáveis, sem salvar ou registrar. **Histórico**
+fica desabilitado e não carrega o modal. Novo, duplicar, grades, edição em lote,
+transferências, importação, impressão e ferramentas de IA não podem executar operações;
+os controles visíveis indicam acesso de consulta. A abertura por `?new=1` também é ignorada.
+As reservas mostram sua quantidade sem oferecer atalho para Pedidos.
+
+O modo de consulta é uma restrição adicional às permissões já existentes. Os handlers
+recusam alterações antes da chamada à API, mas a segurança depende também da allowlist
+no backend; ocultar ou desabilitar botões isoladamente não constitui autorização.
+Câmbio permite consultar taxas atuais, histórico e médias do histórico de taxas; ações de
+atualização, edição e exclusão ficam bloqueadas. Esse histórico de câmbio não dá acesso
+a vendas nem ao histórico dos produtos.
+
+Cobertura: `InventoryReadOnly.test.ts`, `ExchangeRateReadOnly.test.ts` e
+`ExchangeRateModal.test.ts` verificam consulta e abertura dos detalhes, bloqueio de
+operações em lote e impressão, ausência de histórico e recusa de envio direto aos handlers.

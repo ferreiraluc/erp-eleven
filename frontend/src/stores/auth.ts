@@ -21,7 +21,8 @@ export const useAuthStore = defineStore('auth', () => {
   let operationEpoch = 0
   let expiryTimer: ReturnType<typeof setTimeout> | null = null
   const isAuthenticated = computed(() => status.value === 'authenticated' && !!user.value)
-  const isOwner = computed(() => user.value?.role === 'ADMIN' && user.value?.email.toLowerCase() === 'lucas@eleven.com')
+  const isReseller = computed(() => user.value?.access_profile === 'reseller')
+  const isOwner = computed(() => !isReseller.value && user.value?.role === 'ADMIN' && user.value?.email.toLowerCase() === 'lucas@eleven.com')
   const ownSales = computed(() => user.value?.sales_scope === 'own')
   const userRole = computed(() => user.value?.role || '')
   const userName = computed(() => user.value?.nome || '')
@@ -166,6 +167,6 @@ export const useAuthStore = defineStore('auth', () => {
     cancelExpiryTimer()
     window.removeEventListener('erp:session-expired', expire)
   })
-  return { user, token, status, isLoading, error, isAuthenticated, isOwner, ownSales, userRole, userName,
+  return { user, token, status, isLoading, error, isAuthenticated, isOwner, isReseller, ownSales, userRole, userName,
            login, logout, expire, ensureSession, changePassword, clearError: () => { error.value = null } }
 })

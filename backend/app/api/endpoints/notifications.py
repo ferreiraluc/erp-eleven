@@ -320,9 +320,10 @@ def edit_rule(event_key: str, body: RuleUpdate, owner=Depends(require_owner), db
     if not template:
         raise HTTPException(400, 'Escolha um modelo existente.')
     if body.user_ids:
-        service.validate_targets(db, body.user_ids, template.action_path)
+        service.validate_targets(db, body.user_ids, template.action_path, sale_summaries=event_key == 'sale_completed')
     elif event_key in service.DAILY_EVENTS:
-        all_ids = [uid for (uid,) in db.query(Usuario.id).filter(Usuario.ativo.is_(True)).all()]
+        all_ids = [user.id for user in db.query(Usuario).filter(Usuario.ativo.is_(True)).all()
+                   if not service.is_reseller(user)]
         service.validate_targets(db, all_ids, template.action_path)
     for field, value in body.model_dump(exclude={'expected_version'}).items():
         setattr(rule, field, [str(uid) for uid in value] if field == 'user_ids' else value)

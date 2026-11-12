@@ -156,6 +156,15 @@ As mesmas restrições continuam na caixa, na abertura do destino e no envio pus
 Usuários inativos não recebem novos avisos. As seleções já salvas são aproveitadas
 pelos próximos eventos, sem reenviar notificações antigas.
 
+O perfil **Revendedor — somente consulta** pode ser selecionado na regra de venda
+concluída. Recebe um resumo separado: **Venda U$ … concluída** e o nome do vendedor,
+sem cliente, pagamentos, detalhes ou atalho para a venda. A caixa e o push usam
+esse mesmo resumo; tocar no aviso abre a central de notificações. O modelo interno
+personalizado e os atalhos dos funcionários continuam preservados. Outras regras
+e mensagens manuais não são destinadas a esse perfil. A seleção não cria acesso
+ao PDV e não reenvia vendas anteriores; avisos antigos de um perfil de funcionário
+ficam indisponíveis se a conta for convertida para revendedor.
+
 O motivo de um avulso fica no recibo da
 notificação; não reescreve dados financeiros da venda. Avulso não é tratado como
 fraude nem como prova de baixa indevida. Saudações têm janela de 60 minutos após

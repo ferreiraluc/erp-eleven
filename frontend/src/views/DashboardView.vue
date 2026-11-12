@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard">
+  <div class="dashboard" :class="{ 'dashboard--reseller': authStore.isReseller }">
     <!-- Header -->
     <header class="dashboard-header">
       <div class="header-content">
@@ -54,7 +54,8 @@
     <!-- Main Content -->
     <main class="dashboard-main">
       <div class="dashboard-content">
-        <DashboardQuickActions primary-only />
+        <DashboardQuickActions v-if="!authStore.isReseller" primary-only />
+        <p v-else class="reseller-access-note" role="note">{{ $t('access.resellerHelp') }}</p>
 
         <!-- Row 1: Large Inventory Card + Rastreamento -->
         <div class="main-top-grid">
@@ -71,7 +72,7 @@
                 <h3 class="inv-title">{{ $tr("Estoque") }}</h3>
               </div>
               <div class="inv-header-actions" @click.stop>
-                <button class="inv-add-btn inv-header-action erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")' :aria-label='$tr("Novo produto")'>
+                <button v-if="!authStore.isReseller" class="inv-add-btn inv-header-action erp-button erp-button--primary erp-button--sm" @click="navigateToNewProduct" :title='$tr("Novo produto")' :aria-label='$tr("Novo produto")'>
                   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                   </svg>
@@ -141,16 +142,16 @@
           </div>
 
           <!-- Rastreamento Card -->
-          <RastreamentoCard />
+          <RastreamentoCard v-if="!authStore.isReseller" />
         </div>
 
         <!-- Row 2: Quick Actions compact strip -->
-        <div class="quick-strip-card">
+        <div v-if="!authStore.isReseller" class="quick-strip-card">
           <p class="quick-strip-title">{{ $tr("Ações Rápidas") }}</p>
           <DashboardQuickActions />
         </div>
 
-        <div v-if="['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="operation-summary-grid">
+        <div v-if="!authStore.isReseller && ['ADMIN','GERENTE'].includes(authStore.user?.role || '')" class="operation-summary-grid">
           <AddressSummaryCard />
           <SalesSummaryCard />
         </div>
@@ -158,10 +159,10 @@
         <div class="bottom-grid">
 
           <!-- Folgas Card -->
-          <FolgasCard />
+          <FolgasCard v-if="!authStore.isReseller" />
 
           <!-- System Status Card -->
-          <div class="action-card status-card-inline">
+          <div v-if="!authStore.isReseller" class="action-card status-card-inline">
             <h3 class="card-title">{{ $t('dashboard.systemStatus') }}</h3>
             <div class="status-grid">
               <div class="status-box">
@@ -263,7 +264,7 @@
           </div>
         </div>
 
-        <div class="footer-center">
+        <div v-if="!authStore.isReseller" class="footer-center">
           <div class="footer-status">
             <span :class="['system-status-indicator', { 'status-ind-offline': apiStatus === 'offline' || dbStatus === 'offline', 'status-ind-checking': apiStatus === 'checking' || dbStatus === 'checking' }]"></span>
             <span class="system-status-text">
@@ -300,7 +301,7 @@
 
 
     <!-- Exchange Rate Modal -->
-    <ExchangeRateModal v-if="showExchangeRateModal || showExchangeRateHeaderModal" @close="closeExchangeRateModals" />
+    <ExchangeRateModal v-if="canEditRates && (showExchangeRateModal || showExchangeRateHeaderModal)" @close="closeExchangeRateModals" />
   </div>
 </template>
 
@@ -352,7 +353,7 @@ const dbStatus = ref<StatusState>('checking')
 let healthInterval: ReturnType<typeof setInterval> | null = null
 
 async function checkHealth() {
-  if (!isActive()) return
+  if (!isActive() || authStore.isReseller) return
   try {
     const h = await healthAPI.check()
     if (!isActive()) return
@@ -369,7 +370,7 @@ const { exchangeRates, lastUpdate: lastUpdated } = storeToRefs(currencyStore)
 
 // Check if user can edit rates
 const canEditRates = computed(() => {
-  return authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
+  return !authStore.isReseller && authStore.user && ['ADMIN', 'GERENTE'].includes(authStore.user.role)
 })
 
 const updateTime = () => {
@@ -447,6 +448,7 @@ const navigateToInventory = () => {
 }
 
 const navigateToNewProduct = () => {
+  if (authStore.isReseller) return
   router.push('/inventory?new=1')
 }
 
@@ -465,8 +467,10 @@ onMounted(async () => {
   inventoryAPI.getItems({ page_size: 10, sort_by: 'updated_at' }).then(data => { if (isActive()) recentInventoryItems.value = data.items }).catch(() => {})
 
   // Health check — run once immediately, then every 30s
-  checkHealth()
-  healthInterval = setInterval(checkHealth, 30_000)
+  if (!authStore.isReseller) {
+    checkHealth()
+    healthInterval = setInterval(checkHealth, 30_000)
+  }
 })
 
 onUnmounted(() => {
@@ -477,6 +481,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.dashboard--reseller .main-top-grid,.dashboard--reseller .bottom-grid { grid-template-columns:minmax(0,1fr); }
+.dashboard--reseller .dashboard-content { max-width:960px; margin-inline:auto; }
+.reseller-access-note { margin:0 0 16px; padding:12px 16px; background:#eff6ff; border:1px solid #dbeafe; border-radius:12px; color:#475569; font-size:13px; line-height:1.5; }
 .adot-unknown { background: #d97706; }
 .slevel-unknown { color: #92400e; }
 /* ── Inventory Card (large dashboard card) ───────────────────────────── */

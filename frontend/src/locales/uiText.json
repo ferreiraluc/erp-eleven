@@ -5798,5 +5798,25 @@
     "pt": "Mantido no pedido",
     "es": "Mantenido en el pedido",
     "en": "Remaining on order"
+  },
+  "Acesso de consulta": {
+    "pt": "Acesso de consulta",
+    "es": "Acceso de consulta",
+    "en": "Read-only access"
+  },
+  "Acesso de consulta: alterações, impressões e histórico não estão disponíveis.": {
+    "pt": "Acesso de consulta: alterações, impressões e histórico não estão disponíveis.",
+    "es": "Acceso de consulta: los cambios, las impresiones y el historial no están disponibles.",
+    "en": "Read-only access: changes, printing and history are unavailable."
+  },
+  "Acesso de consulta: nenhuma movimentação pode ser registrada.": {
+    "pt": "Acesso de consulta: nenhuma movimentação pode ser registrada.",
+    "es": "Acceso de consulta: no se pueden registrar movimientos.",
+    "en": "Read-only access: stock movements cannot be recorded."
+  },
+  "Acesso de consulta: as taxas de câmbio não podem ser alteradas.": {
+    "pt": "Acesso de consulta: as taxas de câmbio não podem ser alteradas.",
+    "es": "Acceso de consulta: los tipos de cambio no se pueden modificar.",
+    "en": "Read-only access: exchange rates cannot be changed."
   }
 }
