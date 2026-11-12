@@ -118,7 +118,7 @@ def assistant_status(db: Session = Depends(get_db)):
 @router.get("/users", dependencies=[admin])
 def assistant_users(db: Session = Depends(get_db)):
     return [{"id": str(u.id), "nome": u.nome, "role": u.role.value} for u in db.query(Usuario).filter(
-        Usuario.ativo.is_(True), Usuario.role.in_(["ADMIN", "GERENTE", "VENDEDOR"])).order_by(Usuario.nome).all()]
+        Usuario.ativo.is_(True), Usuario.access_profile == 'standard', Usuario.role.in_(["ADMIN", "GERENTE", "VENDEDOR"])).order_by(Usuario.nome).all()]
 
 
 @router.get("/identities", dependencies=[admin])
@@ -131,7 +131,7 @@ def list_identities(db: Session = Depends(get_db)):
 @router.post("/identities", dependencies=[admin])
 def save_identity(body: IdentityInput, db: Session = Depends(get_db)):
     user = db.query(Usuario).filter_by(id=body.user_id, ativo=True).first()
-    if not user or user.role.value not in ("ADMIN", "GERENTE", "VENDEDOR"):
+    if not user or user.access_profile != 'standard' or user.role.value not in ("ADMIN", "GERENTE", "VENDEDOR"):
         raise HTTPException(400, "Usuário não autorizado para o assistente")
     identity = db.query(AssistantIdentity).filter_by(channel=body.channel, external_id=body.external_id).first()
     if identity and identity.user_id != body.user_id:

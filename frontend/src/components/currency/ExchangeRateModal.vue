@@ -9,6 +9,7 @@
         </header>
         <form class="erp-dialog__form" @submit.prevent="save">
           <div class="erp-dialog__body">
+            <p v-if="auth.isReseller" class="rate-note" role="status">{{ uiText('Acesso de consulta: as taxas de câmbio não podem ser alteradas.') }}</p>
             <p class="rate-note">{{ uiText('Câmbio compartilhado em todo o ERP.') }}</p>
             <p v-if="loading" role="status">{{ uiText('Carregando taxas…') }}</p>
             <div v-else-if="!ready" role="alert">
@@ -18,14 +19,14 @@
             <div v-else class="rate-grid">
               <label v-for="field in fields" :key="field.key">
                 {{ field.label }}
-                <DecimalInput v-model="draft[field.key]" :aria-label="field.label" :disabled="!store.canEdit || saving" :required="field.key !== 'eur_to_brl'" />
+                <DecimalInput v-model="draft[field.key]" :aria-label="field.label" :disabled="!canEdit || saving" :required="field.key !== 'eur_to_brl'" />
               </label>
             </div>
             <p v-if="error" class="rate-error" role="alert">{{ error }}</p>
           </div>
           <footer class="erp-dialog__footer">
             <button type="button" class="erp-button erp-button--secondary" :disabled="saving" @click="close">{{ uiText('Cancelar') }}</button>
-            <button v-if="store.canEdit" type="submit" class="erp-button erp-button--primary" :disabled="!ready || saving || !valid">
+            <button v-if="canEdit || auth.isReseller" type="submit" class="erp-button erp-button--primary" :disabled="!canEdit || !ready || saving || !valid">
               {{ uiText(saving ? 'Salvando…' : 'Salvar Taxas') }}
             </button>
           </footer>
@@ -37,10 +38,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { vErpDialog } from '@/directives/erpDialog'
+import { useAuthStore } from '@/stores/auth'
 import { useCurrencyStore } from '@/stores/currency'
 import { uiText } from '@/i18n/uiText'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 const emit = defineEmits<{ close: []; saved: [] }>()
+const auth = useAuthStore()
+const canEdit = computed(() => !auth.isReseller && !!store.canEdit)
 const store = useCurrencyStore(), loading = ref(true), ready = ref(false), saving = ref(false), error = ref('')
 const draft = reactive({ usd_to_pyg: null as number | null, usd_to_brl: null as number | null, eur_to_usd: null as number | null, eur_to_brl: null as number | null })
 type Key = keyof typeof draft
@@ -64,7 +68,7 @@ async function load() {
   loading.value = false
 }
 async function save() {
-  if (!ready.value || !valid.value || saving.value || !store.canEdit) return
+  if (!ready.value || !valid.value || saving.value || !canEdit.value) return
   saving.value = true; error.value = ''
   try {
     const changed = Object.fromEntries(fields.value.filter(({ key }) => draft[key] !== null && draft[key] !== store.currentRates?.[key]).map(({ key }) => [key, draft[key]]))

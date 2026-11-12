@@ -7,6 +7,24 @@ da loja. Denis, Sol e Junior têm acesso operacional aos módulos, mas consultam
 somente suas próprias vendas. A tela de usuários, disponível para Lucas, permite
 cadastrar contas, ativar/desativar, alterar vínculos e redefinir senha temporária.
 
+O perfil **Revendedor — somente consulta** (`access_profile=reseller`) mantém
+catálogo, quantidades da loja e depósito, detalhes/fotos, fornecedores e câmbio
+disponíveis para consulta. Formulários de produto e movimentação podem ser vistos,
+mas não salvam alterações. Cadastro, baixa, transferência, agrupamento, impressão,
+histórico do produto e demais módulos são negados também pelo servidor.
+Esse perfil não precisa de vínculo com vendedor ou planilha; usa `VENDEDOR` e
+escopo pessoal internamente, sem conceder acesso ao PDV. Notificações de vendas
+não equivalem a permissão para abrir os detalhes da venda.
+
+Lucas escolhe o perfil no cadastro de usuários. Alterações revogam as sessões
+anteriores; uma versão antiga do painel que omita o campo não transforma uma
+conta restrita em operacional. O administrador principal permanece no perfil
+padrão. Contas existentes recebem `standard` pela migração aditiva, preservando
+IDs, senhas, vínculos e permissões anteriores. O bot não aceita identidades
+associadas a revendedores, inclusive trabalhos pendentes de impressão originados
+no bot. A política da API usa uma lista explícita de métodos e rotas permitidos;
+novos endpoints não ficam automaticamente acessíveis ao perfil restrito.
+
 No dashboard, Minha conta, Usuários, Auditoria e Sair ficam no cabeçalho original,
 com o título “ERP Eleven, NOME” do usuário conectado. Moeda, idioma com bandeira
 e cotações ocupam uma linha compacta, tanto no celular quanto no desktop.

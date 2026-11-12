@@ -1,13 +1,13 @@
 <template>
-  <ItemFormModal v-if="duplicateDraft" :duplicate-context="duplicateDraft" :suppliers="suppliers" :existing-brands="existingBrands" @close="duplicateDraft = null" @saved="emit('variants-created', { created: [$event], existing: [], group_key: $event.group_key || null })" />
-  <ProductVariantsModal v-if="variantMode && item" :item-id="item.id" :mode="variantMode" @close="variantMode = null" @saved="emit('variants-created', $event)" />
-  <ProductHistoryModal v-if="showHistory && item" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
-  <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
+  <ItemFormModal v-if="duplicateDraft && !readOnly" :duplicate-context="duplicateDraft" :suppliers="suppliers" :existing-brands="existingBrands" @close="duplicateDraft = null" @saved="emit('variants-created', { created: [$event], existing: [], group_key: $event.group_key || null })" />
+  <ProductVariantsModal v-if="variantMode && item && !readOnly" :item-id="item.id" :mode="variantMode" @close="variantMode = null" @saved="emit('variants-created', $event)" />
+  <ProductHistoryModal v-if="showHistory && item && !readOnly" :item-id="item.id" :initial-section="historySection" @close="closeHistory" />
+  <ItemDeleteModal v-if="showDeletion && item && canDeletePermanently && !readOnly" :item-id="item.id" @close="closeDeletion" @history="openHistory" @deleted="emit('deleted', $event)" />
   <div v-show="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-overlay erp-dialog-backdrop" @click.self="!saving && emit('close')">
     <div v-erp-dialog="!showDeletion && !showHistory && !variantMode && !duplicateDraft" class="modal-container erp-dialog" :class="{ 'intake-modal': !isEdit }" role="dialog" aria-modal="true" :aria-label="tr(isEdit ? 'Editar Item' : gradeContext ? 'Adicionar grade' : duplicateContext ? 'Duplicar produto' : 'Novo Item')">
       <div class="modal-header erp-dialog__header">
         <h2>{{ tr(isEdit ? 'Editar Item' : gradeContext ? 'Adicionar grade' : duplicateContext ? 'Duplicar produto' : 'Novo Item') }}</h2>
-        <button v-if="isEdit" ref="historyButton" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
+        <button v-if="isEdit" ref="historyButton" type="button" :disabled="readOnly" :title="readOnly ? tr(READ_ONLY_MESSAGE) : undefined" class="erp-button erp-button--secondary erp-button--sm" @click="openHistory('movements')">{{ tr('Histórico') }}</button>
         <button data-dialog-close :disabled="saving" @click="emit('close')" :aria-label="tr('Fechar')" class="close-btn erp-button erp-button--secondary erp-button--icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -23,6 +23,8 @@
       </div>
 
       <div ref="modalBody" :inert="saving || galleryBusy || undefined" class="modal-body erp-dialog__body">
+        <p v-if="readOnly" class="stock-readout" role="status">{{ tr(READ_ONLY_MESSAGE) }}</p>
+        <fieldset :disabled="readOnly" class="readonly-fields">
         <div v-if="isEdit && canCreateVariants" class="stock-readout variant-entry">
           <p>{{ tr('Use os dados já salvos para criar outros tamanhos com a mesma foto.') }}</p>
           <div class="variant-actions">
@@ -471,8 +473,9 @@
             <button type="button" class="erp-button erp-button--primary erp-button--sm" @click="openProductPhoto(true)">{{ tr('Gerar foto no cabide') }}</button>
           </div>
         </div>
+        </fieldset>
         <ProductGallery v-if="!gradeContext" v-show="['capture', 'basic', 'photo'].includes(activeTab)"
-          v-model:cover="form.image_data" v-model:additional="form.additional_images" editable
+          v-model:cover="form.image_data" v-model:additional="form.additional_images" editable :read-only="readOnly"
           :expanded="activeTab === 'photo'" :loading="galleryLoading" :load-error="galleryLoadError"
           @retry="loadGallery" @busy="galleryBusy = $event" />
 
@@ -487,11 +490,11 @@
         </template>
         <p v-if="submitError" class="submit-error" role="alert">{{ tr(submitError) }}</p>
         <button v-if="!isEdit && !gradeContext && activeTab === 'stock' && !intakeReviewed" type="button" class="erp-button erp-button--secondary" :disabled="saving" @click="showReview">{{ tr('Revisar dados') }}</button>
-        <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
+        <button v-if="isEdit && canDeletePermanently" ref="deleteButton" class="delete-product erp-button erp-button--danger" :disabled="readOnly || saving" @click="showDeletion = true">{{ tr('Excluir definitivamente') }}</button>
         <button :disabled="saving" @click="emit('close')" class="btn btn-secondary erp-button erp-button--secondary">{{ tr(partialItems.length || uncertainSave ? 'Fechar' : 'Cancelar') }}</button>
         <button v-if="activeTab === 'capture' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="activeTab = 'basic'">{{ tr('Conferir dados') }}</button>
         <button v-else-if="!isEdit && activeTab !== 'stock' && !partialItems.length && !uncertainSave" type="button" class="erp-button erp-button--primary" @click="continueToStock">{{ tr('Continuar para estoque') }}</button>
-        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="saving || galleryBusy || galleryLoading || galleryLoadError || loadingDuplicate || duplicateNeedsRefresh || (gradeContext && (!gradeItemCount || !gradeQuantitiesValid)) || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
+        <button v-else-if="!partialItems.length && !uncertainSave" @click="handleSubmit" class="btn btn-primary erp-button erp-button--primary" :disabled="readOnly || saving || galleryBusy || galleryLoading || galleryLoadError || loadingDuplicate || duplicateNeedsRefresh || (gradeContext && (!gradeItemCount || !gradeQuantitiesValid)) || (!isEdit && (!intakeReviewed || conflicts.length > 0))">
           <template v-if="saving">{{ tr('Salvando...') }}</template>
           <template v-else-if="isEdit">{{ tr('Atualizar') }}</template>
           <template v-else-if="gradeItemCount > 0">{{ tr('Criar grade ({count} itens)', { count: gradeItemCount }) }}</template>
@@ -500,10 +503,10 @@
       </div>
     </div>
 
-    <ProductPhotoAssistant v-if="photoOpened" :open="showProductPhoto" :start-with-hanger="startWithHanger" :initial-image="photoSeed" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
-    <BarcodeScanner v-if="showScanner" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
-    <OcrScanner v-if="labelOpened" :open="showOcr" :reference-brand="form.brand" draft @result="onOcrResult" @close="showOcr = false" />
-    <LabelTemplatesModal v-if="showLabelTemplates" @close="showLabelTemplates = false" />
+    <ProductPhotoAssistant v-if="photoOpened && !readOnly" :open="showProductPhoto" :start-with-hanger="startWithHanger" :initial-image="photoSeed" draft @result="onProductPhotoResult" @close="showProductPhoto = false" />
+    <BarcodeScanner v-if="showScanner && !readOnly" @barcode-detected="onBarcodeDetected" @close="showScanner = false" />
+    <OcrScanner v-if="labelOpened && !readOnly" :open="showOcr" :reference-brand="form.brand" draft @result="onOcrResult" @close="showOcr = false" />
+    <LabelTemplatesModal v-if="showLabelTemplates && !readOnly" @close="showLabelTemplates = false" />
   </div>
 </template>
 
@@ -555,6 +558,7 @@ const props = defineProps<{
   existingBrands?: string[]
   canDeletePermanently?: boolean
   canCreateVariants?: boolean
+  readOnly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -566,6 +570,9 @@ const emit = defineEmits<{
   (e: 'reload-grade'): void
 }>()
 
+const READ_ONLY_MESSAGE = 'Acesso de consulta: alterações, impressões e histórico não estão disponíveis.'
+const readOnly = computed(() => !!props.readOnly)
+
 const variantMode = ref<'grade' | null>(null)
 const duplicateDraft = ref<VariantContext | null>(null), loadingDuplicate = ref(false)
 const keepSourceGroup = ref(true)
@@ -576,7 +583,7 @@ const duplicateNeedsRefresh = ref(false)
 let duplicatePending: DuplicateRequest | null = null
 let disposed = false
 async function openDuplicate() {
-  if (!props.item || loadingDuplicate.value || saving.value) return
+  if (readOnly.value || !props.item || loadingDuplicate.value || saving.value) return
   loadingDuplicate.value = true
   try { const context = await inventoryVariantsAPI.context(props.item.id); if (!disposed) duplicateDraft.value = context }
   catch { submitError.value = 'Não foi possível carregar o produto. Tente novamente.' }
@@ -586,7 +593,7 @@ async function openDuplicate() {
 const showDeletion = ref(false), deleteButton = ref<HTMLButtonElement>()
 const showHistory = ref(false), historySection = ref<HistorySection>('movements')
 const historyButton = ref<HTMLButtonElement>()
-function openHistory(section: HistorySection) { showDeletion.value = false; historySection.value = section; showHistory.value = true }
+function openHistory(section: HistorySection) { if (readOnly.value) return; showDeletion.value = false; historySection.value = section; showHistory.value = true }
 async function closeHistory() { showHistory.value = false; await nextTick(); historyButton.value?.focus() }
 async function closeDeletion() { showDeletion.value = false; await nextTick(); deleteButton.value?.focus() }
 
@@ -600,7 +607,7 @@ const showOcr = ref(false)
 const showProductPhoto = ref(false)
 const startWithHanger = ref(false)
 const photoSeed = ref('')
-function openProductPhoto(hanger = false) { photoSeed.value = form.image_data; startWithHanger.value = hanger; showProductPhoto.value = true }
+function openProductPhoto(hanger = false) { if (readOnly.value) return; photoSeed.value = form.image_data; startWithHanger.value = hanger; showProductPhoto.value = true }
 const showLabelTemplates = ref(false)
 const photoOpened = ref(false), labelOpened = ref(false)
 watch(showProductPhoto, value => { if (value) photoOpened.value = true })
@@ -1066,6 +1073,7 @@ function validate(includeStock = true) {
 }
 
 async function handleSubmit() {
+  if (readOnly.value) return
   if (saving.value || galleryBusy.value || galleryLoading.value || galleryLoadError.value || partialItems.value.length || uncertainSave.value) return
   if (conflicts.value.length || (needsIntakeReview.value && !intakeReviewed.value)) {
     reviewError.value = 'Confira os dados e resolva as diferenças antes de continuar.'
@@ -1236,6 +1244,7 @@ async function handleSubmit() {
 }
 
 async function submitDuplicate() {
+  if (readOnly.value) return
   if (!props.duplicateContext || !duplicatePending) return
   try {
     const result = await inventoryVariantsAPI.duplicate(props.duplicateContext.source.id, duplicatePending)
@@ -1355,6 +1364,7 @@ function handleComma(event: KeyboardEvent, add: () => void) {
 </script>
 
 <style scoped>
+.readonly-fields { display: contents; }
 .price-currency-dropdown { flex: 0 0 94px; width: 94px; }
 @media (max-width: 480px) {
   .form-row.price-fields { grid-template-columns: minmax(0, 1fr); }

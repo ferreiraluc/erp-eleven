@@ -145,6 +145,7 @@ def authorized_identity(db, channel, external_id):
     return db.query(AssistantIdentity).join(Usuario, Usuario.id == AssistantIdentity.user_id).filter(
         AssistantIdentity.channel == channel, AssistantIdentity.external_id == external_id,
         AssistantIdentity.active.is_(True), Usuario.ativo.is_(True),
+        Usuario.access_profile == 'standard',
         Usuario.role.in_(["ADMIN", "GERENTE", "VENDEDOR"]),
     ).first()
 

@@ -6,7 +6,7 @@ import type { useAuthStore } from '@/stores/auth'
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(yes => { resolve = yes }); return { promise, resolve } }
 function fixture() {
   const auth = { token: 'first', isLoading: false, status: 'authenticated', isOwner: false, ownSales: true, user: { must_change_password: false, role: 'GERENTE' }, ensureSession: vi.fn().mockResolvedValue(true) } as unknown as ReturnType<typeof useAuthStore>
-  const routes = ['/dashboard', '/pedidos', '/inventory', '/conta', '/usuarios'].map(path => ({ path, component: { template: '<div />' }, meta: { requiresAuth: true, requiresOwner: path === '/usuarios' } }))
+  const routes = ['/dashboard', '/pedidos', '/inventory', '/conta', '/usuarios', '/exchange-rates', '/notificacoes', '/inventory/labels', '/inventory/replenishment', '/pdv', '/vendas-pdv', '/clientes', '/rastreamento', '/future-module'].map(path => ({ path, component: { template: '<div />' }, meta: { requiresAuth: true, requiresOwner: path === '/usuarios' } }))
   const router = createRouter({ history: createMemoryHistory(), routes: [...routes, { path: '/login', component: { template: '<div />' }, meta: { requiresGuest: true } }] })
   router.beforeEach(createAuthGuard(() => auth))
   return { router, auth }
@@ -38,6 +38,22 @@ describe('Authentication navigation guard ownership', () => {
     const { router, auth } = fixture(); await router.push('/usuarios')
     expect(router.currentRoute.value.path).toBe('/dashboard')
     auth.user!.must_change_password = true; await router.push('/pedidos')
+    expect(router.currentRoute.value.path).toBe('/conta')
+  })
+
+  it('limits a reseller to explicit consultation routes, including direct links', async () => {
+    const { router, auth } = fixture()
+    Object.assign(auth, { isReseller: true, isOwner: true, ownSales: false })
+    for (const path of ['/inventory?search=INV-ABC12', '/inventory/', '/exchange-rates', '/conta', '/notificacoes', '/dashboard']) {
+      await router.push(path)
+      expect(router.currentRoute.value.fullPath).toBe(path)
+    }
+    for (const path of ['/usuarios', '/pedidos', '/pdv', '/vendas-pdv?sale_id=private', '/clientes', '/rastreamento', '/inventory/labels', '/inventory/replenishment', '/future-module']) {
+      await router.push(path)
+      expect(router.currentRoute.value.path).toBe('/dashboard')
+    }
+    auth.user!.must_change_password = true
+    await router.push('/inventory')
     expect(router.currentRoute.value.path).toBe('/conta')
   })
 })

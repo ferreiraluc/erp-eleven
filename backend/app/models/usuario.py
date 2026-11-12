@@ -25,6 +25,7 @@ class Usuario(Base):
     auth_version = Column(Integer, nullable=False, default=0, server_default="0")
     must_change_password = Column(Boolean, nullable=False, default=False, server_default="false")
     sales_scope = Column(String(10), nullable=False, default="all", server_default="all")
+    access_profile = Column(String(20), nullable=False, default="standard", server_default="standard")
     sales_seller = Column(String(100))
     vendedor_id = Column(UUID(as_uuid=True), ForeignKey("vendedores.id"))
     ultimo_login = Column(DateTime)

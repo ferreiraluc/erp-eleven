@@ -30,10 +30,11 @@ class UserAccess(BaseModel):
     sales_scope: Literal['all', 'own']
     sales_seller: str | None = Field(None, max_length=100)
     vendedor_id: uuid.UUID | None = None
+    access_profile: Literal['standard', 'reseller'] = 'standard'
 
 
-def validate_binding(body: UserAccess, db: Session):
-    if body.sales_scope == 'own' and (not body.sales_seller or not body.vendedor_id):
+def validate_binding(body: UserAccess, db: Session, profile=None):
+    if (profile or body.access_profile) != 'reseller' and body.sales_scope == 'own' and (not body.sales_seller or not body.vendedor_id):
         raise HTTPException(400, 'Vincule o vendedor e o nome nas planilhas para liberar as vendas pessoais.')
     if body.vendedor_id and not db.get(Vendedor, body.vendedor_id):
         raise HTTPException(400, 'Vendedor não encontrado.')
@@ -54,8 +55,12 @@ def create_user(body: CreateUser, owner=Depends(require_owner), db: Session = De
         password_hash = get_password_hash(body.password)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
-    user = Usuario(**body.model_dump(exclude={'password', 'email'}), email=email,
-                   senha_hash=password_hash, role=UsuarioRole.GERENTE, must_change_password=True)
+    values = body.model_dump(exclude={'password', 'email'})
+    if body.access_profile == 'reseller':
+        values['sales_scope'] = 'own'
+    user = Usuario(**values, email=email, senha_hash=password_hash,
+                   role=UsuarioRole.VENDEDOR if body.access_profile == 'reseller' else UsuarioRole.GERENTE,
+                   must_change_password=True)
     db.add(user)
     db.flush()
     record(db, 'access_created', 'users', entity='usuarios', entity_id=str(user.id))
@@ -68,12 +73,17 @@ def create_user(body: CreateUser, owner=Depends(require_owner), db: Session = De
 def update_user(user_id: uuid.UUID, body: UserAccess, owner=Depends(require_owner), db: Session = Depends(get_db)):
     user = db.query(Usuario).filter_by(id=user_id).populate_existing().with_for_update().first()
     if not user: raise HTTPException(404, 'Usuário não encontrado.')
-    if is_owner(user) and (not body.ativo or body.sales_scope != 'all'):
+    profile = body.access_profile if 'access_profile' in body.model_fields_set else user.access_profile
+    if is_owner(user) and (not body.ativo or body.sales_scope != 'all' or profile != 'standard'):
         raise HTTPException(400, 'O administrador principal deve permanecer ativo e com acesso completo.')
-    validate_binding(body, db)
-    changed = any(getattr(user, key) != value for key, value in body.model_dump().items())
-    for key, value in body.model_dump().items(): setattr(user, key, value)
-    user.role = UsuarioRole.ADMIN if is_owner(user) else UsuarioRole.GERENTE
+    validate_binding(body, db, profile)
+    values = body.model_dump()
+    values['access_profile'] = profile
+    if profile == 'reseller':
+        values['sales_scope'] = 'own'
+    values['role'] = UsuarioRole.ADMIN if is_owner(user) else UsuarioRole.VENDEDOR if profile == 'reseller' else UsuarioRole.GERENTE
+    changed = any(getattr(user, key) != value for key, value in values.items())
+    for key, value in values.items(): setattr(user, key, value)
     if changed: revoke_all(db, user)
     record(db, 'access_changed', 'users', entity='usuarios', entity_id=str(user.id))
     db.commit()

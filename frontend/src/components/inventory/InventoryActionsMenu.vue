@@ -2,19 +2,19 @@
     <details class="more-actions" @keydown.esc="($event.currentTarget as HTMLDetailsElement).open = false">
       <summary class="erp-button erp-button--secondary erp-button--sm" :class="{ 'actions-icon': compact }" :aria-label="tr('Mais ações')"><span v-if="!compact">{{ tr('Mais ações') }} <span aria-hidden="true">▾</span></span><span v-else aria-hidden="true">•••</span></summary>
       <div class="more-actions-menu" @click="($event.currentTarget as HTMLElement).closest('details')?.removeAttribute('open')">
-    <button v-if="['ADMIN', 'GERENTE'].includes(auth.userRole)" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="$router.push('/inventory/replenishment')"><PackageCheck aria-hidden="true" />{{ tr('Reposição') }}</button>
-    <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="$router.push('/inventory/labels')">{{ tr('Etiquetas de produtos') }}</button>
+    <button v-if="readOnly || ['ADMIN', 'GERENTE'].includes(auth.userRole)" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr('Acesso de consulta') : undefined" @click="!readOnly && $router.push('/inventory/replenishment')"><PackageCheck aria-hidden="true" />{{ tr('Reposição') }}</button>
+    <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr('Acesso de consulta') : undefined" @click="!readOnly && $router.push('/inventory/labels')">{{ tr('Etiquetas de produtos') }}</button>
     <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-receiving')">{{ tr('Lotes de recebimento') }}</button>
-    <button v-if="isOwner" type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-deleted')">
+    <button v-if="isOwner" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" @click="!readOnly && emit('open-deleted')">
       {{ tr('Histórico de excluídos') }}
     </button>
-    <button type="button" class="erp-button erp-button--secondary erp-button--sm" :aria-expanded="diagnosticsOpen" aria-controls="inventory-diagnostics" @click="emit('toggle-diagnostics')">
+    <button type="button" class="erp-button erp-button--secondary erp-button--sm" :aria-expanded="diagnosticsOpen" aria-controls="inventory-diagnostics" :disabled="readOnly" :title="readOnly ? tr('Acesso de consulta') : undefined" @click="!readOnly && emit('toggle-diagnostics')">
       <ClipboardCheck aria-hidden="true" />{{ diagnosticsText('open') }}
     </button>
-    <button type="button" class="label-examples erp-button erp-button--secondary erp-button--sm" @click="emit('open-labels')">
+    <button type="button" class="label-examples erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr('Acesso de consulta') : undefined" @click="!readOnly && emit('open-labels')">
       <Lightbulb aria-hidden="true" />{{ tr('Exemplos de etiquetas') }}
     </button>
-    <button type="button" class="erp-button erp-button--secondary erp-button--sm" @click="emit('open-import')">
+    <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="readOnly" :title="readOnly ? tr('Acesso de consulta') : undefined" @click="!readOnly && emit('open-import')">
       <Upload aria-hidden="true" />{{ tr('Importar') }}
     </button>
       </div>
@@ -28,7 +28,7 @@ import { useInventoryI18n } from '@/components/inventory/i18n'
 import { useI18n } from 'vue-i18n'
 import { diagnosticsMessages } from '@/components/inventory/diagnosticsMessages'
 
-defineProps<{ isOwner: boolean; diagnosticsOpen: boolean; compact?: boolean }>()
+defineProps<{ isOwner: boolean; diagnosticsOpen: boolean; compact?: boolean; readOnly?: boolean }>()
 const emit = defineEmits<{
   'open-deleted': []
   'toggle-diagnostics': []

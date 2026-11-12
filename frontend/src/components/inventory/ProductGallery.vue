@@ -25,8 +25,8 @@
         <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || photos.length >= 5" @click="cameraInput?.click()">{{ tr('Câmera') }}</button>
         <span v-if="busy" role="status">{{ tr('Preparando fotos...') }}</span>
       </div>
-      <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden @change="addFiles" />
-      <input ref="cameraInput" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden @change="addFiles" />
+      <input ref="fileInput" :disabled="locked" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden @change="addFiles" />
+      <input ref="cameraInput" :disabled="locked" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden @change="addFiles" />
       <small>{{ tr('Até 5 fotos. A principal aparece nos cards; as outras ficam nesta galeria.') }}</small>
     </template>
     <p v-if="error" class="gallery-error" role="alert">{{ tr(error) }}</p>
@@ -38,12 +38,12 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { catalogForStorage } from '@/services/productPhoto'
 import { galleryPreview, MAX_PRODUCT_PHOTOS, prepareGalleryFile } from '@/services/productGallery'
 import { useInventoryI18n } from './i18n'
-const props = withDefaults(defineProps<{ cover: string; additional: string[]; editable?: boolean; expanded?: boolean; loading?: boolean; loadError?: boolean }>(), { editable: false })
+const props = withDefaults(defineProps<{ cover: string; additional: string[]; editable?: boolean; readOnly?: boolean; expanded?: boolean; loading?: boolean; loadError?: boolean }>(), { editable: false })
 const emit = defineEmits<{ (e: 'update:cover', value: string): void; (e: 'update:additional', value: string[]): void; (e: 'busy', value: boolean): void; (e: 'retry'): void }>()
 const { tr } = useInventoryI18n()
 const photos = computed(() => [props.cover, ...props.additional].filter(Boolean))
 const selected = ref(0), busy = ref(false), error = ref('')
-const locked = computed(() => busy.value || props.loading || props.loadError)
+const locked = computed(() => props.readOnly || busy.value || props.loading || props.loadError)
 const fileInput = ref<HTMLInputElement>(), cameraInput = ref<HTMLInputElement>()
 const previews = ref(new Map<string, string>())
 let disposed = false, generation = 0

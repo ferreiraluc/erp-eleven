@@ -27,10 +27,10 @@ const account = (owner: boolean): User => ({
   ativo: true, must_change_password: false, sales_scope: owner ? 'all' : 'own',
   sales_seller: owner ? 'Lucas' : 'Sol', vendedor_id: null, created_at: '', updated_at: '',
 })
-async function mount(owner = true, path = '/dashboard') {
+async function mount(owner = true, path = '/dashboard', profile: 'standard'|'reseller' = 'standard') {
   const pinia = createPinia(); setActivePinia(pinia)
   testPinia = pinia
-  const auth = useAuthStore(); auth.user = account(owner); auth.token = 'fixture-token'; auth.status = 'authenticated'; saveToken('fixture-token')
+  const auth = useAuthStore(); auth.user = { ...account(owner), access_profile: profile }; auth.token = 'fixture-token'; auth.status = 'authenticated'; saveToken('fixture-token')
   const router = createRouter({ history: createMemoryHistory(), routes: [
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/configuracoes', component: SystemSettingsView, meta: { requiresAuth: true, requiresOwner: true } },
@@ -92,6 +92,27 @@ describe('Account navigation inside the dashboard header', () => {
     expect(element.querySelectorAll('.account-navigation')).toHaveLength(1)
     expect(element.querySelector('.account-bar a[href="/dashboard"]')).not.toBeNull()
     expect(element.querySelector('.notification-bell')).toBeNull()
+  })
+
+  it('keeps reseller account and personal bell but omits operational navigation and tools', async () => {
+    await mount(false, '/dashboard', 'reseller')
+    expect(element.querySelector('.account-links a[href="/conta"]')).not.toBeNull()
+    expect(element.querySelector('.notification-bell')).not.toBeNull()
+    expect(element.querySelector('.account-links a[href="/usuarios"]')).toBeNull()
+    expect(element.querySelector('.account-links a[href="/auditoria"]')).toBeNull()
+    expect(element.querySelector('.quick-strip')).toBeNull()
+    expect(element.querySelector('.inv-add-btn')).toBeNull()
+    expect(element.querySelector('.dashboard-footer a[href="/configuracoes"]')).toBeNull()
+    expect(element.querySelector('.exchange-rate-compact')).not.toBeNull()
+  })
+
+  it('removes a forbidden route immediately if an authenticated account becomes a reseller', async () => {
+    const { auth, router } = await mount(false, '/pedidos')
+    auth.user = { ...auth.user!, access_profile: 'reseller' }
+    await nextTick()
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/dashboard'))
+    expect(element.querySelector('.dashboard--reseller')).not.toBeNull()
+    expect(element.querySelector('.quick-strip')).toBeNull()
   })
 
   it('opens ticket printer settings from the dashboard footer for the owner', async () => {

@@ -2,7 +2,7 @@
   <div class="exchange-management">
     <!-- Header -->
     <ModuleHeader :title="$t('exchangeManagement.title')">
-      <button @click="showQuickUpdateModal = true" class="btn btn-primary erp-button erp-button--primary">
+      <button :disabled="!canEdit" :title="!canEdit ? uiText('Acesso de consulta') : undefined" @click="canEdit && (showQuickUpdateModal = true)" class="btn btn-primary erp-button erp-button--primary">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
         </svg>
@@ -10,6 +10,7 @@
       </button>
     </ModuleHeader>
 
+    <p v-if="!canEdit" class="consultation-note" role="status">{{ uiText('Acesso de consulta: as taxas de câmbio não podem ser alteradas.') }}</p>
     <!-- Current Rates Overview -->
     <div class="current-rates-section">
       <h2>{{ $t('exchangeManagement.currentRates') }}</h2>
@@ -159,7 +160,7 @@
                 <div class="action-buttons">
                   <button
                     v-if="editingRate?.id !== rate.id && !rate.is_active"
-                    @click="startEdit(rate)"
+                    :disabled="!canEdit" @click="startEdit(rate)"
                     class="btn-icon edit erp-button erp-button--ghost erp-button--icon"
                     :title="$t('exchangeManagement.editRate')"
                   >
@@ -169,7 +170,7 @@
                   </button>
 
                   <template v-if="editingRate?.id === rate.id">
-                    <button @click="saveEditedRate" class="btn-icon save erp-button erp-button--primary erp-button--icon" :title="$t('exchangeManagement.saveChanges')">
+                    <button :disabled="!canEdit" @click="saveEditedRate" class="btn-icon save erp-button erp-button--primary erp-button--icon" :title="$t('exchangeManagement.saveChanges')">
                       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                       </svg>
@@ -183,7 +184,7 @@
 
                   <button
                     v-if="editingRate?.id !== rate.id && !rate.is_active"
-                    @click="confirmDelete(rate)"
+                    :disabled="!canEdit" @click="confirmDelete(rate)"
                     class="btn-icon delete erp-button erp-button--danger erp-button--icon"
                     :title="$t('exchangeManagement.deleteRate')"
                   >
@@ -200,7 +201,7 @@
     </div>
 
     <!-- Quick Update Modal -->
-    <div v-if="showQuickUpdateModal" class="modal-overlay erp-dialog-backdrop" @click="showQuickUpdateModal = false">
+    <div v-if="showQuickUpdateModal && canEdit" class="modal-overlay erp-dialog-backdrop" @click="showQuickUpdateModal = false">
       <div v-erp-dialog class="modal-content erp-dialog" @click.stop>
         <div class="modal-header erp-dialog__header">
           <h3>{{ $t('exchangeManagement.quickUpdateTitle') }}</h3>
@@ -254,7 +255,7 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay erp-dialog-backdrop" @click="showDeleteModal = false">
+    <div v-if="showDeleteModal && canEdit" class="modal-overlay erp-dialog-backdrop" @click="showDeleteModal = false">
       <div v-erp-dialog class="modal-content delete-modal erp-dialog" @click.stop>
         <div class="modal-header erp-dialog__header">
           <h3>{{ $t('exchangeManagement.confirmDeletion') }}</h3>
@@ -293,6 +294,7 @@ import { useCurrencyStore } from '@/stores/currency'
 import { exchangeRateAPI, type HistoricalRateUpdate } from '@/services/api'
 
 const authStore = useAuthStore()
+const canEdit = computed(() => !authStore.isReseller && ['ADMIN', 'GERENTE'].includes(authStore.user?.role || ''))
 const { t } = useI18n()
 
 // Reactive data
@@ -452,6 +454,7 @@ const loadSalesAverage = async () => {
 }
 
 const performQuickUpdate = async () => {
+  if (!canEdit.value) return
   try {
     isUpdating.value = true
     updateError.value = null
@@ -473,6 +476,7 @@ const performQuickUpdate = async () => {
 }
 
 const startEdit = (rate: any) => {
+  if (!canEdit.value) return
   editingRate.value = {
     id: rate.id,
     rate: Number(rate.rate),
@@ -486,6 +490,7 @@ const cancelEdit = () => {
 }
 
 const saveEditedRate = async () => {
+  if (!canEdit.value) return
   if (!editingRate.value) return
 
   try {
@@ -507,11 +512,13 @@ const saveEditedRate = async () => {
 }
 
 const confirmDelete = (rate: any) => {
+  if (!canEdit.value) return
   rateToDelete.value = rate
   showDeleteModal.value = true
 }
 
 const deleteRate = async () => {
+  if (!canEdit.value) return
   if (!rateToDelete.value) return
 
   try {
@@ -593,6 +600,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.consultation-note { padding: 10px 14px; border-radius: 10px; color: #475569; background: #eff6ff; font-size: .85rem; }
 .exchange-management {
   min-height: 100vh;
   background-color: #f8fafc;

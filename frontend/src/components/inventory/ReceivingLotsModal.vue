@@ -391,6 +391,7 @@ function sourceChanged() {
   candidateOffset.value = 0
 }
 function start(lot?: ReceivingLot) {
+  if (!props.canManage) return
   attachTo.value = lot
   form.name = ''
   form.notes = ''
@@ -419,6 +420,7 @@ watch(
   { deep: true },
 )
 async function findCandidates() {
+  if (!props.canManage) return
   await run(async () => {
     const data = await receivingAPI.candidates(dateFrom.value, dateTo.value)
     candidates.value = data.items
@@ -427,6 +429,7 @@ async function findCandidates() {
   })
 }
 async function save() {
+  if (!props.canManage) return
   await run(async () => {
     try {
       const result = attachTo.value
@@ -470,6 +473,7 @@ async function loadMembers() {
   })
 }
 async function edit() {
+  if (!props.canManage) return
   await run(async () => {
     if (current.value)
       current.value = await receivingAPI.edit(current.value.id, {
@@ -480,6 +484,7 @@ async function edit() {
   })
 }
 async function remove(row: ReceivingMember) {
+  if (!props.canManage) return
   await run(async () => {
     if (!current.value) return
     await receivingAPI.detach(current.value.id, row.id)

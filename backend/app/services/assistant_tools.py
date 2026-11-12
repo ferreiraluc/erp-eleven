@@ -6,6 +6,7 @@ from datetime import timedelta
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..models.assistant import AssistantNote, utcnow
+from ..models.usuario import Usuario
 from .assistant_queries import (
     ShipmentArgs, OrderArgs, StockArgs, CustomerArgs, SalesArgs, QueryArgs, literal_pattern,
     query_shipments, query_orders, query_stock, query_customers, query_sales,
@@ -23,6 +24,10 @@ from .assistant_documents import FilePrintArgs,prepare_file,query_prints
 from .receipt_tracking import ReceiptArgs,prepare_receipt
 from .assistant_inventory import ItemsArgs,EntryArgs,prepare_inventory
 from .postal_codes import CepArgs, lookup_cep, complete_address
+
+
+def _restricted_user(db, user_id):
+    return db.query(Usuario.access_profile).filter(Usuario.id == user_id).scalar() == 'reseller'
 
 
 class SearchArgs(BaseModel):
@@ -57,7 +62,7 @@ def search_memory(db, termo, user=None):
 
 
 def draft_note(db, message, identity, tipo, conteudo):
-    if not identity.can_register:
+    if not identity.can_register or _restricted_user(db, message.user_id):
         return {"erro": "Usuário sem permissão para registrar ocorrências."}
     note = db.query(AssistantNote).filter_by(source_message_id=message.id).first()
     if not note:
@@ -69,7 +74,7 @@ def draft_note(db, message, identity, tipo, conteudo):
 
 
 def confirm_note(db, message, identity, note_id, cancel=False):
-    if not identity.can_register:
+    if not identity.can_register or _restricted_user(db, message.user_id):
         return "Você não tem permissão para registrar ocorrências."
     try:
         note_uuid = uuid.UUID(note_id.strip())
@@ -139,6 +144,8 @@ TOOLS = [
 
 
 def execute_tool(db, message, identity, name, arguments):
+    if _restricted_user(db, message.user_id):
+        return {'erro': 'Este perfil permite somente consultar estoque e câmbio no aplicativo.'}
     if name=='preparar_rastreios_comprovante':return prepare_receipt(db,message,identity,ReceiptArgs.model_validate(arguments))
     if name in ('preparar_itens','preparar_entrada_estoque'):
         schema=ItemsArgs if name=='preparar_itens' else EntryArgs

@@ -9,7 +9,7 @@ from .models.access import AuthSession, now
 from .config import settings
 from .services.user_sessions import effective_session_expiry
 from .services.user_audit import bind_actor
-from .services.access_policy import is_owner
+from .services.access_policy import is_owner, require_profile_route
 
 security = HTTPBearer(auto_error=False)
 
@@ -43,6 +43,11 @@ def get_current_user(
     request.state.auth_session_expires_at = effective_session_expiry(session)
     if user.must_change_password and request.url.path not in ('/api/auth/me', '/api/auth/password', '/api/auth/logout'):
         raise HTTPException(403, 'PASSWORD_CHANGE_REQUIRED')
+    # FastAPI's included routers retain an unprefixed original APIRoute. The
+    # effective context identifies the matched full template without trusting
+    # user-provided path segments or allowing a whole module by URL prefix.
+    effective_route = request.scope.get('fastapi', {}).get('effective_route_context')
+    require_profile_route(user, request.method, getattr(effective_route, 'path', route))
     return user
 
 

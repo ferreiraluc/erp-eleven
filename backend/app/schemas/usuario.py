@@ -32,6 +32,7 @@ class UsuarioResponse(UsuarioBase):
     email: str
     must_change_password: bool = False
     sales_scope: str = "all"
+    access_profile: str = "standard"
     sales_seller: Optional[str] = None
     vendedor_id: Optional[uuid.UUID] = None
     id: uuid.UUID

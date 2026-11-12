@@ -176,7 +176,7 @@
     "resetDescription": "Introduce una contraseña temporal. La persona deberá cambiarla en el próximo acceso.",
     "saved": "Cambios guardados.",
     "userSaveError": "No se pudo guardar. Revisa los datos, el correo y el vendedor vinculado.",
-    "userRules": "La administración y la auditoría son exclusivas de Lucas. Los demás usuarios operan la tienda según el acceso a ventas definido aquí.",
+    "userRules": "La administración y la auditoría son exclusivas de Lucas. Equipo actual conserva el acceso operativo definido; Revendedor consulta solo inventario, cotizaciones y sus notificaciones.",
     "auditSubtitle": "Operaciones, consultas y actividad por persona y componente.",
     "auditNotice": "Registra inicios de sesión y cambios en el sistema. Las consultas y el tiempo de navegación no se registran.",
     "period": "Período",
@@ -267,6 +267,11 @@
       "exchange-rates": "Cambio",
       "fiado": "Pagadores",
       "folgas": "Días libres"
-    }
+    },
+    "reseller": "Revendedor",
+    "standardProfile": "Equipo actual",
+    "resellerProfile": "Revendedor — solo consulta",
+    "noSalesAccess": "Sin acceso a ventas",
+    "resellerHelp": "Perfil de consulta: vea productos, cantidades y cotizaciones. No permite cambios, ventas, pedidos, clientes, historiales ni impresión."
   }
 }
