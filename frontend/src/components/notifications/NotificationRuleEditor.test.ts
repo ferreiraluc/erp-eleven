@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, h, nextTick, reactive, ref, type App } from 'vue'
 import i18n from '@/i18n'
-import type { NotificationRule, NotificationTemplate } from '@/services/notifications'
+import type { NotificationRecipientUser, NotificationRule, NotificationTemplate } from '@/services/notifications'
 import NotificationRuleEditor from './NotificationRuleEditor.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -14,10 +14,11 @@ vi.mock('@/services/notifications', () => ({ notificationsAPI: { rule: mocks.rul
 let app: App | undefined, root: HTMLElement
 const currentRule = ref<NotificationRule>()
 const saved = vi.fn()
-const users = [
+const users: NotificationRecipientUser[] = [
   { id: 'lucas', nome: 'Lucas' },
   { id: 'sol', nome: 'Sol' },
   { id: 'junior', nome: 'Junior' },
+  { id: 'reseller', nome: 'Revendedor', access_profile: 'reseller' },
 ]
 const template: NotificationTemplate = {
   id: 'template', name: 'Aviso de teste', title: 'Aviso', body: 'Confira no sistema.',
@@ -85,7 +86,7 @@ describe('Notification rule recipients', () => {
       expected_version: 3, enabled: true, template_id: 'template', local_time: '09:00',
       weekdays: [0, 1, 2, 3, 4, 5, 6], user_ids: ['lucas', 'sol', 'junior'],
     }, 'owner-session')
-    expect(users.every(user => recipient(user.id).checked)).toBe(true)
+    expect(users.filter(user => user.access_profile !== 'reseller').every(user => recipient(user.id).checked)).toBe(true)
     expect(root.querySelector('summary')?.textContent).toContain('3')
     expect(saveButton().disabled).toBe(true)
   })
@@ -98,6 +99,37 @@ describe('Notification rule recipients', () => {
     await vi.waitFor(() => expect(mocks.rule).toHaveBeenCalledOnce())
     expect(mocks.rule.mock.calls[0][1].user_ids).toEqual([])
     expect(root.querySelector('summary')?.textContent).toContain('Padrão do evento')
+  })
+
+  it('allows selecting a reseller for sale completed summaries', async () => {
+    await mount('sale_completed', ['lucas'])
+    await select('reseller')
+    saveButton().click()
+    await vi.waitFor(() => expect(mocks.rule).toHaveBeenCalledOnce())
+    expect(mocks.rule.mock.calls[0][1].user_ids).toEqual(['lucas', 'reseller'])
+  })
+
+  it.each(['tracking_status_changed', 'morning_greeting', 'sale_receipt_problem', 'sale_avulso_without_reason'])(
+    'removes former team recipients who are now resellers from %s', async event => {
+      await mount(event, ['lucas', 'reseller'])
+      expect(recipient('reseller')).toBeNull()
+      expect(recipient('lucas').checked).toBe(true)
+      saveButton().click()
+      await vi.waitFor(() => expect(mocks.rule).toHaveBeenCalledOnce())
+      expect(mocks.rule.mock.calls[0][1].user_ids).toEqual(['lucas'])
+    },
+  )
+
+  it('does not carry reseller recipients into a different event', async () => {
+    await mount('sale_completed', ['lucas', 'reseller'])
+    expect(recipient('reseller').checked).toBe(true)
+    currentRule.value = fixture('tracking_status_changed', ['lucas', 'reseller'])
+    await nextTick()
+    expect(recipient('reseller')).toBeNull()
+    saveButton().click()
+    await vi.waitFor(() => expect(mocks.rule).toHaveBeenCalledOnce())
+    expect(mocks.rule.mock.calls[0][0]).toBe('tracking_status_changed')
+    expect(mocks.rule.mock.calls[0][1].user_ids).toEqual(['lucas'])
   })
 
   it('keeps selected users visible after a version conflict rather than showing saved state', async () => {

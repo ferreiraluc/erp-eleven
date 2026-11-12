@@ -112,6 +112,20 @@ describe('Owner notification editor', () => {
     expect(form.querySelector('input[maxlength="500"]')).toBeNull()
     expect(form.querySelector('button[aria-label="Ao abrir o aviso"]')).toBeTruthy()
   })
+  it('selects only eligible team recipients for a manual notification', async () => {
+    mocks.admin.mockResolvedValue({
+      ...initial(),
+      users: [...initial().users, { id: 'reseller', nome: 'Revendedor', access_profile: 'reseller' }],
+    })
+    await mount()
+    const form = await compose()
+    expect(form.querySelector('input[type="checkbox"][value="reseller"]')).toBeNull()
+    button('Selecionar todos').click()
+    await nextTick()
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await vi.waitFor(() => expect(mocks.create).toHaveBeenCalledOnce())
+    expect(mocks.create.mock.calls[0][0].user_ids).toEqual(['sol', 'junior'])
+  })
   it('keeps the current draft mounted and locks authoring navigation during a slow send', async () => {
     let finish!: (value: unknown) => void
     mocks.create.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))

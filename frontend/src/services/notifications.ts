@@ -117,10 +117,15 @@ export interface NotificationContent {
   requires_response: boolean
   action_path: string | null
 }
+export interface NotificationRecipientUser {
+  id: string
+  nome: string
+  access_profile?: 'standard' | 'reseller'
+}
 export interface NotificationAdminResult {
   items: AdminNotification[]
   total: number
-  users: { id: string; nome: string }[]
+  users: NotificationRecipientUser[]
   templates: NotificationTemplate[]
   rules: NotificationRule[]
 }

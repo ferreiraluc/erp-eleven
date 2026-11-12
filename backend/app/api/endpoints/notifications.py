@@ -180,7 +180,8 @@ def admin(offset: int = Query(0, ge=0, le=1000000), limit: int = Query(30, ge=1,
     query = db.query(Notification)
     rows = query.order_by(Notification.created_at.desc(), Notification.id.desc()).offset(offset).limit(limit).all()
     return {'items': _admin_messages(db, rows), 'total': query.count(),
-        'users': [{'id': user.id, 'nome': user.nome} for user in db.query(Usuario).filter(Usuario.ativo.is_(True)).order_by(Usuario.nome).all()],
+        'users': [{'id': user.id, 'nome': user.nome, 'access_profile': user.access_profile or 'standard'}
+                  for user in db.query(Usuario).filter(Usuario.ativo.is_(True)).order_by(Usuario.nome).all()],
         'templates': [_template(row) for row in db.query(NotificationTemplate).order_by(NotificationTemplate.name).all()],
         'rules': [_rule(row) for row in db.query(NotificationRule).order_by(NotificationRule.event_key).all()]}
 

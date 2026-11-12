@@ -51,12 +51,12 @@
         <button
           type="button"
           class="erp-button erp-button--ghost erp-button--sm"
-          @click="form.user_ids = users.map((user) => user.id)"
+          @click="form.user_ids = eligibleUsers.map((user) => user.id)"
         >
           {{ n('selectAll') }}
         </button>
         <div class="notification-users">
-          <label v-for="user in users" :key="user.id" class="check"
+          <label v-for="user in eligibleUsers" :key="user.id" class="check"
             ><input v-model="form.user_ids" type="checkbox" :value="user.id" />{{
               user.nome
             }}</label
@@ -87,6 +87,7 @@ import {
   type NotificationSaleDetail,
   type NotificationSaleSummary,
   type NotificationTrackingDetail,
+  type NotificationRecipientUser,
 } from '@/services/notifications'
 import { notificationText as n } from '@/services/notificationText'
 import { notificationPreview } from '@/services/notificationAuthoring'
@@ -110,7 +111,7 @@ const props = withDefaults(
   defineProps<{
     isTemplate?: boolean
     templates?: NotificationTemplate[]
-    users?: { id: string; nome: string }[]
+    users?: NotificationRecipientUser[]
     token?: string | null
     initialSale?: NotificationSaleDetail | null
     lockedSale?: boolean
@@ -119,6 +120,17 @@ const props = withDefaults(
   { isTemplate: false, templates: () => [], users: () => [], token: null, initialSale: null, lockedSale: false, disabled: false },
 )
 const emit = defineEmits<{ validity: [message: string] }>()
+const eligibleUsers = computed(() => props.users.filter(user => user.access_profile !== 'reseller'))
+watch(
+  [() => props.users, () => form.value.user_ids, () => props.isTemplate],
+  () => {
+    if (props.isTemplate) return
+    const restricted = new Set(props.users.filter(user => user.access_profile === 'reseller').map(user => user.id))
+    const permitted = form.value.user_ids.filter(id => !restricted.has(id))
+    if (permitted.length !== form.value.user_ids.length) form.value.user_ids = permitted
+  },
+  { immediate: true, deep: true, flush: 'sync' },
+)
 const sale = ref<NotificationSaleDetail | null>(props.initialSale)
 const contextIssue = ref('')
 const trackingIssue = ref(''), tracking = ref<NotificationTrackingDetail | null>(null)
@@ -144,11 +156,11 @@ const destinationOptions = computed(() => {
   return options
 })
 const destinationLabel = computed(() => destinationOptions.value.find(option => option.value === destination.value)?.label || '')
-const preview = computed(() => notificationPreview(form.value, props.users, sale.value, new Date(), tracking.value))
+const preview = computed(() => notificationPreview(form.value, eligibleUsers.value, sale.value, new Date(), tracking.value))
 watch(() => props.isTemplate ? '' : contextIssue.value || trackingIssue.value || (preview.value.problem ? n(preview.value.problem) : ''), value => emit('validity', value), { immediate: true, flush: 'sync' })
 function setContext(value: NotificationContext | null) { form.value.context = value; form.value.action_path = '' }
 function selectSeller(value: NotificationSaleSummary) {
-  if (value.seller_id && props.users.some(user => user.id === value.seller_id)) form.value.user_ids = [value.seller_id]
+  if (value.seller_id && eligibleUsers.value.some(user => user.id === value.seller_id)) form.value.user_ids = [value.seller_id]
 }
 function setDestination(value: string) {
   if (value === 'sale' || value === 'product') setContext({ ...form.value.context, target: value })
