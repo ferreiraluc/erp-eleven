@@ -31,6 +31,19 @@ def emit(db, ids, identity, key='fixture-sale', event='sale_completed'):
         action_path=f'/vendas-pdv?sale_id={identity}')
 
 
+def test_admin_recipient_metadata_exposes_profiles_without_private_account_fields(setup):
+    client, factory, ids = setup
+    prepare(factory, ids)
+    response = client.get('/api/notifications/admin', headers=owner())
+    assert response.status_code == 200
+    users = {row['nome']: row for row in response.json()['users']}
+    assert users == {
+        name: {'id': str(ids[name]), 'nome': name, 'access_profile': profile}
+        for name, profile in [('Lucas', 'standard'), ('Sol', 'standard'), ('Junior', 'reseller')]
+    }
+    assert client.get('/api/notifications/admin', headers={'X-User': 'Junior'}).status_code == 403
+
+
 def test_reseller_summary_is_separate_from_team_details_and_can_be_selected(setup):
     client, factory, ids = setup
     identity = prepare(factory, ids)

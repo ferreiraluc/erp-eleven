@@ -32,7 +32,7 @@
       <p>{{ n(defaultRecipientsHelp) }}</p>
       <p v-if="salesEvent">{{ n('salesRecipientsScope') }}</p>
       <div class="notification-rule__users">
-        <label v-for="user in users" :key="user.id" class="check"
+        <label v-for="user in eligibleUsers" :key="user.id" class="check"
           ><input v-model="userIds" type="checkbox" :value="user.id" :disabled="busy" />{{
             user.nome
           }}</label
@@ -57,13 +57,14 @@ import {
   notificationsAPI,
   type NotificationRule,
   type NotificationTemplate,
+  type NotificationRecipientUser,
 } from '@/services/notifications'
 import { notificationText as n, type NotificationCopyKey } from '@/services/notificationText'
 import { useAuthStore } from '@/stores/auth'
 const props = defineProps<{
     rule: NotificationRule
     templates: NotificationTemplate[]
-    users: { id: string; nome: string }[]
+    users: NotificationRecipientUser[]
   }>(),
   emit = defineEmits<{ saved: [] }>()
 const auth = useAuthStore(),
@@ -89,6 +90,19 @@ watch(
     busy.value = false
   },
   { immediate: true },
+)
+const eligibleUsers = computed(() => props.users.filter(user =>
+  user.access_profile !== 'reseller' || props.rule.event_key === 'sale_completed',
+))
+watch(
+  [() => props.users, () => props.rule.event_key, userIds],
+  () => {
+    if (props.rule.event_key === 'sale_completed') return
+    const restricted = new Set(props.users.filter(user => user.access_profile === 'reseller').map(user => user.id))
+    const permitted = userIds.value.filter(id => !restricted.has(id))
+    if (permitted.length !== userIds.value.length) userIds.value = permitted
+  },
+  { immediate: true, deep: true, flush: 'sync' },
 )
 const timed = computed(() =>
   ['daily_greeting', 'morning_greeting', 'afternoon_greeting'].includes(props.rule.event_key),

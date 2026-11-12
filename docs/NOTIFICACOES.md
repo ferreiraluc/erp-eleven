@@ -164,6 +164,10 @@ personalizado e os atalhos dos funcionários continuam preservados. Outras regra
 e mensagens manuais não são destinadas a esse perfil. A seleção não cria acesso
 ao PDV e não reenvia vendas anteriores; avisos antigos de um perfil de funcionário
 ficam indisponíveis se a conta for convertida para revendedor.
+O editor mostra revendedores apenas entre os destinatários da regra **Venda
+concluída**; **Selecionar todos** em um recado manual inclui somente a equipe.
+Ao editar um recado ou outra regra, destinatários convertidos para revendedor
+são retirados da seleção antes de salvar. O backend continua validando o perfil.
 
 O motivo de um avulso fica no recibo da
 notificação; não reescreve dados financeiros da venda. Avulso não é tratado como
