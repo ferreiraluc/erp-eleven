@@ -42,7 +42,7 @@ async function fingerprint(token: string) {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
   return Array.from(new Uint8Array(hash), value => value.toString(16).padStart(2, '0')).join('')
 }
-async function readInstallation() {
+async function readInstallation(): Promise<Installation> {
   if (installation) return installation
   const { value } = await vault.get({ key: 'notification-installation' })
   let parsed: Installation | null = null
