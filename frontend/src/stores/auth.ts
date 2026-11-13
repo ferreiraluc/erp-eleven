@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, computed, onScopeDispose } from 'vue'
 import axios from 'axios'
 import { authAPI, type LoginRequest, type User } from '@/services/api'
-import { clearSession, saveToken, saveSessionExpiry, sessionExpiry, storedToken, tokenIsCurrent } from '@/services/sessionStorage'
+import { clearSession, saveToken, saveSessionExpiry, sessionExpiry, storedToken, tokenIsCurrent, flushSessionStorage, sessionIsRemembered } from '@/services/sessionStorage'
 import i18n from '@/i18n'
+import { isNativeSession, isNativeSessionStorageError, nativeSessionStorageMessage } from '@/services/nativeSessionVault'
 import { AuthOperationSuperseded, isAuthOperationSuperseded } from '@/services/authOperation'
 import { clearCatalogIndex } from '@/services/catalogIndex'
 import { clearNotificationDevice } from '@/services/notificationPush'
@@ -79,6 +80,8 @@ export const useAuthStore = defineStore('auth', () => {
         const verified = await authAPI.getCurrentUser(saved)
         if (current !== generation || saved !== storedToken()) return false
         saveSessionExpiry(saved, verified.session_expires_at)
+        if (isNativeSession()) await flushSessionStorage()
+        if (current !== generation || saved !== storedToken()) return false
         if (!tokenIsCurrent(saved)) {
           window.dispatchEvent(new Event('erp:session-expired'))
           return false
@@ -90,6 +93,12 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = null
         return true
       } catch (e) {
+        if (isNativeSessionStorageError(e) && current === generation) {
+          expire()
+          status.value = 'error'
+          error.value = nativeSessionStorageMessage(String(i18n.global.locale.value))
+          return false
+        }
         if (current !== generation || saved !== storedToken()) return false
         if (axios.isAxiosError(e) && e.response?.status === 401) expire()
         else {
@@ -118,10 +127,17 @@ export const useAuthStore = defineStore('auth', () => {
       assertOperation(operation, null)
       saveToken(result.access_token, remember)
       expectedToken = result.access_token
+      if (isNativeSession()) await flushSessionStorage()
+      assertOperation(operation, result.access_token)
       if (!await ensureSession(true)) throw new Error('session_not_verified')
       assertOperation(operation, result.access_token)
       return result
     } catch (e) {
+      if (isNativeSessionStorageError(e) && operation === operationEpoch) {
+        expire()
+        error.value = nativeSessionStorageMessage(String(i18n.global.locale.value))
+        throw e
+      }
       if (operation !== operationEpoch || storedToken() !== expectedToken || isAuthOperationSuperseded(e)) throw new AuthOperationSuperseded()
       if (!error.value) {
         const status = axios.isAxiosError(e) ? e.response?.status : undefined
@@ -136,12 +152,14 @@ export const useAuthStore = defineStore('auth', () => {
     if (!originalToken || !tokenIsCurrent(originalToken)) { expire(); throw new AuthOperationSuperseded() }
     const operation = ++operationEpoch
     let expectedToken = originalToken
-    const remember = localStorage.getItem('auth_token') === originalToken
+    const remember = sessionIsRemembered(originalToken)
     try {
       const result = await authAPI.changePassword(currentPassword, newPassword, originalToken)
       assertOperation(operation, originalToken)
       saveToken(result.access_token, remember)
       expectedToken = result.access_token
+      if (isNativeSession()) await flushSessionStorage()
+      assertOperation(operation, result.access_token)
       generation++
       checking = null
       checkingToken = null
@@ -149,6 +167,11 @@ export const useAuthStore = defineStore('auth', () => {
       assertOperation(operation, result.access_token)
       return result
     } catch (e) {
+      if (isNativeSessionStorageError(e) && operation === operationEpoch) {
+        expire()
+        error.value = nativeSessionStorageMessage(String(i18n.global.locale.value))
+        throw e
+      }
       if (operation !== operationEpoch || storedToken() !== expectedToken || isAuthOperationSuperseded(e)) throw new AuthOperationSuperseded()
       throw e
     }
@@ -159,7 +182,15 @@ export const useAuthStore = defineStore('auth', () => {
     // Remove private UI immediately. Only this captured token may be revoked;
     // a delayed response never clears the next user's identity.
     expire()
-    if (originalToken) await authAPI.logout(originalToken)
+    const operation = operationEpoch
+    try {
+      // Revoke even if native disk cleanup fails, and never leave a token visible
+      // while awaiting either operation.
+      await Promise.all([originalToken ? authAPI.logout(originalToken) : Promise.resolve(), flushSessionStorage()])
+    } catch (e) {
+      if (isNativeSessionStorageError(e) && operation === operationEpoch) error.value = nativeSessionStorageMessage(String(i18n.global.locale.value))
+      throw e
+    }
   }
 
   window.addEventListener('erp:session-expired', expire)

@@ -49,6 +49,15 @@ class Settings:
     SUPERFRETE_SANDBOX: bool = os.getenv('SUPERFRETE_SANDBOX', 'true').lower() == 'true'
     SUPERFRETE_WEBHOOK_SECRET: str = os.getenv('SUPERFRETE_WEBHOOK_SECRET', '')
 
+    # Mobile transport is opt-in; Web Push continues using its existing configuration.
+    NATIVE_PUSH_ENABLED: bool = os.getenv("NATIVE_PUSH_ENABLED", "false").lower() == "true"
+    NATIVE_PUSH_FCM_SERVICE_ACCOUNT_JSON: str = os.getenv("NATIVE_PUSH_FCM_SERVICE_ACCOUNT_JSON", "")
+    NATIVE_PUSH_APNS_KEY_ID: str = os.getenv("NATIVE_PUSH_APNS_KEY_ID", "")
+    NATIVE_PUSH_APNS_TEAM_ID: str = os.getenv("NATIVE_PUSH_APNS_TEAM_ID", "")
+    NATIVE_PUSH_APNS_PRIVATE_KEY: str = os.getenv("NATIVE_PUSH_APNS_PRIVATE_KEY", "")
+    NATIVE_PUSH_APNS_TOPIC: str = os.getenv("NATIVE_PUSH_APNS_TOPIC", "com.elevenparispy.erp")
+    NATIVE_PUSH_APNS_SANDBOX: bool = os.getenv("NATIVE_PUSH_APNS_SANDBOX", "false").lower() == "true"
+
     # Timezone configuration
     TIMEZONE: str = os.getenv("TIMEZONE", "America/Sao_Paulo")  # GMT-3
 

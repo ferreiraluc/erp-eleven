@@ -288,6 +288,15 @@ export const notificationsAPI = {
         headers: headers(token),
       })
       .then((r) => r.data),
+  nativePushConfig: (platform: 'android' | 'ios', token = storedToken()) =>
+    api.get<{ available: boolean; platform: 'android' | 'ios'; reason: 'ready' | 'not_configured' }>(`${root}/push/native/config`, {
+      params: { platform }, headers: headers(token),
+    }).then(r => r.data),
+  subscribeNative: (value: { platform: 'android' | 'ios'; registration_token: string;
+    installation_secret: string; device_token: string; device_name: string }, token = storedToken()) =>
+    api.post<{ id: string; device_token: string; user_id: string; active: boolean }>(`${root}/push/native/subscribe`, value, {
+      headers: headers(token),
+    }).then(r => r.data),
   pushConfig: (token = storedToken()) =>
     api
       .get<{

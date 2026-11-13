@@ -95,6 +95,7 @@ a foto original somente do produto de origem, reduzindo a memória da operação
 
 ## Começar pela documentação certa
 
+- [Aplicativos Android/iOS](docs/APLICATIVOS_MOBILE.md): piloto Capacitor, segurança, builds, contas, custos e homologação para distribuição.
 - [Escopo e regras do produto](docs/ESCOPO.md): funcionalidades, limites e decisões da loja.
 - [Arquitetura e mapa do código](docs/ARQUITETURA.md): onde alterar cada módulo, dados e processos.
 - [Desenvolvimento e validação](docs/DESENVOLVIMENTO.md): ambiente local, banco, testes e build.

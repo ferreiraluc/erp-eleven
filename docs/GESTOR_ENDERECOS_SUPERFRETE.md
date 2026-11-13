@@ -10,6 +10,14 @@ Acesso: Dashboard → **Endereços e envios** (`/enderecos`), para ADMIN e GEREN
 
 A edição é de dados e padrões dos PDFs gerados pelo ERP, não de Word ou PDFs externos. Arquivos avulsos antigos podem deixar de estar disponíveis após a limpeza da fila. PDFs SuperFrete são validados e guardados no banco assim que o provedor os disponibiliza.
 
+No piloto nativo Android/iOS, **Opções do PDF** abre o seletor do aparelho com o
+arquivo para salvar ou compartilhar; PDFs do histórico e de utilização do cliente
+seguem o mesmo caminho. Não se envia o link do ERP nem texto adicional. Cancelar
+permite tentar novamente e não cria impressão, compra ou cobrança. A confirmação
+**Enviar à impressora** continua separada, usando a fila da loja. No navegador,
+prévia e download mantêm o comportamento existente. Cache privado, validação e
+limites do compartilhamento nativo estão descritos em `VENDAS_PDV.md`.
+
 ## Frontend
 
 As janelas usam o [padrão compacto de modais](UI_MODAIS.md), com ações de salvar,

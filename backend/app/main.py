@@ -173,6 +173,9 @@ app.add_middleware(
         "https://www.elevenparispy.com",
         "https://erp-eleven-backend.onrender.com", 
         "https://erp-eleven.onrender.com",
+        # Bundled Capacitor clients; API authorization remains mandatory.
+        "capacitor://localhost",
+        "https://localhost",
         "http://localhost:3000",
         "http://localhost:5173"
     ],

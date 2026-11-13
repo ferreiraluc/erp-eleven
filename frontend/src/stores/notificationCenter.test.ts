@@ -90,6 +90,16 @@ afterEach(() => {
   vi.useRealTimers()
 })
 describe('Notification center', () => {
+  it('keeps the native pilot inbox usable without permission invitations before provider configuration', async () => {
+    mocks.support.mockReturnValue('native_pending')
+    store = useNotificationCenter(); await tick()
+    expect(store.invitation).toBe(false)
+    expect(store.pushActive).toBe(false)
+    expect(store.items).toEqual([item('one')])
+    expect(mocks.enable).not.toHaveBeenCalled()
+    mocks.auth.token = 'next-login-token'; await tick()
+    expect(store.invitation).toBe(false)
+  })
   it('reconnects an already permitted device on each login without invoking a permission prompt', async () => {
     mocks.restore.mockResolvedValue(true)
     store = useNotificationCenter(); await tick()

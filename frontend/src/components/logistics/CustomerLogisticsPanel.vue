@@ -37,6 +37,7 @@
     </div>
     <AddressUsageHistory v-if="visited.prints" v-show="tab === 'prints'" :key="'prints-' + historyVersion" :customer="customer" compact @freight="openFreight" @print="openPrint" />
     <p v-if="pdfError && tab === 'prints'" role="alert" class="link-error">{{ t('error') }}</p>
+    <p v-if="pdfFeedback && tab === 'prints'" role="status" class="muted">{{ pdfFeedback }}</p>
     <details v-if="customer.ativo && tab === 'shipments'" class="link-form">
       <summary>{{ t('link') }}</summary><p class="muted">{{ t('hint') }}</p>
       <form @submit.prevent="find">
@@ -68,6 +69,8 @@ import { useRouter } from 'vue-router'
 import AddressUsageHistory from '@/components/addresses/AddressUsageHistory.vue'
 import CustomerPurchasesHistory from './CustomerPurchasesHistory.vue'
 import { messages } from './messages'
+import { shareNativePdf, usesNativeFiles } from '@/services/nativeFiles'
+import { nativeText } from '@/services/nativeMessages'
 const router=useRouter()
 const auth = useAuthStore()
 const emit = defineEmits<{ changed: [] }>()
@@ -87,17 +90,26 @@ function refreshHistory() {
   emit('changed')
 }
 const pdfError=ref(false)
+const pdfFeedback=ref('')
+let openingPdf=false
 const openFreight=(id:string)=>router.push({path:'/enderecos',query:{tab:'freight',freight_id:id}})
 async function openPrint(id: string) {
+  if (openingPdf) return
   const request = contextVersion, token = auth.token
-  pdfError.value = false
+  pdfError.value = false; pdfFeedback.value = ''; openingPdf = true
   try {
     const result = await api.get('/api/address-manager/history/' + id + '/pdf', { responseType: 'blob' })
     if (request !== contextVersion || token !== auth.token) return
+    if (usesNativeFiles()) {
+      const shared = await shareNativePdf(new File([result.data], 'eleven-endereco.pdf', { type: 'application/pdf' }), () => request === contextVersion && token === auth.token)
+      if (request === contextVersion && token === auth.token) pdfFeedback.value = nativeText(shared === 'cancelled' ? 'pdfCancelled' : 'pdfOpened')
+      return
+    }
     const url = URL.createObjectURL(result.data)
     window.open(url, '_blank', 'noopener')
     setTimeout(() => URL.revokeObjectURL(url), 60000)
   } catch { if (request === contextVersion && token === auth.token) pdfError.value = true }
+  finally { openingPdf = false }
 }
 const props = defineProps<{ customer: Cliente }>()
 const { t, locale } = useI18n({ useScope: 'local', messages })

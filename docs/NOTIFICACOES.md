@@ -219,6 +219,76 @@ eventos de negócio. Conferência visual usa a interface com dados locais.
 Validação física de som/push depende de aceitar a permissão no aparelho real;
 nunca enviar uma venda, impressão ou alerta real somente para testar a interface.
 
+## Aplicativos Android/iOS — piloto nativo
+
+O piloto Capacitor usa FCM no Android e APNs diretamente no iOS, reaproveitando
+a caixa, os destinatários, a fila e o worker existentes. O navegador/PWA continua
+com Web Push, sem depender de Firebase nem de uma conta Apple para operar.
+A migração `d2m3n4o5p6q7` é aditiva: inscrições antigas recebem transporte `web`;
+nenhuma inscrição ou entrega histórica é apagada ou reenviada.
+
+**O push nativo começa desligado.** Sem configuração, a caixa interna funciona e
+mostra que os avisos externos estão em preparação; o aplicativo não abre pedidos
+de permissão repetidos nem tenta registrar um Firebase inexistente. Para ativar
+um build de piloto depois da configuração e validação física, são necessários os
+dois controles: `VITE_NATIVE_PUSH_ENABLED=true` no build nativo e
+`NATIVE_PUSH_ENABLED=true` no backend. O flag `VITE_*` é público e não é segredo.
+Não ativar o flag de build Android antes de adicionar sua configuração Firebase.
+
+| Plataforma | Configuração necessária |
+| --- | --- |
+| Android | Projeto Firebase com Cloud Messaging HTTP v1; `google-services.json` do aplicativo correspondente em `frontend/android/app/` no ambiente de build. O pacote debug usa `com.elevenparispy.erp.pilot`; distribuição usa `com.elevenparispy.erp`, exigindo cadastros correspondentes. |
+| FCM no backend | `NATIVE_PUSH_FCM_SERVICE_ACCOUNT_JSON`: credencial privada de conta de serviço com permissão para enviar mensagens nesse projeto. Nunca incluir esse JSON no aplicativo, `VITE_*`, repositório ou log. Não confundir com `google-services.json`, que contém configuração do aplicativo. |
+| iOS | App ID `com.elevenparispy.erp`, capability Push Notifications, perfil de assinatura compatível e chave APNs `.p8` da conta Apple. |
+| APNs no backend | `NATIVE_PUSH_APNS_KEY_ID`, `NATIVE_PUSH_APNS_TEAM_ID`, `NATIVE_PUSH_APNS_PRIVATE_KEY` (PEM com quebras de linha), `NATIVE_PUSH_APNS_TOPIC` e `NATIVE_PUSH_APNS_SANDBOX`. Sandbox somente para build/provisionamento de desenvolvimento; TestFlight/distribuição usa produção. Não misturar os ambientes. |
+
+As credenciais são inseridas no ambiente secreto do serviço existente; não há
+novo worker ou serviço pago dedicado a push. O backend usa destinos fixos Google
+e Apple, TLS, timeout, sem redirects/proxy herdado; APNs usa HTTP/2 e reaproveita
+conexão e token do provedor, renovado antes de uma hora. Tokens de instalação
+ficam cifrados no banco com a proteção já utilizada pelo Web Push. O registro
+usa `GET /api/notifications/push/native/config?platform=android|ios` e
+`POST /api/notifications/push/native/subscribe`, sempre autenticados, vinculados
+à própria sessão; a API não aceita escolher outro destinatário.
+
+O aplicativo guarda um segredo de instalação no Keychain/Keystore pelo plugin
+`ElevenSecureStorage`, além de um vínculo aleatório por sessão. O token de login
+não é gravado nesse registro de notificação. A troca de usuário exige um novo
+vínculo, descarta resultados assíncronos da conta anterior e não reproduz avisos
+antigos. Conhecer um token FCM/APNs não basta para transferir uma inscrição:
+é necessário provar o mesmo segredo de instalação. Se o cofre for perdido mas
+o provedor mantiver o token, o registro falha de forma explícita, exigindo
+reconciliação administrativa; não toma a inscrição de outra instalação.
+
+**No piloto, a notificação do sistema operacional é genérica:** título `ELEVEN`
+e texto “Há uma atualização na sua caixa de notificações.” Não contém valores,
+clientes, vendedor, descrição, imagem, URL da venda ou dados de rastreio. O SO
+pode exibir um aviso já aceito pelo provedor depois de logout/troca de usuário;
+por isso não transportamos conteúdo operacional nessa etapa. O payload inclui
+somente identificador opaco, vínculo da sessão e vencimento, com TTL máximo de
+cinco minutos e nunca posterior ao fim da sessão. O clique valida o vínculo e
+abre exclusivamente `/notificacoes`; a caixa busca os detalhes com a sessão e
+as permissões atuais. Alertas expirados ou de outra conta não navegam.
+
+Revogação, usuário inativo, alteração de perfil e corte das 21h continuam sendo
+verificados antes do envio. Logout desativa a inscrição da sessão e limpa avisos
+já apresentados no aparelho; o cofre conserva somente a identidade da instalação
+para o próximo login. Revendedores continuam restritos ao resumo permitido de
+vendas na caixa. Nenhum caminho nativo amplia seu acesso a clientes ou vendas.
+
+Os testes automatizados simulam os provedores e verificam assinatura/protocolo,
+rotatividade de token, expiração, troca de conta, logout, payload mínimo e
+registro concorrente em PostgreSQL isolado. Não comprovam entrega física,
+som, comportamento sob economia de energia nem abertura a partir do aplicativo
+encerrado. Antes de ativar para a equipe, validar em iPhone/iPad e Android reais:
+aceitar/recusar permissão, retomada do app, troca de conta, corte de sessão e
+toque em alerta antigo. Essa etapa depende das contas Apple/Firebase, assinatura
+e consentimento no aparelho; nenhuma permissão do SO pode ser imposta pelo ERP.
+
+Referências: [Capacitor Push Notifications](https://capacitorjs.com/docs/apis/push-notifications),
+[FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api) e
+[autenticação APNs](https://developer.apple.com/documentation/usernotifications/establishing-a-token-based-connection-to-apns).
+
 ### Valor no aviso de venda concluída
 
 O modelo padrão passa a **Venda U$ {sale_total} concluída**, com o nome do vendedor

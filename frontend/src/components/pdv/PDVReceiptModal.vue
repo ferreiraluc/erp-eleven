@@ -46,13 +46,15 @@
         </div>
         <div class="receipt-pdf-controls no-print">
           <p v-if="pdfError" role="alert" class="receipt-pdf-message receipt-pdf-error">{{ pdfError }}</p>
+          <p v-else-if="pdfFile && nativeFiles" id="receipt-download-help" role="status" class="receipt-pdf-message">{{ nativeFeedback || nativeText('pdfHelp') }}</p>
           <p v-else-if="pdfFile" id="receipt-download-help" role="status" class="receipt-pdf-message">
             <template v-if="downloadRequested">{{ uiText('Download solicitado.') }} </template>
             {{ uiText('Para enviar só o PDF, salve o arquivo e compartilhe por Downloads ou Arquivos.') }}
           </p>
           <footer class="receipt-actions erp-dialog__footer">
-            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!data" @click="printReceipt">{{ uiText('🖨 Neste aparelho') }}</button>
-            <a v-if="downloadUrl && pdfFile" class="erp-button erp-button--primary erp-button--sm" :href="downloadUrl" :download="pdfFile.name" aria-describedby="receipt-download-help" @click="downloadTapped">{{ uiText('📄 Salvar PDF') }}</a>
+            <button v-if="!nativeFiles" type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!data" @click="printReceipt">{{ uiText('🖨 Neste aparelho') }}</button>
+            <button v-if="nativeFiles && pdfFile" type="button" class="erp-button erp-button--primary erp-button--sm" :disabled="nativeSharing" aria-describedby="receipt-download-help" @click="sharePDF">{{ nativeText(nativeSharing ? 'pdfPreparingShare' : 'pdfOptions') }}</button>
+            <a v-else-if="downloadUrl && pdfFile" class="erp-button erp-button--primary erp-button--sm" :href="downloadUrl" :download="pdfFile.name" aria-describedby="receipt-download-help" @click="downloadTapped">{{ uiText('📄 Salvar PDF') }}</a>
             <button v-else type="button" class="erp-button erp-button--primary erp-button--sm" :disabled="!data || preparing" @click="preparePDF">{{ uiText(preparing ? 'Preparando PDF…' : 'Preparar PDF') }}</button>
           </footer>
         </div>
@@ -68,11 +70,16 @@ import { pdvReceipts, type ReceiptPreview } from '@/services/pdvReceipts'
 import { saleError } from '@/services/pdvManagement'
 import PDVReceiptDelivery from './PDVReceiptDelivery.vue'
 import { receiptPdfFile } from '@/utils/receiptPdf'
+import { nativePdfErrorText, shareNativePdf, usesNativeFiles } from '@/services/nativeFiles'
+import { nativeText } from '@/services/nativeMessages'
+import { storedToken } from '@/services/sessionStorage'
 const props = defineProps<{ sale: { id: string } }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 const data = ref<ReceiptPreview | null>(null), loading = ref(true), error = ref('')
 const pdfFile = shallowRef<File | null>(null), preparing = ref(false), pdfError = ref('')
 const downloadUrl = ref(''), downloadRequested = ref(false)
+const nativeFiles = usesNativeFiles(), nativeSharing = ref(false), nativeFeedback = ref('')
+const ownerToken = storedToken()
 let mounted = true
 async function load() {
   loading.value = true; error.value = ''
@@ -94,9 +101,11 @@ async function preparePDF(): Promise<File | null> {
     const pdf = await pdvReceipts.pdf(props.sale.id)
     if (!mounted) return null
     const file = receiptPdfFile(pdf, data.value.code || props.sale.id)
-    const url = URL.createObjectURL(file)
-    if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value)
-    downloadUrl.value = url
+    if (!nativeFiles) {
+      const url = URL.createObjectURL(file)
+      if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value)
+      downloadUrl.value = url
+    }
     pdfFile.value = file
     return file
   } catch (e) {
@@ -105,6 +114,16 @@ async function preparePDF(): Promise<File | null> {
     return null
   }
   finally { if (mounted) preparing.value = false }
+}
+async function sharePDF() {
+  if (!nativeFiles || !pdfFile.value || nativeSharing.value) return
+  nativeSharing.value = true; pdfError.value = ''; nativeFeedback.value = ''
+  try {
+    const result = await shareNativePdf(pdfFile.value, () => mounted && storedToken() === ownerToken)
+    if (mounted) nativeFeedback.value = nativeText(result === 'cancelled' ? 'pdfCancelled' : 'pdfOpened')
+  } catch (error) {
+    if (mounted) pdfError.value = nativePdfErrorText(error)
+  } finally { if (mounted) nativeSharing.value = false }
 }
 function downloadTapped() {
   // Restore the original file-download flow. The native Web Share API rejects

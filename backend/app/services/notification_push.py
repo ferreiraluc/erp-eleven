@@ -192,6 +192,7 @@ class PushClaim:
     payload: str
     attempts: int
     expires_at: int
+    transport: str = "web"
 
 
 def claim_delivery(db, moment=None):
@@ -210,7 +211,9 @@ def claim_delivery(db, moment=None):
         delivery.lease_until, delivery.lease_token = None, None
         return None
     sub, user, notice, session = eligible
-    _, private = vapid_keys(db)
+    private = ""
+    if sub.transport == "web":
+        _, private = vapid_keys(db)
     try:
         device_token = _decrypt(sub.device_token_encrypted)
     except ValueError:
@@ -246,13 +249,17 @@ def claim_delivery(db, moment=None):
         "body": bounded(presented['body'], 1000, 1600) or 'Você tem uma nova notificação no sistema.',
         "action_path": path, "severity": notice.severity, "sound": True, "expires_at": expires_at,
     }
+    if sub.transport != "web":
+        # OS alerts cannot enforce an ERP session after the provider accepts a
+        # packet. Keep all business content in the authenticated inbox.
+        content = {key: content[key] for key in ("notification_id", "device_token", "expires_at")}
     payload = json.dumps(content, ensure_ascii=False)
     # JSON escaping can expand otherwise short quotes/control characters.
     # Keep a hard byte cap regardless of the author's alphabet or formatting.
-    while len(payload.encode('utf-8')) > 3072 and len(content['body']) > 128:
+    while len(payload.encode('utf-8')) > 3072 and len(content.get('body', '')) > 128:
         content['body'] = content['body'][:-128]
         payload = json.dumps(content, ensure_ascii=False)
-    return PushClaim(delivery.id, token, sub.endpoint, sub.p256dh, sub.auth, private, payload, delivery.attempts, expires_at)
+    return PushClaim(delivery.id, token, sub.endpoint, sub.p256dh, sub.auth, private, payload, delivery.attempts, expires_at, sub.transport)
 
 
 class _ProviderSession(requests.Session):
@@ -278,6 +285,9 @@ def _retry_seconds(value, moment):
 
 def send_claim(claim):
     """Return normalized provider outcome. Never log capability URLs or bodies."""
+    if claim.transport != "web":
+        from .notification_native_push import send_claim as send_native_claim
+        return send_native_claim(claim)
     from pywebpush import WebPushException, webpush
     remaining = (claim.expires_at - int(now().timestamp() * 1000)) // 1000
     if remaining <= 0:

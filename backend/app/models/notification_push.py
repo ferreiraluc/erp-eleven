@@ -1,7 +1,7 @@
 """Private device bindings and durable Web Push delivery leases."""
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 
 from ..database import Base
@@ -20,6 +20,8 @@ class NotificationPushSubscription(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False, index=True)
     auth_session_id = Column(UUID(as_uuid=True), ForeignKey("auth_sessions.id"), nullable=False, index=True)
     auth_version = Column(Integer, nullable=False)
+    transport = Column(String(12), nullable=False, default="web", server_default="web")
+    installation_hash = Column(String(64))
     endpoint_hash = Column(String(64), nullable=False, unique=True)
     endpoint = Column(Text, nullable=False)
     p256dh = Column(String(200), nullable=False)
@@ -31,6 +33,10 @@ class NotificationPushSubscription(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=now)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=now)
     last_success_at = Column(DateTime(timezone=True))
+    __table_args__ = (
+        CheckConstraint("transport IN ('web', 'fcm', 'apns')", name="ck_notification_push_transport"),
+        Index("ix_notification_push_installation", "installation_hash", "transport"),
+    )
 
 
 class NotificationPushDelivery(Base):

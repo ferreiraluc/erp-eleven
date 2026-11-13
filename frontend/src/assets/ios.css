@@ -13,3 +13,19 @@
     }
   }
 }
+
+/* Native WebViews use platform safe-area insets; preserve side margins in
+   landscape without changing the browser layout. */
+html.eleven-native body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.native-boot-recovery {
+  margin: max(32px, env(safe-area-inset-top)) 20px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  line-height: 1.5;
+}
+.native-boot-recovery button { margin: 8px 8px 0 0; }

@@ -156,3 +156,11 @@ docker compose up --build backend frontend
 
 Não usar `docker compose down -v` sem avaliar o backup: isso elimina o volume local.
 Os Dockerfiles/Compose não foram executados na auditoria macOS, que não tinha Docker instalado.
+## Aplicativos móveis
+
+O build web permanece `npm --prefix frontend run build`. Para o piloto Android/iOS,
+use `npm --prefix frontend run mobile:sync` seguido de `mobile:check`.
+Projetos nativos, requisitos, CI, assinatura e testes físicos estão no
+[guia de aplicativos móveis](APLICATIVOS_MOBILE.md). Não commitar credenciais,
+artefatos compilados nem arquivos de assinatura. Um ZIP de simulador iOS não
+substitui o archive assinado para TestFlight.

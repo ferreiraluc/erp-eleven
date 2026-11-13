@@ -11,15 +11,19 @@
       </div>
 
       <div class="scanner-body erp-dialog__body">
-        <div v-if="!cameraError" class="camera-container">
+        <div v-if="nativeScanner" class="native-scanner-controls">
+          <p class="scanner-hint" :role="nativeFailure ? 'alert' : 'status'">{{ nativeStatus }}</p>
+          <button type="button" class="erp-button erp-button--primary" :disabled="switching" @click="startNativeScanner">{{ nativeText('openScanner') }}</button>
+        </div>
+        <div v-else-if="!cameraError" class="camera-container">
           <div id="qr-reader" class="qr-reader"></div>
           <div class="scan-line"></div>
           <p class="scanner-hint">{{ tr('Aponte a câmera para o QR Code ou código de barras') }}</p>
           <p class="scanner-hint">{{ tr('Se estiver desfocado, afaste um pouco a etiqueta e use o zoom.') }}</p>
         </div>
 
-        <p v-if="switching" role="status" class="scanner-hint">{{ tr('Preparando câmera...') }}</p>
-        <div v-if="!cameraError" class="camera-controls">
+        <p v-if="switching && !nativeScanner" role="status" class="scanner-hint">{{ tr('Preparando câmera...') }}</p>
+        <div v-if="!nativeScanner && !cameraError" class="camera-controls">
           <ErpSelect v-if="cameras.length > 1" :model-value="selectedCamera" :disabled="switching" :label="tr('Câmera')" @update:model-value="changeCamera(String($event))">
             <option v-for="(camera, index) in cameras" :key="camera.deviceId" :value="camera.deviceId">{{ camera.label || `${tr('Câmera')} ${index + 1}` }}</option>
           </ErpSelect>
@@ -70,6 +74,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { Html5Qrcode } from 'html5-qrcode'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { cameraConstraintFailure, preferredScannerCamera, scannerFocusConstraints, scannerVideoConstraints, type ScannerCapabilities } from '@/services/scannerCamera'
+import { NativeScannerError, scanNativeCode, usesNativeScanner } from '@/services/nativeScanner'
+import { nativeText } from '@/services/nativeMessages'
 
 const emit = defineEmits<{
   (e: 'barcode-detected', code: string): void
@@ -77,6 +83,9 @@ const emit = defineEmits<{
 }>()
 
 const cameraError = ref(false)
+const nativeScanner = usesNativeScanner()
+const nativeStatus = ref(nativeText('scanInstructions'))
+const nativeFailure = ref(false)
 const manualCode = ref('')
 const timeoutWarning = ref(false)
 const manualInputRef = ref<HTMLInputElement>()
@@ -91,6 +100,27 @@ let cameraRun = 0
 let detected = false
 let disposed = false
 let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+async function startNativeScanner() {
+  if (!nativeScanner || switching.value || disposed || detected) return
+  const run = ++cameraRun
+  switching.value = true
+  nativeFailure.value = false
+  nativeStatus.value = nativeText('scanning')
+  try {
+    const code = await scanNativeCode()
+    if (disposed || detected || run !== cameraRun) return
+    if (!code) { nativeStatus.value = nativeText('scanCancelled'); return }
+    detected = true
+    emit('barcode-detected', code)
+  } catch (error) {
+    if (disposed || detected || run !== cameraRun) return
+    nativeFailure.value = true
+    nativeStatus.value = nativeText(error instanceof NativeScannerError && error.reason === 'denied' ? 'cameraDenied'
+      : error instanceof NativeScannerError && error.reason === 'busy' ? 'scannerBusy' : 'scannerFailed')
+    manualInputRef.value?.focus()
+  } finally { if (!disposed && run === cameraRun) switching.value = false }
+}
 
 async function listCameras() {
   try {
@@ -169,6 +199,7 @@ async function startCamera(deviceId = '') {
 }
 
 onMounted(async () => {
+  if (nativeScanner) { await startNativeScanner(); return }
   await listCameras()
   let saved = ''
   try { saved = localStorage.getItem('eleven:scanner:camera') || '' } catch { /* optional preference */ }
@@ -272,6 +303,7 @@ function submitManual() {
 }
 .scanner-hint { text-align: center; font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem; }
 .camera-controls { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.native-scanner-controls { display: grid; gap: 12px; padding: 12px 0; }
 .camera-zoom { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569; }
 .camera-zoom input { flex: 1; min-width: 0; }
 .camera-zoom span { min-width: 32px; }

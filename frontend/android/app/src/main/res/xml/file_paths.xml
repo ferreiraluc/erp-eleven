@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="eleven_shared_pdf" path="eleven-shared-pdf/" />
+    <!-- Capacitor's HTML photo capture stores its temporary image here. -->
+    <external-files-path name="eleven_camera" path="Pictures/" />
+</paths>

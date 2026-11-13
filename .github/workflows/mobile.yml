@@ -1,0 +1,92 @@
+name: Build Eleven Mobile
+on:
+  pull_request:
+    paths: ['frontend/**', '.github/workflows/mobile.yml']
+  push:
+    branches: [main]
+    paths: ['frontend/**', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  mobile-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci --include=dev
+      - run: npm run mobile:sync
+      - run: npm run mobile:check
+      - name: Build pilot APK and unsigned store bundle
+        run: cd android && ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug bundleRelease
+      - name: Name artifacts and record checksums
+        run: |
+          mkdir -p mobile-artifacts
+          cp android/app/build/outputs/apk/debug/app-debug.apk mobile-artifacts/Eleven-Piloto-Android.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab mobile-artifacts/Eleven-Android-unsigned.aab
+          cp dist-mobile/mobile-build.json mobile-artifacts/
+          cd mobile-artifacts
+          sha256sum *.apk *.aab > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Eleven-Android-Piloto-${{ github.sha }}
+          path: frontend/mobile-artifacts/
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: Android-validation-reports
+          path: frontend/android/app/build/reports/
+          retention-days: 7
+  mobile-ios:
+    # Build unsigned for simulator before merge. Device/TestFlight signing belongs
+    # to the company's Developer account, added only after Lucas enrolls.
+    if: github.event_name != 'push'
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --include=dev
+      - run: npm run mobile:sync
+      - run: npm run mobile:check
+      - name: Build iPhone and iPad simulator app without signing
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/ElevenMobile" CODE_SIGNING_ALLOWED=NO build
+      - name: Package simulator artifact
+        run: |
+          mkdir -p mobile-artifacts
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ElevenMobile/Build/Products/Debug-iphonesimulator/App.app" mobile-artifacts/Eleven-iOS-Simulator.zip
+          cp dist-mobile/mobile-build.json mobile-artifacts/
+          cd mobile-artifacts
+          shasum -a 256 *.zip > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Eleven-iOS-Simulator-${{ github.sha }}
+          path: frontend/mobile-artifacts/
+          retention-days: 30

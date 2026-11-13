@@ -1,6 +1,7 @@
 import { notificationsAPI } from './notifications'
+import { isNativePushPlatform, nativePushSupport, enableNativeNotificationDevice, restoreNativeNotificationDevice, clearNativeNotificationDevice } from './nativePush'
 
-export type PushSupport = 'ready' | 'denied' | 'unsupported' | 'ios'
+export type PushSupport = 'ready' | 'denied' | 'unsupported' | 'ios' | 'native_pending'
 export interface PushBinding {
   user_id: string
   device_token: string
@@ -23,6 +24,7 @@ function serial<T>(action: () => Promise<T>): Promise<T> {
   return next
 }
 export function pushSupport(): PushSupport {
+  if (isNativePushPlatform()) return nativePushSupport()
   const ios =
     /iP(ad|hone|od)/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
@@ -280,6 +282,7 @@ async function registerGrantedDevice(userId: string, token: string, current: num
 }
 /** Permission is requested synchronously from the user's trusted click, before any network await. */
 export function enableNotificationDevice(userId: string, token: string): Promise<void> {
+  if (isNativePushPlatform()) return enableNativeNotificationDevice(userId, token)
   if (pushSupport() !== 'ready') return Promise.reject(new Error(pushSupport()))
   if (Notification.permission !== 'granted' && navigator.userActivation?.isActive === false)
     return Promise.reject(new Error('gesture-required'))
@@ -297,6 +300,7 @@ export function enableNotificationDevice(userId: string, token: string): Promise
   })
 }
 export function restoreNotificationDevice(userId: string, token: string): Promise<boolean> {
+  if (isNativePushPlatform()) return restoreNativeNotificationDevice(userId, token)
   deviceOwner = userId
   deviceSession = sessionKey(token)
   const current = epoch
@@ -310,6 +314,7 @@ export function restoreNotificationDevice(userId: string, token: string): Promis
 }
 /** Clear display permission before asynchronous logout/session revocation can finish. */
 export function clearNotificationDevice(): void {
+  if (isNativePushPlatform()) { clearNativeNotificationDevice(); return }
   epoch++
   const knownBinding = activeBinding
   const userId = deviceOwner || knownBinding?.user_id || null
@@ -355,6 +360,7 @@ export function clearNotificationDevice(): void {
   }).catch(() => undefined)
 }
 export async function disableNotificationDevice(token: string): Promise<void> {
+  if (isNativePushPlatform()) { clearNativeNotificationDevice(); await notificationsAPI.unsubscribe({}, token); return }
   const binding = typeof indexedDB !== 'undefined' ? await readBinding().catch(() => null) : null
   clearNotificationDevice()
   await notificationsAPI.unsubscribe(binding ? { device_token: binding.device_token } : {}, token)

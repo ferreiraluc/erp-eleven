@@ -43,7 +43,7 @@ export default defineConfig(async ({ mode }) => {
     assetsDir: assetDirectory,
     sourcemap: mode === 'development',
     minify: 'esbuild',
-    target: 'esnext',
+    target: mode === 'mobile' ? ['es2022', 'safari16.4'] : 'esnext',
     cssCodeSplit: true,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
