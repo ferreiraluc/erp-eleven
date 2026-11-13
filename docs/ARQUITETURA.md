@@ -251,6 +251,19 @@ em Configurações; migração e inicialização não geram consumo. Veja
 
 ## Padrão da interface
 
+### Aplicativos móveis
+
+O piloto Capacitor incorpora o mesmo Vue em `frontend/android` e `frontend/ios`.
+`mobile:sync` usa `dist-mobile`, separado do build web; não carrega uma URL remota
+com acesso à ponte nativa. `nativeSessionVault`, `nativeRuntime`, `nativeScanner`,
+`nativeFiles` e `nativePush` isolam os recursos do aparelho. O backend aceita as
+origens locais previstas e continua validando cada operação. Transporte APNs/FCM
+é aditivo e nasce desabilitado. Não existe réplica offline do banco neste piloto.
+Veja [aplicativos móveis](APLICATIVOS_MOBILE.md) para assinatura, distribuição e
+limitações reais; plugins/credenciais não alteram as filas de impressão existentes.
+
+### Componentes web
+
 Tokens, controles, modais, carregamentos, referências e contratos de evolução estão
 no [guia de design e interação](DESIGN_SYSTEM.md). O frontend verifica todos os
 templates com `npm run audit:ui`, além dos testes, tipos e build.

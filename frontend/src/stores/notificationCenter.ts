@@ -51,7 +51,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     return id === generation && !!owner.value
   }
   function showInvitation() {
-    invitation.value = !!owner.value && !pushActive.value && !invitationDismissed && !restoring.value
+    invitation.value = !!owner.value && support.value !== 'native_pending' && !pushActive.value && !invitationDismissed && !restoring.value
   }
   function deferInvitation() {
     invitation.value = false
@@ -178,7 +178,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
         pushError.value = n('restoreError')
       }
     } finally {
-      if (current(own) && attempt === pushAttempt) { restoring.value = false; showInvitation() }
+      if (current(own) && attempt === pushAttempt) { restoring.value = false; support.value = pushSupport(); showInvitation() }
     }
   }
   function start() {
@@ -255,6 +255,8 @@ export const useNotificationCenter = defineStore('notification-center', () => {
   }
   document.addEventListener('visibilitychange', visibility)
   document.addEventListener('pointerdown', unlockSound, { passive: true })
+  const nativeReceived = () => { void load() }
+  window.addEventListener('erp:native-notification-received', nativeReceived)
   window.addEventListener('online', connectivity)
   window.addEventListener('offline', connectivity)
   onScopeDispose(() => {
@@ -262,6 +264,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     if (interval) clearInterval(interval)
     document.removeEventListener('visibilitychange', visibility)
     document.removeEventListener('pointerdown', unlockSound)
+    window.removeEventListener('erp:native-notification-received', nativeReceived)
     window.removeEventListener('online', connectivity)
     window.removeEventListener('offline', connectivity)
   })

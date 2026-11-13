@@ -5,9 +5,10 @@ import i18n from '@/i18n'
 import { uiText } from '@/i18n/uiText'
 import OrderReservationDetails from './OrderReservationDetails.vue'
 
-const mock = vi.hoisted(() => ({ detail: vi.fn(), dispatch: vi.fn(), returnItems: vi.fn(), refundPreview: vi.fn(), cancel: vi.fn(), reversePayment: vi.fn(), printTicket: vi.fn(), ticketState: vi.fn(), ticketPdf: vi.fn() }))
+const mock = vi.hoisted(() => ({ detail: vi.fn(), dispatch: vi.fn(), returnItems: vi.fn(), refundPreview: vi.fn(), cancel: vi.fn(), reversePayment: vi.fn(), printTicket: vi.fn(), ticketState: vi.fn(), ticketPdf: vi.fn(), native: false, share: vi.fn() }))
 vi.mock('@/services/orderReservations', async importOriginal => ({ ...await importOriginal<typeof import('@/services/orderReservations')>(), orderReservations: mock }))
-const auth = reactive({ isOwner: false, user: { id: 'seller-qa' } })
+vi.mock('@/services/nativeFiles', async original => ({ ...await original<typeof import('@/services/nativeFiles')>(), usesNativeFiles: () => mock.native, shareNativePdf: mock.share }))
+const auth = reactive({ isOwner: false, token: 'qa-session', user: { id: 'seller-qa' } })
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 vi.mock('@/components/inventory/ProductThumbnail.vue', () => ({ default: { props: ['item', 'alt'], template: '<img :alt="alt" />' } }))
 let app: App | undefined, container: HTMLDivElement
@@ -22,7 +23,7 @@ async function mount() {
 }
 const button = (text: string) => Array.from(document.querySelectorAll('button')).find(node => node.textContent?.trim() === text)!
 beforeEach(() => {
-  vi.useFakeTimers(); sessionStorage.clear(); auth.isOwner = false; i18n.global.locale.value = 'pt'; container = document.createElement('div'); document.body.append(container)
+  vi.useFakeTimers(); mock.native = false; auth.token = 'qa-session'; sessionStorage.clear(); auth.isOwner = false; i18n.global.locale.value = 'pt'; container = document.createElement('div'); document.body.append(container)
   mock.refundPreview.mockResolvedValue({ payment_id: payment.id, currency: 'USD', amount_gs: 180000, amount_original: 30, card_fee_gs: 0, expected_version: 4 }); mock.detail.mockResolvedValue(order()); mock.ticketState.mockResolvedValue({ printer: null, job: null }); updated.mockReset()
 })
 afterEach(() => { app?.unmount(); app = undefined; container.remove(); vi.useRealTimers(); vi.resetAllMocks() })
@@ -96,4 +97,21 @@ it('blocks settlement with a refund due and invalidates the quote when the refun
   expect(mock.refundPreview.mock.calls[0][2]).toMatchObject({ amount_gs: 60000 }); expect(document.querySelector('.refund-preview')!.textContent).toContain('10,00')
   const field = document.querySelector<HTMLInputElement>('input[aria-label="Valor do pedido a devolver (G$)"]')!; field.value = '30000'; field.dispatchEvent(new Event('input')); await settle()
   expect(document.querySelector('.refund-preview')).toBeNull(); expect(button('Confirmar').disabled).toBe(true); expect(mock.reversePayment).not.toHaveBeenCalled()
+})
+
+
+it('offers a reserved-order PDF natively without enqueueing a print or payment', async () => {
+  mock.native = true; mock.share.mockResolvedValueOnce('cancelled').mockResolvedValueOnce('opened')
+  mock.ticketPdf.mockResolvedValue(new TextEncoder().encode('%PDF-1.4\nfixture\n%%EOF').buffer)
+  const blob = vi.spyOn(URL, 'createObjectURL')
+  await mount(); button('Opções do PDF').click(); await settle()
+  expect(mock.share).toHaveBeenCalledTimes(1); expect(blob).not.toHaveBeenCalled()
+  expect(document.body.textContent).toContain('Compartilhamento cancelado')
+  const file = mock.share.mock.calls[0][0] as File
+  expect(file.name).toMatch(/^eleven-separacao-.*\.pdf$/); expect(file.type).toBe('application/pdf')
+  button('Opções do PDF').click(); await settle()
+  expect(mock.share).toHaveBeenCalledTimes(2); expect(mock.printTicket).not.toHaveBeenCalled(); expect(mock.dispatch).not.toHaveBeenCalled()
+  const current = mock.share.mock.calls[1][1] as () => boolean
+  expect(current()).toBe(true); auth.token = 'other-session'; expect(current()).toBe(false)
+  blob.mockRestore()
 })

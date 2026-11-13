@@ -10,6 +10,7 @@
           <p class="count-hint">{{ t('hint') }}</p>
           <p v-if="loading" role="status">{{ t('loading') }}</p>
           <div v-if="error" role="alert" class="count-error">{{ error }}</div>
+          <p v-if="pdfFeedback" role="status" class="count-hint">{{ pdfFeedback }}</p>
           <div v-if="invalidPending" class="count-warning">
             <p>{{ t('invalidPending') }}</p>
             <label class="count-confirm"><input v-model="checkedRecovery" type="checkbox" />{{ t('confirmClear') }}</label>
@@ -61,7 +62,7 @@
         </div>
         <footer class="erp-dialog__footer">
           <button v-if="!attempt && !job && !invalidPending" class="erp-button erp-button--secondary" type="button" :disabled="loading || downloading" @click="loadPreview">{{ report ? t('refresh') : t('retry') }}</button>
-          <button v-if="report" class="erp-button erp-button--secondary" type="button" :disabled="loading || downloading" @click="download">{{ downloading ? t('downloading') : t('download') }}</button>
+          <button v-if="report" class="erp-button erp-button--secondary" type="button" :disabled="loading || downloading" @click="download">{{ downloading ? t('downloading') : nativeFiles ? nativeText('pdfOptions') : t('download') }}</button>
           <button v-if="job" class="erp-button erp-button--secondary" type="button" :disabled="refreshing" @click="refreshJob">{{ t('status') }}</button>
           <button v-else-if="attempt" class="erp-button erp-button--primary" type="button" :disabled="sending" @click="send">{{ sending ? t('printing') : t('recover') }}</button>
           <button v-else-if="report" class="erp-button erp-button--primary" type="button" :disabled="!canPrint" @click="confirmPrint">{{ sending ? t('printing') : t('print') }}</button>
@@ -79,6 +80,8 @@ import { vErpDialog } from '@/directives/erpDialog'
 import ErpSelect from '@/components/ui/ErpSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { inventoryCountListMessages } from './inventoryCountListMessages'
+import { nativePdfErrorText, NativePdfError, shareNativePdf, usesNativeFiles } from '@/services/nativeFiles'
+import { nativeText } from '@/services/nativeMessages'
 import { countListDefinitelyNotQueued, countListError, inventoryCountList, restoreCountListRequest, type SignedCountList, type CountListDevice, type CountListJob, type CountListRequest } from '@/services/inventoryCountList'
 
 const props = defineProps<{ itemIds: string[] }>()
@@ -109,6 +112,7 @@ const selectedDevice = computed(() => devices.value.find(device => device.id ===
 const reviewed = ref(false)
 const loading = ref(false), sending = ref(false), downloading = ref(false), refreshing = ref(false)
 const error = ref('')
+const nativeFiles = usesNativeFiles(), pdfFeedback = ref('')
 const attempt = ref<CountListRequest | null>(null)
 const invalidPending = ref(false), checkedRecovery = ref(false), storageUnavailable = ref(false)
 const job = ref<CountListJob | null>(null)
@@ -203,10 +207,15 @@ async function refreshJob() {
 async function download() {
   if (!report.value || downloading.value) return
   const id = generation
-  downloading.value = true; error.value = ''
+  downloading.value = true; error.value = ''; pdfFeedback.value = ''
   try {
     const blob = job.value ? await inventoryCountList.jobPdf(job.value.id) : await inventoryCountList.pdf(report.value)
     if (!current(id)) return
+    if (nativeFiles) {
+      const result = await shareNativePdf(new File([blob], filename.value, { type: 'application/pdf' }), () => current(id))
+      if (current(id)) pdfFeedback.value = nativeText(result === 'cancelled' ? 'pdfCancelled' : 'pdfOpened')
+      return
+    }
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url; anchor.download = filename.value; anchor.hidden = true
@@ -217,7 +226,7 @@ async function download() {
       setTimeout(() => URL.revokeObjectURL(url), 60_000)
     }
   } catch (cause) {
-    const message = await countListError(cause, t('pdfError'))
+    const message = cause instanceof NativePdfError ? nativePdfErrorText(cause) : await countListError(cause, t('pdfError'))
     if (current(id)) error.value = message
   } finally { if (current(id)) downloading.value = false }
 }

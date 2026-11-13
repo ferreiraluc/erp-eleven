@@ -37,7 +37,7 @@
             </div>
             <div v-if="printState?.job" class="print-status" role="status"><Printer :size="17" /><div><strong>{{ printState.printer?.name || uiText('Impressora do caixa') }}</strong><p>{{ printStatus }}</p><small v-if="printState.job.diagnostic_message">{{ printState.job.diagnostic_message }}</small></div><button class="erp-button erp-button--ghost erp-button--sm" :disabled="busy" @click="refreshPrint">{{ uiText('Atualizar') }}</button></div>
             <p v-if="error" class="inline-error" role="alert">{{ error }}</p><p v-if="notice" class="inline-success" role="status">{{ notice }}</p>
-            <div class="secondary-actions"><button class="erp-button erp-button--secondary erp-button--sm" :disabled="busy || commandUncertain" @click="download"><Download :size="16" />{{ uiText('Salvar ticket PDF') }}</button><button v-if="active" class="erp-button erp-button--secondary erp-button--sm" :disabled="busy || commandUncertain || !!printState?.job && ['pending', 'claimed'].includes(printState.job.status)" @click="beginPrint"><Printer :size="16" />{{ uiText(order.delivered_at ? 'Imprimir condicional' : 'Imprimir separação') }}</button><button class="erp-button erp-button--ghost erp-button--sm" :disabled="busy || commandUncertain" @click="emit('logistics', order.id)"><Truck :size="16" />{{ uiText('Entrega e anexos') }}</button></div>
+            <div class="secondary-actions"><button class="erp-button erp-button--secondary erp-button--sm" :disabled="busy || commandUncertain" @click="download"><Download :size="16" />{{ nativeFiles ? nativeText('pdfOptions') : uiText('Salvar ticket PDF') }}</button><button v-if="active" class="erp-button erp-button--secondary erp-button--sm" :disabled="busy || commandUncertain || !!printState?.job && ['pending', 'claimed'].includes(printState.job.status)" @click="beginPrint"><Printer :size="16" />{{ uiText(order.delivered_at ? 'Imprimir condicional' : 'Imprimir separação') }}</button><button class="erp-button erp-button--ghost erp-button--sm" :disabled="busy || commandUncertain" @click="emit('logistics', order.id)"><Truck :size="16" />{{ uiText('Entrega e anexos') }}</button></div>
             <div v-if="active" class="secondary-actions">
               <button v-if="order.commerce_status === 'reserved'" class="erp-button erp-button--secondary" :disabled="busy || commandUncertain" @click="beginAction('dispatch')">{{ uiText('Entregar em condicional') }}</button>
               <button v-if="order.commerce_status === 'conditional' && pieceCount > 0" class="erp-button erp-button--secondary" :disabled="busy || commandUncertain" @click="beginAction('return')">{{ uiText('Receber peças de volta') }}</button>
@@ -65,9 +65,12 @@ import { paymentLabel, paymentSymbol } from '@/services/pdvPayments'
 import { uiText, uiNumber } from '@/i18n/uiText'
 import { formatDateTime } from '@/utils/datetime'
 import { useAuthStore } from '@/stores/auth'
+import { nativePdfErrorText, NativePdfError, shareNativePdf, usesNativeFiles } from '@/services/nativeFiles'
+import { nativeText } from '@/services/nativeMessages'
 const props = defineProps<{ orderId: string }>()
 const emit = defineEmits<{ close: []; edit: [id: string]; updated: [value: ReservationDetail]; logistics: [id: string] }>()
 const router = useRouter(), auth = useAuthStore(), order = ref<ReservationDetail | null>(null)
+const nativeFiles = usesNativeFiles()
 const loading = ref(true), busy = ref(false), error = ref(''), notice = ref(''), action = ref<Action | null>(null)
 const confirmed = ref(false), reason = ref(''), reverseId = ref(''), commandUncertain = ref(false), printState = ref<ReceiptState | null>(null)
 type Action = 'print' | 'cancel' | 'reverse' | 'dispatch' | 'return'
@@ -135,14 +138,21 @@ async function refreshPrint() {
 function schedulePrintRefresh() { clearTimeout(printTimer); if (!disposed && printState.value?.job && ['pending', 'claimed'].includes(printState.value.job.status)) printTimer = setTimeout(refreshPrint, 5000) }
 async function download() {
   if (busy.value || !order.value) return
-  busy.value = true; error.value = ''
+  const ownerToken = auth.token
+  busy.value = true; error.value = ''; notice.value = ''
   try {
     const content = await orderReservations.ticketPdf(order.value.id)
-    if (disposed) return
+    if (disposed || auth.token !== ownerToken) return
     if (new TextDecoder().decode(new Uint8Array(content).slice(0, 5)) !== '%PDF-') throw new Error('pdf')
+    const filename = `eleven-separacao-${order.value.numero_pedido.replace(/[^a-zA-Z0-9_-]/g, '')}.pdf`
+    if (nativeFiles) {
+      const result = await shareNativePdf(new File([content], filename, { type: 'application/pdf' }), () => !disposed && auth.token === ownerToken)
+      if (!disposed) notice.value = nativeText(result === 'cancelled' ? 'pdfCancelled' : 'pdfOpened')
+      return
+    }
     const url = URL.createObjectURL(new Blob([content], { type: 'application/pdf' })), anchor = document.createElement('a')
-    anchor.href = url; anchor.download = `eleven-separacao-${order.value.numero_pedido.replace(/[^a-zA-Z0-9_-]/g, '')}.pdf`; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000)
-  } catch (caught) { if (!disposed) error.value = reservationError(caught) }
+    anchor.href = url; anchor.download = filename; document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (caught) { if (!disposed) error.value = caught instanceof NativePdfError ? nativePdfErrorText(caught) : reservationError(caught) }
   finally { busy.value = false }
 }
 function checkout() { if (!busy.value && !commandUncertain.value) void router.push({ path: '/pdv', query: { pedido_id: props.orderId } }) }

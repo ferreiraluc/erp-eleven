@@ -6,8 +6,9 @@ import { restoreCountListRequest, type CountListPreview, type CountListRequest }
 import { chooseDropdown } from '@/test/dropdown'
 
 const ids = { user: '10000000-0000-4000-8000-000000000001', a: '20000000-0000-4000-8000-000000000001', b: '20000000-0000-4000-8000-000000000002', hp: '30000000-0000-4000-8000-000000000001', other: '30000000-0000-4000-8000-000000000002' }
-const mocks = vi.hoisted(() => ({ preview: vi.fn(), pdf: vi.fn(), print: vi.fn(), job: vi.fn(), jobPdf: vi.fn(), auth: { user: { id: '' }, token: 'token', userRole: 'ADMIN' } }))
+const mocks = vi.hoisted(() => ({ preview: vi.fn(), pdf: vi.fn(), print: vi.fn(), job: vi.fn(), jobPdf: vi.fn(), native: false, share: vi.fn(), auth: { user: { id: '' }, token: 'token', userRole: 'ADMIN' } }))
 vi.mock('@/services/inventoryCountList', async (original) => ({ ...(await original<typeof import('@/services/inventoryCountList')>()), inventoryCountList: { preview: mocks.preview, pdf: mocks.pdf, print: mocks.print, job: mocks.job, jobPdf: mocks.jobPdf } }))
+vi.mock('@/services/nativeFiles', async original => ({ ...await original<typeof import('@/services/nativeFiles')>(), usesNativeFiles: () => mocks.native, shareNativePdf: mocks.share }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => mocks.auth }))
 
 function preview(): CountListPreview {
@@ -43,7 +44,7 @@ function pending(): CountListRequest {
   return { snapshot: p.snapshot, signature: p.signature, request_key: '40000000-0000-4000-8000-000000000001', device_id: ids.hp, confirm: true }
 }
 beforeEach(() => {
-  vi.resetAllMocks(); localStorage.clear(); sessionStorage.clear()
+  vi.resetAllMocks(); mocks.native = false; localStorage.clear(); sessionStorage.clear()
   mocks.auth = reactive({ user: { id: ids.user }, token: 'token', userRole: 'ADMIN' })
   mocks.preview.mockResolvedValue(preview()); mocks.print.mockResolvedValue(printJob); mocks.job.mockResolvedValue(printJob)
   mocks.pdf.mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' })); mocks.jobPdf.mockResolvedValue(new Blob(['%PDF']))
@@ -223,4 +224,18 @@ it('keeps download available when session storage cannot be read, while blocking
   expect(button('Confirmar impressão').disabled).toBe(true)
   expect(button('Baixar PDF').disabled).toBe(false)
   expect(document.body.textContent).toContain('Habilite o armazenamento para imprimir')
+})
+
+
+it('offers the count-list PDF through native options without a print or blob download', async () => {
+  mocks.native = true; mocks.share.mockResolvedValueOnce('cancelled').mockResolvedValueOnce('opened')
+  await mount(); button('Opções do PDF').click(); await flush()
+  expect(mocks.share).toHaveBeenCalledTimes(1); expect(URL.createObjectURL).not.toHaveBeenCalled(); expect(mocks.print).not.toHaveBeenCalled()
+  expect(document.body.textContent).toContain('Compartilhamento cancelado')
+  const file = mocks.share.mock.calls[0]![0] as File
+  expect(file.name).toBe('conferencia.pdf'); expect(file.type).toBe('application/pdf')
+  button('Opções do PDF').click(); await flush()
+  expect(mocks.share).toHaveBeenCalledTimes(2)
+  const current = mocks.share.mock.calls[1]![1] as () => boolean
+  expect(current()).toBe(true); unmount(); expect(current()).toBe(false)
 })

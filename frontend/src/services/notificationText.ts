@@ -1,6 +1,7 @@
 import i18n from '@/i18n'
 
 const copy = {
+  native_pending: ['As notificações externas do aplicativo estão em preparação. Os avisos continuam disponíveis nesta caixa.', 'Las notificaciones externas de la aplicación están en preparación. Los avisos siguen disponibles aquí.', 'App push notifications are being prepared. Your notifications remain available in this inbox.'],
   deliveryStatus: ['Avisos da Eleven', 'Avisos de Eleven', 'Eleven alerts'],
   reconnecting: ['Conectando às notificações…', 'Conectando las notificaciones…', 'Connecting notifications…'],
   companyDelivery: ['Os avisos da equipe estão habilitados por padrão. Autorize o navegador uma vez para recebê-los neste aparelho.', 'Los avisos del equipo están habilitados por defecto. Autorice el navegador una vez para recibirlos en este dispositivo.', 'Team alerts are enabled by default. Allow your browser once to receive them on this device.'],

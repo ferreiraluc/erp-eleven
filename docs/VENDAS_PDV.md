@@ -145,6 +145,25 @@ Esse fluxo é o mesmo no recibo após concluir o PDV e em **Vendas → Ticket / 
 Testes automatizados verificam o download e a recuperação de falhas; a seleção
 de aplicativos e a entrega ao destinatário precisam ser conferidas no aparelho real.
 
+No piloto Android/iOS instalado com Capacitor, o mesmo recibo oferece **Opções
+do PDF**. Depois do toque, grava uma cópia no cache privado e abre o seletor
+nativo com somente o arquivo, sem texto, link ou URL `blob:`. A opção de salvar
+ou imprimir depende dos aplicativos e serviços disponíveis no aparelho; abrir
+esse seletor não confirma envio nem impressão física. Cancelar permite nova
+tentativa sem refazer a venda ou criar um trabalho de impressão. O navegador
+continua usando o fluxo de download descrito acima.
+
+O caminho nativo valida PDF completo e limita cada arquivo a 20 MB, usa nomes
+seguros e recusa resultados de uma sessão anterior ou de modal já fechado.
+Cópias oferecidas ao seletor permanecem temporariamente para a leitura pelo app
+destinatário; o próximo compartilhamento remove cópias com mais de 24 horas.
+Inicialização, logout e troca de conta limpam o cache privado desse recurso,
+sem apagar documentos que o usuário exportou para Arquivos/Downloads. Pedidos,
+condicionais, conferência de estoque e PDFs de endereços/envios usam a mesma
+adaptação nativa, preservando suas confirmações e filas de impressão da loja.
+Os testes usam pontes nativas simuladas; câmera, salvamento e destinatários reais
+precisam ser homologados em Android e iPhone/iPad antes da distribuição pública.
+
 O botão **Ler ticket** usa a câmera; leitores USB podem preencher a busca textual.
 A leitura limpa os demais filtros para localizar o ticket, mantendo o escopo de
 acesso imposto pelo backend. Não abre nem seleciona automaticamente a primeira venda.

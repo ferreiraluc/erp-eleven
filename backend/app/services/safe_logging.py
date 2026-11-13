@@ -8,7 +8,7 @@ from ..config import settings
 def redact(message):
     value = str(message)
     for name in dir(settings):
-        if any(word in name for word in ('SECRET','TOKEN','API_KEY','DATABASE_URL')):
+        if any(word in name for word in ('SECRET','TOKEN','API_KEY','PRIVATE_KEY','SERVICE_ACCOUNT_JSON','DATABASE_URL')):
             secret = getattr(settings,name)
             if isinstance(secret,str) and len(secret)>=6:value=value.replace(secret,'[REDACTED]')
     def url(match):

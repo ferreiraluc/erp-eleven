@@ -1,4 +1,6 @@
 """Authenticated device registration; no notification text or credentials in URLs."""
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
@@ -57,3 +59,27 @@ def unsubscribe(body: PushUnsubscribe, request: Request, user: Usuario = Depends
     count = service.unsubscribe(db, user.id, request.state.auth_session_id, endpoint=body.endpoint, device_token=body.device_token)
     db.commit()
     return {"disabled": count}
+
+
+class NativePushSubscribe(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    platform: Literal["android", "ios"]
+    registration_token: str = Field(min_length=32, max_length=4096)
+    installation_secret: str = Field(min_length=64, max_length=64)
+    device_token: str = Field(min_length=32, max_length=128)
+    device_name: str = Field(default="Eleven App", max_length=100)
+
+
+@router.get("/native/config")
+def native_config(platform: Literal["android", "ios"], user: Usuario = Depends(get_current_active_user)):
+    from ...services import notification_native_push
+    return notification_native_push.config(platform)
+
+
+@router.post("/native/subscribe")
+def native_subscribe(body: NativePushSubscribe, request: Request, user: Usuario = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    from ...services import notification_native_push
+    row = notification_native_push.subscribe(db, user, request.state.auth_session_id, **body.model_dump())
+    result = {"id": str(row.id), "user_id": str(row.user_id), "device_token": body.device_token, "active": True}
+    db.commit()
+    return result

@@ -1516,6 +1516,18 @@ Safari e deve ser conferida no aparelho; os testes automatizados verificam
 seleção, fallback, controles opcionais e leitura única, sem comprovar tempo de
 foco físico. API de referência: [Html5Qrcode](https://scanapp.org/html5-qrcode-docs/docs/apis/classes/Html5Qrcode).
 
+No piloto Android/iOS com Capacitor, abrir o leitor a partir do botão da câmera
+usa o leitor nativo oficial, com câmera traseira, QR e códigos de barras; não
+abre a câmera web em paralelo. O Android usa ZXing, evitando depender de download
+de um modelo de leitura na primeira utilização. Cancelar mantém a digitação
+manual e **Abrir leitor** para nova tentativa. Permissão negada orienta as
+configurações do aparelho sem repetir automaticamente a solicitação. Uma leitura
+é emitida no máximo uma vez; resultados tardios após fechar o modal ou informar
+um código manual são descartados. O plugin não fornece um método de encerramento
+programático: seu botão de cancelar fecha a tela nativa. A precisão e a velocidade
+reais exigem teste físico; mocks não comprovam foco ou leitura das etiquetas.
+Referência: [Capacitor Barcode Scanner](https://capacitorjs.com/docs/apis/barcode-scanner).
+
 
 ## Reposição entre páginas e visualização de grades (02/11/2026)
 

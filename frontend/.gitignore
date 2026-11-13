@@ -28,3 +28,19 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Native builds and signing material
+dist-mobile/
+android/local.properties
+android/**/build/
+android/.gradle/
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+*.jks
+*.keystore
+*.mobileprovision
+*.ipa
+*.apk
+*.aab
+
+mobile-artifacts/

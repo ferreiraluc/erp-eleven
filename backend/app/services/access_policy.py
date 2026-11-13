@@ -26,13 +26,14 @@ RESELLER_READ_ROUTES = frozenset({
     '/api/exchange-rates/current', '/api/exchange-rates/history',
     '/api/exchange-rates/sales-average/{currency_pair}',
     '/api/notifications/inbox', '/api/notifications/preferences',
-    '/api/notifications/push/config',
+    '/api/notifications/push/config', '/api/notifications/push/native/config',
 })
 RESELLER_ACCOUNT_ACTIONS = frozenset({
     ('POST', '/api/auth/password'), ('POST', '/api/auth/logout'),
     ('POST', '/api/notifications/read-all'),
     ('POST', '/api/notifications/{notification_id}/read'),
     ('POST', '/api/notifications/push/subscribe'),
+    ('POST', '/api/notifications/push/native/subscribe'),
     ('POST', '/api/notifications/push/unsubscribe'),
 })
 
