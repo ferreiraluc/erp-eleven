@@ -20,4 +20,18 @@ describe('Native lifecycle', () => {
     callback({ isActive: true }); expect(native.resume).toHaveBeenCalledWith(auth, router)
     await cleanup(); callback({ isActive: true }); expect(native.resume).toHaveBeenCalledTimes(1); expect(remove).toHaveBeenCalledTimes(1)
   })
+  it('signals notification permission restoration only after the session has been checked', async () => {
+    native.enabled = true
+    let resolve!: () => void
+    native.resume.mockReturnValue(new Promise<void>(done => { resolve = done }))
+    native.addListener.mockResolvedValue({ remove: vi.fn() })
+    const event = vi.fn()
+    window.addEventListener('erp:native-app-active', event)
+    const cleanup = await initializeNativeLifecycle({} as any, {} as any)
+    native.addListener.mock.calls[0]![1]({ isActive: true })
+    expect(event).not.toHaveBeenCalled()
+    resolve(); await Promise.resolve(); await Promise.resolve()
+    expect(event).toHaveBeenCalledOnce()
+    await cleanup(); window.removeEventListener('erp:native-app-active', event)
+  })
 })

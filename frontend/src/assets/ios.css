@@ -14,12 +14,9 @@
   }
 }
 
-/* Native WebViews use platform safe-area insets; preserve side margins in
-   landscape without changing the browser layout. */
-html.eleven-native body {
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
+/* The native shell owns all safe-area insets (viewport-fit=contain). Avoid
+   adding a second body inset here: fixed/sticky controls and teleported dialogs
+   must share the same already-safe viewport, including landscape and keyboards. */
 .native-boot-recovery {
   margin: max(32px, env(safe-area-inset-top)) 20px;
   padding: 24px;

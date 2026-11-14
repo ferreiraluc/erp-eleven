@@ -7,6 +7,8 @@ import {
   type NotificationPreferences,
 } from '@/services/notifications'
 import { notificationText as n } from '@/services/notificationText'
+import { isNativePushPlatform } from '@/services/nativePush'
+import { canOpenNativeNotificationSettings, openNativeNotificationSettings } from '@/services/nativeNotificationSettings'
 import {
   allowNotificationSound,
   clearNotificationDevice,
@@ -17,6 +19,8 @@ import {
 } from '@/services/notificationPush'
 
 export const useNotificationCenter = defineStore('notification-center', () => {
+  const nativePush = isNativePushPlatform()
+  const canOpenSettings = canOpenNativeNotificationSettings()
   const defaults = (): NotificationPreferences => ({ push_enabled: true, sound_enabled: true,
     categories: ['manual', 'sales', 'tracking', 'reminder', 'greeting'] })
   const auth = useAuthStore()
@@ -56,6 +60,19 @@ export const useNotificationCenter = defineStore('notification-center', () => {
   function deferInvitation() {
     invitation.value = false
     invitationDismissed = true
+  }
+  async function openPushSettings() {
+    if (!owner.value || !canOpenSettings || pushBusy.value) return
+    const own = generation
+    pushBusy.value = true
+    pushError.value = ''
+    try {
+      await openNativeNotificationSettings()
+    } catch {
+      if (current(own)) pushError.value = n('settingsError')
+    } finally {
+      if (current(own)) pushBusy.value = false
+    }
   }
   async function load(append = false) {
     if (!owner.value || !online.value || document.visibilityState === 'hidden') return
@@ -154,7 +171,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
           reason instanceof Error && reason.message === 'unavailable'
             ? 'unavailable'
             : support.value === 'denied'
-              ? 'denied'
+              ? nativePush ? 'nativeDenied' : 'denied'
               : 'pushError',
         )
       })
@@ -256,7 +273,14 @@ export const useNotificationCenter = defineStore('notification-center', () => {
   document.addEventListener('visibilitychange', visibility)
   document.addEventListener('pointerdown', unlockSound, { passive: true })
   const nativeReceived = () => { void load() }
+  const nativeResumed = () => {
+    // A user may return from Android Settings immediately after granting access.
+    // Do not wait for the normal 30s polling throttle to notice that permission.
+    lastRestoreAt = -Infinity
+    visibility()
+  }
   window.addEventListener('erp:native-notification-received', nativeReceived)
+  window.addEventListener('erp:native-app-active', nativeResumed)
   window.addEventListener('online', connectivity)
   window.addEventListener('offline', connectivity)
   onScopeDispose(() => {
@@ -265,6 +289,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     document.removeEventListener('visibilitychange', visibility)
     document.removeEventListener('pointerdown', unlockSound)
     window.removeEventListener('erp:native-notification-received', nativeReceived)
+    window.removeEventListener('erp:native-app-active', nativeResumed)
     window.removeEventListener('online', connectivity)
     window.removeEventListener('offline', connectivity)
   })
@@ -283,12 +308,15 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     restoring,
     invitation,
     support,
+    nativePush,
+    canOpenSettings,
     online,
     preferencesBusy,
     load,
     act,
     preferences,
     enablePush,
+    openPushSettings,
     deferInvitation,
   }
 })

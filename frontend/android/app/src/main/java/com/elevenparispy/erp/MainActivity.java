@@ -7,6 +7,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(ElevenSecureStoragePlugin.class);
+        registerPlugin(ElevenNotificationSettingsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

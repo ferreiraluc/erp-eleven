@@ -235,6 +235,16 @@ dois controles: `VITE_NATIVE_PUSH_ENABLED=true` no build nativo e
 `NATIVE_PUSH_ENABLED=true` no backend. O flag `VITE_*` é público e não é segredo.
 Não ativar o flag de build Android antes de adicionar sua configuração Firebase.
 
+Ao entrar com o transporte configurado, a faixa **Receba os avisos do ELEVEN**
+oferece **Ativar notificações**. O toque pede a permissão do Android/iOS; uma
+permissão concedida é reaproveitada nos próximos logins. Recusar não bloqueia o
+ERP e não dispara pedidos nativos repetidos. No Android, **Abrir configurações**
+leva apenas às notificações do próprio Eleven. Ao voltar, o app revalida a sessão
+e reconecta a inscrição sem esperar o próximo polling. O agente consulta também
+o bloqueio geral e o canal `eleven-updates`, pois Android anterior ao 13 pode
+reportar permissão de runtime concedida mesmo com notificações bloqueadas nos
+Ajustes. O app não modifica permissões, Não Perturbe nem economia de bateria.
+
 | Plataforma | Configuração necessária |
 | --- | --- |
 | Android | Projeto Firebase com Cloud Messaging HTTP v1; `google-services.json` do aplicativo correspondente em `frontend/android/app/` no ambiente de build. O pacote debug usa `com.elevenparispy.erp.pilot`; distribuição usa `com.elevenparispy.erp`, exigindo cadastros correspondentes. |

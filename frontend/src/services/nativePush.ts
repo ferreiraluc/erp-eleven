@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor
 import { PushNotifications } from '@capacitor/push-notifications'
 import { notificationsAPI } from './notifications'
 import { sessionExpiry, storedToken, tokenIsCurrent } from './sessionStorage'
+import { nativeNotificationsAllowed } from './nativeNotificationSettings'
 
 type NativePlatform = 'android' | 'ios'
 type NativeSupport = 'ready' | 'denied' | 'native_pending'
@@ -131,6 +132,9 @@ async function activate(userId: string, token: string, current: number, askPermi
     assertCurrent(current, token)
     if (permission.receive !== 'granted') { status = 'denied'; return false }
   }
+  const notificationsAllowed = await nativeNotificationsAllowed()
+  assertCurrent(current, token)
+  if (!notificationsAllowed) { status = 'denied'; return false }
   status = 'ready'
   const record = await readInstallation()
   const sessionKey = await fingerprint(token)

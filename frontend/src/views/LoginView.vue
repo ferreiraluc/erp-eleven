@@ -96,6 +96,9 @@
         </div>
       </div>
 
+      <footer v-if="!isNativeApp" class="login-download-footer">
+        <a href="/download/">{{ $t('auth.downloadApp') }} <span aria-hidden="true">↓</span></a>
+      </footer>
     </div>
 
   </div>
@@ -103,12 +106,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { navigateAfterLogin } from '@/services/loginNavigation'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const isNativeApp = Capacitor.isNativePlatform()
 
 const remember = ref(true)
 
@@ -153,6 +158,26 @@ const handleLogin = async () => {
   flex-direction: column;
   gap: 2rem;
 }
+
+.login-download-footer {
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.login-download-footer a {
+  color: #315c9d;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: 0.625rem;
+}
+
+.login-download-footer a:hover { background: #ffffff70; }
+.login-download-footer a:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
 
 .login-header {
   text-align: center;

@@ -62,6 +62,8 @@ jobs:
       - run: npm run audit:ui
       - run: npm test
       - run: npm run type-check
+      - name: Validate private iOS packaging without real credentials
+        run: python3 scripts/test_package_adhoc.py
       - run: npm run build
       - run: node scripts/check-build.mjs
   python-security:

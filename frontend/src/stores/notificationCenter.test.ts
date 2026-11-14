@@ -108,6 +108,15 @@ describe('Notification center', () => {
     expect(mocks.restore).toHaveBeenLastCalledWith('sol', 'next-login-token')
     expect(store.pushActive).toBe(true); expect(mocks.enable).not.toHaveBeenCalled()
   })
+  it('restores immediately after native settings return, without the polling throttle or another prompt', async () => {
+    store = useNotificationCenter(); await tick()
+    expect(store.pushActive).toBe(false)
+    mocks.restore.mockResolvedValue(true)
+    window.dispatchEvent(new Event('erp:native-app-active')); await tick()
+    expect(mocks.restore).toHaveBeenCalledTimes(2)
+    expect(store.pushActive).toBe(true); expect(store.invitation).toBe(false)
+    expect(mocks.enable).not.toHaveBeenCalled()
+  })
   it('retries a failed restoration after reconnecting while retaining company defaults', async () => {
     vi.useFakeTimers()
     mocks.restore.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(true)

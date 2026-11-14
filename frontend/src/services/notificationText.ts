@@ -1,6 +1,10 @@
 import i18n from '@/i18n'
 
 const copy = {
+  nativeDelivery: ['Os avisos da equipe estão habilitados. Permita as notificações do aplicativo neste aparelho para recebê-los fora do ERP.', 'Los avisos del equipo están habilitados. Permita las notificaciones de la aplicación en este dispositivo para recibirlos fuera del ERP.', 'Team alerts are enabled. Allow app notifications on this device to receive them outside the ERP.'],
+  nativeDenied: ['As notificações do aplicativo estão bloqueadas neste aparelho. Abra as configurações e permita os avisos da Eleven. O sistema continua disponível.', 'Las notificaciones de la aplicación están bloqueadas en este dispositivo. Abra la configuración y permita los avisos de Eleven. El sistema sigue disponible.', 'App notifications are blocked on this device. Open settings and allow Eleven alerts. You can continue using the app.'],
+  openSettings: ['Abrir configurações', 'Abrir configuración', 'Open settings'],
+  settingsError: ['Não foi possível abrir as configurações. Abra Ajustes → Aplicativos → Eleven → Notificações no Android.', 'No se pudo abrir la configuración. Abra Ajustes → Aplicaciones → Eleven → Notificaciones en Android.', 'Could not open settings. Open Android Settings → Apps → Eleven → Notifications.'],
   native_pending: ['As notificações externas do aplicativo estão em preparação. Os avisos continuam disponíveis nesta caixa.', 'Las notificaciones externas de la aplicación están en preparación. Los avisos siguen disponibles aquí.', 'App push notifications are being prepared. Your notifications remain available in this inbox.'],
   deliveryStatus: ['Avisos da Eleven', 'Avisos de Eleven', 'Eleven alerts'],
   reconnecting: ['Conectando às notificações…', 'Conectando las notificaciones…', 'Connecting notifications…'],

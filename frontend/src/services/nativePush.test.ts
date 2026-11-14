@@ -3,11 +3,13 @@ import { webcrypto } from 'node:crypto'
 const mock = vi.hoisted(() => ({
   platform: 'android', native: true, config: vi.fn(), subscribe: vi.fn(), unsubscribe: vi.fn(),
   get: vi.fn(), set: vi.fn(), check: vi.fn(), request: vi.fn(), register: vi.fn(), channel: vi.fn(), clear: vi.fn(),
+  settingsStatus: vi.fn(), settingsOpen: vi.fn(),
   token: 'session-one', expires: 0, current: true, record: null as string | null,
   callbacks: {} as Record<string, ((event: any) => void)[]>,
 }))
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => mock.native, getPlatform: () => mock.platform },
-  registerPlugin: () => ({ get: mock.get, set: mock.set }) }))
+  registerPlugin: (name: string) => name === 'ElevenNotificationSettings'
+    ? { status: mock.settingsStatus, open: mock.settingsOpen } : { get: mock.get, set: mock.set } }))
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: {
   checkPermissions: mock.check, requestPermissions: mock.request, register: mock.register,
   createChannel: mock.channel, removeAllDeliveredNotifications: mock.clear,
@@ -29,6 +31,7 @@ beforeEach(() => {
   mock.set.mockImplementation(async ({ value }) => { mock.record = value })
   mock.config.mockImplementation(async (platform) => ({ available: true, platform, reason: 'ready' }))
   mock.check.mockResolvedValue({ receive: 'granted' }); mock.request.mockResolvedValue({ receive: 'granted' })
+  mock.settingsStatus.mockResolvedValue({ enabled: true }); mock.settingsOpen.mockResolvedValue(undefined)
   mock.register.mockImplementation(async () => emit('registration', { value: 'native-provider-fixture' }))
   mock.channel.mockResolvedValue(undefined); mock.clear.mockResolvedValue(undefined); mock.unsubscribe.mockResolvedValue({})
   mock.subscribe.mockImplementation(async (value, token) => ({ id: 'sub', user_id: token === 'session-two' ? 'user-two' : 'user-one',
@@ -72,6 +75,41 @@ describe('Native push device and session isolation', () => {
     await expect(service.enableNativeNotificationDevice('user-one', mock.token)).rejects.toThrow('denied')
     expect(service.nativePushSupport()).toBe('denied')
     expect(mock.request).not.toHaveBeenCalled(); expect(mock.register).not.toHaveBeenCalled()
+  })
+  it('recognizes an OS/channel block even when runtime permission reports granted, and restores after settings', async () => {
+    mock.settingsStatus.mockResolvedValue({ enabled: false })
+    const service = await import('./nativePush')
+    expect(await service.restoreNativeNotificationDevice('user-one', mock.token)).toBe(false)
+    expect(service.nativePushSupport()).toBe('denied')
+    expect(mock.register).not.toHaveBeenCalled(); expect(mock.request).not.toHaveBeenCalled()
+    const settings = await import('./nativeNotificationSettings')
+    await settings.openNativeNotificationSettings()
+    expect(mock.settingsOpen).toHaveBeenCalledOnce()
+    expect(mock.settingsOpen).toHaveBeenCalledWith()
+    mock.settingsStatus.mockResolvedValue({ enabled: true })
+    expect(await service.restoreNativeNotificationDevice('user-one', mock.token)).toBe(true)
+    expect(service.nativePushSupport()).toBe('ready')
+    expect(mock.request).not.toHaveBeenCalled()
+  })
+  it('does not invoke Android settings or Android permission checks from iOS', async () => {
+    mock.platform = 'ios'
+    const settings = await import('./nativeNotificationSettings')
+    expect(await settings.nativeNotificationsAllowed()).toBe(true)
+    await expect(settings.openNativeNotificationSettings()).rejects.toThrow('settings-unavailable')
+    expect(mock.settingsStatus).not.toHaveBeenCalled(); expect(mock.settingsOpen).not.toHaveBeenCalled()
+  })
+  it('ignores a late blocked-settings result after logout', async () => {
+    let resolve!: (value: { enabled: boolean }) => void
+    mock.settingsStatus.mockReturnValueOnce(new Promise(result => { resolve = result }))
+    const service = await import('./nativePush')
+    const operation = service.restoreNativeNotificationDevice('user-one', mock.token)
+    await vi.waitFor(() => expect(mock.settingsStatus).toHaveBeenCalledOnce())
+    service.clearNativeNotificationDevice()
+    const stale = expect(operation).rejects.toThrow('notification-session-changed')
+    resolve({ enabled: false })
+    await stale
+    expect(service.nativePushSupport()).toBe('native_pending')
+    expect(mock.register).not.toHaveBeenCalled(); expect(mock.subscribe).not.toHaveBeenCalled()
   })
   it('retains installation proof but rotates the session binding when another user logs in', async () => {
     const service = await import('./nativePush')

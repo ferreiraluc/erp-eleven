@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "android": { "status": "preparing" },
+  "ios": { "status": "pending_enrollment" }
+}
