@@ -366,6 +366,9 @@ export async function disableNotificationDevice(token: string): Promise<void> {
   await notificationsAPI.unsubscribe(binding ? { device_token: binding.device_token } : {}, token)
 }
 export function allowNotificationSound() {
+  // Native foreground/background alerts belong to the OS channel. A second
+  // WebAudio owner would replay inbox backlog and duplicate the system sound.
+  if (isNativePushPlatform()) return false
   const Audio =
     window.AudioContext ||
     (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -379,7 +382,7 @@ export function allowNotificationSound() {
   }
 }
 export function playNotificationSound() {
-  if (!audio || audio.state !== 'running' || document.visibilityState !== 'visible') return false
+  if (isNativePushPlatform() || !audio || audio.state !== 'running' || document.visibilityState !== 'visible') return false
   try {
     const oscillator = audio.createOscillator(),
       gain = audio.createGain(),

@@ -139,7 +139,7 @@ rodapé do login web. Não há publicação pública nas buscas das lojas nesta 
 A página tem recursos próprios, sem carregar o ERP ou exigir uma sessão, mas o
 aplicativo continua exigindo login e as mesmas permissões do servidor.
 
-- **Android:** APK privado definitivo **1.0.1**, com versão, tamanho e SHA-256,
+- **Android:** APK privado definitivo **1.0.2**, com versão, tamanho e SHA-256,
   assinado com chave de release estável. A identidade `com.elevenparispy.erp` é
   distinta do `.pilot`: instala separado do piloto e pede um novo login. Os dados
   continuam no ERP, sem migração ou cópia. Atualizações dessa versão devem preservar
@@ -266,10 +266,13 @@ usuário, permissão negada e expiração às 21h. Detalhes em
 [Notificações](NOTIFICACOES.md#aplicativos-androidios--piloto-nativo).
 
 Notificações não podem ser forçadas contra a permissão do sistema operacional.
-O primeiro piloto nativo usa aviso genérico ELEVEN e consulta dados autorizados
-após abrir: uma notificação já entregue ao provedor pode chegar após o logout.
-Conteúdo comercial completo na tela bloqueada exige outra decisão de privacidade
-e implementação específica, não está habilitado por este piloto.
+Por solicitação de Lucas, os avisos nativos mostram o título e o texto autorizados
+para o destinatário, como no webapp, limitados ao espaço do push. A prévia na tela
+bloqueada depende dos ajustes do Android/iOS. O clique consulta a caixa usando a
+sessão atual; um aviso já aceito pelo provedor pode aparecer após o logout e não
+pode ser recolhido remotamente com garantia. A versão 1.0.2 deixa o som nativo a
+cargo do sistema operacional, sem tocar novamente ao atualizar mensagens antigas
+na abertura do app, e corrige o canal de som preservando as preferências existentes.
 
 ## Homologação antes de ampliar o uso
 

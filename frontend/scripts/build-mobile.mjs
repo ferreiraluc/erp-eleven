@@ -27,7 +27,7 @@ html = html.replace('<meta charset="UTF-8">', `<meta charset="UTF-8">\n    <meta
 html = html.replace('width=device-width, initial-scale=1.0', 'width=device-width, initial-scale=1.0, viewport-fit=contain')
 writeFileSync(path, html)
 writeFileSync(new URL('../dist-mobile/mobile-build.json', import.meta.url), JSON.stringify({
-  platform: 'capacitor', apiOrigin: api.origin, version: '1.0.1',
+  platform: 'capacitor', apiOrigin: api.origin, version: '1.0.2',
   release: html.match(/data-release="([^"]+)"/)?.[1],
 }, null, 2) + '\n')
 console.log(`Mobile bundle: API ${api.origin}; interface incorporada ao aplicativo.`)

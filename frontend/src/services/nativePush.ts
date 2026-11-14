@@ -2,7 +2,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor
 import { PushNotifications } from '@capacitor/push-notifications'
 import { notificationsAPI } from './notifications'
 import { sessionExpiry, storedToken, tokenIsCurrent } from './sessionStorage'
-import { nativeNotificationsAllowed } from './nativeNotificationSettings'
+import { ANDROID_NOTIFICATION_CHANNEL_ID, nativeNotificationsAllowed, prepareNativeNotificationChannel } from './nativeNotificationSettings'
 
 type NativePlatform = 'android' | 'ios'
 type NativeSupport = 'ready' | 'denied' | 'native_pending'
@@ -132,6 +132,8 @@ async function activate(userId: string, token: string, current: number, askPermi
     assertCurrent(current, token)
     if (permission.receive !== 'granted') { status = 'denied'; return false }
   }
+  await prepareNativeNotificationChannel()
+  assertCurrent(current, token)
   const notificationsAllowed = await nativeNotificationsAllowed()
   assertCurrent(current, token)
   if (!notificationsAllowed) { status = 'denied'; return false }
@@ -146,10 +148,6 @@ async function activate(userId: string, token: string, current: number, askPermi
   binding = record.binding?.user_id === userId && record.binding.session_key === sessionKey
     && record.binding.expires_at > Date.now() ? { ...record.binding, expires_at: expiry } : null
   await ensureListeners()
-  if (platform() === 'android') await PushNotifications.createChannel({
-    id: 'eleven-updates', name: 'Avisos da Eleven', description: 'Vendas, rastreios e recados da equipe',
-    importance: 3, visibility: 0, sound: 'default',
-  })
   const registration = await registrationToken()
   assertCurrent(current, token)
   const candidate: Binding = binding || { user_id: userId, session_key: sessionKey, device_token: randomSecret(), expires_at: expiry }
@@ -157,7 +155,9 @@ async function activate(userId: string, token: string, current: number, askPermi
   // just-created binding even when the request resolves after logout.
   binding = candidate
   const response = await notificationsAPI.subscribeNative({ platform: platform(), registration_token: registration,
-    installation_secret: record.secret, device_token: candidate.device_token, device_name: `Eleven ${platform()}` }, token)
+    installation_secret: record.secret, device_token: candidate.device_token, device_name: `Eleven ${platform()}`,
+    ...(platform() === 'android' ? { channel_id: ANDROID_NOTIFICATION_CHANNEL_ID } : {}),
+  }, token)
   assertCurrent(current, token)
   if (response.user_id !== userId || response.device_token !== candidate.device_token || !response.active)
     throw new Error('invalid-subscription-owner')
@@ -181,8 +181,8 @@ export function clearNativeNotificationDevice(): void {
   epoch++
   const previous = binding, token = ownerToken, user = ownerUser
   binding = null; ownerToken = null; ownerUser = null; status = 'native_pending'
-  // Remove generic alerts already visible on this phone; the OS may still
-  // deliver an accepted packet later, which is why it contains no private text.
+  // Remove alerts already visible on this phone. A packet already accepted by
+  // the provider can still arrive later; the server bounds its session TTL.
   if (isNativePushPlatform() && import.meta.env.VITE_NATIVE_PUSH_ENABLED === 'true')
     void PushNotifications.removeAllDeliveredNotifications().catch(() => undefined)
   void serial(async () => {
