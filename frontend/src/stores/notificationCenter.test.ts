@@ -4,6 +4,7 @@ import { nextTick, reactive } from 'vue'
 import { useNotificationCenter } from './notificationCenter'
 import type { NotificationItem } from '@/services/notifications'
 const mocks = vi.hoisted(() => ({
+  native: false,
   auth: {} as { isAuthenticated: boolean; token: string | null; user: { id: string } | null },
   inbox: vi.fn(),
   preferences: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   support: vi.fn(),
 }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => mocks.auth }))
+vi.mock('@/services/nativePush', () => ({ isNativePushPlatform: () => mocks.native }))
 vi.mock('@/services/notifications', () => ({
   notificationsAPI: {
     inbox: mocks.inbox,
@@ -69,6 +71,7 @@ const tick = async () => {
 }
 beforeEach(() => {
   vi.resetAllMocks()
+  mocks.native = false
   localStorage.clear()
   setActivePinia(createPinia())
   mocks.auth = reactive({ isAuthenticated: true, token: 'token-sol', user: { id: 'sol' } })
@@ -235,9 +238,57 @@ describe('Notification center', () => {
     await tick()
     expect(mocks.sound).not.toHaveBeenCalled()
     mocks.inbox.mockResolvedValue({ items: [item('two'), item('one')], total: 2, unread_count: 2 })
-    await store.load()
+    await store.refreshFromPush()
     expect(mocks.sound).toHaveBeenCalledOnce()
-    await store.load()
+    await store.refreshFromPush()
     expect(mocks.sound).toHaveBeenCalledOnce()
+  })
+  it('silently catches up after resuming, then sounds once for a new active-window notification', async () => {
+    vi.useFakeTimers()
+    store = useNotificationCenter(); await tick()
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+    mocks.inbox.mockResolvedValue({ items: [item('while-closed'), item('one')], total: 2, unread_count: 2 })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible' })
+    document.dispatchEvent(new Event('visibilitychange')); await tick()
+    expect(store.items[0]?.id).toBe('while-closed')
+    expect(mocks.sound).not.toHaveBeenCalled()
+    mocks.inbox.mockResolvedValue({ items: [item('new-active'), item('while-closed'), item('one')], total: 3, unread_count: 3 })
+    await vi.advanceTimersByTimeAsync(45000)
+    expect(mocks.sound).toHaveBeenCalledOnce()
+    await store.refreshFromPush()
+    expect(mocks.sound).toHaveBeenCalledOnce()
+  })
+  it('does not replay offline backlog or sound while browsing earlier pages and filters', async () => {
+    store = useNotificationCenter(); await tick()
+    mocks.inbox.mockResolvedValue({ items: [item('old-page')], total: 2, unread_count: 2 })
+    await store.load(true)
+    await store.load()
+    store.unreadOnly = true; await tick()
+    expect(mocks.sound).not.toHaveBeenCalled()
+    Object.defineProperty(navigator, 'onLine', { value: false })
+    window.dispatchEvent(new Event('offline'))
+    mocks.inbox.mockResolvedValue({ items: [item('while-offline')], total: 3, unread_count: 3 })
+    Object.defineProperty(navigator, 'onLine', { value: true })
+    window.dispatchEvent(new Event('online')); await tick()
+    expect(store.items[0]?.id).toBe('while-offline')
+    expect(mocks.sound).not.toHaveBeenCalled()
+    mocks.inbox.mockResolvedValue({ items: [item('new-online')], total: 4, unread_count: 4 })
+    await store.refreshFromPush()
+    expect(mocks.sound).toHaveBeenCalledOnce()
+  })
+  it('leaves all native sound to the OS, including fresh foreground events and inbox catch-up', async () => {
+    vi.useFakeTimers(); mocks.native = true
+    store = useNotificationCenter(); await tick()
+    document.dispatchEvent(new Event('pointerdown'))
+    store.enablePush(); await tick()
+    mocks.inbox.mockResolvedValue({ items: [item('new-native'), item('one')], total: 2, unread_count: 2 })
+    window.dispatchEvent(new Event('erp:native-notification-received')); await tick()
+    window.dispatchEvent(new Event('erp:native-app-active')); await tick()
+    await vi.advanceTimersByTimeAsync(45000)
+    await store.refreshFromPush()
+    expect(store.items[0]?.id).toBe('new-native')
+    expect(mocks.sound).not.toHaveBeenCalled()
+    expect(mocks.allowSound).not.toHaveBeenCalled()
   })
 })

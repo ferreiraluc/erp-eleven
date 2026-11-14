@@ -74,7 +74,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       if (current(own)) pushBusy.value = false
     }
   }
-  async function load(append = false) {
+  async function load(append = false, announce = false) {
     if (!owner.value || !online.value || document.visibilityState === 'hidden') return
     const own = generation,
       next = ++request,
@@ -88,6 +88,8 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       )
       if (!current(own) || next !== request) return
       if (
+        !nativePush && announce && !append &&
+        document.visibilityState === 'visible' && online.value &&
         initialized &&
         prefsReady &&
         prefs.value.sound_enabled &&
@@ -95,7 +97,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       )
         playNotificationSound()
       result.items.forEach((item) => seen.add(`${item.id}:${item.version}`))
-      initialized = true
+      if (!append) initialized = true
       items.value = append
         ? [
             ...items.value,
@@ -138,7 +140,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       token = auth.token
     preferencesBusy.value = true
     error.value = ''
-    allowNotificationSound()
+    if (!nativePush) allowNotificationSound()
     try {
       await notificationsAPI.savePreferences(defaults(), token)
       if (current(own)) prefs.value = defaults()
@@ -154,7 +156,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     pushBusy.value = true
     pushError.value = ''
     support.value = pushSupport()
-    if (prefs.value.sound_enabled) allowNotificationSound()
+    if (!nativePush && prefs.value.sound_enabled) allowNotificationSound()
     // No await before this call: the browser permission belongs to the trusted tap.
     const activation = enableNotificationDevice(auth.user.id, auth.token)
     void activation
@@ -205,7 +207,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
       void load()
       void restorePush()
       interval = setInterval(() => {
-        if (!loading.value) void load()
+        if (!loading.value) void load(false, true)
         void restorePush()
       }, 45000)
     }
@@ -253,26 +255,32 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     { immediate: true, flush: 'sync' },
   )
   watch(unreadOnly, () => {
+    initialized = false
     void load()
   })
   const visibility = () => {
+    // The first result after resuming is a silent baseline, not a batch of new
+    // alerts. The OS may already have sounded them while the app was closed.
+    initialized = false
     support.value = pushSupport()
     start()
     if (document.visibilityState !== 'hidden') void restorePush(true)
   }
   const connectivity = () => {
+    initialized = false
     online.value = navigator.onLine
     start()
     if (online.value) void restorePush(true)
   }
   let soundUnlocked = false
   const unlockSound = () => {
-    if (!soundUnlocked && owner.value && prefsReady && prefs.value.sound_enabled)
+    if (!nativePush && !soundUnlocked && owner.value && prefsReady && prefs.value.sound_enabled)
       soundUnlocked = allowNotificationSound()
   }
   document.addEventListener('visibilitychange', visibility)
   document.addEventListener('pointerdown', unlockSound, { passive: true })
   const nativeReceived = () => { void load() }
+  const refreshFromPush = () => load(false, true)
   const nativeResumed = () => {
     // A user may return from Android Settings immediately after granting access.
     // Do not wait for the normal 30s polling throttle to notice that permission.
@@ -313,6 +321,7 @@ export const useNotificationCenter = defineStore('notification-center', () => {
     online,
     preferencesBusy,
     load,
+    refreshFromPush,
     act,
     preferences,
     enablePush,

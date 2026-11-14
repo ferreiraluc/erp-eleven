@@ -18,6 +18,8 @@ const config: CapacitorConfig = {
     // One inset owner: Capacitor fits the viewport around bars, cutouts and the
     // keyboard. Match the viewport-fit=contain metadata in build-mobile.mjs.
     SystemBars: { insetsHandling: 'native', initialViewportFitValueHint: 'contain', style: 'LIGHT' },
+    // Let the OS channel own foreground sound too; inbox refreshes stay silent.
+    PushNotifications: { presentationOptions: ['badge', 'sound', 'alert'] },
   },
 }
 export default config

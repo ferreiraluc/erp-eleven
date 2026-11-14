@@ -264,6 +264,13 @@ snapshot. Assim, atualizar o servidor não manda aparelhos antigos para um canal
 FCM de fallback nem ignora bloqueios. O app precisa ser atualizado para corrigir
 o som do canal; publicar apenas o backend não altera os canais no aparelho.
 
+O som dos avisos no aplicativo nativo pertence ao Android/iOS, inclusive com o
+app aberto. O ERP não reproduz um segundo som via WebAudio. Abrir o aplicativo,
+retomar a conexão, atualizar a caixa, mudar filtros ou carregar mensagens antigas
+não toca o aviso novamente. No webapp, a primeira consulta após a retomada forma
+uma referência silenciosa; notificações novas durante o uso ativo continuam com
+o som interno permitido pelo navegador.
+
 | Plataforma | Configuração necessária |
 | --- | --- |
 | Android | Projeto Firebase com Cloud Messaging HTTP v1; `google-services.json` do aplicativo correspondente em `frontend/android/app/` no ambiente de build. O pacote debug usa `com.elevenparispy.erp.pilot`; distribuição usa `com.elevenparispy.erp`, exigindo cadastros correspondentes. |
@@ -289,15 +296,25 @@ antigos. Conhecer um token FCM/APNs não basta para transferir uma inscrição:
 o provedor mantiver o token, o registro falha de forma explícita, exigindo
 reconciliação administrativa; não toma a inscrição de outra instalação.
 
-**No piloto, a notificação do sistema operacional é genérica:** título `ELEVEN`
-e texto “Há uma atualização na sua caixa de notificações.” Não contém valores,
-clientes, vendedor, descrição, imagem, URL da venda ou dados de rastreio. O SO
-pode exibir um aviso já aceito pelo provedor depois de logout/troca de usuário;
-por isso não transportamos conteúdo operacional nessa etapa. O payload inclui
-somente identificador opaco, vínculo da sessão e vencimento, com TTL máximo de
-cinco minutos e nunca posterior ao fim da sessão. O clique valida o vínculo e
-abre exclusivamente `/notificacoes`; a caixa busca os detalhes com a sessão e
-as permissões atuais. Alertas expirados ou de outra conta não navegam.
+**O alerta nativo mostra o título e o texto reais da caixa autorizada**, incluindo
+valor/vendedor da venda ou a atualização de rastreio e destinatário quando esses
+dados fizerem parte do aviso. As variáveis dos modelos são resolvidas pela mesma
+apresentação usada no Web Push, depois das verificações de destinatário, perfil e
+sessão. Textos longos são abreviados para caber no limite de 4 KB do provedor;
+a mensagem completa permanece na caixa. O texto aparece somente no alerta FCM
+ou `aps.alert`, sem duplicação nos dados adicionais. Não são enviados URL de
+destino, JWT, segredo de instalação ou metadados arbitrários. Os dados adicionais
+continuam limitados ao identificador opaco, vínculo aleatório e vencimento.
+Claims antigos sem texto mantêm o aviso genérico até a conclusão daquele trabalho.
+
+O TTL máximo continua em cinco minutos e nunca posterior ao fim da sessão.
+O clique valida o vínculo e abre exclusivamente `/notificacoes`; a caixa busca os
+detalhes com a sessão e as permissões atuais. Alertas expirados ou de outra conta
+não navegam. **Um aviso já aceito pelo provedor não pode ser recolhido pelo ERP:**
+ele pode aparecer após logout/troca de conta, e um aviso já apresentado pode
+permanecer no histórico do aparelho. Android/iOS e as preferências de bloqueio
+definem se a prévia mostra o conteúdo com a tela bloqueada. O ERP não força essa
+exibição nem modifica os controles de privacidade do usuário.
 
 No Android, esses avisos visíveis usam prioridade FCM **high**, permitindo ao
 provedor tentar a entrega durante o modo Doze. Não é um serviço permanentemente
@@ -318,7 +335,8 @@ para o próximo login. Revendedores continuam restritos ao resumo permitido de
 vendas na caixa. Nenhum caminho nativo amplia seu acesso a clientes ou vendas.
 
 Os testes automatizados simulam os provedores e verificam assinatura/protocolo,
-rotatividade de token, expiração, troca de conta, logout, payload mínimo e
+rotatividade de token, expiração, troca de conta, logout, escopo do destinatário,
+texto resolvido, compatibilidade com claims antigos, limite final do payload e
 registro concorrente em PostgreSQL isolado. Não comprovam entrega física,
 som, comportamento sob economia de energia nem abertura a partir do aplicativo
 encerrado. Antes de ativar para a equipe, validar em iPhone/iPad e Android reais:

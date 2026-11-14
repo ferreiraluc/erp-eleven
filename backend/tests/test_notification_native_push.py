@@ -166,12 +166,45 @@ def test_native_queue_reuses_session_checks(db, configured, change):
     assert push.claim_delivery(db) is None and delivery.status == 'dead'
 
 
-def test_native_claim_contains_no_private_text_url_or_vapid_key(db, configured):
+def test_native_claim_contains_authorized_text_without_routes_or_vapid_key(db, configured):
     result = claim(db)
     data = json.loads(result.payload)
     assert result.transport == 'fcm' and result.private_key == ''
-    assert set(data) == {'notification_id', 'device_token', 'expires_at'}
-    assert 'Cliente privado' not in result.payload and 'Venda U$ 999' not in result.payload
+    assert set(data) == {'notification_id', 'device_token', 'expires_at', 'title', 'body', 'sound'}
+    assert data['title'] == 'Venda U$ 999 concluída' and data['body'] == 'Cliente privado'
+    assert data['sound'] is True and data['expires_at'] == result.expires_at
+    assert INSTALL not in result.payload and PROVIDER not in result.payload
+
+
+def test_native_claim_uses_resolved_presentation_instead_of_raw_template(db, configured, monkeypatch):
+    user, session = user_session(db)
+    sub = subscribe(db, user, session)
+    delivery = queue(db, sub, user)
+    notice = db.get(Notification, delivery.notification_id)
+    notice.title, notice.body = 'Venda U$ {sale_total} concluída', 'Vendedor: {user_name}'
+    monkeypatch.setattr('app.services.notification_context.presented_fields', lambda db, rows: {
+        notice.id: {'title': 'Venda U$ 800 concluída', 'body': 'Vendedor: Sol'}})
+    result = push.claim_delivery(db)
+    data = json.loads(result.payload)
+    assert data['title'] == 'Venda U$ 800 concluída' and data['body'] == 'Vendedor: Sol'
+    assert '{sale_total}' not in result.payload and '{user_name}' not in result.payload
+
+
+@pytest.mark.parametrize('change', ['other_recipient', 'removed_recipient', 'reseller_private_notice'])
+def test_private_native_text_cannot_be_claimed_outside_current_recipient_scope(db, configured, change):
+    user, session = user_session(db)
+    sub = subscribe(db, user, session)
+    delivery = queue(db, sub, user)
+    recipient = db.get(NotificationRecipient, delivery.recipient_id)
+    if change == 'other_recipient':
+        other, _ = user_session(db, 'Outra conta')
+        recipient.user_id = other.id
+    elif change == 'removed_recipient':
+        recipient.removed_at = now()
+    else:
+        user.access_profile = 'reseller'
+    db.commit()
+    assert push.claim_delivery(db) is None and delivery.status == 'dead'
 
 
 @pytest.mark.parametrize('session_seconds,expected_ttl', [(3600, '300s'), (20, '20s')])
@@ -202,12 +235,12 @@ def test_fcm_uses_visible_high_priority_alert_with_bounded_ttl(db, configured, m
     assert message['android']['priority'] == 'high'
     assert message['android']['notification'] == {
         'channel_id': channel_id or 'eleven-updates', 'tag': str(result.id), 'sound': 'default'}
-    assert message['notification'] == {'title': 'ELEVEN', 'body': native.GENERIC_BODY}
+    assert message['notification'] == {'title': 'Venda U$ 999 concluída', 'body': 'Cliente privado'}
     assert set(message['data']) == {'notification_id', 'device_token', 'expires_at'}
-    assert 'Cliente privado' not in json.dumps(request)
+    assert len(json.dumps(request['json']).encode('utf-8')) <= 4096
 
 
-def test_apns_requires_http2_and_uses_bounded_expiry_and_generic_alert(db, configured, monkeypatch):
+def test_apns_requires_http2_and_uses_bounded_expiry_and_real_alert(db, configured, monkeypatch):
     user, session = user_session(db)
     sub = subscribe(db, user, session, platform='ios', registration_token='d' * 64)
     queue(db, sub, user)
@@ -226,8 +259,57 @@ def test_apns_requires_http2_and_uses_bounded_expiry_and_generic_alert(db, confi
     assert url == 'https://api.push.apple.com/3/device/' + 'd' * 64
     assert request['headers']['apns-topic'] == 'com.elevenparispy.erp'
     assert int(request['headers']['apns-expiration']) <= int(now().timestamp()) + 300
-    assert request['json']['aps']['alert']['title'] == 'ELEVEN'
-    assert 'Cliente privado' not in json.dumps(request)
+    assert request['json']['aps']['alert'] == {'title': 'Venda U$ 999 concluída', 'body': 'Cliente privado'}
+    assert set(request['json']) == {'aps', 'notification_id', 'device_token', 'expires_at'}
+    assert len(json.dumps(request['json']).encode('utf-8')) <= 4096
+
+
+@pytest.mark.parametrize('transport', ['fcm', 'apns'])
+def test_legacy_claim_without_text_keeps_generic_alert(db, configured, monkeypatch, transport):
+    result = claim(db)
+    source = json.loads(result.payload)
+    legacy = {key: source[key] for key in ('notification_id', 'device_token', 'expires_at')}
+    # Even unexpected keys in an old snapshot must not become provider metadata.
+    legacy.update({'action_path': '/private?token=not-a-login-token', 'user_id': 'other',
+                   'installation_secret': INSTALL, 'jwt': 'not-a-login-token'})
+    result = replace(result, transport=transport, payload=json.dumps(legacy))
+    calls = []
+    def send(claim, data, ttl, token, *channel):
+        calls.append(data)
+        assert native._alert_content(data) == {'title': native.GENERIC_TITLE, 'body': native.GENERIC_BODY}
+        return 'delivered', None, None
+    monkeypatch.setattr(native, '_send_' + transport, send)
+    assert push.send_claim(result) == ('delivered', None, None)
+    assert set(calls[0]) == {'notification_id', 'device_token', 'expires_at'}
+
+
+@pytest.mark.parametrize('transport', ['fcm', 'apns'])
+@pytest.mark.parametrize('character', ['😀', '衣', '"', '\\', '\x00'])
+def test_final_provider_payload_bounds_escaped_text_and_does_not_duplicate_it(db, configured, monkeypatch, transport, character):
+    result = replace(claim(db), transport=transport)
+    source = json.loads(result.payload)
+    source.update({'title': character * 120, 'body': character * 4000, 'action_path': '/inventory?private=1'})
+    result = replace(result, payload=json.dumps(source))
+    payloads = []
+    class Client:
+        def __init__(self, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def close(self): pass
+        def post(self, url, **kwargs):
+            payloads.append(kwargs['json'])
+            return SimpleNamespace(status_code=200, headers={})
+    monkeypatch.setattr(native, '_oauth_access', lambda _: 'fixture-access')
+    monkeypatch.setattr(native.requests, 'Session', Client)
+    monkeypatch.setattr(native.httpx, 'Client', Client)
+    assert push.send_claim(result) == ('delivered', None, None)
+    payload = payloads[0]
+    assert len(json.dumps(payload).encode('utf-8')) <= 4096
+    alert = payload['message']['notification'] if transport == 'fcm' else payload['aps']['alert']
+    custom = payload['message']['data'] if transport == 'fcm' else {key: value for key, value in payload.items() if key != 'aps'}
+    assert alert['title'] and alert['body']
+    assert set(custom) == {'notification_id', 'device_token', 'expires_at'}
+    assert '/inventory' not in json.dumps(payload)
 
 
 @pytest.mark.parametrize('status,gone,expected', [(200,False,'delivered'),(410,True,'gone'),(429,False,'retry'),(503,False,'retry'),(403,False,'dead')])

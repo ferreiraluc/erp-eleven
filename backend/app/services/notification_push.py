@@ -250,9 +250,9 @@ def claim_delivery(db, moment=None):
         "action_path": path, "severity": notice.severity, "sound": True, "expires_at": expires_at,
     }
     if sub.transport != "web":
-        # OS alerts cannot enforce an ERP session after the provider accepts a
-        # packet. Keep all business content in the authenticated inbox.
-        content = {key: content[key] for key in ("notification_id", "device_token", "expires_at")}
+        # Use the same authorized/resolved text as the inbox, without passing
+        # routes or user IDs to the OS. Opening an alert still checks the session.
+        content = {key: content[key] for key in ("notification_id", "device_token", "expires_at", "title", "body", "sound")}
     payload = json.dumps(content, ensure_ascii=False)
     # JSON escaping can expand otherwise short quotes/control characters.
     # Keep a hard byte cap regardless of the author's alphabet or formatting.

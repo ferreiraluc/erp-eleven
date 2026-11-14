@@ -36,7 +36,7 @@ watch([() => auth.isAuthenticated, () => auth.isReseller, () => route.path], ([a
 }, { immediate: true })
 function notificationMessage(event: MessageEvent) {
   if (!auth.isAuthenticated || event.data?.user_id !== auth.user?.id) return
-  if (event.data.type === 'eleven-notification-refresh') void notificationCenter.load()
+  if (event.data.type === 'eleven-notification-refresh') void notificationCenter.refreshFromPush()
   if (event.data.type === 'eleven-notification-open') {
     const path = safeNotificationPath(event.data.action_path)
     if (path) void router.push(path)

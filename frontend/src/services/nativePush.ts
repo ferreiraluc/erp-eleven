@@ -181,8 +181,8 @@ export function clearNativeNotificationDevice(): void {
   epoch++
   const previous = binding, token = ownerToken, user = ownerUser
   binding = null; ownerToken = null; ownerUser = null; status = 'native_pending'
-  // Remove generic alerts already visible on this phone; the OS may still
-  // deliver an accepted packet later, which is why it contains no private text.
+  // Remove alerts already visible on this phone. A packet already accepted by
+  // the provider can still arrive later; the server bounds its session TTL.
   if (isNativePushPlatform() && import.meta.env.VITE_NATIVE_PUSH_ENABLED === 'true')
     void PushNotifications.removeAllDeliveredNotifications().catch(() => undefined)
   void serial(async () => {

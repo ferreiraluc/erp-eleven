@@ -1,8 +1,8 @@
 """Opt-in FCM/APNs transport for the existing private notification queue.
 
 Provider tokens and installation secrets are never logged or returned by read
-APIs. Native system alerts deliberately carry no sale/customer content: an OS
-may display an already accepted alert after logout. Opening the app rechecks the
+APIs. Native alerts display the authorized inbox title/body; an OS may still
+display an already accepted alert after logout. Opening the app rechecks the
 current session and loads its inbox through the normal authorization layer.
 """
 import atexit
@@ -31,6 +31,7 @@ GENERIC_TITLE = 'ELEVEN'
 GENERIC_BODY = 'Há uma atualização na sua caixa de notificações.'
 FCM_LEGACY_CHANNEL = 'eleven-updates'
 FCM_CHANNELS = frozenset((FCM_LEGACY_CHANNEL, 'eleven-updates-v2'))
+MAX_PROVIDER_PAYLOAD_BYTES = 4096
 _oauth_lock = Lock()
 _oauth_cache = None
 _apns_lock = Lock()
@@ -197,6 +198,39 @@ def _outcome(status, headers, *, gone=False):
     return 'dead', 'provider_rejected', None
 
 
+def _alert_content(data):
+    def text(key, fallback, characters, byte_limit):
+        value = data.get(key)
+        if value is None:
+            return fallback
+        if not isinstance(value, str):
+            raise ConfigurationError()
+        value = re.sub(r'[\x00-\x1f\x7f]', ' ', value).strip()[:characters]
+        return value.encode('utf-8')[:byte_limit].decode('utf-8', errors='ignore') or fallback
+    # Older workers/claims did not carry text. Do not fabricate business data.
+    return {'title': text('title', GENERIC_TITLE, 120, 300),
+            'body': text('body', GENERIC_BODY, 1000, 1600)}
+
+
+def _provider_data(data):
+    # Never duplicate title/body in custom data, or forward arbitrary metadata,
+    # routes, JWTs or installation secrets. The random binding is not a login token.
+    return {key: data[key] for key in ('notification_id', 'device_token', 'expires_at') if key in data}
+
+
+def _fit_provider_payload(payload, alert):
+    # requests/httpx may escape non-ASCII JSON differently. Counting the larger
+    # ASCII-escaped representation bounds both, including wrapping/FCM routing.
+    def size():
+        return len(json.dumps(payload).encode('utf-8'))
+    for field, step in (('body', 128), ('title', 32)):
+        while size() > MAX_PROVIDER_PAYLOAD_BYTES and alert[field]:
+            alert[field] = alert[field][:-step]
+    if size() > MAX_PROVIDER_PAYLOAD_BYTES:
+        raise ConfigurationError()
+    return payload
+
+
 def _send_fcm(claim, data, ttl, provider_token, channel_id=FCM_LEGACY_CHANNEL):
     if channel_id not in FCM_CHANNELS:
         raise ConfigurationError()
@@ -209,11 +243,13 @@ def _send_fcm(claim, data, ttl, provider_token, channel_id=FCM_LEGACY_CHANNEL):
         return 'dead', 'session_expired', None
     # This transport always emits a visible alert. High priority allows FCM to
     # attempt delivery during Doze; never reuse it for silent background sync.
+    alert = _alert_content(data)
     payload = {'message': {'token': provider_token,
-        'notification': {'title': GENERIC_TITLE, 'body': GENERIC_BODY},
-        'data': {key: str(value) for key, value in data.items()},
+        'notification': alert,
+        'data': {key: str(value) for key, value in _provider_data(data).items()},
         'android': {'priority': 'high', 'ttl': f'{ttl}s', 'collapse_key': str(claim.id),
                     'notification': {'channel_id': channel_id, 'tag': str(claim.id), 'sound': 'default'}}}}
+    _fit_provider_payload(payload, alert)
     with requests.Session() as client:
         client.trust_env = False
         response = client.post(f'https://fcm.googleapis.com/v1/projects/{credentials["project_id"]}/messages:send',
@@ -231,7 +267,8 @@ def _send_fcm(claim, data, ttl, provider_token, channel_id=FCM_LEGACY_CHANNEL):
 def _send_apns(claim, data, ttl, provider_token):
     global _apns_cache
     host = 'api.sandbox.push.apple.com' if settings.NATIVE_PUSH_APNS_SANDBOX else 'api.push.apple.com'
-    payload = {'aps': {'alert': {'title': GENERIC_TITLE, 'body': GENERIC_BODY}, 'sound': 'default'}, **data}
+    alert = _alert_content(data)
+    payload = _fit_provider_payload({'aps': {'alert': alert, 'sound': 'default'}, **_provider_data(data)}, alert)
     # APNs requires HTTP/2. Default certificate verification remains enabled and
     # proxies/redirects cannot redirect this credential-bearing request. Reuse
     # both connection and token as required by Apple's provider guidance.
@@ -281,11 +318,12 @@ def send_claim(claim):
     if not transport_available(claim.transport):
         return 'dead', 'native_push_not_configured', None
     try:
-        # Reconstruct an allowlisted payload; a stale database record cannot put
-        # authored content, URLs or customer details into a native system alert.
+        # Reconstruct an allowlisted payload. Text is the authorized presentation
+        # snapshot; click destinations and credentials never reach the provider.
         source = json.loads(claim.payload)
         data = {'notification_id': str(source['notification_id']),
                 'device_token': str(source['device_token']), 'expires_at': int(source['expires_at'])}
+        data.update({key: source[key] for key in ('title', 'body') if key in source})
         provider_token = _decrypt(claim.endpoint)
         ttl = min(300, remaining)
         if claim.transport == 'fcm':
