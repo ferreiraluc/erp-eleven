@@ -280,6 +280,18 @@ cinco minutos e nunca posterior ao fim da sessão. O clique valida o vínculo e
 abre exclusivamente `/notificacoes`; a caixa busca os detalhes com a sessão e
 as permissões atuais. Alertas expirados ou de outra conta não navegam.
 
+No Android, esses avisos visíveis usam prioridade FCM **high**, permitindo ao
+provedor tentar a entrega durante o modo Doze. Não é um serviço permanentemente
+ativo nem uma sincronização silenciosa. A prioridade não ignora permissão negada,
+canal bloqueado, aplicativo forçado a parar, falta de rede ou restrições do aparelho,
+e não garante entrega imediata. O TTL permanece limitado a cinco minutos e ao fim
+da sessão; avisos vencidos não são recuperados como alertas novos. Validar também
+com tela bloqueada/app em segundo plano em um Android real, usando uma notificação
+de teste autorizada, sem venda ou impressão. A recomendação segue a
+[documentação de prioridade do FCM](https://firebase.google.com/docs/cloud-messaging/android-message-priority),
+que reserva prioridade alta para conteúdo visível e pode reduzir a prioridade
+quando as mensagens repetidamente não produzem avisos ao usuário.
+
 Revogação, usuário inativo, alteração de perfil e corte das 21h continuam sendo
 verificados antes do envio. Logout desativa a inscrição da sessão e limpa avisos
 já apresentados no aparelho; o cofre conserva somente a identidade da instalação
