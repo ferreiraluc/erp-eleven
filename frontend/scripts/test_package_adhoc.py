@@ -170,6 +170,17 @@ class AdHocValidationTest(unittest.TestCase):
                             "-in", str(root / "payload.plist"), "-signer", str(root / "forged.pem"),
                             "-inkey", str(root / "forged.key"), "-out", str(root / "forged.cms")],
                            check=True, capture_output=True)
+            # Positive control for the real verifier: a test-only trust override
+            # proves the CMS command can validate this signed payload. Production
+            # never accepts a caller-provided root or a root inside the profile.
+            (root / "valid-check").mkdir()
+            with patch.object(module, "apple_profile_roots", return_value=(root / "forged.pem").read_bytes()):
+                self.assertEqual(module.verified_profile(root / "forged.cms", root / "valid-check"), plistlib.loads(payload))
+                tampered = (root / "forged.cms").read_bytes().replace(b"private profile name", b"altered profile name")
+                (root / "tampered.cms").write_bytes(tampered)
+                (root / "tampered-check").mkdir()
+                with self.assertRaises(module.InvalidPackage):
+                    module.verified_profile(root / "tampered.cms", root / "tampered-check")
             real_tool = module.apple_tool
             def only_mock_app_signature(args):
                 return b"" if args[0] == "/usr/bin/codesign" else real_tool(args)

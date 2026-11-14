@@ -155,8 +155,8 @@ def verified_profile(profile_file: Path, work: Path) -> dict:
     # A normal Apple-issued app developer certificate must not be allowed to
     # issue profiles. Unknown future Apple signer names fail closed for review.
     if not (re.search(r"(?:^|,)CN=Apple iPhone OS Provisioning Profile Signing(?: G[0-9]+)?(?:,|$)",
-                      subject.removeprefix("subject=")) and
-            re.search(r"(?:^|,)O=Apple Inc\.(?:,|$)", subject.removeprefix("subject="))):
+                      subject.removeprefix("subject=").strip()) and
+            re.search(r"(?:^|,)O=Apple Inc\.(?:,|$)", subject.removeprefix("subject=").strip())):
         raise InvalidPackage("O assinante CMS não é o emissor Apple de perfis iOS esperado.")
     profile = plistlib.loads(payload)
     if not isinstance(profile, dict):

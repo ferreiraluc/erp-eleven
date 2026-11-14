@@ -217,8 +217,11 @@ python3 frontend/scripts/package-adhoc.py /caminho/privado/Eleven.ipa \
 
 Essas URLs são exemplos para preparar o pacote, **não arquivos já publicados**.
 O utilitário não assina nem envia o IPA, não cadastra dispositivos e não muda a
-página de download. Ele requer macOS e executa `codesign` e `security cms`; verifica
-assinatura Apple, certificado autorizado pelo perfil, identidade/equipe, build de
+página de download. Ele requer macOS e executa `codesign` e verificação CMS via OpenSSL contra apenas
+as raízes Apple do chaveiro de sistema, com conferência do emissor de perfis iOS.
+Decodificar com `security cms -D` não comprova assinatura. A verificação recusa CMS
+sem assinante, conteúdo adulterado, cadeia não confiável ou emissor desconhecido.
+Confere também certificado autorizado pelo perfil, identidade/equipe, build de
 dispositivo físico, lista de aparelhos não vazia, perfil Ad Hoc sem debug/Enterprise
 e vencimento. Perfil vencido ou pacote sem assinatura interrompem a geração.
 
