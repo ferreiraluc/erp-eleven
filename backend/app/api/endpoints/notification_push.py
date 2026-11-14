@@ -68,6 +68,7 @@ class NativePushSubscribe(BaseModel):
     installation_secret: str = Field(min_length=64, max_length=64)
     device_token: str = Field(min_length=32, max_length=128)
     device_name: str = Field(default="Eleven App", max_length=100)
+    channel_id: Literal["eleven-updates", "eleven-updates-v2"] | None = None
 
 
 @router.get("/native/config")

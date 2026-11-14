@@ -293,7 +293,8 @@ export const notificationsAPI = {
       params: { platform }, headers: headers(token),
     }).then(r => r.data),
   subscribeNative: (value: { platform: 'android' | 'ios'; registration_token: string;
-    installation_secret: string; device_token: string; device_name: string }, token = storedToken()) =>
+    installation_secret: string; device_token: string; device_name: string;
+    channel_id?: 'eleven-updates' | 'eleven-updates-v2' }, token = storedToken()) =>
     api.post<{ id: string; device_token: string; user_id: string; active: boolean }>(`${root}/push/native/subscribe`, value, {
       headers: headers(token),
     }).then(r => r.data),

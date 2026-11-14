@@ -64,9 +64,9 @@ def queue(db, sub, user):
     return delivery
 
 
-def claim(db):
+def claim(db, **subscription):
     user, session = user_session(db)
-    sub = subscribe(db, user, session)
+    sub = subscribe(db, user, session, **subscription)
     queue(db, sub, user)
     result = push.claim_delivery(db); db.commit()
     return result
@@ -112,6 +112,48 @@ def test_rotation_retires_old_token_and_expired_session_is_rejected(db, configur
     assert failure.value.status_code == 401
 
 
+def test_channel_upgrade_preserves_installation_identity_and_already_claimed_work(db, configured, monkeypatch):
+    user, session = user_session(db)
+    sub = subscribe(db, user, session); db.commit()
+    identity = (sub.id, sub.endpoint_hash, sub.installation_hash, sub.device_token_hash)
+    queue(db, sub, user)
+    previous = push.claim_delivery(db); db.commit()
+    upgraded = subscribe(db, user, session, channel_id='eleven-updates-v2'); db.commit()
+    assert (upgraded.id, upgraded.endpoint_hash, upgraded.installation_hash, upgraded.device_token_hash) == identity
+    assert db.query(NotificationPushSubscription).count() == 1
+    assert native._fcm_endpoint(push._decrypt(upgraded.endpoint)) == (PROVIDER, 'eleven-updates-v2')
+    assert PROVIDER not in upgraded.endpoint
+    with pytest.raises(HTTPException) as failure:
+        subscribe(db, user, session, channel_id='eleven-updates-v2', installation_secret='b' * 64)
+    assert failure.value.status_code == 409
+    queue(db, upgraded, user)
+    current = push.claim_delivery(db); db.commit()
+    sends = []
+    def send(_claim, _data, _ttl, token, channel):
+        sends.append((token, channel))
+        return 'delivered', None, None
+    monkeypatch.setattr(native, '_send_fcm', send)
+    assert push.send_claim(previous) == ('delivered', None, None)
+    assert push.send_claim(current) == ('delivered', None, None)
+    assert sends == [(PROVIDER, 'eleven-updates'), (PROVIDER, 'eleven-updates-v2')]
+
+
+@pytest.mark.parametrize('endpoint', [
+    'broken', 'null', '[]', json.dumps(PROVIDER),
+    json.dumps({'version': True, 'token': PROVIDER, 'channel_id': 'eleven-updates-v2'}),
+    json.dumps({'version': 2, 'token': PROVIDER, 'channel_id': 'eleven-updates-v2'}),
+    json.dumps({'version': 1, 'token': 'short', 'channel_id': 'eleven-updates-v2'}),
+    json.dumps({'version': 1, 'token': PROVIDER, 'channel_id': 'unknown-channel'}),
+    json.dumps({'version': 1, 'token': PROVIDER, 'channel_id': []}),
+    json.dumps({'version': 1, 'token': PROVIDER, 'channel_id': 'eleven-updates-v2', 'url': 'https://invalid.test'}),
+    'a' * 5001,
+])
+def test_malformed_native_endpoint_never_contacts_provider(db, configured, monkeypatch, endpoint):
+    result = replace(claim(db), endpoint=push._encrypt(endpoint))
+    monkeypatch.setattr(native.requests, 'Session', lambda: pytest.fail('Malformed endpoint cannot contact OAuth or FCM'))
+    assert push.send_claim(result) == ('dead', 'native_push_configuration_error', None)
+
+
 @pytest.mark.parametrize('change', ['revoked', 'expired', 'inactive', 'version'])
 def test_native_queue_reuses_session_checks(db, configured, change):
     user, session = user_session(db)
@@ -133,8 +175,9 @@ def test_native_claim_contains_no_private_text_url_or_vapid_key(db, configured):
 
 
 @pytest.mark.parametrize('session_seconds,expected_ttl', [(3600, '300s'), (20, '20s')])
-def test_fcm_uses_visible_high_priority_alert_with_bounded_ttl(db, configured, monkeypatch, session_seconds, expected_ttl):
-    result = claim(db)
+@pytest.mark.parametrize('channel_id', [None, 'eleven-updates', 'eleven-updates-v2'])
+def test_fcm_uses_visible_high_priority_alert_with_bounded_ttl(db, configured, monkeypatch, session_seconds, expected_ttl, channel_id):
+    result = claim(db, channel_id=channel_id)
     moment = now()
     monkeypatch.setattr(native, 'now', lambda: moment)
     result = replace(result, expires_at=int(moment.timestamp() * 1000) + session_seconds * 1000)
@@ -158,7 +201,7 @@ def test_fcm_uses_visible_high_priority_alert_with_bounded_ttl(db, configured, m
     assert message['token'] == PROVIDER and message['android']['ttl'] == expected_ttl
     assert message['android']['priority'] == 'high'
     assert message['android']['notification'] == {
-        'channel_id': 'eleven-updates', 'tag': str(result.id), 'sound': 'default'}
+        'channel_id': channel_id or 'eleven-updates', 'tag': str(result.id), 'sound': 'default'}
     assert message['notification'] == {'title': 'ELEVEN', 'body': native.GENERIC_BODY}
     assert set(message['data']) == {'notification_id', 'device_token', 'expires_at'}
     assert 'Cliente privado' not in json.dumps(request)
@@ -205,7 +248,9 @@ def test_native_expired_or_disabled_claim_never_contacts_provider(db, configured
 def test_registration_validates_native_tokens_and_installation(db, configured):
     user, session = user_session(db)
     for values in ({'registration_token': 'https://attacker.test/token'}, {'installation_secret': 'bad'},
-                   {'platform': 'ios', 'registration_token': PROVIDER}, {'device_token': 'bad'}):
+                   {'platform': 'ios', 'registration_token': PROVIDER}, {'device_token': 'bad'},
+                   {'channel_id': 'unexpected-channel'}, {'channel_id': {}},
+                   {'platform': 'ios', 'registration_token': 'd' * 64, 'channel_id': 'eleven-updates-v2'}):
         with pytest.raises(HTTPException) as failure: subscribe(db, user, session, **values)
         assert failure.value.status_code == 422
 
@@ -229,10 +274,17 @@ def test_native_api_authenticates_reseller_binds_own_session_and_logout_revokes(
     assert client.get('/api/notifications/push/native/config?platform=android', headers=headers).json() == {
         'available': True, 'platform': 'android', 'reason': 'ready'}
     assert client.post(route, headers=headers, json={**body, 'user_id': str(ids['Lucas'][0])}).status_code == 422
+    assert client.post(route, headers=headers, json={**body, 'channel_id': 'other-channel'}).status_code == 422
+    assert client.post(route, headers=headers, json={**body, 'platform': 'ios', 'registration_token': 'd' * 64,
+                                                  'channel_id': 'eleven-updates-v2'}).status_code == 422
+    body['channel_id'] = 'eleven-updates-v2'
     response = client.post(route, headers=headers, json=body)
     assert response.status_code == 200, response.text
     assert response.json()['user_id'] == str(ids['Junior'][0])
     assert PROVIDER not in response.text and INSTALL not in response.text
+    with factory() as db:
+        subscription = db.query(NotificationPushSubscription).one()
+        assert native._fcm_endpoint(push._decrypt(subscription.endpoint)) == (PROVIDER, 'eleven-updates-v2')
     stranger = login(client, 'Sol')
     assert client.post('/api/notifications/push/unsubscribe', headers=stranger, json={'device_token': BINDING}).json() == {'disabled': 0}
     with factory() as db:

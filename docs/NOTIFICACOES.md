@@ -241,9 +241,28 @@ permissão concedida é reaproveitada nos próximos logins. Recusar não bloquei
 ERP e não dispara pedidos nativos repetidos. No Android, **Abrir configurações**
 leva apenas às notificações do próprio Eleven. Ao voltar, o app revalida a sessão
 e reconecta a inscrição sem esperar o próximo polling. O agente consulta também
-o bloqueio geral e o canal `eleven-updates`, pois Android anterior ao 13 pode
+o bloqueio geral e o canal ativo, pois Android anterior ao 13 pode
 reportar permissão de runtime concedida mesmo com notificações bloqueadas nos
 Ajustes. O app não modifica permissões, Não Perturbe nem economia de bateria.
+
+**Som Android e atualização do canal:** o app prepara `eleven-updates-v2` usando
+o som padrão do Android, sem passar a string `default` a `createChannel` do
+Capacitor (que a interpretava como um recurso inexistente `raw/default`). Como
+o Android não permite alterar o som de um canal já criado, a migração cria o
+novo canal uma única vez. Copia importância, bloqueio, silêncio/som escolhido,
+visibilidade, vibração e luzes do anterior; corrige somente a URI inexistente
+conhecida quando não foi uma escolha explícita do usuário. Não apaga o canal
+`eleven-updates` e não modifica o novo canal caso já exista. **Abrir configurações**
+leva ao canal atual quando as notificações gerais do app estão habilitadas.
+
+O cliente anuncia `channel_id` somente após preparar o canal. O backend aceita
+apenas `eleven-updates` e `eleven-updates-v2` para Android; iOS não envia esse campo.
+O canal é guardado junto ao token em um envelope cifrado e versionado, conservando
+o hash de identidade/segredo de instalação e sem migração de banco. Inscrições
+antigas sem envelope continuam usando v1; trabalhos já reservados conservam seu
+snapshot. Assim, atualizar o servidor não manda aparelhos antigos para um canal
+FCM de fallback nem ignora bloqueios. O app precisa ser atualizado para corrigir
+o som do canal; publicar apenas o backend não altera os canais no aparelho.
 
 | Plataforma | Configuração necessária |
 | --- | --- |

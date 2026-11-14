@@ -29,6 +29,8 @@ FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'
 OAUTH_URL = 'https://oauth2.googleapis.com/token'
 GENERIC_TITLE = 'ELEVEN'
 GENERIC_BODY = 'Há uma atualização na sua caixa de notificações.'
+FCM_LEGACY_CHANNEL = 'eleven-updates'
+FCM_CHANNELS = frozenset((FCM_LEGACY_CHANNEL, 'eleven-updates-v2'))
 _oauth_lock = Lock()
 _oauth_cache = None
 _apns_lock = Lock()
@@ -78,7 +80,8 @@ def config(platform):
     return {'available': available, 'platform': platform, 'reason': 'ready' if available else 'not_configured'}
 
 
-def subscribe(db, user, session_id, *, platform, registration_token, installation_secret, device_token, device_name='Eleven App'):
+def subscribe(db, user, session_id, *, platform, registration_token, installation_secret, device_token,
+              device_name='Eleven App', channel_id=None):
     from .notification_push import MAX_DEVICE_SUBSCRIPTIONS, _encrypt, endpoint_hash
     transport = {'android': 'fcm', 'ios': 'apns'}.get(platform)
     if not transport_available(transport):
@@ -86,7 +89,8 @@ def subscribe(db, user, session_id, *, platform, registration_token, installatio
     valid_token = (re.fullmatch(r'(?:[a-fA-F0-9]{2}){16,256}', registration_token) if transport == 'apns'
                    else re.fullmatch(r'[A-Za-z0-9:_-]{32,4096}', registration_token))
     if (not valid_token or not re.fullmatch(r'[a-f0-9]{64}', installation_secret)
-            or not re.fullmatch(r'[A-Za-z0-9_-]{32,128}', device_token)):
+            or not re.fullmatch(r'[A-Za-z0-9_-]{32,128}', device_token)
+            or channel_id is not None and (transport != 'fcm' or not isinstance(channel_id, str) or channel_id not in FCM_CHANNELS)):
         raise HTTPException(422, 'Inscrição do aplicativo inválida. Ative novamente neste aparelho.')
     if transport == 'apns':
         registration_token = registration_token.lower()
@@ -120,7 +124,12 @@ def subscribe(db, user, session_id, *, platform, registration_token, installatio
         row = NotificationPushSubscription(endpoint_hash=identity, transport=transport, installation_hash=installation)
         db.add(row)
     row.user_id, row.auth_session_id, row.auth_version = user.id, session_id, user.auth_version
-    row.endpoint = _encrypt(registration_token)
+    # Keep endpoint identity/ownership based on the provider token, not the
+    # channel. Older clients and already-claimed work retain their legacy token
+    # representation; only a client that created v2 opts its own binding into it.
+    endpoint = (json.dumps({'version': 1, 'token': registration_token, 'channel_id': channel_id}, separators=(',', ':'))
+                if transport == 'fcm' and channel_id is not None else registration_token)
+    row.endpoint = _encrypt(endpoint)
     row.p256dh, row.auth = '', ''
     row.device_token_hash, row.device_token_encrypted = endpoint_hash(device_token), _encrypt(device_token)
     row.device_name = re.sub(r'[\x00-\x1f\x7f]', ' ', device_name or 'Eleven App').strip()[:100]
@@ -131,6 +140,24 @@ def subscribe(db, user, session_id, *, platform, registration_token, installatio
 
 class ConfigurationError(Exception):
     pass
+
+
+def _fcm_endpoint(value):
+    if not isinstance(value, str) or len(value) > 5000:
+        raise ConfigurationError()
+    if re.fullmatch(r'[A-Za-z0-9:_-]{32,4096}', value):
+        return value, FCM_LEGACY_CHANNEL
+    try:
+        endpoint = json.loads(value)
+    except (ValueError, TypeError):
+        raise ConfigurationError() from None
+    if (not isinstance(endpoint, dict) or set(endpoint) != {'version', 'token', 'channel_id'}
+            or type(endpoint['version']) is not int or endpoint['version'] != 1
+            or not isinstance(endpoint['token'], str)
+            or not re.fullmatch(r'[A-Za-z0-9:_-]{32,4096}', endpoint['token'])
+            or not isinstance(endpoint['channel_id'], str) or endpoint['channel_id'] not in FCM_CHANNELS):
+        raise ConfigurationError()
+    return endpoint['token'], endpoint['channel_id']
 
 
 def _oauth_access(credentials):
@@ -170,7 +197,9 @@ def _outcome(status, headers, *, gone=False):
     return 'dead', 'provider_rejected', None
 
 
-def _send_fcm(claim, data, ttl, provider_token):
+def _send_fcm(claim, data, ttl, provider_token, channel_id=FCM_LEGACY_CHANNEL):
+    if channel_id not in FCM_CHANNELS:
+        raise ConfigurationError()
     credentials = _fcm_credentials()
     if not credentials:
         raise ConfigurationError()
@@ -184,7 +213,7 @@ def _send_fcm(claim, data, ttl, provider_token):
         'notification': {'title': GENERIC_TITLE, 'body': GENERIC_BODY},
         'data': {key: str(value) for key, value in data.items()},
         'android': {'priority': 'high', 'ttl': f'{ttl}s', 'collapse_key': str(claim.id),
-                    'notification': {'channel_id': 'eleven-updates', 'tag': str(claim.id), 'sound': 'default'}}}}
+                    'notification': {'channel_id': channel_id, 'tag': str(claim.id), 'sound': 'default'}}}}
     with requests.Session() as client:
         client.trust_env = False
         response = client.post(f'https://fcm.googleapis.com/v1/projects/{credentials["project_id"]}/messages:send',
@@ -260,7 +289,8 @@ def send_claim(claim):
         provider_token = _decrypt(claim.endpoint)
         ttl = min(300, remaining)
         if claim.transport == 'fcm':
-            return _send_fcm(claim, data, ttl, provider_token)
+            provider_token, channel_id = _fcm_endpoint(provider_token)
+            return _send_fcm(claim, data, ttl, provider_token, channel_id)
         if claim.transport == 'apns':
             return _send_apns(claim, data, ttl, provider_token)
         return 'dead', 'native_push_not_configured', None
