@@ -132,8 +132,12 @@ def test_native_claim_contains_no_private_text_url_or_vapid_key(db, configured):
     assert 'Cliente privado' not in result.payload and 'Venda U$ 999' not in result.payload
 
 
-def test_fcm_uses_fixed_provider_endpoint_short_ttl_and_generic_content(db, configured, monkeypatch):
+@pytest.mark.parametrize('session_seconds,expected_ttl', [(3600, '300s'), (20, '20s')])
+def test_fcm_uses_visible_high_priority_alert_with_bounded_ttl(db, configured, monkeypatch, session_seconds, expected_ttl):
     result = claim(db)
+    moment = now()
+    monkeypatch.setattr(native, 'now', lambda: moment)
+    result = replace(result, expires_at=int(moment.timestamp() * 1000) + session_seconds * 1000)
     calls = []
     class Client:
         def __enter__(self): return self
@@ -151,7 +155,10 @@ def test_fcm_uses_fixed_provider_endpoint_short_ttl_and_generic_content(db, conf
     assert url == 'https://fcm.googleapis.com/v1/projects/eleven-fixture/messages:send'
     assert request['allow_redirects'] is False
     message = request['json']['message']
-    assert message['token'] == PROVIDER and message['android']['ttl'] == '300s'
+    assert message['token'] == PROVIDER and message['android']['ttl'] == expected_ttl
+    assert message['android']['priority'] == 'high'
+    assert message['android']['notification'] == {
+        'channel_id': 'eleven-updates', 'tag': str(result.id), 'sound': 'default'}
     assert message['notification'] == {'title': 'ELEVEN', 'body': native.GENERIC_BODY}
     assert set(message['data']) == {'notification_id', 'device_token', 'expires_at'}
     assert 'Cliente privado' not in json.dumps(request)

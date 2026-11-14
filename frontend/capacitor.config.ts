@@ -14,5 +14,10 @@ const config: CapacitorConfig = {
   },
   android: { allowMixedContent: false, webContentsDebuggingEnabled: false },
   ios: { contentInset: 'automatic', preferredContentMode: 'mobile', webContentsDebuggingEnabled: false },
+  plugins: {
+    // One inset owner: Capacitor fits the viewport around bars, cutouts and the
+    // keyboard. Match the viewport-fit=contain metadata in build-mobile.mjs.
+    SystemBars: { insetsHandling: 'native', initialViewportFitValueHint: 'contain', style: 'LIGHT' },
+  },
 }
 export default config

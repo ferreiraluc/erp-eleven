@@ -7,7 +7,7 @@
     <BellRing :size="22" aria-hidden="true" />
     <div class="notification-invitation__copy">
       <strong>{{ n('invitation') }}</strong>
-      <p>{{ n(center.support === 'ready' ? 'inviteHelp' : center.support) }}</p>
+      <p>{{ n(center.support === 'ready' ? 'inviteHelp' : center.nativePush && center.support === 'denied' ? 'nativeDenied' : center.support) }}</p>
       <p v-if="center.pushError" role="alert">{{ center.pushError }}</p>
     </div>
     <div class="notification-invitation__actions">
@@ -19,6 +19,10 @@
         @click="center.enablePush"
       >
         {{ n(center.pushBusy ? 'loading' : 'enable') }}
+      </button>
+      <button v-if="center.support === 'denied' && center.canOpenSettings" type="button"
+        class="erp-button erp-button--primary erp-button--sm" :disabled="center.pushBusy" @click="center.openPushSettings">
+        {{ n('openSettings') }}
       </button>
       <button
         type="button"

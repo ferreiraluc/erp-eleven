@@ -30,6 +30,7 @@
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot your password?",
     "signInButton": "Sign in",
+    "downloadApp": "Download app",
     "signingIn": "Signing in...",
     "testCredentials": "Test credentials: admin@loja.com / 123456"
   },

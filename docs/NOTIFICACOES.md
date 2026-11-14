@@ -235,6 +235,16 @@ dois controles: `VITE_NATIVE_PUSH_ENABLED=true` no build nativo e
 `NATIVE_PUSH_ENABLED=true` no backend. O flag `VITE_*` é público e não é segredo.
 Não ativar o flag de build Android antes de adicionar sua configuração Firebase.
 
+Ao entrar com o transporte configurado, a faixa **Receba os avisos do ELEVEN**
+oferece **Ativar notificações**. O toque pede a permissão do Android/iOS; uma
+permissão concedida é reaproveitada nos próximos logins. Recusar não bloqueia o
+ERP e não dispara pedidos nativos repetidos. No Android, **Abrir configurações**
+leva apenas às notificações do próprio Eleven. Ao voltar, o app revalida a sessão
+e reconecta a inscrição sem esperar o próximo polling. O agente consulta também
+o bloqueio geral e o canal `eleven-updates`, pois Android anterior ao 13 pode
+reportar permissão de runtime concedida mesmo com notificações bloqueadas nos
+Ajustes. O app não modifica permissões, Não Perturbe nem economia de bateria.
+
 | Plataforma | Configuração necessária |
 | --- | --- |
 | Android | Projeto Firebase com Cloud Messaging HTTP v1; `google-services.json` do aplicativo correspondente em `frontend/android/app/` no ambiente de build. O pacote debug usa `com.elevenparispy.erp.pilot`; distribuição usa `com.elevenparispy.erp`, exigindo cadastros correspondentes. |
@@ -269,6 +279,18 @@ somente identificador opaco, vínculo da sessão e vencimento, com TTL máximo d
 cinco minutos e nunca posterior ao fim da sessão. O clique valida o vínculo e
 abre exclusivamente `/notificacoes`; a caixa busca os detalhes com a sessão e
 as permissões atuais. Alertas expirados ou de outra conta não navegam.
+
+No Android, esses avisos visíveis usam prioridade FCM **high**, permitindo ao
+provedor tentar a entrega durante o modo Doze. Não é um serviço permanentemente
+ativo nem uma sincronização silenciosa. A prioridade não ignora permissão negada,
+canal bloqueado, aplicativo forçado a parar, falta de rede ou restrições do aparelho,
+e não garante entrega imediata. O TTL permanece limitado a cinco minutos e ao fim
+da sessão; avisos vencidos não são recuperados como alertas novos. Validar também
+com tela bloqueada/app em segundo plano em um Android real, usando uma notificação
+de teste autorizada, sem venda ou impressão. A recomendação segue a
+[documentação de prioridade do FCM](https://firebase.google.com/docs/cloud-messaging/android-message-priority),
+que reserva prioridade alta para conteúdo visível e pode reduzir a prioridade
+quando as mensagens repetidamente não produzem avisos ao usuário.
 
 Revogação, usuário inativo, alteração de perfil e corte das 21h continuam sendo
 verificados antes do envio. Logout desativa a inscrição da sessão e limpa avisos

@@ -178,10 +178,12 @@ def _send_fcm(claim, data, ttl, provider_token):
     ttl = min(ttl, (claim.expires_at - int(now().timestamp() * 1000)) // 1000)
     if ttl <= 0:
         return 'dead', 'session_expired', None
+    # This transport always emits a visible alert. High priority allows FCM to
+    # attempt delivery during Doze; never reuse it for silent background sync.
     payload = {'message': {'token': provider_token,
         'notification': {'title': GENERIC_TITLE, 'body': GENERIC_BODY},
         'data': {key: str(value) for key, value in data.items()},
-        'android': {'priority': 'normal', 'ttl': f'{ttl}s', 'collapse_key': str(claim.id),
+        'android': {'priority': 'high', 'ttl': f'{ttl}s', 'collapse_key': str(claim.id),
                     'notification': {'channel_id': 'eleven-updates', 'tag': str(claim.id), 'sound': 'default'}}}}
     with requests.Session() as client:
         client.trust_env = False

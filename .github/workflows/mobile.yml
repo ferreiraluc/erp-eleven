@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths: ['frontend/**', '.github/workflows/mobile.yml']
   workflow_dispatch:
+    inputs:
+      android_notifications:
+        description: 'Include Firebase configuration in the Android release (sign locally)'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -31,16 +36,34 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - run: npm ci --include=dev
+      - name: Prepare private Android configuration
+        if: github.event_name == 'workflow_dispatch' && inputs.android_notifications
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.ELEVEN_ANDROID_GOOGLE_SERVICES_JSON }}
+        run: |
+          umask 077
+          test -n "$GOOGLE_SERVICES_JSON"
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          echo 'VITE_NATIVE_PUSH_ENABLED=true' >> "$GITHUB_ENV"
       - run: npm run mobile:sync
       - run: npm run mobile:check
-      - name: Build pilot APK and unsigned store bundle
-        run: cd android && ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug bundleRelease
+      - name: Build pilot and unsigned private release
+        run: |
+          cd android
+          if [ "${VITE_NATIVE_PUSH_ENABLED:-false}" = true ]; then
+            ./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease bundleRelease
+          else
+            ./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease bundleRelease
+          fi
       - name: Name artifacts and record checksums
         run: |
           mkdir -p mobile-artifacts
-          cp android/app/build/outputs/apk/debug/app-debug.apk mobile-artifacts/Eleven-Piloto-Android.apk
+          if [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk mobile-artifacts/Eleven-Piloto-Android.apk
+          fi
           cp android/app/build/outputs/bundle/release/app-release.aab mobile-artifacts/Eleven-Android-unsigned.aab
           cp dist-mobile/mobile-build.json mobile-artifacts/
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk mobile-artifacts/Eleven-Android-unsigned.apk
           cd mobile-artifacts
           sha256sum *.apk *.aab > SHA256SUMS
       - uses: actions/upload-artifact@v4
@@ -54,6 +77,9 @@ jobs:
           name: Android-validation-reports
           path: frontend/android/app/build/reports/
           retention-days: 7
+      - name: Remove temporary Firebase configuration
+        if: always()
+        run: rm -f android/app/google-services.json
   mobile-ios:
     # Build unsigned for simulator before merge. Device/TestFlight signing belongs
     # to the company's Developer account, added only after Lucas enrolls.

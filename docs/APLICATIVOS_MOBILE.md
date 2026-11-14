@@ -47,10 +47,11 @@ local da Rede Eleven e sincronização offline permanece separado.
 
 ## Segurança e dados
 
-- `com.elevenparispy.erp` é o identificador definitivo proposto; confirmar sua
-  disponibilidade nas contas da empresa antes da primeira publicação.
+- `com.elevenparispy.erp` é o identificador definitivo do APK privado. Confirmar
+  esse mesmo App ID na conta Apple antes de assinar o aplicativo iOS.
 - O APK de teste usa `com.elevenparispy.erp.pilot` e o nome **Eleven Piloto**.
-  Instala ao lado do app final; não é atualizado pela futura versão da loja.
+  Instala ao lado do app final; não é atualizado por ele. O APK privado definitivo
+  exige um novo login, mantendo os dados operacionais no mesmo ERP.
 - Nenhum `server.url` remoto nem navegação externa recebe a ponte nativa.
   Assets são incorporados, API é HTTPS e a CSP limita as conexões à API configurada.
 - CORS aceita as origens locais do Capacitor, sem dispensar autenticação.
@@ -100,52 +101,169 @@ debug e AAB release sem assinatura) e iOS para simulador sem assinatura. Os
 artefatos ficam no GitHub Actions por 30 dias. O APK de debug serve para teste
 acompanhado; a chave de debug não é identidade permanente de distribuição.
 O AAB sem assinatura não é publicável e o ZIP de simulador não instala no iPhone.
-Não chamar nenhum deles de versão de produção das lojas.
+Não chamar nenhum deles de versão de produção das lojas. A CI produz o APK release
+sem assinatura para a distribuição privada; a assinatura definitiva é realizada
+**localmente**, sem enviar a chave ou a senha ao GitHub. A chave PKCS12 fica no
+diretório `secrets/` ignorado pelo Git, com acesso restrito; fazer backup privado
+sob controle de Lucas. A configuração FCM só é incluída quando fornecida; isso não
+ativa por si só o push no backend.
 
-## Contas e pagamentos: Lucas conclui pessoalmente
+Para assinatura local sem instalar Android SDK, `SignAndroidRelease.java` usa a
+biblioteca oficial `com.android.tools.build:apksig:8.13.1` (Apache 2.0) e Java 21.
+Baixar JDK Temurin pelo Adoptium e o JAR pelo Google Maven; conferir os checksums
+oficiais antes de executar. Não é necessário aceitar licenças do SDK nesse caminho.
+O helper recusa APK debuggable, assina em v2/v3, preserva alinhamento do APK da CI,
+verifica assinatura e identidade e só então grava o arquivo final. Não publica nem
+faz requisições de rede. Os argumentos são caminhos, nunca a senha em texto:
 
-| Etapa | Custo-base publicado | Ação do titular |
-| --- | --- | --- |
-| [Apple Developer Program](https://developer.apple.com/programs/enroll/) | US$ 99/ano, sujeito à moeda/região | Cadastro, identidade, empresa/D-U-N-S quando exigido, contrato e pagamento |
-| [Google Play Console](https://play.google.com/console/signup) | US$ 25, pagamento único, sujeito à região | Cadastro de organização, verificação, contrato e pagamento |
-| [Firebase Console](https://console.firebase.google.com/) | FCM sem cobrança pelo envio de notificações | Criar projeto da empresa e vincular Android; não habilitar faturamento/serviços extras sem necessidade |
-| Ferramentas locais | Xcode e Android Studio gratuitos | Instalar quando necessário e aceitar seus termos pessoalmente |
+```sh
+# ELEVEN_JAVA_BIN: diretório bin do JDK local; ELEVEN_APKSIG_JAR: JAR verificado.
+# ELEVEN_SIGN_CLASSES: diretório temporário das classes compiladas.
+"$ELEVEN_JAVA_BIN/javac" -cp "$ELEVEN_APKSIG_JAR" -d "$ELEVEN_SIGN_CLASSES" \
+  frontend/scripts/SignAndroidRelease.java
+"$ELEVEN_JAVA_BIN/java" -cp "$ELEVEN_SIGN_CLASSES:$ELEVEN_APKSIG_JAR" \
+  SignAndroidRelease sign /caminho/app-release-unsigned.apk /caminho/Eleven-Android.apk \
+  /caminho/privado/eleven-android.p12 /caminho/privado/store-password.txt
+```
 
-Preferir contas pertencentes à empresa, com Lucas como titular e acesso delegado
-para distribuição. Não compartilhar senha/2FA nem dados do cartão. A verificação
-da empresa pode levar dias; não é possível garantir publicação no dia seguinte.
-GitHub Actions pode consumir a franquia de CI, especialmente macOS; consultar o
-plano da conta antes de aumentar paralelismo ou automatizar builds frequentes.
+A saída mostra apenas hash/tamanho do APK e fingerprint do certificado público.
+Conferir também package ID, versão e `versionCode` da build antes de publicar;
+validação de assinatura não substitui essa conferência nem o teste em aparelho.
 
-Referências: [Apple membership](https://developer.apple.com/programs/enroll/),
-[cadastro Google e taxa](https://support.google.com/googleplay/android-developer/answer/6112435),
-[Firebase pricing](https://firebase.google.com/pricing).
 
-## Distribuição após o cadastro
+## Distribuição privada escolhida em 13/11/2026
 
-1. Confirmar empresa, bundle ID, nome, ícone e responsável por suporte/privacidade.
-   Habilitar acesso de publicação com menor privilégio possível.
-2. Android: criar chave de upload protegida, backup sob controle da empresa e Play
-   App Signing. Configurar assinatura de release por segredo da CI; aumentar
-   `versionCode` a cada envio. Enviar primeiro para teste interno, instalar e
-   conferir atualização. Requisitos adicionais variam conforme tipo da conta.
-3. iOS: configurar Team, App ID, certificado/provisionamento e App Store Connect.
-   Criar archive assinado e enviar ao TestFlight. TestFlight é piloto (build expira
-   em 90 dias), não distribuição definitiva. Testes externos podem exigir revisão.
-4. Configurar push: pacote Android correto no Firebase (o `.pilot` é outro app),
-   APNs topic/ambiente e capability **Push Notifications** no Xcode. Credenciais do
-   servidor ficam no Render. Só depois ligar as flags e fazer testes consentidos
-   de entrega, toque, logout, troca de usuário, permissão negada e expiração 21h.
-   Detalhes em [Notificações](NOTIFICACOES.md#aplicativos-androidios--piloto-nativo).
-5. Preparar imagens reais, texto da loja, política de privacidade em URL pública,
-   ficha de dados coletados, classificação etária, suporte e conta de demonstração
-   sem dados reais para revisão. Verificar requisitos vigentes das duas lojas.
-6. Após piloto aceito, publicar Android em canal adequado à equipe. Para Apple,
-   avaliar app não listado (acesso por link, sujeito à revisão) ou distribuição
-   empresarial gerenciada elegível. O login/permissões do ERP continua obrigatório.
-7. Só ampliar distribuição após confirmar upgrade sem perda de sessão indevida,
-   scanner, PDFs e fila de impressão em aparelhos reais. Conservar webapp como
-   alternativa durante o piloto.
+O grupo inicial é de aproximadamente sete iPhones e três Androids. A distribuição
+será pelo endereço **https://elevenparispy.com/download**, também acessível no
+rodapé do login web. Não há publicação pública nas buscas das lojas nesta etapa.
+A página tem recursos próprios, sem carregar o ERP ou exigir uma sessão, mas o
+aplicativo continua exigindo login e as mesmas permissões do servidor.
+
+- **Android:** APK privado definitivo **1.0.1**, com versão, tamanho e SHA-256,
+  assinado com chave de release estável. A identidade `com.elevenparispy.erp` é
+  distinta do `.pilot`: instala separado do piloto e pede um novo login. Os dados
+  continuam no ERP, sem migração ou cópia. Atualizações dessa versão devem preservar
+  a chave e aumentar `versionCode`. Não orientar a desativar Play Protect.
+  Distribuição fora da Google Play continua sujeita às verificações vigentes do
+  Android conforme região/canal.
+- **iPhone/iPad:** instalação Ad Hoc, apenas nos UDIDs cadastrados no perfil.
+  O estado inicial da página é **aguardando assinatura Apple e cadastro dos aparelhos**.
+  O ZIP do simulador não é oferecido como instalador. O botão de instalação só
+  poderá ser ativado quando houver um IPA assinado, verificado e hospedado.
+- **Atualizações:** publicar uma versão web não atualiza o frontend incorporado aos
+  aplicativos. Gerar novo binário e orientar sua instalação. A instalação privada
+  não oferece atualização silenciosa garantida. Conservar o webapp como alternativa.
+- **Limite Apple:** até 100 dispositivos por família (por exemplo, iPhones) por ano
+  de associação. São aparelhos registrados, não downloads; desativar um aparelho
+  não libera imediatamente sua vaga.
+
+Referências: [APK pelo próprio site](https://developer.android.com/distribute/marketing-tools/alternative-distribution),
+[verificação Android](https://developer.android.com/developer-verification/guides),
+[dispositivos Apple](https://developer.apple.com/help/account/devices/devices-overview/),
+[distribuição Ad Hoc, seção 7.3](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/).
+
+### Assinatura Apple: Lucas conclui pessoalmente
+
+Iniciar em **https://developer.apple.com/programs/enroll/**. O Apple Developer
+Program comum custa US$ 99 por ano, sujeito à moeda/região. O cadastro pode ser
+individual ou de organização conforme a titularidade escolhida; não é necessário
+Apple Developer Enterprise para esse grupo. Organização exige identidade legal,
+D-U-N-S e autoridade para representá-la. Lucas conclui identidade, contratos e
+pagamento; não compartilhar senha, 2FA ou cartão em mensagens.
+
+Não é necessário pagar Google Play Console para listar esse APK no próprio site.
+Uma eventual distribuição pela Play Store será uma etapa separada. Verificação do
+desenvolvedor Android fora da loja e a assinatura de release também são assuntos
+distintos. Firebase/FCM e APNs permanecem sem ativação até sua configuração e teste.
+A verificação da conta Apple pode levar dias; não prometer instalação imediata.
+
+### Obter os UDIDs sem instalar perfis de terceiros
+
+**No Mac da loja, pelo Finder:**
+
+1. Conectar o iPhone por cabo, desbloquear e confirmar **Confiar** no Mac e no iPhone.
+2. Abrir Finder e selecionar o aparelho em **Locais**.
+3. Clicar nas informações do modelo logo abaixo do nome do aparelho até aparecer
+   **UDID**. O Finder alterna entre os identificadores.
+4. Clicar com o botão direito/Control-clique no UDID e escolher **Copiar UDID**.
+5. Guardar numa lista privada com nome do responsável e modelo. Compartilhar somente
+   com Lucas/responsável pelo cadastro da Apple, não em issue, commit ou página pública.
+
+O UDID não é o IMEI nem o número de série. A página `/download` não coleta nem
+armazena esses identificadores. Não instalar perfis de sites desconhecidos para
+extraí-los. No Xcode, também é possível copiar o identificador no Device Hub ou
+em **Window → Devices and Simulators**, conforme sua versão. Para este piloto,
+preferir o Finder disponível no Mac da loja; não presumir que Apple Devices no
+Windows exponha UDID apenas porque exibe série/IMEI.
+
+[Instruções oficiais do Finder/Xcode](https://developer.apple.com/documentation/xcode/locating-device-identifiers)
+· [Guia Apple com Finder](https://help.apple.com/xcode/mac/current/en.lproj/dev93ef696c6.html)
+· [Registrar aparelho](https://developer.apple.com/help/account/devices/register-a-single-device/).
+
+### Preparar o IPA e o manifesto após a conta ser aprovada
+
+1. Cadastrar os aparelhos na conta Apple, confirmar o App ID e a equipe de assinatura.
+2. No Xcode, gerar archive para dispositivo físico e exportar por distribuição
+   **Ad Hoc / Release Testing**, conforme a versão do Xcode, incluindo esses aparelhos.
+   Não usar Development, Enterprise, App Store ou build de simulador neste fluxo.
+3. No Mac, validar o IPA exportado e gerar os arquivos de instalação:
+
+```sh
+python3 frontend/scripts/package-adhoc.py /caminho/privado/Eleven.ipa \
+  --ipa-url https://elevenparispy.com/download/ios/Eleven.ipa \
+  --manifest-url https://elevenparispy.com/download/ios/manifest.plist \
+  --output /caminho/privado/instalacao-eleven
+```
+
+Essas URLs são exemplos para preparar o pacote, **não arquivos já publicados**.
+O utilitário não assina nem envia o IPA, não cadastra dispositivos e não muda a
+página de download. Ele requer macOS e executa `codesign` e verificação CMS via OpenSSL contra apenas
+as raízes Apple do chaveiro de sistema, com conferência do emissor de perfis iOS.
+Decodificar com `security cms -D` não comprova assinatura. A verificação recusa CMS
+sem assinante, conteúdo adulterado, cadeia não confiável ou emissor desconhecido.
+Confere também certificado autorizado pelo perfil, identidade/equipe, build de
+dispositivo físico, lista de aparelhos não vazia, perfil Ad Hoc sem debug/Enterprise
+e vencimento. Perfil vencido ou pacote sem assinatura interrompem a geração.
+
+A saída contém apenas `manifest.plist` e `ios-release.json`. O manifesto usa o
+`CFBundleVersion` real do aplicativo; o JSON inclui versão visível, build, bundle ID,
+validade, URLs, tamanho e SHA-256, **sem a lista de UDIDs, perfil ou certificados**.
+A validação não comprova instalação física nem compara bytes hospedados com o
+arquivo local; ambas as verificações são necessárias antes da ativação.
+
+**Privacidade da hospedagem:** o próprio IPA Ad Hoc contém `embedded.mobileprovision`
+com os UDIDs autorizados. Não enviar o IPA a um release público do GitHub sem tratar
+essa exposição. Definir acesso controlado compatível com a instalação OTA e só então
+publicar o manifesto e o campo `ios` de `releases.json`. O script aceita URLs HTTPS
+estáveis sem credenciais/query/fragmento, para não gravar tokens temporários em
+metadados publicados. Uma hospedagem com URLs assinadas temporárias exige fluxo
+servidor específico e não está implementada nesta etapa.
+
+4. Conferir download, hash e instalação física em um iPhone cadastrado. Conforme a
+   documentação Apple, habilitar **Modo de Desenvolvedor** para a instalação em
+   aparelhos registrados. Preservar os controles de segurança do aparelho.
+5. Depois da conferência, disponibilizar `itms-services` apontando ao manifesto HTTPS;
+   ativar a opção iPhone na página apenas com metadata válida e perfil ainda vigente.
+6. Registrar a data real de validade. Renovar perfil/assinatura e redistribuir antes
+   de expirar; o aplicativo pode deixar de abrir com autorização vencida. Incluir
+   um iPhone novo exige atualizar o perfil e exportar novo pacote.
+
+[Instalação Apple em dispositivos registrados](https://developer.apple.com/documentation/xcode/distributing-your-app-to-registered-devices)
+· [Perfis Ad Hoc](https://developer.apple.com/help/account/provisioning-profiles/create-an-ad-hoc-provisioning-profile/).
+
+Testes isolados do empacotador (sem conta Apple, sem perfil real e sem publicação):
+
+```sh
+python3 -m unittest discover -s frontend/scripts -p 'test_package_adhoc.py' -v
+```
+
+### Notificações e homologação
+
+Configurar o pacote Android correto no Firebase (o `.pilot` é outro app), APNs
+ambiente/topic e capability **Push Notifications** no Xcode. Credenciais do servidor
+ficam no Render. Só depois ligar as flags e testar entrega, toque, logout, troca de
+usuário, permissão negada e expiração às 21h. Detalhes em
+[Notificações](NOTIFICACOES.md#aplicativos-androidios--piloto-nativo).
 
 Notificações não podem ser forçadas contra a permissão do sistema operacional.
 O primeiro piloto nativo usa aviso genérico ELEVEN e consulta dados autorizados
@@ -175,7 +293,9 @@ e implementação específica, não está habilitado por este piloto.
 
 App e API passam a ter ciclos diferentes. Evoluções do backend devem preservar os
 clientes instalados ou prever versão mínima/atualização antes de remover contratos.
-Não ativar atualização remota de JavaScript para contornar revisão das lojas.
+As atualizações privadas também devem conservar o controle de versões e a assinatura;
+não ativar atualização remota de JavaScript que altere a fronteira de confiança nativa.
 Manter `main` protegida, PR `codex/`, validações habituais e builds nativos aprovados.
-As builds assinadas e sua ativação só serão acrescentadas após existir a conta da
-empresa; este piloto não cria nem guarda uma identidade de assinatura definitiva.
+O Android privado já possui caminho de assinatura de release. A assinatura iOS
+e sua ativação dependem da aprovação da conta Apple, dos UDIDs e da validação do
+IPA em aparelho físico. Não publicar como disponível antes dessas etapas.

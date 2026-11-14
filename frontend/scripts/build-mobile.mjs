@@ -21,10 +21,13 @@ const policy = [
   `connect-src 'self' ${api.origin}`, "worker-src 'self' blob:", "frame-src 'self' blob:",
 ].join('; ')
 html = html.replace('<meta charset="UTF-8">', `<meta charset="UTF-8">\n    <meta http-equiv="Content-Security-Policy" content="${policy}">`)
-html = html.replace('width=device-width, initial-scale=1.0', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
+// Keep the entire web viewport inside system bars/display cutouts. With `cover`,
+// modern Android WebViews pass these insets to CSS; the existing fixed/sticky
+// ERP headers and teleported dialogs would then overlap the status bar.
+html = html.replace('width=device-width, initial-scale=1.0', 'width=device-width, initial-scale=1.0, viewport-fit=contain')
 writeFileSync(path, html)
 writeFileSync(new URL('../dist-mobile/mobile-build.json', import.meta.url), JSON.stringify({
-  platform: 'capacitor', apiOrigin: api.origin, version: '1.0.0',
+  platform: 'capacitor', apiOrigin: api.origin, version: '1.0.1',
   release: html.match(/data-release="([^"]+)"/)?.[1],
 }, null, 2) + '\n')
 console.log(`Mobile bundle: API ${api.origin}; interface incorporada ao aplicativo.`)

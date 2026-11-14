@@ -2,11 +2,15 @@
   <section v-if="!center.pushActive || center.pushError" class="notification-delivery" :aria-label="n('deliveryStatus')">
     <p v-if="center.restoring" role="status">{{ n('reconnecting') }}</p>
     <template v-else>
-      <p>{{ n(center.support === 'ready' ? 'companyDelivery' : center.support) }}</p>
+      <p>{{ n(center.support === 'ready' ? center.nativePush ? 'nativeDelivery' : 'companyDelivery' : center.nativePush && center.support === 'denied' ? 'nativeDenied' : center.support) }}</p>
       <p v-if="center.pushError" class="notification-error" role="alert">{{ center.pushError }}</p>
       <button v-if="!center.pushActive && center.support === 'ready'" type="button"
         class="erp-button erp-button--primary erp-button--sm" :disabled="center.pushBusy" @click="center.enablePush">
         {{ n(center.pushBusy ? 'loading' : 'enable') }}
+      </button>
+      <button v-if="center.support === 'denied' && center.canOpenSettings" type="button"
+        class="erp-button erp-button--primary erp-button--sm" :disabled="center.pushBusy" @click="center.openPushSettings">
+        {{ n('openSettings') }}
       </button>
     </template>
   </section>
