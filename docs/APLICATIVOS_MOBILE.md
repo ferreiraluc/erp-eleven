@@ -168,7 +168,7 @@ rodapé do login web. Não há publicação pública nas buscas das lojas nesta 
 A página tem recursos próprios, sem carregar o ERP ou exigir uma sessão, mas o
 aplicativo continua exigindo login e as mesmas permissões do servidor.
 
-- **Android:** APK privado definitivo **1.0.2**, com versão, tamanho e SHA-256,
+- **Android:** APK privado definitivo **1.0.3**, com versão, tamanho e SHA-256,
   assinado com chave de release estável. A identidade `com.elevenparispy.erp` é
   distinta do `.pilot`: instala separado do piloto e pede um novo login. Os dados
   continuam no ERP, sem migração ou cópia. Atualizações dessa versão devem preservar
@@ -331,3 +331,19 @@ Manter `main` protegida, PR `codex/`, validações habituais e builds nativos ap
 O Android privado já possui caminho de assinatura de release. A assinatura iOS
 e sua ativação dependem da aprovação da conta Apple, dos UDIDs e da validação do
 IPA em aparelho físico. Não publicar como disponível antes dessas etapas.
+
+
+### Android 1.0.3 — câmera e PDV
+
+A versão 1.0.3 (`versionCode=4`) usa a mesma assinatura da 1.0.2 e pode ser
+instalada por cima dela. Inclui câmera/galeria nativas no produto e na edição
+massiva, desconto por moeda, confirmação auditada para venda sem saldo e busca
+paginada de clientes. Os controles de notificações/safe area foram preservados.
+O APK vem do workflow com Firebase habilitado, passa por verificação de identidade,
+integridade e assinatura local antes de publicar em `/download`. Sem chave privada
+no CI ou no release. O frontend incorporado corresponde ao commit
+`883e48704dd8881b3315bf7de09372da8458a8d4`; o commit de metadados registra seu hash.
+
+Compilação, testes nativos e lint aprovados no CI; câmera/galeria ainda precisam
+de conferência no aparelho real após instalar, especialmente HEIC no iPhone quando
+houver distribuição Ad Hoc. Atualizar somente o site não substitui o APK instalado.
