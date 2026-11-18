@@ -46,7 +46,7 @@ O app não fica executando continuamente em segundo plano. O projeto de servidor
 local da Rede Eleven e sincronização offline permanece separado.
 
 No cadastro, edição e fotos em lote, **Tirar foto/Câmera** chama `Camera.takePhoto`
-e **Escolher foto/Adicionar fotos/Enviar foto** chama `Camera.chooseFromGallery`,
+e **Escolher foto/Adicionar fotos/Enviar foto** chama o seletor nativo de fotos,
 sem depender do `capture` do seletor HTML do WebView. A seleção múltipla respeita
 as vagas restantes; o ERP também rejeita excesso se um seletor antigo ignorar o
 limite. Cancelar conserva a foto atual; permissão negada mostra orientação sem
@@ -57,6 +57,17 @@ sessão são descartados. Se o Android encerrar o processo enquanto a câmera es
 aberta, o formulário não é recuperado automaticamente: abra-o e capture novamente.
 Esta integração requer instalar o APK novo, além de atualizar o webapp; a captura
 e as permissões ainda precisam de conferência nos aparelhos físicos da equipe.
+
+Compatibilidade iOS: com Camera 8.2.6 / ion-ios-camera 2.0.0, `chooseFromGallery`
+devolve a URL do arquivo original (inclusive HEIC) e não aplica as opções de tamanho.
+Por isso somente a galeria iOS usa `Camera.pickImages`, ainda disponível nessa
+versão: o plugin carrega `UIImage`, corrige orientação, reduz a até 1600 px e
+reescreve JPEG antes de devolver a URL local. O Android mantém `chooseFromGallery`
+e a câmera mantém `takePhoto`. O ERP valida os bytes JPEG/PNG/WebP; não passa a
+aceitar HEIC bruto nem usa a miniatura como foto principal. Rever essa adaptação
+ao atualizar o plugin, pois `pickImages` está marcado como legado. A inspeção do
+código nativo confirma a conversão; o teste com HEIC de um iPhone real continua
+necessário na instalação iOS.
 
 ## Segurança e dados
 

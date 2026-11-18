@@ -57,11 +57,21 @@ test('expiration or a new upstream version requires a new decision', () => {
 
 test('network errors and incomplete npm reports cannot turn into success', () => {
   for (const report of [null, {}, { ...audit(), error: { code: 'ENOTFOUND' } },
-    { ...audit(), vulnerabilities: {} }, { ...audit(), auditReportVersion: 3 }]) {
+    { ...audit(), vulnerabilities: {} }, { ...audit(), vulnerabilities: [], metadata: { vulnerabilities: { total: 0 } } },
+    { ...audit(), auditReportVersion: 3 }]) {
     assert.throws(() => evaluateAudit(report, context))
   }
   assert.deepEqual(evaluateAudit({ auditReportVersion: 2, metadata: { vulnerabilities: { total: 0 } },
     vulnerabilities: {} }, context), { findings: 0, temporary: false })
+})
+
+test('a nonempty audit must account for every finding reported in metadata', () => {
+  for (const total of [0, 1, 3, '2', undefined]) {
+    const report = audit()
+    report.metadata.vulnerabilities.total = total
+    assert.throws(() => evaluateAudit(report, context), /inconsistente/)
+  }
+  assert.deepEqual(evaluateAudit(audit(), context), { findings: 2, temporary: true })
 })
 
 test('artifact must come from the current lock and a fresh nonempty bundle', () => {
@@ -79,6 +89,28 @@ test('direct, transitive and dynamic glob imports in the optional server block t
     assert.throws(() => validateExposure({ ...exposure, serverSource }))
   }
   assert.deepEqual(runtimeImports("import path from 'node:path'; import express from 'express'"), ['express'])
+})
+
+test('installed runtime peers are checked, including optional peers and dependency cycles', () => {
+  function checkRuntime(changed) {
+    const lockContent = JSON.stringify(changed)
+    return validateExposure({ ...exposure, lockContent, build: makeBuildReport(bundle, lockContent, now) })
+  }
+  for (const optional of [false, true]) {
+    const changed = structuredClone(lock)
+    changed.packages['node_modules/express'].peerDependencies = { picomatch: '^4.0.7' }
+    if (optional) changed.packages['node_modules/express'].peerDependenciesMeta = { picomatch: { optional: true } }
+    assert.throws(() => checkRuntime(changed), /picomatch/)
+    delete changed.packages['node_modules/picomatch']
+    if (optional) assert.deepEqual(checkRuntime(changed), changed)
+    else assert.throws(() => checkRuntime(changed), /Dependência de runtime ausente/)
+  }
+  const cycle = structuredClone(lock)
+  cycle.packages['node_modules/express'].peerDependencies = { helper: '*' }
+  cycle.packages['node_modules/helper'] = { version: '1.0.0', peerDependencies: { express: '*' } }
+  assert.deepEqual(checkRuntime(cycle), cycle)
+  cycle.packages['node_modules/helper'].peerDependencies.picomatch = '*'
+  assert.throws(() => checkRuntime(cycle), /picomatch/)
 })
 
 test('chunk evidence resolves both platform paths and nested node_modules without leaking paths', () => {

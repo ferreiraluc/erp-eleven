@@ -62,7 +62,13 @@ export async function selectNativePhotos(source: NativePhotoSource, options: { l
     const sizing = { quality: 90, targetWidth: 1600, targetHeight: 1600, correctOrientation: true, includeMetadata: false, editable: 'no' as const }
     const results = source === 'camera'
       ? [await Camera.takePhoto({ ...sizing, saveToGallery: false, encodingType: EncodingType.JPEG, cameraDirection: CameraDirection.Rear })]
-      : (await Camera.chooseFromGallery({ ...sizing, mediaType: MediaTypeSelection.Photo, allowMultipleSelection: limit > 1, limit })).results
+      // Camera 8.2.6's new iOS gallery returns original HEIC files and ignores
+      // resizing. Its supported legacy picker decodes UIImage and writes JPEG;
+      // keep this iOS-only until the new API also converts selected photos.
+      : Capacitor.getPlatform() === 'ios'
+        ? (await Camera.pickImages({ quality: 90, width: 1600, height: 1600, correctOrientation: true, limit }))
+          .photos.map(photo => ({ type: MediaType.Photo, webPath: photo.webPath }))
+        : (await Camera.chooseFromGallery({ ...sizing, mediaType: MediaTypeSelection.Photo, allowMultipleSelection: limit > 1, limit })).results
     if (!current()) throw new NativePhotoError('session')
     // Older Android pickers can ignore their UI limit. Reject instead of
     // silently dropping pictures or exceeding the product's five-photo limit.

@@ -690,6 +690,7 @@ function confirmStockException(itemId: string, name: string, location: string, q
   return true
 }
 function changeQuantity(item: CartItem, quantity: number) {
+  if (pdv.loading || pdv.checkoutUncertain) return
   try {
     if (!item.is_avulso && item.item_id && Number.isInteger(quantity) && quantity > 0 && quantity <= 9_999_999 && !confirmStockException(item.item_id, item.item_name, item.location, quantity, item.id)) { delete quantityDrafts[item.id]; delete quantityErrors[item.id]; return }
     undoPaymentRounding()
@@ -733,7 +734,7 @@ async function addToCart(item: InventoryItem) {
     finally{if(!disposed && request===searchGeneration)barcodePending.value=false}
     return
   }
-  if (!ratesReady.value) return
+  if (!ratesReady.value || pdv.loading || pdv.checkoutUncertain) return
   try {
     undoPaymentRounding()
     const price = catalogPrice(item.sale_price)

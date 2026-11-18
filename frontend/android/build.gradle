@@ -49,8 +49,12 @@ tasks.register('verifyNativeSecurityVersions') {
             }
         }
         def unitTests = project(':capacitor-android').configurations.releaseUnitTestRuntimeClasspath
-        def json = unitTests.resolvedConfiguration.resolvedArtifacts.find { it.moduleVersion.id.group == 'org.json' && it.name == 'json' }
-        if (json?.moduleVersion?.id?.version != '20260719') throw new GradleException('Capacitor unit tests must use JSON-java 20260719')
+        // Inspect selected components, not Android artifact variants: resolving
+        // every AAR/jar here is ambiguous for the library's self test dependency.
+        def json = unitTests.incoming.resolutionResult.allComponents.find {
+            it.moduleVersion?.group == 'org.json' && it.moduleVersion?.name == 'json'
+        }
+        if (json?.moduleVersion?.version != '20260719') throw new GradleException('Capacitor unit tests must use JSON-java 20260719')
         println('Native security: Gradle 8.14.7, Kotlin 2.4.20 and test-only JSON-java 20260719 resolved')
     }
 }

@@ -37,7 +37,7 @@ export function runtimeImports(source) {
 
 function runtimeDependencyNames(lock, serverSource) {
   const names = new Set()
-  function resolve(name, from = '') {
+  function resolve(name, from = '', optional = false) {
     let parent = from
     while (parent) {
       const candidate = `${parent}/node_modules/${name}`
@@ -45,18 +45,25 @@ function runtimeDependencyNames(lock, serverSource) {
       parent = parent.includes('/node_modules/') ? parent.slice(0, parent.lastIndexOf('/node_modules/')) : ''
     }
     const candidate = `node_modules/${name}`
-    if (!lock.packages[candidate]) throw new Error(`Dependência de runtime ausente no lock: ${name}`)
+    if (!lock.packages[candidate]) {
+      if (optional) return null
+      throw new Error(`Dependência de runtime ausente no lock: ${name}`)
+    }
     return candidate
   }
   const visited = new Set()
-  function traverse(name, from) {
+  function traverse(name, from, optional = false) {
     if (name.startsWith('.') || name.startsWith('/')) throw new Error('Novo módulo local no servidor requer revisão de segurança.')
-    const path = resolve(name, from)
+    const path = resolve(name, from, optional)
+    if (!path) return
     names.add(name)
     if (visited.has(path)) return
     visited.add(path)
     for (const child of Object.keys(lock.packages[path].dependencies || {})) traverse(child, path)
     for (const child of Object.keys(lock.packages[path].optionalDependencies || {})) traverse(child, path)
+    for (const peer of Object.keys(lock.packages[path].peerDependencies || {})) {
+      traverse(peer, path, lock.packages[path].peerDependenciesMeta?.[peer]?.optional === true)
+    }
   }
   for (const name of runtimeImports(serverSource)) traverse(name)
   return names
@@ -92,12 +99,12 @@ export function validateExposure({ lockContent, build, serverSource, renderSourc
 
 export function evaluateAudit(audit, { lock, now = new Date(), latestPicomatch }) {
   if (audit?.auditReportVersion !== 2 || audit.error || !audit.vulnerabilities
-    || typeof audit.vulnerabilities !== 'object' || !audit.metadata?.vulnerabilities) {
+    || typeof audit.vulnerabilities !== 'object' || Array.isArray(audit.vulnerabilities) || !audit.metadata?.vulnerabilities) {
     throw new Error('Auditoria npm incompleta ou inválida; nenhum alerta pode ser dispensado.')
   }
   const findings = Object.entries(audit.vulnerabilities)
+  if (audit.metadata.vulnerabilities.total !== findings.length) throw new Error('Auditoria npm inconsistente.')
   if (findings.length === 0) {
-    if (audit.metadata.vulnerabilities.total !== 0) throw new Error('Auditoria npm inconsistente.')
     return { findings: 0, temporary: false }
   }
   if (now.getTime() >= new Date(temporaryPicomatchRisk.expiresAt).getTime()) {

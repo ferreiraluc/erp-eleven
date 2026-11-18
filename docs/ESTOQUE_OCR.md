@@ -758,7 +758,9 @@ No app Android/iOS, **Tirar foto/Câmera** abre diretamente a câmera nativa e
 **Escolher foto/Adicionar fotos/Enviar foto** abre a galeria, inclusive na edição
 massiva. A câmera não grava automaticamente no álbum do aparelho. Cancelar mantém
 a imagem anterior; resultados de um formulário fechado ou sessão encerrada não
-são aplicados. No navegador, são preservados os seletores de arquivos existentes;
+são aplicados. Na galeria iOS, fotos HEIC são convertidas pelo seletor nativo para
+JPEG antes da importação; o ERP continua validando o formato real da imagem.
+No navegador, são preservados os seletores de arquivos existentes;
 o suporte à captura direta depende do navegador. A correção nativa exige instalar
 o APK atualizado e não é entregue apenas pelo deploy do site.
 
