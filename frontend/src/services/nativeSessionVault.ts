@@ -23,7 +23,21 @@ export function nativeSessionStorageMessage(locale = 'pt'): string {
   if (locale.startsWith('en')) return 'The device secure storage is unavailable. Unlock the device and try again.'
   return 'Não foi possível acessar o armazenamento seguro do aparelho. Desbloqueie-o e tente novamente.'
 }
-interface NativeSessionRecord { version: 1; token: string; expiresAt: number | null; nonce: string }
+export interface NativeOfflineViewer {
+  id: string
+  name: string
+  profile: 'standard' | 'reseller'
+  verifiedAt: number
+}
+interface NativeSessionRecord { version: 1; token: string; expiresAt: number | null; nonce: string; offlineViewer?: NativeOfflineViewer }
+
+function validViewer(value: unknown): value is NativeOfflineViewer {
+  if (!value || typeof value !== 'object') return false
+  const v = value as NativeOfflineViewer
+  return typeof v.id === 'string' && v.id.length > 0 && v.id.length <= 128 &&
+    typeof v.name === 'string' && v.name.length <= 200 &&
+    ['standard', 'reseller'].includes(v.profile) && Number.isFinite(v.verifiedAt) && v.verifiedAt > 0
+}
 
 /** Only a random marker is stored in WebStorage. It prevents an older Keychain
  * entry from restoring an account after an interrupted logout or reinstall. */
@@ -40,6 +54,27 @@ export class NativeSessionVault {
   get token() { return this.record?.token || null }
   get expiresAt() { return this.record?.expiresAt ?? null }
   get isRemembered() { return this.remembered }
+
+  /** Read-only identity from a previous /auth/me, never an online permission. */
+  offlineViewer(token: string): NativeOfflineViewer | null {
+    const record = this.record
+    if (!record || record.token !== token || !validViewer(record.offlineViewer) ||
+        record.expiresAt === null || record.expiresAt <= Date.now() ||
+        record.offlineViewer.verifiedAt > Date.now() + 60000) return null
+    try {
+      const claims = JSON.parse(atob(token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')))
+      if (!claims.sid || claims.sub !== record.offlineViewer.id || !Number.isFinite(claims.exp) || claims.exp * 1000 <= Date.now()) return null
+    } catch { return null }
+    return { ...record.offlineViewer }
+  }
+
+  rememberOfflineViewer(token: string, viewer: NativeOfflineViewer | null) {
+    if (!this.record || this.record.token !== token) return
+    const record = { ...this.record, nonce: this.nonce() }
+    if (viewer && validViewer(viewer)) record.offlineViewer = { ...viewer }
+    else delete record.offlineViewer
+    this.replace(record, this.remembered)
+  }
 
   async initialize(): Promise<void> {
     if (this.ready) return

@@ -11,6 +11,7 @@ export function createAuthGuard(getAuth: () => ReturnType<typeof useAuthStore>) 
     // Returning a redirect from an old guard can override newer Vue navigation.
     if (navigation !== navigationEpoch) return false
     if (storedToken() !== ownerToken && (storedToken() || auth.isLoading)) return false
+    if (auth.status === 'offline') return to.path === '/inventory' ? true : '/inventory'
     if (to.meta.requiresAuth && !verified) return '/login'
     if (!verified) return true
     if (auth.user?.must_change_password && to.path !== '/conta') return '/conta'

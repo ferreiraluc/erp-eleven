@@ -1,7 +1,9 @@
 import { reactive } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import api from './api'
 import { cachedItem, type CatalogFilters, type CatalogRow } from './catalogSearch'
 import { storedToken, tokenIsCurrent } from './sessionStorage'
+import { prepareOfflineCatalog, searchOfflineCatalog } from './offlineCatalog'
 export const catalogCacheState = reactive({
   supported: typeof Worker !== 'undefined' && typeof indexedDB !== 'undefined',
   loading: false,
@@ -77,6 +79,10 @@ function scheduleSync(delay = 5000) {
 }
 export async function prepareCatalogIndex(userId?: string) {
   const token = storedToken()
+  if (Capacitor.isNativePlatform()) {
+    if (userId && token && tokenIsCurrent(token)) await prepareOfflineCatalog({ userId, token })
+    return
+  }
   if (!catalogCacheState.supported || !userId || !token || !tokenIsCurrent(token)) return
   if (ownerToken !== token || ownerId !== userId) {
     epoch++
@@ -206,6 +212,14 @@ export async function refreshCatalogIndex(manual = false) {
   }
 }
 export async function searchDeviceCatalog(query: string, filters: CatalogFilters = {}) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await searchOfflineCatalog(query, filters, { limit: 50 })
+      // Existing online PDV/stock flows remain provisional and revalidate before
+      // acting; only the dedicated read-only screen displays saved quantities.
+      return result.items.map(row => cachedItem(row as CatalogRow))
+    } catch { return [] }
+  }
   busyUntil = Date.now() + 1500
   syncController?.abort()
   if (!current() || !worker) return []

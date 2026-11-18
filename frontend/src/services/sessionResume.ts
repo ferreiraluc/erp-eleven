@@ -11,6 +11,7 @@ export async function resumeVerifiedSession(auth: ReturnType<typeof useAuthStore
     // A new identity or a new pending login owns its own navigation instead.
     if (auth.token || auth.isLoading || auth.status !== 'guest') return
   }
-  if (!valid) await router.replace('/login')
+  if (!valid && auth.status === 'offline') await router.replace('/inventory')
+  else if (!valid) await router.replace('/login')
   else if (auth.user?.must_change_password) await router.replace('/conta')
 }

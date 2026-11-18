@@ -1525,6 +1525,68 @@ navegador. Fotos não participam desse índice. A persistência e a execução e
 seguem as APIs [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 e [Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
 
+### Consulta offline no aplicativo nativo (17/11/2026)
+
+O APK/iOS preparado usa um snapshot próprio, `eleven-offline-catalog-v1`, para a
+tela **Consulta offline**. O índice anterior continua no navegador; no aplicativo,
+`catalogIndex` delega ao novo worker, sem manter dois catálogos completos na RAM.
+Nos fluxos online de Estoque/PDV, resultados locais continuam provisórios e exigem
+confirmação do servidor antes de agir. A tela offline permite somente consultar.
+
+`GET /api/inventory/offline-catalog` entrega páginas por ID de até 500 produtos:
+identificação, atributos, descrição de até 512 caracteres, preço/moeda de venda,
+quantidade física, reservada e disponível em **Loja e Depósito**. Não exporta custo,
+fornecedor, cliente, documento, histórico nem fotos originais. O perfil revendedor
+usa a mesma projeção de consulta; não ganha acesso de escrita. Saldos nulos,
+incoerentes ou reservas inválidas permanecem desconhecidos. Saldo negativo legítimo
+é preservado. `stock_confirmed` significa apenas consistência na coleta, nunca
+estoque atual confirmado sem conexão.
+
+A preparação inicia após cinco segundos de uso autenticado no app e tenta uma
+cópia completa a cada **15 minutos enquanto estiver visível**, além da atualização
+manual. A verificação local ocorre a cada minuto; não faz uma requisição por
+minuto quando a cópia ainda é recente. Reconexão e retomada reavaliam a necessidade.
+Busca/toques/teclas têm prioridade e pausam a cópia de fundo. Falha de rede/quota
+preserva a última geração completa, com retentativas espaçadas. A geração só é
+publicada depois da validação de todas as páginas e construção do índice; estágio
+interrompido não substitui dados consultáveis. Logout/expiração apagam o snapshot;
+próximo login aguarda essa limpeza, evitando mistura entre contas.
+
+Não há delta transacional ou replicação do PostgreSQL: cada página representa o
+momento em que foi coletada. A tela informa a data da cópia, e cada produto conserva
+`snapshot_at`; uma venda após a coleta pode mudar o saldo. A próxima cópia completa
+também remove produtos excluídos definitivamente. Não usar somente `updated_at`
+como promessa de sincronização incremental: exclusões físicas e transações tardias
+precisam de um changelog próprio em uma evolução futura. Para 50 mil produtos,
+uma cópia corresponde a até 100 requisições de dados; não a 100 requisições por
+minuto. Limites: 75 mil registros e 64 MiB de JSON, sujeitos à quota do aparelho.
+RAM inclui objetos e índices do worker, além do estágio em atualização; 64 MiB não
+é uma garantia de consumo total. A descrição completa permanece na consulta online.
+
+Uma miniatura JPEG de até 256 px por produto pode ser preparada em lotes de 12,
+com intervalo de três segundos, após a cópia do texto/saldo e com prioridade aos
+resultados visualizados e produtos recentes. Usa o endpoint existente de miniaturas;
+nunca baixa originais ou galerias. Persistência máxima de **128 MiB**, adicional ao
+catálogo, limitada também pela quota real do navegador. Versões antigas são removidas.
+Falhas têm backoff e limite de três tentativas; fila vazia/limite atingido não mantém
+requisições em loop. Nova cópia, reconexão ou retorno ao primeiro plano reavaliam
+as pendências. Não existe garantia de baixar todas as imagens nem de sincronizar com
+app fechado. Uma miniatura ausente não impede a consulta dos dados.
+
+Autorização offline, restrição até 21h e diferença entre atualização web/binário
+estão em [Aplicativos mobile](APLICATIVOS_MOBILE.md). Não há venda, pagamento,
+movimentação nem impressão offline nesta etapa, nem sincronização de escritas.
+
+Validação: testes de projeção/perfil e lifecycle, busca sobre 50 mil registros e
+`node frontend/scripts/check-offline-worker.mjs`, que usa Chrome com perfil temporário
+e IndexedDB real, exclusivamente com dados sintéticos. A fixture verificou paginação,
+QR, normalização de legado, saldo desconhecido, reabertura, isolamento de conta,
+exclusão no logout e preservação da geração anterior após `QuotaExceededError`
+injetado no armazenamento. O limite de miniaturas foi verificado com metadados de
+orçamento, sem gravar 128 MiB de imagens artificiais. Nesta execução, 50 mil registros
+ocuparam 30.466.773 bytes serializados e a carga/reabertura/verificações levaram
+6.839 ms neste computador; isso não é garantia de tempo, RAM ou quota no Android/iOS.
+
 
 ## Leitor de câmera compartilhado com o PDV
 

@@ -61,11 +61,13 @@ from ...services.inventory_grade_management import (
 
 from .inventory_receiving import router as receiving_router, lot_filter
 from .inventory_grade_analysis import router as grade_analysis_router
+from .inventory_offline import router as offline_catalog_router
 from uuid import UUID
 
 router = APIRouter()
 router.include_router(receiving_router)
 router.include_router(grade_analysis_router)
+router.include_router(offline_catalog_router)
 
 
 @router.get('/search-index')
