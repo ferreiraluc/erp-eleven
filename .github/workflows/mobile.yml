@@ -67,12 +67,12 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release-unsigned.apk mobile-artifacts/Eleven-Android-unsigned.apk
           cd mobile-artifacts
           sha256sum *.apk *.aab > SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Eleven-Android-Piloto-${{ github.sha }}
           path: frontend/mobile-artifacts/
           retention-days: 30
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: Android-validation-reports
@@ -112,7 +112,7 @@ jobs:
           cp dist-mobile/mobile-build.json mobile-artifacts/
           cd mobile-artifacts
           shasum -a 256 *.zip > SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Eleven-iOS-Simulator-${{ github.sha }}
           path: frontend/mobile-artifacts/
