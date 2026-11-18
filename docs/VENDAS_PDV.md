@@ -69,6 +69,20 @@ exibem essa situação e as quantidades/valores devolvidos no comprovante. Não 
 apresentadas como uma venda normal. O ticket conserva o snapshot da revisão enviada.
 Alterações posteriores não reimprimem automaticamente.
 
+O botão **Outra cópia** permanece visível enquanto há um ticket na fila ou em
+processamento, mas fica desabilitado com explicação para evitar duplicação. Com
+o modal visível e conexão disponível, o estado pendente é consultado
+automaticamente; voltar ao aplicativo também permite atualizar a consulta. Isso
+somente lê a fila: não cria nem repete uma impressão. Ao concluir o envio, o botão
+é habilitado para a confirmação habitual. Sem confirmação de estado atual, a
+interface pede atualização antes de permitir nova cópia. O aceite da conexão
+da impressora continua sem comprovar a saída física do papel.
+Se a resposta de uma solicitação de cópia se perder, o modal conserva a chave
+da tentativa e oferece **Retomar solicitação anterior**, com confirmação
+explícita. Consultar o estado ou cancelar a confirmação não gera uma nova chave.
+Uma tentativa já aceita não imprime novamente; uma tentativa que não chegou ao
+servidor ainda pode ser aceita ao retomá-la. Não há reenvio automático.
+
 Filas A4 e tickets permanecem separadas. Para bobina contínua de 80 mm, selecione
 **Bobina contínua** em Configurações → Impressora de tickets: uma página com altura calculada (até 991 mm),
 sem separação em etiquetas. Requer agente Windows 2026.10.14.3. Etiquetas fixas

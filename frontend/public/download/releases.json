@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "android": {
     "status": "ready",
-    "version": "1.0.4",
-    "url": "https://github.com/ferreiraluc/erp-eleven/releases/download/android-v1.0.4/Eleven-Android.apk",
+    "version": "1.0.5",
+    "url": "https://github.com/ferreiraluc/erp-eleven/releases/download/android-v1.0.5/Eleven-Android.apk",
     "sizeBytes": 45956604,
-    "sha256": "7a1315c417a05162a82237040fdb7960c490320cdbe64db75edbd47c53905658",
+    "sha256": "9bae03caa81b3394bdf7aa04107cafcbbef556ce918a336ebe8e97633487a339",
     "minVersion": "Android 8 ou superior"
   },
   "ios": {

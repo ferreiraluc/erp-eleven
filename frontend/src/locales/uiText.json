@@ -3939,10 +3939,40 @@
     "es": "Otra copia",
     "en": "Another copy"
   },
-  "Confira o papel e a fila do Windows. Confirmar envia uma nova cópia, mesmo que a anterior já tenha saído.": {
-    "pt": "Confira o papel e a fila do Windows. Confirmar envia uma nova cópia, mesmo que a anterior já tenha saído.",
-    "es": "Revise el papel y la cola de Windows. Confirmar envía una nueva copia, aunque la anterior ya se haya impreso.",
-    "en": "Check the paper and Windows queue. Confirming sends another copy, even if the previous one was printed."
+  "Confira o papel e a fila da impressora. Confirmar envia uma nova cópia, mesmo que a anterior já tenha saído.": {
+    "pt": "Confira o papel e a fila da impressora. Confirmar envia uma nova cópia, mesmo que a anterior já tenha saído.",
+    "es": "Revise el papel y la cola de la impresora. Confirmar envía una nueva copia, aunque la anterior ya se haya impreso.",
+    "en": "Check the paper and printer queue. Confirming sends another copy, even if the previous one was printed."
+  },
+  "Para evitar impressões duplicadas, aguarde o ticket sair da fila antes de pedir outra cópia. O estado é atualizado automaticamente.": {
+    "pt": "Para evitar impressões duplicadas, aguarde o ticket sair da fila antes de pedir outra cópia. O estado é atualizado automaticamente.",
+    "es": "Para evitar impresiones duplicadas, espere a que el ticket salga de la cola antes de pedir otra copia. El estado se actualiza automáticamente.",
+    "en": "To avoid duplicate prints, wait for the receipt to leave the queue before requesting another copy. Status updates automatically."
+  },
+  "Conecte-se e atualize o estado antes de solicitar uma impressão.": {
+    "pt": "Conecte-se e atualize o estado antes de solicitar uma impressão.",
+    "es": "Conéctese y actualice el estado antes de solicitar una impresión.",
+    "en": "Connect and refresh the status before requesting a print."
+  },
+  "Reabra o ticket após entrar novamente no sistema.": {
+    "pt": "Reabra o ticket após entrar novamente no sistema.",
+    "es": "Vuelva a abrir el ticket después de iniciar sesión nuevamente.",
+    "en": "Reopen the receipt after signing in again."
+  },
+  "Aguardando confirmação do estado do ticket.": {
+    "pt": "Aguardando confirmação do estado do ticket.",
+    "es": "Esperando confirmación del estado del ticket.",
+    "en": "Waiting for receipt status confirmation."
+  },
+  "Retomar solicitação anterior": {
+    "pt": "Retomar solicitação anterior",
+    "es": "Retomar la solicitud anterior",
+    "en": "Resume previous request"
+  },
+  "A resposta da tentativa anterior não chegou. Retome a mesma solicitação: se já foi aceita, não imprime outra cópia. Se ainda não foi aceita, poderá imprimir. Confira o papel antes de continuar.": {
+    "pt": "A resposta da tentativa anterior não chegou. Retome a mesma solicitação: se já foi aceita, não imprime outra cópia. Se ainda não foi aceita, poderá imprimir. Confira o papel antes de continuar.",
+    "es": "No llegó la respuesta del intento anterior. Retome la misma solicitud: si ya fue aceptada, no imprime otra copia. Si aún no fue aceptada, podrá imprimir. Revise el papel antes de continuar.",
+    "en": "The previous attempt's response did not arrive. Resume the same request: if already accepted, it will not print another copy. If not yet accepted, it may print. Check the paper before continuing."
   },
   "Confirmar nova cópia": {
     "pt": "Confirmar nova cópia",
