@@ -229,7 +229,7 @@ rodapé do login web. Não há publicação pública nas buscas das lojas nesta 
 A página tem recursos próprios, sem carregar o ERP ou exigir uma sessão, mas o
 aplicativo continua exigindo login e as mesmas permissões do servidor.
 
-- **Android:** APK privado definitivo **1.0.4**, com versão, tamanho e SHA-256,
+- **Android:** APK privado definitivo **1.0.5**, com versão, tamanho e SHA-256,
   assinado com chave de release estável. A identidade `com.elevenparispy.erp` é
   distinta do `.pilot`: instala separado do piloto e pede um novo login. Os dados
   continuam no ERP, sem migração ou cópia. Atualizações dessa versão devem preservar
@@ -428,3 +428,24 @@ IndexedDB real no Chromium com 50.000 produtos sintéticos: 30.466.773 bytes de
 catálogo serializado, persistência/reabertura, busca, isolamento, limpeza e
 preservação da cópia anterior em falha de quota. Essa medição não é consumo de
 RAM, limite de armazenamento do Android nem benchmark de tempo em celulares.
+
+### Android 1.0.5 — estado e reimpressão do ticket
+
+A versão 1.0.5 (`versionCode=6`) usa a mesma assinatura e pode ser instalada
+sobre as versões anteriores. O frontend incorporado corresponde ao commit
+`49aa03eb9a444eec81b830d11a3dd3d6d604b14f`; o manifesto registra o tamanho e
+SHA-256 do APK assinado. O workflow de release inclui a configuração Firebase
+existente. Mantém o catálogo offline e as notificações da versão anterior.
+
+O modal de ticket no PDV e nas vendas conserva **Outra cópia** visível, mas
+desabilitada enquanto o trabalho está na fila. Consulta automaticamente o estado
+quando visível/conectado e retoma a consulta ao voltar ao app; isso não dispara
+outra impressão. Perda da resposta de uma solicitação de cópia permite retomada
+explícita da mesma chave, com aviso antes de prosseguir. A confirmação habitual
+continua obrigatória para uma nova cópia. Consulte `VENDAS_PDV.md`.
+
+Testes de interface, tipagem, build, sync/check mobile, compilação e lint Android
+foram aprovados. A identidade do APK, configuração FCM, integridade e assinatura
+v2/v3 foram conferidas antes da publicação. Nenhuma impressão operacional foi
+acionada para validar a interface. O aceite TCP não comprova a saída física do
+papel; confirmar no aparelho após instalar. Atualizar o site não substitui o APK.
