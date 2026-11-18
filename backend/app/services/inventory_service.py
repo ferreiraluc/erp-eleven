@@ -40,6 +40,9 @@ def create_movement(
     location_from: Optional[str] = None,
     location_to: Optional[str] = None,
     notes: Optional[str] = None,
+    *,
+    allow_pdv_negative_stock: bool = False,
+    allow_pdv_restitution: bool = False,
 ) -> StockMovement:
     # Stock checks never need the original photo, including mixed photo/count batches.
     item = db.query(Item).options(defer(Item.image_data)).filter(Item.id == item_id).with_for_update().first()
@@ -60,6 +63,18 @@ def create_movement(
         mv_type = MovementType[movement_type]
     except KeyError:
         raise StockMovementError("Tipo de movimentação inválido.") from None
+    if allow_pdv_negative_stock:
+        # Only the ordinary PDV checkout passes this explicit confirmation. It
+        # must never become a general transfer/reservation/adjustment bypass.
+        if mv_type != MovementType.exit or reference_type != 'pdv_sale' or reason != 'pdv_sale':
+            raise StockMovementError('A confirmação de venda sem saldo não se aplica a esta movimentação.', 409)
+        try:
+            uuid.UUID(str(reference_id))
+        except (ValueError, TypeError, AttributeError):
+            raise StockMovementError('A venda sem saldo precisa estar vinculada à venda do PDV.', 409) from None
+    if allow_pdv_restitution and (mv_type != MovementType.entry or reference_type != 'pdv_sale'
+            or reason not in ('pdv_cancel', 'pdv_return', 'pdv_delete', 'pdv_edit')):
+        raise StockMovementError('A reposição confirmada precisa estar vinculada a uma operação do PDV.', 409)
     if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity < 0 or (quantity == 0 and mv_type != MovementType.adjustment):
         raise StockMovementError("Informe uma quantidade inteira positiva; ajuste pode ser zero.")
     if quantity > 2_147_483_647:
@@ -82,14 +97,18 @@ def create_movement(
     reserved_loja, reserved_deposito = item.reserved_loja, item.reserved_deposito
     if any(value is None or value < 0 for value in (reserved_loja, reserved_deposito)):
         raise StockMovementError('As reservas deste produto precisam de conferência antes de movimentar o estoque.', 409)
-    if mv_type != MovementType.adjustment and (loja < 0 or deposito < 0 or item.current_stock != loja + deposito):
+    negative_allowed = allow_pdv_negative_stock or allow_pdv_restitution
+    if mv_type != MovementType.adjustment and (item.current_stock != loja + deposito
+            or not negative_allowed and (loja < 0 or deposito < 0)):
         raise StockMovementError("O saldo por local diverge do total ou está negativo. Confira o inventário e registre um ajuste antes de movimentar.", 409)
     source = deposito if (loc_from if mv_type == MovementType.transfer else loc) == 'deposito' else loja
-    if mv_type in (MovementType.exit, MovementType.transfer) and quantity > source:
-        raise StockMovementError(f"Saldo insuficiente no local de origem: disponível {source}, solicitado {quantity}.", 409)
     held = reserved_deposito if (loc_from if mv_type == MovementType.transfer else loc) == 'deposito' else reserved_loja
-    if mv_type in (MovementType.exit, MovementType.transfer) and quantity > source - held:
+    if mv_type in (MovementType.exit, MovementType.transfer) and held > 0 and quantity > source - held:
         raise StockMovementError(f'Este produto tem {held} unidade(s) reservada(s) em pedidos no local de origem. Disponível: {source - held}. Confira o pedido antes de movimentar.', 409)
+    if mv_type in (MovementType.exit, MovementType.transfer) and quantity > source and not allow_pdv_negative_stock:
+        raise StockMovementError(f"Saldo insuficiente no local de origem: disponível {source}, solicitado {quantity}.", 409)
+    if allow_pdv_negative_stock and min(source - quantity, loja + deposito - quantity) < -2_147_483_648:
+        raise StockMovementError("O saldo resultante excede o limite permitido.")
     if mv_type == MovementType.adjustment and quantity < held:
         raise StockMovementError(f'O saldo informado é menor que as {held} unidade(s) reservada(s) em pedidos. Libere ou confira a reserva antes de ajustar o estoque.', 409)
     destination = deposito if (loc_to if mv_type == MovementType.transfer else loc) == 'deposito' else loja
@@ -146,6 +165,11 @@ def create_movement(
         if existing_stock + quantity > 0:
             new_cost = (existing_stock * existing_cost + quantity * unit_cost) / (existing_stock + quantity)
             item.cost_price = new_cost
+
+    if allow_pdv_negative_stock and source - quantity < 0:
+        reason = 'pdv_sale_negative_stock'
+        confirmation = f'Venda com saldo insuficiente confirmada no PDV. Saldo em {loc}: {source} → {source - quantity}.'
+        notes = f'{notes}\n{confirmation}' if notes else confirmation
 
     movement = StockMovement(
         item_id=item_id,

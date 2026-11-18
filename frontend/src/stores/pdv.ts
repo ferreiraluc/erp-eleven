@@ -59,6 +59,8 @@ export const usePdvStore = defineStore('pdv', () => {
   const stockSnapshots = ref<Record<string, CatalogStockSnapshot>>({})
   const payments = ref<CartPayment[]>([])
   const discountGs = ref(0)
+  const discountCurrency = ref('PYG')
+  const allowNegativeStock = ref(false)
   const clienteId = ref<string | null>(null)
   const clienteNome = ref<string | null>(null)
   const notas = ref('')
@@ -95,8 +97,20 @@ export const usePdvStore = defineStore('pdv', () => {
   }
 
   function availableStock(itemId: string, location: string, excludeId?: string): number | null {
-    try { return Math.max(0, stockAt(stockSnapshots.value[itemId], location) - reservedStock(itemId, location, excludeId)) }
+    try { return stockAt(stockSnapshots.value[itemId], location) - reservedStock(itemId, location, excludeId) }
     catch { return null }
+  }
+
+  function canSellWithoutStock(itemId: string, location: string): boolean {
+    try {
+      stockAt(stockSnapshots.value[itemId], location)
+      return (stockSnapshots.value[itemId][location === 'loja' ? 'reserved_loja' : 'reserved_deposito'] ?? 0) === 0
+    } catch { return false }
+  }
+
+  function hasNegativeBalance(itemId: string): boolean {
+    const snapshot = stockSnapshots.value[itemId]
+    return !!snapshot && ((snapshot.stock_loja ?? 0) < 0 || (snapshot.stock_deposito ?? 0) < 0)
   }
 
   function validateLine(item: Omit<CartItem, 'id'>, excludeId?: string) {
@@ -106,7 +120,11 @@ export const usePdvStore = defineStore('pdv', () => {
     if (!item.item_id) throw new PdvCartError('missingProduct')
     const available = stockAt(stockSnapshots.value[item.item_id], item.location)
     const requested = reservedStock(item.item_id, item.location, excludeId) + item.quantity
-    if (!Number.isFinite(requested) || requested > available) throw new PdvCartError('insufficientStock', { available, requested })
+    const needsException = requested > available || hasNegativeBalance(item.item_id)
+    if (!Number.isFinite(requested) || (needsException &&
+        !(allowNegativeStock.value && (requested <= available || canSellWithoutStock(item.item_id, item.location))))) {
+      throw new PdvCartError('insufficientStock', { available, requested })
+    }
   }
 
   function addItem(item: Omit<CartItem, 'id'>, snapshot?: CatalogStockSnapshot) {
@@ -237,6 +255,8 @@ export const usePdvStore = defineStore('pdv', () => {
     cart.value = []
     payments.value = []
     discountGs.value = 0
+    discountCurrency.value = 'PYG'
+    allowNegativeStock.value = false
     clienteId.value = null
     clienteNome.value = null
     notas.value = ''
@@ -266,6 +286,7 @@ export const usePdvStore = defineStore('pdv', () => {
     try {
       const body: PdvSaleCreate = {
         print_receipt: true,
+        allow_negative_stock: allowNegativeStock.value,
         usd_rate_gs: usdRateGs,
         vendedor_id: vendedorId || undefined,
         cliente_id: clienteId.value || undefined,
@@ -321,10 +342,10 @@ export const usePdvStore = defineStore('pdv', () => {
   }
 
   return {
-    cart, payments, discountGs, clienteId, clienteNome, notas,
+    cart, payments, discountGs, discountCurrency, allowNegativeStock, clienteId, clienteNome, notas,
     loading, checkoutUncertain, lastSale, clients,
     subtotal, total, totalPaid, troco, remaining, cartCount,
-    rememberStock, availableStock, addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount, updateItemOriginalPrice,
+    rememberStock, availableStock, canSellWithoutStock, hasNegativeBalance, addItem, removeItem, updateItemQty, updateItemPrice, updateItemDiscount, updateItemOriginalPrice,
     roundCartTotalToPayment, undoCartTotalRounding, addPayment, removePayment, clearCart, completeSale, loadClients,
   }
 })

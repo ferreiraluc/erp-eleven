@@ -6,7 +6,7 @@ from ..models.cliente import Cliente
 from .customer_documents import normalized_number
 
 
-def directory_match(term):
+def directory_match(term, *, identity_match=None):
     pattern = '%' + term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
     document_number = normalized_number(term)
     document_query = len(document_number) >= 3 and any(char.isdigit() for char in document_number) and all(
@@ -29,6 +29,8 @@ def directory_match(term):
         if document_query:
             matches.extend((normalized_document(row.cpf).contains(document_number, autoescape=True),
                 normalized_document(cast(row.documentos, String)).contains(document_number, autoescape=True)))
+        if identity_match is not None:
+            matches.append(identity_match(row))
         return or_(*matches)
 
     alias = aliased(Cliente)

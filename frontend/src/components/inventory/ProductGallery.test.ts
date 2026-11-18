@@ -7,6 +7,9 @@ const mock = vi.hoisted(() => ({ prepare: vi.fn(), photos: vi.fn(), update: vi.f
 vi.mock('@/services/productGallery', () => ({ MAX_PRODUCT_PHOTOS: 5, prepareGalleryFile: mock.prepare, galleryPreview: async (v: string) => 'preview:' + v }))
 vi.mock('@/services/productPhoto', () => ({ catalogForStorage: async (v: string) => v }))
 vi.mock('@/services/api', () => ({ inventoryAPI: { getItemPhotos: mock.photos, updateItem: mock.update, getByBarcode: async () => [], getDistinctValues: async () => ({ brands: [], categories: [] }) }, ocrAPI: {} }))
+const native = vi.hoisted(() => ({ enabled: false, select: vi.fn() }))
+vi.mock('@/services/nativePhotos', () => ({ usesNativePhotos: () => native.enabled, selectNativePhotos: native.select,
+  nativePhotoSession: (current: () => boolean) => current, nativePhotoErrorText: () => 'Permita o acesso à câmera.' }))
 let app: App, root: HTMLDivElement
 const state = reactive({ cover: 'main', additional: ['side'] })
 const flush = async () => { for (let i = 0; i < 5; i++) { await Promise.resolve(); await nextTick() } }
@@ -15,8 +18,8 @@ function mountForm() {
   app = createApp(ItemFormModal, { item: { id: 'fixture', name: 'Camiseta S', size: 'S', image_data: 'main', current_stock: 1, stock_loja: 1, stock_deposito: 0 } })
   app.use(createI18n({ legacy: false, locale: 'pt', messages: { pt: {} } })).mount(root)
 }
-function mountGallery() {
-  app = createApp({ render: () => h(ProductGallery, { ...state, editable: true, expanded: true,
+function mountGallery(readOnly = false) {
+  app = createApp({ render: () => h(ProductGallery, { ...state, editable: true, expanded: true, readOnly,
     'onUpdate:cover': (v: string) => state.cover = v, 'onUpdate:additional': (v: string[]) => state.additional = v }) })
   app.use(createI18n({ legacy: false, locale: 'pt', messages: { pt: {} } })).mount(root)
 }
@@ -26,6 +29,7 @@ async function files(count: number) {
   input.dispatchEvent(new Event('change', { bubbles: true })); await flush()
 }
 beforeEach(() => {
+  native.enabled = false; native.select.mockResolvedValue([])
   root = document.createElement('div'); document.body.append(root)
   state.cover = 'main'; state.additional = ['side']
   mock.prepare.mockImplementation(async (f: File) => f.name)
@@ -33,6 +37,22 @@ beforeEach(() => {
   mock.update.mockResolvedValue({ id: 'fixture' })
 })
 afterEach(() => { app?.unmount(); root.remove(); vi.clearAllMocks() })
+it('adds a native camera photo through the same compression and limits the separate photo picker to remaining slots', async () => {
+  native.enabled = true
+  native.select.mockResolvedValueOnce([new File(['fixture'], 'camera.jpg', { type: 'image/jpeg' })])
+  mountGallery(); button('Câmera').click(); await flush()
+  expect(native.select).toHaveBeenCalledWith('camera', expect.objectContaining({ limit: 1 }))
+  expect(state.additional).toEqual(['side', 'camera.jpg'])
+  button('＋ Adicionar fotos').click(); await flush()
+  expect(native.select).toHaveBeenLastCalledWith('photos', expect.objectContaining({ limit: 2 }))
+  expect(state.additional).toEqual(['side', 'camera.jpg'])
+})
+it('does not open the native camera for a read-only product', async () => {
+  native.enabled = true
+  mountGallery(true); button('Câmera').click(); button('＋ Adicionar fotos').click(); await flush()
+  expect(native.select).not.toHaveBeenCalled()
+  expect(mock.prepare).not.toHaveBeenCalled()
+})
 it('adds up to five compressed photos and rejects overflow without dropping existing photos', async () => {
   mountGallery(); await files(4)
   expect(mock.prepare).not.toHaveBeenCalled(); expect(root.textContent).toContain('limite de 5')

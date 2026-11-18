@@ -95,8 +95,12 @@ específica: códigos válidos, prévia e confirmação. A foto não é arquivad
 `pdv_*`; `/bi-vendas` usa snapshots de planilhas. São três fontes diferentes e não
 podem ser somadas como se fossem o mesmo faturamento.
 
-O PDV confere o estoque por local ao concluir, recusa saídas acima do saldo e
-devolve ao local original ao cancelar. Quantidades de catálogo são inteiras;
+O PDV confere o estoque por local ao concluir. No PDV comum, uma confirmação
+explícita por venda permite vender sem saldo e registrar a quantidade negativa
+para conferência posterior; reservas de pedidos, saldo desconhecido e divergências
+continuam bloqueando a operação. Sem essa confirmação, saídas acima do saldo são
+recusadas. Cancelamentos e devoluções restituem ao local original, inclusive
+quando uma devolução parcial ainda deixa saldo negativo. Quantidades de catálogo são inteiras;
 avulsos não movimentam estoque. Limites, concorrência e pendências do cancelamento
 financeiro estão no [guia de estoque](ESTOQUE_OCR.md#estoque-no-pdv).
 

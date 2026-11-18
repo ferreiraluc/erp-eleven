@@ -109,6 +109,51 @@ def test_invalid_alias_cycle_terminates_without_matching_another_customer(identi
     assert search(db, 'B-98.765')['items'] == []
 
 
+def test_pdv_alias_lookup_ignores_accents_and_word_order_without_merging_people(identity_search_db):
+    db = identity_search_db
+    principal = Cliente(nome='Davi Almeida')
+    same_name = Cliente(nome='Davi Muniz')
+    db.add_all([principal, same_name]); db.flush()
+    old = Cliente(nome='Muníz Davi', ativo=False, merged_into_id=principal.id)
+    db.add(old); db.flush()
+    result = search(db, 'davi muniz')['items']
+    assert {row['id'] for row in result} == {principal.id, same_name.id}
+    assert result[0]['id'] == same_name.id
+    # Searching returns choices; it never creates PDV accounts or identity links.
+    assert db.query(PdvCliente).count() == 0
+    assert same_name.merged_into_id is None
+
+
+def test_search_ranks_before_paging_and_pages_across_both_directories(identity_search_db):
+    db = identity_search_db
+    exact = Cliente(nome='Ana')
+    directory = [Cliente(nome=f'A Ana pessoa {i:02d}') for i in range(28)]
+    accounts = [PdvCliente(nome=f'A Ana vendedor {i:02d}') for i in range(23)]
+    db.add_all([exact, *directory, *accounts]); db.flush()
+    linked = PdvCliente(nome=directory[0].nome, cadastro_cliente_id=directory[0].id)
+    db.add(linked); db.flush()
+    expected = {('cadastro', row.id) for row in [exact, *directory[1:]]} | {
+        ('pdv', row.id) for row in [linked, *accounts]}
+    returned = []
+    for offset in range(0, len(expected), 7):
+        page = search(db, 'ana', limit=7, offset=offset)
+        returned.extend((row['source'], row['id']) for row in page['items'])
+        assert page['has_more'] == (offset + 7 < len(expected))
+    assert returned[0] == ('cadastro', exact.id)
+    assert len(returned) == len(set(returned)) == len(expected)
+    assert set(returned) == expected
+    assert search(db, 'ana', offset=len(expected)) == {'items': [], 'has_more': False}
+
+
+def test_search_displays_typed_document_that_matched_query(identity_search_db):
+    db = identity_search_db
+    person = Cliente(nome='Ana', documentos=[{'tipo': 'RUC', 'pais': 'PY', 'numero': '800123456'},
+        {'tipo': 'CI', 'pais': 'PY', 'numero': '3456789'}])
+    db.add(person); db.flush()
+    result = search(db, '3.456.789')['items'][0]
+    assert result['doc'] == '3456789' and result['doc_tipo'] == 'CI'
+
+
 def test_client_endpoints_search_alias_without_exposing_duplicate_card(logistics):
     factory, client, _ = logistics
     with factory() as db:

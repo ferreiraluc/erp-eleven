@@ -179,7 +179,8 @@ def test_reversed_product_order_in_two_sales_locks_consistently_and_conserves_st
     {'current_stock':10,'stock_loja':2},  # a preexisting/manual total mismatch
     {'current_stock':10,'stock_loja':10,'reserved_loja':3},  # order held stock while this sale waited
 ])
-def test_sale_waits_for_real_lock_then_rejects_new_balance_or_mismatch(pdv_pg,change):
+@pytest.mark.parametrize('allow_negative_stock', [False, True])
+def test_sale_waits_for_real_lock_then_revalidates_new_balance_or_mismatch(pdv_pg,change,allow_negative_stock):
     factory,client,cid,control,observer_engine=pdv_pg
     uid=item(factory)
     reader_ready=Queue();start_lock=Event()
@@ -191,7 +192,8 @@ def test_sale_waits_for_real_lock_then_rejects_new_balance_or_mismatch(pdv_pg,ch
         assert start_lock.wait(timeout=10)
     control['before_request']=preload
     with ThreadPoolExecutor(max_workers=1) as pool:
-        future=pool.submit(client.post,'/api/pdv/sales',json=payload(cid,[(uid,8,'loja')]))
+        body=payload(cid,[(uid,8,'loja')]);body['allow_negative_stock']=allow_negative_stock
+        future=pool.submit(client.post,'/api/pdv/sales',json=body)
         reader_pid=reader_ready.get(timeout=10)
         with factory() as writer:
             row=writer.query(Item).filter_by(id=uid).with_for_update().one()
@@ -207,12 +209,52 @@ def test_sale_waits_for_real_lock_then_rejects_new_balance_or_mismatch(pdv_pg,ch
             writer.commit()
         response=future.result(timeout=15)
     control.clear()
+    if allow_negative_stock and change == {'current_stock':2,'stock_loja':2}:
+        assert response.status_code==201,response.text
+        with factory() as db:
+            assert balances(db,uid)==(-6,-6,0)
+            movement=db.query(StockMovement).one()
+            assert (movement.quantity_before,movement.quantity_after)==(2,-6)
+            assert movement.reason=='pdv_sale_negative_stock'
+        return
     assert response.status_code==409,response.text
     with factory() as db:
         assert balances(db,uid)==(change['current_stock'],change['stock_loja'],0)
         assert db.get(PdvCliente,cid).saldo_fiado_gs==Decimal('0')
         for model in (PdvSale,PdvSaleItem,PdvPayment,PdvFiadoMovement,StockMovement):
             assert db.query(model).count()==0
+
+
+def test_confirmed_concurrent_sales_keep_each_negative_movement_without_lost_updates(pdv_pg):
+    factory,client,cid,control,_=pdv_pg
+    uid=item(factory,loja=0,deposito=0)
+    preload_barrier(control,[uid],[(0,0,0)])
+    body=payload(cid,[(uid,1,'loja')]);body['allow_negative_stock']=True
+    responses=post_two(client,['/api/pdv/sales']*2,[body,body])
+    control.clear()
+    assert [r.status_code for r in responses]==[201,201],[r.text for r in responses]
+    with factory() as db:
+        assert balances(db,uid)==(-2,-2,0)
+        assert db.query(PdvSale).count()==db.query(PdvPayment).count()==2
+        movements=db.query(StockMovement).all()
+        assert {(m.quantity_before,m.quantity_after) for m in movements}=={(0,-1),(-1,-2)}
+        assert all(m.reason=='pdv_sale_negative_stock' for m in movements)
+
+
+def test_concurrent_negative_stock_cancellations_restore_only_once(pdv_pg):
+    factory,client,cid,control,_=pdv_pg
+    uid=item(factory,loja=0,deposito=0)
+    body=payload(cid,[(uid,2,'loja')]);body['allow_negative_stock']=True
+    made=client.post('/api/pdv/sales',json=body)
+    assert made.status_code==201,made.text
+    sale_id=uuid.UUID(made.json()['id'])
+    preload_barrier(control,[uid],[(-2,-2,0)],sale_id)
+    responses=post_two(client,[f'/api/pdv/sales/{sale_id}/cancel']*2)
+    control.clear()
+    assert sorted(r.status_code for r in responses)==[200,400],[r.text for r in responses]
+    with factory() as db:
+        assert balances(db,uid)==(0,0,0)
+        assert db.query(StockMovement).count()==2
 
 
 @pytest.mark.parametrize('change',[

@@ -151,6 +151,27 @@ PostgreSQL verifica migração aditiva e confirmações concorrentes.
 
 ## No ERP
 
+### Buscar cliente no PDV e nos pedidos
+
+O seletor reúne o cadastro de **Clientes** e as contas PDV ativas, independentemente
+do tipo de cliente. A busca aceita partes do nome sem acento e em outra ordem,
+telefone, CPF/CI/RUC/RG e CEP dos endereços com vínculo confirmado. Nomes e contatos
+antigos de cadastros já unificados continuam encontrando o cadastro principal.
+Um cadastro já associado ao PDV aparece pela conta PDV; homônimos continuam como
+opções distintas e o operador sempre confirma qual pessoa selecionar.
+
+A ordenação prioriza nome, telefone ou documento principal exatos antes de paginar;
+em seguida vêm nomes iniciados pelo texto pesquisado e as demais correspondências.
+Cada consulta traz até 20 opções, com **Mostrar mais clientes** para continuar a
+mesma busca. Documento identificado por tipo, telefone e CEP ajudam a conferir a
+escolha; saldos financeiros não são enviados junto com as sugestões.
+
+O campo aguarda 250 ms após a digitação para consultar. Respostas de pesquisas
+anteriores, páginas adicionais obsoletas e sessões encerradas são descartadas.
+Se a rede falhar, **Tentar novamente** repete a consulta ou a página que faltou,
+preservando as opções já carregadas. Setas e Enter permitem escolher pelo teclado;
+apenas pesquisar não cria clientes, não une pessoas e não altera contas de fiado.
+
 ### Cards e atividade do cliente
 
 Em **Clientes**, cada cadastro usa um card expansível com o mesmo acabamento dos

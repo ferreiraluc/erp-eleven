@@ -15,6 +15,9 @@ const photos = vi.hoisted(() => ({
 vi.mock('@/services/api', () => ({ inventoryAPI: api }))
 vi.mock('@/services/productGallery', () => photos)
 vi.mock('@/services/productPhoto', () => photos)
+const native = vi.hoisted(() => ({ enabled: false, select: vi.fn() }))
+vi.mock('@/services/nativePhotos', () => ({ usesNativePhotos: () => native.enabled, selectNativePhotos: native.select,
+  nativePhotoSession: (current: () => boolean) => current, nativePhotoErrorText: () => 'Permita o acesso à câmera.' }))
 
 let app: App | undefined
 let root: HTMLDivElement
@@ -77,6 +80,7 @@ function closeEditor() {
 }
 
 beforeEach(() => {
+  native.enabled = false; native.select.mockResolvedValue([])
   api.getItem.mockImplementation(async (id: string) => ({ ...items.find(item => item.id === id), image_data: original }))
   photos.photoStatus.mockResolvedValue({ editing_available: true, model: 'gpt-image-1-mini' })
   photos.cutoutPhoto.mockResolvedValue(cutout)
@@ -94,6 +98,30 @@ afterEach(() => {
 })
 
 describe('Bulk photo editing with the shared photo assistant', () => {
+  it('captures one native photo for the opening color group even when the selected scope changes', async () => {
+    native.enabled = true
+    let finish!: (files: File[]) => void
+    native.select.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+    const { state, busy } = await mount({ scope: 'color:branco' })
+    button('Câmera').click(); await settle()
+    expect(native.select).toHaveBeenCalledWith('camera', expect.any(Object))
+    expect(busy).toHaveBeenLastCalledWith(true)
+    state.scope = 'color:azul'; await settle()
+    finish([new File(['camera'], 'camera.jpg', { type: 'image/jpeg' })]); await settle()
+    expect(Object.keys(state.draft)).toEqual(['white-s', 'white-m'])
+    expect(state.draft['white-s'].operation).toBe('replace')
+    expect(busy).toHaveBeenLastCalledWith(false)
+    expect(api.batchEdit).not.toHaveBeenCalled(); expect(api.updateItem).not.toHaveBeenCalled()
+  })
+
+  it('leaves prepared photos untouched after cancelling native selection', async () => {
+    native.enabled = true
+    const { state, updates } = await mount({ draft: { 'blue-s': oldPhoto } })
+    button('Enviar foto').click(); await settle()
+    expect(native.select).toHaveBeenCalledWith('photos', expect.any(Object))
+    expect(state.draft).toEqual({ 'blue-s': oldPhoto })
+    expect(updates).not.toHaveBeenCalled(); expect(photos.prepareGalleryFile).not.toHaveBeenCalled()
+  })
   it('loads only the selected original, removes its background once and stages it for all selected items', async () => {
     const { state, updates, busy } = await mount()
     expect(api.getItem).not.toHaveBeenCalled()

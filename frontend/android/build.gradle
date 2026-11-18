@@ -22,6 +22,41 @@ allprojects {
         google()
         mavenCentral()
     }
+    configurations.configureEach { configuration ->
+        // Capacitor's JVM unit tests declare an older JSON-java. Keep this fix
+        // out of application/runtime configurations; Android supplies org.json.
+        if (configuration.name.toLowerCase(Locale.ROOT).contains('test')) {
+            configuration.resolutionStrategy.eachDependency { dependency ->
+                if (dependency.requested.group == 'org.json' && dependency.requested.name == 'json' &&
+                    dependency.requested.version == '20250517') {
+                    dependency.useVersion('20260719')
+                    dependency.because('GHSA-ghc9-756g-vrcv: bound numeric parsing in JVM test fixtures')
+                }
+            }
+        }
+    }
+}
+
+// Check the actual resolved build/test artifacts, not just the override text.
+tasks.register('verifyNativeSecurityVersions') {
+    doLast {
+        if (gradle.gradleVersion != '8.14.7') throw new GradleException('Use the reviewed Gradle 8.14.7 wrapper')
+        [':capacitor-barcode-scanner', ':capacitor-camera', ':capacitor-filesystem'].each { name ->
+            def artifacts = project(name).buildscript.configurations.classpath.resolvedConfiguration.resolvedArtifacts
+            def kotlin = artifacts.find { it.moduleVersion.id.group == 'org.jetbrains.kotlin' && it.name == 'kotlin-gradle-plugin' }
+            if (kotlin?.moduleVersion?.id?.version != rootProject.ext.kotlin_version) {
+                throw new GradleException("${name} did not resolve patched Kotlin ${rootProject.ext.kotlin_version}")
+            }
+        }
+        def unitTests = project(':capacitor-android').configurations.releaseUnitTestRuntimeClasspath
+        // Inspect selected components, not Android artifact variants: resolving
+        // every AAR/jar here is ambiguous for the library's self test dependency.
+        def json = unitTests.incoming.resolutionResult.allComponents.find {
+            it.moduleVersion?.group == 'org.json' && it.moduleVersion?.name == 'json'
+        }
+        if (json?.moduleVersion?.version != '20260719') throw new GradleException('Capacitor unit tests must use JSON-java 20260719')
+        println('Native security: Gradle 8.14.7, Kotlin 2.4.20 and test-only JSON-java 20260719 resolved')
+    }
 }
 
 task clean(type: Delete) {

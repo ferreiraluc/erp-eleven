@@ -70,5 +70,7 @@
 	<string>Leia os códigos QR das etiquetas e fotografe produtos para o estoque Eleven.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Selecione fotos dos produtos e comprovantes que deseja adicionar ao ERP Eleven.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Permita salvar uma foto no aparelho quando você solicitar.</string>
 </dict>
 </plist>

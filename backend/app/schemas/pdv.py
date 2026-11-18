@@ -80,6 +80,7 @@ class PdvCustomerSelection(BaseModel):
 class PdvCustomerOption(PdvCustomerSelection):
     nome: str
     doc: Optional[str] = None
+    doc_tipo: Optional[str] = None
     telefone: Optional[str] = None
     ceps: List[str] = []
 
@@ -191,6 +192,7 @@ class PdvPaymentResponse(BaseModel):
 
 class PdvSaleCreate(BaseModel):
     usd_rate_gs: Optional[Decimal] = Field(default=None, gt=0, le=1000000)
+    allow_negative_stock: bool = Field(default=False, strict=True)
     print_receipt: bool = False
     vendedor_id: Optional[uuid.UUID] = None
     cliente_id: Optional[uuid.UUID] = None

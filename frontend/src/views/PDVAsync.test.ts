@@ -75,11 +75,12 @@ describe('PDV asynchronous product selection', () => {
   })
 
   it('does not restore cached recent stock over a newer search snapshot when the row is clicked', async () => {
+    vi.mocked(window.confirm).mockReturnValue(false)
     await mount()
     mocks.getItems.mockResolvedValueOnce({ items: [{ ...item, current_stock: 0, stock_loja: 0 }] })
     await search('Fixture'); await click('.pdv-search-clear')
     expect(usePdvStore().availableStock(item.id, 'loja')).toBe(0)
-    expect(root.querySelector<HTMLButtonElement>('.pdv-result-add')!.disabled).toBe(true)
+    expect(root.querySelector<HTMLButtonElement>('.pdv-result-add')!.disabled).toBe(false)
     await click('.pdv-result-row')
     expect(usePdvStore().cart).toEqual([])
     expect(usePdvStore().availableStock(item.id, 'loja')).toBe(0)
@@ -216,12 +217,13 @@ describe('PDV fast product entry and scan context', () => {
     expect(usePdvStore().cart).toHaveLength(1)
   })
 
-  it('keeps an out-of-stock scan visible with alternatives and never adds it', async () => {
+  it('keeps an out-of-stock scan visible with alternatives when the exception is declined', async () => {
+    vi.mocked(window.confirm).mockReturnValue(false)
     mocks.getByBarcode.mockResolvedValueOnce([{...item,current_stock:0,stock_loja:0}])
     mocks.getRelated.mockResolvedValueOnce({items:[{item:{...item,id:'available',name:'Disponível M'},relation:'family'}],next_cursor:null})
     await mount(); await scan()
     expect(usePdvStore().cart).toEqual([])
     expect(root.querySelectorAll('.pdv-result-row')).toHaveLength(2)
-    expect(root.querySelector<HTMLButtonElement>('.pdv-result-add')!.disabled).toBe(true)
+    expect(root.querySelector<HTMLButtonElement>('.pdv-result-add')!.disabled).toBe(false)
   })
 })

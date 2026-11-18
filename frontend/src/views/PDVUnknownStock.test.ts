@@ -78,13 +78,13 @@ describe('PDV quantity and checkout UI', () => {
     i18n.global.locale.value = 'en'; await nextTick()
     expect(container.querySelector('.pdv-quantity-error')?.textContent).toContain('whole quantity')
   })
-  it('shows stock local and requires an explicit local choice instead of overflowing the store balance', async () => {
+  it('shows stock local and supports selecting another location without a stock exception', async () => {
     const { input } = await addKnown()
     mocks.getItems.mockResolvedValue({ items: [known] })
     input.value = 'Fixture'; input.dispatchEvent(new Event('input', { bubbles: true }))
     await vi.advanceTimersByTimeAsync(300); await nextTick()
     expect(container.querySelector('.pdv-result-stock')?.textContent).toContain('Disponível: 0')
-    expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(true)
+    expect((container.querySelector('.pdv-result-add') as HTMLButtonElement).disabled).toBe(false)
     const select = container.querySelector('.pdv-stock-location .erp-dropdown')!
     expect(select.closest('[aria-disabled="true"]')).toBeNull()
     expect(select.querySelector<HTMLButtonElement>('button')?.disabled).toBe(false)

@@ -88,7 +88,7 @@ const money = (v: string | null) => v === null ? tr('Não informado') : `G$ ${Nu
 const location = (v: string | null) => tr(v === 'loja' ? 'Loja' : v === 'deposito' ? 'Depósito' : v || 'Não informado')
 const value = (v: unknown) => v == null ? tr('Não registrado') : typeof v === 'boolean' ? tr(v ? 'Sim' : 'Não') : String(v)
 const status = (v: string) => tr(({ completed: 'Concluída', partially_refunded: 'Devolução parcial', refunded: 'Estornada', cancelled: 'Cancelada', open: 'Aberta', counting: 'Em contagem', reviewing: 'Em revisão', applied: 'Aplicada' } as Record<string, string>)[v] || v)
-const reason = (v: string) => tr(v === 'pdv_sale' ? 'Venda PDV' : v === 'pdv_cancel' ? 'Cancelamento de venda PDV' : v)
+const reason = (v: string) => tr(({ pdv_sale: 'Venda PDV', pdv_sale_negative_stock: 'Venda PDV com saldo insuficiente', pdv_cancel: 'Cancelamento de venda PDV' } as Record<string, string>)[v] || v)
 function heading(row: ProductHistory['rows'][number]) {
   if (row.kind === 'sales') return `${tr('Venda PDV')} · ${status(row.status)}`
   if (row.kind === 'counts') return tr('Contagem de inventário')

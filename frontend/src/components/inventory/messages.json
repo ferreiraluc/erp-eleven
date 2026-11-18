@@ -619,6 +619,10 @@
     "Venta POS",
     "POS sale"
   ],
+  "Venda PDV com saldo insuficiente": [
+    "Venta POS con stock insuficiente",
+    "POS sale with insufficient stock"
+  ],
   "Cancelamento de venda PDV": [
     "Cancelación de venta POS",
     "POS sale cancellation"

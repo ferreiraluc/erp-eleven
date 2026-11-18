@@ -562,7 +562,7 @@ estorno bancário nem decide automaticamente a devolução dessa taxa.
 
 ### Desconto rápido para saldo negociado
 
-Depois de adicionar pelo menos um pagamento positivo, clicar em **Desconto (G$)**
+Depois de adicionar pelo menos um pagamento positivo, clicar em **Desconto**
 preenche o desconto geral para quitar o valor que ainda falta. O campo continua
 editável e a venda só é lançada pela confirmação existente. Exemplo: mercadorias
 de US$576, dólar a G$6.000 e real a R$5,10/U$: R$2.800 correspondem a G$3.294.117,65;
@@ -571,3 +571,32 @@ Descontos anteriores são considerados, sem somar novamente o mesmo saldo. O bot
 fica indisponível sem pagamento, com saldo já quitado ou troco. A taxa de cartão
 não entra como desconto; a base são os valores líquidos aplicados às mercadorias.
 O backend rejeita desconto negativo, não finito ou maior que o subtotal.
+
+
+### Desconto por moeda no PDV
+
+O prefixo do valor de desconto abre o seletor de G$, U$, R$ e EUR. O valor
+informado é convertido pelo câmbio atual para o desconto canônico em guaranis,
+com duas casas decimais. Trocar apenas a moeda de visualização preserva exatamente
+o desconto negociado; o câmbio posterior não altera um desconto já informado.
+O atalho **Desconto** continua quitando o saldo negociado sem resíduos de conversão.
+Valores inválidos ou acima do subtotal impedem a confirmação. A moeda escolhida
+acompanha o carrinho ao navegar e volta a G$ ao limpar/concluir a venda.
+
+### Venda confirmada sem saldo
+
+Produtos ativos com saldos conhecidos e consistentes podem ser adicionados mesmo
+zerados ou negativos. Ao ultrapassar o disponível, o PDV pede confirmação com
+produto, local e saldo projetado, e identifica a exceção no carrinho. A confirmação
+vale apenas para esse carrinho e envia `allow_negative_stock=true`; sem ela, a API
+continua recusando saldo insuficiente. A venda baixa normalmente (por exemplo,
+Loja0 → -1) e grava `pdv_sale_negative_stock` na movimentação/auditoria para
+conferência. Não há alteração automática do cadastro para esconder a diferença.
+
+O backend bloqueia a exceção no local com reservas de pedidos, assim como produtos
+inativos, removidos, saldos desconhecidos ou divergentes. Confere novamente sob
+lock ao concluir. Devoluções/cancelamentos repõem a quantidade no local original,
+mesmo quando o saldo ainda fica negativo. O opt-in não altera reservas, pedidos,
+condicionais ou edição de vendas existentes. Resultado de checkout incerto mantém
+a proteção existente contra reenvio automático; não há promessa de impressão física
+nem de idempotência nova para checkout comum.

@@ -32,7 +32,7 @@ flowchart LR
 | Sem “Lembrar-me” | Credencial em memória do processo; sobrevive ao reload do login, mas exige login após encerrar o processo |
 | Retomada | Revalida sessão; conserva expiração diária às 21h de Brasília e revogação no servidor |
 | QR/código de barras | Scanner nativo compartilhado, câmera traseira, entrada manual e tratamento de cancelamento/permissão |
-| Fotos | Upload existente e captura pelo aparelho; sem permissão ampla de armazenamento |
+| Fotos | Botões separados para câmera nativa e galeria, via Capacitor Camera; até cinco fotos por produto e sem permissão ampla de armazenamento |
 | PDF | Compartilhamento de arquivo local em vendas/PDV, pedidos/condicionais, conferência, endereços/SuperFrete e histórico do cliente |
 | Impressão da loja | Mesmas filas e agentes; nenhuma porta de impressora exposta |
 | Notificações nativas | Código e migração preparados; flags desligadas até configurar credenciais e testar |
@@ -44,6 +44,30 @@ tela nativa; resultados tardios após sair da tela são descartados. Botão Volt
 Android, teclado, áreas seguras e formulários precisam de teste em aparelho real.
 O app não fica executando continuamente em segundo plano. O projeto de servidor
 local da Rede Eleven e sincronização offline permanece separado.
+
+No cadastro, edição e fotos em lote, **Tirar foto/Câmera** chama `Camera.takePhoto`
+e **Escolher foto/Adicionar fotos/Enviar foto** chama o seletor nativo de fotos,
+sem depender do `capture` do seletor HTML do WebView. A seleção múltipla respeita
+as vagas restantes; o ERP também rejeita excesso se um seletor antigo ignorar o
+limite. Cancelar conserva a foto atual; permissão negada mostra orientação sem
+abrir outra origem. A captura usa imagem de até 1600 px e não salva na galeria.
+A compressão, conferência e salvamento continuam nos mesmos formulários; abrir
+a câmera não aciona IA. Resultados após fechar o formulário ou trocar/expirar a
+sessão são descartados. Se o Android encerrar o processo enquanto a câmera estiver
+aberta, o formulário não é recuperado automaticamente: abra-o e capture novamente.
+Esta integração requer instalar o APK novo, além de atualizar o webapp; a captura
+e as permissões ainda precisam de conferência nos aparelhos físicos da equipe.
+
+Compatibilidade iOS: com Camera 8.2.6 / ion-ios-camera 2.0.0, `chooseFromGallery`
+devolve a URL do arquivo original (inclusive HEIC) e não aplica as opções de tamanho.
+Por isso somente a galeria iOS usa `Camera.pickImages`, ainda disponível nessa
+versão: o plugin carrega `UIImage`, corrige orientação, reduz a até 1600 px e
+reescreve JPEG antes de devolver a URL local. O Android mantém `chooseFromGallery`
+e a câmera mantém `takePhoto`. O ERP valida os bytes JPEG/PNG/WebP; não passa a
+aceitar HEIC bruto nem usa a miniatura como foto principal. Rever essa adaptação
+ao atualizar o plugin, pois `pickImages` está marcado como legado. A inspeção do
+código nativo confirma a conversão; o teste com HEIC de um iPhone real continua
+necessário na instalação iOS.
 
 ## Segurança e dados
 
@@ -60,6 +84,11 @@ local da Rede Eleven e sincronização offline permanece separado.
   24 horas, na próxima operação de compartilhamento. Não há limpeza em background.
 - Android desabilita backup e limita FileProvider ao cache de PDFs e à pasta
   privada `Pictures/` usada pela captura de fotos do Capacitor.
+- O provider adicional de `ioncamera-android` tem seus caminhos sobrescritos em
+  `ioncamera_paths.xml`: somente o cache privado, onde a versão 1.0.2 cria os
+  arquivos temporários. Não permite raízes de arquivos permanentes ou externos;
+  permanece não exportado e concede apenas a URI individual à câmera. O app
+  desativa o `requestLegacyExternalStorage` herdado da biblioteca.
 - `PrivacyInfo.xcprivacy` declara finalidade operacional e APIs de timestamp.
   A ficha de privacidade das lojas deve ser conferida com os dados reais do ERP:
   identidade/contato, endereços, fotos, compras/pagamentos, auditoria e dispositivos.
@@ -139,7 +168,7 @@ rodapé do login web. Não há publicação pública nas buscas das lojas nesta 
 A página tem recursos próprios, sem carregar o ERP ou exigir uma sessão, mas o
 aplicativo continua exigindo login e as mesmas permissões do servidor.
 
-- **Android:** APK privado definitivo **1.0.2**, com versão, tamanho e SHA-256,
+- **Android:** APK privado definitivo **1.0.3**, com versão, tamanho e SHA-256,
   assinado com chave de release estável. A identidade `com.elevenparispy.erp` é
   distinta do `.pilot`: instala separado do piloto e pede um novo login. Os dados
   continuam no ERP, sem migração ou cópia. Atualizações dessa versão devem preservar
@@ -302,3 +331,19 @@ Manter `main` protegida, PR `codex/`, validações habituais e builds nativos ap
 O Android privado já possui caminho de assinatura de release. A assinatura iOS
 e sua ativação dependem da aprovação da conta Apple, dos UDIDs e da validação do
 IPA em aparelho físico. Não publicar como disponível antes dessas etapas.
+
+
+### Android 1.0.3 — câmera e PDV
+
+A versão 1.0.3 (`versionCode=4`) usa a mesma assinatura da 1.0.2 e pode ser
+instalada por cima dela. Inclui câmera/galeria nativas no produto e na edição
+massiva, desconto por moeda, confirmação auditada para venda sem saldo e busca
+paginada de clientes. Os controles de notificações/safe area foram preservados.
+O APK vem do workflow com Firebase habilitado, passa por verificação de identidade,
+integridade e assinatura local antes de publicar em `/download`. Sem chave privada
+no CI ou no release. O frontend incorporado corresponde ao commit
+`883e48704dd8881b3315bf7de09372da8458a8d4`; o commit de metadados registra seu hash.
+
+Compilação, testes nativos e lint aprovados no CI; câmera/galeria ainda precisam
+de conferência no aparelho real após instalar, especialmente HEIC no iPhone quando
+houver distribuição Ad Hoc. Atualizar somente o site não substitui o APK instalado.

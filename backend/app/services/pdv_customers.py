@@ -3,7 +3,7 @@ import re
 import unicodedata
 
 from fastapi import HTTPException
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, case, literal
 
 from ..models.cliente import Cliente
 from ..models.pdv import PdvCliente
@@ -32,7 +32,7 @@ def normalizer(db):
         accents + accents.upper(), ascii_letters * 2)), '[^a-z0-9]', '', 'g')
 
 
-def search(db, query, limit=20):
+def search(db, query, limit=20, offset=0):
     term = key(query)
     if len(term) < 2:
         return {'items': [], 'has_more': False}
@@ -49,7 +49,6 @@ def search(db, query, limit=20):
         elif canonical_phone.startswith('55') and len(canonical_phone) in (12, 13):
             phone_terms.add(canonical_phone[2:])
     legacy_cep = normalize(Cliente.endereco).contains(term, autoescape=True) if not literal_only and term.isdigit() and len(term) == 8 else False
-    directory_identity = directory_match(str(query).strip())
 
     def matches(name, phone, doc):
         # Never interpolate input into SQL or interpret %/_ as wildcards.
@@ -58,6 +57,9 @@ def search(db, query, limit=20):
         return or_(and_(*(normalize(name).contains(key(t), autoescape=True) for t in tokens)),
                    *(normalize(phone).contains(t, autoescape=True) for t in sorted(phone_terms)),
                    normalize(doc).contains(term, autoescape=True))
+
+    directory_identity = directory_match(str(query).strip(),
+        identity_match=lambda row: matches(row.nome, row.telefone, row.cpf))
 
     def addresses(customer_id=None, pdv_id=None):
         links = []
@@ -77,18 +79,33 @@ def search(db, query, limit=20):
         PdvCliente.ativo.is_(True), or_(PdvCliente.cadastro_cliente_id.is_(None),
             and_(Cliente.ativo.is_(True), Cliente.merged_into_id.is_(None))),
         or_(matches(PdvCliente.nome, PdvCliente.telefone, PdvCliente.doc),
-            matches(Cliente.nome, Cliente.telefone, Cliente.cpf),
             directory_identity,
             legacy_cep,
             address_match(addresses(PdvCliente.cadastro_cliente_id, PdvCliente.id))))
     # A directory record already linked to PDV appears only as its PDV identity.
     main_query = db.query(Cliente).filter(Cliente.ativo.is_(True), Cliente.merged_into_id.is_(None),
         ~db.query(PdvCliente.id).filter(PdvCliente.cadastro_cliente_id == Cliente.id).exists(),
-        or_(matches(Cliente.nome, Cliente.telefone, Cliente.cpf), directory_identity, legacy_cep, address_match(addresses(Cliente.id))))
-    rows = [('pdv', c) for c in pdv_query.order_by(PdvCliente.nome, PdvCliente.id).limit(limit + 1)]
-    rows += [('cadastro', c) for c in main_query.order_by(Cliente.nome, Cliente.id).limit(limit + 1)]
-    rows.sort(key=lambda pair: (key(pair[1].nome) != term, name_key(pair[1].nome), pair[0], str(pair[1].id)))
-    selected = rows[:limit]
+        or_(directory_identity, legacy_cep, address_match(addresses(Cliente.id))))
+    def ranked(query, model, source):
+        name = normalize(model.nome)
+        doc = normalize(model.doc if source == 'pdv' else model.cpf)
+        rank = case((or_(name == term, doc == term, normalize(model.telefone).in_(phone_terms)), 0),
+                    (name.startswith(term, autoescape=True), 1), else_=2)
+        return query.with_entities(literal(source).label('source'), model.id.label('id'),
+                                   rank.label('rank'), name.label('sort_name'))
+
+    # Rank the entire matching set before slicing it. A short exact name must
+    # not disappear behind the first alphabetic matches from either directory.
+    candidates = ranked(pdv_query, PdvCliente, 'pdv').union_all(
+        ranked(main_query, Cliente, 'cadastro')).subquery()
+    page = db.query(candidates).order_by(candidates.c.rank, candidates.c.sort_name,
+        candidates.c.source, candidates.c.id).offset(offset).limit(limit + 1).all()
+    selected_page = page[:limit]
+    by_source = {}
+    for source, model in (('pdv', PdvCliente), ('cadastro', Cliente)):
+        ids = [row.id for row in selected_page if row.source == source]
+        by_source[source] = {row.id: row for row in db.query(model).filter(model.id.in_(ids)).all()} if ids else {}
+    selected = [(row.source, by_source[row.source][row.id]) for row in selected_page]
     pdv_ids = [c.id for source, c in selected if source == 'pdv']
     main_ids = [c.id if source == 'cadastro' else c.cadastro_cliente_id for source, c in selected]
     # Batch address hints instead of one query per result. Only confirmed links
@@ -101,10 +118,13 @@ def search(db, query, limit=20):
         main_id = customer.id if source == 'cadastro' else customer.cadastro_cliente_id
         ceps = sorted({str(data.get('cep')).strip() for cid, pid, data in hints if data.get('cep') and
                        ((main_id and cid == main_id) or (source == 'pdv' and pid == customer.id))})
+        documents = customer_documents(customer) if source == 'cadastro' else []
+        document = next((doc for doc in documents if term in key(doc['numero'])), next(iter(documents), {}))
         items.append({'source': source, 'id': customer.id, 'nome': customer.nome,
-                      'doc': customer.cpf if source == 'cadastro' else customer.doc,
+                      'doc': (document.get('numero') or customer.cpf) if source == 'cadastro' else customer.doc,
+                      'doc_tipo': document.get('tipo') if source == 'cadastro' else customer.doc_tipo,
                       'telefone': customer.telefone, 'ceps': ceps})
-    return {'items': items, 'has_more': len(rows) > limit}
+    return {'items': items, 'has_more': len(page) > limit}
 
 
 def select(db, selection, user):

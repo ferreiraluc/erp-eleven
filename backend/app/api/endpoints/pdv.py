@@ -70,7 +70,8 @@ def _lock_sale_stock(db: Session, sale_items, *, allow_inactive=False) -> dict[u
     return {item.id: item for item in items}
 
 
-def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uuid.UUID, Item], *, reverse=False):
+def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uuid.UUID, Item], *, reverse=False,
+                 allow_negative_stock=False):
     """Use the shared conservation rules; a conflict rolls back the entire sale."""
     try:
         for item in sale.items:
@@ -85,6 +86,8 @@ def _apply_stock(db: Session, sale: PdvSale, created_by_id, stock_items: dict[uu
                 reference_type="pdv_sale", reference_id=str(sale.id),
                 location=item.location,
                 location_to=item.location if reverse else None,
+                allow_pdv_negative_stock=allow_negative_stock and not reverse,
+                allow_pdv_restitution=reverse,
             )
             if reverse:
                 # Keep PDV cancellation history as an entry into the original location.
@@ -181,6 +184,8 @@ def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, 
 
     if (stock_already_withdrawn or trusted_deposits) and frozen_usd_rate is None:
         raise ValueError('Order settlement requires its persisted exchange rate.')
+    if body.allow_negative_stock and frozen_usd_rate is not None:
+        raise HTTPException(422, 'A venda sem saldo só está disponível no PDV comum; pedidos mantêm suas reservas e conferências.')
     payments = [dict(payment) for payment in (trusted_deposits or [])]
     payments.extend(validate_payment(p.model_dump()) for p in body.payments)
     if any(p['method'] == 'fiado' and p['amount_gs'] > 0 for p in payments) and not body.cliente_id:
@@ -256,7 +261,7 @@ def create_sale_record(db: Session, body: PdvSaleCreate, current_user: Usuario, 
         # applied so later authorized sale returns restore the retained pieces.
         sale.stock_applied = True
     else:
-        _apply_stock(db, sale, current_user.id, stock_items)
+        _apply_stock(db, sale, current_user.id, stock_items, allow_negative_stock=body.allow_negative_stock)
     _update_fiado(db, sale, current_user.id)
 
     if body.print_receipt:
@@ -395,10 +400,11 @@ def cancel_sale(
 def search_customers(
     q: str = Query('', max_length=120),
     limit: int = Query(20, ge=1, le=30),
+    offset: int = Query(0, ge=0, le=100000),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_active_user),
 ):
-    return pdv_customers.search(db, q, limit)
+    return pdv_customers.search(db, q, limit, offset)
 
 
 @router.post('/clients/select', response_model=PdvClienteResponse)

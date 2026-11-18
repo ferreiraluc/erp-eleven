@@ -50,6 +50,7 @@ jobs:
       - name: Build pilot and unsigned private release
         run: |
           cd android
+          ./gradlew --no-daemon verifyNativeSecurityVersions
           if [ "${VITE_NATIVE_PUSH_ENABLED:-false}" = true ]; then
             ./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease bundleRelease
           else
