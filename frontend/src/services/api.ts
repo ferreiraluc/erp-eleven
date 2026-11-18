@@ -959,6 +959,7 @@ export interface PdvPaymentCreate {
 }
 
 export interface PdvSaleCreate {
+  allow_negative_stock?: boolean
   usd_rate_gs?: number
   print_receipt?: boolean
   vendedor_id?: string
@@ -1051,6 +1052,7 @@ export interface PdvCustomerOption {
   source: 'pdv' | 'cadastro'
   nome: string
   doc: string | null
+  doc_tipo?: string | null
   telefone: string | null
   ceps: string[]
 }
@@ -1083,8 +1085,8 @@ export const pdvAPI = {
     api.post(`/api/pdv/sales/${id}/cancel`).then(r => r.data),
 
   // Clients / Fiado
-  searchCustomers: (q: string): Promise<PdvCustomerSearch> =>
-    api.get('/api/pdv/clients/search', { params: { q } }).then(r => r.data),
+  searchCustomers: (q: string, offset = 0): Promise<PdvCustomerSearch> =>
+    api.get('/api/pdv/clients/search', { params: { q, offset } }).then(r => r.data),
   selectCustomer: (data: Pick<PdvCustomerOption, 'id' | 'source'>): Promise<PdvClienteResponse> =>
     api.post('/api/pdv/clients/select', data).then(r => r.data),
   getClients: (params?: Record<string, any>): Promise<PdvClienteResponse[]> =>

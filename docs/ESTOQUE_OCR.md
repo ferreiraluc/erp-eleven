@@ -754,6 +754,14 @@ cadastro que recebe a etiqueta. Fotografe uma peça estendida inteira. A importa
 aceita JPEG/PNG/WebP de até 15 MB/48 MP e reduz a imagem para 1600 px, sem EXIF.
 O servidor valida novamente o formato real e os limites de imagem do ERP.
 
+No app Android/iOS, **Tirar foto/Câmera** abre diretamente a câmera nativa e
+**Escolher foto/Adicionar fotos/Enviar foto** abre a galeria, inclusive na edição
+massiva. A câmera não grava automaticamente no álbum do aparelho. Cancelar mantém
+a imagem anterior; resultados de um formulário fechado ou sessão encerrada não
+são aplicados. No navegador, são preservados os seletores de arquivos existentes;
+o suporte à captura direta depende do navegador. A correção nativa exige instalar
+o APK atualizado e não é entregue apenas pelo deploy do site.
+
 - **Sugerir dados** usa o provedor de visão já configurado, uma foto e até 650 tokens
   de saída. Sugere nome, descrição visual, categoria e cor. Marca e tamanho precisam
   de evidência textual legível; ficam vazios sem ela. A análise não prova autenticidade.
@@ -891,12 +899,15 @@ movimentar. Isso evita usar um saldo antigo carregado na sessão antes de outra
 transação terminar. As regras são compartilhadas pela API e pelas entradas do bot:
 
 - Entrada/saída/transferência exigem quantidade inteira positiva; ajuste aceita zero.
-- Saída exige saldo no local indicado. Saldo disponível no depósito não é consumido
+- Saída exige saldo no local indicado, salvo confirmação de venda sem saldo no
+  PDV comum descrita abaixo. Saldo disponível no depósito não é consumido
   implicitamente por uma saída da loja.
 - Transferência exige locais válidos e diferentes, com saldo suficiente na origem;
   a soma de loja e depósito permanece igual. Não se zera a origem artificialmente
   para adicionar uma quantidade maior ao destino.
-- Total divergente dos locais ou saldo negativo exige conferência e ajuste explícito.
+- Total divergente dos locais exige conferência e ajuste explícito. Saldos
+  negativos seguem bloqueados nas movimentações comuns; a exceção restrita do
+  PDV permite a venda confirmada e a restituição da venda ao local original.
   A movimentação não corrige silenciosamente os dados históricos.
 - Qualquer saldo ausente (total, loja ou depósito) bloqueia entrada, saída,
   transferência e ajuste com conflito recuperável, sem registrar movimentação.
@@ -1039,7 +1050,7 @@ resultados reais com revisão humana.
 
 As baixas de vendas e as entradas de cancelamento usam o mesmo serviço de estoque
 das movimentações. Uma venda de catálogo exige produto existente e ativo,
-quantidade inteira positiva e saldo suficiente no local informado. O limite por
+quantidade inteira positiva e, por padrão, saldo suficiente no local informado. O limite por
 linha é 9.999.999 unidades, compatível com a coluna de quantidade do PDV.
 Itens avulsos não movimentam o catálogo; admitem quantidades positivas com até três
 casas decimais, no máximo 9.999.999,999. Nenhuma quantidade é truncada para concluir
@@ -1048,14 +1059,28 @@ vínculo de produto.
 
 O servidor bloqueia os produtos por UUID em ordem estável e relê os saldos após
 adquirir os locks. Linhas repetidas do mesmo produto consomem o saldo acumulado;
-o saldo do depósito não completa uma saída da loja. Um saldo negativo, ausente,
-divergente, insuficiente ou acima do limite numérico recusa toda a operação.
+o saldo do depósito não completa uma saída da loja. Saldo ausente, divergente ou
+acima do limite numérico recusa toda a operação; saldo insuficiente/negativo exige
+a confirmação excepcional descrita abaixo.
 Se o segundo item falha, o primeiro não fica baixado: venda, itens, pagamentos,
 movimentos, débito de fiado e eventos de auditoria das mutações são revertidos juntos.
 
+A venda comum aceita `allow_negative_stock: true` somente após confirmação
+explícita no carrinho. A opção vale apenas para aquela venda e não fica ativada
+globalmente. Com saldo conhecido e total coerente, o local pode passar de `0` para
+`-1`, ou acumular novas saídas negativas para conferência posterior. Se houver
+reserva no local, a venda continua limitada ao saldo livre; nenhuma reserva é
+consumida pela exceção. Produtos inativos/excluídos continuam bloqueados. Pedidos
+reservados e condicionais não aceitam essa exceção durante o acerto no PDV.
+Saídas que resultam em saldo negativo registram `pdv_sale_negative_stock`, usuário,
+venda, local e saldos antes/depois. Ajustar o inventário exige a conferência física
+habitual. Transferências, bot e demais saídas não ganham permissão de negativar.
+
 O cancelamento bloqueia a venda antes dos produtos e devolve a quantidade ao local
 original uma única vez. É possível devolver estoque de um produto que ficou
-inativo após a venda. Dados legados sem produto/local ou com quantidade de catálogo
+inativo após a venda. Uma restituição parcial pode corrigir o saldo de `-2` para
+`-1` e depois para `0`; não exige inventar uma entrada prévia. Correções da venda
+que retiram mais estoque mantêm a validação de saldo suficiente. Dados legados sem produto/local ou com quantidade de catálogo
 fracionária exigem revisão; o sistema não inventa o local nem arredonda a devolução.
 O histórico original é preservado. A permissão de vendas pessoais continua sendo
 verificada na leitura. Cancelamentos e demais alterações são exclusivos de Lucas.

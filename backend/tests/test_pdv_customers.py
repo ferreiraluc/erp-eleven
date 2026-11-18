@@ -62,6 +62,17 @@ def test_shared_cep_lists_both_people_without_guessing_and_rejects_wildcards(pdv
     assert client.get('/api/pdv/clients/search', params={'q':'João','limit':1}).json()['has_more']
 
 
+def test_search_endpoint_paginates_and_rejects_invalid_offsets(pdv_app):
+    factory, client, _ = pdv_app
+    seed(factory)
+    first = client.get('/api/pdv/clients/search', params={'q': 'João', 'limit': 1}).json()
+    second = client.get('/api/pdv/clients/search', params={'q': 'João', 'limit': 1, 'offset': 1}).json()
+    assert first['items'][0]['id'] != second['items'][0]['id']
+    assert first['has_more'] and not second['has_more']
+    for offset in (-1, 100001):
+        assert client.get('/api/pdv/clients/search', params={'q': 'João', 'offset': offset}).status_code == 422
+
+
 def test_select_directory_customer_reuses_link_and_sale_uses_authoritative_name(pdv_app):
     factory, client, _ = pdv_app
     main, _, _ = seed(factory)

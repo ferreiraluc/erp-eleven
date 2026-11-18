@@ -84,7 +84,7 @@
               <div class="pdv-result-sku">{{ item.inventory_code || item.sku_internal }}</div>
             </div>
             <div class="pdv-result-right">
-              <div class="pdv-result-stock" :class="productAvailable(item) === null ? 'stock-unknown' : productAvailable(item) === 0 ? 'stock-out' : 'stock-ok'">
+              <div class="pdv-result-stock" :class="productAvailable(item) === null ? 'stock-unknown' : productAvailable(item) !== null && productAvailable(item)! <= 0 ? 'stock-out' : 'stock-ok'">
                 {{ cartText('available', { quantity: displayStock(productAvailable(item)) }) }} {{ $tr("un") }}
                 <span v-if="item.catalog_cached"> · {{ uiText('Consulta local · conferir saldo online') }}</span><span v-else-if="productAvailable(item) === null"> · {{ inventoryText('Revisar estoque') }}</span>
               </div>
@@ -146,6 +146,7 @@
           <p v-if="pdv.checkoutUncertain" role="alert" class="pdv-checkout-error">{{ cartText('uncertain') }}</p>
           <p v-else-if="checkoutError" role="alert" class="pdv-checkout-error">{{ cartErrorText(checkoutError) }}</p>
           <!-- Cart items -->
+          <p v-if="pdv.allowNegativeStock && pdv.cart.length" class="pdv-negative-stock-note" role="status">{{ cartText('negativeStockConfirmed') }}</p>
           <div v-if="pdv.cart.length" class="pdv-cart-items">
             <div v-for="item in pdv.cart" :key="item.id" class="pdv-cart-item" :class="{ 'item-avulso': item.is_avulso }">
               <div class="pdv-ci-thumb">
@@ -277,12 +278,16 @@
             </div>
             <!-- Discount -->
             <div class="pay-discount-row">
-              <button type="button" class="pay-discount-label erp-button erp-button--secondary erp-button--sm" :disabled="!canCoverShortfall" :title="uiText('Usar o valor faltante como desconto')" @click="coverShortfallWithDiscount">{{ $tr("Desconto (G$)") }}</button>
+              <button type="button" class="pay-discount-label erp-button erp-button--secondary erp-button--sm" :disabled="!canCoverShortfall" :title="uiText('Usar o valor faltante como desconto')" @click="coverShortfallWithDiscount">{{ $tr("Desconto") }}</button>
               <div class="pay-discount-input-wrap">
-                <span class="pay-currency-prefix">G$</span>
-                <DecimalInput id="pdv-discount" :model-value="pdv.discountGs" @update:model-value="changeGlobalDiscount" class="pay-discount-input" :aria-label="uiText('Desconto (G$)')" />
+                <ErpSelect compact class="pay-discount-currency" :value="pdv.discountCurrency" :label="cartText('discountCurrency')" :disabled="pdv.loading || pdv.checkoutUncertain" @change="changeDiscountCurrency(String($event))">
+                  <option v-for="currency in itemCurrencies" :key="currency" :value="currency">{{ currencyLabel(currency) }}</option>
+                </ErpSelect>
+                <DecimalInput :key="pdv.discountCurrency" id="pdv-discount" :model-value="discountAmount" @update:model-value="changeGlobalDiscount" class="pay-discount-input" :aria-label="cartText('discountAmount')" :aria-invalid="invalidDiscount" :disabled="pdv.loading || pdv.checkoutUncertain" />
               </div>
             </div>
+
+            <p v-if="invalidDiscount" role="alert" class="pdv-checkout-error">{{ cartText('invalidDiscount') }}</p>
 
             <!-- Payment summary -->
             <div class="pay-summary-inline">
@@ -451,9 +456,23 @@ function undoPaymentRounding() {
   roundingSnapshots.clear()
   totalIntent.value = null
 }
+const invalidDiscountDraft = ref(false)
+const discountAmount = computed(() => pdv.discountGs / (getRate(pdv.discountCurrency) || 1))
+const invalidDiscount = computed(() => invalidDiscountDraft.value || !Number.isFinite(pdv.discountGs) || pdv.discountGs < 0 || pdv.discountGs > pdv.subtotal || getRate(pdv.discountCurrency) <= 0)
+function changeDiscountCurrency(currency: string) {
+  if (!itemCurrencies.includes(currency) || pdv.loading || pdv.checkoutUncertain || getRate(currency) <= 0) return
+  // Changing the display currency preserves the negotiated discount exactly.
+  pdv.discountCurrency = currency
+  invalidDiscountDraft.value = false
+}
 function changeGlobalDiscount(value: number | null) {
+  if (pdv.loading || pdv.checkoutUncertain) return
+  const rate = getRate(pdv.discountCurrency)
+  const converted = value === null ? NaN : Math.round(value * rate * 100) / 100
+  invalidDiscountDraft.value = !Number.isFinite(converted) || value === null || value < 0 || rate <= 0 || converted > 999999999999.99
+  if (invalidDiscountDraft.value) return
   undoPaymentRounding()
-  pdv.discountGs = value ?? 0
+  pdv.discountGs = converted
 }
 
 const PAYMENT_METHODS = computed(() => paymentMethods.map(m => ({ ...m, label: paymentLabel(m.value) })))
@@ -492,7 +511,7 @@ watch(() => pdv.loading, loading => {
     }
   }
 })
-watch(() => pdv.cart.length, (len) => { if (len === 0) { roundingSnapshots.clear(); ratesChangedDuringCheckout = false; totalIntent.value = null; resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
+watch(() => pdv.cart.length, (len) => { if (len === 0) { invalidDiscountDraft.value = false; roundingSnapshots.clear(); ratesChangedDuringCheckout = false; totalIntent.value = null; resetPayment(); checkoutError.value = null; Object.keys(quantityDrafts).forEach(key => delete quantityDrafts[key]); Object.keys(quantityErrors).forEach(key => delete quantityErrors[key]) } })
 
 const currencySymbol = computed(() => paymentSymbol(newCurrency.value))
 const cardSelected = computed(() => isCardPayment(newMethod.value))
@@ -517,7 +536,7 @@ function coverShortfallWithDiscount() {
   if (!canCoverShortfall.value) return
   undoPaymentRounding()
   const discount = discountToCoverShortfall(pdv.subtotal, pdv.discountGs, payTotalPaid.value)
-  if (discount !== null) pdv.discountGs = discount
+  if (discount !== null) { pdv.discountGs = discount; invalidDiscountDraft.value = false }
 }
 const payTroco = computed(() => Math.max(0, payTotalPaid.value - pdv.total))
 const cashPaid = computed(() => localPayments.value.reduce((sum, payment) =>
@@ -526,7 +545,7 @@ const invalidNoncashChange = computed(() => payTroco.value > cashPaid.value + 0.
 const remainingInCurrency = computed(() =>
   validRate.value ? payRemaining.value / Number(newRate.value) : 0
 )
-const canConfirmPayment = computed(() => !customerBusy.value && !barcodePending.value && !invalidNoncashChange.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
+const canConfirmPayment = computed(() => !invalidDiscount.value && !customerBusy.value && !barcodePending.value && !invalidNoncashChange.value && payTotalPaid.value >= pdv.total && localPayments.value.length > 0 && (!localPayments.value.some(p => p.method === 'fiado') || !!pdv.clienteId))
 
 function fillTotal() {
   if (!validRate.value) return
@@ -654,17 +673,25 @@ function clearSearch() {
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
 function productLocation(item: InventoryItem): StockLocation {
-  return selectedLocations[item.id] || ((availableStock(item, 'loja') ?? 0) > 0 ? 'loja' : 'deposito')
+  return selectedLocations[item.id] || ((availableStock(item, 'loja') ?? 0) > 0 ? 'loja' : (availableStock(item, 'deposito') ?? 0) > 0 ? 'deposito' : 'loja')
 }
 function productAvailable(item: InventoryItem) { if(item.catalog_cached)return null; return pdv.availableStock(item.id, productLocation(item)) }
-function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return catalogPrice(item.sale_price) !== null && ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && available !== null && available >= 1 }
+function canAddProduct(item: InventoryItem) { const available = productAvailable(item); return catalogPrice(item.sale_price) !== null && ratesReady.value && getRate(item.sale_currency) > 0 && !pdv.loading && !pdv.checkoutUncertain && available !== null && (available >= 1 || pdv.canSellWithoutStock(item.id, productLocation(item))) }
 function canIncrease(item: CartItem) {
   if (item.is_avulso) return item.quantity + 1 <= 9_999_999.999
   const available = item.item_id ? pdv.availableStock(item.item_id, item.location, item.id) : null
-  return available !== null && item.quantity + 1 <= Math.min(available, 9_999_999)
+  return available !== null && item.quantity + 1 <= 9_999_999 && (item.quantity + 1 <= available || !!item.item_id && pdv.canSellWithoutStock(item.item_id, item.location))
+}
+function confirmStockException(itemId: string, name: string, location: string, quantity: number, excludeId?: string) {
+  const available = pdv.availableStock(itemId, location, excludeId)
+  if (available === null || (quantity <= available && !pdv.hasNegativeBalance(itemId)) || pdv.allowNegativeStock || (quantity > available && !pdv.canSellWithoutStock(itemId, location))) return true
+  if (!confirm(cartText('confirmNegativeStock', { name, location: cartText(location), balance: available - quantity }))) return false
+  pdv.allowNegativeStock = true
+  return true
 }
 function changeQuantity(item: CartItem, quantity: number) {
   try {
+    if (!item.is_avulso && item.item_id && Number.isInteger(quantity) && quantity > 0 && quantity <= 9_999_999 && !confirmStockException(item.item_id, item.item_name, item.location, quantity, item.id)) { delete quantityDrafts[item.id]; delete quantityErrors[item.id]; return }
     undoPaymentRounding()
     pdv.updateItemQty(item.id, quantity)
     delete quantityDrafts[item.id]; delete quantityErrors[item.id]
@@ -714,6 +741,7 @@ async function addToCart(item: InventoryItem) {
     const saleCurrency = item.sale_currency || 'PYG'
     const rate = getRate(saleCurrency)
     const priceGs = Math.round(price * rate)
+    if (!confirmStockException(item.id, item.name, productLocation(item), 1)) return
     // Lookups already stored the latest stock. A cached recent card must not replace it.
     pdv.addItem({
       item_id: item.id,
@@ -1005,6 +1033,8 @@ kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.25rem; pa
 
 .pay-discount-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.875rem; background: #fff; }
 .pay-discount-label { font-size: 0.78rem; color: #64748b; white-space: nowrap; }
+.pay-discount-currency { width: 78px; flex-shrink: 0; }
+.pdv-negative-stock-note { margin: 0.5rem 0.875rem; padding: 0.5rem; border-radius: 0.5rem; background: #fff7ed; color: #9a3412; font-size: 0.78rem; }
 .pay-discount-input-wrap { display: flex; align-items: center; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden; background: white; }
 .pay-validation { margin:4px 14px 8px; color:#b45309; font-size:.75rem; }
 .pay-currency-prefix { padding: 0.2rem 0.3rem; font-size: 0.7rem; color: #9ca3af; background: #f9fafb; border-right: 1px solid #e5e7eb; }

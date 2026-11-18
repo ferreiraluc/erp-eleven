@@ -279,8 +279,11 @@ def plan(db,sid,user,command):
         if p.deleted_at:raise HTTPException(409,'Produto excluído do catálogo: escolha devolução sem reposição ou selecione outro produto na edição.')
         if new and any(r['item_id']==p.id and not r['is_avulso'] for r in new['items']) and not p.is_active:raise HTTPException(409,'Selecione produtos ativos para a venda corrigida.')
         if not(d_loja or d_dep):continue
-        if any(v is None or v<0 for v in (p.current_stock,p.stock_loja,p.stock_deposito)) or p.current_stock!=p.stock_loja+p.stock_deposito:raise HTTPException(409,'Saldo original desconhecido ou divergente. Confira o estoque antes de alterar esta venda.')
-        if min(p.stock_loja+d_loja,p.stock_deposito+d_dep)<0:raise HTTPException(409,'Estoque insuficiente para a alteração solicitada.')
+        if any(v is None for v in (p.current_stock,p.stock_loja,p.stock_deposito)) or p.current_stock!=p.stock_loja+p.stock_deposito:raise HTTPException(409,'Saldo original desconhecido ou divergente. Confira o estoque antes de alterar esta venda.')
+        # An explicit return may repair a negative balance in several steps.
+        # Corrections that consume stock still require a nonnegative balance;
+        # this does not reuse checkout's exceptional oversell confirmation.
+        if any(d < 0 for d in (d_loja,d_dep)) and (min(p.stock_loja,p.stock_deposito)<0 or min(p.stock_loja+d_loja,p.stock_deposito+d_dep)<0):raise HTTPException(409,'Estoque insuficiente para a alteração solicitada.')
         if max(p.stock_loja+d_loja,p.stock_deposito+d_dep,p.current_stock+d_loja+d_dep)>2147483647:raise HTTPException(409,'Saldo resultante acima do limite permitido.')
         for loc,d in [('loja',d_loja),('deposito',d_dep)]:
             if d:effects.append({'item_id':p.id,'name':p.name,'location':loc,'delta':int(d),'before':getattr(p,'stock_'+loc),'after':int(getattr(p,'stock_'+loc)+d)})
@@ -324,7 +327,8 @@ def commit(db,sid,user,body):
         # Exits first to avoid transient total overflow when moving between locals.
         for change in sorted(stock,key=lambda r:(r['delta']>0,str(r['item_id']),r['location'])):
             mv=create_movement(db,change['item_id'],'entry' if change['delta']>0 else 'exit',abs(change['delta']),user.id,
-                reason='pdv_'+body.command.operation,reference_type='pdv_sale',reference_id=str(sid),location=change['location'],notes=body.command.reason)
+                reason='pdv_'+body.command.operation,reference_type='pdv_sale',reference_id=str(sid),location=change['location'],notes=body.command.reason,
+                allow_pdv_restitution=change['delta']>0)
             if change['delta']>0:mv.location_from=None;mv.location_to=change['location']
         for change in fiado:
             cid=uuid.UUID(change['customer_id']) if isinstance(change['customer_id'],str) else change['customer_id']

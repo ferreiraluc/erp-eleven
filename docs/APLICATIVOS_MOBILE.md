@@ -32,7 +32,7 @@ flowchart LR
 | Sem “Lembrar-me” | Credencial em memória do processo; sobrevive ao reload do login, mas exige login após encerrar o processo |
 | Retomada | Revalida sessão; conserva expiração diária às 21h de Brasília e revogação no servidor |
 | QR/código de barras | Scanner nativo compartilhado, câmera traseira, entrada manual e tratamento de cancelamento/permissão |
-| Fotos | Upload existente e captura pelo aparelho; sem permissão ampla de armazenamento |
+| Fotos | Botões separados para câmera nativa e galeria, via Capacitor Camera; até cinco fotos por produto e sem permissão ampla de armazenamento |
 | PDF | Compartilhamento de arquivo local em vendas/PDV, pedidos/condicionais, conferência, endereços/SuperFrete e histórico do cliente |
 | Impressão da loja | Mesmas filas e agentes; nenhuma porta de impressora exposta |
 | Notificações nativas | Código e migração preparados; flags desligadas até configurar credenciais e testar |
@@ -44,6 +44,19 @@ tela nativa; resultados tardios após sair da tela são descartados. Botão Volt
 Android, teclado, áreas seguras e formulários precisam de teste em aparelho real.
 O app não fica executando continuamente em segundo plano. O projeto de servidor
 local da Rede Eleven e sincronização offline permanece separado.
+
+No cadastro, edição e fotos em lote, **Tirar foto/Câmera** chama `Camera.takePhoto`
+e **Escolher foto/Adicionar fotos/Enviar foto** chama `Camera.chooseFromGallery`,
+sem depender do `capture` do seletor HTML do WebView. A seleção múltipla respeita
+as vagas restantes; o ERP também rejeita excesso se um seletor antigo ignorar o
+limite. Cancelar conserva a foto atual; permissão negada mostra orientação sem
+abrir outra origem. A captura usa imagem de até 1600 px e não salva na galeria.
+A compressão, conferência e salvamento continuam nos mesmos formulários; abrir
+a câmera não aciona IA. Resultados após fechar o formulário ou trocar/expirar a
+sessão são descartados. Se o Android encerrar o processo enquanto a câmera estiver
+aberta, o formulário não é recuperado automaticamente: abra-o e capture novamente.
+Esta integração requer instalar o APK novo, além de atualizar o webapp; a captura
+e as permissões ainda precisam de conferência nos aparelhos físicos da equipe.
 
 ## Segurança e dados
 
@@ -60,6 +73,11 @@ local da Rede Eleven e sincronização offline permanece separado.
   24 horas, na próxima operação de compartilhamento. Não há limpeza em background.
 - Android desabilita backup e limita FileProvider ao cache de PDFs e à pasta
   privada `Pictures/` usada pela captura de fotos do Capacitor.
+- O provider adicional de `ioncamera-android` tem seus caminhos sobrescritos em
+  `ioncamera_paths.xml`: somente o cache privado, onde a versão 1.0.2 cria os
+  arquivos temporários. Não permite raízes de arquivos permanentes ou externos;
+  permanece não exportado e concede apenas a URI individual à câmera. O app
+  desativa o `requestLegacyExternalStorage` herdado da biblioteca.
 - `PrivacyInfo.xcprivacy` declara finalidade operacional e APIs de timestamp.
   A ficha de privacidade das lojas deve ser conferida com os dados reais do ERP:
   identidade/contato, endereços, fotos, compras/pagamentos, auditoria e dispositivos.

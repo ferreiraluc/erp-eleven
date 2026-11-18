@@ -3,6 +3,11 @@ import { PdvCartError } from '@/services/pdvCart'
 import { useInventoryI18n } from '@/components/inventory/i18n'
 
 const messages: Record<string, [string, string, string]> = {
+  discountCurrency: ['Moeda do desconto', 'Moneda del descuento', 'Discount currency'],
+  discountAmount: ['Valor do desconto', 'Importe del descuento', 'Discount amount'],
+  invalidDiscount: ['Informe um desconto válido, até o subtotal da venda.', 'Indique un descuento válido, hasta el subtotal de la venta.', 'Enter a valid discount up to the sale subtotal.'],
+  confirmNegativeStock: ['Vender "{name}" com saldo insuficiente ou negativo no cadastro? O saldo em {location} ficará {balance}. A exceção será registrada para conferência do estoque.', '¿Vender "{name}" con saldo insuficiente o negativo en el registro? El saldo en {location} quedará en {balance}. La excepción se registrará para revisar el stock.', 'Sell "{name}" with insufficient or negative stock in the record? The balance in {location} will be {balance}. This exception will be recorded for inventory review.'],
+  negativeStockConfirmed: ['Venda sem saldo autorizada neste carrinho. Confira e corrija o estoque físico após a venda.', 'Venta sin saldo autorizada en este carrito. Revise y corrija el stock físico después de la venta.', 'Selling without stock is authorized for this cart. Review and correct physical inventory after the sale.'],
   internalCodeMissing: ['Produto não encontrado ou desativado. Confira a etiqueta interna.', 'Producto no encontrado o desactivado. Revise la etiqueta interna.', 'Product not found or inactive. Check the internal label.'],
   invalidPrice: ['Confira o preço do produto antes de adicionar ao carrinho.', 'Revise el precio del producto antes de agregarlo al carrito.', 'Check the product price before adding it to the cart.'],
   catalogQuantity: ['Informe uma quantidade inteira de 1 a 9.999.999 para produtos do estoque.', 'Indique una cantidad entera de 1 a 9.999.999 para productos del stock.', 'Enter a whole quantity from 1 to 9,999,999 for inventory products.'],

@@ -21,17 +21,20 @@
       <p v-else-if="searched && !options.length">{{ text('empty') }}</p>
       <p v-else-if="!searched">{{ text('hint') }}</p>
       <button v-if="createdCustomer && error" type="button" class="erp-button erp-button--sm" :disabled="disabled || selecting" @click="choose(createdCustomer)">{{ uiText('Associar cliente cadastrado') }}</button>
-      <ul v-if="options.length" id="pdv-customer-results" role="listbox" :aria-label="text('customer')">
+      <button v-if="error && searchFailed" type="button" class="customer-search-retry erp-button erp-button--sm"
+        :disabled="disabled || selecting || loading" @click="fetchOptions(retryOffset)">{{ text('retry') }}</button>
+      <ul v-if="options.length" ref="results" id="pdv-customer-results" role="listbox" :aria-label="text('customer')" :aria-busy="loading">
         <li v-for="(option, index) in options" :id="`pdv-customer-${index}`" :key="`${option.source}:${option.id}`"
           role="option" :aria-selected="active === index">
           <button type="button" :disabled="disabled || selecting" :class="{ active: active === index }" @click="choose(option)">
             <strong>{{ option.nome }}</strong>
-            <span>{{ details(option) }}</span>
+            <span>{{ details(option) || text('noContact') }}</span>
             <small>{{ option.source === 'cadastro' ? text('directory') : 'PDV' }}</small>
           </button>
         </li>
       </ul>
-      <p v-if="hasMore">{{ text('more') }}</p>
+      <button v-if="hasMore && !searchFailed" type="button" class="customer-load-more erp-button erp-button--secondary erp-button--sm"
+        :disabled="disabled || selecting || loading" @click="fetchOptions(nextOffset)">{{ text('more') }}</button>
       <button v-if="canUseName && !required" type="button" class="customer-name-only erp-button erp-button--ghost"
         :disabled="disabled || selecting" @click="useName">{{ text('nameOnly') }}</button>
     </template>
@@ -41,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import ClienteFormModal from '@/components/clientes/ClienteFormModal.vue'
 import { uiText } from '@/i18n/uiText'
@@ -56,9 +59,11 @@ const emit = defineEmits<{
 }>()
 const text = usePdvEntryText(), auth = useAuthStore()
 const query = ref(''), selectedDetails = ref(''), error = ref('')
+const searchFailed = ref(false), retryOffset = ref(0), nextOffset = ref(0)
 const options = ref<PdvCustomerOption[]>([])
 const loading = ref(false), selecting = ref(false), searched = ref(false), hasMore = ref(false), active = ref(-1)
 const input = ref<HTMLInputElement>()
+const results = ref<HTMLUListElement>()
 const showCreate = ref(false), createdCustomer = ref<PdvCustomerOption | null>(null)
 watch([showCreate, selecting], () => emit('busy', showCreate.value || selecting.value), { flush: 'sync' })
 function openCreate() { if (!props.disabled && !selecting.value) { invalidate(); showCreate.value = true } }
@@ -69,26 +74,44 @@ async function onCustomerCreated(customer: Cliente) {
 }
 let request = 0, selectionRequest = 0, timer: ReturnType<typeof setTimeout> | undefined
 const canUseName = computed(() => query.value.trim().length >= 2 && /\p{L}/u.test(query.value) && !/\d/.test(query.value))
-function details(option: PdvCustomerOption) { return [option.doc, option.telefone, ...option.ceps.map(cep => `CEP ${cep}`)].filter(Boolean).join(' · ') }
+function details(option: PdvCustomerOption) {
+  const doc = option.doc ? [option.doc_tipo, option.doc].filter(Boolean).join(' ') : ''
+  return [doc, option.telefone, ...option.ceps.map(cep => `CEP ${cep}`)].filter(Boolean).join(' · ')
+}
 function invalidate() {
   request++; clearTimeout(timer); options.value = []; loading.value = false
   searched.value = false; hasMore.value = false; error.value = ''; active.value = -1
+  searchFailed.value = false; retryOffset.value = 0; nextOffset.value = 0
+}
+async function fetchOptions(offset = 0) {
+  if (props.disabled || selecting.value || props.customerName || query.value.trim().length < 2) return
+  const current = ++request, value = query.value.trim()
+  clearTimeout(timer)
+  loading.value = true; error.value = ''; searchFailed.value = false
+  try {
+    const result = await pdvAPI.searchCustomers(value, offset)
+    if (request !== current) return
+    // A repeated result after a concurrent directory update is shown once;
+    // the next offset still counts the rows the server actually returned.
+    const combined = offset ? [...options.value, ...result.items] : result.items
+    options.value = [...new Map(combined.map(option => [`${option.source}:${option.id}`, option])).values()]
+    nextOffset.value = offset + result.items.length
+    hasMore.value = result.has_more && result.items.length > 0; searched.value = true
+  } catch {
+    if (request === current) { error.value = text('failed'); searchFailed.value = true; retryOffset.value = offset }
+  } finally { if (request === current) loading.value = false }
 }
 watch(query, value => {
   invalidate()
-  if (value.trim().length < 2 || props.customerName) return
-  const current = request
+  if (value.trim().length < 2 || props.customerName || props.disabled) return
   loading.value = true
-  timer = setTimeout(async () => {
-    try {
-      const result = await pdvAPI.searchCustomers(value.trim())
-      if (request !== current) return
-      options.value = result.items; hasMore.value = result.has_more; searched.value = true
-    } catch { if (request === current) error.value = text('failed') }
-    finally { if (request === current) loading.value = false }
-  }, 250)
+  timer = setTimeout(() => { void fetchOptions() }, 250)
+}, { flush: 'sync' })
+watch(() => props.customerName, () => {
+  invalidate()
+  if (!props.customerName) { query.value = ''; selectedDetails.value = '' }
 })
-watch(() => props.customerName, () => { if (!props.customerName) { query.value = ''; selectedDetails.value = ''; invalidate() } })
+watch(() => props.disabled, disabled => { if (disabled && !selecting.value) invalidate() })
 watch([() => auth.user?.id, () => auth.token], () => {
   selectionRequest++; showCreate.value = false; createdCustomer.value = null
   invalidate(); selecting.value = false; emit('busy', false); query.value = ''; selectedDetails.value = ''
@@ -98,13 +121,18 @@ function clear() {
   emit('update:customerId', null); emit('update:customerName', null)
   query.value = ''; selectedDetails.value = ''; invalidate()
 }
-function move(step: number) { if (options.value.length) active.value = (active.value + step + options.value.length) % options.value.length }
+async function move(step: number) {
+  if (!options.value.length) return
+  active.value = active.value < 0 ? (step > 0 ? 0 : options.value.length - 1) : (active.value + step + options.value.length) % options.value.length
+  await nextTick()
+  results.value?.children[active.value]?.scrollIntoView?.({ block: 'nearest' })
+}
 function chooseActive() { if (active.value >= 0 && options.value[active.value]) void choose(options.value[active.value]) }
 async function choose(option: PdvCustomerOption) {
   if (props.disabled || selecting.value) return
   const current = ++request
   const selection = ++selectionRequest
-  clearTimeout(timer); loading.value = false; selecting.value = true; emit('busy', true); error.value = ''
+  clearTimeout(timer); loading.value = false; selecting.value = true; emit('busy', true); error.value = ''; searchFailed.value = false
   try {
     const customer = await pdvAPI.selectCustomer({ id: option.id, source: option.source })
     if (request !== current) return
@@ -139,6 +167,7 @@ onUnmounted(() => { selectionRequest++; invalidate(); emit('busy', false) })
 .customer-selected { display: flex; align-items: center; justify-content: space-between; gap: .5rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .5rem; padding: .45rem .65rem; }
 .customer-selected div { min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; font-size: .85rem; }
 .customer-name-only { margin-top: .35rem; font-size: .75rem; white-space: normal; text-align: left; }
+.customer-load-more, .customer-search-retry { margin-top: .5rem; }
 .customer-search-row { display: flex; align-items: center; gap: 6px; }
 .customer-search-row input { flex: 1; min-width: 0; }
 </style>

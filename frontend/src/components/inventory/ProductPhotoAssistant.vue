@@ -7,14 +7,14 @@
         </header>
         <div ref="photoBody" class="photo-body erp-dialog__body">
           <div class="photo-actions">
-            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!!busy" @click="fileInput?.click()">{{ t('choose') }}</button>
-            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!!busy" @click="cameraInput?.click()">{{ t('camera') }}</button>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!!busy" @click="choosePhoto('photos')">{{ t('choose') }}</button>
+            <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="!!busy" @click="choosePhoto('camera')">{{ t('camera') }}</button>
             <input ref="fileInput" hidden type="file" accept="image/jpeg,image/png,image/webp" @change="upload" />
             <input ref="cameraInput" hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" @change="upload" />
             <small>{{ t('formats') }}</small>
           </div>
           <p v-if="busy" class="photo-status" role="status" aria-live="polite">{{ t(busy) }}</p>
-          <p v-if="error" class="photo-error" role="alert">{{ t(error) }}</p>
+          <p v-if="error || nativeError" class="photo-error" role="alert">{{ nativeError || t(error) }}</p>
           <section class="photo-tools" :aria-label="t('generate')">
             <p v-if="!original" class="photo-hint">{{ t('chooseForHanger') }}</p>
             <div class="photo-actions">
@@ -65,6 +65,7 @@ import { vErpDialog } from '@/directives/erpDialog'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { productPhotoMessages } from './productPhotoMessages'
+import { nativePhotoErrorText, nativePhotoSession, selectNativePhotos, usesNativePhotos, type NativePhotoSource } from '@/services/nativePhotos'
 import { analyzePhoto, catalogForStorage, cutoutPhoto, generateCatalog, photoError, photoStatus, preparePhoto,
   type ProductPhotoFields, type ProductPhotoResult } from '@/services/productPhoto'
 const { t } = useI18n({ useScope: 'local', messages: productPhotoMessages })
@@ -81,9 +82,11 @@ const selectedImage = computed(() => selected.value === 'cutout' ? cutout.value 
 const options = computed(() => (['original', ...(cutout.value ? ['cutout'] : []), ...(hanger.value ? ['hanger'] : [])]) as ('original' | 'cutout' | 'hanger')[])
 const reviewed = ref(false), analyzed = ref(false), noProduct = ref(false), confirmPaid = ref(false), editAttempted = ref(false)
 const busy = ref(''), error = ref(''), editingAvailable = ref(false), model = ref(''), cost = ref<number | null>(null)
+const nativeError = ref('')
 const brandEvidence = ref(''), sizeEvidence = ref('')
 const controller = new AbortController()
 let alive = true
+let selectionGeneration = 0
 let appliedImage = ''
 let seededImage: string | undefined
 function seedImage() {
@@ -93,11 +96,12 @@ function seedImage() {
   if (image && (image === appliedImage || image === original.value)) return
   original.value = image; cutout.value = ''; hanger.value = ''; selected.value = 'original'
   Object.assign(fields, blank()); analyzed.value = false; reviewed.value = false; noProduct.value = false
-  confirmPaid.value = false; editAttempted.value = false; cost.value = null; error.value = ''
+  confirmPaid.value = false; editAttempted.value = false; cost.value = null; error.value = ''; nativeError.value = ''
   brandEvidence.value = ''; sizeEvidence.value = ''
 }
 watch([() => props.open, () => props.initialImage], () => { if (props.open) seedImage() }, { immediate: true })
 watch(() => props.open, async open => {
+  if (!open) selectionGeneration++
   if (open) { await nextTick(); if (photoBody.value) photoBody.value.scrollTop = 0 }
 })
 watch([fields, selected], () => { reviewed.value = false }, { deep: true, flush: 'sync' })
@@ -108,24 +112,43 @@ watch([() => props.open, () => props.startWithHanger, original, editingAvailable
 onMounted(async () => {
   try { const status = await photoStatus(); if (alive) { editingAvailable.value = status.editing_available; model.value = status.model } } catch { /* Original and free cutout remain available. */ }
 })
-onUnmounted(() => { alive = false; controller.abort() })
-function close() { if (busy.value !== 'generating') emit('close') }
+onUnmounted(() => { alive = false; selectionGeneration++; controller.abort() })
+function close() { if (busy.value !== 'generating') { selectionGeneration++; emit('close') } }
+function replacePhoto(image: string) {
+  nativeError.value = ''
+  original.value = image; cutout.value = ''; hanger.value = ''; selected.value = 'original'
+  Object.assign(fields, blank()); analyzed.value = false; reviewed.value = false; noProduct.value = false
+  confirmPaid.value = false; editAttempted.value = false; cost.value = null; brandEvidence.value = ''; sizeEvidence.value = ''
+}
+async function choosePhoto(source: NativePhotoSource) {
+  if (busy.value || !props.open) return
+  nativeError.value = ''
+  if (!usesNativePhotos()) { (source === 'camera' ? cameraInput : fileInput).value?.click(); return }
+  const generation = ++selectionGeneration
+  const current = nativePhotoSession(() => alive && props.open && selectionGeneration === generation)
+  busy.value = 'preparing'; error.value = ''
+  try {
+    const [file] = await selectNativePhotos(source, { isCurrent: current })
+    if (!file || !current()) return
+    const image = await preparePhoto(file)
+    if (current()) replacePhoto(image)
+  } catch (e) { if (alive && props.open && selectionGeneration === generation) nativeError.value = nativePhotoErrorText(e) }
+  finally { if (alive) busy.value = '' }
+}
 async function upload(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
   input.value = ''
   if (!file || busy.value) return
-  busy.value = 'preparing'; error.value = ''
+  busy.value = 'preparing'; error.value = ''; nativeError.value = ''
   try {
     const image = await preparePhoto(file)
     if (!alive) return
-    original.value = image; cutout.value = ''; hanger.value = ''; selected.value = 'original'
-    Object.assign(fields, blank()); analyzed.value = false; reviewed.value = false; noProduct.value = false
-    confirmPaid.value = false; editAttempted.value = false; cost.value = null; brandEvidence.value = ''; sizeEvidence.value = ''
+    replacePhoto(image)
   } catch { if (alive) error.value = 'invalid_image' } finally { if (alive) busy.value = '' }
 }
 async function analyze() {
   if (busy.value || analyzed.value || !original.value) return
-  busy.value = 'analyzing'; error.value = ''; reviewed.value = false
+  busy.value = 'analyzing'; error.value = ''; nativeError.value = ''; reviewed.value = false
   try {
     const result = await analyzePhoto(original.value, controller.signal)
     if (!alive) return
@@ -136,13 +159,13 @@ async function analyze() {
 }
 async function removeBackground() {
   if (busy.value || cutout.value || !original.value) return
-  busy.value = 'removing'; error.value = ''; reviewed.value = false
+  busy.value = 'removing'; error.value = ''; nativeError.value = ''; reviewed.value = false
   try { const result = await cutoutPhoto(original.value, controller.signal); if (alive) { cutout.value = result; selected.value = 'cutout' } }
   catch { if (alive) error.value = 'cutout_failed' } finally { if (alive) busy.value = '' }
 }
 async function generate() {
   if (busy.value || editAttempted.value || !confirmPaid.value || !original.value || !editingAvailable.value) return
-  busy.value = 'generating'; error.value = ''; reviewed.value = false; editAttempted.value = true; confirmPaid.value = false
+  busy.value = 'generating'; error.value = ''; nativeError.value = ''; reviewed.value = false; editAttempted.value = true; confirmPaid.value = false
   try {
     const result = await generateCatalog(original.value, controller.signal)
     if (alive) { hanger.value = result.image; selected.value = 'hanger'; cost.value = result.estimated_cost_usd }
@@ -150,7 +173,7 @@ async function generate() {
 }
 async function apply() {
   if (busy.value || (!props.draft && !props.photoOnly && (!reviewed.value || !fields.name.trim()))) return
-  busy.value = 'preparing'; error.value = ''
+  busy.value = 'preparing'; error.value = ''; nativeError.value = ''
   try {
     const image_data = await catalogForStorage(selectedImage.value)
     if (alive) { appliedImage = image_data; emit('result', { ...fields, name: fields.name.trim(), image_data, ...(props.draft && selected.value !== 'original' ? { original_image: original.value } : {}) }) }

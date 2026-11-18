@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Override ioncamera-android's broad default roots. Version 1.0.2 creates
+         capture files directly in cacheDir; only this private cache is needed.
+         Its provider is not exported and grants access to individual URIs. -->
+    <cache-path name="eleven_camera_cache" path="." />
+</paths>

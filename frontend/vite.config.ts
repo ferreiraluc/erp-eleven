@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { buildSecurityReports } from './scripts/build-security-report.mjs'
 
 // https://vite.dev/config/
 export default defineConfig(async ({ mode }) => {
@@ -17,7 +18,8 @@ export default defineConfig(async ({ mode }) => {
   const release = /^[a-f0-9]{7,40}$/i.test(revision) ? revision.slice(0, 12) : 'local'
   const assetDirectory = `assets/${release}`
   const recoveryVersion = createHash('sha256').update(readFileSync(new URL('./public/loading-fallback.js', import.meta.url))).digest('hex').slice(0, 12)
-  const plugins: any[] = [vue(), {
+  const securityReports = buildSecurityReports()
+  const plugins: any[] = [vue(), securityReports.main, {
     name: 'eleven-release-bootstrap',
     transformIndexHtml: {
       order: 'pre',
@@ -32,7 +34,7 @@ export default defineConfig(async ({ mode }) => {
 
   return {
   plugins,
-  worker: { format: 'es' },
+  worker: { format: 'es', plugins: () => [securityReports.worker()] },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

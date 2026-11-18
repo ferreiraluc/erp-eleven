@@ -8,8 +8,8 @@
         <ErpDropdown v-model="target" :options="options" :label="tr('Aplicar foto a')" :disabled="locked" />
       </div>
       <div class="photo-target"><span>{{ tr('Operação da foto') }}</span><ErpDropdown v-model="operation" :options="[{ value: 'replace', label: tr('Substituir foto principal') }, { value: 'add', label: tr('Adicionar à galeria') }]" :label="tr('Operação da foto')" :disabled="locked" /></div>
-      <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="fileInput?.click()">{{ tr('Enviar foto') }}</button>
-      <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="cameraInput?.click()">{{ tr('Câmera') }}</button>
+      <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="choosePhoto('photos')">{{ tr('Enviar foto') }}</button>
+      <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="choosePhoto('camera')">{{ tr('Câmera') }}</button>
       <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || !targets.length" @click="editPhoto()">{{ tr('Editar foto') }}</button>
     </div>
     <div v-if="sources.length" class="photo-reference">
@@ -57,6 +57,7 @@ import { inventoryAPI, type InventoryItem } from '@/services/api'
 import type { ProductPhotoResult } from '@/services/productPhoto'
 import { inScope } from '@/services/inventoryBulkDetails'
 import { galleryPreview, prepareGalleryFile } from '@/services/productGallery'
+import { nativePhotoErrorText, nativePhotoSession, selectNativePhotos, usesNativePhotos, type NativePhotoSource } from '@/services/nativePhotos'
 import { MAX_BATCH_PHOTOS, photoAssignments, type PhotoDraft } from '@/services/inventoryBulkPhotos'
 import { useInventoryI18n } from './i18n'
 const { tr } = useInventoryI18n()
@@ -126,9 +127,9 @@ async function editPhoto(groupIds?: string[], groupOperation?: PhotoOperation) {
     if (!disposed) error.value = 'Não foi possível carregar a foto original. Tente novamente ou envie outra foto.'
   } finally { if (!disposed) busy.value = false }
 }
-async function stagePhoto(image: string, ids: string[], selectedOperation: PhotoOperation) {
+async function stagePhoto(image: string, ids: string[], selectedOperation: PhotoOperation, current: () => boolean = () => !disposed) {
   const preview = await galleryPreview(image)
-  if (disposed) return false
+  if (!current()) return false
   const next = { ...props.modelValue }
   const photo = { image, preview, operation: selectedOperation }
   ids.forEach(id => { next[id] = photo })
@@ -165,6 +166,21 @@ async function prepare(event: Event) {
   } catch {
     if (!disposed) error.value = 'Não foi possível preparar a foto. Use JPEG, PNG ou WebP de até 15 MB.'
   } finally { busy.value = false }
+}
+async function choosePhoto(source: NativePhotoSource) {
+  if (locked.value || !targets.value.length) return
+  if (!usesNativePhotos()) { (source === 'camera' ? cameraInput : fileInput).value?.click(); return }
+  // Keep the chosen recipients even if a color/name changes while the camera is open.
+  const ids = targets.value.map(item => item.id), selectedOperation = operation.value
+  const current = nativePhotoSession(() => !disposed && !props.disabled && ids.every(id => props.items.some(item => item.id === id)))
+  busy.value = true; error.value = ''
+  try {
+    const [file] = await selectNativePhotos(source, { isCurrent: current })
+    if (!file || !current()) return
+    const image = await prepareGalleryFile(file)
+    if (current()) await stagePhoto(image, ids, selectedOperation, current)
+  } catch (e) { if (!disposed) error.value = nativePhotoErrorText(e) }
+  finally { if (!disposed) busy.value = false }
 }
 </script>
 

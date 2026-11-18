@@ -21,8 +21,8 @@
         <button type="button" class="erp-button erp-button--ghost erp-button--sm" :disabled="locked" @click="removeSelected">{{ tr('Remover foto') }} {{ selected + 1 }}</button>
       </div>
       <div class="gallery-actions">
-        <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || photos.length >= 5" @click="fileInput?.click()">＋ {{ tr('Adicionar fotos') }}</button>
-        <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || photos.length >= 5" @click="cameraInput?.click()">{{ tr('Câmera') }}</button>
+        <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || photos.length >= 5" @click="choosePhotos('photos')">＋ {{ tr('Adicionar fotos') }}</button>
+        <button type="button" class="erp-button erp-button--secondary erp-button--sm" :disabled="locked || photos.length >= 5" @click="choosePhotos('camera')">{{ tr('Câmera') }}</button>
         <span v-if="busy" role="status">{{ tr('Preparando fotos...') }}</span>
       </div>
       <input ref="fileInput" :disabled="locked" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden @change="addFiles" />
@@ -37,6 +37,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { catalogForStorage } from '@/services/productPhoto'
 import { galleryPreview, MAX_PRODUCT_PHOTOS, prepareGalleryFile } from '@/services/productGallery'
+import { nativePhotoErrorText, nativePhotoSession, selectNativePhotos, usesNativePhotos, type NativePhotoSource } from '@/services/nativePhotos'
 import { useInventoryI18n } from './i18n'
 const props = withDefaults(defineProps<{ cover: string; additional: string[]; editable?: boolean; readOnly?: boolean; expanded?: boolean; loading?: boolean; loadError?: boolean }>(), { editable: false })
 const emit = defineEmits<{ (e: 'update:cover', value: string): void; (e: 'update:additional', value: string[]): void; (e: 'busy', value: boolean): void; (e: 'retry'): void }>()
@@ -88,6 +89,20 @@ async function addFiles(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || []); input.value = ''
   if (locked.value || !files.length) return
+  await prepareFiles(files)
+}
+async function choosePhotos(source: NativePhotoSource) {
+  if (locked.value || photos.value.length >= MAX_PRODUCT_PHOTOS) return
+  if (!usesNativePhotos()) { (source === 'camera' ? cameraInput : fileInput).value?.click(); return }
+  const current = nativePhotoSession(() => !disposed && !props.readOnly && !props.loading && !props.loadError)
+  busy.value = true; error.value = ''
+  try {
+    const files = await selectNativePhotos(source, { limit: source === 'camera' ? 1 : MAX_PRODUCT_PHOTOS - photos.value.length, isCurrent: current })
+    if (files.length && current()) await prepareFiles(files, current)
+  } catch (e) { if (!disposed) error.value = nativePhotoErrorText(e) }
+  finally { if (!disposed) busy.value = false }
+}
+async function prepareFiles(files: File[], current: () => boolean = () => !disposed) {
   const available = MAX_PRODUCT_PHOTOS - photos.value.length
   if (files.length > available) { error.value = 'Selecione apenas as fotos que cabem no limite de 5.'; return }
   busy.value = true; error.value = ''
@@ -95,10 +110,10 @@ async function addFiles(event: Event) {
   try {
     for (const file of files) {
       const photo = await prepareGalleryFile(file)
-      if (disposed) return
+      if (!current()) return
       if (!values.includes(photo)) values.push(photo)
     }
-    if (!disposed) apply(values)
+    if (current()) apply(values)
   } catch { error.value = 'Não foi possível preparar a foto. Use JPEG, PNG ou WebP de até 15 MB.' }
   finally { busy.value = false }
 }

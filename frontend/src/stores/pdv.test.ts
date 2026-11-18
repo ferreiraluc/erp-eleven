@@ -253,3 +253,36 @@ describe('rounding a payment filled with Total', () => {
     expect(pdv.total).toBe(100)
   })
 })
+
+
+describe('explicit stock exception', () => {
+  it('allows confirmed negative balance, sends opt-in and resets it after checkout', async () => {
+    login('Lucas'); const pdv = usePdvStore()
+    pdv.allowNegativeStock = true
+    pdv.addItem(catalog, {...snapshot,current_stock:-1,stock_loja:-1,stock_deposito:0})
+    expect(pdv.availableStock(snapshot.id,'loja')).toBe(-2)
+    pdv.addPayment(payment)
+    const post = vi.spyOn(pdvAPI, 'createSale').mockResolvedValueOnce(sale('negative'))
+    await pdv.completeSale()
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({allow_negative_stock:true}))
+    post.mockRestore()
+    expect(pdv.allowNegativeStock).toBe(false)
+  })
+  it('never overrides reservations, unknown balances or inconsistent totals', () => {
+    login('Lucas'); const pdv = usePdvStore(); pdv.allowNegativeStock = true
+    expect(() => pdv.addItem(catalog,{...snapshot,stock_loja:1,stock_deposito:0,current_stock:1,reserved_loja:1})).toThrow('insufficientStock')
+    expect(() => pdv.addItem(catalog,{...snapshot,stock_loja:null})).toThrow('unknownStock')
+    expect(() => pdv.addItem(catalog,{...snapshot,stock_loja:-1})).toThrow('invalidStock')
+    expect(pdv.cart).toEqual([])
+  })
+})
+
+
+it('requires the checkout exception when the other location already has a negative balance', () => {
+  login('Lucas'); const pdv = usePdvStore()
+  const stock = {...snapshot,current_stock:0,stock_loja:1,stock_deposito:-1}
+  expect(() => pdv.addItem(catalog,stock)).toThrow('insufficientStock')
+  pdv.allowNegativeStock = true
+  pdv.addItem(catalog)
+  expect(pdv.cart).toHaveLength(1)
+})

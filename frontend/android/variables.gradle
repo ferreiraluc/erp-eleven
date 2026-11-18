@@ -1,4 +1,6 @@
 ext {
+    // GHSA-r937-wjx7-w2jp: patched KGP; consumed by all Capacitor Kotlin plugins.
+    kotlin_version = '2.4.20'
     minSdkVersion = 26
     compileSdkVersion = 36
     targetSdkVersion = 36

@@ -4,6 +4,9 @@ import { createI18n } from 'vue-i18n'
 import ProductPhotoAssistant from './ProductPhotoAssistant.vue'
 const mock = vi.hoisted(() => ({ analyzePhoto: vi.fn(), generateCatalog: vi.fn(), cutoutPhoto: vi.fn(), preparePhoto: vi.fn(), catalogForStorage: vi.fn(), photoStatus: vi.fn(), photoError: vi.fn(() => 'edit_uncertain') }))
 vi.mock('@/services/productPhoto', () => mock)
+const native = vi.hoisted(() => ({ enabled: false, valid: true, select: vi.fn() }))
+vi.mock('@/services/nativePhotos', () => ({ usesNativePhotos: () => native.enabled, selectNativePhotos: native.select,
+  nativePhotoSession: (current: () => boolean) => () => native.valid && current(), nativePhotoErrorText: () => 'Permita o acesso à câmera.' }))
 let app: App, root: HTMLDivElement
 const button = (text: string) => Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === text)!
 async function mount(props = {}, upload = true) {
@@ -24,6 +27,7 @@ async function review() {
   checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); await nextTick()
 }
 beforeEach(() => {
+  native.enabled = false; native.valid = true; native.select.mockResolvedValue([])
   mock.photoStatus.mockResolvedValue({ editing_available: true, model: 'gpt-image-1-mini' })
   mock.preparePhoto.mockResolvedValue('data:image/jpeg;base64,original')
   mock.catalogForStorage.mockResolvedValue('data:image/jpeg;base64,stored')
@@ -32,6 +36,45 @@ beforeEach(() => {
   mock.generateCatalog.mockResolvedValue({ image: 'data:image/jpeg;base64,generated', model: 'gpt-image-1-mini', estimated_cost_usd: 0.006 })
 })
 afterEach(() => { app?.unmount(); root?.remove(); vi.clearAllMocks() })
+it('opens the native camera explicitly and keeps gallery as a separate choice without starting AI', async () => {
+  native.enabled = true
+  const file = new File(['camera'], 'camera.jpg', { type: 'image/jpeg' })
+  native.select.mockResolvedValue([file])
+  await mount({ draft: true }, false)
+  button('Tirar foto').click(); await nextTick(); await nextTick(); await nextTick()
+  expect(native.select).toHaveBeenCalledWith('camera', expect.objectContaining({ isCurrent: expect.any(Function) }))
+  expect(mock.preparePhoto).toHaveBeenCalledWith(file)
+  expect(mock.analyzePhoto).not.toHaveBeenCalled(); expect(mock.generateCatalog).not.toHaveBeenCalled()
+  button('Escolher foto').click(); await nextTick(); await nextTick()
+  expect(native.select).toHaveBeenLastCalledWith('photos', expect.any(Object))
+})
+
+it('preserves the original when the native camera is cancelled and ignores a late result after closing', async () => {
+  native.enabled = true
+  await mount({ photoOnly: true, initialImage: 'data:image/jpeg;base64,existing' }, false)
+  button('Tirar foto').click(); await nextTick(); await nextTick()
+  expect(mock.preparePhoto).not.toHaveBeenCalled()
+  expect(document.querySelector('.photo-error')).toBeNull()
+  expect(document.querySelector('.photo-comparison img')?.getAttribute('src')).toContain('existing')
+  let finish!: (files: File[]) => void
+  native.select.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+  button('Tirar foto').click(); await nextTick()
+  document.querySelector<HTMLButtonElement>('.photo-dialog [data-dialog-close]')!.click()
+  finish([new File(['camera'], 'camera.jpg', { type: 'image/jpeg' })]); await nextTick(); await nextTick()
+  expect(mock.preparePhoto).not.toHaveBeenCalled()
+  expect(document.querySelector('.photo-comparison img')?.getAttribute('src')).toContain('existing')
+})
+
+it('discards the prepared native image when its session expires while decoding', async () => {
+  native.enabled = true
+  native.select.mockResolvedValue([new File(['camera'], 'camera.jpg', { type: 'image/jpeg' })])
+  let finish!: (image: string) => void
+  mock.preparePhoto.mockReturnValueOnce(new Promise(resolve => { finish = resolve }))
+  await mount({ draft: true, initialImage: 'data:image/jpeg;base64,existing' }, false)
+  button('Tirar foto').click(); await nextTick(); await nextTick()
+  native.valid = false; finish('data:image/jpeg;base64,new'); await nextTick(); await nextTick()
+  expect(document.querySelector('.photo-comparison img')?.getAttribute('src')).toContain('existing')
+})
 describe('Photo-assisted product form', () => {
   it('edits only the image without product fields or paid requests and supports all locales', async () => {
     const { result, i18n } = await mount({ photoOnly: true, initialImage: 'data:image/jpeg;base64,saved', applyHint: 'Aplicar a 4 itens.' }, false)

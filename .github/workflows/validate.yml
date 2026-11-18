@@ -55,10 +55,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --include=dev
-      - name: Audit production Node dependencies
-        run: npm audit --omit=dev --audit-level=high
-      - name: Audit development Node dependencies
-        run: npm audit --include=dev --audit-level=high
+      - name: Validate dependency audit policy
+        run: node --test scripts/audit-dependencies.test.mjs
       - run: npm run audit:ui
       - run: npm test
       - run: npm run type-check
@@ -66,6 +64,8 @@ jobs:
         run: python3 scripts/test_package_adhoc.py
       - run: npm run build
       - run: node scripts/check-build.mjs
+      - name: Audit all Node dependencies against the actual build
+        run: node scripts/audit-dependencies.mjs
   python-security:
     runs-on: ubuntu-latest
     timeout-minutes: 10

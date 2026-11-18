@@ -24,10 +24,10 @@ export function stockAt(snapshot: CatalogStockSnapshot | undefined, location: st
   validateLocation(location)
   if (!snapshot || !hasKnownStock(snapshot)) throw new PdvCartError('unknownStock')
   if (snapshot.is_active === false) throw new PdvCartError('inactiveProduct')
-  if (![snapshot.current_stock, snapshot.stock_loja, snapshot.stock_deposito].every(value => Number.isSafeInteger(value) && value >= 0) ||
+  if (![snapshot.current_stock, snapshot.stock_loja, snapshot.stock_deposito].every(value => Number.isSafeInteger(value)) ||
       snapshot.current_stock !== snapshot.stock_loja + snapshot.stock_deposito) throw new PdvCartError('invalidStock')
   const reserved = snapshot[location === 'loja' ? 'reserved_loja' : 'reserved_deposito'] ?? 0
   const physical = location === 'loja' ? snapshot.stock_loja : snapshot.stock_deposito
-  if (!Number.isSafeInteger(reserved) || reserved < 0 || reserved > physical) throw new PdvCartError('invalidStock')
+  if (!Number.isSafeInteger(reserved) || reserved < 0 || (reserved > 0 && reserved > physical)) throw new PdvCartError('invalidStock')
   return physical - reserved
 }
