@@ -229,7 +229,7 @@ rodapé do login web. Não há publicação pública nas buscas das lojas nesta 
 A página tem recursos próprios, sem carregar o ERP ou exigir uma sessão, mas o
 aplicativo continua exigindo login e as mesmas permissões do servidor.
 
-- **Android:** APK privado definitivo **1.0.3**, com versão, tamanho e SHA-256,
+- **Android:** APK privado definitivo **1.0.4**, com versão, tamanho e SHA-256,
   assinado com chave de release estável. A identidade `com.elevenparispy.erp` é
   distinta do `.pilot`: instala separado do piloto e pede um novo login. Os dados
   continuam no ERP, sem migração ou cópia. Atualizações dessa versão devem preservar
@@ -408,3 +408,23 @@ no CI ou no release. O frontend incorporado corresponde ao commit
 Compilação, testes nativos e lint aprovados no CI; câmera/galeria ainda precisam
 de conferência no aparelho real após instalar, especialmente HEIC no iPhone quando
 houver distribuição Ad Hoc. Atualizar somente o site não substitui o APK instalado.
+
+### Android 1.0.4 — catálogo para consulta offline
+
+A versão 1.0.4 (`versionCode=5`) mantém a assinatura de release e pode ser instalada
+sobre a 1.0.3 ou 1.0.2. O frontend incorporado corresponde ao commit
+`65883bce1a6e785ef41929cf601ca1c4b34d1a51`; o manifesto de downloads registra o
+tamanho e SHA-256 do APK assinado. Inclui o catálogo offline descrito acima, sem
+ativar atualização OTA de código nem operações financeiras offline.
+
+Para a conferência física: instalar, entrar online com **Lembrar-me**, aguardar
+o painel de cache indicar uma cópia salva e testar a busca em modo avião. Reabrir
+o app antes do vencimento da sessão também deve permitir a consulta. Conferir
+miniaturas já baixadas, scanner e quantidades por local; reconectar e confirmar
+a atualização da cópia. A validação em aparelho real permanece necessária.
+
+A fixture reproduzível `node frontend/scripts/check-offline-worker.mjs` validou
+IndexedDB real no Chromium com 50.000 produtos sintéticos: 30.466.773 bytes de
+catálogo serializado, persistência/reabertura, busca, isolamento, limpeza e
+preservação da cópia anterior em falha de quota. Essa medição não é consumo de
+RAM, limite de armazenamento do Android nem benchmark de tempo em celulares.
