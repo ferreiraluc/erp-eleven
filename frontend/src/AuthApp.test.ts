@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({ replace: vi.fn(), route: { path: '/conta', mat
 vi.mock('vue-router', () => ({ useRouter: () => ({ replace: mocks.replace }), useRoute: () => mocks.route,
   RouterLink: { template: '<a><slot /></a>' }, RouterView: { template: '<input data-private-form value="draft" />' } }))
 vi.mock('@/components/NotificationToast.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/offline/OfflineCatalog.vue', () => ({ default: { props: ['userName'], template: '<section data-offline-catalog>{{ userName }}</section>' } }))
 let app: App | undefined, container: HTMLDivElement
 function token(sid = 'old') { return 'x.' + btoa(JSON.stringify({ sid, exp: Date.now() / 1000 + 3600 })) + '.x' }
 const user = { id: 'Sol', nome: 'Sol', email: 'sol@eleven.com', role: 'GERENTE', ativo: true, must_change_password: false, sales_scope: 'own', sales_seller: 'Sol', vendedor_id: 'Sol', created_at: '', updated_at: '' } as User
@@ -25,6 +26,19 @@ function mount() {
 beforeEach(() => { localStorage.clear(); sessionStorage.clear(); mocks.replace.mockReset(); i18n.global.locale.value = 'pt' })
 afterEach(() => { app?.unmount(); container?.remove() })
 describe('Root session recovery and consumer ownership', () => {
+  it('unmounts operational screens and navigation when entering offline consultation', async () => {
+    const auth = mount()
+    expect(container.querySelector('[data-private-form]')).not.toBeNull()
+    auth.user = null
+    auth.offlineViewer = { id: 'Sol', name: 'Sol', profile: 'standard', verifiedAt: Date.now() }
+    auth.status = 'offline'
+    await vi.waitFor(() => expect(container.querySelector('[data-offline-catalog]')?.textContent).toBe('Sol'))
+    expect(container.querySelector('[data-private-form]')).toBeNull()
+    expect(container.querySelector('.account-bar')).toBeNull()
+    auth.expire()
+    await nextTick()
+    expect(container.querySelector('[data-offline-catalog]')).toBeNull()
+  })
   it.each(['success', 'error'])('does not navigate again when an old logout finishes with %s', async outcome => {
     const pending = deferred<void>(); vi.spyOn(authAPI, 'logout').mockReturnValueOnce(pending.promise)
     const auth = mount(); (container.querySelector('.account-bar button') as HTMLButtonElement).click(); await nextTick()

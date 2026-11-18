@@ -1,5 +1,6 @@
 <template>
-  <section class="cache-settings" :aria-label="uiText('Busca rápida neste aparelho')">
+  <OfflineCacheStatus v-if="isNativeSession()" />
+  <section v-else class="cache-settings" :aria-label="uiText('Busca rápida neste aparelho')">
     <h2>{{ uiText('Busca rápida neste aparelho') }}</h2>
     <p>
       {{
@@ -45,6 +46,8 @@
 <script setup lang="ts">
 import { formatDateTime as businessDateTime } from '@/utils/datetime'
 import { onMounted } from 'vue'
+import { isNativeSession } from '@/services/nativeSessionVault'
+import OfflineCacheStatus from '@/components/offline/OfflineCacheStatus.vue'
 import {
   catalogCacheState as state,
   prepareCatalogIndex,

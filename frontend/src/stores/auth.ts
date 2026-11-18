@@ -4,15 +4,18 @@ import axios from 'axios'
 import { authAPI, type LoginRequest, type User } from '@/services/api'
 import { clearSession, saveToken, saveSessionExpiry, sessionExpiry, storedToken, tokenIsCurrent, flushSessionStorage, sessionIsRemembered } from '@/services/sessionStorage'
 import i18n from '@/i18n'
-import { isNativeSession, isNativeSessionStorageError, nativeSessionStorageMessage } from '@/services/nativeSessionVault'
+import { isNativeSession, isNativeSessionStorageError, nativeSessionStorageMessage, nativeSessionVault, type NativeOfflineViewer } from '@/services/nativeSessionVault'
+import { setOfflineReadOnly } from '@/services/offlineAccess'
 import { AuthOperationSuperseded, isAuthOperationSuperseded } from '@/services/authOperation'
 import { clearCatalogIndex } from '@/services/catalogIndex'
+import { clearOfflineCatalog } from '@/services/offlineCatalog'
 import { clearNotificationDevice } from '@/services/notificationPush'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const token = ref<string | null>(null)
-  const status = ref<'unknown' | 'checking' | 'authenticated' | 'guest' | 'error'>('unknown')
+  const status = ref<'unknown' | 'checking' | 'authenticated' | 'offline' | 'guest' | 'error'>('unknown')
+  const offlineViewer = ref<NativeOfflineViewer | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   let checkedAt = 0
@@ -29,9 +32,12 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.nome || '')
 
   function expire() {
+    offlineViewer.value = null
+    setOfflineReadOnly(null)
     cancelExpiryTimer()
     clearNotificationDevice()
     clearCatalogIndex()
+    void clearOfflineCatalog().catch(() => undefined)
     operationEpoch++
     generation++
     checking = null
@@ -67,11 +73,25 @@ export const useAuthStore = defineStore('auth', () => {
     const saved = storedToken()
     if (!saved || !tokenIsCurrent(saved)) { expire(); return false }
     if (checking && checkingToken === saved) return checking
+    const enterOffline = () => {
+      const viewer = isNativeSession() && tokenIsCurrent(saved) && storedToken() === saved ? nativeSessionVault().offlineViewer(saved) : null
+      if (!viewer) return false
+      setOfflineReadOnly(saved)
+      offlineViewer.value = viewer
+      status.value = 'offline'
+      user.value = null
+      token.value = saved
+      checkedAt = 0
+      error.value = null
+      scheduleExpiry(saved)
+      return true
+    }
+    if (!navigator.onLine && enterOffline()) return false
     if (!force && isAuthenticated.value && saved === token.value && Date.now() - checkedAt < 60000) return true
     const current = ++generation
     // Keep an already verified view mounted during background validation so an
     // ordinary window focus does not discard an in-progress form.
-    if (!isAuthenticated.value || token.value !== saved) status.value = 'checking'
+    if ((!isAuthenticated.value && status.value !== 'offline') || token.value !== saved) status.value = 'checking'
     token.value = saved
     scheduleExpiry(saved)
     checkingToken = saved
@@ -80,7 +100,13 @@ export const useAuthStore = defineStore('auth', () => {
         const verified = await authAPI.getCurrentUser(saved)
         if (current !== generation || saved !== storedToken()) return false
         saveSessionExpiry(saved, verified.session_expires_at)
-        if (isNativeSession()) await flushSessionStorage()
+        if (isNativeSession()) {
+          nativeSessionVault().rememberOfflineViewer(saved, verified.ativo && !verified.must_change_password &&
+            (!verified.access_profile || ['standard', 'reseller'].includes(verified.access_profile)) ? {
+              id: verified.id, name: verified.nome.slice(0, 200), profile: verified.access_profile || 'standard', verifiedAt: Date.now(),
+            } : null)
+          await flushSessionStorage()
+        }
         if (current !== generation || saved !== storedToken()) return false
         if (!tokenIsCurrent(saved)) {
           window.dispatchEvent(new Event('erp:session-expired'))
@@ -88,6 +114,8 @@ export const useAuthStore = defineStore('auth', () => {
         }
         scheduleExpiry(saved)
         user.value = verified
+        offlineViewer.value = null
+        setOfflineReadOnly(null)
         status.value = 'authenticated'
         checkedAt = Date.now()
         error.value = null
@@ -100,8 +128,13 @@ export const useAuthStore = defineStore('auth', () => {
           return false
         }
         if (current !== generation || saved !== storedToken()) return false
-        if (axios.isAxiosError(e) && e.response?.status === 401) expire()
+        if (axios.isAxiosError(e) && [401, 403].includes(e.response?.status || 0)) expire()
         else {
+          const unavailable = axios.isAxiosError(e) && !axios.isCancel(e) && (
+            (!e.response && ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'].includes(e.code || '')) ||
+            [502, 503, 504].includes(e.response?.status || 0))
+          if (unavailable && enterOffline()) return false
+          offlineViewer.value = null
           status.value = 'error'
           user.value = null
           error.value = i18n.global.t('access.connectionError')
@@ -198,6 +231,6 @@ export const useAuthStore = defineStore('auth', () => {
     cancelExpiryTimer()
     window.removeEventListener('erp:session-expired', expire)
   })
-  return { user, token, status, isLoading, error, isAuthenticated, isOwner, isReseller, ownSales, userRole, userName,
+  return { user, token, status, offlineViewer, isLoading, error, isAuthenticated, isOwner, isReseller, ownSales, userRole, userName,
            login, logout, expire, ensureSession, changePassword, clearError: () => { error.value = null } }
 })

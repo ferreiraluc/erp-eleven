@@ -4,6 +4,13 @@ import type { useAuthStore } from '@/stores/auth'
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(yes => { resolve = yes }); return { promise, resolve } }
 function authFixture(check: Promise<boolean>) { return { token: 'original', status: 'authenticated', isLoading: false, user: { must_change_password: false }, ensureSession: vi.fn(() => check) } as unknown as ReturnType<typeof useAuthStore> }
 describe('Resume validation ownership', () => {
+  it('opens only the catalog when resume can restore an offline viewer', async () => {
+    const auth = authFixture(Promise.resolve(false)), replace = vi.fn()
+    auth.status = 'offline'
+    auth.user = null
+    await resumeVerifiedSession(auth, { replace })
+    expect(replace).toHaveBeenCalledExactlyOnceWith('/inventory')
+  })
   it.each([true, false])('does not navigate a new account after an old validation resolves %s', async valid => {
     const check = deferred<boolean>(), auth = authFixture(check.promise), replace = vi.fn()
     const pending = resumeVerifiedSession(auth, { replace })

@@ -72,6 +72,113 @@ describe('PDV session isolation',()=>{
 const snapshot = { id: 'catalog-1', current_stock: 8, stock_loja: 3, stock_deposito: 5, is_active: true }
 const catalog = { ...item, item_id: snapshot.id, is_avulso: false }
 const payment = { method:'cash_gs',currency:'GS',amount_original:100,exchange_rate:1,amount_gs:100,cambista_id:null,reference:null,label:'Cash' }
+
+function offline(auth: ReturnType<typeof useAuthStore>) {
+  const user = { ...auth.user! }
+  auth.offlineViewer = { id: user.id, name: user.nome, profile: user.access_profile || 'standard', verifiedAt: Date.now() }
+  auth.status = 'offline'
+  auth.user = null
+  return user
+}
+function revalidated(auth: ReturnType<typeof useAuthStore>, user: User) {
+  auth.user = user
+  auth.offlineViewer = null
+  auth.status = 'authenticated'
+}
+
+describe('PDV draft across a read-only offline interruption', () => {
+  it('keeps the same-session draft, payments and adjustments only in memory until permissions are revalidated', () => {
+    const auth = login('Lucas', 'all'), pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addPayment(payment)
+    pdv.discountGs = 10; pdv.discountCurrency = 'USD'; pdv.allowNegativeStock = true
+    pdv.clienteId = 'client-1'; pdv.clienteNome = 'Private customer'; pdv.notas = 'Private draft note'
+    const before = JSON.stringify({ cart: pdv.cart, payments: pdv.payments })
+    const user = offline(auth)
+    expect(pdv.cart).toHaveLength(1); expect(pdv.payments).toHaveLength(1)
+    expect(auth.isAuthenticated).toBe(false)
+    revalidated(auth, { ...user })
+    expect(JSON.stringify({ cart: pdv.cart, payments: pdv.payments })).toBe(before)
+    expect(pdv.discountGs).toBe(10); expect(pdv.discountCurrency).toBe('USD')
+    expect(pdv.allowNegativeStock).toBe(true); expect(pdv.clienteId).toBe('client-1')
+    expect(pdv.clienteNome).toBe('Private customer'); expect(pdv.notas).toBe('Private draft note')
+    expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0)
+  })
+
+  it('preserves an in-flight uncertain checkout and prevents a second sale after reconnection', async () => {
+    let reject!: (error: unknown) => void
+    const request = vi.spyOn(pdvAPI, 'createSale').mockReturnValueOnce(new Promise((_resolve, no) => { reject = no }))
+    const auth = login('Lucas'), pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addPayment(payment)
+    const checkout = pdv.completeSale(), failed = expect(checkout).rejects.toThrow('Synthetic timeout')
+    const user = offline(auth)
+    expect(pdv.loading).toBe(true); expect(pdv.cart).toHaveLength(1)
+    reject(new Error('Synthetic timeout')); await failed
+    expect(pdv.checkoutUncertain).toBe(true); expect(pdv.loading).toBe(false)
+    expect(pdv.cart).toHaveLength(1); expect(pdv.payments).toHaveLength(1)
+    revalidated(auth, user)
+    expect(pdv.checkoutUncertain).toBe(true)
+    await expect(pdv.completeSale()).rejects.toThrow('uncertain')
+    expect(request).toHaveBeenCalledOnce()
+  })
+
+  it('recognizes a checkout that was committed before the connection dropped without resending it', async () => {
+    const pending = deferred<PdvSaleResponse>(), request = vi.spyOn(pdvAPI, 'createSale').mockReturnValueOnce(pending.promise)
+    const auth = login('Lucas'), pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addPayment(payment)
+    const checkout = pdv.completeSale(), user = offline(auth)
+    pending.resolve(sale('committed-during-outage')); await checkout
+    expect(pdv.cart).toEqual([]); expect(pdv.payments).toEqual([])
+    expect(pdv.lastSale?.id).toBe('committed-during-outage'); expect(pdv.checkoutUncertain).toBe(false)
+    revalidated(auth, user)
+    expect(pdv.lastSale?.id).toBe('committed-during-outage'); expect(request).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { sales_scope: 'own' }, { vendedor_id: 'other-seller' }, { sales_seller: 'other-seller' },
+    { access_profile: 'reseller' }, { role: 'VENDEDOR' }, { must_change_password: true }, { ativo: false },
+  ] as Partial<User>[])('discards financial data when revalidation changes financial access %j', changes => {
+    const auth = login('Lucas', 'all'), pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addPayment(payment); pdv.checkoutUncertain = true
+    pdv.lastSale = sale('private-receipt'); pdv.clients = [client(900)]
+    const user = offline(auth)
+    revalidated(auth, { ...user, ...changes })
+    expect(pdv.cart).toEqual([]); expect(pdv.payments).toEqual([])
+    expect(pdv.lastSale).toBeNull(); expect(pdv.clients).toEqual([])
+    expect(pdv.availableStock(snapshot.id, 'loja')).toBeNull()
+  })
+
+  it.each(['logout/expiry', 'new token', 'different offline owner'] as const)('immediately clears an offline draft after %s', change => {
+    const auth = login('Lucas'), pdv = usePdvStore()
+    pdv.addItem(catalog, snapshot); pdv.addPayment(payment); pdv.checkoutUncertain = true
+    offline(auth)
+    if (change === 'logout/expiry') auth.expire()
+    else if (change === 'new token') auth.token = 'new-session'
+    else auth.offlineViewer = { ...auth.offlineViewer!, id: 'another-user' }
+    expect(pdv.cart).toEqual([]); expect(pdv.payments).toEqual([])
+    expect(pdv.checkoutUncertain).toBe(false); expect(pdv.availableStock(snapshot.id, 'loja')).toBeNull()
+  })
+
+  it('does not restore an expired offline draft when its old checkout later fails', async () => {
+    let reject!: (reason: unknown) => void
+    vi.spyOn(pdvAPI, 'createSale').mockReturnValueOnce(new Promise((_resolve, no) => { reject = no }))
+    const auth = login('Lucas'), pdv = usePdvStore(); pdv.addItem(catalog, snapshot)
+    const checkout = pdv.completeSale(), failed = expect(checkout).rejects.toThrow('Synthetic timeout')
+    offline(auth); auth.expire(); login('Sol'); pdv.addItem({ ...item, item_name: 'New session draft' })
+    reject(new Error('Synthetic timeout')); await failed
+    expect(pdv.checkoutUncertain).toBe(false); expect(pdv.loading).toBe(false)
+    expect(pdv.cart[0].item_name).toBe('New session draft')
+  })
+
+  it('does not mistake a central offline write rejection for a submitted sale', async () => {
+    const blocked = Object.assign(new Error('Synthetic read-only boundary'), { code: 'ERR_OFFLINE_READ_ONLY' })
+    vi.spyOn(pdvAPI, 'createSale').mockRejectedValueOnce(blocked)
+    const auth = login('Lucas'), pdv = usePdvStore(); pdv.addItem(catalog, snapshot)
+    offline(auth)
+    await expect(pdv.completeSale()).rejects.toBe(blocked)
+    expect(pdv.checkoutUncertain).toBe(false); expect(pdv.cart).toHaveLength(1)
+  })
+})
+
 describe('PDV stock conservation', () => {
   it.each([0, -1, 1.5, NaN, Infinity, 10_000_000])('rejects invalid catalog quantity %s without changing a valid cart', quantity => {
     login('Lucas'); const pdv = usePdvStore(); pdv.addItem(catalog, snapshot)

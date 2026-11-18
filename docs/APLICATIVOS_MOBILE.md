@@ -36,7 +36,7 @@ flowchart LR
 | PDF | Compartilhamento de arquivo local em vendas/PDV, pedidos/condicionais, conferência, endereços/SuperFrete e histórico do cliente |
 | Impressão da loja | Mesmas filas e agentes; nenhuma porta de impressora exposta |
 | Notificações nativas | Código e migração preparados; flags desligadas até configurar credenciais e testar |
-| Consulta sem internet | Apenas recursos já existentes de índice do catálogo; estoque confirmado e operações continuam exigindo rede |
+| Consulta sem internet | No app nativo, catálogo salvo com preços, saldos por local e miniaturas; acesso separado de uma sessão online, com prazo até a expiração já emitida pelo servidor |
 
 Exportações CSV/ZIP ainda usam os caminhos do navegador e não fazem parte da
 homologação nativa deste piloto. O scanner do plugin é encerrado pelo usuário na
@@ -44,6 +44,67 @@ tela nativa; resultados tardios após sair da tela são descartados. Botão Volt
 Android, teclado, áreas seguras e formulários precisam de teste em aparelho real.
 O app não fica executando continuamente em segundo plano. O projeto de servidor
 local da Rede Eleven e sincronização offline permanece separado.
+
+### Consulta offline no aplicativo (1.0.4)
+
+Após um login online válido, o app prepara automaticamente uma cópia do catálogo
+em armazenamento local. O dashboard mostra quantidade de produtos, miniaturas e
+horário da cópia. A carga ocorre em páginas pequenas; uma falha preserva a última
+geração completa. A atualização é reavaliada a cada minuto enquanto o app está
+visível e a cópia completa vence após 15 minutos. O primeiro preparo, reconexão e
+retomada também são considerados. Não há execução contínua garantida com o app
+fechado nem cópia ilimitada de arquivos.
+
+São armazenados dados de produto, descrição limitada, preço/moeda de venda e
+quantidades físicas, reservadas e disponíveis de loja/depósito. O valor exibido
+é uma observação histórica, com data, não confirmação de saldo atual. Páginas
+sucessivas podem representar instantes diferentes; o período de coleta fica
+registrado. Saldos inconsistentes são desconhecidos, nunca substituídos por zero.
+Miniaturas da foto principal são carregadas aos poucos, com orçamento separado
+de 128 MiB; o catálogo admite até 75 mil produtos/64 MiB serializados. Esses
+limites não equivalem ao consumo total de RAM. Originais, fotos adicionais,
+custos e dados de clientes não são copiados por esse mecanismo. A quota real e
+a remoção de armazenamento pelo sistema podem reduzir a disponibilidade.
+
+Ao perder a rede, o aplicativo pode mostrar uma tela exclusiva de consulta com
+busca, filtros, scanner, detalhes e miniaturas já salvas. `isAuthenticated`
+permanece falso e os módulos operacionais são desmontados. O cliente HTTP também
+bloqueia mutações iniciadas por callbacks antigos; não existe fila/replay de
+vendas, pagamentos, movimentações ou impressões. Reencontrar um produto no cache
+não autoriza uma venda nem valida estoque.
+
+A identidade mínima confirmada por `/auth/me` fica junto do token, nonce da
+instalação e expiração no cofre nativo existente (Android Keystore/Keychain),
+vinculada ao `sub` do JWT. Não é um novo login offline nem um perfil em
+`localStorage`. Exige sessão previamente validada e, para reabrir após encerrar
+o processo, login com Lembrar-me. Conserva o prazo absoluto informado pelo
+servidor, limitado pelo JWT: não estende a regra de 21h de Brasília. Logout,
+expiração, 401/403 e falha do cofre removem acesso; troca obrigatória de senha,
+perfil inválido ou relógio significativamente anterior à validação não habilitam
+consulta offline. Uma revogação feita em outro aparelho só pode ser conhecida
+na reconexão. O catálogo é isolado pela conta e apagado ao encerrar a sessão.
+
+Sem internet no primeiro login do dia, depois do vencimento, é necessário
+restabelecer a conexão para autenticar e preparar uma cópia. O site no navegador
+continua com o índice rápido anterior, sem promessa de inicialização offline.
+O servidor local da Rede Eleven será uma etapa distinta para vendas e impressão.
+
+### Atualização após deploy: limite atual e próximo passo
+
+O deploy atualiza a API e o site, mas **não substitui o Vue incorporado ao APK**.
+Esta versão ainda não instala atualizações OTA. Telas e lógica web podem receber
+um atualizador de bundles em uma entrega posterior: build mobile próprio,
+manifesto assinado, chave pública no binário, validação de hashes e compatibilidade
+nativa/API, download separado da geração em uso, ativação em momento seguro e
+retorno automático à última versão saudável. O hash informativo de
+`download/releases.json` não substitui assinatura de código. Nunca apontar
+`server.url` para o site como atalho para esse mecanismo.
+
+Plugins, permissões, SDK e código nativo continuam exigindo APK/IPA novo. A
+instalação silenciosa de APK depende das condições do Android e não é garantida
+para aparelhos pessoais; a distribuição Ad Hoc iOS também conserva suas regras
+de assinatura e provisionamento. Um eventual atualizador não deve reiniciar uma
+venda ou formulário em andamento nem modificar o prazo da sessão.
 
 No cadastro, edição e fotos em lote, **Tirar foto/Câmera** chama `Camera.takePhoto`
 e **Escolher foto/Adicionar fotos/Enviar foto** chama o seletor nativo de fotos,

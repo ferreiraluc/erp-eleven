@@ -13,6 +13,19 @@ function fixture() {
 }
 beforeEach(() => { clearSession(); saveToken('first') })
 describe('Authentication navigation guard ownership', () => {
+  it('restricts offline identity to the read-only catalog regardless of requested route', async () => {
+    const { router, auth } = fixture()
+    auth.status = 'offline'
+    auth.user = null
+    vi.mocked(auth.ensureSession).mockResolvedValue(false)
+    for (const path of ['/pdv', '/usuarios', '/inventory/labels', '/dashboard', '/login', '/inventory']) {
+      await router.push(path)
+      expect(router.currentRoute.value.path).toBe('/inventory')
+    }
+    auth.status = 'guest'
+    await router.push('/pdv')
+    expect(router.currentRoute.value.path).toBe('/login')
+  })
   it('cancels a delayed failed guard instead of redirecting a newer successful navigation', async () => {
     const { router, auth } = fixture(); await router.push('/dashboard')
     const old = deferred<boolean>(); vi.mocked(auth.ensureSession).mockReturnValueOnce(old.promise)

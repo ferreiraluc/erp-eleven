@@ -2,6 +2,8 @@ import type { CustomerSort, CustomerWithActivity } from './customerLogistics'
 import type { OcrParsedLabel } from './ocr'
 import axios from 'axios'
 import { storedToken, clearSession } from './sessionStorage'
+import { isNativeSession } from './nativeSessionVault'
+import { isOfflineReadOnly } from './offlineAccess'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -17,6 +19,9 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = storedToken()
+  if (isOfflineReadOnly(token) && !['get', 'head', 'options'].includes((config.method || 'get').toLowerCase()) && config.url !== '/api/auth/login') {
+    throw new axios.AxiosError('Consulta offline: conecte-se para realizar alterações.', 'ERR_OFFLINE_READ_ONLY', config)
+  }
   if (config.url === '/api/auth/login') config.headers.delete('Authorization')
   else if (token && !config.headers.has('Authorization')) config.headers.Authorization = `Bearer ${token}`
   return config
@@ -103,7 +108,7 @@ export const authAPI = {
     api.post('/api/auth/password', { current_password, new_password }, { headers: sessionHeaders(token) }).then(res => res.data),
 
   getCurrentUser: (token = storedToken()): Promise<User> =>
-    api.get('/api/auth/me', { headers: sessionHeaders(token) }).then(res => res.data),
+    api.get('/api/auth/me', { headers: sessionHeaders(token), ...(isNativeSession() ? { timeout: 8000 } : {}) }).then(res => res.data),
   
   logout: (token = storedToken()): Promise<void> =>
     api.post('/api/auth/logout', undefined, { headers: sessionHeaders(token) }).then(res => res.data),

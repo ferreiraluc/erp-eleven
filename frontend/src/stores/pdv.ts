@@ -271,10 +271,34 @@ export const usePdvStore = defineStore('pdv', () => {
     loading.value = false
   }
 
-  // Pinia survives hash navigation. Clear financial drafts and cached balances
-  // synchronously when identity, token or the user's financial scope changes.
+  function financialContext() {
+    const user = auth.user, token = auth.token
+    if (!user || !token) return null
+    return { token, userId: user.id, profile: user.access_profile || 'standard',
+      signature: JSON.stringify([token, user.id, user.sales_scope, user.vendedor_id,
+        user.sales_seller, user.access_profile || 'standard', user.role, user.ativo, user.must_change_password]) }
+  }
+  // A network outage hides operational screens but is not a different session.
+  // Keep the draft and an in-flight checkout's outcome only in this store's
+  // memory. A verified /me with different scope, logout or a new token still
+  // destroys it synchronously; the offline viewer never grants write access.
+  let draftContext = financialContext()
   watch([() => auth.user?.id, () => auth.token, () => auth.user?.sales_scope,
-         () => auth.user?.vendedor_id, () => auth.user?.sales_seller], resetSessionState, { flush: 'sync' })
+         () => auth.user?.vendedor_id, () => auth.user?.sales_seller,
+         () => auth.user?.access_profile, () => auth.user?.role, () => auth.user?.ativo,
+         () => auth.user?.must_change_password, () => auth.status,
+         () => auth.offlineViewer?.id, () => auth.offlineViewer?.profile], () => {
+    const next = financialContext()
+    if (next) {
+      if (next.signature !== draftContext?.signature) resetSessionState()
+      draftContext = next
+      return
+    }
+    if (auth.status === 'offline' && draftContext && auth.token === draftContext.token &&
+        auth.offlineViewer?.id === draftContext.userId && auth.offlineViewer.profile === draftContext.profile) return
+    resetSessionState()
+    draftContext = null
+  }, { flush: 'sync' })
 
   async function completeSale(vendedorId?: string, usdRateGs?: number): Promise<PdvSaleResponse> {
     ensureEditable()
@@ -328,7 +352,8 @@ export const usePdvStore = defineStore('pdv', () => {
       return sale
     } catch (error) {
       const status = (error as { response?: { status?: number } })?.response?.status
-      if (generation === sessionGeneration && (!status || status >= 500)) checkoutUncertain.value = true
+      const blockedBeforeSend = (error as { code?: string })?.code === 'ERR_OFFLINE_READ_ONLY'
+      if (generation === sessionGeneration && !blockedBeforeSend && (!status || status >= 500)) checkoutUncertain.value = true
       throw error
     } finally {
       if (generation === sessionGeneration) loading.value = false

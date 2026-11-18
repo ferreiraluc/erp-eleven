@@ -2,23 +2,27 @@
   <div id="app">
     <a class="skip-link" href="#main-content">{{ $t('access.skipToContent') }}</a>
     <AccountNavigation
-      v-if="!route.matched.some(record => record.path === '/dashboard') || !auth.isAuthenticated"
+      v-if="auth.status !== 'offline' && (!route.matched.some(record => record.path === '/dashboard') || !auth.isAuthenticated)"
       :class="{ 'operational-account-bar': route.meta.requiresAuth }"
     />
     <NotificationInvitation v-if="auth.isAuthenticated" />
-    <div v-if="auth.status === 'checking'" class="session-state" role="status">{{ $t('access.checking') }}</div>
+    <main v-if="auth.status === 'offline' && auth.offlineViewer" id="main-content" tabindex="-1">
+      <OfflineCatalog :key="auth.offlineViewer.id" :user-name="auth.offlineViewer.name" :loading="retryingOffline" @retry="retrySession" @logout="logout" />
+    </main>
+    <div v-else-if="auth.status === 'checking'" class="session-state" role="status">{{ $t('access.checking') }}</div>
     <section v-else-if="auth.status === 'error' && route.meta.requiresAuth" class="session-state session-error" role="alert">
       <p>{{ $t('access.connectionError') }}</p>
       <div><button class="erp-button erp-button--secondary" @click="retrySession">{{ $t('common.refresh') }}</button><button class="erp-button erp-button--secondary" @click="logout">{{ $t('common.logout') }}</button></div>
     </section>
     <main v-else-if="!route.meta.requiresAuth || auth.isAuthenticated" id="main-content" tabindex="-1">
       <RouterView v-if="!auth.isReseller || resellerCanVisit(route.path)" :key="`${auth.user?.id || 'guest'}:${auth.user?.access_profile || 'standard'}`" />
+      <OfflineCacheStatus v-if="isNativeSession() && auth.isAuthenticated && route.path === '/dashboard'" />
     </main>
     <NotificationToast />
   </div>
 </template>
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue'
+import { defineAsyncComponent, onBeforeUnmount, ref, watch } from 'vue'
 import { useCurrencyStore } from '@/stores/currency'
 import { RouterView, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -29,7 +33,31 @@ import NotificationInvitation from '@/components/notifications/NotificationInvit
 import { useNotificationCenter } from '@/stores/notificationCenter'
 import { safeNotificationPath } from '@/services/notifications'
 import { resellerCanVisit } from '@/services/accessProfile'
+import { isNativeSession } from '@/services/nativeSessionVault'
+import { storedToken, tokenIsCurrent } from '@/services/sessionStorage'
+import { prepareOfflineCatalog, stopOfflineCatalog } from '@/services/offlineCatalog'
+const OfflineCatalog = defineAsyncComponent(() => import('@/components/offline/OfflineCatalog.vue').then(module => module.default))
+const OfflineCacheStatus = defineAsyncComponent(() => import('@/components/offline/OfflineCacheStatus.vue').then(module => module.default))
 const auth = useAuthStore(), router = useRouter(), route = useRoute()
+const retryingOffline = ref(false)
+watch(() => [auth.status, auth.token, auth.user?.id, auth.offlineViewer?.id], () => {
+  if (!isNativeSession()) return
+  const token = auth.token
+  const userId = auth.isAuthenticated ? auth.user?.id : auth.status === 'offline' ? auth.offlineViewer?.id : undefined
+  if (!token || !userId) { stopOfflineCatalog(); return }
+  void prepareOfflineCatalog({ userId, token, isCurrent: () => storedToken() === token && tokenIsCurrent(token) &&
+    (auth.isAuthenticated && auth.user?.id === userId || auth.status === 'offline' && auth.offlineViewer?.id === userId) })
+}, { immediate: true })
+function connectivityChanged() {
+  if (isNativeSession() && auth.token && !document.hidden) void retrySession()
+}
+window.addEventListener('online', connectivityChanged)
+window.addEventListener('offline', connectivityChanged)
+onBeforeUnmount(() => {
+  stopOfflineCatalog()
+  window.removeEventListener('online', connectivityChanged)
+  window.removeEventListener('offline', connectivityChanged)
+})
 const notificationCenter = useNotificationCenter()
 watch([() => auth.isAuthenticated, () => auth.isReseller, () => route.path], ([authenticated, reseller]) => {
   if (authenticated && reseller && !resellerCanVisit(route.path)) void router.replace(auth.user?.must_change_password ? '/conta' : '/dashboard')
@@ -47,11 +75,16 @@ onBeforeUnmount(() => navigator.serviceWorker?.removeEventListener('message', no
 const currency = useCurrencyStore()
 watch(() => auth.isAuthenticated && auth.user?.id, id => { if (id) void currency.loadCurrentRates() }, { immediate: true })
 async function retrySession() {
+  if (retryingOffline.value) return
+  retryingOffline.value = true
   const ownerToken = auth.token
-  const valid = await auth.ensureSession(true)
-  if (auth.isLoading || (auth.token !== ownerToken && auth.token)) return
-  if (valid && auth.user?.must_change_password) await router.replace('/conta')
-  else if (!valid && auth.status === 'guest') await router.replace('/login')
+  try {
+    const valid = await auth.ensureSession(true)
+    if (auth.isLoading || (auth.token !== ownerToken && auth.token)) return
+    if (valid && auth.user?.must_change_password) await router.replace('/conta')
+    else if (!valid && auth.status === 'offline') await router.replace('/inventory')
+    else if (!valid && auth.status === 'guest') await router.replace('/login')
+  } finally { retryingOffline.value = false }
 }
 function logout() { return logoutToLogin(auth, router) }
 </script>

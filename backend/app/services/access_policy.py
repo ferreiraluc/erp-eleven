@@ -13,7 +13,7 @@ def is_reseller(user):
 # unavailable to the restricted profile until explicitly reviewed here.
 RESELLER_READ_ROUTES = frozenset({
     '/api/auth/me',
-    '/api/inventory/search-index', '/api/inventory/suppliers',
+    '/api/inventory/search-index', '/api/inventory/offline-catalog', '/api/inventory/suppliers',
     '/api/inventory/items', '/api/inventory/items/distinct-values',
     '/api/inventory/items/barcode/{code}', '/api/inventory/items/{item_id}',
     '/api/inventory/items/thumbnails', '/api/inventory/items/{item_id}/thumbnail',
