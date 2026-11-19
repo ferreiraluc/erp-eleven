@@ -121,7 +121,7 @@ jobs:
           bash tools/eleven-ticket-agent-macos/build.sh "$RUNNER_TEMP/Eleven-Tickets-macOS"
           cd "$RUNNER_TEMP"
           zip -r Eleven-Tickets-macOS-2026.10.20.1.zip Eleven-Tickets-macOS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Eleven-Tickets-macOS
           path: ${{ runner.temp }}/Eleven-Tickets-macOS-2026.10.20.1.zip
