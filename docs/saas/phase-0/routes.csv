@@ -1,0 +1,254 @@
+method,path,file,line,declared_dependencies,operation_id
+GET,/api/access/users,backend/app/api/endpoints/user_admin.py,22,require_owner;get_db,users_api_access_users_get
+POST,/api/access/users,backend/app/api/endpoints/user_admin.py,47,require_owner;get_db,create_user_api_access_users_post
+PUT,/api/access/users/{user_id},backend/app/api/endpoints/user_admin.py,67,require_owner;get_db,update_user_api_access_users__user_id__put
+POST,/api/access/users/{user_id}/reset-password,backend/app/api/endpoints/user_admin.py,88,require_owner;get_db,reset_password_api_access_users__user_id__reset_password_post
+POST,/api/access/activity,backend/app/api/endpoints/user_admin.py,109,get_current_active_user;get_db,activity_api_access_activity_post
+GET,/api/access/audit,backend/app/api/endpoints/user_admin.py,115,require_owner;get_db,audit_api_access_audit_get
+POST,/api/auth/login,backend/app/api/endpoints/auth.py,28,get_db,login_api_auth_login_post
+GET,/api/auth/me,backend/app/api/endpoints/auth.py,44,get_current_active_user,me_api_auth_me_get
+POST,/api/auth/password,backend/app/api/endpoints/auth.py,61,get_current_active_user;get_db,change_password_api_auth_password_post
+POST,/api/auth/register,backend/app/api/endpoints/auth.py,78,require_owner;get_db,register_user_api_auth_register_post
+POST,/api/auth/logout,backend/app/api/endpoints/auth.py,96,get_current_active_user;get_db,logout_api_auth_logout_post
+GET,/api/vendas/,backend/app/api/endpoints/vendas.py,18,get_db;get_current_active_user,listar_vendas_api_vendas__get
+POST,/api/vendas/,backend/app/api/endpoints/vendas.py,28,get_db;get_current_active_user,criar_venda_api_vendas__post
+GET,/api/vendas/{venda_id},backend/app/api/endpoints/vendas.py,71,get_db;get_current_active_user,obter_venda_api_vendas__venda_id__get
+GET,/api/vendedores/,backend/app/api/endpoints/vendedores.py,23,get_db;get_current_active_user,listar_vendedores_api_vendedores__get
+POST,/api/vendedores/,backend/app/api/endpoints/vendedores.py,40,"get_db;require_role(['ADMIN', 'GERENTE'])",criar_vendedor_api_vendedores__post
+GET,/api/vendedores/{vendedor_id},backend/app/api/endpoints/vendedores.py,62,get_db;get_current_active_user,obter_vendedor_api_vendedores__vendedor_id__get
+PUT,/api/vendedores/{vendedor_id},backend/app/api/endpoints/vendedores.py,78,"get_db;require_role(['ADMIN', 'GERENTE'])",atualizar_vendedor_api_vendedores__vendedor_id__put
+DELETE,/api/vendedores/{vendedor_id},backend/app/api/endpoints/vendedores.py,102,get_db;require_role(['ADMIN']),excluir_vendedor_api_vendedores__vendedor_id__delete
+GET,/api/vendedores/{vendedor_id}/folgas,backend/app/api/endpoints/vendedores.py,125,get_db;get_current_active_user,listar_folgas_vendedor_api_vendedores__vendedor_id__folgas_get
+POST,/api/vendedores/{vendedor_id}/folgas,backend/app/api/endpoints/vendedores.py,153,get_db;get_current_active_user,criar_folga_api_vendedores__vendedor_id__folgas_post
+PUT,/api/vendedores/folgas/{folga_id},backend/app/api/endpoints/vendedores.py,189,get_db;get_current_active_user,atualizar_folga_api_vendedores_folgas__folga_id__put
+DELETE,/api/vendedores/folgas/{folga_id},backend/app/api/endpoints/vendedores.py,211,get_db;get_current_active_user,remover_folga_api_vendedores_folgas__folga_id__delete
+GET,/api/vendedores/folgas/calendario,backend/app/api/endpoints/vendedores.py,229,get_db;get_current_active_user,obter_calendario_folgas_api_vendedores_folgas_calendario_get
+GET,/api/vendedores/estatisticas/resumo,backend/app/api/endpoints/vendedores.py,279,get_db;get_current_active_user,obter_estatisticas_resumo_api_vendedores_estatisticas_resumo_get
+GET,/api/vendedores/{vendedor_id}/atividade,backend/app/api/endpoints/vendedores.py,338,get_db;get_current_active_user,atividade_vendedor_api_vendedores__vendedor_id__atividade_get
+GET,/api/cambistas/,backend/app/api/endpoints/cambistas.py,14,get_db;get_current_active_user,listar_cambistas_api_cambistas__get
+POST,/api/cambistas/,backend/app/api/endpoints/cambistas.py,22,"get_db;require_role(['ADMIN', 'GERENTE'])",criar_cambista_api_cambistas__post
+GET,/api/cambistas/{cambista_id},backend/app/api/endpoints/cambistas.py,34,get_db;get_current_active_user,obter_cambista_api_cambistas__cambista_id__get
+GET,/api/cambistas/{cambista_id}/current-rates,backend/app/api/endpoints/cambistas.py,46,get_db;get_current_active_user,get_cambista_with_current_rates_api_cambistas__cambista_id__current_rates_get
+GET,/api/pedidos/pagina,backend/app/api/endpoints/pedidos.py,41,get_db;get_current_active_user,listar_pagina_pedidos_api_pedidos_pagina_get
+GET,/api/pedidos/,backend/app/api/endpoints/pedidos.py,69,get_db;get_current_active_user,listar_pedidos_api_pedidos__get
+POST,/api/pedidos/,backend/app/api/endpoints/pedidos.py,96,get_db;get_current_active_user,criar_pedido_api_pedidos__post
+GET,/api/pedidos/{pedido_id},backend/app/api/endpoints/pedidos.py,165,get_db;get_current_active_user,obter_pedido_api_pedidos__pedido_id__get
+PUT,/api/pedidos/{pedido_id},backend/app/api/endpoints/pedidos.py,196,get_db;get_current_active_user,atualizar_pedido_api_pedidos__pedido_id__put
+DELETE,/api/pedidos/{pedido_id},backend/app/api/endpoints/pedidos.py,282,"get_db;require_role(['ADMIN', 'GERENTE'])",excluir_pedido_api_pedidos__pedido_id__delete
+GET,/api/pedidos/numero/{numero_pedido},backend/app/api/endpoints/pedidos.py,181,get_db;get_current_active_user,obter_pedido_por_numero_api_pedidos_numero__numero_pedido__get
+GET,/api/pedidos/{pedido_id}/rastreamentos,backend/app/api/endpoints/pedidos.py,267,get_db;get_current_active_user,listar_pacotes_do_pedido_api_pedidos__pedido_id__rastreamentos_get
+GET,/api/pedidos/{pedido_id}/anexos,backend/app/api/endpoints/pedidos.py,308,get_db;get_current_active_user,listar_anexos_api_pedidos__pedido_id__anexos_get
+POST,/api/pedidos/{pedido_id}/anexos,backend/app/api/endpoints/pedidos.py,322,get_db;get_current_active_user,adicionar_anexo_api_pedidos__pedido_id__anexos_post
+DELETE,/api/pedidos/{pedido_id}/anexos/{anexo_id},backend/app/api/endpoints/pedidos.py,360,get_db;get_current_active_user,remover_anexo_api_pedidos__pedido_id__anexos__anexo_id__delete
+GET,/api/pedidos/rastreamento/{codigo_rastreio},backend/app/api/endpoints/pedidos.py,383,get_db;get_current_active_user,verificar_rastreamento_existente_api_pedidos_rastreamento__codigo_rastreio__get
+GET,/api/tags/,backend/app/api/endpoints/tags.py,14,get_db;get_current_active_user,listar_tags_api_tags__get
+POST,/api/tags/,backend/app/api/endpoints/tags.py,27,"get_db;require_role(['ADMIN', 'GERENTE'])",criar_tag_api_tags__post
+GET,/api/tags/{tag_id},backend/app/api/endpoints/tags.py,59,get_db;get_current_active_user,obter_tag_api_tags__tag_id__get
+PUT,/api/tags/{tag_id},backend/app/api/endpoints/tags.py,75,"get_db;require_role(['ADMIN', 'GERENTE'])",atualizar_tag_api_tags__tag_id__put
+DELETE,/api/tags/{tag_id},backend/app/api/endpoints/tags.py,122,"get_db;require_role(['ADMIN', 'GERENTE'])",excluir_tag_api_tags__tag_id__delete
+POST,/api/tags/seed,backend/app/api/endpoints/tags.py,142,get_db;require_role(['ADMIN']),criar_tags_padrao_api_tags_seed_post
+GET,/api/dashboard/stats,backend/app/api/endpoints/dashboard.py,17,get_db;get_current_active_user,get_dashboard_stats_api_dashboard_stats_get
+GET,/api/dashboard/vendas-por-periodo,backend/app/api/endpoints/dashboard.py,66,get_db;get_current_active_user,get_vendas_por_periodo_api_dashboard_vendas_por_periodo_get
+GET,/api/dashboard/vendedores-performance,backend/app/api/endpoints/dashboard.py,98,get_db;get_current_active_user,get_vendedores_performance_api_dashboard_vendedores_performance_get
+GET,/api/exchange-rates/current,backend/app/api/endpoints/exchange_rates.py,22,get_db;get_current_active_user,get_current_rates_api_exchange_rates_current_get
+POST,/api/exchange-rates/quick-update,backend/app/api/endpoints/exchange_rates.py,57,"get_db;require_role(['ADMIN', 'GERENTE'])",quick_update_rates_api_exchange_rates_quick_update_post
+GET,/api/exchange-rates/,backend/app/api/endpoints/exchange_rates.py,151,get_db;get_current_active_user,list_exchange_rates_api_exchange_rates__get
+POST,/api/exchange-rates/,backend/app/api/endpoints/exchange_rates.py,159,"get_db;require_role(['ADMIN', 'GERENTE'])",create_exchange_rate_api_exchange_rates__post
+PUT,/api/exchange-rates/{rate_id},backend/app/api/endpoints/exchange_rates.py,184,"get_db;require_role(['ADMIN', 'GERENTE'])",update_exchange_rate_api_exchange_rates__rate_id__put
+GET,/api/exchange-rates/history,backend/app/api/endpoints/exchange_rates.py,204,get_db;get_current_active_user,get_exchange_rates_history_api_exchange_rates_history_get
+PUT,/api/exchange-rates/history/{rate_id},backend/app/api/endpoints/exchange_rates.py,235,"get_db;require_role(['ADMIN', 'GERENTE'])",edit_historical_rate_api_exchange_rates_history__rate_id__put
+DELETE,/api/exchange-rates/history/{rate_id},backend/app/api/endpoints/exchange_rates.py,260,"get_db;require_role(['ADMIN', 'GERENTE'])",delete_historical_rate_api_exchange_rates_history__rate_id__delete
+GET,/api/exchange-rates/weekly-average/{currency_pair},backend/app/api/endpoints/exchange_rates.py,287,get_db;get_current_active_user,get_weekly_average_api_exchange_rates_weekly_average__currency_pair__get
+GET,/api/exchange-rates/sales-week-average/{currency_pair},backend/app/api/endpoints/exchange_rates.py,325,get_db;get_current_active_user,get_sales_week_average_api_exchange_rates_sales_week_average__currency_pair__get
+GET,/api/exchange-rates/sales-average/{currency_pair},backend/app/api/endpoints/exchange_rates.py,369,get_db;get_current_active_user,get_sales_average_rate_api_exchange_rates_sales_average__currency_pair__get
+GET,/api/exchange-rates/{currency_pair},backend/app/api/endpoints/exchange_rates.py,474,get_db;get_current_active_user,get_rate_by_pair_api_exchange_rates__currency_pair__get
+GET,/api/money-transfers/,backend/app/api/endpoints/money_transfers.py,31,get_db;get_current_active_user,list_transfers_api_money_transfers__get
+POST,/api/money-transfers/,backend/app/api/endpoints/money_transfers.py,102,"get_db;require_role(['ADMIN', 'GERENTE'])",create_transfer_api_money_transfers__post
+GET,/api/money-transfers/pending,backend/app/api/endpoints/money_transfers.py,48,get_db;get_current_active_user,list_pending_transfers_api_money_transfers_pending_get
+GET,/api/money-transfers/summary,backend/app/api/endpoints/money_transfers.py,58,get_db;get_current_active_user,get_transfer_summary_api_money_transfers_summary_get
+GET,/api/money-transfers/{transfer_id},backend/app/api/endpoints/money_transfers.py,128,get_db;get_current_active_user,get_transfer_api_money_transfers__transfer_id__get
+PUT,/api/money-transfers/{transfer_id},backend/app/api/endpoints/money_transfers.py,141,"get_db;require_role(['ADMIN', 'GERENTE'])",update_transfer_api_money_transfers__transfer_id__put
+POST,/api/money-transfers/{transfer_id}/confirm-delivery,backend/app/api/endpoints/money_transfers.py,174,"get_db;require_role(['ADMIN', 'GERENTE'])",confirm_delivery_api_money_transfers__transfer_id__confirm_delivery_post
+POST,/api/money-transfers/{transfer_id}/cancel,backend/app/api/endpoints/money_transfers.py,206,"get_db;require_role(['ADMIN', 'GERENTE'])",cancel_transfer_api_money_transfers__transfer_id__cancel_post
+GET,/api/money-transfers/thais/pending-balance,backend/app/api/endpoints/money_transfers.py,234,get_db;get_current_active_user,get_thais_pending_balance_api_money_transfers_thais_pending_balance_get
+POST,/api/money-transfers/{transfer_id}/send-to-thais,backend/app/api/endpoints/money_transfers.py,242,"get_db;require_role(['ADMIN', 'GERENTE'])",send_transfer_to_thais_api_money_transfers__transfer_id__send_to_thais_post
+GET,/api/money-transfers/thais/weekly-summary,backend/app/api/endpoints/money_transfers.py,262,get_db;get_current_active_user,get_weekly_thais_summary_api_money_transfers_thais_weekly_summary_get
+GET,/api/rastreamento/,backend/app/api/endpoints/rastreamento.py,32,get_db;get_current_user,listar_rastreamentos_api_rastreamento__get
+POST,/api/rastreamento/,backend/app/api/endpoints/rastreamento.py,89,get_db;get_current_user,criar_rastreamento_api_rastreamento__post
+GET,/api/rastreamento/{rastreamento_id},backend/app/api/endpoints/rastreamento.py,125,get_db;get_current_user,obter_rastreamento_api_rastreamento__rastreamento_id__get
+PUT,/api/rastreamento/{rastreamento_id},backend/app/api/endpoints/rastreamento.py,214,get_db;get_current_user,atualizar_rastreamento_api_rastreamento__rastreamento_id__put
+DELETE,/api/rastreamento/{rastreamento_id},backend/app/api/endpoints/rastreamento.py,284,get_db;get_current_user,deletar_rastreamento_api_rastreamento__rastreamento_id__delete
+GET,/api/rastreamento/codigo/{codigo},backend/app/api/endpoints/rastreamento.py,170,get_db;get_current_user,obter_rastreamento_por_codigo_api_rastreamento_codigo__codigo__get
+GET,/api/rastreamento/resumo/dashboard,backend/app/api/endpoints/rastreamento.py,306,get_db;get_current_user,obter_resumo_dashboard_api_rastreamento_resumo_dashboard_get
+POST,/api/rastreamento/calcular-frete,backend/app/api/endpoints/rastreamento.py,355,get_current_user,calcular_frete_endpoint_api_rastreamento_calcular_frete_post
+POST,/api/rastreamento/consultar,backend/app/api/endpoints/rastreamento.py,411,get_db;get_current_user,consultar_rastreamento_api_rastreamento_consultar_post
+POST,/api/rastreamento/consultar-e-salvar,backend/app/api/endpoints/rastreamento.py,443,get_db;get_current_user,consultar_e_salvar_rastreamento_api_rastreamento_consultar_e_salvar_post
+POST,/api/rastreamento/{rastreamento_id}/atualizar,backend/app/api/endpoints/rastreamento.py,497,get_db;get_current_user,atualizar_rastreamento_online_api_rastreamento__rastreamento_id__atualizar_post
+POST,/api/rastreamento/atualizar-todos,backend/app/api/endpoints/rastreamento.py,529,get_db;get_current_user,atualizar_todos_rastreamentos_api_rastreamento_atualizar_todos_post
+POST,/api/excel-import/preview-onedrive,backend/app/api/endpoints/excel_import.py,49,"get_db;require_role(['ADMIN', 'GERENTE'])",preview_onedrive_import_api_excel_import_preview_onedrive_post
+POST,/api/excel-import/import-onedrive,backend/app/api/endpoints/excel_import.py,130,"get_db;require_role(['ADMIN', 'GERENTE'])",import_from_onedrive_api_excel_import_import_onedrive_post
+POST,/api/excel-import/preview-upload,backend/app/api/endpoints/excel_import.py,208,"get_db;require_role(['ADMIN', 'GERENTE'])",preview_file_upload_api_excel_import_preview_upload_post
+POST,/api/excel-import/import-upload,backend/app/api/endpoints/excel_import.py,296,"get_db;require_role(['ADMIN', 'GERENTE'])",import_file_upload_api_excel_import_import_upload_post
+POST,/api/excel-import/preview-custom-format,backend/app/api/endpoints/excel_import.py,381,"get_db;require_role(['ADMIN', 'GERENTE'])",preview_custom_format_api_excel_import_preview_custom_format_post
+POST,/api/excel-import/import-custom-format,backend/app/api/endpoints/excel_import.py,473,"get_db;require_role(['ADMIN', 'GERENTE'])",import_custom_format_api_excel_import_import_custom_format_post
+GET,/api/excel-import/template,backend/app/api/endpoints/excel_import.py,557,,download_template_api_excel_import_template_get
+GET,/api/inventory/receiving-lots,backend/app/api/endpoints/inventory_receiving.py,83,get_db;get_current_active_user,list_lots_api_inventory_receiving_lots_get
+POST,/api/inventory/receiving-lots,backend/app/api/endpoints/inventory_receiving.py,115,"get_db;require_role(['ADMIN', 'GERENTE'])",create_lot_api_inventory_receiving_lots_post
+GET,/api/inventory/receiving-candidates,backend/app/api/endpoints/inventory_receiving.py,93,get_db;get_current_active_user,candidates_api_inventory_receiving_candidates_get
+PATCH,/api/inventory/receiving-lots/{lot_id},backend/app/api/endpoints/inventory_receiving.py,141,"get_db;require_role(['ADMIN', 'GERENTE'])",edit_lot_api_inventory_receiving_lots__lot_id__patch
+POST,/api/inventory/receiving-lots/{lot_id}/items,backend/app/api/endpoints/inventory_receiving.py,150,"get_db;require_role(['ADMIN', 'GERENTE'])",attach_api_inventory_receiving_lots__lot_id__items_post
+GET,/api/inventory/receiving-lots/{lot_id}/items,backend/app/api/endpoints/inventory_receiving.py,163,get_db;get_current_active_user,members_api_inventory_receiving_lots__lot_id__items_get
+DELETE,/api/inventory/receiving-lots/{lot_id}/items/{member_id},backend/app/api/endpoints/inventory_receiving.py,174,"get_db;require_role(['ADMIN', 'GERENTE'])",detach_api_inventory_receiving_lots__lot_id__items__member_id__delete
+POST,/api/inventory/items/{item_id}/duplicate,backend/app/api/endpoints/inventory.py,58,"get_db;require_role(['ADMIN', 'GERENTE'])",copy_inventory_item_api_inventory_items__item_id__duplicate_post
+GET,/api/inventory/items/{item_id}/variants,backend/app/api/endpoints/inventory.py,64,"get_db;require_role(['ADMIN', 'GERENTE'])",get_variant_context_api_inventory_items__item_id__variants_get
+POST,/api/inventory/items/{item_id}/variants,backend/app/api/endpoints/inventory.py,70,"get_db;require_role(['ADMIN', 'GERENTE'])",add_item_variants_api_inventory_items__item_id__variants_post
+GET,/api/inventory/diagnostics,backend/app/api/endpoints/inventory.py,76,get_db;get_current_active_user,inventory_diagnostics_api_inventory_diagnostics_get
+GET,/api/inventory/suppliers,backend/app/api/endpoints/inventory.py,141,get_db;get_current_active_user,list_suppliers_api_inventory_suppliers_get
+POST,/api/inventory/suppliers,backend/app/api/endpoints/inventory.py,149,"get_db;require_role(['ADMIN', 'GERENTE'])",create_supplier_api_inventory_suppliers_post
+GET,/api/inventory/items/deleted-history,backend/app/api/endpoints/inventory.py,164,get_db;require_owner,deleted_product_history_api_inventory_items_deleted_history_get
+GET,/api/inventory/items/distinct-values,backend/app/api/endpoints/inventory.py,176,get_db;get_current_active_user,get_distinct_values_api_inventory_items_distinct_values_get
+GET,/api/inventory/items,backend/app/api/endpoints/inventory.py,189,get_db;get_current_active_user,list_items_api_inventory_items_get
+POST,/api/inventory/items,backend/app/api/endpoints/inventory.py,281,"get_db;require_role(['ADMIN', 'GERENTE'])",create_item_api_inventory_items_post
+GET,/api/inventory/items/barcode/{code},backend/app/api/endpoints/inventory.py,306,get_db;get_current_active_user,get_items_by_barcode_api_inventory_items_barcode__code__get
+GET,/api/inventory/alerts/summary,backend/app/api/endpoints/inventory.py,324,get_db;get_current_active_user,get_alerts_summary_api_inventory_alerts_summary_get
+GET,/api/inventory/groups,backend/app/api/endpoints/inventory.py,349,get_db;get_current_active_user,get_groups_api_inventory_groups_get
+PATCH,/api/inventory/groups,backend/app/api/endpoints/inventory.py,436,get_db;get_current_active_user,rename_group_api_inventory_groups_patch
+GET,/api/inventory/suggestions,backend/app/api/endpoints/inventory.py,458,get_db;get_current_active_user,get_suggestions_api_inventory_suggestions_get
+GET,/api/inventory/items/thumbnails,backend/app/api/endpoints/inventory.py,494,get_db;get_current_active_user,get_product_thumbnails_api_inventory_items_thumbnails_get
+GET,/api/inventory/items/{item_id}/thumbnail,backend/app/api/endpoints/inventory.py,501,get_db;get_current_active_user,get_product_thumbnail_api_inventory_items__item_id__thumbnail_get
+GET,/api/inventory/items/{item_id}/photos,backend/app/api/endpoints/inventory.py,507,get_db;get_current_active_user,get_item_photos_api_inventory_items__item_id__photos_get
+GET,/api/inventory/items/{item_id},backend/app/api/endpoints/inventory.py,517,get_db;get_current_active_user,get_item_api_inventory_items__item_id__get
+PUT,/api/inventory/items/{item_id},backend/app/api/endpoints/inventory.py,532,"get_db;require_role(['ADMIN', 'GERENTE'])",update_item_api_inventory_items__item_id__put
+DELETE,/api/inventory/items/{item_id},backend/app/api/endpoints/inventory.py,904,get_db;require_role(['ADMIN']),delete_item_api_inventory_items__item_id__delete
+POST,/api/inventory/items/group,backend/app/api/endpoints/inventory.py,555,"get_db;require_role(['ADMIN', 'GERENTE'])",group_items_batch_api_inventory_items_group_post
+POST,/api/inventory/items/grade,backend/app/api/endpoints/inventory.py,572,"get_db;require_role(['ADMIN', 'GERENTE'])",create_grade_api_inventory_items_grade_post
+POST,/api/inventory/items/grade/quantities,backend/app/api/endpoints/inventory.py,572,"get_db;require_role(['ADMIN', 'GERENTE'])",create_grade_api_inventory_items_grade_quantities_post
+POST,/api/inventory/items/ungroup,backend/app/api/endpoints/inventory.py,679,get_db;get_current_active_user,ungroup_items_api_inventory_items_ungroup_post
+DELETE,/api/inventory/items/{item_id}/group,backend/app/api/endpoints/inventory.py,694,get_db;get_current_active_user,remove_item_from_group_api_inventory_items__item_id__group_delete
+PATCH,/api/inventory/items/batch/details,backend/app/api/endpoints/inventory.py,715,get_db;get_current_active_user,batch_edit_items_api_inventory_items_batch_details_patch
+PATCH,/api/inventory/items/batch/photos,backend/app/api/endpoints/inventory.py,715,get_db;get_current_active_user,batch_edit_items_api_inventory_items_batch_photos_patch
+PATCH,/api/inventory/items/batch/quantities,backend/app/api/endpoints/inventory.py,715,get_db;get_current_active_user,batch_edit_items_api_inventory_items_batch_quantities_patch
+PATCH,/api/inventory/items/batch,backend/app/api/endpoints/inventory.py,715,get_db;get_current_active_user,batch_edit_items_api_inventory_items_batch_patch
+POST,/api/inventory/items/transfer-bulk,backend/app/api/endpoints/inventory.py,843,get_db;get_current_active_user,bulk_transfer_items_api_inventory_items_transfer_bulk_post
+GET,/api/inventory/items/{item_id}/history,backend/app/api/endpoints/inventory.py,876,get_db;get_current_active_user,get_product_history_api_inventory_items__item_id__history_get
+POST,/api/inventory/items/{item_id}/delete-from-catalog,backend/app/api/endpoints/inventory.py,883,get_db;require_owner,remove_from_catalog_api_inventory_items__item_id__delete_from_catalog_post
+GET,/api/inventory/items/{item_id}/deletion-preview,backend/app/api/endpoints/inventory.py,891,get_db;require_owner,preview_item_deletion_api_inventory_items__item_id__deletion_preview_get
+DELETE,/api/inventory/items/{item_id}/permanent,backend/app/api/endpoints/inventory.py,896,get_db;require_owner,permanently_delete_api_inventory_items__item_id__permanent_delete
+POST,/api/inventory/items/{item_id}/quick-exit,backend/app/api/endpoints/inventory.py,922,get_db;get_current_active_user,quick_exit_api_inventory_items__item_id__quick_exit_post
+POST,/api/inventory/movements,backend/app/api/endpoints/inventory.py,952,get_db;get_current_active_user,create_movement_endpoint_api_inventory_movements_post
+GET,/api/inventory/movements,backend/app/api/endpoints/inventory.py,1018,get_db;get_current_active_user,list_movements_api_inventory_movements_get
+POST,/api/inventory/movements/batch,backend/app/api/endpoints/inventory.py,988,get_db;get_current_active_user,create_batch_movements_api_inventory_movements_batch_post
+GET,/api/inventory/movements/item/{item_id},backend/app/api/endpoints/inventory.py,1043,get_db;get_current_active_user,get_item_movements_api_inventory_movements_item__item_id__get
+GET,/api/inventory/sessions,backend/app/api/endpoints/inventory.py,1079,get_db;get_current_active_user,list_sessions_api_inventory_sessions_get
+POST,/api/inventory/sessions,backend/app/api/endpoints/inventory.py,1066,"get_db;require_role(['ADMIN', 'GERENTE'])",create_session_api_inventory_sessions_post
+GET,/api/inventory/sessions/{session_id},backend/app/api/endpoints/inventory.py,1088,get_db;get_current_active_user,get_session_api_inventory_sessions__session_id__get
+PUT,/api/inventory/sessions/{session_id}/status,backend/app/api/endpoints/inventory.py,1101,"get_db;require_role(['ADMIN', 'GERENTE'])",update_session_status_api_inventory_sessions__session_id__status_put
+POST,/api/inventory/sessions/{session_id}/scan,backend/app/api/endpoints/inventory.py,1132,get_db;get_current_active_user,scan_item_api_inventory_sessions__session_id__scan_post
+POST,/api/inventory/sessions/{session_id}/apply,backend/app/api/endpoints/inventory.py,1187,"get_db;require_role(['ADMIN', 'GERENTE'])",apply_session_endpoint_api_inventory_sessions__session_id__apply_post
+POST,/api/inventory/import/csv,backend/app/api/endpoints/inventory.py,1241,"get_db;require_role(['ADMIN', 'GERENTE'])",import_csv_api_inventory_import_csv_post
+POST,/api/inventory/import/nfe,backend/app/api/endpoints/inventory.py,1324,"get_db;require_role(['ADMIN', 'GERENTE'])",import_nfe_api_inventory_import_nfe_post
+GET,/api/clientes/,backend/app/api/endpoints/clientes.py,36,get_db;get_current_active_user,listar_clientes_api_clientes__get
+POST,/api/clientes/,backend/app/api/endpoints/clientes.py,89,get_db;get_current_active_user,criar_cliente_api_clientes__post
+GET,/api/clientes/pagina,backend/app/api/endpoints/clientes.py,64,get_db;get_current_active_user,listar_pagina_clientes_api_clientes_pagina_get
+GET,/api/clientes/search,backend/app/api/endpoints/clientes.py,114,get_db;get_current_active_user,buscar_clientes_api_clientes_search_get
+GET,/api/clientes/{cliente_id},backend/app/api/endpoints/clientes.py,141,get_db;get_current_active_user,obter_cliente_api_clientes__cliente_id__get
+PUT,/api/clientes/{cliente_id},backend/app/api/endpoints/clientes.py,152,get_db;get_current_active_user,atualizar_cliente_api_clientes__cliente_id__put
+DELETE,/api/clientes/{cliente_id},backend/app/api/endpoints/clientes.py,179,"get_db;require_role(['ADMIN', 'GERENTE'])",excluir_cliente_api_clientes__cliente_id__delete
+GET,/api/clientes/{cliente_id}/pedidos,backend/app/api/endpoints/clientes.py,194,get_db;get_current_active_user,listar_pedidos_do_cliente_api_clientes__cliente_id__pedidos_get
+GET,/api/clientes/{cliente_id}/logistica,backend/app/api/endpoints/clientes.py,215,get_db;get_current_active_user,logistica_do_cliente_api_clientes__cliente_id__logistica_get
+POST,/api/clientes/{cliente_id}/vinculos,backend/app/api/endpoints/clientes.py,244,get_db;get_current_active_user,vincular_ao_cliente_api_clientes__cliente_id__vinculos_post
+GET,/api/clientes/{cliente_id}/compras-pdv,backend/app/api/endpoints/clientes.py,275,get_db;get_current_active_user,compras_pdv_do_cliente_api_clientes__cliente_id__compras_pdv_get
+GET,/api/clientes/{cliente_id}/historico-enderecos,backend/app/api/endpoints/clientes.py,285,get_db;get_current_active_user,historico_enderecos_cliente_api_clientes__cliente_id__historico_enderecos_get
+POST,/api/ocr/parse,backend/app/api/endpoints/ocr.py,45,get_db;get_current_active_user,parse_label_api_ocr_parse_post
+GET,/api/ocr/brands,backend/app/api/endpoints/ocr.py,80,get_db;get_current_active_user,get_brands_api_ocr_brands_get
+GET,/api/ocr/templates,backend/app/api/endpoints/ocr.py,97,get_db;get_current_active_user,list_templates_api_ocr_templates_get
+POST,/api/ocr/templates,backend/app/api/endpoints/ocr.py,147,get_db;get_current_active_user,save_template_api_ocr_templates_post
+GET,/api/ocr/templates/{template_id},backend/app/api/endpoints/ocr.py,125,get_db;get_current_active_user,get_template_api_ocr_templates__template_id__get
+DELETE,/api/ocr/templates/{template_id},backend/app/api/endpoints/ocr.py,177,get_db;get_current_active_user,delete_template_api_ocr_templates__template_id__delete
+GET,/api/product-photo/status,backend/app/api/endpoints/product_photo.py,14,operator,status_api_product_photo_status_get
+POST,/api/product-photo/analyze,backend/app/api/endpoints/product_photo.py,31,operator,analyze_api_product_photo_analyze_post
+POST,/api/product-photo/catalog,backend/app/api/endpoints/product_photo.py,36,operator,catalog_api_product_photo_catalog_post
+GET,/api/pdv/management,backend/app/api/endpoints/pdv.py,126,get_db;get_current_active_user,managed_sales_api_pdv_management_get
+GET,/api/pdv/management/options,backend/app/api/endpoints/pdv.py,135,get_db;get_current_active_user,managed_options_api_pdv_management_options_get
+GET,/api/pdv/management/{sale_id},backend/app/api/endpoints/pdv.py,142,get_db;get_current_active_user,managed_sale_api_pdv_management__sale_id__get
+POST,/api/pdv/management/{sale_id}/preview,backend/app/api/endpoints/pdv.py,147,get_db;require_owner,preview_sale_change_api_pdv_management__sale_id__preview_post
+POST,/api/pdv/management/{sale_id}/commit,backend/app/api/endpoints/pdv.py,153,get_db;require_owner,commit_sale_change_api_pdv_management__sale_id__commit_post
+POST,/api/pdv/sales,backend/app/api/endpoints/pdv.py,157,get_db;get_current_active_user,create_sale_api_pdv_sales_post
+GET,/api/pdv/sales,backend/app/api/endpoints/pdv.py,277,get_db;get_current_active_user,list_sales_api_pdv_sales_get
+GET,/api/pdv/sales/{sale_id}/receipt,backend/app/api/endpoints/pdv.py,233,get_db;get_current_active_user,receipt_status_api_pdv_sales__sale_id__receipt_get
+POST,/api/pdv/sales/{sale_id}/receipt,backend/app/api/endpoints/pdv.py,263,get_db;get_current_active_user,print_receipt_api_pdv_sales__sale_id__receipt_post
+GET,/api/pdv/sales/{sale_id}/receipt/preview,backend/app/api/endpoints/pdv.py,241,get_db;get_current_active_user,receipt_preview_api_pdv_sales__sale_id__receipt_preview_get
+GET,/api/pdv/sales/{sale_id}/receipt/pdf,backend/app/api/endpoints/pdv.py,249,get_db;get_current_active_user,receipt_pdf_api_pdv_sales__sale_id__receipt_pdf_get
+GET,/api/pdv/sales/{sale_id},backend/app/api/endpoints/pdv.py,315,get_db;get_current_active_user,get_sale_api_pdv_sales__sale_id__get
+POST,/api/pdv/sales/{sale_id}/cancel,backend/app/api/endpoints/pdv.py,329,get_db;get_current_active_user,cancel_sale_api_pdv_sales__sale_id__cancel_post
+GET,/api/pdv/clients/search,backend/app/api/endpoints/pdv.py,353,get_db;get_current_active_user,search_customers_api_pdv_clients_search_get
+POST,/api/pdv/clients/select,backend/app/api/endpoints/pdv.py,363,get_db;get_current_active_user,select_customer_api_pdv_clients_select_post
+GET,/api/pdv/clients,backend/app/api/endpoints/pdv.py,373,get_db;get_current_active_user,list_clients_api_pdv_clients_get
+POST,/api/pdv/clients,backend/app/api/endpoints/pdv.py,394,get_db;get_current_active_user,create_client_api_pdv_clients_post
+GET,/api/pdv/clients/{cliente_id},backend/app/api/endpoints/pdv.py,411,get_db;get_current_active_user,get_client_api_pdv_clients__cliente_id__get
+PUT,/api/pdv/clients/{cliente_id},backend/app/api/endpoints/pdv.py,423,get_db;get_current_active_user,update_client_api_pdv_clients__cliente_id__put
+GET,/api/pdv/clients/{cliente_id}/fiado,backend/app/api/endpoints/pdv.py,440,get_db;get_current_active_user,get_fiado_history_api_pdv_clients__cliente_id__fiado_get
+POST,/api/pdv/clients/{cliente_id}/fiado/payment,backend/app/api/endpoints/pdv.py,460,get_db;get_current_active_user,record_fiado_payment_api_pdv_clients__cliente_id__fiado_payment_post
+POST,/api/assistant/webhooks/twilio,backend/app/api/endpoints/assistant.py,36,get_db,twilio_webhook_api_assistant_webhooks_twilio_post
+POST,/api/assistant/webhooks/telegram,backend/app/api/endpoints/assistant.py,61,get_db,telegram_webhook_api_assistant_webhooks_telegram_post
+GET,/api/assistant/status,backend/app/api/endpoints/assistant.py,102,get_db,assistant_status_api_assistant_status_get
+GET,/api/assistant/users,backend/app/api/endpoints/assistant.py,119,get_db,assistant_users_api_assistant_users_get
+GET,/api/assistant/identities,backend/app/api/endpoints/assistant.py,125,get_db,list_identities_api_assistant_identities_get
+POST,/api/assistant/identities,backend/app/api/endpoints/assistant.py,132,get_db,save_identity_api_assistant_identities_post
+GET,/api/assistant/notes,backend/app/api/endpoints/assistant.py,153,get_db,list_notes_api_assistant_notes_get
+GET,/api/assistant/queue,backend/app/api/endpoints/assistant.py,160,get_db,list_queue_api_assistant_queue_get
+GET,/api/assistant/actions,backend/app/api/endpoints/assistant.py,171,get_db,list_actions_api_assistant_actions_get
+POST,/api/assistant/messages/{message_id}/retry,backend/app/api/endpoints/assistant.py,181,get_db,retry_message_api_assistant_messages__message_id__retry_post
+GET,/api/freight/status,backend/app/api/endpoints/product_photo.py,14,operator,status_api_freight_status_get
+GET,/api/freight/orders,backend/app/api/endpoints/freight.py,21,manager;get_db,orders_api_freight_orders_get
+GET,/api/freight/orders/{key},backend/app/api/endpoints/freight.py,27,manager;get_db,get_order_api_freight_orders__key__get
+POST,/api/freight/quotes,backend/app/api/endpoints/freight.py,34,manager;get_db,quote_api_freight_quotes_post
+POST,/api/freight/orders/{key}/cart,backend/app/api/endpoints/freight.py,43,manager;get_db,cart_api_freight_orders__key__cart_post
+POST,/api/freight/orders/{key}/pay,backend/app/api/endpoints/freight.py,54,manager;get_db,pay_api_freight_orders__key__pay_post
+POST,/api/freight/orders/{key}/refresh,backend/app/api/endpoints/freight.py,66,manager;get_db,refresh_api_freight_orders__key__refresh_post
+GET,/api/freight/orders/{key}/pdf,backend/app/api/endpoints/address_manager.py,198,manager;get_db,pdf_api_freight_orders__key__pdf_get
+POST,/api/freight/orders/{key}/print,backend/app/api/endpoints/freight.py,90,manager;get_db,print_label_api_freight_orders__key__print_post
+POST,/api/freight/webhooks/superfrete,backend/app/api/endpoints/freight.py,102,get_db,superfrete_webhook_api_freight_webhooks_superfrete_post
+POST,/api/address-manager/postal-code,backend/app/api/endpoints/address_manager.py,29,manager,postal_code_api_address_manager_postal_code_post
+GET,/api/address-manager/customers,backend/app/api/endpoints/address_manager.py,51,manager;get_db,customers_api_address_manager_customers_get
+GET,/api/address-manager/addresses,backend/app/api/endpoints/address_manager.py,60,manager;get_db,addresses_api_address_manager_addresses_get
+POST,/api/address-manager/addresses,backend/app/api/endpoints/address_manager.py,70,manager;get_db,create_address_api_address_manager_addresses_post
+PUT,/api/address-manager/addresses/{key},backend/app/api/endpoints/address_manager.py,78,manager;get_db,update_address_api_address_manager_addresses__key__put
+GET,/api/address-manager/addresses/{key}/usage,backend/app/api/endpoints/address_manager.py,86,manager;get_db,address_usage_api_address_manager_addresses__key__usage_get
+GET,/api/address-manager/senders,backend/app/api/endpoints/address_manager.py,95,manager;get_db,senders_api_address_manager_senders_get
+POST,/api/address-manager/senders,backend/app/api/endpoints/address_manager.py,124,manager;get_db,create_sender_api_address_manager_senders_post
+POST,/api/address-manager/sender-generator/generate,backend/app/api/endpoints/address_manager.py,102,require_owner,generate_sender_preview_api_address_manager_sender_generator_generate_post
+POST,/api/address-manager/sender-generator/import,backend/app/api/endpoints/address_manager.py,109,require_owner,import_sender_preview_api_address_manager_sender_generator_import_post
+POST,/api/address-manager/sender-generator/save,backend/app/api/endpoints/address_manager.py,116,require_owner;get_db,save_sender_preview_api_address_manager_sender_generator_save_post
+PUT,/api/address-manager/senders/{key},backend/app/api/endpoints/address_manager.py,130,manager;get_db,update_sender_api_address_manager_senders__key__put
+GET,/api/address-manager/layouts,backend/app/api/endpoints/address_manager.py,142,manager;get_db,layouts_api_address_manager_layouts_get
+PUT,/api/address-manager/layouts/{key},backend/app/api/endpoints/address_manager.py,151,manager;get_db,save_layout_api_address_manager_layouts__key__put
+GET,/api/address-manager/overview,backend/app/api/endpoints/address_manager.py,166,manager;get_db,overview_api_address_manager_overview_get
+GET,/api/address-manager/history,backend/app/api/endpoints/address_manager.py,182,manager;get_db,history_api_address_manager_history_get
+GET,/api/address-manager/history/{key},backend/app/api/endpoints/address_manager.py,190,manager;get_db,detail_api_address_manager_history__key__get
+GET,/api/address-manager/history/{key}/pdf,backend/app/api/endpoints/address_manager.py,198,manager;get_db,pdf_api_address_manager_history__key__pdf_get
+POST,/api/address-manager/history/{key}/cancel,backend/app/api/endpoints/address_manager.py,213,manager;get_db,cancel_api_address_manager_history__key__cancel_post
+POST,/api/address-manager/preview,backend/app/api/endpoints/address_manager.py,223,manager;get_db,preview_api_address_manager_preview_post
+POST,/api/address-manager/print,backend/app/api/endpoints/address_manager.py,230,manager;get_db,print_address_api_address_manager_print_post
+GET,/api/printing/receipt-device,backend/app/api/endpoints/printing.py,66,get_current_active_user;get_db,receipt_device_api_printing_receipt_device_get
+PUT,/api/printing/receipt-device,backend/app/api/endpoints/printing.py,74,require_owner;get_db,configure_receipt_device_api_printing_receipt_device_put
+POST,/api/printing/receipt-device/credential,backend/app/api/endpoints/printing.py,96,require_owner;get_db,rotate_receipt_credential_api_printing_receipt_device_credential_post
+GET,/api/printing/agent-package,backend/app/api/endpoints/printing.py,112,administrator,agent_package_api_printing_agent_package_get
+POST,/api/printing/agent/connect,backend/app/api/endpoints/printing.py,136,printer;get_db,connect_api_printing_agent_connect_post
+GET,/api/printing/devices,backend/app/api/endpoints/printing.py,159,administrator;get_db,devices_api_printing_devices_get
+POST,/api/printing/devices,backend/app/api/endpoints/printing.py,150,administrator;get_db,create_device_api_printing_devices_post
+POST,/api/printing/devices/{device_id}/revoke,backend/app/api/endpoints/printing.py,165,administrator;get_db,revoke_api_printing_devices__device_id__revoke_post
+GET,/api/printing/jobs,backend/app/api/endpoints/printing.py,203,administrator;get_db,jobs_api_printing_jobs_get
+POST,/api/printing/jobs,backend/app/api/endpoints/printing.py,176,administrator;get_db,enqueue_api_printing_jobs_post
+POST,/api/printing/agent/claim,backend/app/api/endpoints/printing.py,211,printer;get_db,claim_api_printing_agent_claim_post
+GET,/api/printing/agent/jobs/{job_id}/pdf,backend/app/api/endpoints/printing.py,252,printer;get_db,document_api_printing_agent_jobs__job_id__pdf_get
+POST,/api/printing/agent/jobs/{job_id}/result,backend/app/api/endpoints/printing.py,270,printer;get_db,result_api_printing_agent_jobs__job_id__result_post
+GET,/api/sales-bi/overview,backend/app/api/endpoints/address_manager.py,166,manager;get_db,overview_api_sales_bi_overview_get
+GET,/api/sales-bi/sources,backend/app/api/endpoints/sales_bi.py,54,manager;get_db,sources_api_sales_bi_sources_get
+GET,/api/sales-bi/config,backend/app/api/endpoints/sales_bi.py,63,admin;get_db,config_api_sales_bi_config_get
+PUT,/api/sales-bi/config,backend/app/api/endpoints/sales_bi.py,69,admin;get_db,save_config_api_sales_bi_config_put
+POST,/api/sales-bi/sync,backend/app/api/endpoints/freight.py,66,manager;get_db,refresh_api_sales_bi_sync_post
+GET,/api/sales-bi/entries,backend/app/api/endpoints/sales_bi_entries.py,17,"require_role(['ADMIN', 'GERENTE']);get_db",entries_api_sales_bi_entries_get
+GET,/,backend/app/main.py,236,,root__get
+GET,/live,backend/app/main.py,247,,liveness_live_get
+GET,/health,backend/app/main.py,251,,health_check_health_get

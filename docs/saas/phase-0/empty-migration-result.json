@@ -1,0 +1,7 @@
+{
+  "exit_code": 1,
+  "empty_database_bootstrap_passed": false,
+  "expected_missing_table_observed": true,
+  "local_only": true,
+  "production_accessed": false
+}
